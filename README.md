@@ -1,2 +1,2 @@
 # pss
-project semantic stream
+Project Semantic Stream is the code name for a developing capability for managing BIG VARIETY using Big Data technologies natively. "Big Variety" describes the characteristic of Big Data that there are data formats and sources that are too diverse to handle using traditional data management approaches.
