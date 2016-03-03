@@ -109,7 +109,7 @@ public class PUML3ParserTest {
 		conds.add("(age > 15 or not([ATTR] = 'class')) and (not(sqrt(9) >= 3)) or field = 'VT'");
 		conds.add("NOT([ATTR] matches 'hello')");
 		conds.add("key is null");
-		conds.add("key isnull");
+		//conds.add("key isnull");
 		conds.add("value is not null");
 		conds.add("[ATTR] matches 'hello'");
 		conds.add("[ATTR] contains 'hello'");
@@ -137,7 +137,7 @@ public class PUML3ParserTest {
 		conds.add("reGExp_eXTRact(f1, f2) = 'x'");
 		conds.add("REGexp_replace(f1, f2) = 'x'");
 		conds.add(
-				"LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(ISNULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) = ''");
+				"LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(IS NULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) = ''");
 		conds.add("is_Date(f1)");
 
 		// Iterate over the conditions and check for parsing errors
@@ -268,7 +268,7 @@ public class PUML3ParserTest {
 		conds.add(
 				"concat(regexp_replace(value, '([0-9]*)\\.([^.]*)', '$1'), '.', regexp_replace(value, '([0-9]*)\\.([^.]*)', '$2'))");
 		conds.add(
-				"LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(ISNULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) -- comment here");
+				"LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(IS NULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) -- comment here");
 		// an equation formula should be resolvable to a boolean condition
 		// statement, but the grammar fails at the moment
 		/*

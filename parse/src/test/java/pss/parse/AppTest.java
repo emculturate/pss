@@ -49,5 +49,6 @@ public class AppTest
 
         MyListener extractor = new MyListener(parser);
         ParseTreeWalker.DEFAULT.walk(extractor, tree); 
+        System.out.println(tree);
     }
 }
