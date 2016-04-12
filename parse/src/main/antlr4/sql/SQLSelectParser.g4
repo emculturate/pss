@@ -45,16 +45,32 @@ sql
 ===============================================================================
 */
 query_expression
-  : unionized_query
+  : intersected_query
+  ;
+   
+intersected_query
+  : unionized_query (intersect_clause unionized_query)*
+  ;
+
+intersect_clause
+  : interset_operator set_qualifier?
+  ;
+  
+interset_operator
+  : (INTERSECT)
   ;
 
 unionized_query
-  : intersected_query ((UNION | EXCEPT) (ALL|DISTINCT)? intersected_query)*
+  : query_primary (union_clause query_primary)*
   ;
 
-intersected_query
-  : query_primary (INTERSECT (ALL|DISTINCT)? query_primary)*
+union_clause
+  : union_operator set_qualifier?
   ;
+
+union_operator
+   : (UNION | EXCEPT)
+   ;
 
 query_primary
   : query_specification
@@ -66,17 +82,13 @@ subquery
   ;
 
 query_specification
-  : SELECT set_qualifier? select_list table_expression?
-  ;
-
-
-table_expression
-  : from_clause
+  : SELECT set_qualifier? select_list 
+  ( from_clause
     where_clause?
     groupby_clause?
     having_clause?
     orderby_clause?
-    limit_clause?
+    limit_clause?)?
   ;
 
 from_clause
@@ -84,14 +96,15 @@ from_clause
   ;
 
 table_reference_list
-  : table_primary (COMMA table_primary)*
-  | table_primary (unqualified_join right=table_primary)*
-  | table_primary (qualified_join right=table_primary s=join_specification)*
+  : table_primary 
+    ((COMMA table_primary)
+     | (unqualified_join right=table_primary)
+     | (qualified_join right=table_primary s=join_specification))*
   ;
 
 table_primary
-  : table_or_query_name ((AS)? alias=identifier)? 
-  | subquery (AS)? alias=identifier 
+  : table_or_query_name as_clause?
+  | subquery as_clause? 
   ;
 
 unqualified_join
@@ -117,38 +130,37 @@ join_specification
 join_condition
   : ON search_condition
   ;
-
+  
 named_columns_join
-  : USING LEFT_PAREN f=column_reference_list RIGHT_PAREN
+  : using_term LEFT_PAREN f=column_reference_list RIGHT_PAREN
   ;
 
-
+using_term
+  : USING
+  ;
+  
 // DETAILS OF QUERY
 
 select_list
-  : select_sublist (COMMA select_sublist)*
+  : select_item (COMMA select_item)*
   ;
 
 table_or_query_name
   : identifier  ( DOT  identifier (  DOT identifier )? )?
   ;
 
-select_sublist
+select_item
   : value_expression as_clause?
-  | qualified_asterisk
+  | select_all_columns
   ;
 
-qualified_asterisk
+select_all_columns
   : (tb_name=Identifier DOT)? MULTIPLY
   ;
 
 set_qualifier
   : DISTINCT
   | ALL
-  ;
-
-column_reference
-  : (tb_name=identifier DOT)? name=identifier
   ;
 
 as_clause
@@ -159,6 +171,9 @@ column_reference_list
   : column_reference (COMMA column_reference)*
   ;
 
+column_reference
+  : (tb_name=identifier DOT)? name=identifier
+  ;
 
 /*
 ===============================================================================
@@ -175,52 +190,18 @@ parenthesized_value_expression
   ;
 
 nonparenthesized_value_expression_primary
-  : unsigned_value_specification
+  : unsigned_literal
   | column_reference
-  | set_function_specification
+  | aggregate_function
   | subquery
   | case_expression
   | cast_specification
   | routine_invocation
   ;
 
-/*
-===============================================================================
-  6.4 <unsigned value specification>
-===============================================================================
-*/
-
-signed_numerical_literal
-  : sign? unsigned_numeric_literal
-  ;
-
-unsigned_numeric_literal
-  : NUMBER
-  | REAL_NUMBER
-  ;
-
-unsigned_value_specification
-  : unsigned_literal
-  ;
-
-/*
-===============================================================================
-  6.9 <set function specification>
-
-  Invoke an SQL-invoked routine.
-===============================================================================
-*/
-set_function_specification
-  : aggregate_function
-  ;
-
 aggregate_function
-  : COUNT LEFT_PAREN MULTIPLY RIGHT_PAREN
-  | general_set_function filter_clause?
-  ;
-
-general_set_function
-  : set_function_type LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN
+  : COUNT LEFT_PAREN MULTIPLY RIGHT_PAREN	# count_all_aggregate
+  | set_function_type LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?		# general_set_function 
   ;
 
 set_function_type
@@ -256,11 +237,13 @@ grouping_operation
 */
 
 case_expression
-  : CASE boolean_value_expression ( simple_when_clause )+ ( else_clause  )? END
-  | CASE (searched_when_clause)+ (else_clause)? END
+  : CASE boolean_value_expression when_clause_list ( else_clause  )? END
+  | CASE when_clause_list (else_clause)? END
   ;
 
-simple_when_clause : WHEN search_condition THEN result ;
+when_clause_list
+   : (searched_when_clause)+ 
+   ;
 
 searched_when_clause
   : WHEN c=search_condition THEN r=result
@@ -271,9 +254,13 @@ else_clause
   ;
 
 result
-  : value_expression | NULL
+  : value_expression | null_literal
   ;
 
+null_literal
+  : NULL
+  ;
+  
 /*
 ===============================================================================
   6.12 <cast specification>
@@ -281,16 +268,9 @@ result
 */
 
 cast_specification
-  : CAST LEFT_PAREN cast_operand AS cast_target RIGHT_PAREN
+  : CAST LEFT_PAREN value_expression AS data_type RIGHT_PAREN
   ;
 
-cast_operand
-  : value_expression
-  ;
-
-cast_target
-  : data_type
-  ;
 
 /*
 ===============================================================================
@@ -304,9 +284,9 @@ value_expression
   ;
 
 common_value_expression
-  : numeric_value_expression
+  : additive_expression
   | string_value_expression
-  | NULL
+  | null_literal
   ;
 
 /*
@@ -317,11 +297,11 @@ common_value_expression
 ===============================================================================
 */
 
-numeric_value_expression
-  : left=term ((PLUS|MINUS) right=term)*
+additive_expression
+  : left=multiplicative_expression ((PLUS|MINUS) right=multiplicative_expression)*
   ;
 
-term
+multiplicative_expression
   : left=factor ((MULTIPLY|DIVIDE|MODULAR) right=factor)*
   ;
 
@@ -330,7 +310,7 @@ factor
   ;
 
 numeric_primary
-  : value_expression_primary (CAST_EXPRESSION cast_target)*
+  : value_expression_primary (CAST_EXPRESSION data_type)*
   | extract_expression
   ;
 
@@ -374,39 +354,27 @@ extract_source
 */
 
 string_value_expression
-/*  : character_value_expression
-  ;
-
-character_value_expression */
-  : character_factor (CONCATENATION_OPERATOR character_factor)*
-  ;
-
-character_factor
-  : character_primary
+  : character_primary (CONCATENATION_OPERATOR character_primary)*
   ;
 
 character_primary
   : value_expression_primary
-  | string_value_function
-  ;
-
-/*
-===============================================================================
-  6.29 <string value function>
-===============================================================================
-*/
-
-string_value_function
-  : trim_function
+  | trim_function
   ;
 
 trim_function
-  : TRIM LEFT_PAREN trim_operands RIGHT_PAREN
+  : trim_function_name LEFT_PAREN trim_operands RIGHT_PAREN
+  ;
+
+trim_function_name
+  : TRIM
   ;
 
 trim_operands
-  : ((trim_specification)? (trim_character=string_value_expression)? FROM)? trim_source=string_value_expression
-  | trim_source=string_value_expression COMMA trim_character=string_value_expression
+  : ((trim_specification)? (trim_character=string_value_expression)? FROM)? 
+     trim_source=string_value_expression  # mysql_trim_operands
+  | trim_source=string_value_expression COMMA 
+     trim_character=string_value_expression # other_trim_operands
   ;
 
 trim_specification
@@ -432,21 +400,24 @@ and_predicate
   ;
 
 negative_predicate
-  : parenthetical_predicate
-  | NOT parenthetical_predicate
+  : not? parenthetical_predicate
   ;
 
 parenthetical_predicate
-  : boolean_primary is_clause?
-  | LEFT_PAREN boolean_value_expression RIGHT_PAREN 
+  : boolean_primary is_clause?						# basic_clause
+  | LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
   ;
 
 is_clause
-  : IS NOT? t=truth_value
+  : IS not? truth_value
   ;
 
 truth_value
   : TRUE | FALSE | UNKNOWN
+  ;
+
+not
+  : NOT
   ;
 
 boolean_primary
@@ -478,7 +449,7 @@ predicate
 */
 row_value_expression
   : nonparenthesized_value_expression_primary
-  | NULL
+  | null_literal
   ;
 
 row_value_predicand
@@ -529,13 +500,13 @@ grouping_element
   | ordinary_grouping_set
   ;
 
+ordinary_grouping_set_list
+  : ordinary_grouping_set (COMMA ordinary_grouping_set)*
+  ;
+
 ordinary_grouping_set
   : row_value_predicand
   | LEFT_PAREN row_value_predicand_list RIGHT_PAREN
-  ;
-
-ordinary_grouping_set_list
-  : ordinary_grouping_set (COMMA ordinary_grouping_set)*
   ;
 
 rollup_list
@@ -590,9 +561,12 @@ between_predicate
   ;
 
 between_predicate_part_2
-  : (NOT)? BETWEEN (ASYMMETRIC | SYMMETRIC)? begin=row_value_predicand AND end=row_value_predicand
+  : (not)? BETWEEN symmetry? begin=row_value_predicand AND end=row_value_predicand
   ;
 
+symmetry
+   : (ASYMMETRIC | SYMMETRIC)
+   ;
 
 /*
 ===============================================================================
@@ -601,7 +575,7 @@ between_predicate_part_2
 */
 
 in_predicate
-  : predicand=numeric_value_expression  NOT? IN in_predicate_value
+  : additive_expression  not? IN in_predicate_value
   ;
 
 in_predicate_value
@@ -626,7 +600,7 @@ pattern_matching_predicate
   ;
 
 pattern_matcher
-  : NOT? negativable_matcher
+  : not? negativable_matcher
   | regex_matcher
   ;
 
@@ -654,9 +628,13 @@ regex_matcher
 */
 
 null_predicate
-  : predicand=row_value_predicand IS (n=NOT)? NULL
+  : row_value_predicand is_null_clause
   ;
 
+is_null_clause
+  : IS (n=NOT)? NULL
+  ;
+  
 /*
 ==============================================================================================
   8.8 <quantified comparison predicate>
@@ -666,7 +644,7 @@ null_predicate
 */
 
 quantified_comparison_predicate
-  : l=numeric_value_expression  c=comp_op q=quantifier s=subquery
+  : l=additive_expression  c=comp_op q=quantifier s=subquery
   ;
 
 quantifier : all  | some ;
@@ -733,14 +711,14 @@ routine_invocation
   : function_name LEFT_PAREN sql_argument_list? RIGHT_PAREN
   ;
 
-function_names_for_reserved_words
-  : LEFT
-  | RIGHT
-  ;
-
 function_name
   : identifier
   | function_names_for_reserved_words
+  ;
+
+function_names_for_reserved_words
+  : LEFT
+  | RIGHT
   ;
 
 sql_argument_list
@@ -771,7 +749,7 @@ order_specification
   ;
 
 limit_clause
-  : LIMIT e=numeric_value_expression
+  : LIMIT e=additive_expression
   ;
 
 null_ordering
@@ -790,10 +768,14 @@ null_ordering
 */
 
 identifier
-  : Identifier
+  : simple_identifier
   | nonreserved_keywords
   ;
 
+simple_identifier
+   :	Identifier
+   ;
+   
 nonreserved_keywords
   : AVG
   | BETWEEN
@@ -912,19 +894,32 @@ nonreserved_keywords
 
 /*
 ===============================================================================
-  5.3 <literal>
+  6.4 <unsigned value specification>
 ===============================================================================
 */
+
+signed_numerical_literal
+  : sign? unsigned_numeric_literal
+  ;
 
 unsigned_literal
   : unsigned_numeric_literal
   | general_literal
   ;
 
+unsigned_numeric_literal
+  : NUMBER					# ordinal_number
+  | REAL_NUMBER				# real_number
+  ;
+
 general_literal
-  : Character_String_Literal
+  : character_literal
   | datetime_literal
   | boolean_literal
+  ;
+
+character_literal
+  : Character_String_Literal
   ;
 
 datetime_literal
