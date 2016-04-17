@@ -36,9 +36,24 @@ options {
 ===============================================================================
 */
 sql
-  : query_expression (SEMI_COLON)? EOF
+  : (query_expression 
+  | insert_expression 
+  | update_expression
+  | create_table_as_expression)(SEMI_COLON)? EOF
   ;
 
+insert_expression
+  : INSERT INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery
+  ;
+  
+update_expression
+  : UPDATE INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery
+  ;
+  
+create_table_as_expression
+  : CREATE TABLE AS query_expression
+  ;
+  
 /*
 ===============================================================================
   7.13 <query expression>

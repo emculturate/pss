@@ -53,6 +53,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * Number of query and subqueries encountered
 	 */
 	Integer queryCount = 0;
+	Boolean unionClauseFound = false;
+	Boolean firstUnionClause = false;
+	Boolean intersectClauseFound = false;
+	Boolean firstIntersectClause = false;
 
 	// Extra-Grammar Identifiers
 
@@ -140,6 +144,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return collector.remove(symbolKey);
 	}
 
+	/**
+	 * 
+	 */
+	private void pushSymbolTable() {
+		Object symbols = tableColumnList;
+		if (symbols != null) {
+			pushStack("tableColumnList", symbols);
+		}
+		tableColumnList = new HashMap<String, Object>();
+	}
+
+	/**
+	 * @param key
+	 * @param symbols
+	 */
+	@SuppressWarnings("unchecked")
+	private void popSymbolTable(String key, HashMap<String, Object> symbols) {
+		tableColumnList = (HashMap<String, Object>) popStack("tableColumnList");
+		tableColumnList.put(key, symbols);
+	}
+
+	private void popSymbolTablePutAll(HashMap<String, Object> symbols) {
+		tableColumnList = (HashMap<String, Object>) popStack("tableColumnList");
+		tableColumnList.putAll(symbols);
+	}
+
 	private Integer currentStackLevel(String key) {
 		return stackSymbols.get(key);
 	}
@@ -169,13 +199,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		collector.put(index, item);
 	}
 
-	@SuppressWarnings("unchecked")
 	private Object getNode(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
 		return collector.get(mapIdx);
 	}
 
-	@SuppressWarnings("unchecked")
 	private Object removeNode(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
 		return collector.remove(mapIdx);
@@ -406,6 +434,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		handleListList(ruleIndex, parentRuleIndex);
+
+		// clear union clause count
+		intersectClauseFound = false;
+	}
+
+	@Override
+	public void enterIntersected_query(@NotNull SQLSelectParserParser.Intersected_queryContext ctx) {
+		pushSymbolTable();
 	}
 
 	@Override
@@ -413,6 +449,30 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 
 		handleOperandList(ruleIndex, "intersect");
+
+		// Handle symbol tables
+		HashMap<String, Object> symbols = tableColumnList;
+
+		if (intersectClauseFound) {
+			// Retrieve outer symbol table, insert this symbol table into it
+			String key = "intersect" + queryCount;
+			popSymbolTable(key, symbols);
+			queryCount++;
+		} else {
+			popSymbolTablePutAll(symbols);
+		}
+
+		// clear union clause count
+		unionClauseFound = false;
+	}
+
+	@Override
+	public void enterIntersect_clause(@NotNull SQLSelectParserParser.Intersect_clauseContext ctx) {
+		if (!intersectClauseFound) {
+			intersectClauseFound = true;
+			firstIntersectClause = true;
+		} else
+			firstIntersectClause = false;
 	}
 
 	@Override
@@ -435,7 +495,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
-		showTrace(parseTrace, "Union Operator: " + subMap);
+		showTrace(parseTrace, "Intersect Operator: " + subMap);
+
+		// Get first interface to represent intersection output
+		if (firstIntersectClause) {
+			showTrace(symbolTrace, "Intersect So Far: " + tableColumnList);
+			captureQueryInterface();
+			showTrace(symbolTrace, "Intersect So Far: " + tableColumnList);
+
+		}
+	}
+
+	@Override
+	public void enterUnionized_query(@NotNull SQLSelectParserParser.Unionized_queryContext ctx) {
+		pushSymbolTable();
 	}
 
 	@Override
@@ -443,6 +516,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 
 		handleOperandList(ruleIndex, "union");
+
+		// Handle symbol tables
+		HashMap<String, Object> symbols = tableColumnList;
+
+		if (unionClauseFound) {
+			// Retrieve outer symbol table, insert this symbol table into it
+			String key = "union" + queryCount;
+			popSymbolTable(key, symbols);
+			queryCount++;
+		} else {
+			popSymbolTablePutAll(symbols);
+		}
+
+	}
+
+	@Override
+	public void enterUnion_clause(@NotNull SQLSelectParserParser.Union_clauseContext ctx) {
+		if (!unionClauseFound) {
+			unionClauseFound = true;
+			firstUnionClause = true;
+		} else
+			firstUnionClause = false;
 	}
 
 	@Override
@@ -466,6 +561,60 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
 		showTrace(parseTrace, "Union Operator: " + subMap);
+
+		// Get first interface to represent union output
+		if (firstUnionClause) {
+			showTrace(symbolTrace, "Union So Far: " + tableColumnList);
+			captureQueryInterface();
+			showTrace(symbolTrace, "Union So Far: " + tableColumnList);
+		}
+
+	}
+
+	/**
+	 * 
+	 */
+	private void captureQueryInterface() {
+		HashMap<String, Object> interfac = getInterfaceFromQuery("query");
+		if (interfac == null) {
+			interfac = getInterfaceFromQuery("union");
+		}
+		if (interfac == null) {
+			interfac = getInterfaceFromQuery("intersect");
+		}
+		if (interfac != null) {
+			// need to get the interface from inside the query
+			HashMap<String, Object> newif = new HashMap<String, Object>();
+			for (String key : interfac.keySet()) {
+				newif.put(key, "union_column");
+			}
+			tableColumnList.put("interface", newif);
+		}
+	}
+
+	/**
+	 * @param hdr
+	 * @return
+	 */
+	private HashMap<String, Object> getInterfaceFromQuery(String hdr) {
+		String queryName = hdr + (queryCount - 1);
+		HashMap<String, Object> query = (HashMap<String, Object>) tableColumnList.get(queryName);
+		HashMap<String, Object> interfac = getInterface(query);
+		return interfac;
+	}
+
+	/**
+	 * @param query
+	 * @return
+	 */
+	private HashMap<String, Object> getInterface(HashMap<String, Object> query) {
+		HashMap<String, Object> interfac = null;
+		if (query != null) {
+			interfac = (HashMap<String, Object>) query.get("interface");
+		} else
+			interfac = null;
+		HashMap<String, Object> interfac1 = interfac;
+		return interfac1;
 	}
 
 	@Override
@@ -498,11 +647,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterQuery_specification(@NotNull SQLSelectParserParser.Query_specificationContext ctx) {
-		Object symbols = tableColumnList;
-		if (symbols != null) {
-			pushStack("tableColumnList", symbols);
-		}
-		tableColumnList = new HashMap<String, Object>();
+		pushSymbolTable();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -564,8 +709,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (unks != null) {
 			for (String tab_ref : symbols.keySet()) {
-				if ((tab_ref.equals("interface")) 
-				|| (tab_ref.startsWith("query") && tab_ref.endsWith("_def"))) {
+				if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query"))) {
 				} else {
 					Object item = symbols.get(tab_ref);
 					if (item instanceof HashMap<?, ?>) {
@@ -583,12 +727,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			hold.putAll(unks);
 		} else {
 			// otherwise put things back
-			symbols.put("unknown", unks);
+			if (unks != null)
+				symbols.put("unknown", unks);
 		}
 
 		// Retrieve outer symbol table, insert this symbol table into it
-		tableColumnList = (HashMap<String, Object>) popStack("tableColumnList");
-		tableColumnList.put("query" + queryCount, symbols);
+		String key = "query" + queryCount;
+		popSymbolTable(key, symbols);
 		queryCount++;
 	}
 
@@ -603,7 +748,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 
 		handleOperandList(ruleIndex, "join");
-		// handlePushDown(ruleIndex);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -625,10 +769,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put("alias", null);
 
 			Object table = item.get("table");
-			alias = table.toString();
-			collectTable(alias, table);
+			if (table != null) {
+				alias = table.toString();
+				collectTable(alias, table);
 
-			subMap.put("table", item);
+				subMap.put("table", item);
+			} else {
+				alias = "unnamed";
+				Map<String, Object> aliasMap = new HashMap<String, Object>();
+				aliasMap.put(alias, alias);
+				Boolean done = handleQuery("query", aliasMap, alias, item);
+				if (!done)
+					done = handleQuery("union", aliasMap, alias, item);
+				if (!done)
+					done = handleQuery("intersect", aliasMap, alias, item);
+
+			}
+
 		} else if (ctx.getChildCount() == 2) {
 			item = new HashMap<String, Object>();
 			Map<String, Object> reference = (Map<String, Object>) subMap.remove("1");
@@ -643,14 +800,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.putAll(reference);
 				collectTable(alias, table);
 			} else {
-				String queryName = "query" + (queryCount - 1);
-				Object query = tableColumnList.remove(queryName);
-				if (query != null) {
-					item.put("query", reference);
-
-					collectTable(alias, queryName);
-					tableColumnList.put(queryName + "_def", query);
-				}
+				Boolean done = handleQuery("query", item, alias, reference);
+				if (!done)
+					done = handleQuery("union", item, alias, reference);
+				if (!done)
+					done = handleQuery("intersect", item, alias, reference);
 			}
 
 			subMap.put("table", item);
@@ -659,6 +813,50 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 		showTrace(parseTrace, "TABLE PRIMARY: " + subMap);
+	}
+
+	/**
+	 * @param hdr
+	 * @param item
+	 * @param alias
+	 * @param reference
+	 * @return
+	 */
+	private Boolean handleQuery(String hdr, Map<String, Object> item, String alias, Map<String, Object> reference) {
+		String queryName = hdr + (queryCount - 1);
+		Map<String, Object> query = (Map<String, Object>) tableColumnList.remove(queryName);
+		if (query != null) {
+			item.put(hdr, reference);
+
+			// add alias to query
+			collectTable(alias, queryName);
+
+			// propagate interface to outer layer of query
+			Map<String, Object> hold = (Map<String, Object>) tableColumnList.get(queryName);
+			// Move unknowns to query
+			Map<String, Object> unk = (Map<String, Object>) tableColumnList.remove("unknown");
+			// hold.putAll(unk);
+
+			// move any other interface elements to query and empty unknowns
+			Map<String, Object> interfac = (Map<String, Object>) query.get("interface");
+			for (String key : interfac.keySet()) {
+				Object unkItem = unk.remove(key);
+				if (unkItem != null)
+					hold.put(key, unkItem);
+				else
+					hold.put(key, key);
+				;
+			}
+
+			// if any unknowns left, put them back into table
+			if (unk.size() > 0)
+				tableColumnList.put("unknown", unk);
+			
+			// Add query definition back into symbol table
+			tableColumnList.put("def_" + queryName, query);
+			return true;
+		} else
+			return false;
 	}
 
 	@Override

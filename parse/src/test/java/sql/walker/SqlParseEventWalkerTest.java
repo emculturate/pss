@@ -85,12 +85,60 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void simpleMultipleUnionParseTest() {
+
+		final String cond = " SELECT first FROM third " 
+		+ " union select third from fifth "
+				+ " union select fourth from sixth " 
+		+ " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void simpleMultipleIntersectParseTest() {
+
+		final String cond = " SELECT first FROM third " 
+		+ " intersect select third from fifth "
+				+ " intersect select fourth from sixth " 
+		+ " intersect select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
 	public void simpleUnionIntersectParseTest() {
 
 		final String cond = " SELECT first FROM third " 
 		+ " union select third from fifth "
 				+ " intersect select fourth from sixth " 
 		+ " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void nestedUnionIntersectAAParseTest() {
+
+		final String cond = " SELECT first FROM ( " 
+		        + "  select third from fifth "
+				+ " intersect select fourth from sixth ) aa " 
+		        + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void nestedUnionIntersectParseTest() {
+
+		final String cond = " SELECT first FROM ( " 
+		        + "  select third from fifth "
+				+ " intersect select fourth from sixth ) " 
+		        + " union select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(cond);
 		runParsertest(cond, parser);
@@ -190,7 +238,7 @@ public class SqlParseEventWalkerTest {
 	public void biggerQueryParseTest() {
 
 		final String cond = " select spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, "
-				+ "spriden_mi, SGBSTDN_TERM_CODE_ADMIT FROM ( "
+				+ "spriden_mi, TERM_CODE_ADMIT FROM ( "
 				+ " SELECT spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden "
 				+ " WHERE spriden_change_ind is null) spriden " + " JOIN (  SELECT pidm, max(term) AS max_term FROM ( "
 				+ " SELECT shrtgpa_pidm AS pidm, shrtgpa_term_code AS term  "
@@ -202,10 +250,10 @@ public class SqlParseEventWalkerTest {
 				+ " FROM sgbstdn WHERE sgbstdn_levl_code = 'UG'  ) x GROUP BY pidm "
 				+ " ) terms ON spriden.spriden_pidm = terms.pidm "
 				+ " JOIN STVTERM termDates ON termDates.STVTERM_CODE = terms.max_term "
-				+ " JOIN (SELECT sgbstdn_pidm, MIN(SGBSTDN_TERM_CODE_ADMIT) AS SGBSTDN_TERM_CODE_ADMIT from sgbstdn "
+				+ " JOIN (SELECT sgbstdn_pidm, MIN(SGBSTDN_TERM_CODE_ADMIT) AS TERM_CODE_ADMIT from sgbstdn "
 				+ " WHERE sgbstdn_levl_code = 'UG' GROUP BY sgbstdn_pidm "
 				+ " ) undergradOnly ON undergradOnly.sgbstdn_pidm = spriden.spriden_pidm "
-				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi, SGBSTDN_TERM_CODE_ADMIT "
+				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi, TERM_CODE_ADMIT "
 				+ " HAVING max(max_term) >= 201310 ";
 
 		final SQLSelectParserParser parser = parse(cond);
@@ -457,6 +505,94 @@ public class SqlParseEventWalkerTest {
 }
 
 
+	@Test
+	public void simpleInsertFromQueryTest() {
+
+		final String cond = " insert into sch.subj.tbl (newcol1, newcol2) values (SELECT b.att1, b.att2 "
+			+ " from (SELECT a.col1 as att1, a.col2 as att2 " 
+			+ " FROM sch.subj.tab1 as a"
+			+ " WHERE a.col1 <> a.col3 " 
+			+ " ) AS b )";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	/*
+	 * UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, temp_lo+15, DEFAULT)
+  WHERE city = 'San Francisco' AND date = '2003-07-03'
+  
+UPDATE accounts SET (contact_first_name, contact_last_name) =
+    (SELECT first_name, last_name FROM salesmen
+     WHERE salesmen.id = accounts.sales_id);
+     
+UPDATE accounts SET contact_first_name = first_name,
+                    contact_last_name = last_name
+  FROM salesmen WHERE salesmen.id = accounts.sales_id;
+  
+UPDATE summary s SET (sum_x, sum_y, avg_x, avg_y) =
+    (SELECT sum(x), sum(y), avg(x), avg(y) FROM data d
+     WHERE d.group_id = s.group_id);
+
+UPDATE employees SET sales_count = sales_count + 1 WHERE id =
+  (SELECT sales_person FROM accounts WHERE name = 'Acme Corporation');
+
+UPDATE weather SET temp_lo = temp_lo+1, temp_hi = temp_lo+15, prcp = DEFAULT
+  WHERE city = 'San Francisco' AND date = '2003-07-03'
+  RETURNING temp_lo, temp_hi, prcp;
+
+// WITH EXAMPLES
+
+WITH moved_rows AS (
+    DELETE FROM products
+    WHERE
+        "date" >= '2010-10-01' AND
+        "date" < '2010-11-01'
+    RETURNING *
+)
+INSERT INTO products_log
+SELECT * FROM moved_rows;
+
+
+WITH regional_sales AS (
+        SELECT region, SUM(amount) AS total_sales
+        FROM orders
+        GROUP BY region
+     ), top_regions AS (
+        SELECT region
+        FROM regional_sales
+        WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)
+     )
+SELECT region,
+       product,
+       SUM(quantity) AS product_units,
+       SUM(amount) AS product_sales
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product;
+
+WITH t AS (
+    UPDATE products SET price = price * 1.05
+    RETURNING *
+)
+SELECT * FROM products;
+
+WITH t AS (
+    UPDATE accounts SET (contact_first_name, contact_last_name) =
+        (SELECT first_name, last_name FROM salesmen
+     WHERE salesmen.id = accounts.sales_id);
+    RETURNING *
+)
+insert into accounts values ((SELECT first_name, last_name FROM salesmen
+     WHERE !exists t.id = accounts.sales_id))
+
+INSERT INTO table [ ( column [, ...] ) ]
+    { DEFAULT VALUES | VALUES ( { expression | DEFAULT } [, ...] ) [, ...] | query }
+    [ RETURNING * | output_expression [ AS output_name ] [, ...] ]
+	 */
+	
+	
+	
 	private void runParsertest(final String cond, final SQLSelectParserParser parser) {
 		try {
 				System.out.println();
