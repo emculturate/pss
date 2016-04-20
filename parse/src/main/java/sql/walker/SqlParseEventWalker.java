@@ -3,7 +3,10 @@ package sql.walker;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
+import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -35,9 +38,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	HashMap<String, Object> aliasTableMap = new HashMap<String, Object>();
 
 	/**
-	 * Collect Table Names
+	 * Collect Symbol Table
 	 */
-	HashMap<String, Object> tableColumnList = new HashMap<String, Object>();
+	HashMap<String, Object> symbolTable = new HashMap<String, Object>();
 
 	/**
 	 * Depth of token stack
@@ -148,11 +151,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * 
 	 */
 	private void pushSymbolTable() {
-		Object symbols = tableColumnList;
+		Object symbols = symbolTable;
 		if (symbols != null) {
-			pushStack("tableColumnList", symbols);
+			pushStack("symbolTable", symbols);
 		}
-		tableColumnList = new HashMap<String, Object>();
+		symbolTable = new HashMap<String, Object>();
 	}
 
 	/**
@@ -161,13 +164,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@SuppressWarnings("unchecked")
 	private void popSymbolTable(String key, HashMap<String, Object> symbols) {
-		tableColumnList = (HashMap<String, Object>) popStack("tableColumnList");
-		tableColumnList.put(key, symbols);
+		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
+		symbolTable.put(key, symbols);
 	}
 
 	private void popSymbolTablePutAll(HashMap<String, Object> symbols) {
-		tableColumnList = (HashMap<String, Object>) popStack("tableColumnList");
-		tableColumnList.putAll(symbols);
+		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
+		symbolTable.putAll(symbols);
 	}
 
 	private Integer currentStackLevel(String key) {
@@ -235,18 +238,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@SuppressWarnings("unchecked")
 	private void collectTable(String alias, Object tableReference) {
 		if (tableReference instanceof String) {
-			Object aliasSet = tableColumnList.get((String) alias);
-			HashMap<String, Object> ref = (HashMap<String, Object>) tableColumnList.get((String) tableReference);
+			Object aliasSet = symbolTable.get((String) alias);
+			HashMap<String, Object> ref = (HashMap<String, Object>) symbolTable.get((String) tableReference);
 			if (aliasSet == null) {
 				if (!alias.equals((String) tableReference))
-					tableColumnList.put(alias, (String) tableReference);
+					symbolTable.put(alias, (String) tableReference);
 				if (ref == null)
-					tableColumnList.put((String) tableReference, new HashMap<String, Object>());
+					symbolTable.put((String) tableReference, new HashMap<String, Object>());
 			} else {
 				if (!alias.equals((String) tableReference))
-					tableColumnList.put(alias, (String) tableReference);
+					symbolTable.put(alias, (String) tableReference);
 				if (ref == null)
-					tableColumnList.put((String) tableReference, aliasSet);
+					symbolTable.put((String) tableReference, aliasSet);
 				else
 					ref.putAll((Map<String, Object>) aliasSet);
 			}
@@ -257,31 +260,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/**
 	 * @param tableReference
+	 * @param token
 	 */
 	@SuppressWarnings("unchecked")
-	private void collectTableItem(Object tableReference, Object item) {
+	private void collectTableItem(Object tableReference, Object item, Token token) {
+		// HashMap<String, Object> tokenMap = new HashMap<String, Object> ();
+		// tokenMap.put("line", token.getLine());
+		// tokenMap.put("start", token.getStartIndex());
+		// tokenMap.put("reference", token.toString());
+
 		if (tableReference instanceof String) {
-			Object symbols = tableColumnList.get((String) tableReference);
+			Object symbols = symbolTable.get((String) tableReference);
 			if (symbols == null) {
 				symbols = new HashMap<String, Object>();
 				if (item instanceof String)
-					((HashMap<String, Object>) symbols).put((String) item, item);
+					((HashMap<String, Object>) symbols).put((String) item, token.toString());
 				else
 					((HashMap<String, Object>) symbols).put("subquery", item);
-				tableColumnList.put((String) tableReference, symbols);
+				symbolTable.put((String) tableReference, symbols);
 			} else if (symbols instanceof String) {
 				// Refernce is an ALIAS to a different table
-				symbols = tableColumnList.get((String) symbols);
+				symbols = symbolTable.get((String) symbols);
 				if (item instanceof String)
-					((HashMap<String, Object>) symbols).put((String) item, item);
+					((HashMap<String, Object>) symbols).put((String) item, token.toString());
 				else
 					((HashMap<String, Object>) symbols).put("subquery", item);
 			} else if (symbols instanceof HashMap<?, ?>) {
 				if (item instanceof String)
-					((HashMap<String, Object>) symbols).put((String) item, item);
+					((HashMap<String, Object>) symbols).put((String) item, token.toString());
 				else
 					((HashMap<String, Object>) symbols).put("subquery", item);
-				// tableColumnList.put((String) tableReference, symbols);
+				// symbolTable.put((String) tableReference, symbols);
 			}
 		} else if (tableReference instanceof HashMap<?, ?>) {
 			showTrace(symbolTrace, "Error collecting table: " + tableReference);
@@ -426,7 +435,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		collector.put("SQL", subMap.remove("1"));
 		// showTrace(resultTrace, collector);
-		showTrace(symbolTrace, tableColumnList);
+		showTrace(symbolTrace, symbolTable);
 	}
 
 	@Override
@@ -451,7 +460,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		handleOperandList(ruleIndex, "intersect");
 
 		// Handle symbol tables
-		HashMap<String, Object> symbols = tableColumnList;
+		HashMap<String, Object> symbols = symbolTable;
 
 		if (intersectClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
@@ -499,9 +508,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Get first interface to represent intersection output
 		if (firstIntersectClause) {
-			showTrace(symbolTrace, "Intersect So Far: " + tableColumnList);
+			showTrace(symbolTrace, "Intersect So Far: " + symbolTable);
 			captureQueryInterface();
-			showTrace(symbolTrace, "Intersect So Far: " + tableColumnList);
+			showTrace(symbolTrace, "Intersect So Far: " + symbolTable);
 
 		}
 	}
@@ -518,7 +527,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		handleOperandList(ruleIndex, "union");
 
 		// Handle symbol tables
-		HashMap<String, Object> symbols = tableColumnList;
+		HashMap<String, Object> symbols = symbolTable;
 
 		if (unionClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
@@ -564,9 +573,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Get first interface to represent union output
 		if (firstUnionClause) {
-			showTrace(symbolTrace, "Union So Far: " + tableColumnList);
+			showTrace(symbolTrace, "Union So Far: " + symbolTable);
 			captureQueryInterface();
-			showTrace(symbolTrace, "Union So Far: " + tableColumnList);
+			showTrace(symbolTrace, "Union So Far: " + symbolTable);
 		}
 
 	}
@@ -575,20 +584,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * 
 	 */
 	private void captureQueryInterface() {
-		HashMap<String, Object> interfac = getInterfaceFromQuery("query");
+		String prefx = "query";
+		HashMap<String, Object> interfac = getInterfaceFromQuery(prefx);
 		if (interfac == null) {
-			interfac = getInterfaceFromQuery("union");
+			prefx = "union";
+			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			interfac = getInterfaceFromQuery("intersect");
+			prefx = "intersect";
+			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac != null) {
 			// need to get the interface from inside the query
 			HashMap<String, Object> newif = new HashMap<String, Object>();
 			for (String key : interfac.keySet()) {
-				newif.put(key, "union_column");
+				newif.put(key, prefx + "_column");
 			}
-			tableColumnList.put("interface", newif);
+			symbolTable.put("interface", newif);
 		}
 	}
 
@@ -598,7 +610,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	private HashMap<String, Object> getInterfaceFromQuery(String hdr) {
 		String queryName = hdr + (queryCount - 1);
-		HashMap<String, Object> query = (HashMap<String, Object>) tableColumnList.get(queryName);
+		HashMap<String, Object> query = (HashMap<String, Object>) symbolTable.get(queryName);
 		HashMap<String, Object> interfac = getInterface(query);
 		return interfac;
 	}
@@ -698,39 +710,48 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, subMap);
 
 		// Handle symbol tables
-		HashMap<String, Object> symbols = tableColumnList;
+		HashMap<String, Object> symbols = symbolTable;
 
 		// Special handling of queries with only one source: Move "unknown"
 		// references to that table
 		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
 
-		Integer count = 0;
-		HashMap<String, Object> hold = null;
-
 		if (unks != null) {
-			for (String tab_ref : symbols.keySet()) {
-				if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query"))) {
-				} else {
-					Object item = symbols.get(tab_ref);
-					if (item instanceof HashMap<?, ?>) {
-						hold = (HashMap<String, Object>) item;
-						count++;
+			Integer count = 0;
+			HashMap<String, Object> hold = new HashMap<String, Object>();
+			String holdTabRef = null;
+
+			if (unks != null) {
+				for (String tab_ref : symbols.keySet()) {
+					if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query"))
+							|| (tab_ref.startsWith("def_union")) || (tab_ref.startsWith("def_intersect"))) {
+					} else {
+						Object item = symbols.get(tab_ref);
+						if (item instanceof HashMap<?, ?>) {
+							hold.put(tab_ref, item);
+							holdTabRef = tab_ref;
+							count++;
+						}
 					}
 				}
-				if (count > 1)
-					break;
+			}
+
+			if (count == 1) {
+				// just one table referenced, put all unknowns into it
+				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+			} else {
+				// Allocate Unknowns
+				for (String tab_ref : hold.keySet()) {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
+					for (String key : currItem.keySet()) {
+						unks.remove(key);
+					}
+				}
+				// put whatever is left back into the unknowns
+				if (unks.size() > 0)
+					symbols.put("unknown", unks);
 			}
 		}
-
-		if (count == 1) {
-			// just one table referenced, put all unknowns into it
-			hold.putAll(unks);
-		} else {
-			// otherwise put things back
-			if (unks != null)
-				symbols.put("unknown", unks);
-		}
-
 		// Retrieve outer symbol table, insert this symbol table into it
 		String key = "query" + queryCount;
 		popSymbolTable(key, symbols);
@@ -824,7 +845,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	private Boolean handleQuery(String hdr, Map<String, Object> item, String alias, Map<String, Object> reference) {
 		String queryName = hdr + (queryCount - 1);
-		Map<String, Object> query = (Map<String, Object>) tableColumnList.remove(queryName);
+		Map<String, Object> query = (Map<String, Object>) symbolTable.remove(queryName);
 		if (query != null) {
 			item.put(hdr, reference);
 
@@ -832,28 +853,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			collectTable(alias, queryName);
 
 			// propagate interface to outer layer of query
-			Map<String, Object> hold = (Map<String, Object>) tableColumnList.get(queryName);
+			Map<String, Object> hold = (Map<String, Object>) symbolTable.get(queryName);
 			// Move unknowns to query
-			Map<String, Object> unk = (Map<String, Object>) tableColumnList.remove("unknown");
-			// hold.putAll(unk);
+			Map<String, Object> unk = (Map<String, Object>) symbolTable.remove("unknown");
 
-			// move any other interface elements to query and empty unknowns
-			Map<String, Object> interfac = (Map<String, Object>) query.get("interface");
-			for (String key : interfac.keySet()) {
-				Object unkItem = unk.remove(key);
-				if (unkItem != null)
-					hold.put(key, unkItem);
-				else
-					hold.put(key, key);
-				;
+			if (unk != null) {
+				// move any other interface elements to query and empty unknowns
+				Map<String, Object> interfac = (Map<String, Object>) query.get("interface");
+				for (String key : interfac.keySet()) {
+					Object unkItem = unk.remove(key);
+					if (unkItem != null)
+						hold.put(key, unkItem);
+					else
+						hold.put(key, key);
+					;
+				}
+
+				// if any unknowns left, put them back into table
+				if (unk.size() > 0)
+					symbolTable.put("unknown", unk);
 			}
-
-			// if any unknowns left, put them back into table
-			if (unk.size() > 0)
-				tableColumnList.put("unknown", unk);
-			
 			// Add query definition back into symbol table
-			tableColumnList.put("def_" + queryName, query);
+			symbolTable.put("def_" + queryName, query);
 			return true;
 		} else
 			return false;
@@ -913,14 +934,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 		showTrace(parseTrace, "QUALIFIED JOIN: " + subMap);
 	}
-
-	// @Override
-	// public void exitJoin_type(@NotNull SQLSelectParserParser.Join_typeContext
-	// ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// Integer stackLevel = currentStackLevel(ruleIndex);
-	// Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-	// }
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -1134,10 +1147,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, "SELECT ITEM: " + item);
 
 		// Add item to symbol table
-		HashMap<String, Object> selectInterface = (HashMap<String, Object>) tableColumnList.get("interface");
+		HashMap<String, Object> selectInterface = (HashMap<String, Object>) symbolTable.get("interface");
 		if (selectInterface == null) {
 			selectInterface = new HashMap<String, Object>();
-			tableColumnList.put("interface", selectInterface);
+			symbolTable.put("interface", selectInterface);
 		}
 		selectInterface.put(alias, reference);
 	}
@@ -1556,7 +1569,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put("table_ref", null);
 
 			Object name = subMap.remove("1");
-			collectTableItem("unknown", name);
+			collectTableItem("unknown", name, ctx.getStart());
 
 			item.put("name", name);
 			subMap.put("column", item);
@@ -1565,7 +1578,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put("table_ref", subMap.remove("1"));
 
 			Object name = subMap.remove("2");
-			collectTableItem(item.get("table_ref"), name);
+			collectTableItem(item.get("table_ref"), name, ctx.getStart());
 
 			item.put("name", name);
 			subMap.put("column", item);
@@ -1598,14 +1611,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put("table_ref", "*");
 			item.put("name", "*");
 
-			collectTableItem("unknown", "*");
+			collectTableItem("unknown", "*", ctx.getStart());
 
 			subMap.put("column", item);
 		} else if (ctx.getChildCount() == 3) {
 			showTrace(parseTrace, "Three entries: " + ctx.getText());
 			item.put("table_ref", ctx.getChild(0).getText());
 
-			collectTableItem(item.get("table_ref"), "*");
+			collectTableItem(item.get("table_ref"), "*", ctx.getStart());
 
 			item.put("name", "*");
 			subMap.put("column", item);
