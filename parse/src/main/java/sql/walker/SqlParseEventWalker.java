@@ -3,6 +3,7 @@ package sql.walker;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -28,38 +29,39 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	final static Integer resultTrace = 4;
 
 	/**
-	 * Collect components of parse tree
+	 * SQL Abstract Structure This collects and constructs a nested Map data
+	 * structure representing the entire SQL statement
 	 */
-	HashMap<String, Object> collector = new HashMap<String, Object>();
+	private HashMap<String, Object> sqlTree = new HashMap<String, Object>();
 
 	/**
-	 * Collect Alias to Table/Query Map
+	 * Collect Root Table Columns
 	 */
-	HashMap<String, Object> aliasTableMap = new HashMap<String, Object>();
+	private HashMap<String, Object> tableColumnMap = new HashMap<String, Object>();
 
 	/**
-	 * Collect Symbol Table
+	 * Collect Nested Symbol Table for the query
 	 */
-	HashMap<String, Object> symbolTable = new HashMap<String, Object>();
-
-	/**
-	 * Depth of token stack
-	 */
-	HashMap<Integer, Integer> stackTree = new HashMap<Integer, Integer>();
+	private HashMap<String, Object> symbolTable = new HashMap<String, Object>();
 
 	/**
 	 * Depth of token stack
 	 */
-	HashMap<String, Integer> stackSymbols = new HashMap<String, Integer>();
+	private HashMap<Integer, Integer> stackTree = new HashMap<Integer, Integer>();
+
+	/**
+	 * Depth of token stack
+	 */
+	private HashMap<String, Integer> stackSymbols = new HashMap<String, Integer>();
 
 	/**
 	 * Number of query and subqueries encountered
 	 */
-	Integer queryCount = 0;
-	Boolean unionClauseFound = false;
-	Boolean firstUnionClause = false;
-	Boolean intersectClauseFound = false;
-	Boolean firstIntersectClause = false;
+	private Integer queryCount = 0;
+	private Boolean unionClauseFound = false;
+	private Boolean firstUnionClause = false;
+	private Boolean intersectClauseFound = false;
+	private Boolean firstIntersectClause = false;
 
 	// Extra-Grammar Identifiers
 
@@ -69,15 +71,52 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	// Getters and Setters
-
-	public HashMap<String, Object> getCollector() {
-		return collector;
+	public static Boolean getShowparse() {
+		return showParse;
 	}
 
-	public void setCollector(HashMap<String, Object> collector) {
-		this.collector = collector;
+	public static Boolean getShowsymbols() {
+		return showSymbols;
 	}
 
+	public static Boolean getShowother() {
+		return showOther;
+	}
+
+	public static Boolean getShowresults() {
+		return showResults;
+	}
+
+	public HashMap<String, Object> getSqlTree() {
+		return sqlTree;
+	}
+
+	public HashMap<String, Object> getTableColumnMap() {
+		return tableColumnMap;
+	}
+
+	public HashMap<String, Object> getSymbolTable() {
+		return symbolTable;
+	}
+
+	public HashSet<String> getInterface() {
+		HashSet<String> interfac = new HashSet<String>();
+		HashMap<String, Object> hold = null;
+		if (symbolTable != null) {
+			for (String key : symbolTable.keySet()) {
+				hold = (HashMap<String, Object>) symbolTable.get(key);
+				break;
+			}
+			if (hold != null) {
+				hold = (HashMap<String, Object>) hold.get("interface");
+			}
+		}
+		if (hold != null)
+			for (String key : hold.keySet()) {
+				interfac.add(key.toUpperCase());
+			}
+		return interfac;
+	}
 	// Other Methods
 
 	/**
@@ -132,7 +171,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		stackSymbols.put(key, newLevel);
 		String symbolKey = key + "_" + newLevel;
 		collect(symbolKey, symbols);
-		showTrace(symbolTrace, "PUSH - " + symbolKey + ": " + symbols);
+		showTrace(otherTrace, "PUSH - " + symbolKey + ": " + symbols);
 		return newLevel;
 	}
 
@@ -143,8 +182,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			stackSymbols.remove(key);
 		else
 			stackSymbols.put(key, level - 1);
-		showTrace(symbolTrace, "POP - " + symbolKey + ": " + stackSymbols);
-		return collector.remove(symbolKey);
+		showTrace(otherTrace, "POP - " + symbolKey + ": " + stackSymbols);
+		return sqlTree.remove(symbolKey);
 	}
 
 	/**
@@ -199,30 +238,30 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @param item
 	 */
 	private void collect(String index, Object item) {
-		collector.put(index, item);
+		sqlTree.put(index, item);
 	}
 
 	private Object getNode(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return collector.get(mapIdx);
+		return sqlTree.get(mapIdx);
 	}
 
 	private Object removeNode(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return collector.remove(mapIdx);
+		return sqlTree.remove(mapIdx);
 	}
 
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> getNodeMap(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		Map<String, Object> idMap = (Map<String, Object>) collector.get(mapIdx);
+		Map<String, Object> idMap = (Map<String, Object>) sqlTree.get(mapIdx);
 		return idMap;
 	}
 
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> removeNodeMap(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return (Map<String, Object>) collector.remove(mapIdx);
+		return (Map<String, Object>) sqlTree.remove(mapIdx);
 	}
 
 	private String makeMapIndex(int ruleIndex, Integer stackIndex) {
@@ -334,7 +373,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = getNodeMap(parentRuleIndex, parentStackLevel);
 		subMap.putAll(item);
-		collector.put("SKIP", "TRUE");
+		sqlTree.put("SKIP", "TRUE");
 	}
 
 	/**
@@ -360,7 +399,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap = getNodeMap(parentRuleIndex, parentStackLevel);
 			Integer indx = subMap.size();
 			subMap.put(indx.toString(), item);
-			collector.put("SKIP", "TRUE");
+			sqlTree.put("SKIP", "TRUE");
 
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -422,7 +461,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> pMap = getNodeMap(parentRuleIndex, parentStackLevel);
 		Integer indx = pMap.size();
 		pMap.put(indx.toString(), item);
-		collector.put("SKIP", "TRUE");
+		sqlTree.put("SKIP", "TRUE");
 	}
 
 	// Listener overrides
@@ -433,9 +472,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		collector.put("SQL", subMap.remove("1"));
+		sqlTree.put("SQL", subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
+		showTrace(symbolTrace, tableColumnMap);
 	}
 
 	@Override
@@ -716,25 +756,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// references to that table
 		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
 
-		if (unks != null) {
-			Integer count = 0;
-			HashMap<String, Object> hold = new HashMap<String, Object>();
-			String holdTabRef = null;
+		Integer count = 0;
+		Integer tableCount = 0;
+		String onlyTableName = null;
+		HashMap<String, Object> hold = new HashMap<String, Object>();
+		String holdTabRef = null;
 
-			if (unks != null) {
-				for (String tab_ref : symbols.keySet()) {
-					if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query"))
-							|| (tab_ref.startsWith("def_union")) || (tab_ref.startsWith("def_intersect"))) {
+		for (String tab_ref : symbols.keySet()) {
+			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_union"))
+					|| (tab_ref.startsWith("def_intersect"))) {
+			} else {
+				Object item = symbols.get(tab_ref);
+				if (item instanceof HashMap<?, ?>) {
+					hold.put(tab_ref, item);
+					holdTabRef = tab_ref;
+					count++;
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+							|| (tab_ref.startsWith("intersect"))) {
 					} else {
-						Object item = symbols.get(tab_ref);
-						if (item instanceof HashMap<?, ?>) {
-							hold.put(tab_ref, item);
-							holdTabRef = tab_ref;
-							count++;
-						}
+						tableCount++;
+						onlyTableName = tab_ref;
 					}
 				}
 			}
+		}
+		if (unks != null) {
 
 			if (count == 1) {
 				// just one table referenced, put all unknowns into it
@@ -748,8 +794,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					}
 				}
 				// put whatever is left back into the unknowns
-				if (unks.size() > 0)
-					symbols.put("unknown", unks);
+				if (unks.size() > 0) {
+					if (tableCount == 1)
+						// just one table remains referenced, put all unknowns into it
+						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
+					else
+						symbols.put("unknown", unks);
+				}
+			}
+		}
+		// Add TABLE references to alias table
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+						|| (tab_ref.startsWith("intersect"))) {
+				} else {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableColumnMap
+							.get(tab_ref.toLowerCase());
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else
+					{
+						HashMap<String, Object> newItem = new HashMap<String, Object> ();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableColumnMap.put(tab_ref.toLowerCase(), newItem);
+				}}
 			}
 		}
 		// Retrieve outer symbol table, insert this symbol table into it
@@ -959,7 +1028,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
-		collector.put("SKIP", "TRUE");
+		sqlTree.put("SKIP", "TRUE");
 	}
 
 	@Override
@@ -1995,7 +2064,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		showTrace(parseTrace, "Enter " + makeMapIndex(ruleIndex, stackLvl) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + collector);
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
 		showTrace(parseTrace, "");
 	}
 
@@ -2032,7 +2101,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Object item = null;
 
-		Object skip = collector.remove("SKIP");
+		Object skip = sqlTree.remove("SKIP");
 		if (skip == null) {
 			if (ctx.getChildCount() == 1)
 				if (ctx.getChild(0) instanceof TerminalNodeImpl) {
@@ -2060,13 +2129,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						idMap.put(((Integer) (idMap.size())).toString(), item);
 				}
 			} else {
-				showTrace(parseTrace, collector);
+				showTrace(parseTrace, sqlTree);
 			}
 		}
 
 		popStack(ruleIndex);
 		showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + collector);
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
 		showTrace(parseTrace, "");
 	}
 
