@@ -47,9 +47,17 @@ insert_expression
   ;
   
 update_expression
-  : UPDATE INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery
+  : UPDATE table_primary SET assignment_expression_list where_clause
+  ;
+
+assignment_expression_list
+  :   assignment_expression (COMMA assignment_expression)*
   ;
   
+assignment_expression
+  : column_reference EQUAL row_value_predicand
+  ;
+    
 create_table_as_expression
   : CREATE TABLE AS query_expression
   ;
@@ -161,7 +169,7 @@ select_list
   ;
 
 table_or_query_name
-  : identifier  ( DOT  identifier (  DOT identifier )? )?
+  : identifier   (DOT  (simple_numeric_identifier|identifier))?
   ;
 
 select_item
@@ -212,11 +220,12 @@ nonparenthesized_value_expression_primary
   | case_expression
   | cast_specification
   | routine_invocation
+  | window_over_partition_expression
   ;
 
 aggregate_function
   : COUNT LEFT_PAREN MULTIPLY RIGHT_PAREN	# count_all_aggregate
-  | set_function_type LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?		# general_set_function 
+  | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?		# general_set_function 
   ;
 
 set_function_type
@@ -224,14 +233,18 @@ set_function_type
   | MAX
   | MIN
   | SUM
-  | EVERY
-  | ANY
-  | SOME
   | COUNT
+  | RANK
   | STDDEV_POP
   | STDDEV_SAMP
   | VAR_SAMP
   | VAR_POP
+  ;
+
+set_qualifier_type  
+  : EVERY
+  | ANY
+  | SOME
   | COLLECT
   | FUSION
   | INTERSECTION
@@ -276,6 +289,26 @@ null_literal
   : NULL
   ;
   
+  /*
+   * Functions over partitions
+   * rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc)
+   */
+ window_over_partition_expression
+   : window_function over_clause
+   ;
+   
+window_function
+   : set_function_type LEFT_PAREN value_expression? RIGHT_PAREN
+   ;
+   
+over_clause
+   : OVER LEFT_PAREN (partition_by_clause? orderby_clause?) RIGHT_PAREN
+   ;
+    
+partition_by_clause
+   : PARTITION BY select_list
+   ;
+   
 /*
 ===============================================================================
   6.12 <cast specification>
@@ -727,7 +760,7 @@ routine_invocation
   ;
 
 function_name
-  : identifier
+  : identifier (DOT identifier)?
   | function_names_for_reserved_words
   ;
 
@@ -790,6 +823,11 @@ identifier
 simple_identifier
    :	Identifier
    ;
+ 
+simple_numeric_identifier
+   :	Numeric_Identifier
+   |	NUMBER
+   ;
    
 nonreserved_keywords
   : AVG
@@ -838,6 +876,7 @@ nonreserved_keywords
   | MONTH
   | NATIONAL
   | NULLIF
+  | OVER
   | OVERWRITE
   | PARTITION
   | PARTITIONS
@@ -863,6 +902,7 @@ nonreserved_keywords
   | TRIM
   | TO
   | UNKNOWN
+  | UPDATE
   | VALUES
   | VAR_POP
   | VAR_SAMP
@@ -924,8 +964,17 @@ unsigned_literal
 
 unsigned_numeric_literal
   : NUMBER					# ordinal_number
-  | REAL_NUMBER				# real_number
+  | real_number_def				# real_number
   ;
+
+
+real_number_def
+    :   NUMBER DOT NUMBER? exponent?
+    |   DOT NUMBER exponent?
+    |   NUMBER exponent
+    ;
+
+exponent : EXPONEN   NUMBER ;
 
 general_literal
   : character_literal
@@ -1326,6 +1375,7 @@ MONTH : M O N T H;
 NATIONAL : N A T I O N A L;
 NULLIF : N U L L I F;
 
+OVER : O V E R;
 OVERWRITE : O V E R W R I T E;
 
 PARTITION : P A R T I T I O N;
@@ -1336,6 +1386,7 @@ PURGE : P U R G E;
 QUARTER : Q U A R T E R;
 
 RANGE : R A N G E;
+RANK : R A N K;
 REGEXP : R E G E X P;
 RLIKE : R L I K E;
 ROLLUP : R O L L U P;
@@ -1356,6 +1407,7 @@ TIMEZONE_MINUTE: T I M E Z O N E UNDERLINE M I N U T E;
 TRIM : T R I M;
 TO : T O;
 
+UPDATE : U P D A T E;
 UNKNOWN : U N K N O W N;
 
 VALUES : V A L U E S;
@@ -1450,22 +1502,30 @@ MINUS : '-';
 MULTIPLY: '*';
 DIVIDE  : '/';
 MODULAR : '%';
-DOT : '.';
+DOT		: Period;
 UNDERLINE : '_';
 VERTICAL_BAR : '|';
 QUOTE : '\'';
 DOUBLE_QUOTE : '"';
+ 
 
 NUMBER : Digit+;
 
-fragment
-Digit : '0'..'9';
+EXPONEN : E ('+' | '-')?;
 
-REAL_NUMBER
-    :   ('0'..'9')+ '.' ('0'..'9')* EXPONENT?
-    |   '.' ('0'..'9')+ EXPONENT?
-    |   ('0'..'9')+ EXPONENT
-    ;
+/*
+===============================================================================
+ Identifiers
+===============================================================================
+*/
+
+Identifier
+  : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
+  ;
+  
+Numeric_Identifier
+  :  Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')*
+  ;
 
 BlockComment
     :   '/*' .*? '*/' -> skip
@@ -1475,20 +1535,14 @@ LineComment
     :   '--' ~[\r\n]* -> skip
     ;
 
-/*
-===============================================================================
- Identifiers
-===============================================================================
-*/
-
-Identifier
-  : Regular_Identifier
-  ;
 
 fragment
-Regular_Identifier
-  : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
-  ;
+Digit : '0'..'9';
+
+
+fragment
+Period : '.';
+
 
 /*
 ===============================================================================
@@ -1505,9 +1559,6 @@ Extended_Control_Characters         :   '\u0080' .. '\u009F';
 Character_String_Literal
   : QUOTE ( ESC_SEQ | ~('\\'|'\'') )* QUOTE
   ;
-
-fragment
-EXPONENT : ('e'|'E') ('+'|'-')? ('0'..'9')+ ;
 
 fragment
 HEX_DIGIT : ('0'..'9'|'a'..'f'|'A'..'F') ;

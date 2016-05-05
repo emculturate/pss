@@ -3,9 +3,6 @@ package sql.walker;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-
-import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.NotNull;
@@ -62,6 +59,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private Boolean firstUnionClause = false;
 	private Boolean intersectClauseFound = false;
 	private Boolean firstIntersectClause = false;
+	private Boolean useAsLeaf = false;
 
 	// Extra-Grammar Identifiers
 
@@ -99,6 +97,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return symbolTable;
 	}
 
+	@SuppressWarnings("unchecked")
 	public HashSet<String> getInterface() {
 		HashSet<String> interfac = new HashSet<String>();
 		HashMap<String, Object> hold = null;
@@ -796,7 +795,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// put whatever is left back into the unknowns
 				if (unks.size() > 0) {
 					if (tableCount == 1)
-						// just one table remains referenced, put all unknowns into it
+						// just one table remains referenced, put all unknowns
+						// into it
 						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
 					else
 						symbols.put("unknown", unks);
@@ -813,12 +813,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 							.get(tab_ref.toLowerCase());
 					if (currItem != null)
 						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else
-					{
-						HashMap<String, Object> newItem = new HashMap<String, Object> ();
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
 						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 						tableColumnMap.put(tab_ref.toLowerCase(), newItem);
-				}}
+					}
+				}
 			}
 		}
 		// Retrieve outer symbol table, insert this symbol table into it
@@ -1113,7 +1113,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
-		if (subMap.size() == 1) {
+		if (subMap.size() >= 1) {
 			item.put("clauses", subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -1868,7 +1868,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put("function", subMap.remove("1"));
+			item.putAll((Map<? extends String, ? extends Object>) subMap.remove("1"));
 			subMap = (Map<String, Object>) subMap.remove("2");
 			type = subMap.remove("Type");
 			item.put("parameters", subMap.remove(type.toString()));
@@ -1883,7 +1883,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitFunction_name(@NotNull SQLSelectParserParser.Function_nameContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		handleOneChild(ruleIndex);
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		if (subMap.size() == 1) {
+			showTrace(parseTrace, "Just One Identifier: " + subMap);
+			String functName = (String) subMap.remove("1");
+			subMap.put("function_name", functName);
+			showTrace(parseTrace, "function_name: " + functName + " Map: " + subMap);
+		} else if (subMap.size() == 2) {
+			showTrace(parseTrace, "Two entries: " + subMap);
+			String schema = (String) subMap.remove("1");
+			subMap.put("schema", schema);
+			String functName = (String) subMap.remove("2");
+			subMap.put("function_name", functName);
+			showTrace(parseTrace, "Schema: " + schema + " function_name: " + functName + " Map: " + subMap);
+		} else {
+			showTrace(parseTrace, "Too many entries: " + subMap);
+		}
 	}
 
 	@Override
@@ -2026,6 +2044,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitReal_number(@NotNull SQLSelectParserParser.Real_numberContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitReal_number_def(@NotNull SQLSelectParserParser.Real_number_defContext ctx) {
+		// Tell master exit that the full text is the value
+		useAsLeaf = true;
+	}
+
+	@Override
+	public void exitExponent(@NotNull SQLSelectParserParser.ExponentContext ctx) {
+		// Tell master exit that the full text is the value
+		useAsLeaf = true;
+	}
+
+	@Override
 	public void exitDatetime_literal(@NotNull SQLSelectParserParser.Datetime_literalContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
@@ -2103,7 +2139,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Object skip = sqlTree.remove("SKIP");
 		if (skip == null) {
-			if (ctx.getChildCount() == 1)
+			if (useAsLeaf) {
+				item = ctx.getText();
+				useAsLeaf = false;
+			} else if (ctx.getChildCount() == 1)
 				if (ctx.getChild(0) instanceof TerminalNodeImpl) {
 					// I'm a leaf
 					item = ctx.getText();

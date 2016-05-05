@@ -131,6 +131,15 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void numericLiteralParseTest() {
+// NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names can start with numbers, not column names
+		final String cond = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
 	public void subqueryParseTest() {
 		// probably could handle unknowns from inside query better. Also, should
 		// trap/notice there's no COURSES table
@@ -174,10 +183,28 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void complexCaseFunctionTest() {
+
+		final String cond = " SELECT " + 
+  " CASE   " +
+  " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   " +
+  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
+  " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name " + 
+  " FROM my.234 as s948, my.other5 as s949";
+		
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
 	public void caseStatementParseTest() {
 
-		final String cond = " SELECT CASE WHEN true THEN 'Y'	 " + " ELSE 'N' END as case_one, "
-				+ " CASE  col WHEN 'a' THEN 'b'	 " + " ELSE null END as case_two " + " FROM sgbstdn ";
+		final String cond = " SELECT CASE WHEN true THEN 'Y' " +
+				  "  WHEN false THEN 'N' " +
+		          " ELSE 'N' END as case_one, "
+				+ " CASE  col WHEN 'a' THEN 'b'	 " 
+		        + " ELSE null END as case_two " 
+				+ " FROM sgbstdn ";
 
 		final SQLSelectParserParser parser = parse(cond);
 		runParsertest(cond, parser);
@@ -201,6 +228,18 @@ public class SqlParseEventWalkerTest {
 		runParsertest(cond, parser);
 	}
 
+	@Test
+	public void rankPartitionSyntaxTest() {
+		final String cond = " SELECT " +
+				" rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
+				+ " FROM tab1 as a" ;
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	
+	 
 	@Test
 	public void biggerQueryParseTest() {
 
@@ -403,6 +442,94 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
+	}
+
+
+	@Test
+	public void complexHiveQueryJoinTest() {
+
+		final String cond = " SELECT " + 
+  " CASE   " +
+  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_last_name   " +
+  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
+  " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name, " + 
+  " CASE   " +
+  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_sur_name   " +
+  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_sur_name " +  
+  " ELSE COALESCE(S948.t_sur_name, S949.t_sur_name) END AS t_sur_name, " + 
+  " CASE   " +
+  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_first_name   " +
+  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_first_name   " +
+  " ELSE COALESCE(S948.t_student_first_name, S949.t_student_first_name) END AS t_student_first_name " + 
+" FROM ( " +
+  " SELECT  " +
+     " t_student_first_name, " +
+     " t_sur_name, " +
+     " t_student_last_name, " +
+     " k_stfd, " +
+     " OBSERVATION_TM " + 
+  " from ( " +
+     " SELECT  " +
+        " t_student_first_name, " +
+        " t_sur_name, " +
+        " t_student_last_name, " +
+        " k_stfd, " +
+        " OBSERVATION_TM,  " +
+        " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " + 
+     " from ( " +
+        " SELECT  " +
+           " DOB AS t_student_first_name, " +
+           " NAME AS t_sur_name, " +
+           " LOCATION AS t_student_last_name, " +
+           " NAME AS k_stfd, " +
+           " OBSERVATION_TM,  " +
+           " pantodev.row_num() as row_num " + 
+        " FROM pantodev.23810_949 " + 
+        " WHERE  " +
+           " OBSERVATION_DT <= 20160321  " +
+           " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-21 10:43:15.0') " +
+     " ) a " +
+    " ) b where key_rank =1 " +
+" ) S949  " +
+" FULL OUTER JOIN ( " +
+ "  SELECT  " +
+    "  t_student_first_name, " + 
+     " t_sur_name, " +
+     " t_student_last_name, " +
+     " k_stfd, " +
+     " OBSERVATION_TM " + 
+  " from ( " +
+     " SELECT  " +
+        " t_student_first_name, " + 
+        " t_sur_name, " +
+        " t_student_last_name, " +
+        " k_stfd, " +
+        " OBSERVATION_TM,  " +
+        " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " + 
+     " from ( " +
+        " SELECT  " +
+           " DOB AS t_student_first_name, " +
+           " NAME AS t_sur_name, " +
+           " LOCATION AS t_student_last_name, " +
+           " NAME AS k_stfd, " +
+           " OBSERVATION_TM,  " +
+           " pantodev.row_num() as row_num " + 
+        " FROM pantodev.23810_948 " + 
+        " WHERE  " +
+           " OBSERVATION_DT <= 20160309  " +
+           " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-09 12:54:18.0') " +
+        " ) a " +
+       " ) b where key_rank =1 " +
+ " ) S948  " +
+" ON (S949.k_stfd=S948.k_stfd) " +  
+" where  " +
+   " (((unix_timestamp(S949.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0'))  " +
+    "  AND (unix_timestamp(S949.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484'))) " + 
+    " OR ((unix_timestamp(S948.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0')) " +
+     " AND (unix_timestamp(S948.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484')))) ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
 	}
 
 	@Test
