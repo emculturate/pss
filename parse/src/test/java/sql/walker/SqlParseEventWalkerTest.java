@@ -542,6 +542,364 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(cond);
 		runParsertest(cond, parser);
 	}
+	
+	/***********************************
+	 * Section covering GF Encoder Style Queries
+	 */
+
+	@Test
+	public void authorizationQueryTest() {
+
+		String sql = "select RECORD_TYPE as RECORD_TYPE, ACTION as ACTION, USER_ID as PRIMARY_USER_ID, ";
+		// check authorizationTbl
+
+		sql += "authn.is_active as IS_ACTIVE, authn.can_login as CAN_LOGIN, authn.send_activation as SEND_ACTIVATION, ";
+		sql += "IS_ACTIVE, CAN_LOGIN, SEND_ACTIVATION, ";
+
+		sql += "FIRST_NAME as FIRST_NAME, LAST_NAME as LAST_NAME, ";
+		sql += "authn.alt_user_id as ALT_USER_ID, ";
+		sql += "ROLE_ID as ROLE_ID"
+				+ ", EMAIL as EMAIL, ALT_EMAIL as ALT_EMAIL, ADDRESS_1 as ADDRESS_1, ADDRESS_2 as ADDRESS_2, CITY as CITY, STATE as STATE, POSTAL_CODE as POSTAL_CODE, HOME_PHONE as HOME_PHONE,"
+				+ " CELL_PHONE as CELL_PHONE, WORK_PHONE as WORK_PHONE, GENDER as GENDER, ETHNICITY as ETHNICITY, DATE_OF_BIRTH as DATE_OF_BIRTH, TOTAL_CREDIT_HOURS as TOTAL_CREDIT_HOURS, CREDIT_HOURS_ATTEMPTED as CREDIT_HOURS_ATTEMPTED, "
+				+ " MAJOR_ID as MAJOR_ID, STUDENT_ENROLLMENT_STATUS as STUDENT_ENROLLMENT_STATUS, STUDENT_ENROLLMENT_GOAL as STUDENT_ENROLLMENT_GOAL, ";
+		sql += "authn.pin as PIN, authn.sso_id as SSO_ID, ";
+		sql += "'' as ACT_TOTAL, '' as ACT_ENGLISH, "
+				+ " '' as ACT_READING, '' as ACT_MATH, '' as ACT_SCIENCE, '' as SAT_TOTAL, '' as SAT_VERBAL, '' as SAT_MATH, '' as HIGH_SCHOOL_GPA, "
+				+ " '' as FIRST_GENERATION_IND, '' as FATHER_EDUCATION, '' as MOTHER_EDUCATION, '' as HIGH_SCHOOL_ZIP_CODE, '' as HOUSEHOLD_INCOME, "
+				+ " '' as SINGLE_PARENT_FAMILY_IND, '' as TRANSFER_GPA, '' as HOME_COLLEGE, '' as RECEIVE_TXT_MESSAGE_IND "
+				+ " from "
+				+ "(select a.record_type as RECORD_TYPE, a.action as ACTION, a.primary_user_id as USER_ID, first_name as FIRST_NAME, last_name as LAST_NAME, a.is_active as IS_ACTIVE, a.login_ind AS CAN_LOGIN, a.activate_email_ind as SEND_ACTIVATION, role_id as ROLE_ID, '' as MAJOR_ID,total_credit_hours as TOTAL_CREDIT_HOURS, attempted_credit_hours as CREDIT_HOURS_ATTEMPTED, "
+				+ " email as EMAIL, '' as ALT_EMAIL, address_1 as ADDRESS_1, address_2 as ADDRESS_2, city as CITY, state as STATE, postal_code as POSTAL_CODE, home_phone as HOME_PHONE, cell_phone as CELL_PHONE, '' as WORK_PHONE, gender as GENDER, ethnicity as ETHNICITY, "
+				+ " date_of_birth as DATE_OF_BIRTH, receive_txt_message_ind as RECEIVE_TXT_MESSAGE_IND, student_enrollment_status as STUDENT_ENROLLMENT_STATUS, student_enrollment_goal as STUDENT_ENROLLMENT_GOAL from "
+				+ " studentTbl a left join "
+				// start of student major
+				+ "(select primary_user_id, total_credit_hours,attempted_credit_hours from (select primary_user_id, total_credit_hours,attempted_credit_hours,"
+				+ "rank() over (partition by primary_user_id order by b.begin_date desc ,b.end_date desc) term_rank from "
+				+ " studentMajorTbl  a, academicPeriodTbl "
+				+ " b where a.term_id=b.external_id and a.total_credit_hours is not null and a.attempted_credit_hours is not null and length(trim(a.total_credit_hours)) > 0 and length(trim(a.attempted_credit_hours)) > 0) tbl where term_rank =1)"
+				// end of student major
+				+ " b on (a.primary_user_id = b.primary_user_id) ";
+		sql += " union all "
+				+ " select record_type as RECORD_TYPE, action as ACTION, primary_user_id as USER_ID, first_name as FIRST_NAME, last_name as LAST_NAME, is_active as IS_ACTIVE, login_ind AS CAN_LOGIN, activate_email_ind as SEND_ACTIVATION, role_id as ROLE_ID, '' as MAJOR_ID,'' as TOTAL_CREDIT_HOURS, '' as CREDIT_HOURS_ATTEMPTED, "
+				+ " email as EMAIL, alt_email as ALT_EMAIL, '' as ADDRESS_1, '' as ADDRESS_2, '' as CITY, '' as STATE, '' as POSTAL_CODE, home_phone as HOME_PHONE, cell_phone as CELL_PHONE, work_phone as WORK_PHONE, '' as GENDER, '' as ETHNICITY, '' as DATE_OF_BIRTH, '' as RECEIVE_TXT_MESSAGE_IND, '' as STUDENT_ENROLLMENT_STATUS, '' as STUDENT_ENROLLMENT_GOAL from "
+				+ " advisorTbl  staff";
+		sql += " union all "
+				+ " select record_type as RECORD_TYPE, action as ACTION, primary_user_id as USER_ID, first_name as FIRST_NAME, last_name as LAST_NAME,is_active as IS_ACTIVE, login_ind AS CAN_LOGIN, activate_email_ind as SEND_ACTIVATION,  role_id as ROLE_ID, '' as MAJOR_ID,'' as TOTAL_CREDIT_HOURS, '' as CREDIT_HOURS_ATTEMPTED, "
+				+ " email as EMAIL, alt_email as ALT_EMAIL, '' as ADDRESS_1, '' as ADDRESS_2, '' as CITY, '' as STATE, '' as POSTAL_CODE, home_phone as HOME_PHONE, cell_phone as CELL_PHONE, work_phone as WORK_PHONE, '' as GENDER, '' as ETHNICITY, '' as DATE_OF_BIRTH, '' as RECEIVE_TXT_MESSAGE_IND, '' as STUDENT_ENROLLMENT_STATUS, '' as STUDENT_ENROLLMENT_GOAL from "
+				+ " instructorTbl inst";
+		sql += ") user";
+
+		sql += " left join authorizationTbl " + " authn on user.USER_ID = authn.primary_user_id";
+		sql += " where user.USER_ID is not null and length(trim(user.USER_ID)) > 0";
+
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getRegistrationSqlTest() {
+		/*
+		 * Registration COLUMNS: RECORD_TYPE, ACTION, TERM_ID, PRIMARY_USER_ID,
+		 * GROUP_ID, CLASSIFICATION, OVERALL_GPA, TERM_GPA
+		 */
+
+		String cond = " SELECT reg.record_type as RECORD_TYPE, reg.action as ACTION, reg.term_id as TERM_ID, "
+				+ " reg.primary_user_id as PRIMARY_USER_ID, reg.group_id as GROUP_ID,reg.classification as CLASSIFICATION, "
+				+ " gpatbl.cum_gpa as OVERALL_GPA, gpatbl.term_gpa as TERM_GPA " + " from "
+				+ " studentAcademicTbl reg  left outer join "
+				+ " (select coalesce(cgpa.primary_user_id,tgpa.primary_user_id) as primary_user_id, coalesce(cgpa.term_id,tgpa.term_id) as term_id, "
+				+ " coalesce(cgpa.key_value,'') as cum_gpa, coalesce(tgpa.key_value,'') as term_gpa from (select * from "
+				+ " studentTermDataTbl where key_column='cumGPAKey') cgpa "
+				+ " full outer join (select * from  studentTermDataTbl  where key_column='termGPAKey' ) tgpa "
+				+ " on (cgpa.primary_user_id=tgpa.primary_user_id and "
+				+ " cgpa.term_id=tgpa.term_id ) ) gpatbl on (reg.primary_user_id=gpatbl.primary_user_id and reg.term_id=gpatbl.term_id) "
+				+ " inner join termFilterTbl  tf on reg.term_id = tf.term_id";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getTermSqlTest() {
+		/*
+		 * Term COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME, BEGIN_DATE,
+		 * END_DATE
+		 */
+		String cond = "select term.record_type as RECORD_TYPE, term.action as ACTION,  term.external_id as EXTERNAL_ID, term.name as NAME, datestr(term.begin_date, "
+				+ " 'TERM_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT') as BEGIN_DATE, datestr(term.end_date, 'TERM_SOURCE_DATE_FORMAT', "
+				+ "'SSCPLUS_DEFAULT_DATE_FORMAT') as END_DATE from academicPeriodTbl " + " term";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getCourseSqlTest() {
+		/*
+		 * Course COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, COURSE_ID, TITLE,
+		 * CREDIT_HOURS
+		 */
+		String cond = "select crs.record_type as RECORD_TYPE,crs.action as ACTION,concat_ws('-',crs.subject_code,crs.course_number) as EXTERNAL_ID, concat_ws('-',crs.subject_code,crs.course_number) as COURSE_ID, "
+				+ " crs.course_title as TITLE, COALESCE(crs.credit_hour_low,crs.credit_hour_high,0) as CREDIT_HOURS from "
+				+ " courseTbl crs";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getSectionSqlTest() {
+		//********* ERROR: Reference in Hive ARRAY object: "sched_arr[0].col1 as BEGIN_DATE"
+		/*
+		 * Section COLUMNS: RECORD_TYPE, ACTION, TERM_ID, COURSE_EXTERNAL_ID,
+		 * SECTION_NAME, SECTION_TAGS,BEGIN_DATE, END_DATE, START_TIME,
+		 * END_TIME, MEETING_DAYS, LOCATION, ADDITIONAL MEETINGS (repeat meeting
+		 * info)
+		 */
+		String cond = "select record_type as RECORD_TYPE, action as ACTION,term_id as TERM_ID,course_external_id as COURSE_EXTERNAL_ID ,section_name as SECTION_NAME,"
+				+ "'' as section_tags,  sched_arr[0].col1 as BEGIN_DATE, sched_arr[0].col2 as END_DATE, sched_arr[0].col3 as BEGIN_TIME, sched_arr[0].col4 as END_TIME, sched_arr[0].col5 as MEETING_DAYS,sched_arr[0].col6 as LOCATION from ( "
+				+ "select record_type,action,term_id,course_external_id,section_name, collectarray(sched) as sched_arr from ("
+				+ "select record_type,action,term_id,course_external_id,section_name,struct(begin_date,end_date,start_time,end_time,meeting_days,location) as sched from ("
+				+ "select s.record_type as RECORD_TYPE,s.action as ACTION, s.term_code as TERM_ID, concat_ws('-',s.subject_code,s.course_number) as COURSE_EXTERNAL_ID,"
+				+ "case when s.section_name is null or length(trim(s.section_name))=0 then '' else s.section_name end as SECTION_NAME, case when sec.meet_start_date is not null then datestr(sec.meet_start_date, '"
+				+ " SECTION_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT')  else '' end as BEGIN_DATE, case when sec.meet_end_date is not null then datestr(sec.meet_end_date, '"
+				+ "SECTION_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT') else ''  end as END_DATE, "
+				+ "case when sec.meet_start_time is null or length(trim(sec.meet_start_time))=0 or length(trim(sec.meet_start_time)) < 4 then '' else concat_ws(':',substr(sec.meet_start_time,1,2),substr(sec.meet_start_time,3,2)) end as START_TIME, "
+				+ "case when sec.meet_end_time is null or length(trim(sec.meet_end_time))=0 or length(trim(sec.meet_end_time)) < 4 then '' else concat_ws(':',substr(sec.meet_end_time,1,2),substr(sec.meet_end_time,3,2)) end as END_TIME, "
+				+ "coalesce(concat(sec.meet_sunday,meet_monday,meet_tuesday,meet_wednesday,meet_thursday,meet_friday,meet_saturday),'') as MEETING_DAYS,"
+				+ "case when (meet_building_code is null or length(trim(meet_building_code))=0) and (meet_room_code is null or length(trim(meet_room_code))=0) then '' "
+				+ "when (meet_building_code is null or length(trim(meet_building_code))=0) or (meet_room_code is null or length(trim(meet_room_code))=0) then concat(trim(meet_building_code),trim(meet_room_code)) "
+				+ " else concat_ws('-',meet_building_code,meet_room_code) end as LOCATION from "
+				+ " sectionTbl s inner join termFilterTbl tf on " + "s.term_code = tf.term_id "
+				+ " left join sectionMeetTbl "
+				+ " sec on (sec.course_ref_no=s.course_ref_no and sec.term_code=s.term_code) "
+				+ ") sub_sec) mid_sec group by record_type,action,term_id,course_external_id,section_name) main_sec";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getSectionSqlV6Test() {
+		/*
+		 * Section COLUMNS: RECORD_TYPE, ACTION, TERM_ID, COURSE_EXTERNAL_ID,
+		 * SECTION_NAME, SECTION_TAGS
+		 */
+		final String cond = "select s.record_type as RECORD_TYPE, " + "s.action as ACTION, "
+				+ "s.term_code as TERM_ID, " + "concat_ws('-',s.subject_code,s.course_number) as COURSE_EXTERNAL_ID, "
+				+ "case  " + "when s.section_name is null or length(trim(s.section_name))=0  " + "then ''  "
+				+ "else s.section_name  " + "end as SECTION_NAME, " + "s.section_tag as SECTION_TAGS "
+				+ "from sectionTbl s  " + "inner join termFilterTbl tf  " + "on s.term_code = tf.term_id ";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getEnrollmentSqlTest() {
+		/*
+		 * Enrollment COLUMNS: RECORD_TYPE, ACTION, PRIMARY_USER_ID, TERM_ID,
+		 * COURSE_EXTERNAL_ID, SECTION_NAME, MIDTERM_GRADE, FINAL_GRADE
+		 */
+		String cond = "select cw.record_type as RECORD_TYPE, cw.action as ACTION, cw.student_id as PRIMARY_USER_ID, cw.term_code as TERM_ID, concat_ws('-',s.subject_code,s.course_number) "
+				+ " as COURSE_EXTERNAL_ID, s.section_name as SECTION_NAME,cw.midterm_grade as MIDTERM_GRADE,cw.final_grade as "
+				+ " FINAL_GRADE"
+				+ " from courseWorkTbl  cw,  sectionTbl  s inner join termFilterTbl tf on cw.term_code = tf.term_id "
+				+ "where cw.course_ref_no=s.course_ref_no and cw.term_code=s.term_code and cw.registration_status_cd in ('regCodes')";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getInstructionSqlTest() {
+		/*
+		 * Instructor Assignments COLUMNS: RECORD_TYPE, ACTION, TERM_ID,
+		 * COURSE_EXTERNAL_ID, SECTION_NAME, PRIMARY_USER_ID
+		 */
+		String cond = "select ia.record_type as RECORD_TYPE, ia.action as ACTION, ia.term_code as TERM_ID, concat_ws('-',ia.subject_code,ia.course_number) "
+				+ "as COURSE_EXTERNAL_ID,ia.section_name as SECTION_NAME ,ia.instructor_id as PRIMARY_USER_ID "
+				+ "from instructorAssgnmtTbl  ia inner join termFilterTbl  tf on " + "ia.term_code = tf.term_id";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getGroupingSqlTest() {
+		/*
+		 * Grouping COLUMNS: RECORD_TYPE, ACTION, GROUP_ID, PRIMARY_USER_ID
+		 */
+		String sql = " select user.secondary_record_type as RECORD_TYPE,user.action as ACTION,user.group_id as GROUP_ID,user.primary_user_id as PRIMARY_USER_ID from "
+				+ " (";
+		String[] groupingTbls = new String[10];
+		groupingTbls[0] = "firstTable";
+		groupingTbls[1] = "secondTable";
+		groupingTbls[2] = "thirdTable";
+		groupingTbls[3] = "fourthTable";
+
+		String unionStatement = " select secondary_record_type,action,group_id,primary_user_id from zeroTable ";
+		for (int i = 0; i < 4; i++) {
+			unionStatement += " union all ";
+			unionStatement += " select secondary_record_type,action,group_id,primary_user_id from " + groupingTbls[i]
+					+ " ";
+		}
+
+		sql += unionStatement
+				+ ") user where user.primary_user_id is not null and length(trim(user.primary_user_id)) > 0";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getMajorSqlTest() {
+		/*
+		 * Major COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME
+		 */
+		String cond = "select record_type as RECORD_TYPE,action as ACTION,"
+				+ "trim(external_id) as EXTERNAL_ID,case when name is null or length(trim(name)) = 0 then 'Major name not available' else trim(name) end as NAME from "
+				+ " majorTbl where external_id is not null and length(trim(external_id)) > 0";
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void getDeclarationSqlTest() {
+		//*************** ERROR: Hive syntax not handled: "lateral view explode"
+		/*
+		 * Declaration COLUMNS: RECORD_TYPE, ACTION, PRIMARY_USER_ID, MAJOR_ID
+		 */
+		String sql = "select record_type as record_type,action as action,primary_user_id as primary_user_id, "
+				+ "maj_items.col1 as major_id from (select record_type,action,primary_user_id, "
+				+ "array(struct(major_cd_1), struct(major_cd_2), struct(major_cd_3), struct(major_cd_4)) as major_arr from "
+				+ "(select record_type,action, primary_user_id, major_cd_1,major_cd_2,major_cd_3, major_cd_4 from "
+				+ "(select a.record_type,a.action,primary_user_id, major_cd_1,major_cd_2,major_cd_3,major_cd_4,";
+		sql += "rank() over (partition by primary_user_id order by b.begin_date desc ,b.end_date desc) term_rank from "
+				+ " studentMajorTbl a,  academicPeriodTbl "
+				+ " b where a.term_id=b.external_id and a.major_cd_1 is not null and length(trim(a.major_cd_1))>0 ) tbl where term_rank=1) res) fin_res ";
+		//sql += "lateral view explode(major_arr) exploded_table as maj_items where length(trim(maj_items.col1)) > 0";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getTagSqlTest() {
+		/*
+		 * Tag COLUMNS: RECORD_TYPE, ACTION, TAG, GROUP ID, PRIMARY_USER_ID
+		 */
+		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
+				+ "tag as TAG, group_id as GROUP_ID, primary_user_id as PRIMARY_USER_ID from "
+				+ " tagTbl where tag is not null and length(trim(tag)) > 0 "
+				+ "and group_id is not null and length(trim(group_id)) > 0 "
+				+ "and primary_user_id is not null and length(trim(primary_user_id)) > 0 ";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getAuthorizeSqlTest() {
+		/*
+		 * Authorize COLUMNS: RECORD_TYPE, ACTION, ROLE_ID, PRIMARY_USER_ID
+		 */
+		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
+				+ "role_id as ROLE_ID, primary_user_id as PRIMARY_USER_ID from  authorizeTbl "
+				+ " where role_id is not null and length(trim(role_id)) > 0 "
+				+ "and primary_user_id is not null and length(trim(primary_user_id)) > 0 ";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getCategorySqlTest() {
+		/*
+		 * Category COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME, GROUP_ID
+		 */
+		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
+				+ "external_id as EXTERNAL_ID, name as NAME, group_id as GROUP_ID from "
+				+ " categoryTbl where external_id is not null and length(trim(external_id)) > 0 "
+				+ "and name is not null and length(trim(name)) > 0 "
+				+ "and group_id is not null and length(trim(group_id)) > 0 ";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getCategorizeSqlTest() {
+		/*
+		 * Categorize COLUMNS: RECORD_TYPE, ACTION, CATEGORY_ID, PRIMARY_ID
+		 */
+		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
+				+ "category_id as CATEGORY_ID, primary_id as PRIMARY_ID from  categorizeTbl "
+				+ " where (category_id is not null and length(trim(category_id)) > 0 "
+				+ "and primary_id is not null and length(trim(primary_id)) > 0) ";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getRelationshipSqlTest() {
+		/*
+		 * Relationship COLUMNS: RECORD_TYPE, ACTION, NAME,
+		 * PARENT_PRIMARY_USER_ID, CHILD_PRIMARY_USER_ID, GROUP_ID
+		 */
+		String sql = "select record_type as RECORD_TYPE, action as ACTION, "
+				+ "name as NAME, parent_primary_user_id as PARENT_PRIMARY_USER_ID,"
+				+ "child_primary_user_id as CHILD_PRIMARY_USER_ID, group_id as GROUP_ID from relationshipTbl "
+				+ " where lower(trim(name)) in ('advisor','coach','professor','tutor') "
+				+ " and parent_primary_user_id is not null and length(trim(parent_primary_user_id)) > 0"
+				+ " and child_primary_user_id is not null and length(trim(child_primary_user_id)) > 0"
+				+ " and group_id is not null and length(trim(group_id)) > 0";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void getSectionMeetingSqlTest() {
+
+		String sql = "select sec.record_type as RECORD_TYPE,sec.action as ACTION, sec.term_code as TERM_ID,concat_ws('-',s.subject_code,s.course_number) as COURSE_EXTERNAL_ID, "
+				+ "case when s.section_name is null or length(trim(s.section_name))=0 then '' else s.section_name end as SECTION_NAME, "
+				+ "case when sec.meet_start_date is not null then datestr(sec.meet_start_date, 'SECTION_SOURCE_DATE_FORMAT', "
+				+ "'SSCPLUS_DEFAULT_DATE_FORMAT')  else '' end as BEGIN_DATE, "
+				+ "case when sec.meet_end_date is not null then datestr(sec.meet_end_date, 'SECTION_SOURCE_DATE_FORMAT',"
+				+ " 'SSCPLUS_DEFAULT_DATE_FORMAT') else ''  end as END_DATE, "
+				+ "case when sec.meet_start_time is null or length(trim(sec.meet_start_time))=0 or length(trim(sec.meet_start_time)) < 4 then '' else concat_ws(':',substr(sec.meet_start_time,1,2),substr(sec.meet_start_time,3,2)) end as START_TIME, "
+				+ "case when sec.meet_end_time is null or length(trim(sec.meet_end_time))=0 or length(trim(sec.meet_end_time)) < 4 then '' else concat_ws(':',substr(sec.meet_end_time,1,2),substr(sec.meet_end_time,3,2)) end as END_TIME, "
+				+ "coalesce(concat(sec.meet_sunday,meet_monday,meet_tuesday,meet_wednesday,meet_thursday,meet_friday,meet_saturday),'') as MEETING_DAYS, "
+				+ "case when (meet_building_code is null or length(trim(meet_building_code))=0) and (meet_room_code is null or length(trim(meet_room_code))=0) then '' "
+				+ "when (meet_building_code is null or length(trim(meet_building_code))=0) or (meet_room_code is null or length(trim(meet_room_code))=0) then concat(trim(meet_building_code),trim(meet_room_code)) "
+				+ " else concat_ws('-',meet_building_code,meet_room_code) end as LOCATION from sectionMeetTbl sec inner join termFilterTbl tf on "
+				+ "sec.term_code = tf.term_id " + " inner join sectionTbl "
+				+ " s on (sec.course_ref_no=s.course_ref_no and sec.term_code=s.term_code)";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void createTermFilterTableTest() {
+		String sql = "select external_id as term_id from " + "termStgTableName  a, (select min(term_rank) as term_rank "
+				+ "from (" + "select curr_term_rank as term_rank from currentTermTableName union all "
+				+ "select max(t1.term_rank) term_rank from termStgTableName  t1, "
+				+ " currentTermTableName t2 where t1.term_rank < t2.curr_term_rank" + ") tbl" + ") b "
+				+ "where a.term_rank >= b.term_rank";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void createCurrentTermTableTest() {
+		String sql = "select min(term_rank) curr_term_rank from ( " + "select term_rank from "
+				+ " termStgTableName  where unix_timestamp() between term_start and term_end " + "union all "
+				+ "select max(term_rank) term_rank from termStgTableName " + " where unix_timestamp() >= term_start "
+				+ ") tbl";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void createTermStgTableTest() {
+		String sql = "select external_id, " + "rank() over (order by begin_date, end_date) term_rank, "
+				+ "unix_timestamp(begin_date,'yyyyMMdd') term_start, "
+				+ "unix_timestamp(end_date,'yyyyMMdd') term_end from  hiveTableName ";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	/*****************************
+	 * End Of GF Encoder Tests
+	 */
 
 	/*
 	 * UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, temp_lo+15,
