@@ -36,7 +36,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void simpleAndOrParseTest() {
-
+//gyg
 		final String cond = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
 
 		final SQLSelectParserParser parser = parse(cond);

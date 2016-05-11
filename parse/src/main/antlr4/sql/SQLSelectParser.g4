@@ -169,7 +169,7 @@ select_list
   ;
 
 table_or_query_name
-  : identifier   (DOT  (simple_numeric_identifier|identifier))?
+  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
   ;
 
 select_item
@@ -1511,8 +1511,6 @@ DOUBLE_QUOTE : '"';
 
 NUMBER : Digit+;
 
-EXPONEN : E ('+' | '-')?;
-
 /*
 ===============================================================================
  Identifiers
@@ -1522,6 +1520,8 @@ EXPONEN : E ('+' | '-')?;
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
   ;
+
+EXPONEN : E ('+' | '-')?;
   
 Numeric_Identifier
   :  Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')*
