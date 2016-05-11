@@ -15,6 +15,16 @@ import sql.SQLSelectParserParser.SqlContext;
 public class SqlParseEventWalkerTest {
 
 	@Test
+	public void queryOverEntityTest() {
+		final String cond = "SELECT aa.scbcrse_coll_code, aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
+				+ " WHERE not aa.scbcrse_subj_code = courses.subj_code "
+				+ " AND (aa.scbcrse_crse_numb = courses.crse_numb " + " or aa.scbcrse_crse_numb = courses.crse_numb) ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
 	public void simpleParseTest() {
 		final String cond = "SELECT aa.scbcrse_coll_code, aa.* FROM scbcrse as aa, mycrse as courses "
 				+ " WHERE not aa.scbcrse_subj_code = courses.subj_code "

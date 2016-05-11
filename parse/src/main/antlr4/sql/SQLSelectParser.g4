@@ -817,11 +817,16 @@ null_ordering
 
 identifier
   : simple_identifier
+  | puml_identifier
   | nonreserved_keywords
   ;
 
 simple_identifier
    :	Identifier
+   ;
+
+puml_identifier
+   :    Bracket_Identifier
    ;
  
 simple_numeric_identifier
@@ -1516,6 +1521,9 @@ NUMBER : Digit+;
  Identifiers
 ===============================================================================
 */
+Bracket_Identifier	
+	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
+	;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
