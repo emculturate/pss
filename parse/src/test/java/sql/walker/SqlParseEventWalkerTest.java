@@ -1,5 +1,8 @@
 package sql.walker;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -16,12 +19,44 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void queryOverEntityTest() {
-		final String cond = "SELECT aa.scbcrse_coll_code, aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
+		final String cond = "SELECT aa.scbcrse_coll_code as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
 				+ " WHERE not aa.scbcrse_subj_code = courses.subj_code "
-				+ " AND (aa.scbcrse_crse_numb = courses.crse_numb " + " or aa.scbcrse_crse_numb = courses.crse_numb) ";
+				+ " AND aa.scbcrse_crse_numb = courses.crse_numb ";
 
 		final SQLSelectParserParser parser = parse(cond);
 		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void queryOverEntitySwapTest() {
+		final String cond = "SELECT aa.[College Name] as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
+				+ " WHERE not aa.[Subject Code] = courses.[Subject Code] "
+				+ " AND aa.[Course Number] = courses.[Course Number] ";
+
+		final SQLSelectParserParser parser = parse(cond);
+		
+		HashMap<String, String> entityMap = new HashMap<String, String> ();
+		// load with physical table names
+		entityMap.put("[Institutional Course]", "panto.1234_908");
+		entityMap.put("[Student Coursework]", "panto.5637_453");
+		
+		
+		HashMap<String, Map<String, String>> attributeMap = new HashMap<String, Map<String, String>> ();
+		// [institutional course]
+		HashMap<String, String> tableMap = new HashMap<String, String> ();
+		attributeMap.put("[Institutional Course]", tableMap);
+		tableMap.put("[Subject Code]", "scbcrse_subj_code");
+		tableMap.put("[Course Number]", "crs_no");
+		
+		// [student coursework]
+		tableMap = new HashMap<String, String> ();
+		attributeMap.put("[Student Coursework]", tableMap);
+		tableMap.put("[Attribute Name]", "oth_name");
+		tableMap.put("[College Name]", "clg_name");
+		tableMap.put("[Subject Code]", "scbcrse_subj_code");
+		tableMap.put("[Course Number]", "crs_no");
+		
+		runParsertest(cond, parser, entityMap, attributeMap);
 	}
 
 	@Test
@@ -909,6 +944,7 @@ public class SqlParseEventWalkerTest {
 
 	/*****************************
 	 * End Of GF Encoder Tests
+	 * @param entityMap 
 	 */
 
 	/*
@@ -961,6 +997,12 @@ public class SqlParseEventWalkerTest {
 	 */
 
 	private void runParsertest(final String cond, final SQLSelectParserParser parser) {
+		runParsertest( cond, parser, null, null);
+	}
+			
+	private void runParsertest(final String cond, final SQLSelectParserParser parser, 
+			HashMap<String, String> entityMap, 
+			HashMap<String, Map<String, String>> attributeMap) {
 		try {
 			System.out.println();
 			// There should be zero errors
@@ -969,6 +1011,10 @@ public class SqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + cond, 0, numErrors);
 
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			if (entityMap != null)
+				extractor.setEntityTableNameMap(entityMap);
+			if (attributeMap != null)
+				extractor.setAttributeColumnMap(attributeMap);
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
 			System.out.println("Interface: " + extractor.getInterface());

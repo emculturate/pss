@@ -26,6 +26,38 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	final static Integer resultTrace = 4;
 
 	/**
+	 * Symbol Swap Maps
+	 */
+	private HashMap<String, String> entityTableNameMap;
+	private HashMap<String, Map<String, String>> attributeColumnMap;
+
+	public void setEntityTableNameMap(HashMap<String, String> entityTableNameMap) {
+		this.entityTableNameMap = entityTableNameMap;
+	}
+
+	public void setAttributeColumnMap(HashMap<String, Map<String, String>> attributeColumnMap) {
+		this.attributeColumnMap = attributeColumnMap;
+	}
+
+	private String getTableName(String entityName) {
+		return getLookupValue(entityTableNameMap, entityName);
+	}
+
+	/**
+	 * @param lkp
+	 * @param lkpName
+	 * @return
+	 */
+	private String getLookupValue(HashMap<String, String> lkp, String lkpName) {
+		if (lkp == null)
+			return lkpName;
+		String hold = lkp.get(lkpName);
+		if (hold == null)
+			return lkpName;
+		return hold;
+	}
+
+	/**
 	 * SQL Abstract Structure This collects and constructs a nested Map data
 	 * structure representing the entire SQL statement
 	 */
@@ -206,6 +238,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTable.put(key, symbols);
 	}
 
+	@SuppressWarnings("unchecked")
 	private void popSymbolTablePutAll(HashMap<String, Object> symbols) {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
 		symbolTable.putAll(symbols);
@@ -1240,7 +1273,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + subMap);
 			String table = (String) subMap.remove("1");
-
+			
+			// try swapping names here
+			table = getTableName(table);
+			
 			collectTable(table, table);
 
 			subMap.put("table", table);
@@ -1250,7 +1286,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String schema = (String) subMap.remove("1");
 			subMap.put("schema", schema);
 			String table = (String) subMap.remove("2");
-
+			
+			// try swapping names here
+			table = getTableName(table);
+			
 			collectTable(table, table);
 
 			subMap.put("table", table);
@@ -1262,7 +1301,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String schema = (String) subMap.remove("2");
 			subMap.put("schema", schema);
 			String table = (String) subMap.remove("3");
-
+			
+			// try swapping names here
+			table = getTableName(table);
+			
 			collectTable(table, table);
 
 			subMap.put("table", table);
@@ -1504,6 +1546,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		addToParent(parentRuleIndex, parentStackLevel, item);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void exitParenthesized_value_expression(
 			@NotNull SQLSelectParserParser.Parenthesized_value_expressionContext ctx) {
@@ -2071,6 +2114,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitIdentifier(@NotNull SQLSelectParserParser.IdentifierContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitPuml_identifier(@NotNull SQLSelectParserParser.Puml_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		System.out.println(ctx.getText() + " " + ctx.getParent());
+		System.out.println(ctx.getText());
 	}
 
 	@Override
