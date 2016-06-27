@@ -944,9 +944,91 @@ public class SqlParseEventWalkerTest {
 
 	/*****************************
 	 * End Of GF Encoder Tests
-	 * @param entityMap 
 	 */
 
+	/*****************************
+	 * Start Of Pagoda Style Tests
+	 */
+
+	@Test
+	public void selectWithBasicTest() {
+		String sql = "with first as (select a from mulch), second as (select b from lawn) "+
+	                 " select * from first, second";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void selectWorkbooksDownfillTest() {
+		String sql = "with downfill as ( "+
+				" select  "+
+				" student_id "+
+				" , term_id "+
+				" , major_cd_fill "+
+				" , college_cd_fill "+
+				" , degree_cd_fill "+
+				" , concentration_cd_fill "+
+				" , major_cd_2_fill "+
+				" , college_cd_2_fill "+
+				" , degree_cd_2_fill "+
+				" , concentration_cd_2_fill "+
+				" from ( "+
+				" SELECT "+
+				" student_id "+
+				" , major_cd "+
+				" , term_id "+
+				" , value_partition "+
+				" , first_value(major_cd) over (partition by student_id, value_partition order by term_row) as major_cd_fill "+
+				" , first_value(college_cd) over (partition by student_id, value_partition order by term_row) as college_cd_fill "+
+				" , first_value(degree_cd) over (partition by student_id, value_partition order by term_row) as degree_cd_fill "+
+				" , first_value(concentration_cd) over (partition by student_id, value_partition order by term_row) as concentration_cd_fill "+
+				" , first_value(major_cd_2) over (partition by student_id, value_partition order by term_row) as major_cd_2_fill "+
+				" , first_value(college_cd_2) over (partition by student_id, value_partition order by term_row) as college_cd_2_fill "+
+				" , first_value(degree_cd_2) over (partition by student_id, value_partition order by term_row) as degree_cd_2_fill "+
+				" , first_value(concentration_cd_2) over (partition by student_id, value_partition order by term_row) as concentration_cd_2_fill "+
+				" FROM ( "+
+				" SELECT "+
+				" student_id "+
+				" , major_cd "+
+				" , smt.term_id "+
+				" , college_cd "+
+				" , degree_cd "+
+				" , concentration_cd "+
+				" , major_cd_2 "+
+				" , college_cd_2 "+
+				" , degree_cd_2 "+
+				" , concentration_cd_2 "+
+				" , sum(case when major_cd is null then 0 else 1 end) "+ 
+				" over (partition by student_id order by term_row) as value_partition "+
+				" , term_row "+
+		" 	  FROM student_major_term smt "+
+		" left join (select row_number() over(order by start_date asc) as term_row, term_id from standard_term) terms "+ 
+		" on terms.term_id = smt.term_id "+
+		" ORDER BY 1,12 DESC "+
+		" 	  ) sub1 "+
+	" order by 1,3 desc "+
+	" ) sub2 "+
+" where sub2.major_cd is null "+
+" ) "+
+" update student_major_term smt set "+ 
+" major_cd = downfill.major_cd_fill "+
+			" , college_cd = downfill.college_cd_fill "+
+			" , degree_cd = downfill.degree_cd_fill "+
+			" , concentration_cd = downfill.concentration_cd_fill "+
+			" , major_cd_2 = downfill.major_cd_2_fill "+
+			" , college_cd_2 = downfill.college_cd_2_fill "+
+			" , degree_cd_2 = downfill.degree_cd_2_fill "+
+			" 	, concentration_cd_2 = downfill.concentration_cd_2_fill "+
+			" from downfill "+
+		" where smt.student_id = downfill.student_id "+
+		" and smt.term_id = downfill.term_id ";
+
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+	
+	
+	
 	/*
 	 * UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, temp_lo+15,
 	 * DEFAULT) WHERE city = 'San Francisco' AND date = '2003-07-03'

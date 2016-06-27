@@ -36,10 +36,28 @@ options {
 ===============================================================================
 */
 sql
-  : (query_expression 
+  : (with_query
+  | create_table_as_expression
+  ) (SEMI_COLON)? EOF
+  ;
+  
+with_query
+  : query
+  | WITH with_list (COMMA with_list)* query
+  ;
+
+with_list
+  : query_alias (LEFT_PAREN query RIGHT_PAREN)
+  ;
+  
+query_alias
+  : identifier AS
+  ;
+
+query
+  : query_expression 
   | insert_expression 
   | update_expression
-  | create_table_as_expression)(SEMI_COLON)? EOF
   ;
 
 insert_expression
@@ -47,7 +65,7 @@ insert_expression
   ;
   
 update_expression
-  : UPDATE table_primary SET assignment_expression_list where_clause
+  : UPDATE table_primary SET assignment_expression_list from_clause? where_clause
   ;
 
 assignment_expression_list
@@ -230,11 +248,14 @@ aggregate_function
 
 set_function_type
   : AVG
+  | FIRST_VALUE
+  | LAST_VALUE
   | MAX
   | MIN
   | SUM
   | COUNT
   | RANK
+  | ROW_NUMBER
   | STDDEV_POP
   | STDDEV_SAMP
   | VAR_SAMP
@@ -1349,6 +1370,7 @@ EXTRACT : E X T R A C T;
 
 FILTER : F I L T E R;
 FIRST : F I R S T;
+FIRST_VALUE : F I R S T '_' V A L U E;
 FORMAT : F O R M A T;
 FUSION : F U S I O N;
 
@@ -1364,6 +1386,7 @@ ISODOW : I S O D O W;
 ISOYEAR : I S O Y E A R;
 
 LAST : L A S T;
+LAST_VALUE : L A S T '_' V A L U E;
 LESS : L E S S;
 LIST : L I S T;
 LOCATION : L O C A T I O N;
@@ -1395,6 +1418,7 @@ RANK : R A N K;
 REGEXP : R E G E X P;
 RLIKE : R L I K E;
 ROLLUP : R O L L U P;
+ROW_NUMBER : R O W '_' N U M B E R;
 
 SECOND : S E C O N D;
 SET : S E T;
