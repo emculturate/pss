@@ -701,12 +701,109 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return interfac1;
 	}
 
+	
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitWith_query(@NotNull SQLSelectParserParser.With_queryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		Map<String, Object> item;
+
+	    if (subMap.size() == 1) {
+	    	// just a query by itself
+			handleOneChild(ruleIndex);
+
+	    } else
+	    if (subMap.size() == 2) {
+	    	// A With Query
+			Map<String, Object> withList = (Map<String, Object>) subMap.remove("1");
+			Map<String, Object> query = (Map<String, Object>) subMap.remove("2");
+
+			subMap.put("with", withList);
+			subMap.put("query", query);
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "WITH QUERY: " + subMap);
+	}
+
+
+	@Override
+	public void exitWith_clause(@NotNull SQLSelectParserParser.With_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		Map<String, Object> newMap = collectNewRuleMap(ruleIndex, stackLevel);
+		type = newMap.remove("Type");
+
+		String[] keys = new String[1];
+		keys = subMap.keySet().toArray(keys);
+
+		for (String key : keys) {
+			newMap.putAll((Map<String, Object>)subMap.remove(key));
+		}
+		
+		showTrace(parseTrace, "WITH CLAUSE: " + newMap);
+	}
+
+
+	@Override
+	public void exitQuery_alias(@NotNull SQLSelectParserParser.Query_aliasContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitQuery(@NotNull SQLSelectParserParser.QueryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		handleOneChild(ruleIndex);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitWith_list_item(@NotNull SQLSelectParserParser.With_list_itemContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		Map<String, Object> item;
+		String alias = null;
+
+	    if (subMap.size() == 2) {
+
+	    	alias = (String) subMap.remove("1");
+
+			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
+
+			subMap.put(alias, aliasMap);
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "WITH QUERY: " + subMap);
+	}
+	
 	@Override
 	public void exitQuery_primary(@NotNull SQLSelectParserParser.Query_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
 	}
-
+	
 	@Override
 	public void exitSubquery(@NotNull SQLSelectParserParser.SubqueryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();

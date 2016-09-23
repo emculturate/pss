@@ -42,11 +42,14 @@ sql
   ;
   
 with_query
-  : query
-  | WITH with_list (COMMA with_list)* query
+  : with_clause+ query
   ;
 
-with_list
+with_clause
+  : WITH with_list_item (COMMA with_list_item)*
+  ;
+  
+with_list_item
   : query_alias (LEFT_PAREN query RIGHT_PAREN)
   ;
   
