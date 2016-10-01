@@ -42,7 +42,7 @@ sql
   ;
   
 with_query
-  : with_clause+ query
+  : with_clause? query
   ;
 
 with_clause
@@ -189,10 +189,6 @@ select_list
   : select_item (COMMA select_item)*
   ;
 
-table_or_query_name
-  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
-  ;
-
 select_item
   : value_expression as_clause?
   | select_all_columns
@@ -200,6 +196,10 @@ select_item
 
 select_all_columns
   : (tb_name=Identifier DOT)? MULTIPLY
+  ;
+
+table_or_query_name
+  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
   ;
 
 set_qualifier
@@ -552,6 +552,10 @@ search_condition
   : value_expression // instead of boolean_value_expression, we use value_expression for more flexibility.
   ;
 
+orderby_clause
+  : ORDER BY sort_specifier_list
+  ;
+
 /*
 ===============================================================================
   7.9 <group by clause>
@@ -803,10 +807,6 @@ sql_argument_list
 ===============================================================================
 */
 
-orderby_clause
-  : ORDER BY sort_specifier_list
-  ;
-
 sort_specifier_list
   : sort_specifier (COMMA sort_specifier)*
   ;
@@ -828,8 +828,6 @@ null_ordering
   : NULL FIRST
   | NULL LAST
   ;
-  
-  
 
 /*
 ===============================================================================

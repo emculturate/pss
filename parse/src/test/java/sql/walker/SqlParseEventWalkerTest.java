@@ -276,7 +276,17 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void rankPartitionSyntaxTest() {
 		final String cond = " SELECT " +
-				" rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
+				" rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
+				+ " FROM tab1 as a" ;
+
+		final SQLSelectParserParser parser = parse(cond);
+		runParsertest(cond, parser);
+	}
+
+	@Test
+	public void rankWithParameterPartitionSyntaxTest() {
+		final String cond = " SELECT " +
+				" rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
 				+ " FROM tab1 as a" ;
 
 		final SQLSelectParserParser parser = parse(cond);
