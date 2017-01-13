@@ -19,21 +19,21 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void queryOverEntityTest() {
-		final String cond = "SELECT aa.scbcrse_coll_code as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
+		final String query = "SELECT aa.scbcrse_coll_code as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
 				+ " WHERE not aa.scbcrse_subj_code = courses.subj_code "
 				+ " AND aa.scbcrse_crse_numb = courses.crse_numb ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void queryOverEntitySwapTest() {
-		final String cond = "SELECT aa.[College Name] as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
+		final String query = "SELECT aa.[College Name] as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
 				+ " WHERE not aa.[Subject Code] = courses.[Subject Code] "
 				+ " AND aa.[Course Number] = courses.[Course Number] ";
 
-		final SQLSelectParserParser parser = parse(cond);
+		final SQLSelectParserParser parser = parse(query);
 		
 		HashMap<String, String> entityMap = new HashMap<String, String> ();
 		// load with physical table names
@@ -56,241 +56,241 @@ public class SqlParseEventWalkerTest {
 		tableMap.put("[Subject Code]", "scbcrse_subj_code");
 		tableMap.put("[Course Number]", "crs_no");
 		
-		runParsertest(cond, parser, entityMap, attributeMap);
+		runParsertest(query, parser, entityMap, attributeMap);
 	}
 
 	@Test
 	public void simpleParseTest() {
-		final String cond = "SELECT aa.scbcrse_coll_code, aa.* FROM scbcrse as aa, mycrse as courses "
+		final String query = "SELECT aa.scbcrse_coll_code, aa.* FROM scbcrse as aa, mycrse as courses "
 				+ " WHERE not aa.scbcrse_subj_code = courses.subj_code "
 				+ " AND (aa.scbcrse_crse_numb = courses.crse_numb " + " or aa.scbcrse_crse_numb = courses.crse_numb) ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void aggregateParseTest() {
 
-		final String cond = " SELECT scbcrse_subj_code as subj_code, count(*), MAX(scbcrse_eff_term) "
+		final String query = " SELECT scbcrse_subj_code as subj_code, count(*), MAX(scbcrse_eff_term) "
 				+ " FROM scbcrse " + " group by scbcrse_subj_code, xxx " + " order by 2, scbcrse_subj_code, 1 ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleAndOrParseTest() {
 //gyg
-		final String cond = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
+		final String query = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleFromListType1ParseTest() {
 
-		final String cond = " SELECT * FROM third, fourth, fifth, sixth ";
+		final String query = " SELECT * FROM third, fourth, fifth, sixth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleFromListType2ParseTest() {
 
-		final String cond = " SELECT * FROM third cross join fourth union join fifth natural join sixth ";
+		final String query = " SELECT * FROM third cross join fourth union join fifth natural join sixth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleFromListType3ParseTest() {
 
-		final String cond = " SELECT * FROM third cross join fourth "
+		final String query = " SELECT * FROM third cross join fourth "
 				+ " union join fifth natural join sixth natural inner join seventh";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleFromListType4ParseTest() {
 
-		final String cond = " SELECT * FROM third join fourth on a = b " + " left outer join fifth on b = d ";
+		final String query = " SELECT * FROM third join fourth on a = b " + " left outer join fifth on b = d ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleMultipleUnionParseTest() {
 
-		final String cond = " SELECT first FROM third " + " union select third from fifth "
+		final String query = " SELECT first FROM third " + " union select third from fifth "
 				+ " union select fourth from sixth " + " union select seventh from eighth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleMultipleIntersectParseTest() {
 
-		final String cond = " SELECT first FROM third " + " intersect select third from fifth "
+		final String query = " SELECT first FROM third " + " intersect select third from fifth "
 				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleUnionIntersectParseTest() {
 
-		final String cond = " SELECT first FROM third " + " union select third from fifth "
+		final String query = " SELECT first FROM third " + " union select third from fifth "
 				+ " intersect select fourth from sixth " + " union select seventh from eighth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void nestedUnionIntersectAAParseTest() {
 
-		final String cond = " SELECT first FROM ( " + "  select third from fifth "
+		final String query = " SELECT first FROM ( " + "  select third from fifth "
 				+ " intersect select fourth from sixth ) aa " + " union select seventh from eighth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void nestedUnionIntersectParseTest() {
 
-		final String cond = " SELECT first FROM ( " + "  select third from fifth "
+		final String query = " SELECT first FROM ( " + "  select third from fifth "
 				+ " intersect select fourth from sixth ) " + " union select seventh from eighth ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void numericLiteralParseTest() {
 // NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names can start with numbers, not column names
-		final String cond = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
+		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void subqueryParseTest() {
 		// probably could handle unknowns from inside query better. Also, should
 		// trap/notice there's no COURSES table
-		final String cond = "SELECT aa.scbcrse_coll_code FROM scbcrse aa "
+		final String query = "SELECT aa.scbcrse_coll_code FROM scbcrse aa "
 				+ " WHERE aa.scbcrse_subj_code = courses.subj_code " + " AND aa.scbcrse_crse_numb = courses.crse_numb "
 				+ " AND aa.scbcrse_eff_term = ( " + " SELECT MAX(scbcrse_eff_term) " + " FROM scbcrse "
 				+ " WHERE scbcrse_subj_code = courses.subj_code " + " AND scbcrse_crse_numb = courses.crse_numb "
 				+ " AND scbcrse_eff_term <= courses.term) ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void arithmeticParseTest() {
 
-		final String cond = "SELECT -(aa.scbcrse_coll_code * 6 - other) FROM scbcrse aa "
+		final String query = "SELECT -(aa.scbcrse_coll_code * 6 - other) FROM scbcrse aa "
 				+ " WHERE aa.scbcrse_subj_code is not null ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void stringFunctionParseTest() {
 
-		final String cond = "SELECT trim(leading '0' from field1), a || b, " + " trim('0' || field2,'0') "
+		final String query = "SELECT trim(leading '0' from field1), a || b, " + " trim('0' || field2,'0') "
 				+ " FROM scbcrse aa " + " WHERE subj_code in ('AA', 'BB') ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void inPredicateFunctionParseTest() {
-		final String cond = "SELECT * " + " FROM scbcrse aa " + " WHERE subj_code in ('AA', 'BB') "
+		final String query = "SELECT * " + " FROM scbcrse aa " + " WHERE subj_code in ('AA', 'BB') "
 				+ " and item in (select * from other)";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void complexCaseFunctionTest() {
 
-		final String cond = " SELECT " + 
+		final String query = " SELECT " + 
   " CASE   " +
   " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   " +
   " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
   " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name " + 
   " FROM my.234 as s948, my.other5 as s949";
 		
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void caseStatementParseTest() {
 
-		final String cond = " SELECT CASE WHEN true THEN 'Y' " +
+		final String query = " SELECT CASE WHEN true THEN 'Y' " +
 				  "  WHEN false THEN 'N' " +
 		          " ELSE 'N' END as case_one, "
 				+ " CASE  col WHEN 'a' THEN 'b'	 " 
 		        + " ELSE null END as case_two " 
 				+ " FROM sgbstdn ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void selectItemSubqueryStatementParseTest() {
-		final String cond = " SELECT first_item,( " + " SELECT item " + " FROM sgbstdn "
+		final String query = " SELECT first_item,( " + " SELECT item " + " FROM sgbstdn "
 				+ " WHERE sgbstdn_levl_code = 'US' " + " ) AS INTERNATIONAL_IND " + " FROM sgbstdn ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void nestedSymbolTableConstructionTest() {
-		final String cond = " SELECT b.att1, b.att2 " + " from (SELECT a.col1 as att1, a.col2 as att2 "
+		final String query = " SELECT b.att1, b.att2 " + " from (SELECT a.col1 as att1, a.col2 as att2 "
 				+ " FROM tab1 as a" + " WHERE a.col1 <> a.col3 " + " ) AS b ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void rankPartitionSyntaxTest() {
-		final String cond = " SELECT " +
+		final String query = " SELECT " +
 				" rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
 				+ " FROM tab1 as a" ;
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void rankWithParameterPartitionSyntaxTest() {
-		final String cond = " SELECT " +
+		final String query = " SELECT " +
 				" rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
 				+ " FROM tab1 as a" ;
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	
@@ -298,7 +298,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void biggerQueryParseTest() {
 
-		final String cond = " select spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, "
+		final String query = " select spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, "
 				+ "spriden_mi, TERM_CODE_ADMIT FROM ( "
 				+ " SELECT spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden "
 				+ " WHERE spriden_change_ind is null) spriden " + " JOIN (  SELECT pidm, max(term) AS max_term FROM ( "
@@ -317,8 +317,8 @@ public class SqlParseEventWalkerTest {
 				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi, TERM_CODE_ADMIT "
 				+ " HAVING max(max_term) >= 201310 ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -503,7 +503,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void complexHiveQueryJoinTest() {
 
-		final String cond = " SELECT " + 
+		final String query = " SELECT " + 
   " CASE   " +
   " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_last_name   " +
   " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
@@ -583,19 +583,19 @@ public class SqlParseEventWalkerTest {
     " OR ((unix_timestamp(S948.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0')) " +
      " AND (unix_timestamp(S948.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484')))) ";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
 	public void simpleInsertFromQueryTest() {
 
-		final String cond = " insert into sch.subj.tbl (newcol1, newcol2) values (SELECT b.att1, b.att2 "
+		final String query = " insert into sch.subj.tbl (newcol1, newcol2) values (SELECT b.att1, b.att2 "
 				+ " from (SELECT a.col1 as att1, a.col2 as att2 " + " FROM sch.subj.tab1 as a"
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 	
 	/***********************************
@@ -658,7 +658,7 @@ public class SqlParseEventWalkerTest {
 		 * GROUP_ID, CLASSIFICATION, OVERALL_GPA, TERM_GPA
 		 */
 
-		String cond = " SELECT reg.record_type as RECORD_TYPE, reg.action as ACTION, reg.term_id as TERM_ID, "
+		String query = " SELECT reg.record_type as RECORD_TYPE, reg.action as ACTION, reg.term_id as TERM_ID, "
 				+ " reg.primary_user_id as PRIMARY_USER_ID, reg.group_id as GROUP_ID,reg.classification as CLASSIFICATION, "
 				+ " gpatbl.cum_gpa as OVERALL_GPA, gpatbl.term_gpa as TERM_GPA " + " from "
 				+ " studentAcademicTbl reg  left outer join "
@@ -669,8 +669,8 @@ public class SqlParseEventWalkerTest {
 				+ " on (cgpa.primary_user_id=tgpa.primary_user_id and "
 				+ " cgpa.term_id=tgpa.term_id ) ) gpatbl on (reg.primary_user_id=gpatbl.primary_user_id and reg.term_id=gpatbl.term_id) "
 				+ " inner join termFilterTbl  tf on reg.term_id = tf.term_id";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -679,11 +679,11 @@ public class SqlParseEventWalkerTest {
 		 * Term COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME, BEGIN_DATE,
 		 * END_DATE
 		 */
-		String cond = "select term.record_type as RECORD_TYPE, term.action as ACTION,  term.external_id as EXTERNAL_ID, term.name as NAME, datestr(term.begin_date, "
+		String query = "select term.record_type as RECORD_TYPE, term.action as ACTION,  term.external_id as EXTERNAL_ID, term.name as NAME, datestr(term.begin_date, "
 				+ " 'TERM_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT') as BEGIN_DATE, datestr(term.end_date, 'TERM_SOURCE_DATE_FORMAT', "
 				+ "'SSCPLUS_DEFAULT_DATE_FORMAT') as END_DATE from academicPeriodTbl " + " term";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -692,11 +692,11 @@ public class SqlParseEventWalkerTest {
 		 * Course COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, COURSE_ID, TITLE,
 		 * CREDIT_HOURS
 		 */
-		String cond = "select crs.record_type as RECORD_TYPE,crs.action as ACTION,concat_ws('-',crs.subject_code,crs.course_number) as EXTERNAL_ID, concat_ws('-',crs.subject_code,crs.course_number) as COURSE_ID, "
+		String query = "select crs.record_type as RECORD_TYPE,crs.action as ACTION,concat_ws('-',crs.subject_code,crs.course_number) as EXTERNAL_ID, concat_ws('-',crs.subject_code,crs.course_number) as COURSE_ID, "
 				+ " crs.course_title as TITLE, COALESCE(crs.credit_hour_low,crs.credit_hour_high,0) as CREDIT_HOURS from "
 				+ " courseTbl crs";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -708,7 +708,7 @@ public class SqlParseEventWalkerTest {
 		 * END_TIME, MEETING_DAYS, LOCATION, ADDITIONAL MEETINGS (repeat meeting
 		 * info)
 		 */
-		String cond = "select record_type as RECORD_TYPE, action as ACTION,term_id as TERM_ID,course_external_id as COURSE_EXTERNAL_ID ,section_name as SECTION_NAME,"
+		String query = "select record_type as RECORD_TYPE, action as ACTION,term_id as TERM_ID,course_external_id as COURSE_EXTERNAL_ID ,section_name as SECTION_NAME,"
 				+ "'' as section_tags,  sched_arr[0].col1 as BEGIN_DATE, sched_arr[0].col2 as END_DATE, sched_arr[0].col3 as BEGIN_TIME, sched_arr[0].col4 as END_TIME, sched_arr[0].col5 as MEETING_DAYS,sched_arr[0].col6 as LOCATION from ( "
 				+ "select record_type,action,term_id,course_external_id,section_name, collectarray(sched) as sched_arr from ("
 				+ "select record_type,action,term_id,course_external_id,section_name,struct(begin_date,end_date,start_time,end_time,meeting_days,location) as sched from ("
@@ -726,8 +726,8 @@ public class SqlParseEventWalkerTest {
 				+ " left join sectionMeetTbl "
 				+ " sec on (sec.course_ref_no=s.course_ref_no and sec.term_code=s.term_code) "
 				+ ") sub_sec) mid_sec group by record_type,action,term_id,course_external_id,section_name) main_sec";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -736,13 +736,13 @@ public class SqlParseEventWalkerTest {
 		 * Section COLUMNS: RECORD_TYPE, ACTION, TERM_ID, COURSE_EXTERNAL_ID,
 		 * SECTION_NAME, SECTION_TAGS
 		 */
-		final String cond = "select s.record_type as RECORD_TYPE, " + "s.action as ACTION, "
+		final String query = "select s.record_type as RECORD_TYPE, " + "s.action as ACTION, "
 				+ "s.term_code as TERM_ID, " + "concat_ws('-',s.subject_code,s.course_number) as COURSE_EXTERNAL_ID, "
 				+ "case  " + "when s.section_name is null or length(trim(s.section_name))=0  " + "then ''  "
 				+ "else s.section_name  " + "end as SECTION_NAME, " + "s.section_tag as SECTION_TAGS "
 				+ "from sectionTbl s  " + "inner join termFilterTbl tf  " + "on s.term_code = tf.term_id ";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -751,13 +751,13 @@ public class SqlParseEventWalkerTest {
 		 * Enrollment COLUMNS: RECORD_TYPE, ACTION, PRIMARY_USER_ID, TERM_ID,
 		 * COURSE_EXTERNAL_ID, SECTION_NAME, MIDTERM_GRADE, FINAL_GRADE
 		 */
-		String cond = "select cw.record_type as RECORD_TYPE, cw.action as ACTION, cw.student_id as PRIMARY_USER_ID, cw.term_code as TERM_ID, concat_ws('-',s.subject_code,s.course_number) "
+		String query = "select cw.record_type as RECORD_TYPE, cw.action as ACTION, cw.student_id as PRIMARY_USER_ID, cw.term_code as TERM_ID, concat_ws('-',s.subject_code,s.course_number) "
 				+ " as COURSE_EXTERNAL_ID, s.section_name as SECTION_NAME,cw.midterm_grade as MIDTERM_GRADE,cw.final_grade as "
 				+ " FINAL_GRADE"
 				+ " from courseWorkTbl  cw,  sectionTbl  s inner join termFilterTbl tf on cw.term_code = tf.term_id "
 				+ "where cw.course_ref_no=s.course_ref_no and cw.term_code=s.term_code and cw.registration_status_cd in ('regCodes')";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -766,11 +766,11 @@ public class SqlParseEventWalkerTest {
 		 * Instructor Assignments COLUMNS: RECORD_TYPE, ACTION, TERM_ID,
 		 * COURSE_EXTERNAL_ID, SECTION_NAME, PRIMARY_USER_ID
 		 */
-		String cond = "select ia.record_type as RECORD_TYPE, ia.action as ACTION, ia.term_code as TERM_ID, concat_ws('-',ia.subject_code,ia.course_number) "
+		String query = "select ia.record_type as RECORD_TYPE, ia.action as ACTION, ia.term_code as TERM_ID, concat_ws('-',ia.subject_code,ia.course_number) "
 				+ "as COURSE_EXTERNAL_ID,ia.section_name as SECTION_NAME ,ia.instructor_id as PRIMARY_USER_ID "
 				+ "from instructorAssgnmtTbl  ia inner join termFilterTbl  tf on " + "ia.term_code = tf.term_id";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -804,11 +804,11 @@ public class SqlParseEventWalkerTest {
 		/*
 		 * Major COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME
 		 */
-		String cond = "select record_type as RECORD_TYPE,action as ACTION,"
+		String query = "select record_type as RECORD_TYPE,action as ACTION,"
 				+ "trim(external_id) as EXTERNAL_ID,case when name is null or length(trim(name)) = 0 then 'Major name not available' else trim(name) end as NAME from "
 				+ " majorTbl where external_id is not null and length(trim(external_id)) > 0";
-		final SQLSelectParserParser parser = parse(cond);
-		runParsertest(cond, parser);
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
 	}
 
 	@Test
@@ -1088,11 +1088,11 @@ public class SqlParseEventWalkerTest {
 	 * output_expression [ AS output_name ] [, ...] ]
 	 */
 
-	private void runParsertest(final String cond, final SQLSelectParserParser parser) {
-		runParsertest( cond, parser, null, null);
+	private void runParsertest(final String query, final SQLSelectParserParser parser) {
+		runParsertest( query, parser, null, null);
 	}
 			
-	private void runParsertest(final String cond, final SQLSelectParserParser parser, 
+	private void runParsertest(final String query, final SQLSelectParserParser parser, 
 			HashMap<String, String> entityMap, 
 			HashMap<String, Map<String, String>> attributeMap) {
 		try {
@@ -1100,7 +1100,7 @@ public class SqlParseEventWalkerTest {
 			// There should be zero errors
 			SqlContext tree = parser.sql();
 			final int numErrors = parser.getNumberOfSyntaxErrors();
-			Assert.assertEquals("Expected no failures with " + cond, 0, numErrors);
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
 			if (entityMap != null)
@@ -1112,7 +1112,7 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Interface: " + extractor.getInterface());
 
 		} catch (RecognitionException e) {
-			System.err.println("Exception parsing eqn: " + cond);
+			System.err.println("Exception parsing eqn: " + query);
 		}
 	}
 
