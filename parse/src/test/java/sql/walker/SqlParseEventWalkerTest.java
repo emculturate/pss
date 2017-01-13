@@ -969,6 +969,32 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void selectWithPostgresUpsert() {
+		String sql = "WITH upsert AS  "+
+                " (UPDATE cat_concentration "+
+                " SET concentration_desc = stvmajr_desc "+
+                 " FROM bnr_stvmajr "+
+                " RETURNING * ) "+
+                " INSERT INTO cat_concentration "+
+                " (        concentration_code, "+
+                " concentration_desc, "+
+                " active_ind "+
+                " ) values ("+
+                " SELECT stvmajr_code AS concentration_code "+
+                " , stvmajr_desc AS concentration_desc "+
+                " , 'T' AS active_ind "+
+                " FROM bnr_stvmajr )";
+//                +
+//                " WHERE NOT EXISTS ( "+
+//                " SELECT *  "+
+//                " FROM upsert "+
+//                " ) "+
+//                " AND stvmajr_valid_concentratn_ind = 'Y'";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
 	public void selectWorkbooksDownfillTest() {
 		String sql = "with downfill as ( "+
 				" select  "+

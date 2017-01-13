@@ -63,14 +63,36 @@ query
   | update_expression
   ;
 
+/*
+ * POSTGRES:
+[ WITH [ RECURSIVE ] with_query [, ...] ]
+INSERT INTO table_name [ AS alias ] [ ( column_name [, ...] ) ]
+    { DEFAULT VALUES | VALUES ( { expression | DEFAULT } [, ...] ) [, ...] | query }
+    [ ON CONFLICT [ conflict_target ] conflict_action ]
+    [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+ */
 insert_expression
-  : INSERT INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery
+  : INSERT INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery returning?
   ;
   
+/*
+ * POSTGRES:
+[ WITH [ RECURSIVE ] with_query [, ...] ]
+UPDATE [ ONLY ] table [ * ] [ [ AS ] alias ]
+    SET { column = { expression | DEFAULT } |
+          ( column [, ...] ) = ( { expression | DEFAULT } [, ...] ) } [, ...]
+    [ FROM from_list ]
+    [ WHERE condition | WHERE CURRENT OF cursor_name ]
+    [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+ */
 update_expression
-  : UPDATE table_primary SET assignment_expression_list from_clause? where_clause
+  : UPDATE table_primary SET assignment_expression_list from_clause? where_clause? returning?
   ;
 
+returning
+  : RETURNING MULTIPLY
+  ;
+  
 assignment_expression_list
   :   assignment_expression (COMMA assignment_expression)*
   ;
@@ -370,7 +392,7 @@ common_value_expression
 */
 
 additive_expression
-  : left=multiplicative_expression ((PLUS|MINUS) right=multiplicative_expression)*
+  : (left=multiplicative_expression ((PLUS|MINUS) right=multiplicative_expression)*)
   ;
 
 multiplicative_expression
@@ -912,6 +934,7 @@ nonreserved_keywords
   | QUARTER
   | RANGE
   | REGEXP
+  | RETURNING
   | RLIKE
   | ROLLUP
   | SECOND
@@ -1320,6 +1343,7 @@ OUTER : O U T E R;
 OR : O R;
 ORDER : O R D E R;
 RIGHT : R I G H T;
+RETURNING : R E T U R N I N G;
 SELECT : S E L E C T;
 SOME : S O M E;
 SYMMETRIC : S Y M M E T R I C;
