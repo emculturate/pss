@@ -33,7 +33,7 @@ and_condition_statement
 
 
 negative_condition_statement
-	:	NOT condition_parenthetical					# NEGATIVE_CONDITION_STMT
+	:	NOT  condition_parenthetical					# NEGATIVE_CONDITION_STMT
 	|	condition_parenthetical						# CONDITION_STMT	;
 	
 condition_parenthetical
