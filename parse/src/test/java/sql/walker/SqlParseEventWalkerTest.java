@@ -983,13 +983,12 @@ public class SqlParseEventWalkerTest {
                 " SELECT stvmajr_code AS concentration_code "+
                 " , stvmajr_desc AS concentration_desc "+
                 " , 'T' AS active_ind "+
-                " FROM bnr_stvmajr )";
-//                +
-//                " WHERE NOT EXISTS ( "+
-//                " SELECT *  "+
-//                " FROM upsert "+
-//                " ) "+
-//                " AND stvmajr_valid_concentratn_ind = 'Y'";
+                " FROM bnr_stvmajr "                +
+                " WHERE NOT EXISTS ( "+
+                " SELECT *  "+
+                " FROM upsert "+
+                " ) "  +
+               " AND stvmajr_valid_concentratn_ind = 'Y')";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}

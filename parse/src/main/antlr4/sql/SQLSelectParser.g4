@@ -70,9 +70,27 @@ INSERT INTO table_name [ AS alias ] [ ( column_name [, ...] ) ]
     { DEFAULT VALUES | VALUES ( { expression | DEFAULT } [, ...] ) [, ...] | query }
     [ ON CONFLICT [ conflict_target ] conflict_action ]
     [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+
+* HIVE:
+* Standard syntax:
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...) [IF NOT EXISTS]] select_statement1 FROM from_statement;
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1 FROM from_statement;
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] (z,y) select_statement1 FROM from_statement;
+
+Original Parser: 
+insert_statement
+  : INSERT (OVERWRITE)? INTO table_name (LEFT_PAREN column_name_list RIGHT_PAREN)? query_expression
+  | INSERT (OVERWRITE)? INTO LOCATION path=Character_String_Literal (USING file_type=identifier (param_clause)?)? query_expression
+  ;
+    
  */
 insert_expression
-  : INSERT INTO table_primary (LEFT_PAREN column_reference_list RIGHT_PAREN)? VALUES subquery returning?
+  : INSERT INTO 
+  table_primary 
+  (LEFT_PAREN column_reference_list RIGHT_PAREN)? 
+  VALUES 
+  subquery 
+  returning?
   ;
   
 /*
@@ -86,7 +104,12 @@ UPDATE [ ONLY ] table [ * ] [ [ AS ] alias ]
     [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
  */
 update_expression
-  : UPDATE table_primary SET assignment_expression_list from_clause? where_clause? returning?
+  : UPDATE 
+  table_primary 
+  SET assignment_expression_list 
+  from_clause? 
+  where_clause? 
+  returning?
   ;
 
 returning

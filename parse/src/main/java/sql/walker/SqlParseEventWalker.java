@@ -654,34 +654,283 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		handleOneChild(ruleIndex);
 	}
 
-	// @Override
-	// public void exitInsert_expression(@NotNull
-	// SQLSelectParserParser.Insert_expressionContext ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// handleOneChild(ruleIndex);
-	// }
+	@Override
+	public void exitInsert_expression(@NotNull SQLSelectParserParser.Insert_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		String[] keys = new String[1];
+		Object type = subMap.remove("Type");
 
-	// @Override
-	// public void exitUpdate_expression(@NotNull
-	// SQLSelectParserParser.Update_expressionContext ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// handleOneChild(ruleIndex);
-	// }
+		keys = subMap.keySet().toArray(keys);
 
-	// @Override
-	// public void exitAssignment_expression_list(@NotNull
-	// SQLSelectParserParser.Assignment_expression_listContext ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// handleOneChild(ruleIndex);
-	// }
-	//
-	// @Override
-	// public void exitAssignment_expression(@NotNull
-	// SQLSelectParserParser.Assignment_expressionContext ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// handleOneChild(ruleIndex);
-	// }
-	//
+		for (String key : keys) {
+			Object obj = subMap.remove(key);
+			if (obj instanceof String) {
+
+			} else {
+				HashMap<String, Object> value = (HashMap<String, Object>) obj;
+				Integer childKey = (Integer) (value).remove("Type");
+				if (childKey == null) {
+					if (value.containsKey("table"))
+						subMap.put("insert", value);
+					else {
+						String nk = "query" + queryCount;
+						subMap.put(nk, value);
+					}
+				} else {
+					Object segment = value.remove(childKey.toString());
+					if (childKey == (Integer) SQLSelectParserParser.RULE_column_reference_list) {
+						subMap.put("into", value);
+					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
+						subMap.put("returning", segment);
+					} else {
+						showTrace(parseTrace, "Too Many Entries" + segment);
+					}
+				}
+			}
+		}
+		showTrace(parseTrace, subMap);
+
+		// Handle symbol tables
+		HashMap<String, Object> symbols = symbolTable;
+
+		// Special handling of queries with only one source: Move "unknown"
+		// references to that table
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
+
+		Integer count = 0;
+		Integer tableCount = 0;
+		String onlyTableName = null;
+		HashMap<String, Object> hold = new HashMap<String, Object>();
+		String holdTabRef = null;
+
+		for (String tab_ref : symbols.keySet()) {
+			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_union"))
+					|| (tab_ref.startsWith("def_intersect"))) {
+			} else {
+				Object item = symbols.get(tab_ref);
+				if (item instanceof HashMap<?, ?>) {
+					hold.put(tab_ref, item);
+					holdTabRef = tab_ref;
+					count++;
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+							|| (tab_ref.startsWith("intersect"))) {
+					} else {
+						tableCount++;
+						onlyTableName = tab_ref;
+					}
+				}
+			}
+		}
+		if (unks != null) {
+
+			if (count == 1) {
+				// just one table referenced, put all unknowns into it
+				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+			} else {
+				// Allocate Unknowns
+				for (String tab_ref : hold.keySet()) {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
+					for (String key : currItem.keySet()) {
+						unks.remove(key);
+					}
+				}
+				// put whatever is left back into the unknowns
+				if (unks.size() > 0) {
+					if (tableCount == 1)
+						// just one table remains referenced, put all unknowns
+						// into it
+						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
+					else
+						symbols.put("unknown", unks);
+				}
+			}
+		}
+		// Add TABLE references to alias table
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+						|| (tab_ref.startsWith("intersect"))) {
+				} else {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableColumnMap
+							.get(tab_ref.toLowerCase());
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableColumnMap.put(tab_ref.toLowerCase(), newItem);
+					}
+				}
+			}
+		}
+		// Retrieve outer symbol table, insert this symbol table into it
+		// String key = "update" + queryCount;
+		// popSymbolTable(key, symbols);
+		queryCount++;
+	}
+
+	@Override
+	public void exitUpdate_expression(@NotNull SQLSelectParserParser.Update_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		String[] keys = new String[1];
+		Object type = subMap.remove("Type");
+
+		keys = subMap.keySet().toArray(keys);
+
+		for (String key : keys) {
+			Object obj = subMap.remove(key);
+			if (obj instanceof String) {
+
+			} else {
+				HashMap<String, Object> value = (HashMap<String, Object>) obj;
+				Integer childKey = (Integer) (value).remove("Type");
+				if (childKey == null) {
+					subMap.put("update", value);
+				} else {
+					Object segment = value.remove(childKey.toString());
+					if (childKey == (Integer) SQLSelectParserParser.RULE_assignment_expression_list) {
+						subMap.put("assignments", segment);
+					} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
+						if (((HashMap<String, Object>) segment).size() == 1) {
+							subMap.put("from", ((HashMap<String, Object>) segment).remove("1"));
+						} else
+							subMap.put("from", segment);
+					} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
+						HashMap<String, Object> item = (HashMap<String, Object>) segment;
+						item = (HashMap<String, Object>) item.remove("1");
+						subMap.put("where", item);
+					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
+						subMap.put("returning", segment);
+					} else {
+						showTrace(parseTrace, "Too Many Entries" + segment);
+					}
+				}
+			}
+		}
+		showTrace(parseTrace, subMap);
+
+		// Handle symbol tables
+		HashMap<String, Object> symbols = symbolTable;
+
+		// Special handling of queries with only one source: Move "unknown"
+		// references to that table
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
+
+		Integer count = 0;
+		Integer tableCount = 0;
+		String onlyTableName = null;
+		HashMap<String, Object> hold = new HashMap<String, Object>();
+		String holdTabRef = null;
+
+		for (String tab_ref : symbols.keySet()) {
+			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_union"))
+					|| (tab_ref.startsWith("def_intersect"))) {
+			} else {
+				Object item = symbols.get(tab_ref);
+				if (item instanceof HashMap<?, ?>) {
+					hold.put(tab_ref, item);
+					holdTabRef = tab_ref;
+					count++;
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+							|| (tab_ref.startsWith("intersect"))) {
+					} else {
+						tableCount++;
+						onlyTableName = tab_ref;
+					}
+				}
+			}
+		}
+		if (unks != null) {
+
+			if (count == 1) {
+				// just one table referenced, put all unknowns into it
+				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+			} else {
+				// Allocate Unknowns
+				for (String tab_ref : hold.keySet()) {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
+					for (String key : currItem.keySet()) {
+						unks.remove(key);
+					}
+				}
+				// put whatever is left back into the unknowns
+				if (unks.size() > 0) {
+					if (tableCount == 1)
+						// just one table remains referenced, put all unknowns
+						// into it
+						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
+					else
+						symbols.put("unknown", unks);
+				}
+			}
+		}
+		// Add TABLE references to alias table
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+						|| (tab_ref.startsWith("intersect"))) {
+				} else {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableColumnMap
+							.get(tab_ref.toLowerCase());
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableColumnMap.put(tab_ref.toLowerCase(), newItem);
+					}
+				}
+			}
+		}
+		// Retrieve outer symbol table, insert this symbol table into it
+		// String key = "update" + queryCount;
+		// popSymbolTable(key, symbols);
+		queryCount++;
+	}
+
+	@Override
+	public void exitAssignment_expression_list(@NotNull SQLSelectParserParser.Assignment_expression_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_partition_by_clause) {
+			handleListList(ruleIndex, parentRuleIndex);
+		} else {
+			// then parent is normal query
+			handlePushDown(ruleIndex);
+		}
+	}
+
+	@Override
+	public void exitAssignment_expression(@NotNull SQLSelectParserParser.Assignment_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		if (subMap.size() == 2) {
+			showTrace(parseTrace, "Comparison: " + subMap);
+			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
+			subMap.put("set", left);
+
+			Map<String, Object> right = (Map<String, Object>) subMap.remove("2");
+			subMap.put("to", right);
+
+			showTrace(parseTrace, "Assignment: " + subMap);
+
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+
+	}
+
 	// @Override
 	// public void exitCreate_table_as_expression_list(@NotNull
 	// SQLSelectParserParser.Create_table_as_expression_listContext ctx) {
@@ -690,7 +939,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	// }
 
 	@Override
-	public void exitQuery_expression(@NotNull SQLSelectParserParser.Query_expressionContext ctx) {
+	public void exitQuery_expression(SQLSelectParserParser.Query_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		handleListList(ruleIndex, parentRuleIndex);
