@@ -178,6 +178,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void numericLiteralParseTest() {
 // NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names can start with numbers, not column names
+		// TODO: Fix this, it doesn't actually parse the scientific notation properly
 		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -199,9 +200,58 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void arithmeticSimpleParseTest() {
+		final String query = "SELECT (6 * 9 - 100 + a)  FROM scbcrse aa "
+				+ " WHERE aa.scbcrse_subj_code is not null ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
 	public void arithmeticParseTest() {
 
 		final String query = "SELECT -(aa.scbcrse_coll_code * 6 - other) FROM scbcrse aa "
+				+ " WHERE aa.scbcrse_subj_code is not null ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void arithmeticRunningAdditionTest() {
+
+		final String query = "SELECT 5+8+9-2+9 FROM scbcrse aa "
+				+ " WHERE aa.scbcrse_subj_code is not null ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void arithmeticRunningMultiplicationTest() {
+
+		final String query = "SELECT 5*8*9/2*9 FROM scbcrse aa "
+				+ " WHERE aa.scbcrse_subj_code is not null ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void arithmeticRunningMultiplicationWithParenTest() {
+
+		final String query = "SELECT 5*(8*9)/(2*9) FROM scbcrse aa "
+				+ " WHERE aa.scbcrse_subj_code is not null ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void arithmeticWithAliasParseTest() {
+
+		final String query = "SELECT -(aa.scbcrse_coll_code * 6 - other) as item FROM scbcrse aa "
 				+ " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -989,6 +1039,22 @@ public class SqlParseEventWalkerTest {
                 " FROM upsert "+
                 " ) "  +
                " AND stvmajr_valid_concentratn_ind = 'Y')";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void selectWithEmbeddedSelect() {
+		String sql = "WITH upsert AS  "+
+                " (Select "+
+                " concentration_desc, stvmajr_desc "+
+                 " FROM bnr_stvmajr "+
+                "  ) "+
+                " Select cat_concentration, "+
+                " concentration_code, "+
+                " concentration_desc, "+
+                " active_ind "+
+                " FROM upsert ";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}

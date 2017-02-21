@@ -894,6 +894,8 @@ simple_identifier
 
 puml_identifier
    :    Bracket_Identifier
+   |	Condition_Identifier
+   |	Population_Identifier
    ;
  
 simple_numeric_identifier
@@ -1595,6 +1597,14 @@ NUMBER : Digit+;
 */
 Bracket_Identifier	
 	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
+	;
+
+Condition_Identifier	
+	:	'<'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*'>'
+	;
+
+Population_Identifier	
+	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*'}'
 	;
 
 Identifier

@@ -1,0 +1,50 @@
+The SQL Parse Event Walker collects and produces four different objects when parsing SQL statements. These include:
+
+1. A nested Map<> object holding an Abstract Syntax Tree of the query
+2. A nested Symbol Table 
+3. A Source Table Dictionary containing the column names of the input tables
+4. An output Interface list, containing the name sof the output columns
+
+Abstract Syntax Tree of the Query
+
+The raw parse tree is quite specific to the grammar and produces a data structure that is difficult to work with generally. 
+In order to simplify working with the query text, the SqlParseEventWalker creates an Abstract Syntax Tree representation of the query
+built using nested HashMap<String, Object> objects. The syntax tree preserves the essential structure of the query, using a set of standard
+keys to represent language constructs and phrase types while holding the details as subtrees. 
+
+The AST can be walked recursively to explore different levels, or to apply transformations. A set of language generators will be developed for
+various SQL syntaxes (e.g., Hive, Postgresql, SPARQL, others as needed). These will support substitutions and aliasing when given a symbol 
+table substitution object.
+
+The AST Keys that will appear are documented in the following list. Some keys will have variable names. In some entries, examples
+of the child subtrees may be presented. Examples of the more complex situations (such as UNION and INTERESTCTION) will also be presented.
+The order of the keys presented will be alphabetical. A separate AST grammar may also  be presented later.
+
+AST KEYS
+
+alias: A subtree representing a leaf node in the AST. The "alias" key points to a string containing the alias name to be used in referencing
+the thing aliased in other parts of the query, or in the final result (depending on where the alias is defined in the overall query tree).
+
+column: A subtree containing potentiall several different kinds of subtrees. The most common subtree will be a column reference, but other
+possible contents include literal constants, single-valued queries, include-all column references, SQL formulas and function statements.
+
+A "column reference" subtree consists of an embedded map containing a single "name" and a single "table_ref" entry. The "name" being the
+column name from one of the query's tables or sub-queries, and the "table_ref" contains either an alias or the actual table name where 
+the column name is defined.
+EXAMPLE: column={name=scbcrse_coll_code, table_ref=aa}
+
+An "include-all column reference" subtree is a "column reference" where the contents of the name have been set to the universal column 
+selector "*".
+EXAMPLE: column={name=*, table_ref=aa}}
+
+name=scbcrse_coll_code, SQL: Holds the topmost query object, or a map with multiple query subtrees (if the query includes WITH)
+
+select: contains a list of output columns. The list is presented as a Map whose keys are numerals representing the order of the output columns. 
+Each subtree of these index keys is an embedded map consisting of a "column" subtree and an optional "alias" subtree. 
+EXAMPLE: select={1={column={...}, alias=bb}, 2={column={...}}, 3={column={...}}}
+
+table_ref: This key is used to hold a leaf value, namely a table or table alias value, depending on where it appears in the query.
+
+{1={column={name=scbcrse_coll_code, table_ref=aa}, alias=[College Code]}, 2={column={name=*, table_ref=aa}}, 3={column={name=[Attribute Name], table_ref=aa}}}, 
+from={join={1={table={alias=aa, table=[Student Coursework]}}, 2={table={alias=courses, table=[Institutional Course]}}}}, where={AND={1={not={left={column={name=scbcrse_subj_code, table_ref=aa}}, right={column={name=subj_code, table_ref=courses}}, operator==}}, 2={left={column={name=scbcrse_crse_numb, table_ref=aa}}, right={column={name=crse_numb, table_ref=courses}}, operator==}}}}}
+
