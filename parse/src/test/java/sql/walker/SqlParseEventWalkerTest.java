@@ -34,28 +34,27 @@ public class SqlParseEventWalkerTest {
 				+ " AND aa.[Course Number] = courses.[Course Number] ";
 
 		final SQLSelectParserParser parser = parse(query);
-		
-		HashMap<String, String> entityMap = new HashMap<String, String> ();
+
+		HashMap<String, String> entityMap = new HashMap<String, String>();
 		// load with physical table names
 		entityMap.put("[Institutional Course]", "panto.1234_908");
 		entityMap.put("[Student Coursework]", "panto.5637_453");
-		
-		
-		HashMap<String, Map<String, String>> attributeMap = new HashMap<String, Map<String, String>> ();
+
+		HashMap<String, Map<String, String>> attributeMap = new HashMap<String, Map<String, String>>();
 		// [institutional course]
-		HashMap<String, String> tableMap = new HashMap<String, String> ();
+		HashMap<String, String> tableMap = new HashMap<String, String>();
 		attributeMap.put("[Institutional Course]", tableMap);
 		tableMap.put("[Subject Code]", "scbcrse_subj_code");
 		tableMap.put("[Course Number]", "crs_no");
-		
+
 		// [student coursework]
-		tableMap = new HashMap<String, String> ();
+		tableMap = new HashMap<String, String>();
 		attributeMap.put("[Student Coursework]", tableMap);
 		tableMap.put("[Attribute Name]", "oth_name");
 		tableMap.put("[College Name]", "clg_name");
 		tableMap.put("[Subject Code]", "scbcrse_subj_code");
 		tableMap.put("[Course Number]", "crs_no");
-		
+
 		runParsertest(query, parser, entityMap, attributeMap);
 	}
 
@@ -73,7 +72,17 @@ public class SqlParseEventWalkerTest {
 	public void aggregateParseTest() {
 
 		final String query = " SELECT scbcrse_subj_code as subj_code, count(*), MAX(scbcrse_eff_term) "
-				+ " FROM scbcrse " + " group by scbcrse_subj_code, xxx " + " order by 2, scbcrse_subj_code, 1 ";
+				+ " FROM scbcrse " + " group by scbcrse_subj_code " + " order by 2, scbcrse_subj_code, 1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void aggregateWithAliasParseTest() {
+
+		final String query = " SELECT scbcrse_subj_code as subj_code, count(*) as total, MAX(scbcrse_eff_term) as maximum"
+				+ " FROM scbcrse " + " group by scbcrse_subj_code " + " order by 2, scbcrse_subj_code, 1 ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -81,7 +90,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void simpleAndOrParseTest() {
-//gyg
+		// gyg
 		final String query = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -146,6 +155,26 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void simpleMultipleUnion1ParseTest() {
+
+		final String query = " SELECT first FROM third " + " union select second from fifth "
+				+ " union select fourth from sixth " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void simpleMultipleIntersect1ParseTest() {
+
+		final String query = " SELECT first FROM third " + " intersect select second from fifth "
+				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
 	public void simpleUnionIntersectParseTest() {
 
 		final String query = " SELECT first FROM third " + " union select third from fifth "
@@ -177,8 +206,10 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void numericLiteralParseTest() {
-// NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names can start with numbers, not column names
-		// TODO: Fix this, it doesn't actually parse the scientific notation properly
+		// NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names
+		// can start with numbers, not column names
+		// TODO: Fix this, it doesn't actually parse the scientific notation
+		// properly
 		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -201,8 +232,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void arithmeticSimpleParseTest() {
-		final String query = "SELECT (6 * 9 - 100 + a)  FROM scbcrse aa "
-				+ " WHERE aa.scbcrse_subj_code is not null ";
+		final String query = "SELECT (6 * 9 - 100 + a)  FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -221,8 +251,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void arithmeticRunningAdditionTest() {
 
-		final String query = "SELECT 5+8+9-2+9 FROM scbcrse aa "
-				+ " WHERE aa.scbcrse_subj_code is not null ";
+		final String query = "SELECT 5+8+9-2+9 FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -231,8 +260,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void arithmeticRunningMultiplicationTest() {
 
-		final String query = "SELECT 5*8*9/2*9 FROM scbcrse aa "
-				+ " WHERE aa.scbcrse_subj_code is not null ";
+		final String query = "SELECT 5*8*9/2*9 FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -241,13 +269,12 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void arithmeticRunningMultiplicationWithParenTest() {
 
-		final String query = "SELECT 5*(8*9)/(2*9) FROM scbcrse aa "
-				+ " WHERE aa.scbcrse_subj_code is not null ";
+		final String query = "SELECT 5*(8*9)/(2*9) FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
-	
+
 	@Test
 	public void arithmeticWithAliasParseTest() {
 
@@ -280,13 +307,11 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void complexCaseFunctionTest() {
 
-		final String query = " SELECT " + 
-  " CASE   " +
-  " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   " +
-  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
-  " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name " + 
-  " FROM my.234 as s948, my.other5 as s949";
-		
+		final String query = " SELECT " + " CASE   " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
+				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   "
+				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
+				+ " FROM my.234 as s948, my.other5 as s949";
+
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
@@ -294,11 +319,8 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void caseStatementParseTest() {
 
-		final String query = " SELECT CASE WHEN true THEN 'Y' " +
-				  "  WHEN false THEN 'N' " +
-		          " ELSE 'N' END as case_one, "
-				+ " CASE  col WHEN 'a' THEN 'b'	 " 
-		        + " ELSE null END as case_two " 
+		final String query = " SELECT CASE WHEN true THEN 'Y' " + "  WHEN false THEN 'N' "
+				+ " ELSE 'N' END as case_one, " + " CASE  col WHEN 'a' THEN 'b'	 " + " ELSE null END as case_two "
 				+ " FROM sgbstdn ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -325,9 +347,9 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void rankPartitionSyntaxTest() {
-		final String query = " SELECT " +
-				" rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
-				+ " FROM tab1 as a" ;
+		final String query = " SELECT "
+				+ " rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " FROM tab1 as a";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -335,16 +357,14 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void rankWithParameterPartitionSyntaxTest() {
-		final String query = " SELECT " +
-				" rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank " 
-				+ " FROM tab1 as a" ;
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " FROM tab1 as a";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
 
-	
-	 
 	@Test
 	public void biggerQueryParseTest() {
 
@@ -420,8 +440,8 @@ public class SqlParseEventWalkerTest {
 				// --MODIFY PER MEMBER
 				+ " ) AS ACTIVE_IND "
 
-		+ " FROM  "
-		// --STUDENT POPULATION
+				+ " FROM  "
+				// --STUDENT POPULATION
 				+ " ( " + " SELECT "
 				+ " spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi "
 				+ " FROM ( "
@@ -491,7 +511,7 @@ public class SqlParseEventWalkerTest {
 				// --MODIFY PER MEMBER
 				+ " AND sprtele.sprtele_status_ind is null " + " ) hp ON population.spriden_pidm = hp.sprtele_pidm "
 
-		// --MOBILE PHONE
+				// --MOBILE PHONE
 				+ " LEFT OUTER JOIN ( "
 				+ " SELECT sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
 				+ " FROM sprtele " + " JOIN ( " + " SELECT sprtele_pidm, max(sprtele_seqno) as max_seqno "
@@ -549,89 +569,44 @@ public class SqlParseEventWalkerTest {
 		runParsertest(query, parser);
 	}
 
-
 	@Test
 	public void complexHiveQueryJoinTest() {
 
-		final String query = " SELECT " + 
-  " CASE   " +
-  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_last_name   " +
-  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   " +
-  " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name, " + 
-  " CASE   " +
-  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_sur_name   " +
-  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_sur_name " +  
-  " ELSE COALESCE(S948.t_sur_name, S949.t_sur_name) END AS t_sur_name, " + 
-  " CASE   " +
-  " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_first_name   " +
-  " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_first_name   " +
-  " ELSE COALESCE(S948.t_student_first_name, S949.t_student_first_name) END AS t_student_first_name " + 
-" FROM ( " +
-  " SELECT  " +
-     " t_student_first_name, " +
-     " t_sur_name, " +
-     " t_student_last_name, " +
-     " k_stfd, " +
-     " OBSERVATION_TM " + 
-  " from ( " +
-     " SELECT  " +
-        " t_student_first_name, " +
-        " t_sur_name, " +
-        " t_student_last_name, " +
-        " k_stfd, " +
-        " OBSERVATION_TM,  " +
-        " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " + 
-     " from ( " +
-        " SELECT  " +
-           " DOB AS t_student_first_name, " +
-           " NAME AS t_sur_name, " +
-           " LOCATION AS t_student_last_name, " +
-           " NAME AS k_stfd, " +
-           " OBSERVATION_TM,  " +
-           " pantodev.row_num() as row_num " + 
-        " FROM pantodev.23810_949 " + 
-        " WHERE  " +
-           " OBSERVATION_DT <= 20160321  " +
-           " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-21 10:43:15.0') " +
-     " ) a " +
-    " ) b where key_rank =1 " +
-" ) S949  " +
-" FULL OUTER JOIN ( " +
- "  SELECT  " +
-    "  t_student_first_name, " + 
-     " t_sur_name, " +
-     " t_student_last_name, " +
-     " k_stfd, " +
-     " OBSERVATION_TM " + 
-  " from ( " +
-     " SELECT  " +
-        " t_student_first_name, " + 
-        " t_sur_name, " +
-        " t_student_last_name, " +
-        " k_stfd, " +
-        " OBSERVATION_TM,  " +
-        " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank " + 
-     " from ( " +
-        " SELECT  " +
-           " DOB AS t_student_first_name, " +
-           " NAME AS t_sur_name, " +
-           " LOCATION AS t_student_last_name, " +
-           " NAME AS k_stfd, " +
-           " OBSERVATION_TM,  " +
-           " pantodev.row_num() as row_num " + 
-        " FROM pantodev.23810_948 " + 
-        " WHERE  " +
-           " OBSERVATION_DT <= 20160309  " +
-           " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-09 12:54:18.0') " +
-        " ) a " +
-       " ) b where key_rank =1 " +
- " ) S948  " +
-" ON (S949.k_stfd=S948.k_stfd) " +  
-" where  " +
-   " (((unix_timestamp(S949.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0'))  " +
-    "  AND (unix_timestamp(S949.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484'))) " + 
-    " OR ((unix_timestamp(S948.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0')) " +
-     " AND (unix_timestamp(S948.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484')))) ";
+		final String query = " SELECT " + " CASE   "
+				+ " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_last_name   "
+				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   "
+				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name, "
+				+ " CASE   "
+				+ " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_sur_name   "
+				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_sur_name "
+				+ " ELSE COALESCE(S948.t_sur_name, S949.t_sur_name) END AS t_sur_name, " + " CASE   "
+				+ " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_first_name   "
+				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_first_name   "
+				+ " ELSE COALESCE(S948.t_student_first_name, S949.t_student_first_name) END AS t_student_first_name "
+				+ " FROM ( " + " SELECT  " + " t_student_first_name, " + " t_sur_name, " + " t_student_last_name, "
+				+ " k_stfd, " + " OBSERVATION_TM " + " from ( " + " SELECT  " + " t_student_first_name, "
+				+ " t_sur_name, " + " t_student_last_name, " + " k_stfd, " + " OBSERVATION_TM,  "
+				+ " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " from ( " + " SELECT  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
+				+ " LOCATION AS t_student_last_name, " + " NAME AS k_stfd, " + " OBSERVATION_TM,  "
+				+ " pantodev.row_num() as row_num " + " FROM pantodev.23810_949 " + " WHERE  "
+				+ " OBSERVATION_DT <= 20160321  "
+				+ " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-21 10:43:15.0') " + " ) a "
+				+ " ) b where key_rank =1 " + " ) S949  " + " FULL OUTER JOIN ( " + "  SELECT  "
+				+ "  t_student_first_name, " + " t_sur_name, " + " t_student_last_name, " + " k_stfd, "
+				+ " OBSERVATION_TM " + " from ( " + " SELECT  " + " t_student_first_name, " + " t_sur_name, "
+				+ " t_student_last_name, " + " k_stfd, " + " OBSERVATION_TM,  "
+				+ " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " from ( " + " SELECT  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
+				+ " LOCATION AS t_student_last_name, " + " NAME AS k_stfd, " + " OBSERVATION_TM,  "
+				+ " pantodev.row_num() as row_num " + " FROM pantodev.23810_948 " + " WHERE  "
+				+ " OBSERVATION_DT <= 20160309  "
+				+ " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-09 12:54:18.0') " + " ) a "
+				+ " ) b where key_rank =1 " + " ) S948  " + " ON (S949.k_stfd=S948.k_stfd) " + " where  "
+				+ " (((unix_timestamp(S949.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0'))  "
+				+ "  AND (unix_timestamp(S949.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484'))) "
+				+ " OR ((unix_timestamp(S948.observation_tm) > unix_timestamp('1900-01-01 00:00:00.0')) "
+				+ " AND (unix_timestamp(S948.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484')))) ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -647,7 +622,7 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
-	
+
 	/***********************************
 	 * Section covering GF Encoder Style Queries
 	 */
@@ -751,7 +726,8 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void getSectionSqlTest() {
-		//********* ERROR: Reference in Hive ARRAY object: "sched_arr[0].col1 as BEGIN_DATE"
+		// ********* ERROR: Reference in Hive ARRAY object: "sched_arr[0].col1
+		// as BEGIN_DATE"
 		/*
 		 * Section COLUMNS: RECORD_TYPE, ACTION, TERM_ID, COURSE_EXTERNAL_ID,
 		 * SECTION_NAME, SECTION_TAGS,BEGIN_DATE, END_DATE, START_TIME,
@@ -863,7 +839,8 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void getDeclarationSqlTest() {
-		//*************** ERROR: Hive syntax not handled: "lateral view explode"
+		// *************** ERROR: Hive syntax not handled: "lateral view
+		// explode"
 		/*
 		 * Declaration COLUMNS: RECORD_TYPE, ACTION, PRIMARY_USER_ID, MAJOR_ID
 		 */
@@ -875,7 +852,8 @@ public class SqlParseEventWalkerTest {
 		sql += "rank() over (partition by primary_user_id order by b.begin_date desc ,b.end_date desc) term_rank from "
 				+ " studentMajorTbl a,  academicPeriodTbl "
 				+ " b where a.term_id=b.external_id and a.major_cd_1 is not null and length(trim(a.major_cd_1))>0 ) tbl where term_rank=1) res) fin_res ";
-		//sql += "lateral view explode(major_arr) exploded_table as maj_items where length(trim(maj_items.col1)) > 0";
+		// sql += "lateral view explode(major_arr) exploded_table as maj_items
+		// where length(trim(maj_items.col1)) > 0";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
@@ -885,11 +863,11 @@ public class SqlParseEventWalkerTest {
 		/*
 		 * Tag COLUMNS: RECORD_TYPE, ACTION, TAG, GROUP ID, PRIMARY_USER_ID
 		 */
-		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
-				+ "tag as TAG, group_id as GROUP_ID, primary_user_id as PRIMARY_USER_ID from "
-				+ " tagTbl where tag is not null and length(trim(tag)) > 0 "
-				+ "and group_id is not null and length(trim(group_id)) > 0 "
-				+ "and primary_user_id is not null and length(trim(primary_user_id)) > 0 ";
+		String sql = " select rec_type as RECORD_TYPE, action_cd as ACTION, "
+				+ "tag_name as TAG, grp_id as GROUP_ID, user_id as PRIMARY_USER_ID from "
+				+ " tagTbl where tag_name is not null and length(trim(tag_name)) > 0 "
+				+ "and grp_id is not null and length(trim(grp_id)) > 0 "
+				+ "and user_id is not null and length(trim(user_id)) > 0 ";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
@@ -1012,124 +990,89 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void selectWithBasicTest() {
-		String sql = "with first as (select a from mulch), second as (select b from lawn) "+
-	                 " select * from first, second";
+		String sql = "with first as (select a from mulch), " + "second as (select b from lawn) "
+				+ " select * from first, second";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
 
 	@Test
 	public void selectWithPostgresUpsert() {
-		String sql = "WITH upsert AS  "+
-                " (UPDATE cat_concentration "+
-                " SET concentration_desc = stvmajr_desc "+
-                 " FROM bnr_stvmajr "+
-                " RETURNING * ) "+
-                " INSERT INTO cat_concentration "+
-                " (        concentration_code, "+
-                " concentration_desc, "+
-                " active_ind "+
-                " ) values ("+
-                " SELECT stvmajr_code AS concentration_code "+
-                " , stvmajr_desc AS concentration_desc "+
-                " , 'T' AS active_ind "+
-                " FROM bnr_stvmajr "                +
-                " WHERE NOT EXISTS ( "+
-                " SELECT *  "+
-                " FROM upsert "+
-                " ) "  +
-               " AND stvmajr_valid_concentratn_ind = 'Y')";
+		String sql = "WITH upsert AS  " + " (UPDATE cat_concentration " + " SET concentration_desc = stvmajr_desc "
+				+ " FROM bnr_stvmajr " + " RETURNING * ) " + " INSERT INTO cat_concentration "
+				+ " (        concentration_code, " + " concentration_desc, " + " active_ind " + " ) values ("
+				+ " SELECT stvmajr_code AS concentration_code " + " , stvmajr_desc AS concentration_desc "
+				+ " , 'T' AS active_ind " + " FROM bnr_stvmajr " + " WHERE NOT EXISTS ( " + " SELECT *  "
+				+ " FROM upsert " + " ) " + " AND stvmajr_valid_concentratn_ind = 'Y')";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
 
 	@Test
 	public void selectWithEmbeddedSelect() {
-		String sql = "WITH upsert AS  "+
-                " (Select "+
-                " concentration_desc, stvmajr_desc "+
-                 " FROM bnr_stvmajr "+
-                "  ) "+
-                " Select cat_concentration, "+
-                " concentration_code, "+
-                " concentration_desc, "+
-                " active_ind "+
-                " FROM upsert ";
+		String sql = "WITH upsert AS  " + " (Select " + " concentration_desc, stvmajr_desc " + " FROM bnr_stvmajr "
+				+ "  ) " + " Select cat_concentration, " + " concentration_code, " + " concentration_desc, "
+				+ " active_ind " + " FROM upsert ";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
 
 	@Test
 	public void selectWorkbooksDownfillTest() {
-		String sql = "with downfill as ( "+
-				" select  "+
-				" student_id "+
-				" , term_id "+
-				" , major_cd_fill "+
-				" , college_cd_fill "+
-				" , degree_cd_fill "+
-				" , concentration_cd_fill "+
-				" , major_cd_2_fill "+
-				" , college_cd_2_fill "+
-				" , degree_cd_2_fill "+
-				" , concentration_cd_2_fill "+
-				" from ( "+
-				" SELECT "+
-				" student_id "+
-				" , major_cd "+
-				" , term_id "+
-				" , value_partition "+
-				" , first_value(major_cd) over (partition by student_id, value_partition order by term_row) as major_cd_fill "+
-				" , first_value(college_cd) over (partition by student_id, value_partition order by term_row) as college_cd_fill "+
-				" , first_value(degree_cd) over (partition by student_id, value_partition order by term_row) as degree_cd_fill "+
-				" , first_value(concentration_cd) over (partition by student_id, value_partition order by term_row) as concentration_cd_fill "+
-				" , first_value(major_cd_2) over (partition by student_id, value_partition order by term_row) as major_cd_2_fill "+
-				" , first_value(college_cd_2) over (partition by student_id, value_partition order by term_row) as college_cd_2_fill "+
-				" , first_value(degree_cd_2) over (partition by student_id, value_partition order by term_row) as degree_cd_2_fill "+
-				" , first_value(concentration_cd_2) over (partition by student_id, value_partition order by term_row) as concentration_cd_2_fill "+
-				" FROM ( "+
-				" SELECT "+
-				" student_id "+
-				" , major_cd "+
-				" , smt.term_id "+
-				" , college_cd "+
-				" , degree_cd "+
-				" , concentration_cd "+
-				" , major_cd_2 "+
-				" , college_cd_2 "+
-				" , degree_cd_2 "+
-				" , concentration_cd_2 "+
-				" , sum(case when major_cd is null then 0 else 1 end) "+ 
-				" over (partition by student_id order by term_row) as value_partition "+
-				" , term_row "+
-		" 	  FROM student_major_term smt "+
-		" left join (select row_number() over(order by start_date asc) as term_row, term_id from standard_term) terms "+ 
-		" on terms.term_id = smt.term_id "+
-		" ORDER BY 1,12 DESC "+
-		" 	  ) sub1 "+
-	" order by 1,3 desc "+
-	" ) sub2 "+
-" where sub2.major_cd is null "+
-" ) "+
-" update student_major_term smt set "+ 
-" major_cd = downfill.major_cd_fill "+
-			" , college_cd = downfill.college_cd_fill "+
-			" , degree_cd = downfill.degree_cd_fill "+
-			" , concentration_cd = downfill.concentration_cd_fill "+
-			" , major_cd_2 = downfill.major_cd_2_fill "+
-			" , college_cd_2 = downfill.college_cd_2_fill "+
-			" , degree_cd_2 = downfill.degree_cd_2_fill "+
-			" 	, concentration_cd_2 = downfill.concentration_cd_2_fill "+
-			" from downfill "+
-		" where smt.student_id = downfill.student_id "+
-		" and smt.term_id = downfill.term_id ";
+		String sql = "with downfill as ( " + " select  " + " student_id " + " , term_id " + " , major_cd_fill "
+				+ " , college_cd_fill " + " , degree_cd_fill " + " , concentration_cd_fill " + " , major_cd_2_fill "
+				+ " , college_cd_2_fill " + " , degree_cd_2_fill " + " , concentration_cd_2_fill " + " from ( "
+				+ " SELECT " + " student_id " + " , major_cd " + " , term_id " + " , value_partition "
+				+ " , first_value(major_cd) over (partition by student_id, value_partition order by term_row) as major_cd_fill "
+				+ " , first_value(college_cd) over (partition by student_id, value_partition order by term_row) as college_cd_fill "
+				+ " , first_value(degree_cd) over (partition by student_id, value_partition order by term_row) as degree_cd_fill "
+				+ " , first_value(concentration_cd) over (partition by student_id, value_partition order by term_row) as concentration_cd_fill "
+				+ " , first_value(major_cd_2) over (partition by student_id, value_partition order by term_row) as major_cd_2_fill "
+				+ " , first_value(college_cd_2) over (partition by student_id, value_partition order by term_row) as college_cd_2_fill "
+				+ " , first_value(degree_cd_2) over (partition by student_id, value_partition order by term_row) as degree_cd_2_fill "
+				+ " , first_value(concentration_cd_2) over (partition by student_id, value_partition order by term_row) as concentration_cd_2_fill "
+				+ " FROM ( " + " SELECT " + " student_id " + " , major_cd " + " , smt.term_id " + " , college_cd "
+				+ " , degree_cd " + " , concentration_cd " + " , major_cd_2 " + " , college_cd_2 " + " , degree_cd_2 "
+				+ " , concentration_cd_2 " + " , sum(case when major_cd is null then 0 else 1 end) "
+				+ " over (partition by student_id order by term_row) as value_partition " + " , term_row "
+				+ " 	  FROM student_major_term smt "
+				+ " left join (select row_number() over(order by start_date asc) as term_row, term_id from standard_term) terms "
+				+ " on terms.term_id = smt.term_id " + " ORDER BY 1,12 DESC " + " 	  ) sub1 " + " order by 1,3 desc "
+				+ " ) sub2 " + " where sub2.major_cd is null " + " ) " + " update student_major_term smt set "
+				+ " major_cd = downfill.major_cd_fill " + " , college_cd = downfill.college_cd_fill "
+				+ " , degree_cd = downfill.degree_cd_fill " + " , concentration_cd = downfill.concentration_cd_fill "
+				+ " , major_cd_2 = downfill.major_cd_2_fill " + " , college_cd_2 = downfill.college_cd_2_fill "
+				+ " , degree_cd_2 = downfill.degree_cd_2_fill "
+				+ " 	, concentration_cd_2 = downfill.concentration_cd_2_fill " + " from downfill "
+				+ " where smt.student_id = downfill.student_id " + " and smt.term_id = downfill.term_id ";
 
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
-	
-	
-	
+
+	@Test
+	public void selectBasicUpdateTest() {
+		String sql = "UPDATE employees SET emp_sales_count = acct_sales_count + 1, redder = greener  FROM accounts";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void selectBasic2UpdateTest() {
+		//TODO 
+		String sql = "update this_table set outputA = column1, outputB = column2, outputC = column3 "
+				+ " from that_table where this_table.key=that_table.key";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
+	@Test
+	public void selectBasicInsertTest() {
+		String sql = "insert into employees  (emp_sales_count, redder)  values (select acct_sales_count + 1, greener  FROM accounts)";
+		final SQLSelectParserParser parser = parse(sql);
+		runParsertest(sql, parser);
+	}
+
 	/*
 	 * UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, temp_lo+15,
 	 * DEFAULT) WHERE city = 'San Francisco' AND date = '2003-07-03'
@@ -1180,12 +1123,11 @@ public class SqlParseEventWalkerTest {
 	 */
 
 	private void runParsertest(final String query, final SQLSelectParserParser parser) {
-		runParsertest( query, parser, null, null);
+		runParsertest(query, parser, null, null);
 	}
-			
-	private void runParsertest(final String query, final SQLSelectParserParser parser, 
-			HashMap<String, String> entityMap, 
-			HashMap<String, Map<String, String>> attributeMap) {
+
+	private void runParsertest(final String query, final SQLSelectParserParser parser,
+			HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
 		try {
 			System.out.println();
 			// There should be zero errors

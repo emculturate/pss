@@ -131,12 +131,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	public HashSet<String> getInterface() {
+		// TODO: When a query has a with, the interface can appear in anyone of
+		// the symbol table queries, because it will be a list.
 		HashSet<String> interfac = new HashSet<String>();
 		HashMap<String, Object> hold = null;
 		if (symbolTable != null) {
 			for (String key : symbolTable.keySet()) {
-				hold = (HashMap<String, Object>) symbolTable.get(key);
-				break;
+				if (key.equals("with")) {
+				} else {
+					hold = (HashMap<String, Object>) symbolTable.get(key);
+					break;
+				}
 			}
 			if (hold != null) {
 				hold = (HashMap<String, Object>) hold.get("interface");
@@ -643,6 +648,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 
 			subMap.put(alias, aliasMap);
+			// Add to symbol tree WITH subclause
+			if (symbolTable.containsKey("with")) {
+				Map<String, Object> with = (Map<String, Object>) symbolTable.remove("with");
+				with.put(alias, symbolTable);
+				symbolTable = new HashMap<String, Object>();
+				symbolTable.put("with", with);
+			} else {
+				Map<String, Object> with = new HashMap<String, Object>();
+				with.put(alias, symbolTable);
+				symbolTable = new HashMap<String, Object>();
+				symbolTable.put("with", with);
+			}
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -939,10 +956,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (String key : keys) {
 				if (key.equals("unknown")) { // do nothing
 
+				} else if (key.equals("with")) { // do nothing
+
 				} else {
 					// must be the table
-					HashMap<String, Object> item = (HashMap<String, Object>) symbolTable.get(key);
-					item.put(column, unk.get(column));
+					showTrace(symbolTrace, "Key for not 'UNKNOWN': " + key + " Entry: "+ symbolTable.get(key));
+					Object item = symbolTable.get(key);
+					if (item instanceof Map<?, ?>) {
+					HashMap<String, Object> map = (HashMap<String, Object>) item;
+					map.put(column, unk.get(column)); }
 				}
 			}
 		} else {
@@ -1934,7 +1956,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 2) {
 			showTrace(parseTrace, "Comparison: " + subMap);
-			Map<String, Object> condition = new HashMap<String, Object> ();
+			Map<String, Object> condition = new HashMap<String, Object>();
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
 			condition.put("left", left);
 
@@ -2186,7 +2208,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		handleOneChild(ruleIndex);
 	}
 
-
 	@Override
 	public void exitAdditive_expression(@NotNull SQLSelectParserParser.Additive_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -2199,10 +2220,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() >= 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
 			int indx = 1;
-			for(int x = 1; subMap.size() > 0; x=x+2) {
+			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-				calc.put("left", subMap.remove("" + indx++));
+					calc.put("left", subMap.remove("" + indx++));
 				else {
 					calc.put("left", item);
 					item = new HashMap<String, Object>();
@@ -2211,7 +2232,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				calc.put("operator", ctx.getChild(x).getText());
 				item.put("calc", calc);
 			}
-			
+
 			subMap = item;
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -2231,10 +2252,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() >= 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
 			int indx = 1;
-			for(int x = 1; subMap.size() > 0; x=x+2) {
+			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-				calc.put("left", subMap.remove("" + indx++));
+					calc.put("left", subMap.remove("" + indx++));
 				else {
 					calc.put("left", item);
 					item = new HashMap<String, Object>();
@@ -2243,7 +2264,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				calc.put("operator", ctx.getChild(x).getText());
 				item.put("calc", calc);
 			}
-			
+
 			subMap = item;
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
