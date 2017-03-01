@@ -575,6 +575,30 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(symbolTrace, tableColumnMap);
 	}
 
+	@Override
+	public void exitPredicand_value(@NotNull SQLSelectParserParser.Predicand_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put("PREDICAND", subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+		showTrace(symbolTrace, tableColumnMap);
+	}
+
+	@Override
+	public void exitCondition_value(@NotNull SQLSelectParserParser.Condition_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put("CONDITION", subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+		showTrace(symbolTrace, tableColumnMap);
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitWith_query(@NotNull SQLSelectParserParser.With_queryContext ctx) {

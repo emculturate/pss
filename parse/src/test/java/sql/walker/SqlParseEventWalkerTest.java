@@ -13,6 +13,8 @@ import org.junit.Test;
 
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
+import sql.SQLSelectParserParser.Condition_valueContext;
+import sql.SQLSelectParserParser.Predicand_valueContext;
 import sql.SQLSelectParserParser.SqlContext;
 
 public class SqlParseEventWalkerTest {
@@ -55,7 +57,7 @@ public class SqlParseEventWalkerTest {
 		tableMap.put("[Subject Code]", "scbcrse_subj_code");
 		tableMap.put("[Course Number]", "crs_no");
 
-		runParsertest(query, parser, entityMap, attributeMap);
+		runSQLParsertest(query, parser, entityMap, attributeMap);
 	}
 
 	@Test
@@ -1122,11 +1124,160 @@ public class SqlParseEventWalkerTest {
 	 * output_expression [ AS output_name ] [, ...] ]
 	 */
 
-	private void runParsertest(final String query, final SQLSelectParserParser parser) {
-		runParsertest(query, parser, null, null);
+	/**
+	 * PREDICANDS TESTS
+	 * @param query
+	 * @param parser
+	 */
+	
+
+	@Test
+	public void basicColumnPredicandTest() {
+		String sql = "table1.emp_sales_count";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
 	}
 
-	private void runParsertest(final String query, final SQLSelectParserParser parser,
+	@Test
+	public void basicLiteralValuePredicandTest() {
+		String sql = "'AA'";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void basicNullValuePredicandTest() {
+		String sql = "null";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void concatenationPredicandTest() {
+		String sql = "a || b || 'oops'";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void functionPredicandTest() {
+		String sql = "concat_ws('-', crs.subject_code, crs.course_number) ";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void aggregateFunctionPredicandTest() {
+		String sql = "max(scbcrse_eff_term)";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void caseFunctionPredicandTest() {
+		String sql = "case when true then ‘Y’ when false then ‘N’ else ‘N’ end";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void windowFunctionPredicandTest() {
+		String sql = "rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void selectLookupSubqueryPredicandTest() {
+		String sql = "(SELECT aa.scbcrse_coll_code FROM scbcrse aa)";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void arithmeticExpressionPredicandTest() {
+		String sql = "-(aa.scbcrse_coll_code * 6 - other) ";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	/**
+	 * CONDITION TESTS
+	 * @param query
+	 * @param parser
+	 */
+
+	@Test
+	public void conditionBasicConditionTest() {
+		String sql = "table1.emp_sales_count >= 25";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionSimpleBooleanTest() {
+		String sql = "true";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionListOfAndsTest() {
+		String sql = "a=b and b=c and x >y";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionListOfOrsTest() {
+		String sql = "a=b or b=c or x >y";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionParentheticalTest() {
+		String sql = "((a=b) or (b=c))";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionNotTest() {
+		String sql = "not a = b";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionInTest() {
+		String sql = "item in (25, 26)";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionIsNullTest() {
+		String sql = "table1.emp_sales_count is null";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionIsNotNullTest() {
+		String sql = "table1.emp_sales_count is not null";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	//*****************************
+	// COMMON TEST METHODS
+	
+	private void runParsertest(final String query, final SQLSelectParserParser parser) {
+		runSQLParsertest(query, parser, null, null);
+	}
+
+	private void runSQLParsertest(final String query, final SQLSelectParserParser parser,
 			HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
 		try {
 			System.out.println();
@@ -1149,8 +1300,44 @@ public class SqlParseEventWalkerTest {
 		}
 	}
 
-	private static final SQLSelectParserParser parse(final String condition) {
-		CharStream input = new ANTLRInputStream(condition);
+	private void runPredicandParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Predicand_valueContext tree = parser.predicand_value();
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+		}
+	}
+
+	private void runConditionParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Condition_valueContext tree = parser.condition_value();
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+		}
+	}
+
+	private static final SQLSelectParserParser parse(final String query) {
+		CharStream input = new ANTLRInputStream(query);
 		SQLSelectParserLexer lexer = new SQLSelectParserLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
