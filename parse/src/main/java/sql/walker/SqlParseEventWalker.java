@@ -16,7 +16,7 @@ import sql.SQLSelectParserBaseListener;
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	final static Boolean showParse = false;
-	final static Boolean showSymbols = true;
+	final static Boolean showSymbols = false;
 	final static Boolean showOther = false;
 	final static Boolean showResults = true;
 
@@ -984,11 +984,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				} else {
 					// must be the table
-					showTrace(symbolTrace, "Key for not 'UNKNOWN': " + key + " Entry: "+ symbolTable.get(key));
+					showTrace(symbolTrace, "Key for not 'UNKNOWN': " + key + " Entry: " + symbolTable.get(key));
 					Object item = symbolTable.get(key);
 					if (item instanceof Map<?, ?>) {
-					HashMap<String, Object> map = (HashMap<String, Object>) item;
-					map.put(column, unk.get(column)); }
+						HashMap<String, Object> map = (HashMap<String, Object>) item;
+						map.put(column, unk.get(column));
+					}
 				}
 			}
 		} else {
@@ -1419,14 +1420,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (unk != null) {
 				// move any other interface elements to query and empty unknowns
 				Map<String, Object> interfac = (Map<String, Object>) query.get("interface");
-				for (String key : interfac.keySet()) {
-					Object unkItem = unk.remove(key);
-					if (unkItem != null)
-						hold.put(key, unkItem);
-					else
-						hold.put(key, key);
-					;
-				}
+				if (interfac != null)
+					for (String key : interfac.keySet()) {
+						Object unkItem = unk.remove(key);
+						if (unkItem != null)
+							hold.put(key, unkItem);
+						else
+							hold.put(key, key);
+						;
+					}
 
 				// if any unknowns left, put them back into table
 				if (unk.size() > 0)

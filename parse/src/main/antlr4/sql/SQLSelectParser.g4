@@ -1641,6 +1641,7 @@ Population_Identifier
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
+  | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')* DOUBLE_QUOTE
   ;
 
 EXPONEN : E ('+' | '-')?;
