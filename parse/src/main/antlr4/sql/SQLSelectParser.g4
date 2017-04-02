@@ -329,7 +329,9 @@ aggregate_function
 set_function_type
   : AVG
   | FIRST_VALUE
+  | LAG
   | LAST_VALUE
+  | LEAD
   | MAX
   | MIN
   | SUM
@@ -399,7 +401,7 @@ null_literal
    ;
    
 window_function
-   : set_function_type LEFT_PAREN value_expression? RIGHT_PAREN
+   : set_function_type LEFT_PAREN sql_argument_list? RIGHT_PAREN
    ;
    
 over_clause
@@ -1182,6 +1184,7 @@ exact_numeric_type
   | INTEGER
   | INT8
   | BIGINT
+  | NUMBER_TYPE
   ;
 
 approximate_numeric_type
@@ -1394,6 +1397,7 @@ LIMIT : L I M I T;
 NATURAL : N A T U R A L;
 NOT : N O T;
 NULL : N U L L;
+NUMBER_TYPE : N U M B E R;
 
 ON : O N;
 OUTER : O U T E R;
@@ -1467,8 +1471,10 @@ INTERSECTION : I N T E R S E C T I O N;
 ISODOW : I S O D O W;
 ISOYEAR : I S O Y E A R;
 
+LAG : L A G;
 LAST : L A S T;
 LAST_VALUE : L A S T '_' V A L U E;
+LEAD : L E A D;
 LESS : L E S S;
 LIST : L I S T;
 LOCATION : L O C A T I O N;

@@ -18,6 +18,98 @@ import sql.SQLSelectParserParser.Predicand_valueContext;
 import sql.SQLSelectParserParser.SqlContext;
 
 public class SqlParseEventWalkerTest {
+	// *********************************
+	// Clauses that need to be built out
+	
+	@Test
+	public void concatenationForumlaTest() {
+		// the concatenated elements work when in parentheses, otherwise grammar is indeterminate
+		final String query = "SELECT min(substr(strm, 1, 2) || substr(strm, 3, 1) + 1 || substr(strm, 4,1))"
+				+ " from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void concatenationInTest() {
+		// the concatenated elements work when in parentheses, otherwise grammar is indeterminate
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd || crs_nm in (select fld from orange)";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void topXv1Test() {
+		final String query = "SELECT top 100 apple"
+				+ " from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void topXv2Test() {
+		final String query = "SELECT top(100) apple as orange"
+				+ " from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void likeCondition1Test() {
+		// Parses but AST not developed
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd like '%STUFF%'";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void likeCondition2Test() {
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd like lower('%STUFF%')";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void doubleQuotedEscapeSequenceTest() {
+		final String query = "SELECT 'try embedd\\'d quote' as a, 'try embedd''d quote' as b"
+				+ " from tab1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void caseExpressionStatementParseTest() {
+		// THIS ONE WORKS - NOT SURE I HAVE THE RIGHT PROBLEM
+		final String query = " SELECT CASE WHEN a < b THEN 'Y' " + "  WHEN a = b THEN 'N' "
+				+ " ELSE 'N' END as case_one " 
+				+ " FROM sgbstdn ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void leadOverPartitionTest() {
+		// PARSE, BUT AST INCOMPLETE FOR PARAMETER LIST
+		final String query = "SELECT lead(code,1) over (partition by spriden_id order by code)"
+				+ " from tab1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	// *********************************
+	// Correctly Parsed, Completely developed
 
 	@Test
 	public void queryOverEntityTest() {
