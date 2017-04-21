@@ -313,7 +313,7 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void subqueryParseTest() {
 		// probably could handle unknowns from inside query better. Also, should
-		// trap/notice there's no COURSES table
+		// trap/notice there's no COURSES table in the from statement
 		final String query = "SELECT aa.scbcrse_coll_code FROM scbcrse aa "
 				+ " WHERE aa.scbcrse_subj_code = courses.subj_code " + " AND aa.scbcrse_crse_numb = courses.crse_numb "
 				+ " AND aa.scbcrse_eff_term = ( " + " SELECT MAX(scbcrse_eff_term) " + " FROM scbcrse "
@@ -1388,7 +1388,8 @@ public class SqlParseEventWalkerTest {
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
 			System.out.println("Interface: " + extractor.getInterface());
-
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Input Table Map: " + extractor.getTableColumnMap());
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 		}
