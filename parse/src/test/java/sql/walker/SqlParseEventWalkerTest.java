@@ -107,6 +107,65 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
+
+	
+	// *********************************
+	// Macro Variables for Substitutions
+
+	@Test
+	public void querySubstitutionVariableForPredicandV1() {
+		final String query = "SELECT col1 as ex, <basic_predicand> from old_table "
+				+ " WHERE  <second_predicand> = <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForPredicandV2() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <second_predicand> = <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForFullCondition() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <condition_substitute> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForMultipleConditions() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <second_predicand> or <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForTableOrSubQueryFromSubstitution() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from <old_table> as new_table "
+				+ " WHERE  <second_predicand> or <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForTableOrSubQueryJoinSubstitution() {
+		final String query = "SELECT new_table.col1 as ex, <basic_predicand> as predicand from <gu> as old_table "
+				+ " join <nt> as new_table on <gu_nt_join_condition>"
+				+ " WHERE  <second_predicand> or <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
 	
 	// *********************************
 	// Correctly Parsed, Completely developed
