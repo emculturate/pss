@@ -196,6 +196,7 @@ union_operator
 query_primary
   : query_specification
   | subquery
+  | variable_identifier
   ;
 
 subquery

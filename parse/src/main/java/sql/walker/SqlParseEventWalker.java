@@ -1151,6 +1151,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitQuery_primary(@NotNull SQLSelectParserParser.Query_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
+
 		handleOneChild(ruleIndex);
 	}
 
