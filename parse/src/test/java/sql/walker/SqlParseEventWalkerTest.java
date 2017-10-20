@@ -107,6 +107,105 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
+
+	
+	// *********************************
+	// Macro Variables for Substitutions
+
+	@Test
+	public void querySubstitutionVariableForPredicandV1() {
+		final String query = "SELECT col1 as ex, <basic_predicand> from old_table "
+				+ " WHERE  <second_predicand> = <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForPredicandV2() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <second_predicand> = <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForFullCondition() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <condition_substitute> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForMultipleConditions() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <first_condition> or <second_condition> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForTableOrSubQueryFromSubstitution() {
+		final String query = "SELECT col1 as ex, <basic_predicand> as predicand from <old_table> as new_table "
+				+ " WHERE  <second_predicand> or <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void querySubstitutionVariableForTableOrSubQueryJoinSubstitution() {
+		final String query = "SELECT new_table.col1 as ex, <basic_predicand> as predicand from <gu> as old_table "
+				+ " join <nt> as new_table on <gu_nt_join_condition>"
+				+ " WHERE  <second_predicand> or <third_predicand> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void complexCaseWithSubstitutionsTest() {
+// TODO: This one thinks <today> is a condition because of the style of Case statement that it is. Can we modify this?
+		final String query = " SELECT " + " CASE observation_time  " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
+				+ " WHEN <today> THEN S949.t_student_last_name   "
+				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
+				+ " FROM my.234 as s948, my.other5 as s949";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void formulaWithSubstitution() {
+		final String query = "SELECT func(<substitute_me>,<today>, 128.9) as ex, <basic_predicand> as predicand from old_table "
+				+ " WHERE  <condition_substitute> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void unionJoinWithSubstitutionV1() {
+		// TODO: These special joins do not like substitutions
+		final String query = " SELECT * FROM third cross join <fourth> union join <fifth> natural join sixth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+
+	@Test
+	public void unionSubstitutionV1() {
+// TODO: Not sure this is constructing intersect and unions correctly
+		final String query = " SELECT * FROM third union <fourth> intersect <sixth> union <fifth> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
 	
 	// *********************************
 	// Correctly Parsed, Completely developed

@@ -196,6 +196,7 @@ union_operator
 query_primary
   : query_specification
   | subquery
+  | variable_identifier
   ;
 
 subquery
@@ -226,6 +227,7 @@ table_reference_list
 table_primary
   : table_or_query_name as_clause?
   | subquery as_clause? 
+  | variable_identifier as_clause
   ;
 
 unqualified_join
@@ -396,7 +398,7 @@ null_literal
    * Functions over partitions
    * rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc)
    */
- window_over_partition_expression
+window_over_partition_expression
    : window_function over_clause
    ;
    
@@ -432,6 +434,7 @@ value_expression
   : common_value_expression
   | row_value_expression
   | boolean_value_expression
+  | variable_identifier
   ;
 
 common_value_expression
@@ -555,8 +558,9 @@ negative_predicate
   ;
 
 parenthetical_predicate
-  : boolean_primary is_clause?						# basic_clause
+  : boolean_primary is_clause?						# basic_predicate_clause
   | LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
+  | variable_identifier								# substitution_predicate 
   ;
 
 is_clause
@@ -606,13 +610,8 @@ row_value_expression
 row_value_predicand
   : nonparenthesized_value_expression_primary
   | common_value_expression
+  | variable_identifier
   ;
-
-/*
-===============================================================================
-  7.5 <from clause>
-===============================================================================
-*/
 
 column_name_list
   :  identifier  ( COMMA identifier  )*
@@ -918,7 +917,7 @@ null_ordering
 
 identifier
   : simple_identifier
-  | puml_identifier
+  | logical_identifier
   | nonreserved_keywords
   ;
 
@@ -926,9 +925,17 @@ simple_identifier
    :	Identifier
    ;
 
+logical_identifier
+   :    Bracket_Identifier
+   ;
+
+variable_identifier
+	:	Variable_Identifier
+	;
+
 puml_identifier
    :    Bracket_Identifier
-   |	Condition_Identifier
+   |	Variable_Identifier
    |	Population_Identifier
    ;
  
@@ -1637,7 +1644,7 @@ Bracket_Identifier
 	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
 	;
 
-Condition_Identifier	
+Variable_Identifier	
 	:	'<'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*'>'
 	;
 

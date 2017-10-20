@@ -1151,6 +1151,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitQuery_primary(@NotNull SQLSelectParserParser.Query_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
+
 		handleOneChild(ruleIndex);
 	}
 
@@ -1385,6 +1389,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					done = collectQuerySymbolTable("union", item, alias, reference);
 				if (!done)
 					done = collectQuerySymbolTable("intersect", item, alias, reference);
+				if (!done) {
+					// Check for Substitution Variable
+					reference = checkForSubstitutionVariable(reference, "tuple");
+					item.putAll(reference);
+				}
 			}
 
 			subMap.put("table", item);
@@ -1558,14 +1567,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove("Type");
-		Object item;
+		Map<String, Object> item;
 		HashMap<String, Object> reference = new HashMap<String, Object>();
 		String alias = null;
 
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Item: " + subMap);
-			item = subMap.remove("1");
-			reference.putAll((Map<String, Object>) item);
+			item = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
+			reference.putAll(item);
 			HashMap<String, Object> column = (HashMap<String, Object>) reference.get("column");
 			if (column == null)
 				alias = "unnamed";
@@ -1573,8 +1582,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				alias = (String) column.get("name");
 		} else {
 			showTrace(parseTrace, "Item and Alias: " + subMap);
-			item = subMap.remove("1");
+			item = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
 			reference.putAll((Map<String, Object>) item);
+
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			alias = (String) aliasMap.get("alias");
 			((Map<String, Object>) item).putAll(aliasMap);
@@ -1589,6 +1599,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			symbolTable.put("interface", selectInterface);
 		}
 		selectInterface.put(alias, reference);
+	}
+
+	/**
+	 * @param subMap
+	 * @param type
+	 * @return
+	 */
+	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
+		if(subMap.containsKey("substitution")) {
+			Map<String, Object> hold = (Map<String, Object>) subMap.get("substitution");
+			hold.put("type", type);
+		}
+		return subMap;
 	}
 
 	@Override
@@ -1734,6 +1757,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
 		showTrace(parseTrace, "Column Reference: " + subMap);
+	}
+
+	@Override
+	public void exitVariable_identifier(@NotNull SQLSelectParserParser.Variable_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+
+		if (subMap == null) {
+			// unqualified select all has no map
+			subMap = makeRuleMap(ruleIndex);
+		}
+		subMap.remove("Type");
+		if (ctx.getChildCount() == 1) {
+			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
+			item.put("name", ctx.getChild(0).getText());
+			subMap.put("substitution", item);
+		}
+		// Add item to parent map
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "Substitution Variable: " + subMap);
 	}
 
 	/*****************************************************************************************************
@@ -1949,7 +1999,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void exitBasic_clause(@NotNull SQLSelectParserParser.Basic_clauseContext ctx) {
+	public void exitBasic_predicate_clause(@NotNull SQLSelectParserParser.Basic_predicate_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
@@ -1967,6 +2017,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put("Is Clause", item.get("1"));
 			showTrace(parseTrace, "Clause: " + subMap);
 
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitSubstitution_predicate(@NotNull SQLSelectParserParser.Substitution_predicateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		if (subMap.size() == 1) {
+			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
+			subMap.putAll(left);
+			subMap = checkForSubstitutionVariable(subMap, "condition");
+			showTrace(parseTrace, "Clause: " + subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2051,13 +2119,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
 
-			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			condition.put("left", left);
-
 			String operator = (String) subMap.remove("2");
 			condition.put("operator", operator);
 
-			Map<String, Object> right = (Map<String, Object>) subMap.remove("3");
+			Map<String, Object> left = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
+			condition.put("left", left);
+
+			Map<String, Object> right = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"), "predicand");
 			condition.put("right", right);
 
 			subMap.put("condition", condition);
