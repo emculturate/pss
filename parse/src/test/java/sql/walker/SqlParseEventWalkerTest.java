@@ -71,6 +71,7 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void likeCondition2Test() {
+		//TODO: Not parsing the function after the LIKE
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like lower('%STUFF%')";
 
@@ -180,7 +181,52 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void substitutionsWithWhereClausePredicandsTest() {
+		// TODO: will not parse getting stuck at where clause
+		final String query = " Select <column1> as redvalue, <column2> as greenvalue "
+				+ " from <table> where <column1> > <column2>;";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void substitutionsOfColumnsWithTableAliasTest() {
+		// TODO: will not parse table alias in front of substitution variable
+		final String query = " Select tt.<column1> as redvalue, tt.<column2> as greenvalue "
+				+ " from <table> as tt where tt.<column1> > tt.<column2>;";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void navigateV1StudentSubstitution() {
+		// TODO: Build out the AST, interface and Substitution list so that all placeholders are recorded
+		final String query = "with getLastXTerms as ( <GetLastXTerms> ), "
+				+ " studentPopulation as ( <studentPopulation> ), "
+				+ " student as ( "
+				+ " select distinct <StudentIdentifier> as nk, "
+				+ " studentTable.<StudentId> as username, "
+				+ " <StudentEmailAddress> as email, "
+				+ " <StudentFirstName> as first_name, "
+				+ " <StudentLastName> as last_name, "
+				+ " <Birthdate> as birthdate, "
+				+ " <ActiveStudent> as is_active "
+				+ " from <StudentTable> as studentTable join studentPopulation ON  "
+				+ " <studentPopulationJoinCondition>  "
+				+ " Left join <PersonTable> as personTable on ( "
+				+ " <personTableJoinCondition> ) "
+				+ " where <whereClause> )"
+				+ " select * from student ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
 	public void formulaWithSubstitution() {
+		// TODO: This one thinks <today> is a condition. Can we modify this?
 		final String query = "SELECT func(<substitute_me>,<today>, 128.9) as ex, <basic_predicand> as predicand from old_table "
 				+ " WHERE  <condition_substitute> ";
 
@@ -285,6 +331,15 @@ public class SqlParseEventWalkerTest {
 	public void simpleAndOrParseTest() {
 		// gyg
 		final String query = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void simpleFromStatementTest() {
+
+		final String query = " SELECT * FROM tab1 ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -1253,7 +1308,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void selectBasic2UpdateTest() {
-		// TODO
+		// TODO: generate Interface list from Update queries; Assign unknown symbols from source table to source table in Symbol tree
 		String sql = "update this_table set outputA = column1, outputB = column2, outputC = column3 "
 				+ " from that_table where this_table.key=that_table.key";
 		final SQLSelectParserParser parser = parse(sql);
@@ -1326,6 +1381,22 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void basicColumnPredicandTest() {
 		String sql = "table1.emp_sales_count";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void basicColumnPredicandWithSubstitutionTest() {
+		//TODO: Does not parse; qualified substitution should produce COLUMN substitution
+		String sql = "table1.<emp_sales_count>";
+		final SQLSelectParserParser parser = parse(sql);
+		runPredicandParsertest(sql, parser);
+	}
+
+	@Test
+	public void basicColumnSubstitutionTest() {
+		//TODO: Type isn't being set; Substitution List isn't being filled
+		String sql = "<emp_sales_count>";
 		final SQLSelectParserParser parser = parse(sql);
 		runPredicandParsertest(sql, parser);
 	}
@@ -1444,7 +1515,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void conditionInTest() {
-		String sql = "item in (25, 26)";
+		String sql = "columnName in (25, 26)";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
 	}
@@ -1459,6 +1530,37 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void conditionIsNotNullTest() {
 		String sql = "table1.emp_sales_count is not null";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void substitutionConditionTest() {
+		String sql = "<item> = 26";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionWithSubstitutionInV1Test() {
+		// TODO: Does not parse; fails on "in" after the variable
+		String sql = "<columnName> in (25, 26)";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionWithSubstitutionInV2Test() {
+		// TODO: Does not parse; fails on "in" after the first variable
+		String sql = "<columnName> in <inList>";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionWithSubstitutionInV3Test() {
+		// TODO: Does not parse; can't handle in list type variable
+		String sql = "column in <inList>";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
 	}
@@ -1489,6 +1591,7 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Interface: " + extractor.getInterface());
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Input Table Map: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 		}
@@ -1506,6 +1609,7 @@ public class SqlParseEventWalkerTest {
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
 			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -1524,6 +1628,7 @@ public class SqlParseEventWalkerTest {
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
 			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);

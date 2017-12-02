@@ -296,6 +296,7 @@ column_reference_list
 
 column_reference
   : (tb_name=identifier DOT)? name=identifier
+  | tb_name=identifier DOT substitution=variable_identifier
   ;
 
 /*
@@ -433,8 +434,8 @@ cast_specification
 value_expression
   : common_value_expression
   | row_value_expression
-  | boolean_value_expression
   | variable_identifier
+  | boolean_value_expression
   ;
 
 common_value_expression
