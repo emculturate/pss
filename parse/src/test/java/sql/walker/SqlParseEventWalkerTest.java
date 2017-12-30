@@ -1,5 +1,7 @@
 package sql.walker;
 
+import static org.junit.Assert.*;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,8 +25,8 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void concatenationForumlaTest() {
-		// the concatenated elements work when in parentheses, otherwise grammar is indeterminate
-		final String query = "SELECT min(substr(strm, 1, 2) || substr(strm, 3, 1) + 1 || substr(strm, 4,1))"
+		//TODO: the concatenated elements work when in parentheses, otherwise grammar is indeterminate
+		final String query = "SELECT substr(strm, 1, 2) || substr(strm, 3, 1) + 1 || substr(strm, 4,1)"
 				+ " from tab1";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -33,7 +35,7 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void concatenationInTest() {
-		// the concatenated elements work when in parentheses, otherwise grammar is indeterminate
+		//TODO: the concatenated elements work when in parentheses, otherwise grammar is indeterminate
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd || crs_nm in (select fld from orange)";
 
@@ -43,6 +45,7 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void topXv1Test() {
+		//TODO: TOP 100 does not parse
 		final String query = "SELECT top 100 apple"
 				+ " from tab1";
 
@@ -52,6 +55,8 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void topXv2Test() {
+		// TODO: Query doesn't parse correctly. top(100) interpreted as a general function with "apple" as its alias
+		// leaving the "as orange" 
 		final String query = "SELECT top(100) apple as orange"
 				+ " from tab1";
 
@@ -60,8 +65,8 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
-	public void likeCondition1Test() {
-		// Parses but AST not developed
+	public void likeCondition1V1Test() {
+		//TODO: Parses but AST not developed
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like '%STUFF%'";
 
@@ -70,8 +75,18 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
+	public void likeCondition1WithColumnTest() {
+		//TODO: Not parsing any predicand after the LIKE, only string literals
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd like subj_cd";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
 	public void likeCondition2Test() {
-		//TODO: Not parsing the function after the LIKE
+		//TODO: Not parsing any predicand after the LIKE, only string literals
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like lower('%STUFF%')";
 
@@ -80,8 +95,38 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
-	public void doubleQuotedEscapeSequenceTest() {
-		final String query = "SELECT 'try embedd\\'d quote' as a, 'try embedd''d quote' as b"
+	public void likeConditionWithSubstitutionV1Test() {
+		//TODO: Parses but AST not developed
+		final String query = "SELECT apple"
+				+ " from tab1 where <subj_cd> like '%STUFF%'";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void likeConditionWithSubstitutionV2Test() {
+		//TODO: Not parsing any predicand after the LIKE, only string literals
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd like <predicand>";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void doubleQuotedEscapeSequenceV1Test() {
+		final String query = "SELECT 'try embedd\\'d quote' as a"
+				+ " from tab1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void doubleQuotedEscapeSequenceV2Test() {
+		//TODO: Repeated single quote within quoted constant not recognized
+		final String query = "SELECT 'try embedd''d quote' as b"
 				+ " from tab1 ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -101,7 +146,7 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void leadOverPartitionTest() {
-		// PARSE, BUT AST INCOMPLETE FOR PARAMETER LIST
+		// TODO: PARSE, BUT AST INCOMPLETE FOR PARAMETER LIST
 		final String query = "SELECT lead(code,1) over (partition by spriden_id order by code)"
 				+ " from tab1 ";
 
@@ -170,7 +215,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void complexCaseWithSubstitutionsTest() {
-// TODO: This one thinks <today> is a condition because of the style of Case statement that it is. Can we modify this?
+		// TODO: Item 27 - Substitution variable <today> does not get a type 
 		final String query = " SELECT " + " CASE observation_time  " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
 				+ " WHEN <today> THEN S949.t_student_last_name   "
 				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
@@ -182,7 +227,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void substitutionsWithWhereClausePredicandsTest() {
-		// TODO: will not parse getting stuck at where clause
+		// TODO: Item 28 - will not parse getting stuck at where clause
 		final String query = " Select <column1> as redvalue, <column2> as greenvalue "
 				+ " from <table> where <column1> > <column2>;";
 
@@ -201,7 +246,39 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
-	public void navigateV1StudentSubstitution() {
+	public void selectListWithSubstitutions() {
+		// TODO: ITEM 1 - Build out the AST, interface and Substitution list so that all placeholders are recorded
+		final String query = " select noalias, normcol as normalias, <PredicandVariableNoAlias>, <PredicandVariable> predicandAlias,"
+				+ " studentTable.<ColumnVariableNoAlias>, studentTable.<ColumnVariableWithAlias> columnAlias"
+				+ " from <StudentTable> as studentTable ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void formulaWithSubstitution() {
+		// TODO: Item 33 - This one thinks <today> is a condition. Can we modify this?
+		final String query = "SELECT func(old_table.newColumn, otherColumn, <substitute_me>, old_table.<today>, 128.9, 'A') as ex "
+				+ " from old_table ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}, alias=ex}}, from={table={alias=null, table=old_table}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[ex]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<today>=column, <substitute_me>=predicand}", extractor.getSubstitutionsMap().toString());
+		// TODO: The expected value here is still an approximation
+		Assert.assertEquals("Table Dictionary is wrong", "{old_table={<today>={substitution={name=<today>, type=column}, newColumn=[@3,12:20='old_table',<210>,1:12], otherColumn=[@3,12:20='old_table',<210>,1:12], <today>={substitution={name=<today>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		// TODO: Symbol Table is not constructed properly 
+		Assert.assertEquals("Symbol Table is wrong", "{query0={old_table={subquery={column={substitution={name=<today>, type=column}, table_ref=old_table}}}, table_ref={newColumn=[@3,12:20='old_table',<210>,1:12], substitution={name=<today>, type=column}}, interface={ex={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}}}, unknown={otherColumn=[@7,33:43='otherColumn',<210>,1:33]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void navigateV2StudentSubstitution() {
 		// TODO: Build out the AST, interface and Substitution list so that all placeholders are recorded
 		final String query = "with getLastXTerms as ( <GetLastXTerms> ), "
 				+ " studentPopulation as ( <studentPopulation> ), "
@@ -209,7 +286,7 @@ public class SqlParseEventWalkerTest {
 				+ " select distinct <StudentIdentifier> as nk, "
 				+ " studentTable.<StudentId> as username, "
 				+ " <StudentEmailAddress> as email, "
-				+ " <StudentFirstName> as first_name, "
+				+ " studentTable.<StudentFirstName> as first_name, "
 				+ " <StudentLastName> as last_name, "
 				+ " <Birthdate> as birthdate, "
 				+ " <ActiveStudent> as is_active "
@@ -218,17 +295,16 @@ public class SqlParseEventWalkerTest {
 				+ " Left join <PersonTable> as personTable on ( "
 				+ " <personTableJoinCondition> ) "
 				+ " where <whereClause> )"
-				+ " select * from student ";
+				+ " select *, <missing>, <notmissing> as notMissing from student ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
 
 	@Test
-	public void formulaWithSubstitution() {
-		// TODO: This one thinks <today> is a condition. Can we modify this?
-		final String query = "SELECT func(<substitute_me>,<today>, 128.9) as ex, <basic_predicand> as predicand from old_table "
-				+ " WHERE  <condition_substitute> ";
+	public void interfaceHandlingOfSubstitution() {
+		// TODO: Item 32 - Interface should use the substitution variables name if not aliased
+		final String query =  " select normalColumn, <missing>, <notmissing> as notMissing from student ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -236,7 +312,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void unionJoinWithSubstitutionV1() {
-		// TODO: These special joins do not like substitutions
+		// TODO: Item 34 - These special joins do not like substitutions
 		final String query = " SELECT * FROM third cross join <fourth> union join <fifth> natural join sixth ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -246,13 +322,42 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void unionSubstitutionV1() {
-// TODO: Not sure this is constructing intersect and unions correctly
 		final String query = " SELECT * FROM third union <fourth> intersect <sixth> union <fifth> ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
+
+	@Test
+	public void unionSubstitutionV2() {
+		final String query = " SELECT * FROM student union <optionalAllStudent> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
 	
+
+	@Test
+	public void optionalJoinV1() {
+		// TODO: ITEM 15 - Doesn't recognize optional join tree additions after the on clause
+		final String query = " SELECT * FROM third as T3 join fourth as F4 on <third_fourth_join_condition> <fifth> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void numericLiteralParseTest() {
+		// NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names
+		// can start with numbers, not column names
+		// TODO: ITEM 15 - Fix this, it doesn't actually parse the scientific notation
+		// properly
+		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
 	// *********************************
 	// Correctly Parsed, Completely developed
 
@@ -314,7 +419,16 @@ public class SqlParseEventWalkerTest {
 				+ " FROM scbcrse " + " group by scbcrse_subj_code " + " order by 2, scbcrse_subj_code, 1 ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=scbcrse_subj_code, table_ref=null}, alias=subj_code}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}, 3={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}}, orderby={1={null_order=null, column={literal=2}, sort_order=ASC}, 2={null_order=null, column={column={name=scbcrse_subj_code, table_ref=null}}, sort_order=ASC}, 3={null_order=null, column={literal=1}, sort_order=ASC}}, from={table={alias=null, table=scbcrse}}, groupby={1={column={name=scbcrse_subj_code, table_ref=null}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[subj_code, unnamed_1, unnamed_0]", extractor.getInterface().toString());
+		Assert.assertTrue("Substitution List is wrong", extractor.getSubstitutionsMap().isEmpty());
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_subj_code=[@23,127:143=\'scbcrse_subj_code\',<210>,1:127], scbcrse_eff_term=[@12,54:69=\'scbcrse_eff_term\',<210>,1:54]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={scbcrse={scbcrse_subj_code=[@23,127:143='scbcrse_subj_code',<210>,1:127], scbcrse_eff_term=[@12,54:69='scbcrse_eff_term',<210>,1:54]}, interface={subj_code={column={name=scbcrse_subj_code, table_ref=null}}, unnamed_1={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -376,7 +490,8 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void simpleFromListType4ParseTest() {
 
-		final String query = " SELECT * FROM third join fourth on a = b " + " left outer join fifth on b = d ";
+		final String query = " SELECT * FROM third join fourth on a = b " 
+		+ " left outer join fifth on b = d ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -447,18 +562,6 @@ public class SqlParseEventWalkerTest {
 
 		final String query = " SELECT first FROM ( " + "  select third from fifth "
 				+ " intersect select fourth from sixth ) " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void numericLiteralParseTest() {
-		// NUMBERS MISTAKEN FOR COLUMN NAMES; SHOULD notice context. Table names
-		// can start with numbers, not column names
-		// TODO: Fix this, it doesn't actually parse the scientific notation
-		// properly
-		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -1154,7 +1257,7 @@ public class SqlParseEventWalkerTest {
 		 * Categorize COLUMNS: RECORD_TYPE, ACTION, CATEGORY_ID, PRIMARY_ID
 		 */
 		String sql = " select record_type as RECORD_TYPE, action as ACTION, "
-				+ "category_id as CATEGORY_ID, primary_id as PRIMARY_ID from  categorizeTbl "
+				+ "category_id as CATEGORy_id, primary_id as PRIMARY_ID from  categorizeTbl "
 				+ " where (category_id is not null and length(trim(category_id)) > 0 "
 				+ "and primary_id is not null and length(trim(primary_id)) > 0) ";
 		final SQLSelectParserParser parser = parse(sql);
@@ -1308,7 +1411,8 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void selectBasic2UpdateTest() {
-		// TODO: generate Interface list from Update queries; Assign unknown symbols from source table to source table in Symbol tree
+		// TODO: ITEM 11 - generate Interface list and proper Table Dictionary
+		// from Update queries; Assign unknown symbols from source table to source table in Symbol tree
 		String sql = "update this_table set outputA = column1, outputB = column2, outputC = column3 "
 				+ " from that_table where this_table.key=that_table.key";
 		final SQLSelectParserParser parser = parse(sql);
@@ -1317,6 +1421,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void selectBasicInsertTest() {
+		// TODO: Item 13 - Generate proper Interface list from Insert statements
 		String sql = "insert into employees  (emp_sales_count, redder)  values (select acct_sales_count + 1, greener  FROM accounts)";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
@@ -1568,11 +1673,11 @@ public class SqlParseEventWalkerTest {
 	// *****************************
 	// COMMON TEST METHODS
 
-	private void runParsertest(final String query, final SQLSelectParserParser parser) {
-		runSQLParsertest(query, parser, null, null);
+	private SqlParseEventWalker runParsertest(final String query, final SQLSelectParserParser parser) {
+		return runSQLParsertest(query, parser, null, null);
 	}
 
-	private void runSQLParsertest(final String query, final SQLSelectParserParser parser,
+	private SqlParseEventWalker runSQLParsertest(final String query, final SQLSelectParserParser parser,
 			HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
 		try {
 			System.out.println();
@@ -1592,8 +1697,10 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Input Table Map: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			return null;
 		}
 	}
 
