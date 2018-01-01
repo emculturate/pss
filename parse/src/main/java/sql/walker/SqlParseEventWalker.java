@@ -378,9 +378,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (localSymbolTable == null) {
 				// tableReference has not been added to Symbol Table before
 				localSymbolTable = new HashMap<String, Object>();
-				addItemToSymbolTable(localSymbolTable, item, token);
 				symbolTable.put((String) tableReference, localSymbolTable);
-			} else if (localSymbolTable instanceof String) {
+			}
+			if (localSymbolTable instanceof String) {
 				// tableReference is an ALIAS to a different table
 				localSymbolTable = symbolTable.get((String) localSymbolTable);
 				addItemToSymbolTable(localSymbolTable, item, token);
@@ -407,12 +407,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (item instanceof String)
 			// Item is a column reference
 			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
-		else if (((HashMap<String, Object>) item).containsKey("substitution"))
-			// Item is a Predicate Substitution Variable
-			((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
-		else
-			// Item is a subquery with its own Symbol Table
-			((HashMap<String, Object>) localSymbolTable).put("subquery", item);
+		else {
+			HashMap<String, Object> node = (HashMap<String, Object>) item;
+			if (node.containsKey("substitution")) {
+
+				node = (HashMap<String, Object>) node.get("substitution");
+				if (node.get("type").equals("column"))
+					// Item is a Column Substitution Variable
+					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
+							(HashMap<String, Object>) item);
+				else
+					// Item is a Predicate Substitution Variable
+					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
+			} else if (node.containsKey("column")) {
+				// Item is a Column and should already be in the Symbol Table
+			} else
+				// Item is a subquery with its own Symbol Table
+				((HashMap<String, Object>) localSymbolTable).put("subquery", item);
+		}
 	}
 
 	/**
@@ -843,7 +855,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		}
-		// Add TABLE references to alias table
+		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert")) || (tab_ref.startsWith("update"))
@@ -962,7 +974,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		}
-		// Add TABLE references to alias table
+		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
@@ -1335,7 +1347,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		}
-		// Add TABLE references to alias table
+		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
@@ -1414,17 +1426,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		} else if (ctx.getChildCount() == 2) {
 			item = new HashMap<String, Object>();
-			Map<String, Object> reference = (Map<String, Object>) subMap.remove("1");
+			Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "tuple");
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			alias = (String) aliasMap.get("alias");
 			item.putAll(aliasMap);
 
 			// Try various alternatives
-			Object table = reference.get("table");
-			if (table != null) {
+			if (reference.containsKey("table")) {
+				Object table = reference.get("table");
 				item.putAll(reference);
 				collectSymbolTable(alias, table);
+			} else if (reference.containsKey("substitution")) {
+				// Check for Substitution Variable
+				item.putAll(reference);
+				// Collect Symbol Table Reference
+				Map<String, Object> substitution = (Map<String, Object>) reference.get("substitution");
+				collectSymbolTable(alias, substitution.get("name"));
+
 			} else {
 				Boolean done = collectQuerySymbolTable("query", item, alias, reference);
 				if (!done)
@@ -1435,11 +1454,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					done = collectQuerySymbolTable("union", item, alias, reference);
 				if (!done)
 					done = collectQuerySymbolTable("intersect", item, alias, reference);
-				if (!done) {
-					// Check for Substitution Variable
-					reference = checkForSubstitutionVariable(reference, "tuple");
-					item.putAll(reference);
-				}
 			}
 
 			subMap.put("table", item);
@@ -1580,6 +1594,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitJoin_condition(@NotNull SQLSelectParserParser.Join_conditionContext ctx) {
+		// TODO: Capture Join Condition Variables
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
 	}
@@ -1650,11 +1665,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Select Item has an alias
 			showTrace(parseTrace, "Item and Alias: " + item);
-			// // Get first item, record if it is a Substitution Variable by
-			// adding the Substitution List
-			// item = checkForSubstitutionVariable((Map<String, Object>)
-			// subMap.remove("1"), "predicand");
-			// reference.putAll(item);
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			interfaceAlias = (String) aliasMap.get("alias");
@@ -1822,8 +1832,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			columnRef = subMap.remove("1");
 		} else if (subMap.size() == 2) {
 			showTrace(parseTrace, "Two entries: " + subMap);
-			tableRefKey = "table_ref";
+			// tableRefKey = "table_ref";
 			tableRef = (String) subMap.remove("1");
+			tableRefKey = tableRef;
 			columnRef = subMap.remove("2");
 
 		} else {
@@ -1831,8 +1842,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			doNotSkip = false;
 		}
 		if (doNotSkip) {
-			// Capture SymbolTable entry
-			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
 			// Add column to SQL AST Tree
 			columnSubTree.put("table_ref", tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
@@ -1849,6 +1858,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				columnSubTree.put("name", columnRef);
 			}
 			subMap.put("column", columnSubTree);
+
+			// Capture SymbolTable entry
+			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
 		}
 		showTrace(parseTrace, "Column Reference: " + subMap);
 	}
@@ -2027,6 +2039,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitSearch_condition(@NotNull SQLSelectParserParser.Search_conditionContext ctx) {
+		// TODO: Add On Condition Variables
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
 	}
@@ -2758,10 +2771,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				valueExpression = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
 
 				// Get Value Expression entry
-				HashMap<String, Object> node = (HashMap<String, Object>)  valueExpression.get("column");
+				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get("column");
 				if (node == null)
 					node = (HashMap<String, Object>) valueExpression.get("substitution");
-				if (node != null){
+				if (node != null) {
 					if (node.containsKey("table_ref"))
 						// Value is associated with a table
 						tableRef = (String) node.get("table_ref");
@@ -2783,7 +2796,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Capture SymbolTable entry
 				collectSymbolTableItem(tableRef, valueExpression, ctx.getStart());
 				// Add column to SQL AST Tree
-				subMap.putAll( valueExpression);
+				subMap.putAll(valueExpression);
 			}
 			showTrace(parseTrace, "Column Reference: " + subMap);
 
