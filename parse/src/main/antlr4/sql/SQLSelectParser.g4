@@ -730,7 +730,8 @@ symmetry
 */
 
 in_predicate
-  : additive_expression  not? IN in_predicate_value
+//  : additive_expression  not? IN in_predicate_value
+  : row_value_predicand  not? IN in_predicate_value
   ;
 
 in_predicate_value

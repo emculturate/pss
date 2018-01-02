@@ -1426,7 +1426,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		} else if (ctx.getChildCount() == 2) {
 			item = new HashMap<String, Object>();
-			Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "tuple");
+			Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+					"tuple");
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			alias = (String) aliasMap.get("alias");
@@ -1594,8 +1595,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitJoin_condition(@NotNull SQLSelectParserParser.Join_conditionContext ctx) {
-		// TODO: Capture Join Condition Variables
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		subMap = (Map<String, Object>) subMap.get("1");
+		if (subMap.containsKey("parentheses")) {
+			// Remove extraneous parentheses from the outermost layer of the On Condition
+			Map<String, Object> contents = (Map<String, Object>)subMap.remove("parentheses");
+			subMap.putAll(contents);
+		}
+		
+		// Now handle child as usual
 		handleOneChild(ruleIndex);
 	}
 
@@ -2041,6 +2055,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSearch_condition(@NotNull SQLSelectParserParser.Search_conditionContext ctx) {
 		// TODO: Add On Condition Variables
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		
 		handleOneChild(ruleIndex);
 	}
 
@@ -2135,6 +2156,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
 			subMap.putAll(left);
+			// If the clause remaining is an embedded Condition Substitution Variable, this captures and labels it
 			subMap = checkForSubstitutionVariable(subMap, "condition");
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else {
@@ -2754,7 +2776,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_sql_argument_list) {
-			// handleListItem(ruleIndex, parentRuleIndex);
 			Integer stackLevel = currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 			subMap.remove("Type");
@@ -2799,7 +2820,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				subMap.putAll(valueExpression);
 			}
 			showTrace(parseTrace, "Column Reference: " + subMap);
+		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_search_condition)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_condition_value)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_filter_clause)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_searched_when_clause)) {
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			subMap = (Map<String, Object>) subMap.get("1");
+			// Get first item, record if it is a Substitution Variable by
+			// adding the Substitution List - This captures when the entire condition is a Substitution Variable alone
+			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, "condition");
 
+			// NOW handle the child
+			handleOneChild(ruleIndex);
 		} else {
 			// then parent is any non-list parent
 			handleOneChild(ruleIndex);
@@ -2836,19 +2870,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 1) {
-			item.put("column", subMap.remove("1"));
+			item.put("predicand", subMap.remove("1"));
 			item.put("sort_order", "ASC");
 			item.put("null_order", null);
 			showTrace(parseTrace, "One Entry: " + item);
 
 		} else if (subMap.size() == 2) {
-			item.put("column", subMap.remove("1"));
+			item.put("predicand", subMap.remove("1"));
 			item.put("sort_order", subMap.remove("2"));
 			item.put("null_order", null);
 			showTrace(parseTrace, "Two entries: " + item);
 
 		} else if (subMap.size() == 3) {
-			item.put("column", subMap.remove("1"));
+			item.put("predicand", subMap.remove("1"));
 			item.put("sort_order", subMap.remove("2"));
 			item.put("null_order", subMap.remove("3"));
 			showTrace(parseTrace, "Three entries: " + item);
@@ -2898,6 +2932,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitRow_value_predicand(@NotNull SQLSelectParserParser.Row_value_predicandContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		// Get first item, record if it is a Substitution Variable by
+		// adding the Substitution List
+		Map<String, Object> substitutionPredicand = checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+
 		handleOneChild(ruleIndex);
 	}
 
