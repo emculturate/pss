@@ -1,7 +1,5 @@
 package sql.walker;
 
-import static org.junit.Assert.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -526,6 +524,358 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	// END OF WHERE CLAUSE CONDITIONS
+	// CASE STATEMENTS
+
+	@Test
+	public void basicCaseConditionConstantsTest() {
+		String sql = "case when true then 'Y' when false then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={literal=true}}, 2={then={literal='N'}, when={literal=false}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicCaseExplicitConditionExpressionTest() {
+		String sql = "case when column1 = true then 'Y' when column2 = false then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=null}}, right={literal=true}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@2,10:16='column1',<210>,1:10], column2=[@8,39:45='column2',<210>,1:39]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicCaseImpliedConditionExpressionV1Test() {
+		String sql = "case column1 when true then 'Y' when false then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={literal=true}}, 2={then={literal='N'}, when={literal=false}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicCaseImpliedColumnExpressionV2Test() {
+		String sql = "case column1 when column2 then 'Y' when column3 then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5], column3=[@7,40:46='column3',<210>,1:40], column2=[@3,18:24='column2',<210>,1:18]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseImpliedConditionExpressionWithPredicandSubstitutionPos1Test() {
+		// TODO: Item 27 - Substitution variable <item> does not get the right type, should be PREDICAND because of the type of CASE STMT
+		// TODO: Item 50 - Table Dictionary is not created when the Predicand is parsed on its own
+		final String query = "CASE observation_time WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name "
+				+ " WHEN <item> THEN S949.t_student_last_name "
+				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runPredicandParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5], column3=[@7,40:46='column3',<210>,1:40], column2=[@3,18:24='column2',<210>,1:18]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseImpliedConditionExpressionWithPredicandSubstitutionPos2Test() {
+		// TODO: Item 27 - Substitution variable <column2> does not get the right type, should be PREDICAND because of the type of CASE STMT
+		String sql = "case <column1> when column2 then 'Y' when column3 then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5], column3=[@7,40:46='column3',<210>,1:40], column2=[@3,18:24='column2',<210>,1:18]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseImpliedConditionExpressionWithPredicandSubstitutionPos3Test() {
+		// TODO: Item 30 - Predicand substitution not typed nor included in the Substitution Table
+		String sql = "case column1 when column2 then 'Y' when column3 then <column4> else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5], column3=[@7,40:46='column3',<210>,1:40], column2=[@3,18:24='column2',<210>,1:18]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseImpliedConditionExpressionWithPredicandSubstitutionPos4Test() {
+		// TODO: Item 30 - Predicand substitution not typed nor included in the Substitution Table
+		String sql = "case column1 when column2 then 'Y' when column3 then column4 else <column5> end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<210>,1:5], column3=[@7,40:46='column3',<210>,1:40], column2=[@3,18:24='column2',<210>,1:18]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos1Test() {
+		String sql = "case when <column1> = true then 'Y' when column2 = false then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={substitution={name=<column1>, type=predicand}}, right={literal=true}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@8,41:47='column2',<210>,1:41]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos2Test() {
+		String sql = "case when a.<column1> = 700 then 'Y' when a.column2 = 800 then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={substitution={name=<column1>, type=column}, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={column2=[@10,42:42='a',<210>,1:42], <column1>={substitution={name=<column1>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos3Test() {
+		String sql = "case when <column1> then 'Y' when column2 = false then 'N' else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={substitution={name=<column1>, type=condition}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@6,34:40='column2',<210>,1:34]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos4Test() {
+		// TODO: Item 30 - Predicand substitution not typed nor included in the Substitution Table
+		String sql = "case when a.column1 = 700 then 'Y' when a.column2 = 800 then <predicand> else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={substitution={name=<column1>, type=column}, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={column2=[@10,42:42='a',<210>,1:42], <column1>={substitution={name=<column1>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos5Test() {
+		// TODO: Item 30 - Predicand substitution not typed nor included in the Substitution Table
+		String sql = "case when a.column1 = 700 then 'Y' when a.column2 = 800 then 'N' else <predicand> end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={substitution={name=<column1>, type=column}, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={column2=[@10,42:42='a',<210>,1:42], <column1>={substitution={name=<column1>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos6Test() {
+		String sql = "case when a.column1 = 700 then 'Y' when a.column2 = 800 then a.<column4> else 'N' end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={column={substitution={name=<column4>, type=column}, table_ref=a}}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<210>,1:10], column2=[@10,40:40='a',<210>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseExplicitConditionExpressionWithPredicandSubstitutionPos7Test() {
+		String sql = "case when a.column1 = 700 then 'Y' when a.column2 = 800 then 'N' else a.<column4> end";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={column={substitution={name=<column4>, type=column}, table_ref=a}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<210>,1:10], column2=[@10,40:40='a',<210>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	// Various other case examples
+	@Test
+	public void caseExpressionStatementParseTest() {
+		final String query = " SELECT CASE WHEN a < b THEN 'Y' WHEN a = b THEN 'N' "
+				+ " ELSE 'N' END as case_one " 
+				+ " FROM sgbstdn ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=case_one, case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}, from={table={alias=null, table=sgbstdn}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[case_one]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sgbstdn={a=[@9,38:38='a',<210>,1:38], b=[@11,42:42='b',<210>,1:42]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={sgbstdn={a=[@9,38:38='a',<210>,1:38], b=[@11,42:42='b',<210>,1:42]}, interface={case_one={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void complexCaseFunctionTest() {
+
+		final String query = " SELECT " + " CASE   " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
+				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   "
+				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
+				+ " FROM my.234 as s948, my.other5 as s949";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void caseStatementParseTest() {
+
+		final String query = " SELECT CASE WHEN true THEN 'Y' " + "  WHEN false THEN 'N' "
+				+ " ELSE 'N' END as case_one, " + " CASE  col WHEN 'a' THEN 'b'	 " + " ELSE null END as case_two "
+				+ " FROM sgbstdn ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void getMajorSqlTest() {
+		/*
+		 * Major COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME
+		 */
+		String query = "select record_type as RECORD_TYPE,action as ACTION,"
+				+ "trim(external_id) as EXTERNAL_ID,case when name is null or length(trim(name)) = 0 then 'Major name not available' else trim(name) end as NAME from "
+				+ " majorTbl where external_id is not null and length(trim(external_id)) > 0";
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	// END OF CASE STATEMENTS
 	// ORDER BY Clauses
 	
 	@Test
@@ -751,17 +1101,6 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
 	}
-
-	@Test
-	public void caseExpressionStatementParseTest() {
-		// THIS ONE WORKS - NOT SURE I HAVE THE RIGHT PROBLEM
-		final String query = " SELECT CASE WHEN a < b THEN 'Y' " + "  WHEN a = b THEN 'N' "
-				+ " ELSE 'N' END as case_one " 
-				+ " FROM sgbstdn ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
 	
 	@Test
 	public void leadOverPartitionTest() {
@@ -828,18 +1167,6 @@ public class SqlParseEventWalkerTest {
 		final String query = "SELECT new_table.col1 as ex, <basic_predicand> as predicand from <gu> as old_table "
 				+ " join <nt> as new_table on <gu_nt_join_condition>"
 				+ " WHERE  <second_predicand> or <third_predicand> ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void complexCaseWithSubstitutionsTest() {
-		// TODO: Item 27 - Substitution variable <today> does not get a type 
-		final String query = " SELECT " + " CASE observation_time  " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
-				+ " WHEN <today> THEN S949.t_student_last_name   "
-				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
-				+ " FROM my.234 as s948, my.other5 as s949";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -1335,29 +1662,6 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@14,64:67='item',<210>,1:64], *=[@1,7:7='*',<198>,1:7], subj_code=[@6,33:41='subj_code',<210>,1:33]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@18,80:80='*',<198>,1:80]}, interface={*={column={name=*, table_ref=*}}}}}}",
 				extractor.getSymbolTable().toString());
-	}
-
-	@Test
-	public void complexCaseFunctionTest() {
-
-		final String query = " SELECT " + " CASE   " + " WHEN s948.OBSERVATION_TM THEN S948.t_student_last_name   "
-				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   "
-				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name "
-				+ " FROM my.234 as s948, my.other5 as s949";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void caseStatementParseTest() {
-
-		final String query = " SELECT CASE WHEN true THEN 'Y' " + "  WHEN false THEN 'N' "
-				+ " ELSE 'N' END as case_one, " + " CASE  col WHEN 'a' THEN 'b'	 " + " ELSE null END as case_two "
-				+ " FROM sgbstdn ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
 	}
 
 	@Test
@@ -1860,18 +2164,6 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
-	public void getMajorSqlTest() {
-		/*
-		 * Major COLUMNS: RECORD_TYPE, ACTION, EXTERNAL_ID, NAME
-		 */
-		String query = "select record_type as RECORD_TYPE,action as ACTION,"
-				+ "trim(external_id) as EXTERNAL_ID,case when name is null or length(trim(name)) = 0 then 'Major name not available' else trim(name) end as NAME from "
-				+ " majorTbl where external_id is not null and length(trim(external_id)) > 0";
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
 	public void getDeclarationSqlTest() {
 		// *************** ERROR: Hive syntax not handled: "lateral view
 		// explode"
@@ -2273,8 +2565,16 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
-	public void conditionListOfAndsTest() {
+	public void conditionListOfAndsV1Test() {
 		String sql = "a=b and b=c and x >y";
+		final SQLSelectParserParser parser = parse(sql);
+		runConditionParsertest(sql, parser);
+	}
+
+	@Test
+	public void conditionListOfAndsV2Test() {
+		// TODO: Item 51 - Table Dictionary not created when condition parsing is performed on its own
+		String sql = "a.a=b.b and a.b=b.c and a.x > b.y";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
 	}
@@ -2386,7 +2686,7 @@ public class SqlParseEventWalkerTest {
 		}
 	}
 
-	private void runPredicandParsertest(final String query, final SQLSelectParserParser parser) {
+	private SqlParseEventWalker runPredicandParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
 			// There should be zero errors
@@ -2402,9 +2702,11 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 
+			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
-		}
+			return null;
+		} 
 	}
 
 	private void runConditionParsertest(final String query, final SQLSelectParserParser parser) {
