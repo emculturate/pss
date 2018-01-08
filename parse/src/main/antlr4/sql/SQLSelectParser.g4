@@ -371,7 +371,7 @@ grouping_operation
 */
 
 case_expression
-  : CASE boolean_value_expression when_clause_list ( else_clause  )? END
+  : CASE value_expression when_value_list ( else_clause  )? END
   | CASE when_clause_list (else_clause)? END
   ;
 
@@ -380,14 +380,22 @@ when_clause_list
    ;
 
 searched_when_clause
-  : WHEN c=search_condition THEN r=result
+  : WHEN c=search_condition THEN r=case_result
+  ;
+
+when_value_list
+   : (when_value_clause)+ 
+   ;
+
+when_value_clause
+  : WHEN c=value_expression THEN r=case_result
   ;
 
 else_clause
-  : ELSE r=result
+  : ELSE r=case_result
   ;
 
-result
+case_result
   : value_expression | null_literal
   ;
 

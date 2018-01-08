@@ -640,6 +640,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		sqlTree.put("PREDICAND", subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+						|| (tab_ref.startsWith("intersect"))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
@@ -652,6 +678,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		sqlTree.put("CONDITION", subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
+						|| (tab_ref.startsWith("intersect"))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
@@ -861,14 +913,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert")) || (tab_ref.startsWith("update"))
 						|| (tab_ref.startsWith("union")) || (tab_ref.startsWith("intersect"))) {
 				} else {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap
-							.get(tab_ref.toLowerCase());
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
 					if (currItem != null)
 						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 					else {
 						HashMap<String, Object> newItem = new HashMap<String, Object>();
 						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(tab_ref.toLowerCase(), newItem);
+						tableDictionaryMap.put(reference, newItem);
 					}
 				}
 			}
@@ -980,14 +1037,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
 						|| (tab_ref.startsWith("intersect"))) {
 				} else {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap
-							.get(tab_ref.toLowerCase());
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
 					if (currItem != null)
 						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 					else {
 						HashMap<String, Object> newItem = new HashMap<String, Object>();
 						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(tab_ref.toLowerCase(), newItem);
+						tableDictionaryMap.put(reference, newItem);
 					}
 				}
 			}
@@ -1353,14 +1415,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
 						|| (tab_ref.startsWith("intersect"))) {
 				} else {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap
-							.get(tab_ref.toLowerCase());
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
 					if (currItem != null)
 						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 					else {
 						HashMap<String, Object> newItem = new HashMap<String, Object>();
 						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(tab_ref.toLowerCase(), newItem);
+						tableDictionaryMap.put(reference, newItem);
 					}
 				}
 			}
@@ -1604,11 +1671,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		subMap = (Map<String, Object>) subMap.get("1");
 		if (subMap.containsKey("parentheses")) {
-			// Remove extraneous parentheses from the outermost layer of the On Condition
-			Map<String, Object> contents = (Map<String, Object>)subMap.remove("parentheses");
+			// Remove extraneous parentheses from the outermost layer of the On
+			// Condition
+			Map<String, Object> contents = (Map<String, Object>) subMap.remove("parentheses");
 			subMap.putAll(contents);
 		}
-		
+
 		// Now handle child as usual
 		handleOneChild(ruleIndex);
 	}
@@ -1965,9 +2033,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
 		if (subMap.size() == 2) {
+			// Variation 2: When contains CONDITIONS
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
 			subMap.putAll((Map<String, Object>) subMap.remove("2"));
 		} else if (subMap.size() == 3) {
+			// Variation 1: Case ITEM in implied equals formula with When
+			// Predicand
 			subMap.put("item", subMap.remove("1"));
 			subMap.putAll((Map<String, Object>) subMap.remove("2"));
 			subMap.putAll((Map<String, Object>) subMap.remove("3"));
@@ -1999,7 +2070,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
 		addToParent(parentRuleIndex, parentStackLevel, item);
-		showTrace(parseTrace, "When Clause List: " + item);
+		showTrace(parseTrace, "Case Variation 2, Without Item: When Clause List: " + item);
 	}
 
 	@Override
@@ -2020,7 +2091,49 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
 		addToParent(parentRuleIndex, parentStackLevel, item);
-		showTrace(parseTrace, "Case When Clause: " + item);
+		showTrace(parseTrace, "Case Variation 2, Without Item: Case When Clause: " + item);
+
+	}
+
+	@Override
+	public void exitWhen_value_list(@NotNull SQLSelectParserParser.When_value_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() >= 1) {
+			item.put("clauses", subMap);
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+		addToParent(parentRuleIndex, parentStackLevel, item);
+		showTrace(parseTrace, "Case Variation 1, With Item: When Value List: " + item);
+	}
+
+	@Override
+	public void exitWhen_value_clause(@NotNull SQLSelectParserParser.When_value_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		Map<String, Object> item = new HashMap<String, Object>();
+		if (subMap.size() == 2) {
+			item.put("when", subMap.remove("1"));
+			item.put("then", subMap.remove("2"));
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+		addToParent(parentRuleIndex, parentStackLevel, item);
+		showTrace(parseTrace, "Case Variation 1, With Item: When Value Clause: " + item);
 
 	}
 
@@ -2046,7 +2159,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
-	public void exitResult(@NotNull SQLSelectParserParser.ResultContext ctx) {
+	public void exitCase_result(@NotNull SQLSelectParserParser.Case_resultContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
 	}
@@ -2061,7 +2174,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		
+
 		handleOneChild(ruleIndex);
 	}
 
@@ -2156,7 +2269,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
 			subMap.putAll(left);
-			// If the clause remaining is an embedded Condition Substitution Variable, this captures and labels it
+			// If the clause remaining is an embedded Condition Substitution
+			// Variable, this captures and labels it
 			subMap = checkForSubstitutionVariable(subMap, "condition");
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else {
@@ -2823,14 +2937,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_search_condition)
 				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)
 				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_condition_value)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_filter_clause)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_searched_when_clause)) {
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_filter_clause)) {
 			Integer stackLevel = currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 			subMap = (Map<String, Object>) subMap.get("1");
 			// Get first item, record if it is a Substitution Variable by
-			// adding the Substitution List - This captures when the entire condition is a Substitution Variable alone
+			// adding the Substitution List - This captures when the entire
+			// condition is a Substitution Variable alone
 			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, "condition");
+
+			// NOW handle the child
+			handleOneChild(ruleIndex);
+		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_case_expression)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_when_value_clause)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_case_result)) {
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			subMap = (Map<String, Object>) subMap.get("1");
+			// Get first item, record if it is a Substitution Variable by
+			// adding the Substitution List - This captures when the entire
+			// condition is a Substitution Variable alone
+			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, "predicand");
 
 			// NOW handle the child
 			handleOneChild(ruleIndex);
@@ -2937,7 +3064,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		// Get first item, record if it is a Substitution Variable by
 		// adding the Substitution List
-		Map<String, Object> substitutionPredicand = checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+		Map<String, Object> substitutionPredicand = checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
+				"predicand");
 
 		handleOneChild(ruleIndex);
 	}
