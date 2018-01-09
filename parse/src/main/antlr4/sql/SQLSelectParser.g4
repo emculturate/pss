@@ -420,7 +420,8 @@ over_clause
    ;
     
 partition_by_clause
-   : PARTITION BY select_list
+//   : PARTITION BY row_value_predicand_list
+   : PARTITION BY sql_argument_list
    ;
    
 /*

@@ -1691,12 +1691,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSelect_list(@NotNull SQLSelectParserParser.Select_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_partition_by_clause) {
-			handleListList(ruleIndex, parentRuleIndex);
-		} else {
 			// then parent is normal query
 			handlePushDown(ruleIndex);
-		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2811,17 +2807,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String functType = (String) subMap.remove("1");
 
 		Map<String, Object> item = new HashMap<String, Object>();
-		subMap.put("function", item);
 
-		if (subMap.size() == 1) {
-			item.put("function_name", functType);
+		if (subMap.size() == 0) {
 			item.put("parameters", null);
-		} else if (subMap.size() == 2) {
-			item.put("function_name", functType);
-			item.put("parameters", subMap.remove("2"));
+		} else if (subMap.size() == 1) {
+			subMap = (Map<String, Object>) subMap.remove("2");
+			type = subMap.remove("Type");
+			item.put("parameters", subMap.remove(type.toString()));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
+		subMap.put("function", item);
+		item.put("function_name", functType);
+
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 		showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
 	}
@@ -2866,27 +2864,41 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 
 		if (subMap.size() >= 1) {
-			HashMap<String, Object> item = new HashMap<String, Object>();
-			item.put("partition_by", subMap);
+			HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
+			type = item.remove("Type");
+			
+			item.put("partition_by", item.remove(type.toString()));
 			addToParent(parentRuleIndex, parentStackLevel, item);
 		} else {
 			showTrace(parseTrace, "Not enough entries: " + subMap);
 		}
+		
+
+//		if (subMap.size() == 0) {
+//			item.put("parameters", null);
+//		} else if (subMap.size() == 1) {
+//			subMap = (Map<String, Object>) subMap.remove("2");
+//			type = subMap.remove("Type");
+//			item.put("parameters", subMap.remove(type.toString()));
+//		} else {
+//			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+//		}
+
 	}
 
 	@Override
 	public void exitSql_argument_list(@NotNull SQLSelectParserParser.Sql_argument_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		// int parentRuleIndex = ctx.getParent().getRuleIndex();
-		// handleListList(ruleIndex, parentRuleIndex);
-		// TODO: Add substitution variable handling here so predicands get added
-		// when they appear in functions
+		int stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+//		subMap.remove("Type");
+
+
 		handlePushDown(ruleIndex);
 	}
 
 	@Override
 	public void exitValue_expression(@NotNull SQLSelectParserParser.Value_expressionContext ctx) {
-		// TODO: Lists used in functions
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_sql_argument_list) {

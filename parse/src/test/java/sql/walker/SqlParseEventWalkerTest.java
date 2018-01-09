@@ -1085,6 +1085,221 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	// END OF AGGREGATE QUERIES
+	// WINDOW FUNCTIONS
+	
+	@Test
+	public void leadOverPartitionTest() {
+		// Item 26 - Window function property "spriden_id" appearing in Interface improperly;
+		final String query = "SELECT func(item), lead(code,1) over (partition by spriden_id order by code)"
+				+ " from tab1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}, 2={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_0]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={item=[@3,12:15='item',<210>,1:12], code=[@19,71:74='code',<210>,1:71], spriden_id=[@16,51:60='spriden_id',<210>,1:51]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={item=[@3,12:15='item',<210>,1:12], code=[@19,71:74='code',<210>,1:71], spriden_id=[@16,51:60='spriden_id',<210>,1:51]}, interface={unnamed_1={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}, unnamed_0={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void rankPartitionSyntaxTest() {
+		final String query = " SELECT "
+				+ " rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[key_rank]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,78:84='row_num',<210>,1:78], k_stfd=[@8,35:40='k_stfd',<210>,1:35], kppi=[@10,43:46='kppi',<210>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<210>,1:57]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={row_num=[@16,78:84='row_num',<210>,1:78], k_stfd=[@8,35:40='k_stfd',<210>,1:35], kppi=[@10,43:46='kppi',<210>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<210>,1:57]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void rankWithParameterPartitionSyntaxTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[key_rank]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={parm=[@3,14:17='parm',<210>,1:14], row_num=[@17,82:88='row_num',<210>,1:82], k_stfd=[@9,39:44='k_stfd',<210>,1:39], kppi=[@11,47:50='kppi',<210>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<210>,1:61]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={parm=[@3,14:17='parm',<210>,1:14], row_num=[@17,82:88='row_num',<210>,1:82], k_stfd=[@9,39:44='k_stfd',<210>,1:39], kppi=[@11,47:50='kppi',<210>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<210>,1:61]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selectPartitionDownfillTest() {
+		String query = " SELECT  "
+				+ "   first_value(major_cd) over (partition by student_id, value_partition order by term_row) as major_cd_fill "
+				+ " , first_value(college_cd) over (partition by student_id, value_partition order by term_row) as college_cd_fill "
+				+ " , first_value(degree_cd) over (partition by student_id, value_partition order by term_row) as degree_cd_fill "
+				+ " , first_value(concentration_cd) over (partition by student_id, value_partition order by term_row) as concentration_cd_fill "
+				+ " , first_value(major_cd_2) over (partition by student_id, value_partition order by term_row) as major_cd_2_fill "
+				+ " , first_value(college_cd_2) over (partition by student_id, value_partition order by term_row) as college_cd_2_fill "
+				+ " , first_value(degree_cd_2) over (partition by student_id, value_partition order by term_row) as degree_cd_2_fill "
+				+ " , first_value(concentration_cd_2) over (partition by student_id, value_partition order by term_row) as concentration_cd_2_fill "
+				+ " FROM student_term_major where major_cd is null";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("Interface is wrong", "[degree_cd_2_fill, concentration_cd_fill, college_cd_fill, major_cd_2_fill, college_cd_2_fill, degree_cd_fill, concentration_cd_2_fill, major_cd_fill]", 
+				extractor.getInterface().toString());
+	}
+
+	@Test
+	public void windowFunctionPredicandTest() {
+		String sql = "rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<210>,1:69], k_stfd=[@7,26:31='k_stfd',<210>,1:26], kppi=[@9,34:37='kppi',<210>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<210>,1:48]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<210>,1:26], row_num=[@15,69:75='row_num',<210>,1:69], kppi=[@9,34:37='kppi',<210>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<210>,1:48]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionColumnVariableP1Test() {
+		// TODO: Item 52 - Partition clause doesn't take column references with table references/aliases
+		String sql = "rank(a.<columnParam>) OVER (partition by a.k_stfd, a.kppi order by a.row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={substitution={name=<columnParam>, type=column}, table_ref=a}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, row_num=[@19,67:67='a',<210>,1:67], k_stfd=[@10,41:41='a',<210>,1:41], kppi=[@14,51:51='a',<210>,1:51]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, k_stfd=[@10,41:41='a',<210>,1:41], row_num=[@19,67:67='a',<210>,1:67], kppi=[@14,51:51='a',<210>,1:51]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionColumnVariableP2Test() {
+		// Item 52 - Partition clause doesn't take column references with table references/aliases
+		String sql = "rank(a.column) OVER (partition by a.<k_stfd>, a.kppi order by a.row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={substitution={name=<k_stfd>, type=column}, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=a}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<210>,1:5], row_num=[@19,62:62='a',<210>,1:62], kppi=[@14,46:46='a',<210>,1:46], <k_stfd>={substitution={name=<k_stfd>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={<k_stfd>={substitution={name=<k_stfd>, type=column}}, column=[@2,5:5='a',<210>,1:5], row_num=[@19,62:62='a',<210>,1:62], kppi=[@14,46:46='a',<210>,1:46]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionColumnVariableP3Test() {
+		// Item 52 - Partition clause doesn't take column references with table references/aliases
+		String sql = "rank(a.column) OVER (partition by a.k_stfd, a.kppi order by a.<row_num> desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={substitution={name=<row_num>, type=column}, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=a}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<row_num>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<210>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, k_stfd=[@10,34:34='a',<210>,1:34], kppi=[@14,44:44='a',<210>,1:44]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={k_stfd=[@10,34:34='a',<210>,1:34], column=[@2,5:5='a',<210>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, kppi=[@14,44:44='a',<210>,1:44]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionPredicandVariableP1Test() {
+		String sql = "rank(<columnParam>) OVER (partition by k_stfd, kppi order by row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={substitution={name=<columnParam>, type=predicand}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@13,61:67='row_num',<210>,1:61], k_stfd=[@8,39:44='k_stfd',<210>,1:39], kppi=[@10,47:50='kppi',<210>,1:47]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,39:44='k_stfd',<210>,1:39], row_num=[@13,61:67='row_num',<210>,1:61], kppi=[@10,47:50='kppi',<210>,1:47]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionPredicandVariableP2Test() {
+		String sql = "rank(column) OVER (partition by <k_stfd>, kppi order by row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={substitution={name=<k_stfd>, type=predicand}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<63>,1:5], row_num=[@13,56:62='row_num',<210>,1:56], kppi=[@10,42:45='kppi',<210>,1:42]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column=[@2,5:10='column',<63>,1:5], row_num=[@13,56:62='row_num',<210>,1:56], kppi=[@10,42:45='kppi',<210>,1:42]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void windowFunctionPredicandVariableP3Test() {
+		String sql = "rank(column) OVER (partition by k_stfd, kppi order by <row_num> desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<row_num>, type=predicand}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<row_num>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<63>,1:5], k_stfd=[@8,32:37='k_stfd',<210>,1:32], kppi=[@10,40:43='kppi',<210>,1:40]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,32:37='k_stfd',<210>,1:32], column=[@2,5:10='column',<63>,1:5], kppi=[@10,40:43='kppi',<210>,1:40]}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	//
 	// Miscellaneous
 	@Test
 	public void doubleQuotedEscapeSequenceV1Test() {
@@ -1099,17 +1314,6 @@ public class SqlParseEventWalkerTest {
 	public void doubleQuotedEscapeSequenceV2Test() {
 		//TODO: Repeated single quote within quoted constant not recognized
 		final String query = "SELECT 'try embedd''d quote' as b"
-				+ " from tab1 ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-	
-	@Test
-	public void leadOverPartitionTest() {
-		// TODO: Item 26 - Window function property "spriden_id" appearing in Interface improperly;
-		// 
-		final String query = "SELECT lead(code,1) over (partition by spriden_id order by code)"
 				+ " from tab1 ";
 
 		final SQLSelectParserParser parser = parse(query);
@@ -1680,26 +1884,6 @@ public class SqlParseEventWalkerTest {
 	public void nestedSymbolTableConstructionTest() {
 		final String query = " SELECT b.att1, b.att2 " + " from (SELECT a.col1 as att1, a.col2 as att2 "
 				+ " FROM tab1 as a" + " WHERE a.col1 <> a.col3 " + " ) AS b ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void rankPartitionSyntaxTest() {
-		final String query = " SELECT "
-				+ " rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
-				+ " FROM tab1 as a";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void rankWithParameterPartitionSyntaxTest() {
-		final String query = " SELECT "
-				+ " rank(parm) OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank "
-				+ " FROM tab1 as a";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
@@ -2521,13 +2705,6 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void caseFunctionPredicandTest() {
 		String sql = "case when true then ‘Y’ when false then ‘N’ else ‘N’ end";
-		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
-	}
-
-	@Test
-	public void windowFunctionPredicandTest() {
-		String sql = "rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc)";
 		final SQLSelectParserParser parser = parse(sql);
 		runPredicandParsertest(sql, parser);
 	}
