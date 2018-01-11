@@ -464,44 +464,98 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void likeCondition1V1Test() {
-		//TODO: Item 20 - Like Not implemented completely
+		//Item 20 - Like Not implemented completely
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like '%STUFF%'";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={literal='%STUFF%'}, operator=like}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	@Test
 	public void likeCondition1WithColumnTest() {
-		//TODO: Item 21 - Not parsing any predicand after the LIKE, only string literals
+		//Item 21 - Not parsing any predicand after the LIKE, only string literals
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like subj_cd";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=like}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@7,42:48='subj_cd',<210>,1:42], apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@7,42:48='subj_cd',<210>,1:42], apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void notLikeCondition1WithColumnTest() {
+		//Item 53 - not like AND SIMILAR FAILS TO BUILD TREE
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd not  like subj_cd";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=not_like}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@8,47:53='subj_cd',<210>,1:47], apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@8,47:53='subj_cd',<210>,1:47], apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	@Test
 	public void likeCondition2Test() {
-		//TODO: Item 21 - Not parsing any predicand after the LIKE, only string literals
+		// Item 21 - Not parsing any predicand after the LIKE, only string literals
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like lower('%STUFF%')";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={function={parameters={1={literal='%STUFF%'}}, function_name=lower}}, operator=like}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	@Test
 	public void likeConditionWithSubstitutionV1Test() {
-		// TODO: Item 42 - predicand before Like not properly recognized
+		//  Item 42 - predicand before Like not properly recognized
 		final String query = "SELECT apple"
 				+ " from tab1 where <subj_cd> like '%STUFF%'";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={1={substitution={name=<subj_cd>, type=predicand}}, Type=113, 2={1=like, Type=114}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subj_cd>, type=predicand}}, right={literal='%STUFF%'}, operator=like}}}}",
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
@@ -515,12 +569,23 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void likeConditionWithSubstitutionV2Test() {
-		//TODO: Item 41 - Not parsing any predicand after the LIKE, only string literals
+		// Item 41 - Not parsing any predicand after the LIKE, only string literals
 		final String query = "SELECT apple"
 				+ " from tab1 where subj_cd like <predicand>";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={substitution={name=<predicand>, type=predicand}}, operator=like}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<210>,1:29], apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	// END OF WHERE CLAUSE CONDITIONS

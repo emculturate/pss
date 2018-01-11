@@ -1691,8 +1691,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSelect_list(@NotNull SQLSelectParserParser.Select_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
-			// then parent is normal query
-			handlePushDown(ruleIndex);
+		// then parent is normal query
+		handlePushDown(ruleIndex);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2353,8 +2353,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
 
-			String operator = (String) subMap.remove("2");
-			condition.put("operator", operator);
+			Object operator = subMap.remove("2");
+			if (operator instanceof String)
+				condition.put("operator", operator);
+			else
+				condition.put("operator", ((HashMap<String, String>) operator).get("1"));
 
 			Map<String, Object> left = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"predicand");
@@ -2367,6 +2370,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put("condition", condition);
 			showTrace(parseTrace, "Comparison: " + subMap);
 
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+	}
+	// RULE_comp_op
+
+	@Override
+	public void exitComparison_operator(@NotNull SQLSelectParserParser.Comparison_operatorContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		subMap.remove("Type");
+
+		if (subMap.size() == 1) {
+			showTrace(parseTrace, "Comparison Operator: " + subMap);
+		} else if (subMap.size() == 2) {
+			showTrace(parseTrace, "Comparison Operator: " + subMap);
+			String notvar = (String) subMap.remove("1");
+			String operator = (String) subMap.remove("2");
+			subMap.put("1", notvar + '_' + operator);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2866,23 +2890,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() >= 1) {
 			HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
 			type = item.remove("Type");
-			
+
 			item.put("partition_by", item.remove(type.toString()));
 			addToParent(parentRuleIndex, parentStackLevel, item);
 		} else {
 			showTrace(parseTrace, "Not enough entries: " + subMap);
 		}
-		
 
-//		if (subMap.size() == 0) {
-//			item.put("parameters", null);
-//		} else if (subMap.size() == 1) {
-//			subMap = (Map<String, Object>) subMap.remove("2");
-//			type = subMap.remove("Type");
-//			item.put("parameters", subMap.remove(type.toString()));
-//		} else {
-//			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
-//		}
+		// if (subMap.size() == 0) {
+		// item.put("parameters", null);
+		// } else if (subMap.size() == 1) {
+		// subMap = (Map<String, Object>) subMap.remove("2");
+		// type = subMap.remove("Type");
+		// item.put("parameters", subMap.remove(type.toString()));
+		// } else {
+		// showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+		// }
 
 	}
 
@@ -2891,8 +2914,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-//		subMap.remove("Type");
-
+		// subMap.remove("Type");
 
 		handlePushDown(ruleIndex);
 	}

@@ -601,7 +601,6 @@ predicate
   : comparison_predicate
   | between_predicate
   | in_predicate
-  | pattern_matching_predicate // like predicate and other similar predicates
   | null_predicate
   | exists_predicate
   ;
@@ -702,7 +701,28 @@ row_value_predicand_list
 ===============================================================================
 */
 comparison_predicate
-  : left=row_value_predicand c=comp_op right=row_value_predicand
+  : left=row_value_predicand c=comparison_operator right=row_value_predicand
+  ;
+
+comparison_operator
+  : comp_op
+  | not? relative_comp_op
+  | similarity_op
+  ;
+  
+relative_comp_op
+  : LIKE
+  | ILIKE
+  | SIMILAR TO
+  | REGEXP
+  | RLIKE
+;
+
+similarity_op
+  : Similar_To
+  | Not_Similar_To
+  | Similar_To_Case_Insensitive
+  | Not_Similar_To_Case_Insensitive
   ;
 
 comp_op
@@ -712,8 +732,8 @@ comp_op
   | LEQ
   | GTH
   | GEQ
-  ;
-
+;
+  
 /*
 ===============================================================================
   8.3 <between predicate>
@@ -752,37 +772,6 @@ in_value_list
   : row_value_expression  ( COMMA row_value_expression )*
   ;
 
-/*
-===============================================================================
-  8.5, 8.6 <pattern matching predicate>
-
-  Specify a pattern-matching comparison.
-===============================================================================
-*/
-
-pattern_matching_predicate
-  : f=row_value_predicand pattern_matcher s=Character_String_Literal
-  ;
-
-pattern_matcher
-  : not? negativable_matcher
-  | regex_matcher
-  ;
-
-negativable_matcher
-  : LIKE
-  | ILIKE
-  | SIMILAR TO
-  | REGEXP
-  | RLIKE
-  ;
-
-regex_matcher
-  : Similar_To
-  | Not_Similar_To
-  | Similar_To_Case_Insensitive
-  | Not_Similar_To_Case_Insensitive
-  ;
 
 /*
 ===============================================================================
