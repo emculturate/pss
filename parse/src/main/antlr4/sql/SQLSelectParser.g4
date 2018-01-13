@@ -214,12 +214,15 @@ query_specification
   ;
 
 from_clause
-  : FROM table_reference_list
+  : FROM table_reference_list join_extension?
   ;
 
+join_extension
+  : variable_identifier
+  ;
+  
 table_reference_list
-  : table_primary 
-    ((COMMA table_primary)
+  : table_primary ((COMMA table_primary)
      | (unqualified_join right=table_primary)
      | (qualified_join right=table_primary s=join_specification))*
   ;
@@ -296,6 +299,7 @@ column_reference_list
 
 column_reference
   : (tb_name=identifier DOT)? name=identifier
+  | tb_name=identifier DOT substitution=variable_identifier
   ;
 
 /*
@@ -316,11 +320,11 @@ nonparenthesized_value_expression_primary
   : unsigned_literal
   | column_reference
   | aggregate_function
-  | subquery
   | case_expression
   | cast_specification
   | routine_invocation
   | window_over_partition_expression
+  | subquery
   ;
 
 aggregate_function
@@ -370,7 +374,7 @@ grouping_operation
 */
 
 case_expression
-  : CASE boolean_value_expression when_clause_list ( else_clause  )? END
+  : CASE value_expression when_value_list ( else_clause  )? END
   | CASE when_clause_list (else_clause)? END
   ;
 
@@ -379,14 +383,22 @@ when_clause_list
    ;
 
 searched_when_clause
-  : WHEN c=search_condition THEN r=result
+  : WHEN c=search_condition THEN r=case_result
+  ;
+
+when_value_list
+   : (when_value_clause)+ 
+   ;
+
+when_value_clause
+  : WHEN c=value_expression THEN r=case_result
   ;
 
 else_clause
-  : ELSE r=result
+  : ELSE r=case_result
   ;
 
-result
+case_result
   : value_expression | null_literal
   ;
 
@@ -411,7 +423,8 @@ over_clause
    ;
     
 partition_by_clause
-   : PARTITION BY select_list
+//   : PARTITION BY row_value_predicand_list
+   : PARTITION BY sql_argument_list
    ;
    
 /*
@@ -433,8 +446,10 @@ cast_specification
 value_expression
   : common_value_expression
   | row_value_expression
-  | boolean_value_expression
+  // variables identified here are Predicand variables
   | variable_identifier
+  // variables encountered after this would be condition variables
+  | boolean_value_expression
   ;
 
 common_value_expression
@@ -526,8 +541,8 @@ trim_function_name
 
 trim_operands
   : ((trim_specification)? (trim_character=string_value_expression)? FROM)? 
-     trim_source=string_value_expression  # mysql_trim_operands
-  | trim_source=string_value_expression COMMA 
+     trim_source=value_expression  # mysql_trim_operands
+  | trim_source=value_expression COMMA 
      trim_character=string_value_expression # other_trim_operands
   ;
 
@@ -558,21 +573,8 @@ negative_predicate
   ;
 
 parenthetical_predicate
-  : boolean_primary is_clause?						# basic_predicate_clause
-  | LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
-  | variable_identifier								# substitution_predicate 
-  ;
-
-is_clause
-  : IS not? truth_value
-  ;
-
-truth_value
-  : TRUE | FALSE | UNKNOWN
-  ;
-
-not
-  : NOT
+  : LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
+  | boolean_primary is_clause?						# basic_predicate_clause
   ;
 
 boolean_primary
@@ -591,11 +593,14 @@ predicate
   : comparison_predicate
   | between_predicate
   | in_predicate
-  | pattern_matching_predicate // like predicate and other similar predicates
   | null_predicate
   | exists_predicate
+  | substitution_predicate
   ;
 
+substitution_predicate
+	: variable_identifier
+	;
 
 /*
 ===============================================================================
@@ -692,7 +697,28 @@ row_value_predicand_list
 ===============================================================================
 */
 comparison_predicate
-  : left=row_value_predicand c=comp_op right=row_value_predicand
+  : left=row_value_predicand c=comparison_operator right=row_value_predicand
+  ;
+
+comparison_operator
+  : comp_op
+  | not? relative_comp_op
+  | similarity_op
+  ;
+  
+relative_comp_op
+  : LIKE
+  | ILIKE
+  | SIMILAR TO
+  | REGEXP
+  | RLIKE
+;
+
+similarity_op
+  : Similar_To
+  | Not_Similar_To
+  | Similar_To_Case_Insensitive
+  | Not_Similar_To_Case_Insensitive
   ;
 
 comp_op
@@ -702,8 +728,8 @@ comp_op
   | LEQ
   | GTH
   | GEQ
-  ;
-
+;
+  
 /*
 ===============================================================================
   8.3 <between predicate>
@@ -711,11 +737,7 @@ comp_op
 */
 
 between_predicate
-  : predicand=row_value_predicand between_predicate_part_2
-  ;
-
-between_predicate_part_2
-  : (not)? BETWEEN symmetry? begin=row_value_predicand AND end=row_value_predicand
+  : row_value_predicand  (not)? BETWEEN symmetry? begin=row_value_predicand AND end=row_value_predicand
   ;
 
 symmetry
@@ -729,49 +751,20 @@ symmetry
 */
 
 in_predicate
-  : additive_expression  not? IN in_predicate_value
+//  : additive_expression  not? IN in_predicate_value
+  : row_value_predicand  not? IN in_predicate_value
   ;
 
 in_predicate_value
   : subquery
   | LEFT_PAREN in_value_list RIGHT_PAREN
+  | variable_identifier
   ;
 
 in_value_list
   : row_value_expression  ( COMMA row_value_expression )*
   ;
 
-/*
-===============================================================================
-  8.5, 8.6 <pattern matching predicate>
-
-  Specify a pattern-matching comparison.
-===============================================================================
-*/
-
-pattern_matching_predicate
-  : f=row_value_predicand pattern_matcher s=Character_String_Literal
-  ;
-
-pattern_matcher
-  : not? negativable_matcher
-  | regex_matcher
-  ;
-
-negativable_matcher
-  : LIKE
-  | ILIKE
-  | SIMILAR TO
-  | REGEXP
-  | RLIKE
-  ;
-
-regex_matcher
-  : Similar_To
-  | Not_Similar_To
-  | Similar_To_Case_Insensitive
-  | Not_Similar_To_Case_Insensitive
-  ;
 
 /*
 ===============================================================================
@@ -788,6 +781,19 @@ null_predicate
 is_null_clause
   : IS (n=NOT)? NULL
   ;
+ 
+is_clause
+  : IS not? truth_value
+  ;
+
+truth_value
+  : TRUE | FALSE | UNKNOWN
+  ;
+
+not
+  : NOT
+  ;
+
   
 /*
 ==============================================================================================
