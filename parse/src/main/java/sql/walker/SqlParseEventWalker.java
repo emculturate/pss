@@ -342,7 +342,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@SuppressWarnings("unchecked")
 	private void collectSymbolTable(String alias, Object tableReference) {
-		// TODO
 		if (tableReference instanceof String) {
 			Object aliasSet = symbolTable.get((String) alias);
 			HashMap<String, Object> ref = (HashMap<String, Object>) symbolTable.get((String) tableReference);
@@ -1441,7 +1440,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitFrom_clause(@NotNull SQLSelectParserParser.From_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		if (subMap.size() == 3) {
+			// handle from clause with extension
+			subMap.putAll((Map<String, Object>) subMap.remove("1"));
+			if (subMap.containsKey("2"))
+				subMap.put("extension", subMap.remove("2"));
+		}
 		handlePushDown(ruleIndex);
+	}
+	// RULE_join_extension
+
+	@Override
+	public void exitJoin_extension(@NotNull SQLSelectParserParser.Join_extensionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
+				"join_extension");
+
+		handleOneChild(ruleIndex);
 	}
 
 	@Override
@@ -1772,8 +1793,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
 		if (subMap.containsKey("substitution")) {
 			Map<String, Object> hold = (Map<String, Object>) subMap.get("substitution");
-			hold.put("type", type);
-			substitutionsMap.put((String) hold.get("name"), type);
+			if (!hold.containsKey("type")) {
+				hold.put("type", type);
+				substitutionsMap.put((String) hold.get("name"), type);
+			}
 		}
 		return subMap;
 	}
@@ -1818,8 +1841,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
-	// TODO: Add tuple Substitution Variables to Table Dictionary, Substitution
-	// Variables
 	public void exitTable_or_query_name(@NotNull SQLSelectParserParser.Table_or_query_nameContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
@@ -2162,7 +2183,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitSearch_condition(@NotNull SQLSelectParserParser.Search_conditionContext ctx) {
-		// TODO: Add On Condition Variables
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -2230,6 +2250,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitBasic_predicate_clause(@NotNull SQLSelectParserParser.Basic_predicate_clauseContext ctx) {
+		// {condition={left={substitution={name=<subject code>,
+		// type=predicand}}, operator=is true}}
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
@@ -2240,11 +2262,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll(left);
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else if (subMap.size() == 2) {
+			// TODO: Grammar peculiarity results in Substitution Variable
+			// mislabelled as a condition when it should be a predicand.
+			// Fixing it here
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			subMap.put("Clause", item.get("1"));
+			if (item.containsKey("substitution")) {
+				HashMap<String, Object> hold = (HashMap<String, Object>) item.get("substitution");
+				hold.put("type", "predicand");
+				substitutionsMap.put((String) hold.get("name"), "predicand");
+			}
+			HashMap<String, Object> hold = new HashMap<String, Object>();
+			hold.put("left", item);
+			subMap.put("condition", hold);
 
 			item = (Map<String, Object>) subMap.remove("2");
-			subMap.put("Is Clause", item.get("1"));
+			subMap.putAll(item);
 			showTrace(parseTrace, "Clause: " + subMap);
 
 		} else {
@@ -2323,6 +2355,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 	}
 
+	@Override
+	public void exitIs_clause(@NotNull SQLSelectParserParser.Is_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+		// Make a new submap and fill it by reading the tokens directly
+		subMap = new HashMap<String, Object>();
+
+		if (ctx.getChildCount() == 2) {
+			subMap.put("operator", ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+		} else if (ctx.getChildCount() == 3) {
+			subMap.put("operator",
+					ctx.getChild(0).getText() + " " + ctx.getChild(1).getText() + " " + ctx.getChild(2).getText());
+		}
+		// Add item to parent map
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitParen_clause(@NotNull SQLSelectParserParser.Paren_clauseContext ctx) {
@@ -2374,7 +2429,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 	}
-	// RULE_comp_op
 
 	@Override
 	public void exitComparison_operator(@NotNull SQLSelectParserParser.Comparison_operatorContext ctx) {
@@ -2396,6 +2450,69 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitBetween_predicate(@NotNull SQLSelectParserParser.Between_predicateContext ctx) {
+		// RULE_between_predicate
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		if (subMap.size() >= 3) {
+			showTrace(parseTrace, "Bewteen: " + subMap);
+			Map<String, Object> condition = new HashMap<String, Object>();
+			condition.put("item", subMap.remove("1"));
+			String itemKey = "begin";
+
+			Object operator = subMap.remove("2");
+			if (operator instanceof String)
+				if (operator.equals("not"))
+					condition.put("operator", "not between");
+				else {
+					condition.put("symmetry", operator);
+					condition.put("operator", "between");
+				}
+			else {
+				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
+				condition.put(itemKey, operator);
+				itemKey = "end";
+				condition.put("operator", "between");
+				condition.put("symmetry", null);
+			}
+
+			operator = subMap.remove("3");
+			if (operator instanceof String)
+				condition.put("symmetry", operator);
+			else {
+				if (!condition.containsKey("symmetry"))
+					condition.put("symmetry", null);
+				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
+				condition.put(itemKey, operator);
+				if (itemKey.equals("begin"))
+					itemKey = "end";
+				else
+					itemKey = "stop";
+			}
+
+			if (itemKey.equals("begin")) {
+				operator = subMap.remove("4");
+				condition.put(itemKey, operator);
+				operator = subMap.remove("5");
+				condition.put("end", operator);
+			} else if (itemKey.equals("end")) {
+				operator = subMap.remove("4");
+				condition.put(itemKey, operator);
+			}
+
+			subMap.put("between", condition);
+			showTrace(parseTrace, "Comparison: " + subMap);
+
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+	}
+
 	@Override
 	public void exitIn_predicate(@NotNull SQLSelectParserParser.In_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -2411,6 +2528,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() == 3) {
 			showTrace(parseTrace, "In predicate: " + subMap);
 			subMap.put("item", subMap.remove("1"));
+			subMap.remove("2");
 			subMap.put("not_in_list", subMap.remove("3"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
@@ -2427,6 +2545,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitIn_predicate_value(@NotNull SQLSelectParserParser.In_predicate_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "in_list");
+
 		handleOneChild(ruleIndex);
 	}
 
@@ -2995,6 +3118,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// NOW handle the child
 			handleOneChild(ruleIndex);
+		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_aggregate_function)
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_trim_operands)) {
+			// Trim and Aggregate Function Parameter
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			subMap = (Map<String, Object>) subMap.get("1");
+			// Get first item, record if it is a Substitution Variable by
+			// adding the Substitution List - This captures when the entire
+			// condition is a Substitution Variable alone
+			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, "predicand");
+
+			// NOW handle the child
+			handleOneChild(ruleIndex);
+			//
 		} else {
 			// then parent is any non-list parent
 			handleOneChild(ruleIndex);

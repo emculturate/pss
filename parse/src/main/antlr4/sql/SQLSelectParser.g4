@@ -214,12 +214,15 @@ query_specification
   ;
 
 from_clause
-  : FROM table_reference_list
+  : FROM table_reference_list join_extension?
   ;
 
+join_extension
+  : variable_identifier
+  ;
+  
 table_reference_list
-  : table_primary 
-    ((COMMA table_primary)
+  : table_primary ((COMMA table_primary)
      | (unqualified_join right=table_primary)
      | (qualified_join right=table_primary s=join_specification))*
   ;
@@ -317,11 +320,11 @@ nonparenthesized_value_expression_primary
   : unsigned_literal
   | column_reference
   | aggregate_function
-  | subquery
   | case_expression
   | cast_specification
   | routine_invocation
   | window_over_partition_expression
+  | subquery
   ;
 
 aggregate_function
@@ -443,7 +446,9 @@ cast_specification
 value_expression
   : common_value_expression
   | row_value_expression
+  // variables identified here are Predicand variables
   | variable_identifier
+  // variables encountered after this would be condition variables
   | boolean_value_expression
   ;
 
@@ -536,8 +541,8 @@ trim_function_name
 
 trim_operands
   : ((trim_specification)? (trim_character=string_value_expression)? FROM)? 
-     trim_source=string_value_expression  # mysql_trim_operands
-  | trim_source=string_value_expression COMMA 
+     trim_source=value_expression  # mysql_trim_operands
+  | trim_source=value_expression COMMA 
      trim_character=string_value_expression # other_trim_operands
   ;
 
@@ -568,21 +573,8 @@ negative_predicate
   ;
 
 parenthetical_predicate
-  : boolean_primary is_clause?						# basic_predicate_clause
-  | LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
-  | variable_identifier								# substitution_predicate 
-  ;
-
-is_clause
-  : IS not? truth_value
-  ;
-
-truth_value
-  : TRUE | FALSE | UNKNOWN
-  ;
-
-not
-  : NOT
+  : LEFT_PAREN boolean_value_expression RIGHT_PAREN # paren_clause
+  | boolean_primary is_clause?						# basic_predicate_clause
   ;
 
 boolean_primary
@@ -603,8 +595,12 @@ predicate
   | in_predicate
   | null_predicate
   | exists_predicate
+  | substitution_predicate
   ;
 
+substitution_predicate
+	: variable_identifier
+	;
 
 /*
 ===============================================================================
@@ -741,11 +737,7 @@ comp_op
 */
 
 between_predicate
-  : predicand=row_value_predicand between_predicate_part_2
-  ;
-
-between_predicate_part_2
-  : (not)? BETWEEN symmetry? begin=row_value_predicand AND end=row_value_predicand
+  : row_value_predicand  (not)? BETWEEN symmetry? begin=row_value_predicand AND end=row_value_predicand
   ;
 
 symmetry
@@ -766,6 +758,7 @@ in_predicate
 in_predicate_value
   : subquery
   | LEFT_PAREN in_value_list RIGHT_PAREN
+  | variable_identifier
   ;
 
 in_value_list
@@ -788,6 +781,19 @@ null_predicate
 is_null_clause
   : IS (n=NOT)? NULL
   ;
+ 
+is_clause
+  : IS not? truth_value
+  ;
+
+truth_value
+  : TRUE | FALSE | UNKNOWN
+  ;
+
+not
+  : NOT
+  ;
+
   
 /*
 ==============================================================================================
