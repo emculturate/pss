@@ -3399,6 +3399,7 @@ public class SqlParseEventWalkerTest {
 			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
 			return null;
 		}
 	}
