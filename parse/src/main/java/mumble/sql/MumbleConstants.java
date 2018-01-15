@@ -29,7 +29,7 @@ public final class MumbleConstants {
 	public static final String PSS_JOIN_KEY = "join";
 	public static final String PSS_JOIN_ON_KEY = "on";
 	public static final String PSS_JOIN_TYPE_KEY = "join_type";
-	public static final String PSS_LEFT_KEY = "left";
+	public static final String PSS_LEFT_FACTOR_KEY = "left";
 	public static final String PSS_LIMIT_KEY = "limit";
 	public static final String PSS_LIST_KEY = "list";
 	public static final String PSS_LITERAL_KEY = "literal";

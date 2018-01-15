@@ -2285,7 +2285,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				substitutionsMap.put((String) hold.get("name"), "predicand");
 			}
 			HashMap<String, Object> hold = new HashMap<String, Object>();
-			hold.put(PSS_LEFT_KEY, item);
+			hold.put(PSS_LEFT_FACTOR_KEY, item);
 			subMap.put(PSS_CONDITION_KEY, hold);
 
 			item = (Map<String, Object>) subMap.remove("2");
@@ -2331,7 +2331,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			condition.put(PSS_LEFT_KEY, left);
+			condition.put(PSS_LEFT_FACTOR_KEY, left);
 
 			condition.putAll((Map<String, Object>) subMap.remove("2"));
 
@@ -2429,7 +2429,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> left = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"predicand");
-			condition.put(PSS_LEFT_KEY, left);
+			condition.put(PSS_LEFT_FACTOR_KEY, left);
 
 			Map<String, Object> right = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
 					"predicand");
@@ -2666,7 +2666,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Map<String, Object> left = new HashMap<String, Object>();
 				left.put(PSS_LITERAL_KEY, "-1");
 				Map<String, Object> item = new HashMap<String, Object>();
-				item.put(PSS_LEFT_KEY, left);
+				item.put(PSS_LEFT_FACTOR_KEY, left);
 				item.put(PSS_OPERATOR_KEY, "*");
 				item.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("2"));
 				Map<String, Object> calc = new HashMap<String, Object>();
@@ -2713,9 +2713,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(PSS_LEFT_KEY, subMap.remove("" + indx++));
+					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put(PSS_LEFT_KEY, item);
+					calc.put(PSS_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
 				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
@@ -2745,9 +2745,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(PSS_LEFT_KEY, subMap.remove("" + indx++));
+					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put(PSS_LEFT_KEY, item);
+					calc.put(PSS_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
 				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
