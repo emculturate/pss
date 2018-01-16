@@ -1285,7 +1285,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), PSS_QUERY_KEY);
+		checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
 
 		handleOneChild(ruleIndex);
 	}
@@ -1352,7 +1352,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_groupby_clause) {
 					subMap.put(PSS_GROUPBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_having_clause) {
-					subMap.put(PSS_HAVING_KEY, segment);
+					HashMap<String, Object> item = (HashMap<String, Object>) segment;
+					item = (HashMap<String, Object>) item.remove("1");
+					subMap.put(PSS_HAVING_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
 					subMap.put(PSS_ORDERBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
@@ -1628,7 +1630,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		else if (ctx.getChildCount() == 3) {
 			String type = (String) subMap.remove("1");
 			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
-			subMap.put(PSS_JOIN_TYPE_KEY, type);
+//			subMap.put(PSS_JOIN_TYPE_KEY, type);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -2019,7 +2021,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitHaving_clause(@NotNull SQLSelectParserParser.Having_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = currentStackLevel(ruleIndex);
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		handlePushDown(ruleIndex);
+//		handleOneChild(ruleIndex);
 	}
 
 	@Override

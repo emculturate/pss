@@ -84,6 +84,25 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void basicLeftJoinWithOnTest() {
+		final String query = " SELECT a.* FROM third a left join fourth b on  a.a = b.b "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@12,48:48='a',<210>,1:48], *=[@1,8:8='a',<210>,1:8]}, fourth={b=[@16,54:54='b',<210>,1:54]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@12,48:48='a',<210>,1:48], *=[@1,8:8='a',<210>,1:8]}, fourth={b=[@16,54:54='b',<210>,1:54]}, interface={*={column={name=*, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
 	public void basicJoinWithOnParenthesisTest() {
 		// Item 4 - Normal join ON Condition in parentheses should drop the parenthetical
 		final String query = " SELECT a.* FROM third a join fourth b on (a.a = b.b)"; 
@@ -286,6 +305,25 @@ public class SqlParseEventWalkerTest {
 	// End of Join Extensions
 
 	// WHERE CONDITION VARIATIONS
+	
+	@Test
+	public void whereConditionWithNegationTest() {
+		final String query = "SELECT apple from tab1 where not true";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={not={literal=true}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<210>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<210>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
 	
 	@Test
 	public void whereConditionWithSingleConditionVariableTest() {
@@ -1456,6 +1494,60 @@ public class SqlParseEventWalkerTest {
 	}
 
 	// end of trim functions
+	// HAVING Clauses
+	
+	@Test
+	public void basicHavingTest() {
+
+		final String query = " select spriden_id,  TERM_CODE_ADMIT FROM tab1 "
+				+ " HAVING max(TERM_CODE_ADMIT) >= 201310 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={function={function_name=max, qualifier=null, parameters={column={name=TERM_CODE_ADMIT, table_ref=null}}}}, right={literal=201310}, operator=>=}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<210>,1:59], spriden_id=[@1,8:17='spriden_id',<210>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<210>,1:59], spriden_id=[@1,8:17='spriden_id',<210>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void conditionVariableHavingTest() {
+
+		final String query = " select spriden_id,  TERM_CODE_ADMIT FROM tab1 "
+				+ " HAVING <condition> or <condition2>";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void predicandVariableHavingTest() {
+
+		final String query = " select spriden_id,  TERM_CODE_ADMIT FROM tab1 "
+				+ " HAVING <condition> > '20130101' ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void columnVariableHavingTest() {
+
+		final String query = " select spriden_id,  TERM_CODE_ADMIT FROM tab1 "
+				+ " HAVING tab1.<condition> > '20130101' ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	// end of having clause
 	// ORDER BY Clauses
 	
 	@Test
@@ -2421,32 +2513,6 @@ public class SqlParseEventWalkerTest {
 	public void nestedSymbolTableConstructionTest() {
 		final String query = " SELECT b.att1, b.att2 " + " from (SELECT a.col1 as att1, a.col2 as att2 "
 				+ " FROM tab1 as a" + " WHERE a.col1 <> a.col3 " + " ) AS b ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void biggerQueryParseTest() {
-
-		final String query = " select spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, "
-				+ "spriden_mi, TERM_CODE_ADMIT FROM ( "
-				+ " SELECT spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden "
-				+ " WHERE spriden_change_ind is null) spriden " + " JOIN (  SELECT pidm, max(term) AS max_term FROM ( "
-				+ " SELECT shrtgpa_pidm AS pidm, shrtgpa_term_code AS term  "
-				+ " FROM shrtgpa WHERE shrtgpa_levl_code = 'UG' "
-				+ " UNION ALL SELECT shrtrce_pidm AS pidm, shrtrce_term_code_eff AS term FROM shrtrce WHERE shrtrce_levl_code = 'UG' "
-				+ " UNION ALL SELECT sfrstca_pidm AS pidm, sfrstca_term_code AS term   FROM sfrstca "
-				+ " JOIN stvterm ON stvterm_code = sfrstca_term_code " + " AND stvterm_end_date > SYSDATE - 365  "
-				+ " UNION ALL SELECT sgbstdn_pidm AS pidm, sgbstdn_term_code_eff AS term "
-				+ " FROM sgbstdn WHERE sgbstdn_levl_code = 'UG'  ) x GROUP BY pidm "
-				+ " ) terms ON spriden.spriden_pidm = terms.pidm "
-				+ " JOIN STVTERM termDates ON termDates.STVTERM_CODE = terms.max_term "
-				+ " JOIN (SELECT sgbstdn_pidm, MIN(SGBSTDN_TERM_CODE_ADMIT) AS TERM_CODE_ADMIT from sgbstdn "
-				+ " WHERE sgbstdn_levl_code = 'UG' GROUP BY sgbstdn_pidm "
-				+ " ) undergradOnly ON undergradOnly.sgbstdn_pidm = spriden.spriden_pidm "
-				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi, TERM_CODE_ADMIT "
-				+ " HAVING max(max_term) >= 201310 ";
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
