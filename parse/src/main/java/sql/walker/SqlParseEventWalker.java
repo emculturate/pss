@@ -1,6 +1,7 @@
 package sql.walker;
 
 import java.util.HashMap;
+
 import java.util.HashSet;
 import java.util.Map;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -13,9 +14,16 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 import static mumble.sql.MumbleConstants.*;
 
 import mumble.sql.Snippet;
+
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserBaseListener;
-
+/**
+ * Primary Listener Class; The class accepts events from the parse project's 
+ * Base Parser Listener and creates a nested Hashmap Abstract Tree of the SQL
+ * 
+ * @author geoffreyhowe
+ *
+ */
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	final static Boolean showParse = false;
