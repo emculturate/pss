@@ -10,6 +10,9 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
+import static mumble.sql.MumbleConstants.*;
+
+import mumble.sql.Snippet;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserBaseListener;
 
@@ -24,42 +27,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	final static Integer symbolTrace = 2;
 	final static Integer otherTrace = 3;
 	final static Integer resultTrace = 4;
-
-	/**
-	 * Symbol Swap Maps
-	 */
-	private HashMap<String, String> entityTableNameMap;
-	private HashMap<String, Map<String, String>> attributeColumnMap;
-
-	public void setEntityTableNameMap(HashMap<String, String> entityTableNameMap) {
-		this.entityTableNameMap = entityTableNameMap;
-	}
-
-	public void setAttributeColumnMap(HashMap<String, Map<String, String>> attributeColumnMap) {
-		this.attributeColumnMap = attributeColumnMap;
-	}
-
-	private String getTableName(String entityName) {
-		return getLookupValue(entityTableNameMap, entityName);
-	}
-
-	public HashMap<String, Object> getSubstitutionsMap() {
-		return substitutionsMap;
-	}
-
-	/**
-	 * @param lkp
-	 * @param lkpName
-	 * @return
-	 */
-	private String getLookupValue(HashMap<String, String> lkp, String lkpName) {
-		if (lkp == null)
-			return lkpName;
-		String hold = lkp.get(lkpName);
-		if (hold == null)
-			return lkpName;
-		return hold;
-	}
 
 	/**
 	 * SQL Abstract Syntax Tree: This collects and constructs a nested Map data
@@ -116,6 +83,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	// Extra-Grammar Identifiers
 
+	/**
+	 * Symbol Swap Maps
+	 */
+	private HashMap<String, String> entityTableNameMap;
+	private HashMap<String, Map<String, String>> attributeColumnMap;
+
+	public void setEntityTableNameMap(HashMap<String, String> entityTableNameMap) {
+		this.entityTableNameMap = entityTableNameMap;
+	}
+
+	public void setAttributeColumnMap(HashMap<String, Map<String, String>> attributeColumnMap) {
+		this.attributeColumnMap = attributeColumnMap;
+	}
+
+	private String getTableName(String entityName) {
+		return getLookupValue(entityTableNameMap, entityName);
+	}
+
+	public HashMap<String, Object> getSubstitutionsMap() {
+		return substitutionsMap;
+	}
+
+	/**
+	 * @param lkp
+	 * @param lkpName
+	 * @return
+	 */
+	private String getLookupValue(HashMap<String, String> lkp, String lkpName) {
+		if (lkp == null)
+			return lkpName;
+		String hold = lkp.get(lkpName);
+		if (hold == null)
+			return lkpName;
+		return hold;
+	}
+
 	// Constructors
 	public SqlParseEventWalker() {
 		super();
@@ -158,7 +161,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = null;
 		if (symbolTable != null) {
 			for (String key : symbolTable.keySet()) {
-				if (key.equals("with")) {
+				if (key.equals(PSS_WITH_KEY)) {
 				} else {
 					hold = (HashMap<String, Object>) symbolTable.get(key);
 					break;
@@ -174,6 +177,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		return interfac;
 	}
+
+	/**
+	 * Emit a Snippet object with all of the parts of the SQL Parse Event Walker results related to the query
+	*
+	 * @return
+	 */
+	public Snippet getSnippet() {
+		return new Snippet(sqlTree, tableDictionaryMap, symbolTable, substitutionsMap, getInterface());
+	}
+	
 	// Other Methods
 
 	/**
@@ -408,17 +421,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
 		else {
 			HashMap<String, Object> node = (HashMap<String, Object>) item;
-			if (node.containsKey("substitution")) {
+			if (node.containsKey(PSS_SUBSTITUTION_KEY)) {
 
-				node = (HashMap<String, Object>) node.get("substitution");
-				if (node.get("type").equals("column"))
+				node = (HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY);
+				if (node.get(PSS_TYPE_KEY).equals(PSS_COLUMN_KEY))
 					// Item is a Column Substitution Variable
 					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
 							(HashMap<String, Object>) item);
 				else
 					// Item is a Predicate Substitution Variable
 					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
-			} else if (node.containsKey("column")) {
+			} else if (node.containsKey(PSS_COLUMN_KEY)) {
 				// Item is a Column and should already be in the Symbol Table
 			} else
 				// Item is a subquery with its own Symbol Table
@@ -441,11 +454,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			prefx = "union";
+			prefx = PSS_UNION_KEY;
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			prefx = "intersect";
+			prefx = PSS_INTERSECT_KEY;
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac != null) {
@@ -624,7 +637,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put("SQL", subMap.remove("1"));
+		sqlTree.put(PSS_SQL_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);
@@ -636,7 +649,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put("PREDICAND", subMap.remove("1"));
+		sqlTree.put(PSS_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -644,8 +657,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
-						|| (tab_ref.startsWith("intersect"))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -674,7 +687,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put("CONDITION", subMap.remove("1"));
+		sqlTree.put(PSS_CONDITION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -682,8 +695,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
-						|| (tab_ref.startsWith("intersect"))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -728,8 +741,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> withList = (Map<String, Object>) subMap.remove("1");
 			Map<String, Object> query = (Map<String, Object>) subMap.remove("2");
 
-			subMap.put("with", withList);
-			subMap.put("query", query);
+			subMap.put(PSS_WITH_KEY, withList);
+			subMap.put(PSS_QUERY_KEY, query);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -780,16 +793,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			subMap.put(alias, aliasMap);
 			// Add to symbol tree WITH subclause
-			if (symbolTable.containsKey("with")) {
-				Map<String, Object> with = (Map<String, Object>) symbolTable.remove("with");
+			if (symbolTable.containsKey(PSS_WITH_KEY)) {
+				Map<String, Object> with = (Map<String, Object>) symbolTable.remove(PSS_WITH_KEY);
 				with.put(alias, symbolTable);
 				symbolTable = new HashMap<String, Object>();
-				symbolTable.put("with", with);
+				symbolTable.put(PSS_WITH_KEY, with);
 			} else {
 				Map<String, Object> with = new HashMap<String, Object>();
 				with.put(alias, symbolTable);
 				symbolTable = new HashMap<String, Object>();
-				symbolTable.put("with", with);
+				symbolTable.put(PSS_WITH_KEY, with);
 			}
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -828,7 +841,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				HashMap<String, Object> value = (HashMap<String, Object>) obj;
 				Integer childKey = (Integer) (value).remove("Type");
 				if (childKey == null) {
-					if (value.containsKey("table")) {
+					if (value.containsKey(PSS_TABLE_KEY)) {
 						subMap.put("insert", value);
 					} else {
 						String nk = "query" + queryCount;
@@ -840,7 +853,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					if (childKey == (Integer) SQLSelectParserParser.RULE_column_reference_list) {
 						subMap.put("into", value);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
-						subMap.put("returning", segment);
+						subMap.put(PSS_RETURNING_KEY, segment);
 					} else {
 						showTrace(parseTrace, "Too Many Entries" + segment);
 					}
@@ -873,8 +886,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					holdTabRef = tab_ref;
 					count++;
 					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith("union"))
-							|| (tab_ref.startsWith("intersect"))) {
+							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
+							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -910,7 +923,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert")) || (tab_ref.startsWith("update"))
-						|| (tab_ref.startsWith("union")) || (tab_ref.startsWith("intersect"))) {
+						|| (tab_ref.startsWith(PSS_UNION_KEY)) || (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -955,18 +968,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else {
 					Object segment = value.remove(childKey.toString());
 					if (childKey == (Integer) SQLSelectParserParser.RULE_assignment_expression_list) {
-						subMap.put("assignments", segment);
+						subMap.put(PSS_ASSIGNMENTS_KEY, segment);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
 						if (((HashMap<String, Object>) segment).size() == 1) {
-							subMap.put("from", ((HashMap<String, Object>) segment).remove("1"));
+							subMap.put(PSS_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 						} else
-							subMap.put("from", segment);
+							subMap.put(PSS_FROM_KEY, segment);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
 						HashMap<String, Object> item = (HashMap<String, Object>) segment;
 						item = (HashMap<String, Object>) item.remove("1");
-						subMap.put("where", item);
+						subMap.put(PSS_WHERE_KEY, item);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
-						subMap.put("returning", segment);
+						subMap.put(PSS_RETURNING_KEY, segment);
 					} else {
 						showTrace(parseTrace, "Too Many Entries" + segment);
 					}
@@ -997,8 +1010,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					hold.put(tab_ref, item);
 					holdTabRef = tab_ref;
 					count++;
-					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
-							|| (tab_ref.startsWith("intersect"))) {
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -1033,8 +1046,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
-						|| (tab_ref.startsWith("intersect"))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1080,16 +1093,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 2) {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			subMap.put("set", left);
+			subMap.put(PSS_SET_KEY, left);
 
 			Map<String, Object> right = (Map<String, Object>) subMap.remove("2");
-			subMap.put("to", right);
+			subMap.put(PSS_TO_KEY, right);
 
 			showTrace(parseTrace, "Assignment: " + subMap);
 
 			// Put target column symbol into update table's set and interface
 			Map<String, Object> unk = (HashMap<String, Object>) symbolTable.get("unknown");
-			String column = ((HashMap<String, String>) ((HashMap<String, Object>) left).get("column")).get("name");
+			String column = ((HashMap<String, String>) ((HashMap<String, Object>) left).get(PSS_COLUMN_KEY)).get("name");
 
 			String[] keys = new String[1];
 			keys = symbolTable.keySet().toArray(keys);
@@ -1097,7 +1110,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (String key : keys) {
 				if (key.equals("unknown")) { // do nothing
 
-				} else if (key.equals("with")) { // do nothing
+				} else if (key.equals(PSS_WITH_KEY)) { // do nothing
 
 				} else {
 					// must be the table
@@ -1142,14 +1155,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitIntersected_query(@NotNull SQLSelectParserParser.Intersected_queryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, "intersect");
+		handleOperandList(ruleIndex, PSS_INTERSECT_KEY);
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols = symbolTable;
 
 		if (intersectClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
-			String key = "intersect" + queryCount;
+			String key = PSS_INTERSECT_KEY + queryCount;
 			popSymbolTable(key, symbols);
 			queryCount++;
 		} else {
@@ -1178,14 +1191,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put("operator", subMap.remove("1"));
-			item.put("qualifier", null);
-			subMap.put("intersect", item);
+			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, null);
+			subMap.put(PSS_INTERSECT_KEY, item);
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put("operator", subMap.remove("1"));
-			item.put("qualifier", subMap.remove("2"));
-			subMap.put("intersect", item);
+			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+			subMap.put(PSS_INTERSECT_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -1209,14 +1222,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitUnionized_query(@NotNull SQLSelectParserParser.Unionized_queryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, "union");
+		handleOperandList(ruleIndex, PSS_UNION_KEY);
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols = symbolTable;
 
 		if (unionClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
-			String key = "union" + queryCount;
+			String key = PSS_UNION_KEY + queryCount;
 			popSymbolTable(key, symbols);
 			queryCount++;
 		} else {
@@ -1243,14 +1256,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put("operator", subMap.remove("1"));
-			item.put("qualifier", null);
-			subMap.put("union", item);
+			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, null);
+			subMap.put(PSS_UNION_KEY, item);
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put("operator", subMap.remove("1"));
-			item.put("qualifier", subMap.remove("2"));
-			subMap.put("union", item);
+			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+			subMap.put(PSS_UNION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -1289,7 +1302,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			HashMap<String, Object> item = new HashMap<String, Object>();
 
-			item.put("lookup", subMap.remove("1"));
+			item.put(PSS_LOOKUP_KEY, subMap.remove("1"));
 
 			subMap.put("1", item);
 			handleListItem(ruleIndex, parentRuleIndex);
@@ -1324,26 +1337,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Integer childKey = (Integer) (value).remove("Type");
 				Object segment = value.remove(childKey.toString());
 				if (childKey == (Integer) SQLSelectParserParser.RULE_select_list) {
-					subMap.put("select", segment);
+					subMap.put(PSS_SELECT_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier) {
-					subMap.put("qualifier", segment);
+					subMap.put(PSS_QUALIFIER_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
 					if (((HashMap<String, Object>) segment).size() == 1) {
-						subMap.put("from", ((HashMap<String, Object>) segment).remove("1"));
+						subMap.put(PSS_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 					} else
-						subMap.put("from", segment);
+						subMap.put(PSS_FROM_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put("where", item);
+					subMap.put(PSS_WHERE_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_groupby_clause) {
-					subMap.put("groupby", segment);
+					subMap.put(PSS_GROUPBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_having_clause) {
-					subMap.put("having", segment);
+					HashMap<String, Object> item = (HashMap<String, Object>) segment;
+					item = (HashMap<String, Object>) item.remove("1");
+					subMap.put(PSS_HAVING_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
-					subMap.put("orderby", segment);
+					subMap.put(PSS_ORDERBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
-					subMap.put("limit", segment);
+					subMap.put(PSS_LIMIT_KEY, segment);
 				} else {
 					showTrace(parseTrace, "Too Many Entries" + segment);
 				}
@@ -1375,8 +1390,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					holdTabRef = tab_ref;
 					count++;
 					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith("union"))
-							|| (tab_ref.startsWith("intersect"))) {
+							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
+							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -1411,8 +1426,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("union"))
-						|| (tab_ref.startsWith("intersect"))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1447,7 +1462,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// handle from clause with extension
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
 			if (subMap.containsKey("2"))
-				subMap.put("extension", subMap.remove("2"));
+				subMap.put(PSS_JOIN_EXTENSION_KEY, subMap.remove("2"));
 		}
 		handlePushDown(ruleIndex);
 	}
@@ -1469,7 +1484,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitTable_reference_list(@NotNull SQLSelectParserParser.Table_reference_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, "join");
+		handleOperandList(ruleIndex, PSS_JOIN_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1488,27 +1503,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			item = (Map<String, Object>) subMap.remove("1");
-			item.put("alias", null);
+			item.put(PSS_ALIAS_KEY, null);
 
-			Object table = item.get("table");
+			Object table = item.get(PSS_TABLE_KEY);
 			if (table != null) {
 				alias = table.toString();
 				collectSymbolTable(alias, table);
 
-				subMap.put("table", item);
+				subMap.put(PSS_TABLE_KEY, item);
 			} else {
 				alias = "unnamed";
 				Map<String, Object> aliasMap = new HashMap<String, Object>();
 				aliasMap.put(alias, alias);
-				Boolean done = collectQuerySymbolTable("query", aliasMap, alias, item);
+				Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, aliasMap, alias, item);
 				if (!done)
 					done = collectQuerySymbolTable("insert", aliasMap, alias, item);
 				if (!done)
 					done = collectQuerySymbolTable("update", aliasMap, alias, item);
 				if (!done)
-					done = collectQuerySymbolTable("union", aliasMap, alias, item);
+					done = collectQuerySymbolTable(PSS_UNION_KEY, aliasMap, alias, item);
 				if (!done)
-					done = collectQuerySymbolTable("intersect", aliasMap, alias, item);
+					done = collectQuerySymbolTable(PSS_INTERSECT_KEY, aliasMap, alias, item);
 
 			}
 
@@ -1518,34 +1533,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					"tuple");
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-			alias = (String) aliasMap.get("alias");
+			alias = (String) aliasMap.get(PSS_ALIAS_KEY);
 			item.putAll(aliasMap);
 
 			// Try various alternatives
-			if (reference.containsKey("table")) {
-				Object table = reference.get("table");
+			if (reference.containsKey(PSS_TABLE_KEY)) {
+				Object table = reference.get(PSS_TABLE_KEY);
 				item.putAll(reference);
 				collectSymbolTable(alias, table);
-			} else if (reference.containsKey("substitution")) {
+			} else if (reference.containsKey(PSS_SUBSTITUTION_KEY)) {
 				// Check for Substitution Variable
 				item.putAll(reference);
 				// Collect Symbol Table Reference
-				Map<String, Object> substitution = (Map<String, Object>) reference.get("substitution");
+				Map<String, Object> substitution = (Map<String, Object>) reference.get(PSS_SUBSTITUTION_KEY);
 				collectSymbolTable(alias, substitution.get("name"));
 
 			} else {
-				Boolean done = collectQuerySymbolTable("query", item, alias, reference);
+				Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable("insert", item, alias, reference);
+					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable("update", item, alias, reference);
+					done = collectQuerySymbolTable(PSS_UPDATE_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable("union", item, alias, reference);
+					done = collectQuerySymbolTable(PSS_UNION_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable("intersect", item, alias, reference);
+					done = collectQuerySymbolTable(PSS_INTERSECT_KEY, item, alias, reference);
 			}
 
-			subMap.put("table", item);
+			subMap.put(PSS_TABLE_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -1611,11 +1626,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, subMap);
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 2)
-			subMap.put("join", ctx.getText());
+			subMap.put(PSS_JOIN_KEY, ctx.getText());
 		else if (ctx.getChildCount() == 3) {
 			String type = (String) subMap.remove("1");
-			subMap.put("join", ctx.getChild(0).getText() + ctx.getChild(2).getText());
-			subMap.put("join_type", type);
+			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
+//			subMap.put(PSS_JOIN_TYPE_KEY, type);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -1639,14 +1654,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.remove("1");
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1)
-			subMap.put("join", ctx.getText());
+			subMap.put(PSS_JOIN_KEY, ctx.getText());
 		else if (ctx.getChildCount() == 2) {
 			// String type = (String) subMap.remove("1");
-			subMap.put("join", ctx.getChild(0).getText());
+			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText());
 			// subMap.put("join_type", type);
 		} else if (ctx.getChildCount() == 3) {
 			// String type = (String) subMap.remove("1");
-			subMap.put("join", ctx.getChild(0).getText() + ctx.getChild(1).getText());
+			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(1).getText());
 			// subMap.put("join_type", type);
 		}
 		// Add item to parent map
@@ -1673,7 +1688,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> join = (Map<String, Object>) pMap.get(indx.toString());
 			// Add On clause to previous Join statement
 			item = (Map<String, Object>) subMap.remove("1");
-			join.put("on", item);
+			join.put(PSS_JOIN_ON_KEY, item);
 			showTrace(parseTrace, "join On Clause: " + join);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -1691,10 +1706,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		subMap = (Map<String, Object>) subMap.get("1");
-		if (subMap.containsKey("parentheses")) {
+		if (subMap.containsKey(PSS_PARENTHESES_KEY)) {
 			// Remove extraneous parentheses from the outermost layer of the On
 			// Condition
-			Map<String, Object> contents = (Map<String, Object>) subMap.remove("parentheses");
+			Map<String, Object> contents = (Map<String, Object>) subMap.remove(PSS_PARENTHESES_KEY);
 			subMap.putAll(contents);
 		}
 
@@ -1743,17 +1758,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 0) {
 			// Select Item did not have an Alias, construct one from options
 			showTrace(parseTrace, "Just One Item: " + item);
-			HashMap<String, Object> node = (HashMap<String, Object>) item.get("column");
+			HashMap<String, Object> node = (HashMap<String, Object>) item.get(PSS_COLUMN_KEY);
 			if (node == null)
-				node = (HashMap<String, Object>) item.get("substitution");
+				node = (HashMap<String, Object>) item.get(PSS_SUBSTITUTION_KEY);
 			if (node != null)
-				if (node.containsKey("name"))
+				if (node.containsKey(PSS_NAME_KEY))
 					// Select Item is a column or substitution, use its name
-					interfaceAlias = (String) node.get("name");
-				else if (node.containsKey("substitution"))
+					interfaceAlias = (String) node.get(PSS_NAME_KEY);
+				else if (node.containsKey(PSS_SUBSTITUTION_KEY))
 					// then Select Item is a COLUMN Substitution Variable, get
 					// the variable's name
-					interfaceAlias = (String) ((HashMap<String, Object>) node.get("substitution")).get("name");
+					interfaceAlias = (String) ((HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY)).get("name");
 			if (interfaceAlias == null) {
 				// Select Item is a PREDICAND without a name, generate the next
 				// placeholder for the interface
@@ -1766,7 +1781,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Item and Alias: " + item);
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-			interfaceAlias = (String) aliasMap.get("alias");
+			interfaceAlias = (String) aliasMap.get(PSS_ALIAS_KEY);
 			((Map<String, Object>) item).putAll(aliasMap);
 		}
 		addToParent(parentRuleIndex, parentStackLevel, item);
@@ -1791,10 +1806,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
-		if (subMap.containsKey("substitution")) {
-			Map<String, Object> hold = (Map<String, Object>) subMap.get("substitution");
-			if (!hold.containsKey("type")) {
-				hold.put("type", type);
+		if (subMap.containsKey(PSS_SUBSTITUTION_KEY)) {
+			Map<String, Object> hold = (Map<String, Object>) subMap.get(PSS_SUBSTITUTION_KEY);
+			if (!hold.containsKey(PSS_TYPE_KEY)) {
+				hold.put(PSS_TYPE_KEY, type);
 				substitutionsMap.put((String) hold.get("name"), type);
 			}
 		}
@@ -1820,20 +1835,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
-			item.put("table_ref", "*");
-			item.put("name", "*");
+			item.put(PSS_TABLE_REF_KEY, "*");
+			item.put(PSS_NAME_KEY, "*");
 
 			collectSymbolTableItem("unknown", "*", ctx.getStart());
 
-			subMap.put("column", item);
+			subMap.put(PSS_COLUMN_KEY, item);
 		} else if (ctx.getChildCount() == 3) {
 			showTrace(parseTrace, "Three entries: " + ctx.getText());
-			item.put("table_ref", ctx.getChild(0).getText());
+			item.put(PSS_TABLE_REF_KEY, ctx.getChild(0).getText());
 
-			collectSymbolTableItem(item.get("table_ref"), "*", ctx.getStart());
+			collectSymbolTableItem(item.get(PSS_TABLE_REF_KEY), "*", ctx.getStart());
 
-			item.put("name", "*");
-			subMap.put("column", item);
+			item.put(PSS_NAME_KEY, "*");
+			subMap.put(PSS_COLUMN_KEY, item);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -1856,12 +1871,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put("table", table);
+			subMap.put(PSS_TABLE_KEY, table);
 			showTrace(parseTrace, "table: " + table + " Map: " + subMap);
 		} else if (subMap.size() == 2) {
 			showTrace(parseTrace, "Two entries: " + subMap);
 			String schema = (String) subMap.remove("1");
-			subMap.put("schema", schema);
+			subMap.put(PSS_SCHEMA_KEY, schema);
 			String table = (String) subMap.remove("2");
 
 			// try swapping names here
@@ -1869,14 +1884,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put("table", table);
+			subMap.put(PSS_TABLE_KEY, table);
 			showTrace(parseTrace, "Schema: " + schema + " Table: " + table + " Map: " + subMap);
 		} else if (subMap.size() == 3) {
 			showTrace(parseTrace, "Three entries: " + subMap);
 			String dbname = (String) subMap.remove("1");
-			subMap.put("dbname", dbname);
+			subMap.put(PSS_DATABASE_NAME_KEY, dbname);
 			String schema = (String) subMap.remove("2");
-			subMap.put("schema", schema);
+			subMap.put(PSS_SCHEMA_KEY, schema);
 			String table = (String) subMap.remove("3");
 
 			// try swapping names here
@@ -1884,7 +1899,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put("table", table);
+			subMap.put(PSS_TABLE_KEY, table);
 			showTrace(parseTrace, "Database: " + dbname + "Schema: " + schema + " Table: " + table + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -1901,7 +1916,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + subMap);
 			String alias = (String) subMap.remove("1");
-			subMap.put("alias", alias);
+			subMap.put(PSS_ALIAS_KEY, alias);
 			showTrace(parseTrace, "Alias: " + alias + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -1942,21 +1957,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		if (doNotSkip) {
 			// Add column to SQL AST Tree
-			columnSubTree.put("table_ref", tableRef);
+			columnSubTree.put(PSS_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
 				// should be a substitution
 				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
-				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get("substitution");
-				substitutionMap.put("type", "column");
+				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(PSS_SUBSTITUTION_KEY);
+				substitutionMap.put(PSS_TYPE_KEY, PSS_COLUMN_KEY);
 
 				// Add reference to Substitution Variables list
-				substitutionsMap.put((String) substitutionMap.get("name"), "column");
+				substitutionsMap.put((String) substitutionMap.get("name"), PSS_COLUMN_KEY);
 
 				columnSubTree.putAll((HashMap<String, Object>) columnRef);
 			} else {
-				columnSubTree.put("name", columnRef);
+				columnSubTree.put(PSS_NAME_KEY, columnRef);
 			}
-			subMap.put("column", columnSubTree);
+			subMap.put(PSS_COLUMN_KEY, columnSubTree);
 
 			// Capture SymbolTable entry
 			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
@@ -1983,8 +1998,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
-			item.put("name", ctx.getChild(0).getText());
-			subMap.put("substitution", item);
+			item.put(PSS_NAME_KEY, ctx.getChild(0).getText());
+			subMap.put(PSS_SUBSTITUTION_KEY, item);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -2006,7 +2021,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitHaving_clause(@NotNull SQLSelectParserParser.Having_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = currentStackLevel(ruleIndex);
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		handlePushDown(ruleIndex);
+//		handleOneChild(ruleIndex);
 	}
 
 	@Override
@@ -2024,7 +2043,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Part of a window function
 			subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put("orderby", subMap);
+			item.put(PSS_ORDERBY_KEY, subMap);
 
 			addToParent(parentRuleIndex, parentStackLevel, item);
 		} else
@@ -2056,7 +2075,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() == 3) {
 			// Variation 1: Case ITEM in implied equals formula with When
 			// Predicand
-			subMap.put("item", subMap.remove("1"));
+			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
 			subMap.putAll((Map<String, Object>) subMap.remove("2"));
 			subMap.putAll((Map<String, Object>) subMap.remove("3"));
 		} else {
@@ -2064,7 +2083,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put("case", subMap);
+		item.put(PSS_CASE_KEY, subMap);
 		addToParent(parentRuleIndex, parentStackLevel, item);
 		showTrace(parseTrace, "Case: " + item);
 
@@ -2082,7 +2101,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() >= 1) {
-			item.put("clauses", subMap);
+			item.put(PSS_CLAUSES_KEY, subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2102,8 +2121,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() == 2) {
-			item.put("when", subMap.remove("1"));
-			item.put("then", subMap.remove("2"));
+			item.put(PSS_WHEN_KEY, subMap.remove("1"));
+			item.put(PSS_THEN_KEY, subMap.remove("2"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2124,7 +2143,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() >= 1) {
-			item.put("clauses", subMap);
+			item.put(PSS_CLAUSES_KEY, subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2144,8 +2163,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() == 2) {
-			item.put("when", subMap.remove("1"));
-			item.put("then", subMap.remove("2"));
+			item.put(PSS_WHEN_KEY, subMap.remove("1"));
+			item.put(PSS_THEN_KEY, subMap.remove("2"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2166,7 +2185,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() == 1) {
-			item.put("else", subMap.remove("1"));
+			item.put(PSS_ELSE_KEY, subMap.remove("1"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2203,7 +2222,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitOr_predicate(@NotNull SQLSelectParserParser.Or_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		String key = "or";
+		String key = PSS_OR_KEY;
 
 		handleOperandList(ruleIndex, key);
 	}
@@ -2211,7 +2230,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitAnd_predicate(@NotNull SQLSelectParserParser.And_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		String key = "and";
+		String key = PSS_AND_KEY;
 
 		handleOperandList(ruleIndex, key);
 	}
@@ -2266,14 +2285,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// mislabelled as a condition when it should be a predicand.
 			// Fixing it here
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			if (item.containsKey("substitution")) {
-				HashMap<String, Object> hold = (HashMap<String, Object>) item.get("substitution");
-				hold.put("type", "predicand");
+			if (item.containsKey(PSS_SUBSTITUTION_KEY)) {
+				HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_SUBSTITUTION_KEY);
+				hold.put(PSS_TYPE_KEY, "predicand");
 				substitutionsMap.put((String) hold.get("name"), "predicand");
 			}
 			HashMap<String, Object> hold = new HashMap<String, Object>();
-			hold.put("left", item);
-			subMap.put("condition", hold);
+			hold.put(PSS_LEFT_FACTOR_KEY, item);
+			subMap.put(PSS_CONDITION_KEY, hold);
 
 			item = (Map<String, Object>) subMap.remove("2");
 			subMap.putAll(item);
@@ -2299,7 +2318,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll(left);
 			// If the clause remaining is an embedded Condition Substitution
 			// Variable, this captures and labels it
-			subMap = checkForSubstitutionVariable(subMap, "condition");
+			subMap = checkForSubstitutionVariable(subMap, PSS_CONDITION_KEY);
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
@@ -2318,11 +2337,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			condition.put("left", left);
+			condition.put(PSS_LEFT_FACTOR_KEY, left);
 
 			condition.putAll((Map<String, Object>) subMap.remove("2"));
 
-			subMap.put("condition", condition);
+			subMap.put(PSS_CONDITION_KEY, condition);
 			showTrace(parseTrace, "IS NULL Clause: " + subMap);
 
 		} else {
@@ -2346,9 +2365,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 2) {
-			subMap.put("operator", ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+			subMap.put(PSS_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
 		} else if (ctx.getChildCount() == 3) {
-			subMap.put("operator",
+			subMap.put(PSS_OPERATOR_KEY,
 					ctx.getChild(0).getText() + " " + ctx.getChild(1).getText() + " " + ctx.getChild(2).getText());
 		}
 		// Add item to parent map
@@ -2369,9 +2388,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap = new HashMap<String, Object>();
 
 		if (ctx.getChildCount() == 2) {
-			subMap.put("operator", ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+			subMap.put(PSS_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
 		} else if (ctx.getChildCount() == 3) {
-			subMap.put("operator",
+			subMap.put(PSS_OPERATOR_KEY,
 					ctx.getChild(0).getText() + " " + ctx.getChild(1).getText() + " " + ctx.getChild(2).getText());
 		}
 		// Add item to parent map
@@ -2388,7 +2407,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			subMap.put("parentheses", item);
+			subMap.put(PSS_PARENTHESES_KEY, item);
 			showTrace(parseTrace, "Parenthesed Clause: " + subMap);
 
 		} else {
@@ -2410,19 +2429,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Object operator = subMap.remove("2");
 			if (operator instanceof String)
-				condition.put("operator", operator);
+				condition.put(PSS_OPERATOR_KEY, operator);
 			else
-				condition.put("operator", ((HashMap<String, String>) operator).get("1"));
+				condition.put(PSS_OPERATOR_KEY, ((HashMap<String, String>) operator).get("1"));
 
 			Map<String, Object> left = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"predicand");
-			condition.put("left", left);
+			condition.put(PSS_LEFT_FACTOR_KEY, left);
 
 			Map<String, Object> right = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
 					"predicand");
-			condition.put("right", right);
+			condition.put(PSS_RIGHT_FACTOR_KEY, right);
 
-			subMap.put("condition", condition);
+			subMap.put(PSS_CONDITION_KEY, condition);
 			showTrace(parseTrace, "Comparison: " + subMap);
 
 		} else {
@@ -2462,50 +2481,50 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() >= 3) {
 			showTrace(parseTrace, "Bewteen: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
-			condition.put("item", subMap.remove("1"));
-			String itemKey = "begin";
+			condition.put(PSS_ITEM_KEY, subMap.remove("1"));
+			String itemKey = PSS_RANGE_BEGIN_KEY;
 
 			Object operator = subMap.remove("2");
 			if (operator instanceof String)
 				if (operator.equals("not"))
-					condition.put("operator", "not between");
+					condition.put(PSS_OPERATOR_KEY, "not between");
 				else {
-					condition.put("symmetry", operator);
-					condition.put("operator", "between");
+					condition.put(PSS_SYMMETRY_KEY, operator);
+					condition.put(PSS_OPERATOR_KEY, PSS_BETWEEN_KEY);
 				}
 			else {
 				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
 				condition.put(itemKey, operator);
-				itemKey = "end";
-				condition.put("operator", "between");
-				condition.put("symmetry", null);
+				itemKey = PSS_RANGE_END_KEY;
+				condition.put(PSS_OPERATOR_KEY, PSS_BETWEEN_KEY);
+				condition.put(PSS_SYMMETRY_KEY, null);
 			}
 
 			operator = subMap.remove("3");
 			if (operator instanceof String)
-				condition.put("symmetry", operator);
+				condition.put(PSS_SYMMETRY_KEY, operator);
 			else {
-				if (!condition.containsKey("symmetry"))
-					condition.put("symmetry", null);
+				if (!condition.containsKey(PSS_SYMMETRY_KEY))
+					condition.put(PSS_SYMMETRY_KEY, null);
 				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
 				condition.put(itemKey, operator);
-				if (itemKey.equals("begin"))
-					itemKey = "end";
+				if (itemKey.equals(PSS_RANGE_BEGIN_KEY))
+					itemKey = PSS_RANGE_END_KEY;
 				else
 					itemKey = "stop";
 			}
 
-			if (itemKey.equals("begin")) {
+			if (itemKey.equals(PSS_RANGE_BEGIN_KEY)) {
 				operator = subMap.remove("4");
 				condition.put(itemKey, operator);
 				operator = subMap.remove("5");
-				condition.put("end", operator);
+				condition.put(PSS_RANGE_END_KEY, operator);
 			} else if (itemKey.equals("end")) {
 				operator = subMap.remove("4");
 				condition.put(itemKey, operator);
 			}
 
-			subMap.put("between", condition);
+			subMap.put(PSS_BETWEEN_KEY, condition);
 			showTrace(parseTrace, "Comparison: " + subMap);
 
 		} else {
@@ -2523,19 +2542,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 2) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put("item", subMap.remove("1"));
-			subMap.put("in_list", subMap.remove("2"));
+			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.put(PSS_IN_LIST_KEY, subMap.remove("2"));
 		} else if (subMap.size() == 3) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put("item", subMap.remove("1"));
+			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
 			subMap.remove("2");
-			subMap.put("not_in_list", subMap.remove("3"));
+			subMap.put(PSS_NOT_IN_LIST_KEY, subMap.remove("3"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put("in", subMap);
+		item.put(PSS_IN_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -2561,7 +2580,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put("list", subMap);
+		item.put(PSS_LIST_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -2579,7 +2598,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			subMap.put("parentheses", item);
+			subMap.put(PSS_PARENTHESES_KEY, item);
 			showTrace(parseTrace, "Parenthesed Clause: " + subMap);
 
 		} else {
@@ -2604,15 +2623,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put("function_name", subMap.remove("1"));
-			item.put("qualifier", null);
-			item.put("parameters", subMap.remove("2"));
-			subMap.put("function", item);
+			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, null);
+			item.put(PSS_PARAMETERS_KEY, subMap.remove("2"));
+			subMap.put(PSS_FUNCTION_KEY, item);
 		} else if (subMap.size() == 3) {
-			item.put("function_name", subMap.remove("1"));
-			item.put("qualifier", subMap.remove("2"));
-			item.put("parameters", subMap.remove("3"));
-			subMap.put("function", item);
+			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+			item.put(PSS_PARAMETERS_KEY, subMap.remove("3"));
+			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2629,10 +2648,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 0) {
-			item.put("function_name", "COUNT");
-			item.put("qualifier", null);
-			item.put("parameters", "*");
-			subMap.put("function", item);
+			item.put(PSS_FUNCTION_NAME_KEY, "COUNT");
+			item.put(PSS_QUALIFIER_KEY, null);
+			item.put(PSS_PARAMETERS_KEY, "*");
+			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2651,13 +2670,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// multiply by -1
 				// 1={left={literal=-1}, right={...}, operand=*}
 				Map<String, Object> left = new HashMap<String, Object>();
-				left.put("literal", "-1");
+				left.put(PSS_LITERAL_KEY, "-1");
 				Map<String, Object> item = new HashMap<String, Object>();
-				item.put("left", left);
-				item.put("operator", "*");
-				item.put("right", subMap.remove("2"));
+				item.put(PSS_LEFT_FACTOR_KEY, left);
+				item.put(PSS_OPERATOR_KEY, "*");
+				item.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("2"));
 				Map<String, Object> calc = new HashMap<String, Object>();
-				calc.put("calc", item);
+				calc.put(PSS_CALCULATION_KEY, item);
 				subMap.put("1", calc);
 			} else {
 				subMap.put("1", subMap.remove("2"));
@@ -2700,14 +2719,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put("left", subMap.remove("" + indx++));
+					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put("left", item);
+					calc.put(PSS_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put("right", subMap.remove("" + indx++));
-				calc.put("operator", ctx.getChild(x).getText());
-				item.put("calc", calc);
+				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(PSS_OPERATOR_KEY, ctx.getChild(x).getText());
+				item.put(PSS_CALCULATION_KEY, calc);
 			}
 
 			subMap = item;
@@ -2732,14 +2751,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put("left", subMap.remove("" + indx++));
+					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put("left", item);
+					calc.put(PSS_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put("right", subMap.remove("" + indx++));
-				calc.put("operator", ctx.getChild(x).getText());
-				item.put("calc", calc);
+				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(PSS_OPERATOR_KEY, ctx.getChild(x).getText());
+				item.put(PSS_CALCULATION_KEY, calc);
 			}
 
 			subMap = item;
@@ -2776,7 +2795,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitString_value_expression(@NotNull SQLSelectParserParser.String_value_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		handleOperandList(ruleIndex, "concatenate");
+		handleOperandList(ruleIndex, PSS_CONCATENATE_KEY);
 	}
 
 	@Override
@@ -2806,9 +2825,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put("function_name", subMap.remove("1"));
-			item.put("parameters", subMap.remove("2"));
-			subMap.put("function", item);
+			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(PSS_PARAMETERS_KEY, subMap.remove("2"));
+			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2829,13 +2848,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put("trim_character", subMap.remove("1"));
-			item.put("value", subMap.remove("2"));
+			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("1"));
+			item.put(PSS_VALUE_KEY, subMap.remove("2"));
 
 		} else if (subMap.size() == 3) {
-			item.put("qualifier", subMap.remove("1"));
-			item.put("trim_character", subMap.remove("2"));
-			item.put("value", subMap.remove("3"));
+			item.put(PSS_QUALIFIER_KEY, subMap.remove("1"));
+			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("2"));
+			item.put(PSS_VALUE_KEY, subMap.remove("3"));
 		}
 
 		// Add item to parent map
@@ -2857,8 +2876,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put("trim_character", subMap.remove("2"));
-			item.put("value", subMap.remove("1"));
+			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("2"));
+			item.put(PSS_VALUE_KEY, subMap.remove("1"));
 		}
 
 		// Add item to parent map
@@ -2884,8 +2903,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.putAll((Map<? extends String, ? extends Object>) subMap.remove("1"));
 			subMap = (Map<String, Object>) subMap.remove("2");
 			type = subMap.remove("Type");
-			item.put("parameters", subMap.remove(type.toString()));
-			subMap.put("function", item);
+			item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
+			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -2903,14 +2922,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + subMap);
 			String functName = (String) subMap.remove("1");
-			subMap.put("function_name", functName);
+			subMap.put(PSS_FUNCTION_NAME_KEY, functName);
 			showTrace(parseTrace, "function_name: " + functName + " Map: " + subMap);
 		} else if (subMap.size() == 2) {
 			showTrace(parseTrace, "Two entries: " + subMap);
 			String schema = (String) subMap.remove("1");
-			subMap.put("schema", schema);
+			subMap.put(PSS_SCHEMA_KEY, schema);
 			String functName = (String) subMap.remove("2");
-			subMap.put("function_name", functName);
+			subMap.put(PSS_FUNCTION_NAME_KEY, functName);
 			showTrace(parseTrace, "Schema: " + schema + " function_name: " + functName + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -2934,7 +2953,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.putAll((Map<String, Object>) subMap.remove("1"));
 			item.putAll((Map<String, Object>) subMap.remove("2"));
-			subMap.put("window_function", item);
+			subMap.put(PSS_WINDOW_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Incorrect number of entries: " + subMap);
 		}
@@ -2956,16 +2975,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 0) {
-			item.put("parameters", null);
+			item.put(PSS_PARAMETERS_KEY, null);
 		} else if (subMap.size() == 1) {
 			subMap = (Map<String, Object>) subMap.remove("2");
 			type = subMap.remove("Type");
-			item.put("parameters", subMap.remove(type.toString()));
+			item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
-		subMap.put("function", item);
-		item.put("function_name", functType);
+		subMap.put(PSS_FUNCTION_KEY, item);
+		item.put(PSS_FUNCTION_NAME_KEY, functType);
 
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 		showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
@@ -2985,14 +3004,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		HashMap<String, Object> item = new HashMap<String, Object>();
 		if (subMap.size() == 0) {
-			subMap.put("over", null);
+			subMap.put(PSS_OVER_KEY, null);
 		} else if (subMap.size() == 1) {
 			item.putAll((Map<String, Object>) subMap.remove("1"));
-			subMap.put("over", item);
+			subMap.put(PSS_OVER_KEY, item);
 		} else if (subMap.size() > 1) {
 			item.putAll((Map<String, Object>) subMap.remove("1"));
 			item.putAll((Map<String, Object>) subMap.remove("2"));
-			subMap.put("over", item);
+			subMap.put(PSS_OVER_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -3014,21 +3033,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
 			type = item.remove("Type");
 
-			item.put("partition_by", item.remove(type.toString()));
+			item.put(PSS_PARTITION_BY_KEY, item.remove(type.toString()));
 			addToParent(parentRuleIndex, parentStackLevel, item);
 		} else {
 			showTrace(parseTrace, "Not enough entries: " + subMap);
 		}
-
-		// if (subMap.size() == 0) {
-		// item.put("parameters", null);
-		// } else if (subMap.size() == 1) {
-		// subMap = (Map<String, Object>) subMap.remove("2");
-		// type = subMap.remove("Type");
-		// item.put("parameters", subMap.remove(type.toString()));
-		// } else {
-		// showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
-		// }
 
 	}
 
@@ -3037,8 +3046,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		// subMap.remove("Type");
-
 		handlePushDown(ruleIndex);
 	}
 
@@ -3063,21 +3070,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				valueExpression = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
 
 				// Get Value Expression entry
-				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get("column");
+				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(PSS_COLUMN_KEY);
 				if (node == null)
-					node = (HashMap<String, Object>) valueExpression.get("substitution");
+					node = (HashMap<String, Object>) valueExpression.get(PSS_SUBSTITUTION_KEY);
 				if (node != null) {
-					if (node.containsKey("table_ref"))
+					if (node.containsKey(PSS_TABLE_REF_KEY))
 						// Value is associated with a table
-						tableRef = (String) node.get("table_ref");
-					if (node.containsKey("name"))
+						tableRef = (String) node.get(PSS_TABLE_REF_KEY);
+					if (node.containsKey(PSS_NAME_KEY))
 						// Value Expression is a column or substitution, use its
 						// name
-						name = (String) node.get("name");
-					else if (node.containsKey("substitution"))
+						name = (String) node.get(PSS_NAME_KEY);
+					else if (node.containsKey(PSS_SUBSTITUTION_KEY))
 						// then Value Expression is a COLUMN Substitution
 						// Variable, get the variable's name
-						name = (String) ((HashMap<String, Object>) node.get("substitution")).get("name");
+						name = (String) ((HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY)).get("name");
 				}
 
 			} else {
@@ -3101,7 +3108,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Get first item, record if it is a Substitution Variable by
 			// adding the Substitution List - This captures when the entire
 			// condition is a Substitution Variable alone
-			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, "condition");
+			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, PSS_CONDITION_KEY);
 
 			// NOW handle the child
 			handleOneChild(ruleIndex);
@@ -3168,21 +3175,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 1) {
-			item.put("predicand", subMap.remove("1"));
-			item.put("sort_order", "ASC");
-			item.put("null_order", null);
+			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
+			item.put(PSS_SORT_ORDER_KEY, "ASC");
+			item.put(PSS_NULL_ORDER_KEY, null);
 			showTrace(parseTrace, "One Entry: " + item);
 
 		} else if (subMap.size() == 2) {
-			item.put("predicand", subMap.remove("1"));
-			item.put("sort_order", subMap.remove("2"));
-			item.put("null_order", null);
+			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
+			item.put(PSS_SORT_ORDER_KEY, subMap.remove("2"));
+			item.put(PSS_NULL_ORDER_KEY, null);
 			showTrace(parseTrace, "Two entries: " + item);
 
 		} else if (subMap.size() == 3) {
-			item.put("predicand", subMap.remove("1"));
-			item.put("sort_order", subMap.remove("2"));
-			item.put("null_order", subMap.remove("3"));
+			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
+			item.put(PSS_SORT_ORDER_KEY, subMap.remove("2"));
+			item.put(PSS_NULL_ORDER_KEY, subMap.remove("3"));
 			showTrace(parseTrace, "Three entries: " + item);
 
 		} else {
@@ -3259,7 +3266,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (keys.length == 1) {
 			showTrace(parseTrace, "Just One Entry: " + subMap);
 			Object item = subMap.remove(keys[0]);
-			subMap.put("literal", item);
+			subMap.put(PSS_LITERAL_KEY, item);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
@@ -3306,7 +3313,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitNull_literal(@NotNull SQLSelectParserParser.Null_literalContext ctx) {
 		HashMap<String, Object> item = new HashMap<String, Object>();
-		item.put("null_literal", "null");
+		item.put(PSS_NULL_LITERAL_KEY, "null");
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
