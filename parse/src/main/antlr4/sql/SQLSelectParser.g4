@@ -204,7 +204,7 @@ subquery
   ;
 
 query_specification
-  : SELECT set_qualifier? select_list 
+  : SELECT into_list? set_qualifier? select_list 
   ( from_clause
     where_clause?
     groupby_clause?
@@ -217,6 +217,10 @@ from_clause
   : FROM table_reference_list join_extension?
   ;
 
+into_list
+  : INTO table_or_query_name
+  ;
+  
 join_extension
   : variable_identifier
   ;
@@ -419,13 +423,27 @@ window_function
    ;
    
 over_clause
-   : OVER LEFT_PAREN (partition_by_clause? orderby_clause?) RIGHT_PAREN
+   : OVER LEFT_PAREN (partition_by_clause? orderby_clause? range_restriction_clause?) RIGHT_PAREN
    ;
     
 partition_by_clause
 //   : PARTITION BY row_value_predicand_list
    : PARTITION BY sql_argument_list
    ;
+   
+range_restriction_clause
+   : row_range_clause
+   | range_range_clause
+   ;
+   
+row_range_clause
+   : ROWS // unbound preceding, unbound following; 1 preceding, current row, interval '1' month preceding
+   ;
+   
+range_range_clause
+   : RANGE // between,    unbound preceding, unbound following
+   ;
+   
    
 /*
 ===============================================================================
@@ -434,7 +452,7 @@ partition_by_clause
 */
 
 cast_specification
-  : CAST LEFT_PAREN value_expression AS data_type RIGHT_PAREN
+  : (CAST | TRYCAST) LEFT_PAREN value_expression AS data_type RIGHT_PAREN
   ;
 
 
@@ -952,6 +970,7 @@ simple_numeric_identifier
    
 nonreserved_keywords
   : AVG
+  | ASC
   | BETWEEN
   | BY
   | CENTURY
@@ -964,6 +983,7 @@ nonreserved_keywords
   | DAY
   | DEC
   | DECADE
+  | DESC
   | DOW
   | DOY
   | DROP
@@ -1009,6 +1029,7 @@ nonreserved_keywords
   | RETURNING
   | RLIKE
   | ROLLUP
+  | ROWS
   | SECOND
   | SET
   | SIMILAR
@@ -1369,7 +1390,6 @@ ALL : A L L;
 AND : A N D;
 ANY : A N Y;
 ASYMMETRIC : A S Y M M E T R I C;
-ASC : A S C;
 
 BOTH : B O T H;
 
@@ -1378,7 +1398,6 @@ CAST : C A S T;
 CREATE : C R E A T E;
 CROSS : C R O S S;
 
-DESC : D E S C;
 DISTINCT : D I S T I N C T;
 
 END : E N D;
@@ -1416,8 +1435,10 @@ ON : O N;
 OUTER : O U T E R;
 OR : O R;
 ORDER : O R D E R;
+
 RIGHT : R I G H T;
 RETURNING : R E T U R N I N G;
+
 SELECT : S E L E C T;
 SOME : S O M E;
 SYMMETRIC : S Y M M E T R I C;
@@ -1426,6 +1447,8 @@ TABLE : T A B L E;
 THEN : T H E N;
 TRAILING : T R A I L I N G;
 TRUE : T R U E;
+TRYCAST : T R Y '_' C A S T;
+
 
 UNION : U N I O N;
 UNIQUE : U N I Q U E;
@@ -1440,6 +1463,7 @@ WITH : W I T H;
   Non Reserved Keywords
 ===============================================================================
 */
+ASC : A S C;
 AVG : A V G;
 
 BETWEEN : B E T W E E N;
@@ -1456,6 +1480,7 @@ CUBE : C U B E;
 DAY : D A Y;
 DEC : D E C;
 DECADE : D E C A D E;
+DESC : D E S C;
 DOW : D O W;
 DOY : D O Y;
 DROP : D R O P;
@@ -1520,6 +1545,7 @@ REGEXP : R E G E X P;
 RLIKE : R L I K E;
 ROLLUP : R O L L U P;
 ROW_NUMBER : R O W '_' N U M B E R;
+ROWS : R O W S;
 
 SECOND : S E C O N D;
 SET : S E T;

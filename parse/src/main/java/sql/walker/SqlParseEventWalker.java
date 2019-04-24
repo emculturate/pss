@@ -690,7 +690,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
-	public void exitCondition_value(@NotNull SQLSelectParserParser.Condition_valueContext ctx) {
+	public void exitCondition_value(SQLSelectParserParser.Condition_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);

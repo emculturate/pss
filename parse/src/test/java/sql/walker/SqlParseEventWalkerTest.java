@@ -304,6 +304,125 @@ public class SqlParseEventWalkerTest {
 
 	// End of Join Extensions
 
+	// RESERVED WORD CONVERSION: ASC AND DESC TO BECOME NON-RESERVED WORDS
+	// ITEM 64: Completed
+	
+	@Test
+	public void descReservedWordTest() {
+		final String query = "SELECT apple from tab1 order by apple desc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<212>,1:32]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<212>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void descAsColumnTest() {
+		final String query = "SELECT desc from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={desc=[@1,7:10='desc',<69>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={desc=[@1,7:10='desc',<69>,1:7]}, interface={desc={column={name=desc, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void queryHasBothDescAsColumnAndReservedWordTest() {
+		final String query = "SELECT desc from tab1 order by desc desc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=desc, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={desc=[@6,31:34='desc',<69>,1:31]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={desc=[@6,31:34='desc',<69>,1:31]}, interface={desc={column={name=desc, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void ascReservedWordTest() {
+		final String query = "SELECT apple from tab1 order by apple asc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<212>,1:32]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<212>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void ascAsColumnTest() {
+		final String query = "SELECT asc from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[asc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={asc=[@1,7:9='asc',<55>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={asc=[@1,7:9='asc',<55>,1:7]}, interface={asc={column={name=asc, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void queryHasBothAscAsColumnAndReservedWordTest() {
+		final String query = "SELECT asc from tab1 order by asc asc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=asc, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[asc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={asc=[@6,30:32='asc',<55>,1:30]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={asc=[@6,30:32='asc',<55>,1:30]}, interface={asc={column={name=asc, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	// END OF RESERVED WORD CONVERSION
+	
 	// WHERE CONDITION VARIATIONS
 	
 	@Test
