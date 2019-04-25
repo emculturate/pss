@@ -636,8 +636,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/*****************************************************************************************************
 	 * Grammar Clauses Start Here
+	 * 
+	 * The following methods act as overrides on the default Walker Exit and Entry logic for each clause.
+	 * 
 	 */
-	// Listener overrides
+	
+	// Parser End Points: These are independently callable and produce complete set of objects for each call. 
 
 	@Override
 	public void exitSql(@NotNull SQLSelectParserParser.SqlContext ctx) {
@@ -648,44 +652,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		sqlTree.put(PSS_SQL_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
-		showTrace(symbolTrace, tableDictionaryMap);
-	}
-
-	@Override
-	public void exitPredicand_value(@NotNull SQLSelectParserParser.Predicand_valueContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_PREDICAND_TREE_KEY, subMap.remove("1"));
-		// showTrace(resultTrace, collector);
-		showTrace(symbolTrace, symbolTable);
-
-		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
-
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
@@ -727,6 +693,53 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
+	@Override
+	public void exitPredicand_value(@NotNull SQLSelectParserParser.Predicand_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_PREDICAND_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+	
+	// TODO: Add to AST
+//	@Override
+//	public void exitLiteral_value(@NotNull SQLSelectParserParser.Literal_valueContext ctx) {
+//	}
+	
+	// End of Grammar End Points
+	
+	// Dependent Clauses 
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitWith_query(@NotNull SQLSelectParserParser.With_queryContext ctx) {
@@ -1076,6 +1089,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
+	// TODO: Add to AST
+//	@Override
+//	public void exitReturning(@NotNull SQLSelectParserParser.ReturningContext ctx) {
+//	}
+	
 	@Override
 	public void exitAssignment_expression_list(@NotNull SQLSelectParserParser.Assignment_expression_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -1137,6 +1155,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	}
 
+	// TODO: Complete Logic
 	// @Override
 	// public void exitCreate_table_as_expression_list(@NotNull
 	// SQLSelectParserParser.Create_table_as_expression_listContext ctx) {
@@ -1221,6 +1240,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
+	// Intersect_operator does not need its own logic
+	
 	@Override
 	public void enterUnionized_query(@NotNull SQLSelectParserParser.Unionized_queryContext ctx) {
 		pushSymbolTable();
@@ -1285,6 +1306,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 	}
+	
+	// Union_operator does NOT need its own method
+	
+	
 
 	@Override
 	public void exitQuery_primary(@NotNull SQLSelectParserParser.Query_primaryContext ctx) {
@@ -2620,7 +2645,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
 	}
+	
+	/*
+	===============================================================================
+	  Aggregate Over Sets Functions
+	===============================================================================
+	*/
+	// Part of the <aggregate_function> rule
+	@Override
+	public void exitCount_all_aggregate(@NotNull SQLSelectParserParser.Count_all_aggregateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
 
+		Map<String, Object> item = new HashMap<String, Object>();
+
+		if (subMap.size() == 0) {
+			item.put(PSS_FUNCTION_NAME_KEY, "COUNT");
+			item.put(PSS_QUALIFIER_KEY, null);
+			item.put(PSS_PARAMETERS_KEY, "*");
+			subMap.put(PSS_FUNCTION_KEY, item);
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+		showTrace(parseTrace, "Aggregate Function: " + subMap);
+	}
+
+	// Part of the <aggregate_function> rule
 	@Override
 	public void exitGeneral_set_function(@NotNull SQLSelectParserParser.General_set_functionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -2639,26 +2691,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
 			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
 			item.put(PSS_PARAMETERS_KEY, subMap.remove("3"));
-			subMap.put(PSS_FUNCTION_KEY, item);
-		} else {
-			showTrace(parseTrace, "Wrong number of entries: " + subMap);
-		}
-		showTrace(parseTrace, "Aggregate Function: " + subMap);
-	}
-
-	@Override
-	public void exitCount_all_aggregate(@NotNull SQLSelectParserParser.Count_all_aggregateContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-
-		Map<String, Object> item = new HashMap<String, Object>();
-
-		if (subMap.size() == 0) {
-			item.put(PSS_FUNCTION_NAME_KEY, "COUNT");
-			item.put(PSS_QUALIFIER_KEY, null);
-			item.put(PSS_PARAMETERS_KEY, "*");
 			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
@@ -3108,8 +3140,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Column Reference: " + subMap);
 		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_search_condition)
 				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_condition_value)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_filter_clause)) {
+				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_condition_value)) {
 			Integer stackLevel = currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 			subMap = (Map<String, Object>) subMap.get("1");
