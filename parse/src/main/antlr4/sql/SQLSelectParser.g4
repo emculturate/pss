@@ -56,7 +56,7 @@ condition_value
 ===============================================================================
 */
 predicand_value
-  : cast_value_expression EOF
+  : value_expression_primary EOF
   ;
   
 /*
@@ -127,6 +127,12 @@ insert_statement
   | INSERT (OVERWRITE)? INTO LOCATION path=Character_String_Literal (USING file_type=identifier (param_clause)?)? query_expression
   ;
     
+ 
+column_name_list
+  :  identifier  ( COMMA identifier  )*
+  ;
+ 
+  
  */
 insert_expression
   : INSERT INTO 
@@ -173,6 +179,12 @@ assignment_expression_list
 assignment_expression
   : column_reference EQUAL row_value_predicand
   ;
+   
+/*
+===============================================================================
+  CREATE TABLE
+===============================================================================
+*/
     
 create_table_as_expression
   : CREATE TABLE AS query_expression
@@ -180,7 +192,7 @@ create_table_as_expression
   
 /*
 ===============================================================================
-  <query expression>
+  QUERY EXPRESSION
 ===============================================================================
 */
 // Nested, structured query construction that preserves precedence order:  Intersect then Union
@@ -220,8 +232,8 @@ union_operator
 */
 
 query_primary
-  : query_specification
-  | subquery
+  : subquery
+  | query_specification
   | variable_identifier
   ;
 
@@ -355,15 +367,8 @@ column_reference
 ===============================================================================
 */
    
-/*
-===============================================================================
-  You can CAST any Predicand to a Data Type <cast value expression>
-===============================================================================
-*/
-
-cast_value_expression
-  : (CAST | TRYCAST) LEFT_PAREN value_expression_primary AS data_type RIGHT_PAREN
-  | value_expression_primary CAST_OPERATOR data_type
+predicand_primary
+  : value_expression_primary (CAST_OPERATOR data_type)?
   ;
 
 value_expression_primary
@@ -380,6 +385,7 @@ nonparenthesized_value_expression_primary
   | column_reference
   | aggregate_function
   | case_expression
+  | cast_function_expression
   | routine_invocation
   | window_over_partition_expression
   | subquery
@@ -469,7 +475,20 @@ null_literal
   : NULL
   ;
   
+/*
+===============================================================================
+  CAST Function
+===============================================================================
+*/
+
+cast_function_expression
+  : cast_function_name LEFT_PAREN value_expression AS data_type RIGHT_PAREN
+  ;
  
+cast_function_name
+  : CAST | TRYCAST
+  ;
+   
 /*
 ===============================================================================
  WINDOW Functions
@@ -513,7 +532,7 @@ range_range_clause
 
 /*
 ===============================================================================
-  6.25 <value expression>
+  <value expression>
 ===============================================================================
 */
 value_expression
@@ -690,10 +709,6 @@ row_value_predicand
   : nonparenthesized_value_expression_primary
   | common_value_expression
   | variable_identifier
-  ;
-
-column_name_list
-  :  identifier  ( COMMA identifier  )*
   ;
 
 /*
@@ -1218,64 +1233,76 @@ boolean_literal
 */
 
 data_type
-  : character_string_type
-  | national_character_string_type
-  | binary_large_object_string_type
-  | numeric_type
-  | boolean_type
-  | datetime_type
-  | bit_type
-  | binary_type
-  | network_type
-  | array_type
+  : variable_size_data_type
+  | precision_scale_data_type
+  | static_data_type
   ;
 
-network_type
-  : INET4
+variable_size_data_type
+  : variable_data_type_name type_length?
+  ;
+  
+variable_data_type_name
+  : CHARACTER
+  | CHAR
+  | CHARACTER VARYING
+  | CHAR VARYING
+  | VARCHAR
+  | VARCHAR2  // Classic Oracle
+  | NATIONAL CHARACTER
+  | NATIONAL CHAR
+  | NCHAR
+  | NATIONAL CHARACTER VARYING
+  | NATIONAL CHAR VARYING
+  | NCHAR VARYING
+  | NVARCHAR
+  | BLOB
+  | BYTEA
+  // bit_type
+  | BIT 
+  | VARBIT 
+  | BIT VARYING 
+  // binary_type
+  | BINARY 
+  | BINARY VARYING 
+  | VARBINARY 
+  ;
+ 
+type_length
+  : LEFT_PAREN NUMBER RIGHT_PAREN
+  ;
+   
+precision_scale_data_type
+  : precision_data_type_name precision_param?
+  ;
+  
+precision_data_type_name
+  : NUMERIC
+  | NUMBER    // SNOWFLAKE
+  | DECIMAL
+  | DEC
+  | FLOAT
+  | DOUBLE
+  | DOUBLE PRECISION
+  ;  
+
+precision_param
+  : LEFT_PAREN precision=NUMBER RIGHT_PAREN
+  | LEFT_PAREN precision=NUMBER COMMA scale=NUMBER RIGHT_PAREN
+  ;
+  
+static_data_type
+  : static_data_type_name
   ;
 
-character_string_type
-  : CHARACTER type_length?
-  | CHAR type_length?
-  | CHARACTER VARYING type_length?
-  | CHAR VARYING type_length?
-  | VARCHAR type_length?
-  | VARCHAR2 type_length?   // Classic Oracle
-  | TEXT
-  ;
-
-national_character_string_type
-  : NATIONAL CHARACTER type_length?
-  | NATIONAL CHAR type_length?
-  | NCHAR type_length?
-  | NATIONAL CHARACTER VARYING type_length?
-  | NATIONAL CHAR VARYING type_length?
-  | NCHAR VARYING type_length?
-  | NVARCHAR type_length?
-  ;
-
-binary_large_object_string_type
-  : BLOB type_length?
-  | BYTEA type_length?
+static_data_type_name  
+  : TEXT
+  | INET4
   | STRUCT   // HIVE
   | UNION    // HIVE
   | VARIANT  // SNOWFLAKE
   | OBJECT   // SNOWFLAKE
-  ;
-
-type_length
-  : LEFT_PAREN NUMBER RIGHT_PAREN
-  ;
-
-numeric_type
-  : exact_numeric_type | approximate_numeric_type
-  ;
-
-exact_numeric_type
-  : NUMERIC (precision_param)?
-  | NUMBER (precision_param)?    // SNOWFLAKE
-  | DECIMAL (precision_param)?
-  | DEC (precision_param)?
+  // Numeric
   | INT1
   | TINYINT  // HIVE
   | INT2
@@ -1286,29 +1313,14 @@ exact_numeric_type
   | INT8
   | BIGINT
   | NUMBER_TYPE
-  ;
-
-approximate_numeric_type
-  : FLOAT (precision_param)?
   | FLOAT4
   | REAL
   | FLOAT8
-  | DOUBLE (precision_param)?
-  | DOUBLE PRECISION
-  ;
-
-precision_param
-  : LEFT_PAREN precision=NUMBER RIGHT_PAREN
-  | LEFT_PAREN precision=NUMBER COMMA scale=NUMBER RIGHT_PAREN
-  ;
-
-boolean_type
-  : BOOLEAN
+  // Boolean
+  | BOOLEAN
   | BOOL
-  ;
-
-datetime_type
-  : DATE
+  // datetime_type
+  | DATE
   | DATETIME     // SNOWFLAKE
   | TIME
   | TIME WITH TIME ZONE
@@ -1319,22 +1331,8 @@ datetime_type
   | TIMESTAMP
   | TIMESTAMP WITH TIME ZONE
   | TIMESTAMPTZ
-  ;
-
-bit_type
-  : BIT type_length?
-  | VARBIT type_length?
-  | BIT VARYING type_length?
-  ;
-
-binary_type
-  : BINARY type_length?
-  | BINARY VARYING type_length?
-  | VARBINARY type_length?
-  ;
-  
-array_type
-  : ARRAY
+  // array_type
+  | ARRAY
   ;  
   
   /**********************************************************
@@ -1656,7 +1654,7 @@ ZONE : Z O N E;
   Data Type Tokens
 ===============================================================================
 */
-ARRAY : A R R A Y;
+ARRAY : A R R A Y;  // HIVE and Snowflake
 
 BOOLEAN : B O O L E A N;
 BOOL : B O O L;
