@@ -184,6 +184,101 @@ public class SqlParseEventWalkerTest {
 
 
 	@Test
+	public void castInDifferentContextsWhereConditionTest() {
+		final String query = " SELECT colu FROM tab1 where cast(cola as boolean) is true"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, operator=is true}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[colu]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<221>,1:8], cola=[@7,34:37='cola',<221>,1:34]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<221>,1:8], cola=[@7,34:37='cola',<221>,1:34]}, interface={colu={column={name=colu, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void castInDifferentContextsCalculationTest() {
+		final String query = " SELECT colu + cast(cola as numeric (9)) FROM tab1"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<221>,1:8], cola=[@5,20:23='cola',<221>,1:20]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<221>,1:8], cola=[@5,20:23='cola',<221>,1:20]}, interface={unnamed_0={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void castInDifferentContextsJoinConditionTest() {
+		final String query = " SELECT tab1.colu FROM tab1 join tab2 on tab1.cola = cast(tab2.cola as CHARACTER VARYING)"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=tab1}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join, on={condition={left={column={name=cola, table_ref=tab1}}, right={function={function_name=cast, data_type={type=CHARACTER VARYING}, type=CAST, value={column={name=cola, table_ref=tab2}}}}, operator==}}}, 3={table={alias=null, table=tab2}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[colu]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='tab1',<221>,1:8], cola=[@9,41:44='tab1',<221>,1:41]}, tab2={cola=[@15,58:61='tab2',<221>,1:58]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='tab1',<221>,1:8], cola=[@9,41:44='tab1',<221>,1:41]}, tab2={cola=[@15,58:61='tab2',<221>,1:58]}, interface={colu={column={name=colu, table_ref=tab1}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void castInDifferentContextsGroupByTest() {
+		final String query = " SELECT cast(cola as boolean) a, max(cast(cola as boolean)) b FROM tab1 group by cast(cola as boolean)"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}, alias=a}, 2={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, alias=b}}, from={table={alias=null, table=tab1}}, groupby={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={cola=[@25,86:89='cola',<221>,1:86]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={cola=[@25,86:89='cola',<221>,1:86]}, interface={a={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, b={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void castInDifferentContextsOrderByTest() {
+		final String query = " SELECT a, b FROM tab1 order by cast(cola as boolean)"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, orderby={1={null_order=null, predicand={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<221>,1:8], b=[@3,11:11='b',<221>,1:11], cola=[@10,37:40='cola',<221>,1:37]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<221>,1:8], b=[@3,11:11='b',<221>,1:11], cola=[@10,37:40='cola',<221>,1:37]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
 	public void basicCastingVariableTypesWithLengthsTest() {
 		final String query = " SELECT cast('a' as character varying (10)) a,"
 				+ " cast('a' as national character) b,"
