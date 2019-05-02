@@ -32,7 +32,7 @@ options {
 
 /*
 ===============================================================================
-  SQL statement (Start Symbol
+  Start Statements: SQL, Condition, Predicand and Literal
 ===============================================================================
 */
 sql
@@ -56,7 +56,7 @@ condition_value
 ===============================================================================
 */
 predicand_value
-  : value_expression EOF
+  : value_expression_primary EOF
   ;
   
 /*
@@ -65,14 +65,20 @@ predicand_value
 ===============================================================================
 */
 literal_value
-  : (signed_numerical_literal | unsigned_literal) EOF
+  : (signed_numeric_literal | unsigned_literal) EOF
   ;
  
 /*
 ===============================================================================
-  Remainder of Grammar
+  Dependent Grammar Rules
 ===============================================================================
 */
+/*
+===============================================================================
+  WITH Statement <with query>
+===============================================================================
+*/
+
 with_query
   : with_clause? query
   ;
@@ -96,6 +102,12 @@ query
   ;
 
 /*
+===============================================================================
+  INSERT Statement <insert expression>
+===============================================================================
+*/
+
+/*
  * POSTGRES:
 [ WITH [ RECURSIVE ] with_query [, ...] ]
 INSERT INTO table_name [ AS alias ] [ ( column_name [, ...] ) ]
@@ -115,6 +127,12 @@ insert_statement
   | INSERT (OVERWRITE)? INTO LOCATION path=Character_String_Literal (USING file_type=identifier (param_clause)?)? query_expression
   ;
     
+ 
+column_name_list
+  :  identifier  ( COMMA identifier  )*
+  ;
+ 
+  
  */
 insert_expression
   : INSERT INTO 
@@ -124,6 +142,12 @@ insert_expression
   subquery 
   returning?
   ;
+  
+/*
+===============================================================================
+  UPDATE Statement <update expression>
+===============================================================================
+*/
   
 /*
  * POSTGRES:
@@ -155,6 +179,12 @@ assignment_expression_list
 assignment_expression
   : column_reference EQUAL row_value_predicand
   ;
+   
+/*
+===============================================================================
+  CREATE TABLE
+===============================================================================
+*/
     
 create_table_as_expression
   : CREATE TABLE AS query_expression
@@ -162,9 +192,11 @@ create_table_as_expression
   
 /*
 ===============================================================================
-  7.13 <query expression>
+  QUERY EXPRESSION
 ===============================================================================
 */
+// Nested, structured query construction that preserves precedence order:  Intersect then Union
+
 query_expression
   : intersected_query
   ;
@@ -193,9 +225,15 @@ union_operator
    : (UNION | EXCEPT)
    ;
 
+/*
+===============================================================================
+  SELECT Statement <query primary>
+===============================================================================
+*/
+
 query_primary
-  : query_specification
-  | subquery
+  : subquery
+  | query_specification
   | variable_identifier
   ;
 
@@ -204,7 +242,7 @@ subquery
   ;
 
 query_specification
-  : SELECT set_qualifier? select_list 
+  : SELECT into_list? set_qualifier? select_list 
   ( from_clause
     where_clause?
     groupby_clause?
@@ -213,10 +251,49 @@ query_specification
     limit_clause?)?
   ;
 
+/*
+===============================================================================
+  SELECT Details
+===============================================================================
+*/
+
+
+into_list
+  : INTO table_or_query_name
+  ;
+
+set_qualifier
+  : DISTINCT
+  | ALL
+  ;
+
+select_list
+  : select_item (COMMA select_item)*
+  ;
+
+select_item
+  : value_expression as_clause?
+  | select_all_columns
+  ;
+
+as_clause
+  : (AS)? identifier
+  ;
+
+select_all_columns
+  : (tb_name=Identifier DOT)? MULTIPLY
+  ;
+
+/*
+===============================================================================
+  FROM Statement <from clause>
+===============================================================================
+*/
+
 from_clause
   : FROM table_reference_list join_extension?
   ;
-
+  
 join_extension
   : variable_identifier
   ;
@@ -231,6 +308,10 @@ table_primary
   : table_or_query_name as_clause?
   | subquery as_clause? 
   | variable_identifier as_clause
+  ;
+
+table_or_query_name
+  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
   ;
 
 unqualified_join
@@ -265,33 +346,11 @@ using_term
   : USING
   ;
   
-// DETAILS OF QUERY
-
-select_list
-  : select_item (COMMA select_item)*
-  ;
-
-select_item
-  : value_expression as_clause?
-  | select_all_columns
-  ;
-
-select_all_columns
-  : (tb_name=Identifier DOT)? MULTIPLY
-  ;
-
-table_or_query_name
-  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
-  ;
-
-set_qualifier
-  : DISTINCT
-  | ALL
-  ;
-
-as_clause
-  : (AS)? identifier
-  ;
+/*
+===============================================================================
+  Column List clauses
+===============================================================================
+*/
 
 column_reference_list
   : column_reference (COMMA column_reference)*
@@ -304,9 +363,14 @@ column_reference
 
 /*
 ===============================================================================
-  6.3 <value_expression_primary>
+  Predicands <value expression primary>
 ===============================================================================
 */
+   
+predicand_primary
+  : value_expression_primary (CAST_OPERATOR data_type)?
+  ;
+
 value_expression_primary
   : parenthesized_value_expression
   | nonparenthesized_value_expression_primary
@@ -321,15 +385,22 @@ nonparenthesized_value_expression_primary
   | column_reference
   | aggregate_function
   | case_expression
-  | cast_specification
+  | cast_function_expression
   | routine_invocation
   | window_over_partition_expression
   | subquery
   ;
 
+/*
+===============================================================================
+  Aggregate Over Sets Functions
+===============================================================================
+*/
 aggregate_function
   : COUNT LEFT_PAREN MULTIPLY RIGHT_PAREN	# count_all_aggregate
-  | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?		# general_set_function 
+  | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN   # general_set_function
+  // Next variation not supported, limited SQL dialects only
+  // | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?
   ;
 
 set_function_type
@@ -359,17 +430,15 @@ set_qualifier_type
   | INTERSECTION
   ;
 
-filter_clause
-  : FILTER LEFT_PAREN WHERE search_condition RIGHT_PAREN
-  ;
+//  TODO: filter clause variant on aggregate functions not currently supported
+// filter_clause
+//   : FILTER LEFT_PAREN WHERE search_condition RIGHT_PAREN
+//   ;
 
-grouping_operation
-  : GROUPING LEFT_PAREN column_reference_list RIGHT_PAREN
-  ;
 
 /*
 ===============================================================================
-  6.11 <case expression>
+ CASE Clause <case expression>
 ===============================================================================
 */
 
@@ -406,6 +475,25 @@ null_literal
   : NULL
   ;
   
+/*
+===============================================================================
+  CAST Function
+===============================================================================
+*/
+
+cast_function_expression
+  : cast_function_name LEFT_PAREN value_expression AS data_type RIGHT_PAREN
+  ;
+ 
+cast_function_name
+  : CAST | TRYCAST
+  ;
+   
+/*
+===============================================================================
+ WINDOW Functions
+===============================================================================
+*/
   /*
    * Functions over partitions
    * rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc)
@@ -419,7 +507,7 @@ window_function
    ;
    
 over_clause
-   : OVER LEFT_PAREN (partition_by_clause? orderby_clause?) RIGHT_PAREN
+   : OVER LEFT_PAREN (partition_by_clause? orderby_clause? range_restriction_clause?) RIGHT_PAREN
    ;
     
 partition_by_clause
@@ -427,20 +515,24 @@ partition_by_clause
    : PARTITION BY sql_argument_list
    ;
    
+range_restriction_clause
+   : row_range_clause
+   | range_range_clause
+   ;
+   
+row_range_clause
+   : ROWS // unbound preceding, unbound following; 1 preceding, current row, interval '1' month preceding
+   ;
+   
+range_range_clause
+   : RANGE // between,    unbound preceding, unbound following
+   ;
+   
+
+
 /*
 ===============================================================================
-  6.12 <cast specification>
-===============================================================================
-*/
-
-cast_specification
-  : CAST LEFT_PAREN value_expression AS data_type RIGHT_PAREN
-  ;
-
-
-/*
-===============================================================================
-  6.25 <value expression>
+  <value expression>
 ===============================================================================
 */
 value_expression
@@ -479,7 +571,7 @@ factor
   ;
 
 numeric_primary
-  : value_expression_primary (CAST_EXPRESSION data_type)*
+  : value_expression_primary
   | extract_expression
   ;
 
@@ -607,6 +699,7 @@ substitution_predicate
   7.2 <row value expression>
 ===============================================================================
 */
+
 row_value_expression
   : nonparenthesized_value_expression_primary
   | null_literal
@@ -618,13 +711,9 @@ row_value_predicand
   | variable_identifier
   ;
 
-column_name_list
-  :  identifier  ( COMMA identifier  )*
-  ;
-
 /*
 ===============================================================================
-  7.8 <where clause>
+  WHERE <where clause>
 ===============================================================================
 */
 where_clause
@@ -641,9 +730,10 @@ orderby_clause
 
 /*
 ===============================================================================
-  7.9 <group by clause>
+  GROUP BY <group by clause>
 ===============================================================================
 */
+
 groupby_clause
   : GROUP BY (grouping_element_list | select_list)
   ;
@@ -732,7 +822,7 @@ comp_op
   
 /*
 ===============================================================================
-  8.3 <between predicate>
+  <between predicate>
 ===============================================================================
 */
 
@@ -746,7 +836,7 @@ symmetry
 
 /*
 ===============================================================================
-  8.4 <in predicate>
+  <in predicate>
 ===============================================================================
 */
 
@@ -952,6 +1042,7 @@ simple_numeric_identifier
    
 nonreserved_keywords
   : AVG
+  | ASC
   | BETWEEN
   | BY
   | CENTURY
@@ -964,6 +1055,7 @@ nonreserved_keywords
   | DAY
   | DEC
   | DECADE
+  | DESC
   | DOW
   | DOY
   | DROP
@@ -1005,10 +1097,12 @@ nonreserved_keywords
   | PURGE
   | QUARTER
   | RANGE
+  | RANK
   | REGEXP
   | RETURNING
   | RLIKE
   | ROLLUP
+  | ROWS
   | SECOND
   | SET
   | SIMILAR
@@ -1071,11 +1165,11 @@ nonreserved_keywords
 
 /*
 ===============================================================================
-  6.4 <unsigned value specification>
+  LITERAL  Value Rules
 ===============================================================================
 */
 
-signed_numerical_literal
+signed_numeric_literal
   : sign? unsigned_numeric_literal
   ;
 
@@ -1132,64 +1226,86 @@ boolean_literal
 
 /*
 ===============================================================================
-  6.1 <data types>
+  DATA TYPES  <data types>
+  * Parser has been modified to support multiple DBMS engine variations.
+  * Not all data types are permitted in every engine
+
 ===============================================================================
 */
 
 data_type
-  : character_string_type
-  | national_character_string_type
-  | binary_large_object_string_type
-  | numeric_type
-  | boolean_type
-  | datetime_type
-  | bit_type
-  | binary_type
-  | network_type
+  : variable_size_data_type
+  | precision_scale_data_type
+  | static_data_type
   ;
 
-network_type
-  : INET4
+variable_size_data_type
+  : variable_data_type_name type_length?
   ;
-
-character_string_type
-  : CHARACTER type_length?
-  | CHAR type_length?
-  | CHARACTER VARYING type_length?
-  | CHAR VARYING type_length?
-  | VARCHAR type_length?
-  | TEXT
+  
+variable_data_type_name
+  : CHARACTER
+  | CHAR
+  | CHARACTER VARYING
+  | CHAR VARYING
+  | VARCHAR
+  | VARCHAR2  // Classic Oracle
+  | NATIONAL CHARACTER
+  | NATIONAL CHAR
+  | NCHAR
+  | NATIONAL CHARACTER VARYING
+  | NATIONAL CHAR VARYING
+  | NCHAR VARYING
+  | NVARCHAR
+  | BLOB
+  | BYTEA
+  // bit_type
+  | BIT 
+  | VARBIT 
+  | BIT VARYING 
+  // binary_type
+  | BINARY 
+  | BINARY VARYING 
+  | VARBINARY 
   ;
-
+ 
 type_length
   : LEFT_PAREN NUMBER RIGHT_PAREN
   ;
+   
+precision_scale_data_type
+  : precision_data_type_name precision_param?
+  ;
+  
+precision_data_type_name
+  : NUMERIC
+  | NUMBER    // SNOWFLAKE
+  | DECIMAL
+  | DEC
+  | FLOAT
+  | DOUBLE
+  | DOUBLE PRECISION
+  ;  
 
-national_character_string_type
-  : NATIONAL CHARACTER type_length?
-  | NATIONAL CHAR type_length?
-  | NCHAR type_length?
-  | NATIONAL CHARACTER VARYING type_length?
-  | NATIONAL CHAR VARYING type_length?
-  | NCHAR VARYING type_length?
-  | NVARCHAR type_length?
+precision_param
+  : LEFT_PAREN precision=NUMBER RIGHT_PAREN
+  | LEFT_PAREN precision=NUMBER COMMA scale=NUMBER RIGHT_PAREN
+  ;
+  
+static_data_type
+  : static_data_type_name
   ;
 
-binary_large_object_string_type
-  : BLOB type_length?
-  | BYTEA type_length?
-  ;
-
-numeric_type
-  : exact_numeric_type | approximate_numeric_type
-  ;
-
-exact_numeric_type
-  : NUMERIC (precision_param)?
-  | DECIMAL (precision_param)?
-  | DEC (precision_param)?
+static_data_type_name  
+  : TEXT
+  | INET4
+  | STRUCT   // HIVE
+  | UNION    // HIVE
+  | VARIANT  // SNOWFLAKE
+  | OBJECT   // SNOWFLAKE
+  // Numeric
   | INT1
-  | TINYINT
+  | TINYINT  // HIVE
   | INT2
   | SMALLINT
   | INT4
@@ -1198,50 +1314,27 @@ exact_numeric_type
   | INT8
   | BIGINT
   | NUMBER_TYPE
-  ;
-
-approximate_numeric_type
-  : FLOAT (precision_param)?
   | FLOAT4
   | REAL
   | FLOAT8
-  | DOUBLE
-  | DOUBLE PRECISION
-  ;
-
-precision_param
-  : LEFT_PAREN precision=NUMBER RIGHT_PAREN
-  | LEFT_PAREN precision=NUMBER COMMA scale=NUMBER RIGHT_PAREN
-  ;
-
-boolean_type
-  : BOOLEAN
+  // Boolean
+  | BOOLEAN
   | BOOL
-  ;
-
-datetime_type
-  : DATE
+  // datetime_type
+  | DATE
+  | DATETIME     // SNOWFLAKE
   | TIME
   | TIME WITH TIME ZONE
   | TIMETZ
+  | TIMESTAMP_LTZ     // SNOWFLAKE
+  | TIMESTAMP_NTZ     // SNOWFLAKE
+  | TIMESTAMP_TZ     // SNOWFLAKE
   | TIMESTAMP
   | TIMESTAMP WITH TIME ZONE
   | TIMESTAMPTZ
-  ;
-
-bit_type
-  : BIT type_length?
-  | VARBIT type_length?
-  | BIT VARYING type_length?
-  ;
-
-binary_type
-  : BINARY type_length?
-  | BINARY VARYING type_length?
-  | VARBINARY type_length?
-  ;
-  
-  
+  // array_type
+  | ARRAY
+  ;  
   
   /**********************************************************
    * 
@@ -1369,7 +1462,6 @@ ALL : A L L;
 AND : A N D;
 ANY : A N Y;
 ASYMMETRIC : A S Y M M E T R I C;
-ASC : A S C;
 
 BOTH : B O T H;
 
@@ -1378,7 +1470,6 @@ CAST : C A S T;
 CREATE : C R E A T E;
 CROSS : C R O S S;
 
-DESC : D E S C;
 DISTINCT : D I S T I N C T;
 
 END : E N D;
@@ -1416,8 +1507,10 @@ ON : O N;
 OUTER : O U T E R;
 OR : O R;
 ORDER : O R D E R;
+
 RIGHT : R I G H T;
 RETURNING : R E T U R N I N G;
+
 SELECT : S E L E C T;
 SOME : S O M E;
 SYMMETRIC : S Y M M E T R I C;
@@ -1426,6 +1519,8 @@ TABLE : T A B L E;
 THEN : T H E N;
 TRAILING : T R A I L I N G;
 TRUE : T R U E;
+TRYCAST : T R Y '_' C A S T;
+
 
 UNION : U N I O N;
 UNIQUE : U N I Q U E;
@@ -1440,6 +1535,7 @@ WITH : W I T H;
   Non Reserved Keywords
 ===============================================================================
 */
+ASC : A S C;
 AVG : A V G;
 
 BETWEEN : B E T W E E N;
@@ -1456,6 +1552,7 @@ CUBE : C U B E;
 DAY : D A Y;
 DEC : D E C;
 DECADE : D E C A D E;
+DESC : D E S C;
 DOW : D O W;
 DOY : D O Y;
 DROP : D R O P;
@@ -1519,7 +1616,8 @@ RANK : R A N K;
 REGEXP : R E G E X P;
 RLIKE : R L I K E;
 ROLLUP : R O L L U P;
-ROW_NUMBER : R O W '_' N U M B E R;
+ROW_NUMBER : R O W UNDERLINE N U M B E R;
+ROWS : R O W S;
 
 SECOND : S E C O N D;
 SET : S E T;
@@ -1557,6 +1655,8 @@ ZONE : Z O N E;
   Data Type Tokens
 ===============================================================================
 */
+ARRAY : A R R A Y;  // HIVE and Snowflake
+
 BOOLEAN : B O O L E A N;
 BOOL : B O O L;
 BIT : B I T;
@@ -1585,13 +1685,18 @@ DECIMAL : D E C I M A L; // alias for number
 
 CHAR : C H A R;
 VARCHAR : V A R C H A R;
+VARCHAR2 : V A R C H A R '2';
 NCHAR : N C H A R;
 NVARCHAR : N V A R C H A R;
 
 DATE : D A T E;
+DATETIME : D A T E T I M E;
 TIME : T I M E;
 TIMETZ : T I M E T Z;
 TIMESTAMP : T I M E S T A M P;
+TIMESTAMP_LTZ : T I M E S T A M P UNDERLINE L T Z;
+TIMESTAMP_NTZ : T I M E S T A M P UNDERLINE N T Z;
+TIMESTAMP_TZ : T I M E S T A M P UNDERLINE T Z;
 TIMESTAMPTZ : T I M E S T A M P T Z;
 
 TEXT : T E X T;
@@ -1600,6 +1705,9 @@ BINARY : B I N A R Y;
 VARBINARY : V A R B I N A R Y;
 BLOB : B L O B;
 BYTEA : B Y T E A; // alias for BLOB
+OBJECT : O B J E C T;
+STRUCT : S T R U C T; 
+VARIANT : V A R I A N T;
 
 INET4 : I N E T '4';
 
@@ -1609,10 +1717,6 @@ Not_Similar_To : '!~';
 Similar_To_Case_Insensitive : '~*';
 Not_Similar_To_Case_Insensitive : '!~*';
 
-// Cast Operator
-CAST_EXPRESSION
-  : COLON COLON
-  ;
 
 ASSIGN  : ':=';
 EQUAL  : '=';
@@ -1637,6 +1741,8 @@ UNDERLINE : '_';
 VERTICAL_BAR : '|';
 QUOTE : '\'';
 DOUBLE_QUOTE : '"';
+// Cast Operator
+CAST_OPERATOR : '::';
  
 
 NUMBER : Digit+;
