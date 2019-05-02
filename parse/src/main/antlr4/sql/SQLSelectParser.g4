@@ -1097,6 +1097,7 @@ nonreserved_keywords
   | PURGE
   | QUARTER
   | RANGE
+  | RANK
   | REGEXP
   | RETURNING
   | RLIKE

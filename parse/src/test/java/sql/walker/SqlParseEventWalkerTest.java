@@ -123,6 +123,9 @@ public class SqlParseEventWalkerTest {
 
 	/* ===========================================================
 	 * CAST Function Tests
+	 * ITEM 58: Add support for CAST AS function
+	 * ITEM 65: Snowflake, Hive and many Postgres Data Types
+	 * ITEM 66: Snowflake's TRY_CAST function
 	   ===========================================================*/
 	@Test
 	public void basicSelectListCasting1Test() {
@@ -165,6 +168,7 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void basicSelectListTryCasting2Test() {
+		// ITEM 66: Snowflake's TRY_CAST function
 		final String query = " SELECT TRY_cast(col1 as boolean) a,cast(col2 as varchar(2)) b, cast(col3 as numeric(9,3)) as c FROM tab1"; 
 
 		final SQLSelectParserParser parser = parse(query);
@@ -278,6 +282,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getSymbolTable().toString());
 	}
 
+	// ITEM 65: All Hive and Snowflake data types, and most Postgres data types
 	@Test
 	public void basicCastingVariableTypesWithLengthsTest() {
 		final String query = " SELECT cast('a' as character varying (10)) a,"
@@ -593,7 +598,8 @@ public class SqlParseEventWalkerTest {
 	// End of Join Extensions
 
 	// RESERVED WORD CONVERSION: ASC AND DESC TO BECOME NON-RESERVED WORDS
-	// ITEM 64: Completed
+	// ITEM 64: Support ASC and DESC as column names
+	// ITEM 69: Support RANK as a column name
 	
 	@Test
 	public void descReservedWordTest() {
@@ -709,6 +715,64 @@ public class SqlParseEventWalkerTest {
 				extractor.getSymbolTable().toString());
 	}
 	
+	@Test
+	public void rankReservedWordTest() {
+		final String query = "SELECT rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS key_rank from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[key_rank]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void rankAsColumnTest() {
+		final String query = "SELECT rank from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=rank, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rank]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={rank=[@1,7:10='rank',<116>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={rank=[@1,7:10='rank',<116>,1:7]}, interface={rank={column={name=rank, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void queryHasRankAsBothColumnAndReservedWordTest() {
+		final String query = "SELECT rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc) AS rank from tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rank]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}, interface={rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+
 	// END OF RESERVED WORD CONVERSION
 	
 	// WHERE CONDITION VARIATIONS
