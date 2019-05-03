@@ -411,6 +411,7 @@ set_function_type
   | LEAD
   | MAX
   | MIN
+  | NTH_VALUE
   | SUM
   | COUNT
   | RANK
@@ -497,6 +498,7 @@ cast_function_name
   /*
    * Functions over partitions
    * rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc)
+   * last_value(column) over (partition by other_column rows between 2 preceding and unbounded following)
    */
 window_over_partition_expression
    : window_function over_clause
@@ -507,26 +509,56 @@ window_function
    ;
    
 over_clause
-   : OVER LEFT_PAREN (partition_by_clause? orderby_clause? range_restriction_clause?) RIGHT_PAREN
+   : OVER LEFT_PAREN (partition_by_clause? orderby_clause? bracket_frame_clause?) RIGHT_PAREN
    ;
     
 partition_by_clause
-//   : PARTITION BY row_value_predicand_list
    : PARTITION BY sql_argument_list
    ;
    
-range_restriction_clause
-   : row_range_clause
-   | range_range_clause
+bracket_frame_clause
+   : rows_or_range bracket_frame_definition
    ;
    
-row_range_clause
-   : ROWS // unbound preceding, unbound following; 1 preceding, current row, interval '1' month preceding
+rows_or_range
+   : ROWS  // unbound preceding, unbound following; 1 preceding, current row, interval '1' month preceding
+   | RANGE 
    ;
    
-range_range_clause
-   : RANGE // between,    unbound preceding, unbound following
+bracket_frame_definition
+   : between_frame_definition
+   | preceding_frame_edge
+   | current_row_edge
    ;
+   
+between_frame_definition
+   : BETWEEN frame_edge AND frame_edge
+   ;
+   
+frame_edge
+   : preceding_frame_edge
+   | following_frame_edge
+   | current_row_edge
+   ;
+   
+preceding_frame_edge
+   : bracket_constraint PRECEDING
+   ;
+   
+following_frame_edge
+   : bracket_constraint FOLLOWING
+   ;
+   
+current_row_edge
+   : CURRENT ROW
+   ;
+   
+bracket_constraint
+   : NUMBER
+   | UNBOUNDED
+   ;
+   
+   
    
 
 
@@ -1519,7 +1551,7 @@ TABLE : T A B L E;
 THEN : T H E N;
 TRAILING : T R A I L I N G;
 TRUE : T R U E;
-TRYCAST : T R Y '_' C A S T;
+TRYCAST : T R Y UNDERLINE C A S T;
 
 
 UNION : U N I O N;
@@ -1548,6 +1580,7 @@ COALESCE : C O A L E S C E;
 COLUMN : C O L U M N;
 COUNT : C O U N T;
 CUBE : C U B E;
+CURRENT : C U R R E N T;
 
 DAY : D A Y;
 DEC : D E C;
@@ -1566,7 +1599,8 @@ EXTRACT : E X T R A C T;
 
 FILTER : F I L T E R;
 FIRST : F I R S T;
-FIRST_VALUE : F I R S T '_' V A L U E;
+FIRST_VALUE : F I R S T UNDERLINE V A L U E;
+FOLLOWING : F O L L O W I N G;
 FORMAT : F O R M A T;
 FUSION : F U S I O N;
 
@@ -1583,7 +1617,7 @@ ISOYEAR : I S O Y E A R;
 
 LAG : L A G;
 LAST : L A S T;
-LAST_VALUE : L A S T '_' V A L U E;
+LAST_VALUE : L A S T UNDERLINE V A L U E;
 LEAD : L E A D;
 LESS : L E S S;
 LIST : L I S T;
@@ -1599,6 +1633,7 @@ MINUTE : M I N U T E;
 MONTH : M O N T H;
 
 NATIONAL : N A T I O N A L;
+NTH_VALUE : N T H UNDERLINE V A L U E;
 NULLIF : N U L L I F;
 
 OVER : O V E R;
@@ -1606,6 +1641,7 @@ OVERWRITE : O V E R W R I T E;
 
 PARTITION : P A R T I T I O N;
 PARTITIONS : P A R T I T I O N S;
+PRECEDING : P R E C E D I N G;
 PRECISION : P R E C I S I O N;
 PURGE : P U R G E;
 
@@ -1617,6 +1653,7 @@ REGEXP : R E G E X P;
 RLIKE : R L I K E;
 ROLLUP : R O L L U P;
 ROW_NUMBER : R O W UNDERLINE N U M B E R;
+ROW : R O W;
 ROWS : R O W S;
 
 SECOND : S E C O N D;
@@ -1636,6 +1673,7 @@ TRIM : T R I M;
 TO : T O;
 
 UPDATE : U P D A T E;
+UNBOUNDED : U N B O U N D E D;
 UNKNOWN : U N K N O W N;
 
 VALUES : V A L U E S;

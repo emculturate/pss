@@ -2438,6 +2438,203 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,32:37='k_stfd',<221>,1:32], column=[@2,5:10='column',<63>,1:5], kppi=[@10,40:43='kppi',<221>,1:40]}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	// ITEM 61: Window Functions with window frame syntax in the order by clause 
+	@Test
+	public void windowWithUnboundedBoundingFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between unbounded preceding and unbounded following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithReversedUnboundedBoundingFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between unbounded following and unbounded preceding) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithLeftBoundRightUnboundedFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between 100 preceding and unbounded following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithLeftUnboundRightBoundFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between unbounded preceding and 25 following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithLeftBoundRightBoundFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between 10 preceding and 25 following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithLeftCurrentRowRightBoundFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between current row and 25 following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithLeftUnboundRightCurrentRowFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows between unbounded preceding and current row) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithPrecedingUnboundFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows unbounded preceding) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithPrecedingBoundFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows 30 preceding) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithCurrentRowFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " rows current row) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithPrecedingUnboundRangeFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " range unboundED preceding) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithPrecedingBoundRangeFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " range 30 preceding) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+	
+	@Test
+	public void windowWithCurrentRowRangeFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " range current row) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
+
+	@Test
+	public void windowWithLeftBoundRightBoundRangeFrameTest() {
+		final String query = " SELECT "
+				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "
+				+ " range between 10 preceding and 10 following) AS key_rank "
+				+ " FROM tab1 as a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+	}
 	
 	// end of Window Functions
 	// Miscellaneous
