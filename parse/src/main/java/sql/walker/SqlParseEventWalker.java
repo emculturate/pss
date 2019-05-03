@@ -2610,6 +2610,252 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Static Data Type: " + subMap);
 		}
 
+		/*
+		===============================================================================
+		  WINDOW Functions
+		===============================================================================
+		*/
+
+		  /*
+		   * Functions over partitions
+		   * rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc)
+		   * last_value(column) over (partition by other_column rows between 2 preceding and unbounded following)
+		   */
+
+		@Override
+		public void exitWindow_over_partition_expression(
+				@NotNull SQLSelectParserParser.Window_over_partition_expressionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() == 2) {
+				showTrace(parseTrace, "Window Over Partition: " + subMap);
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.putAll((Map<String, Object>) subMap.remove("1"));
+				item.putAll((Map<String, Object>) subMap.remove("2"));
+				subMap.put(PSS_WINDOW_FUNCTION_KEY, item);
+			} else {
+				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void exitWindow_function(@NotNull SQLSelectParserParser.Window_functionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+			String functType = (String) subMap.remove("1");
+
+			Map<String, Object> item = new HashMap<String, Object>();
+
+			if (subMap.size() == 0) {
+				item.put(PSS_PARAMETERS_KEY, null);
+			} else if (subMap.size() == 1) {
+				subMap = (Map<String, Object>) subMap.remove("2");
+				type = subMap.remove("Type");
+				item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
+			} else {
+				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
+			}
+			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(PSS_FUNCTION_NAME_KEY, functType);
+
+			addToParent(parentRuleIndex, parentStackLevel, subMap);
+			showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void exitOver_clause(@NotNull SQLSelectParserParser.Over_clauseContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			HashMap<String, Object> item = new HashMap<String, Object>();
+			if (subMap.size() == 0) {
+				subMap.put(PSS_OVER_KEY, null);
+			} else if (subMap.size() == 1) {
+				item.putAll((Map<String, Object>) subMap.remove("1"));
+				subMap.put(PSS_OVER_KEY, item);
+			} else if (subMap.size() == 2) {
+				item.putAll((Map<String, Object>) subMap.remove("1"));
+				item.putAll((Map<String, Object>) subMap.remove("2"));
+				subMap.put(PSS_OVER_KEY, item);
+			} else if (subMap.size() == 3) {
+				item.putAll((Map<String, Object>) subMap.remove("1"));
+				item.putAll((Map<String, Object>) subMap.remove("2"));
+				item.putAll((Map<String, Object>) subMap.remove("3"));
+				subMap.put(PSS_OVER_KEY, item);
+			} else {
+				showTrace(parseTrace, "Wrong number of entries: " + subMap);
+			}
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public void exitPartition_by_clause(@NotNull SQLSelectParserParser.Partition_by_clauseContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() >= 1) {
+				HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
+				type = item.remove("Type");
+
+				item.put(PSS_PARTITION_BY_KEY, item.remove(type.toString()));
+				addToParent(parentRuleIndex, parentStackLevel, item);
+			} else {
+				showTrace(parseTrace, "Not enough entries: " + subMap);
+			}
+
+		}
+
+
+		@Override
+		public void exitBracket_frame_clause(
+				@NotNull SQLSelectParserParser.Bracket_frame_clauseContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() == 2) {
+				showTrace(parseTrace, "Window Over Partition: " + subMap);
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.put(PSS_TYPE_KEY, (String) subMap.remove("1"));
+				item.putAll((Map<String, Object>) subMap.remove("2"));
+				subMap.put(PSS_BRACKET_FRAME_KEY, item);
+			} else {
+				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
+			}
+		}
+
+		// rows_or_range clauses do not need their own method
+		
+
+		@Override
+		public void exitBracket_frame_definition(@NotNull SQLSelectParserParser.Bracket_frame_definitionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			handleOneChild(ruleIndex);
+		}
+
+		@Override
+		public void exitBetween_frame_definition(@NotNull SQLSelectParserParser.Between_frame_definitionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() == 2) {
+				showTrace(parseTrace, "Window Over Partition: " + subMap);
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.put(PSS_RANGE_BEGIN_KEY,  subMap.remove("1"));
+				item.put(PSS_RANGE_END_KEY,  subMap.remove("2"));
+				subMap.put(PSS_BETWEEN_KEY, item);
+			} else {
+				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
+			}
+		}
+
+
+		@Override
+		public void exitFrame_edge(@NotNull SQLSelectParserParser.Frame_edgeContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			handleOneChild(ruleIndex);
+		}
+
+		@Override
+		public void exitPreceding_frame_edge(
+				@NotNull SQLSelectParserParser.Preceding_frame_edgeContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() == 1) {
+				subMap.put(PSS_VALUE_KEY, (String) subMap.remove("1"));
+				subMap.put(PSS_BRACKET_DIRECTION_KEY, PSS_PRECEDING_KEY);
+				showTrace(parseTrace, "Preceding Edge Clause: " + subMap);
+
+			} else {
+				showTrace(parseTrace, "Wrong number of entries: " + subMap);
+			}
+		}
+
+		@Override
+		public void exitFollowing_frame_edge(
+				@NotNull SQLSelectParserParser.Following_frame_edgeContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove("Type");
+
+			if (subMap.size() == 1) {
+				subMap.put(PSS_VALUE_KEY, (String) subMap.remove("1"));
+				subMap.put(PSS_BRACKET_DIRECTION_KEY, PSS_FOLLOWING_KEY);
+				showTrace(parseTrace, "Preceding Edge Clause: " + subMap);
+
+			} else {
+				showTrace(parseTrace, "Wrong number of entries: " + subMap);
+			}
+		}
+
+
+		@Override
+		public void exitCurrent_row_edge(@NotNull SQLSelectParserParser.Current_row_edgeContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+			subMap = makeRuleMap(ruleIndex);
+			subMap.remove("Type");
+			
+			if (ctx.getChildCount() == 2) {
+				showTrace(parseTrace, "two word frame edge: " + ctx.getText());
+				String part = ctx.getChild(0).getText().toUpperCase();
+				part = part + " " + ctx.getChild(1).getText().toUpperCase();
+				subMap.put(PSS_VALUE_KEY, part);
+			} else  {
+				showTrace(parseTrace, "incorrect phrase");
+			}
+			// Add item to parent map
+			addToParent(parentRuleIndex, parentStackLevel, subMap);
+			showTrace(parseTrace, "Static Data Type: " + subMap);
+		}
 
 /*
 ===============================================================================
@@ -3348,111 +3594,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
-	}
-
-	@Override
-	public void exitWindow_over_partition_expression(
-			@NotNull SQLSelectParserParser.Window_over_partition_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-
-		if (subMap.size() == 2) {
-			showTrace(parseTrace, "Window Over Partition: " + subMap);
-			Map<String, Object> item = new HashMap<String, Object>();
-			item.putAll((Map<String, Object>) subMap.remove("1"));
-			item.putAll((Map<String, Object>) subMap.remove("2"));
-			subMap.put(PSS_WINDOW_FUNCTION_KEY, item);
-		} else {
-			showTrace(parseTrace, "Incorrect number of entries: " + subMap);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public void exitWindow_function(@NotNull SQLSelectParserParser.Window_functionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-		String functType = (String) subMap.remove("1");
-
-		Map<String, Object> item = new HashMap<String, Object>();
-
-		if (subMap.size() == 0) {
-			item.put(PSS_PARAMETERS_KEY, null);
-		} else if (subMap.size() == 1) {
-			subMap = (Map<String, Object>) subMap.remove("2");
-			type = subMap.remove("Type");
-			item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
-		} else {
-			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
-		}
-		subMap.put(PSS_FUNCTION_KEY, item);
-		item.put(PSS_FUNCTION_NAME_KEY, functType);
-
-		addToParent(parentRuleIndex, parentStackLevel, subMap);
-		showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public void exitOver_clause(@NotNull SQLSelectParserParser.Over_clauseContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-
-		HashMap<String, Object> item = new HashMap<String, Object>();
-		if (subMap.size() == 0) {
-			subMap.put(PSS_OVER_KEY, null);
-		} else if (subMap.size() == 1) {
-			item.putAll((Map<String, Object>) subMap.remove("1"));
-			subMap.put(PSS_OVER_KEY, item);
-		} else if (subMap.size() > 1) {
-			item.putAll((Map<String, Object>) subMap.remove("1"));
-			item.putAll((Map<String, Object>) subMap.remove("2"));
-			subMap.put(PSS_OVER_KEY, item);
-		} else {
-			showTrace(parseTrace, "Wrong number of entries: " + subMap);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public void exitPartition_by_clause(@NotNull SQLSelectParserParser.Partition_by_clauseContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
-
-		if (subMap.size() >= 1) {
-			HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
-			type = item.remove("Type");
-
-			item.put(PSS_PARTITION_BY_KEY, item.remove(type.toString()));
-			addToParent(parentRuleIndex, parentStackLevel, item);
-		} else {
-			showTrace(parseTrace, "Not enough entries: " + subMap);
-		}
-
 	}
 
 	@Override

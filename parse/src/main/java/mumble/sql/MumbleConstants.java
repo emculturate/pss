@@ -6,6 +6,8 @@ public final class MumbleConstants {
 	public static final String PSS_AND_KEY = "and";
 	public static final String PSS_ASSIGNMENTS_KEY = "assignments";
 	public static final String PSS_BETWEEN_KEY = "between";
+	public static final String PSS_BRACKET_FRAME_KEY = "bracket";
+	public static final String PSS_BRACKET_DIRECTION_KEY = "direction";
 	public static final String PSS_CALCULATION_KEY = "calc";
 	public static final String PSS_CASE_KEY = "case";
 	public static final String PSS_CLAUSES_KEY = "clauses";
@@ -16,6 +18,7 @@ public final class MumbleConstants {
 	public static final String PSS_DATATYPE_KEY = "data_type";
 	public static final String PSS_DATABASE_NAME_KEY = "dbname";
 	public static final String PSS_ELSE_KEY = "else";
+	public static final String PSS_FOLLOWING_KEY = "FOLLOWING";
 	public static final String PSS_FROM_KEY = "from";
 	public static final String PSS_FUNCTION_KEY = "function";
 	public static final String PSS_FUNCTION_NAME_KEY = "function_name";
@@ -48,6 +51,7 @@ public final class MumbleConstants {
 	public static final String PSS_PARENTHESES_KEY = "parentheses";
 	public static final String PSS_PARTITION_BY_KEY = "partition_by";
 	public static final String PSS_PRECISION_KEY = "precision";
+	public static final String PSS_PRECEDING_KEY = "PRECEDING";
 	public static final String PSS_PREDICAND_KEY = "predicand";
 	public static final String PSS_PREDICAND_TREE_KEY = "PREDICAND";
 	public static final String PSS_QUALIFIER_KEY = "qualifier";
