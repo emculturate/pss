@@ -1299,6 +1299,8 @@ variable_data_type_name
   | BINARY 
   | BINARY VARYING 
   | VARBINARY 
+  // weird types
+  | INTERVAL // POSTGRES
   ;
  
 type_length
@@ -1330,11 +1332,23 @@ static_data_type
 
 static_data_type_name  
   : TEXT
+  | NAME	 // POSTGRES
   | INET4
+  | INET	 // POSTGRES
+  | CIDR	 // POSTGRES
   | STRUCT   // HIVE
   | UNION    // HIVE
   | VARIANT  // SNOWFLAKE
   | OBJECT   // SNOWFLAKE
+  | JSON     // POSTGRES
+  | JSONB    // POSTGRES
+  | OID	     // POSTGRES
+  | XID	     // POSTGRES
+  | UUID	 // POSTGRES
+  | PG_LSN   // POSTGRES
+  | PG_NODE_TREE  // POSTGRES
+  | REGPROC  // POSTGRES
+  | MACADDR  // POSTGRES
   // Numeric
   | INT1
   | TINYINT  // HIVE
@@ -1345,6 +1359,10 @@ static_data_type_name
   | INTEGER
   | INT8
   | BIGINT
+  | BIGSERIAL
+  | SMALLSERIAL
+  | SERIAL
+  | MONEY
   | NUMBER_TYPE
   | FLOAT4
   | REAL
@@ -1363,10 +1381,14 @@ static_data_type_name
   | TIMESTAMP_TZ     // SNOWFLAKE
   | TIMESTAMP
   | TIMESTAMP WITH TIME ZONE
+  | TIMESTAMP WITHOUT TIME ZONE
   | TIMESTAMPTZ
+  | ABSTIME			// POSTGRES
   // array_type
-  | ARRAY
+  | ARRAY			// POSTGRES
+  | ANYARRAY		// POSTGRES
   ;  
+  
   
   /**********************************************************
    * 
@@ -1561,6 +1583,7 @@ USING : U S I N G;
 WHEN : W H E N;
 WHERE : W H E R E;
 WITH : W I T H;
+WITHOUT : W I T H O U T;
 
 /*
 ===============================================================================
@@ -1693,6 +1716,10 @@ ZONE : Z O N E;
   Data Type Tokens
 ===============================================================================
 */
+
+
+ABSTIME : A B S T I M E; // POSTGRES
+ANYARRAY : A N Y A R R A Y;  // POSTGRES
 ARRAY : A R R A Y;  // HIVE and Snowflake
 
 BOOLEAN : B O O L E A N;
@@ -1700,16 +1727,36 @@ BOOL : B O O L;
 BIT : B I T;
 VARBIT : V A R B I T;
 
+CIDR : C I D R; // POSTGRES
+INET : I N E T; // POSTGRES
+INET4 : I N E T '4';
+INTERVAL: I N T E R V A L; // POSTGRES
 INT1 : I N T '1';
 INT2 : I N T '2';
 INT4 : I N T '4';
 INT8 : I N T '8';
+
+JSON : J S O N; // POSTGRES
+JSONB : J S O N B; // POSTGRES
+MACADDR : M A C A D D R; // POSTGRES
+NAME : N A M E; // POSTGRES
+OID : O I D; // POSTGRES
+PG_LSN : P G UNDERLINE L S N; // POSTGRES
+PG_NODE_TREE : P G UNDERLINE N O D E UNDERLINE T R E E; // POSTGRES
+REGPROC : R E G P R O C; // POSTGRES
+XID : X I D; // POSTGRES
+UUID : U U I D;  // POSTGRES
 
 TINYINT : T I N Y I N T; // alias for INT1
 SMALLINT : S M A L L I N T; // alias for INT2
 INT : I N T; // alias for INT4
 INTEGER : I N T E G E R; // alias - INT4
 BIGINT : B I G I N T; // alias for INT8
+BIGSERIAL : B I G S E R I A L; // POSTGRES
+SMALLSERIAL : S M A L L S E R I A L; // POSTGRES
+SERIAL : S E R I A L; // POSTGRES
+MONEY : M O N E Y; // POSTGRES
+
 
 FLOAT4 : F L O A T '4';
 FLOAT8 : F L O A T '8';
@@ -1746,8 +1793,6 @@ BYTEA : B Y T E A; // alias for BLOB
 OBJECT : O B J E C T;
 STRUCT : S T R U C T; 
 VARIANT : V A R I A N T;
-
-INET4 : I N E T '4';
 
 // Operators
 Similar_To : '~';
