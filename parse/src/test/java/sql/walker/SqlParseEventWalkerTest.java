@@ -354,6 +354,26 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={}, interface={a={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={literal='a'}}}, b={function={function_name=cast, data_type={type=FLOAT4}, type=CAST, value={literal='a'}}}, c={function={function_name=cast, data_type={type=TIME WITH TIME ZONE}, type=CAST, value={literal='a'}}}, d={function={function_name=cast, data_type={type=TIMESTAMP WITH TIME ZONE}, type=CAST, value={literal='a'}}}, e={function={function_name=cast, data_type={type=INET4}, type=CAST, value={literal='a'}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void realisticCastingTest() {
+		// TODO: Need real cast query
+		final String query = " "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=NUMERIC}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=7, type=DECIMAL}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={precision=98, scale=7, type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={precision=2, type=FLOAT}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d, e]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={}, interface={a={function={function_name=cast, data_type={type=NUMERIC}, type=CAST, value={literal='a'}}}, b={function={function_name=cast, data_type={type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}}, c={function={function_name=cast, data_type={precision=9, scale=7, type=DECIMAL}, type=CAST, value={literal='a'}}}, d={function={function_name=cast, data_type={precision=98, scale=7, type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}}, e={function={function_name=cast, data_type={precision=2, type=FLOAT}, type=CAST, value={literal='a'}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
 	
 	// JOIN CONDITION VARIATIONS
 
@@ -769,6 +789,29 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}}",
 				extractor.getTableColumnMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<221>,1:76], k_stfd=[@8,33:38='k_stfd',<221>,1:33], kppi=[@10,41:44='kppi',<221>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<221>,1:55]}, interface={rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void realisticRankAndDescColumnNameTest() {
+		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
+				"FROM  <Guide> AS Guide_Student_Conditions " + 
+				" UNION ALL " + 
+				"SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"FROM <NAV> AS  Nav_Student_Conditions";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[app_name, is_active, student, rank, category, nk, desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={is_active=[@7,39:47='is_active',<227>,1:39], student=[@15,66:72='student',<227>,1:66], rank=[@11,54:57='rank',<120>,1:54], category=[@5,29:36='category',<227>,1:29], nk=[@9,50:51='nk',<227>,1:50], desc=[@13,60:63='desc',<70>,1:60]}, <NAV>={is_active=[@29,163:171='is_active',<227>,1:163], student=[@37,190:196='student',<227>,1:190], rank=[@33,178:181='rank',<120>,1:178], category=[@27,153:160='category',<227>,1:153], nk=[@31,174:175='nk',<227>,1:174], desc=[@35,184:187='desc',<70>,1:184]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union2={query0={<Guide>={is_active=[@7,39:47='is_active',<227>,1:39], student=[@15,66:72='student',<227>,1:66], rank=[@11,54:57='rank',<120>,1:54], category=[@5,29:36='category',<227>,1:29], nk=[@9,50:51='nk',<227>,1:50], desc=[@13,60:63='desc',<70>,1:60]}, Guide_Student_Conditions=<Guide>, interface={app_name={literal='Guide'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={is_active=[@29,163:171='is_active',<227>,1:163], student=[@37,190:196='student',<227>,1:190], rank=[@33,178:181='rank',<120>,1:178], category=[@27,153:160='category',<227>,1:153], nk=[@31,174:175='nk',<227>,1:174], desc=[@35,184:187='desc',<70>,1:184]}, interface={app_name={literal='Nav'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
