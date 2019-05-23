@@ -1074,126 +1074,152 @@ simple_numeric_identifier
    
 nonreserved_keywords
   : AVG
-  | ASC
-  | BETWEEN
-  | BY
-  | CENTURY
-  | CHARACTER
-  | COALESCE
-  | COLLECT
-  | COLUMN
-  | COUNT
-  | CUBE
-  | DAY
-  | DEC
-  | DECADE
-  | DESC
-  | DOW
-  | DOY
-  | DROP
-  | EPOCH
-  | EVERY
-  | EXISTS
-  | EXTERNAL
-  | EXTRACT
-  | FILTER
-  | FIRST
-  | FORMAT
-  | FUSION
-  | GROUPING
-  | HASH
-  | INDEX
-  | INSERT
-  | INTERSECTION
-  | ISODOW
-  | ISOYEAR
-  | LAST
-  | LESS
-  | LIST
-  | LOCATION
-  | MAX
-  | MAXVALUE
-  | MICROSECONDS
-  | MILLENNIUM
-  | MILLISECONDS
-  | MIN
-  | MINUTE
-  | MONTH
-  | NATIONAL
-  | NULLIF
-  | OVER
-  | OVERWRITE
-  | PARTITION
-  | PARTITIONS
-  | PRECISION
-  | PURGE
-  | QUARTER
-  | RANGE
-  | RANK
-  | REGEXP
-  | RETURNING
-  | RLIKE
-  | ROLLUP
-  | ROWS
-  | SECOND
-  | SET
-  | SIMILAR
-  | STDDEV_POP
-  | STDDEV_SAMP
-  | SUBPARTITION
-  | SUM
-  | TABLESPACE
-  | THAN
-  | TIMEZONE
-  | TIMEZONE_HOUR
-  | TIMEZONE_MINUTE
-  | TRIM
-  | TO
-  | UNKNOWN
-  | UPDATE
-  | VALUES
-  | VAR_POP
-  | VAR_SAMP
-  | VARYING
-  | WEEK
-  | YEAR
-  | ZONE
-
-  | BIGINT
-  | BIT
-  | BLOB
-  | BOOL
-  | BOOLEAN
-  | BYTEA
-  | CHAR
-  | DATE
-  | DECIMAL
-  | DOUBLE
-  | FLOAT
-  | FLOAT4
-  | FLOAT8
-  | INET4
-  | INT
-  | INT1
-  | INT2
-  | INT4
-  | INT8
-  | INTEGER
-  | NCHAR
-  | NUMERIC
-  | NVARCHAR
-  | REAL
-  | SMALLINT
-  | TEXT
-  | TIME
-  | TIMESTAMP
-  | TIMESTAMPTZ
-  | TIMETZ
-  | TINYINT
-  | VARBINARY
-  | VARBIT
-  | VARCHAR
-  ;
+  | 	ABSTIME			// POSTGRES
+  | 	ANYARRAY		// POSTGRES
+  | 	ARRAY			// POSTGRES
+  | 	ASC
+  | 	BETWEEN
+  | 	BIGINT
+  | 	BIGSERIAL
+  | 	BINARY 
+  | 	BIT
+  | 	BLOB
+  | 	BOOL
+  | 	BY
+  | 	BYTEA
+  | 	CENTURY
+  | 	CHAR
+  | 	CHARACTER
+  | 	CIDR	 // POSTGRES
+  | 	COALESCE
+  | 	COLLECT
+  | 	COLUMN
+  | 	COUNT
+  | 	CUBE
+  | 	DATE
+  | 	DATETIME     // SNOWFLAKE
+  | 	DAY
+  | 	DEC
+  | 	DECADE
+  | 	DESC
+  | 	DOUBLE
+  | 	DOW
+  | 	DOY
+  | 	DROP
+  | 	EPOCH
+  | 	EVERY
+  | 	EXISTS
+  | 	EXTERNAL
+  | 	EXTRACT
+  | 	FILTER
+  | 	FIRST
+  | 	FLOAT
+  | 	FLOAT4
+  | 	FLOAT8
+  | 	FORMAT
+  | 	FUSION
+  | 	GROUPING
+  | 	HASH
+  | 	INDEX
+  | 	INET	 // POSTGRES
+  | 	INET4
+  | 	INSERT
+  | 	INT
+  | 	INT1
+  | 	INT2
+  | 	INT4
+  | 	INT8
+  | 	INTERSECTION
+  | 	INTERVAL // POSTGRES
+  | 	ISODOW
+  | 	ISOYEAR
+  | 	JSON     // POSTGRES
+  | 	JSONB    // POSTGRES
+  | 	LAST
+  | 	LESS
+  | 	LIST
+  | 	LOCATION
+  | 	MACADDR  // POSTGRES
+  | 	MAX
+  | 	MAXVALUE
+  | 	MICROSECONDS
+  | 	MILLENNIUM
+  | 	MILLISECONDS
+  | 	MIN
+  | 	MINUTE
+  | 	MONEY
+  | 	MONTH
+  | 	NAME	 // POSTGRES
+  | 	NATIONAL
+  | 	NCHAR
+  | 	NULLIF
+  | 	NUMBER_TYPE
+  | 	NUMERIC
+  | 	NVARCHAR
+  | 	OBJECT   // SNOWFLAKE
+  | 	OID	     // POSTGRES
+  | 	OVER
+  | 	OVERWRITE
+  | 	PARTITION
+  | 	PARTITIONS
+  | 	PG_LSN   // POSTGRES
+  | 	PG_NODE_TREE  // POSTGRES
+  | 	PRECISION
+  | 	PURGE
+  | 	QUARTER
+  | 	RANGE
+  | 	RANK
+  | 	REAL
+  | 	REGEXP
+  | 	REGPROC  // POSTGRES
+  | 	RETURNING
+  | 	RLIKE
+  | 	ROLLUP
+  | 	ROWS
+  | 	SECOND
+  | 	SERIAL
+  | 	SET
+  | 	SIMILAR
+  | 	SMALLINT
+  | 	SMALLSERIAL
+  | 	STDDEV_POP
+  | 	STDDEV_SAMP
+  | 	STRUCT   // HIVE
+  | 	SUBPARTITION
+  | 	SUM
+  | 	TABLESPACE
+  | 	TEXT
+  | 	THAN
+  | 	TIME
+  | 	TIMESTAMP
+  | 	TIMESTAMP_LTZ     // SNOWFLAKE
+  | 	TIMESTAMP_NTZ     // SNOWFLAKE
+  | 	TIMESTAMP_TZ     // SNOWFLAKE
+  | 	TIMESTAMPTZ
+  | 	TIMETZ
+  | 	TIMEZONE
+  | 	TIMEZONE_HOUR
+  | 	TIMEZONE_MINUTE
+  | 	TINYINT
+  | 	TO
+  | 	TRIM
+  | 	UNION    // HIVE
+  | 	UNKNOWN
+  | 	UPDATE
+  | 	UUID	 // POSTGRES
+  | 	VALUES
+  | 	VAR_POP
+  | 	VAR_SAMP
+  | 	VARBINARY
+  | 	VARBIT 
+  | 	VARCHAR
+  | 	VARIANT  // SNOWFLAKE
+  | 	VARYING
+  | 	WEEK
+  | 	WITH
+  | 	XID	     // POSTGRES
+  | 	YEAR
+  | 	ZONE ;
 
 /*
 ===============================================================================
