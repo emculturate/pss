@@ -50,6 +50,7 @@ public final class MumbleConstants {
 	public static final String PSS_PARAMETERS_KEY = "parameters";
 	public static final String PSS_PARENTHESES_KEY = "parentheses";
 	public static final String PSS_PARTITION_BY_KEY = "partition_by";
+	public static final String PSS_PARTS_KEY = "parts";
 	public static final String PSS_PRECISION_KEY = "precision";
 	public static final String PSS_PRECEDING_KEY = "PRECEDING";
 	public static final String PSS_PREDICAND_KEY = "predicand";
