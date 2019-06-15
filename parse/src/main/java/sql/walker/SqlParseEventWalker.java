@@ -2864,7 +2864,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 */
 
 	@Override
-	public void exitVariable_identifier(@NotNull SQLSelectParserParser.Variable_identifierContext ctx) {
+	public void exitSimple_variable_identifier(@NotNull SQLSelectParserParser.Simple_variable_identifierContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -2883,6 +2883,47 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
 			item.put(PSS_NAME_KEY, ctx.getChild(0).getText());
+			subMap.put(PSS_SUBSTITUTION_KEY, item);
+		}
+		// Add item to parent map
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "Substitution Variable: " + subMap);
+	}
+
+	@Override
+	public void exitExtended_variable_identifier(@NotNull SQLSelectParserParser.Extended_variable_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> subItem = new HashMap<String, Object>();
+
+		if (subMap == null) {
+			// unqualified select all has no map
+			subMap = makeRuleMap(ruleIndex);
+		}
+		subMap.remove("Type");
+		if (ctx.getChildCount() == 1) {
+			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
+			String variable_name = ctx.getChild(0).getText();
+			item.put(PSS_NAME_KEY, variable_name);
+			item.put(PSS_PARTS_KEY, subItem);
+			String[] trim = variable_name.split("\\.",0);
+			if (trim.length == 3) {
+				subItem.put("1", trim[0].substring(1));
+				subItem.put("2", trim[1]);
+				subItem.put("3", trim[2].substring(0, trim[2].length()-1));
+			} else if (trim.length == 2) {
+				subItem.put("1", trim[0].substring(1));
+				subItem.put("2", trim[1].substring(0, trim[1].length()-1));
+			} else {
+				subItem.put("1", variable_name.substring(1, variable_name.length()-1));				
+			}
 			subMap.put(PSS_SUBSTITUTION_KEY, item);
 		}
 		// Add item to parent map
@@ -3858,10 +3899,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
-	public void exitPuml_identifier(@NotNull SQLSelectParserParser.Puml_identifierContext ctx) {
+	public void exitVariable_identifier(@NotNull SQLSelectParserParser.Variable_identifierContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		System.out.println(ctx.getText() + " " + ctx.getParent());
-		System.out.println(ctx.getText());
+		handleOneChild(ruleIndex);
 	}
 
 	@Override

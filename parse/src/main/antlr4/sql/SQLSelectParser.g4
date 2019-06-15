@@ -1049,6 +1049,11 @@ identifier
   | nonreserved_keywords
   ;
 
+variable_identifier
+   : simple_variable_identifier
+   | extended_variable_identifier
+   ;
+
 simple_identifier
    :	Identifier
    ;
@@ -1056,16 +1061,14 @@ simple_identifier
 logical_identifier
    :    Bracket_Identifier
    ;
-
-variable_identifier
+   
+simple_variable_identifier
 	:	Variable_Identifier
 	;
 
-puml_identifier
-   :    Bracket_Identifier
-   |	Variable_Identifier
-   |	Population_Identifier
-   ;
+extended_variable_identifier
+	:  Extended_Variable_Identifier
+	;
  
 simple_numeric_identifier
    :	Numeric_Identifier
@@ -1862,15 +1865,19 @@ NUMBER : Digit+;
 ===============================================================================
 */
 Bracket_Identifier	
-	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
+	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')*']'
 	;
 
 Variable_Identifier	
-	:	'<'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*'>'
+	:	LTH ('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')* GTH
+	;
+
+Extended_Variable_Identifier	
+	:	LTH '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')* ']' ('.''['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')* ']')? ('.''['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')* ']')? GTH
 	;
 
 Population_Identifier	
-	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*'}'
+	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')*'}'
 	;
 
 Identifier
