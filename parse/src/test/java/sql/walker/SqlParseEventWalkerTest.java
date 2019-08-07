@@ -4807,9 +4807,6 @@ public class SqlParseEventWalkerTest {
 
 	/**
 	 * CONDITION TESTS
-	 * 
-	 * @param query
-	 * @param parser
 	 */
 
 	@Test

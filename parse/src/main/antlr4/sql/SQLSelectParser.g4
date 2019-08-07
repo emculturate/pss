@@ -1839,6 +1839,7 @@ YEAR : Y E A R;
 ZONE : Z O N E;
 
   // Snowflake Set Functions
+  
 ANY_VALUE : A N Y UNDERLINE V A L U E;
 CORR : C O R R;
 COVAR_POP : C O V A R UNDERLINE P O P;
