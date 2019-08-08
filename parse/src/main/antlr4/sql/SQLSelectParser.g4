@@ -402,7 +402,7 @@ aggregate_function
   // Next variation not supported, limited SQL dialects only
   // | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?
   ;
-
+  
 set_function_type
   : AVG
   | FIRST_VALUE
@@ -555,6 +555,7 @@ window_over_partition_expression
    
 window_function
    : set_function_type LEFT_PAREN sql_argument_list? RIGHT_PAREN
+   | item_select_function LEFT_PAREN sql_argument_list RIGHT_PAREN (select_direction? null_handling)?
    ;
    
 over_clause
@@ -568,7 +569,7 @@ partition_by_clause
 bracket_frame_clause
    : rows_or_range bracket_frame_definition
    ;
-   
+      
 rows_or_range
    : ROWS  // unbound preceding, unbound following; 1 preceding, current row, interval '1' month preceding
    | RANGE 
@@ -607,6 +608,21 @@ bracket_constraint
    | UNBOUNDED
    ;
    
+    
+   // SNOWFLAKE ITEM SELECTION SYNTAX
+item_select_function
+  : FIRST_VALUE
+  | LAST_VALUE
+  | NTH_VALUE
+  ;
+   
+select_direction
+   :  FROM (FIRST | LAST)
+   ;
+   
+null_handling
+   :  (IGNORE | RESPECT) NULLS
+   ;
    
    
 
@@ -1321,6 +1337,11 @@ nonreserved_keywords
   | APPROX_PERCENTILE
   | APPROX_PERCENTILE_ACCUMULATE
   | APPROX_PERCENTILE_COMBINE
+  // Snowflake Last Value Options
+  |     IGNORE
+  |     RESPECT
+  |		NULLS
+  
   ;
 
 /*
@@ -1666,6 +1687,7 @@ GROUP : G R O U P;
 
 HAVING : H A V I N G;
 
+IGNORE: I G N O R E;
 ILIKE : I L I K E;
 IN : I N;
 INNER : I N N E R;
@@ -1683,6 +1705,7 @@ LIMIT : L I M I T;
 NATURAL : N A T U R A L;
 NOT : N O T;
 NULL : N U L L;
+NULLS : N U L L S;
 NUMBER_TYPE : N U M B E R;
 
 ON : O N;
@@ -1690,6 +1713,7 @@ OUTER : O U T E R;
 OR : O R;
 ORDER : O R D E R;
 
+RESPECT : R E S P E C T;
 RIGHT : R I G H T;
 RETURNING : R E T U R N I N G;
 

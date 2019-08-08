@@ -2659,18 +2659,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String functType = (String) subMap.remove("1");
 
 			Map<String, Object> item = new HashMap<String, Object>();
+			Map<String, Object> hold = new HashMap<String, Object>();
 
 			if (subMap.size() == 0) {
 				item.put(PSS_PARAMETERS_KEY, null);
-			} else if (subMap.size() == 1) {
-				subMap = (Map<String, Object>) subMap.remove("2");
-				type = subMap.remove("Type");
-				item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
+			} else if (subMap.size() >= 1) {
+				hold = (Map<String, Object>) subMap.remove("2");
+				type = hold.remove("Type");
+				item.put(PSS_PARAMETERS_KEY, hold.remove(type.toString()));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
-			subMap.put(PSS_FUNCTION_KEY, item);
+			
 			item.put(PSS_FUNCTION_NAME_KEY, functType);
+
+			if (subMap.containsKey("3")) {
+				item.putAll((Map<String, Object>) subMap.remove("3"));
+			}
+			if (subMap.containsKey("4")) {
+				item.putAll((Map<String, Object>) subMap.remove("4"));
+			}
+			
+			subMap.put(PSS_FUNCTION_KEY, item);
 
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
 			showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
@@ -2856,6 +2866,53 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
 			showTrace(parseTrace, "Static Data Type: " + subMap);
 		}
+
+		// item_select_function does NOT need its own exit method
+
+		@Override
+		public void exitSelect_direction(@NotNull SQLSelectParserParser.Select_directionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+			if (subMap == null) {
+				// unqualified select all has no map
+				subMap = makeRuleMap(ruleIndex);
+			}
+			subMap.remove("Type");
+			if (ctx.getChildCount() == 2) {
+				subMap.put(PSS_SELECT_DIRECTION_KEY, ctx.getChild(1).getText());
+			}
+			// Add item to parent map
+			addToParent(parentRuleIndex, parentStackLevel, subMap);
+		}
+
+		@Override
+		public void exitNull_handling(@NotNull SQLSelectParserParser.Null_handlingContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = currentStackLevel(ruleIndex);
+			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+			if (subMap == null) {
+				// unqualified select all has no map
+				subMap = makeRuleMap(ruleIndex);
+			}
+			subMap.remove("Type");
+			if (ctx.getChildCount() == 2) {
+				subMap.put(PSS_NULL_HANDLING_KEY, ctx.getChild(0).getText());
+			}
+			// Add item to parent map
+			addToParent(parentRuleIndex, parentStackLevel, subMap);
+		}
+
 
 /*
 ===============================================================================
