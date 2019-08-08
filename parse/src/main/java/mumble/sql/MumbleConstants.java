@@ -64,6 +64,10 @@ public final class MumbleConstants {
 	public static final String PSS_SCALE_KEY = "scale";
 	public static final String PSS_SCHEMA_KEY = "schema";
 	public static final String PSS_SELECT_KEY = "select";
+	
+	public static final String PSS_SELECT_DIRECTION_KEY = "select_from";
+	public static final String PSS_NULL_HANDLING_KEY = "null_handle";
+	
 	public static final String PSS_SET_KEY = "set";
 	public static final String PSS_SORT_ORDER_KEY = "sort_order";
 	public static final String PSS_SQL_TREE_KEY = "SQL";
