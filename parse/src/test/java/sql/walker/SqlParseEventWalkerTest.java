@@ -1211,6 +1211,124 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={banana=[@9,85:90='banana',<299>,1:85], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
+	
+	// ORDER BY TESTS
+	
+	@Test
+	public void simpleOrderByTest() {
+		final String query = "SELECT * from tab1 order by col1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void directionAscOrderByTest() {
+		final String query = "SELECT * from tab1 order by col1 ASC";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void directionDescOrderByTest() {
+		final String query = "SELECT * from tab1 order by col1 DESC";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=DESC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void directionAscWithNullsDecoratorOrderByTest() {
+		final String query = "SELECT * from tab1 order by col1 ASC nulls last";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void multipleColumnsWithNullsDecoratorsOrderByTest() {
+		final String query = "SELECT * from tab1 order by col1 ASC nulls last, col2 desc nulls first";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=first, predicand={column={name=col2, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7], col2=[@11,49:52='col2',<299>,1:49], col1=[@6,28:31='col1',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7], col2=[@11,49:52='col2',<299>,1:49], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	// LIMIT Statements
+	
+	@Test
+	public void simpleLimitTest() {
+		final String query = "SELECT * from tab1 limit 100";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, limit={literal=100}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<285>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<285>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
 
 	// BETWEEN Statements
 	
@@ -3082,6 +3200,48 @@ public class SqlParseEventWalkerTest {
 	}
 
 	// SNOWFLAKE SELECT FROM WINDOW TESTS
+	
+	@Test
+	public void lagWindowIgnoreNullsTest() {
+		String query = " SELECT  "
+				+ "   lag(major_cd) ignore nulls over (partition by student_id, value_partition order by term_row) as major_cd_fill "
+				+ " FROM student_term_major where major_cd is null";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,153:160='major_cd',<299>,1:153], student_id=[@11,58:67='student_id',<299>,1:58], value_partition=[@13,70:84='value_partition',<299>,1:70], term_row=[@16,95:102='term_row',<299>,1:95]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,153:160='major_cd',<299>,1:153], student_id=[@11,58:67='student_id',<299>,1:58], value_partition=[@13,70:84='value_partition',<299>,1:70], term_row=[@16,95:102='term_row',<299>,1:95]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void leadWindowIgnoreNullsTest() {
+		String query = " SELECT  "
+				+ "   lead(major_cd) ignore nulls over (partition by student_id, value_partition order by term_row) as major_cd_fill "
+				+ " FROM student_term_major where major_cd is null";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,154:161='major_cd',<299>,1:154], student_id=[@11,59:68='student_id',<299>,1:59], value_partition=[@13,71:85='value_partition',<299>,1:71], term_row=[@16,96:103='term_row',<299>,1:96]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,154:161='major_cd',<299>,1:154], student_id=[@11,59:68='student_id',<299>,1:59], value_partition=[@13,71:85='value_partition',<299>,1:71], term_row=[@16,96:103='term_row',<299>,1:96]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
 	
 	@Test
 	public void lastValueWindowIgnoreNullsTest() {

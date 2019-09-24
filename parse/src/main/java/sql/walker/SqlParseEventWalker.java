@@ -1478,7 +1478,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
 					subMap.put(PSS_ORDERBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
-					subMap.put(PSS_LIMIT_KEY, segment);
+					HashMap<String, Object>  hold = (HashMap<String, Object>) ((HashMap<String, Object>) segment).remove("1");
+					subMap.put(PSS_LIMIT_KEY, hold);
 				} else {
 					showTrace(parseTrace, "Too Many Entries" + segment);
 				}
@@ -3033,9 +3034,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			handlePushDown(ruleIndex);
 	}
 
+
 	@Override
 	public void exitLimit_clause(@NotNull SQLSelectParserParser.Limit_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+
 		handlePushDown(ruleIndex);
 	}
 
@@ -3841,7 +3850,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() == 3) {
 			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
 			item.put(PSS_SORT_ORDER_KEY, subMap.remove("2"));
-			item.put(PSS_NULL_ORDER_KEY, subMap.remove("3"));
+			Map<String, Object> hold = (Map<String, Object>) subMap.remove("3");
+			type = hold.remove("Type").toString();
+			item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
 			showTrace(parseTrace, "Three entries: " + item);
 
 		} else {
@@ -3854,6 +3865,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		handleListItem(ruleIndex, parentRuleIndex);
 
+	}
+
+	@Override
+	public void exitNull_ordering(@NotNull SQLSelectParserParser.Null_orderingContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		handlePushDown(ruleIndex);
 	}
 
 	@Override
