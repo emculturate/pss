@@ -614,6 +614,8 @@ item_select_function
   : FIRST_VALUE
   | LAST_VALUE
   | NTH_VALUE
+  | LAG
+  | LEAD
   ;
    
 select_direction
@@ -821,9 +823,47 @@ search_condition
   : value_expression // instead of boolean_value_expression, we use value_expression for more flexibility.
   ;
 
+/*
+===============================================================================
+  ORDER BY <order_by clause>
+===============================================================================
+*/
+
 orderby_clause
   : ORDER BY sort_specifier_list
   ;
+
+sort_specifier_list
+  : sort_specifier (COMMA sort_specifier)*
+  ;
+
+sort_specifier
+  : key=row_value_predicand order=order_specification? null_order=null_ordering?
+  ;
+
+order_specification
+  : ASC
+  | DESC
+  ;
+
+null_ordering
+  : NULLS null_first_last 
+  ;
+  
+null_first_last
+  : FIRST | LAST
+  ;
+
+/*
+===============================================================================
+  LIMIT <limit clause>
+===============================================================================
+*/
+
+limit_clause
+  : LIMIT e=additive_expression
+  ;
+
 
 /*
 ===============================================================================
@@ -1072,33 +1112,6 @@ sql_argument_list
   : value_expression (COMMA value_expression)*
   ;
 
-/*
-===============================================================================
-  14.1 <declare cursor>
-===============================================================================
-*/
-
-sort_specifier_list
-  : sort_specifier (COMMA sort_specifier)*
-  ;
-
-sort_specifier
-  : key=row_value_predicand order=order_specification? null_order=null_ordering?
-  ;
-
-order_specification
-  : ASC
-  | DESC
-  ;
-
-limit_clause
-  : LIMIT e=additive_expression
-  ;
-
-null_ordering
-  : NULL FIRST
-  | NULL LAST
-  ;
 
 /*
 ===============================================================================
