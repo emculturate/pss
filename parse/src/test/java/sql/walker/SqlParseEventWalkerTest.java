@@ -121,6 +121,121 @@ public class SqlParseEventWalkerTest {
 				extractor.getSymbolTable().toString());
 	}
 
+// Aliasing in select lists
+	@Test
+	public void basicSelectListAliasing1Test() {
+		final String query = " SELECT a as x,b as y,c as z FROM tab1"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}, 3={column={name=c, table_ref=null}, alias=z}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x, y, z]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,15:15='b',<299>,1:15], c=[@9,22:22='c',<299>,1:22]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,15:15='b',<299>,1:15], c=[@9,22:22='c',<299>,1:22]}, interface={x={column={name=a, table_ref=null}}, y={column={name=b, table_ref=null}}, z={column={name=c, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicSelectListNumericPrefixAliasingTest() {
+		final String query = " SELECT a as 01_x,b as 02_y,c as 999_z FROM tab1"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=01_x}, 2={column={name=b, table_ref=null}, alias=02_y}, 3={column={name=c, table_ref=null}, alias=999_z}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[02_y, 999_z, 01_x]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,18:18='b',<299>,1:18], c=[@9,28:28='c',<299>,1:28]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,18:18='b',<299>,1:18], c=[@9,28:28='c',<299>,1:28]}, interface={02_y={column={name=b, table_ref=null}}, 999_z={column={name=c, table_ref=null}}, 01_x={column={name=a, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicSelectListQuotedNumericPrefixColumnTest() {
+		final String query = " SELECT \"09_a\" as 01_x, \"22_b\" as 02_y,\"36_c\" as \"999_z\" FROM \"99tab1\""; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=\"09_a\", table_ref=null}, alias=01_x}, 2={column={name=\"22_b\", table_ref=null}, alias=02_y}, 3={column={name=\"36_c\", table_ref=null}, alias=\"999_z\"}}, from={table={alias=null, table=\"99tab1\"}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[\"999_z\", 02_y, 01_x]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<302>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<302>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<302>,1:39]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<302>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<302>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<302>,1:39]}, interface={\"999_z\"={column={name=\"36_c\", table_ref=null}}, 02_y={column={name=\"22_b\", table_ref=null}}, 01_x={column={name=\"09_a\", table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void real1SelectListNumericPrefixAliasingTest() {
+		final String query = "SELECT sub.Degree_Code AS 01_DEGREE_CD, sub.Degree_Name AS 02_DEGREE_NAME FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_5223_164728_46090704 t) sub"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Degree_Code, table_ref=sub}, alias=01_DEGREE_CD}, 2={column={name=Degree_Name, table_ref=sub}, alias=02_DEGREE_NAME}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164728_46090704}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[02_DEGREE_NAME, 01_DEGREE_CD]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<299>,1:87]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<299>,1:87]}, t=hive_result_pit_5223_164728_46090704, interface={*={column={name=*, table_ref=t}}}}, interface={02_DEGREE_NAME={column={name=Degree_Name, table_ref=sub}}, 01_DEGREE_CD={column={name=Degree_Code, table_ref=sub}}}, query0={Degree_Code=[@1,7:9='sub',<299>,1:7], Degree_Name=[@7,40:42='sub',<299>,1:40]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void real2SelectListNumericPrefixAliasingTest() {
+		final String query = "SELECT sub.College_Code AS 01_College_Cd, sub.College_Name AS 02_College_Name FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_6875_220752_46090864 t) sub"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=College_Code, table_ref=sub}, alias=01_College_Cd}, 2={column={name=College_Name, table_ref=sub}, alias=02_College_Name}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_6875_220752_46090864}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[02_College_Name, 01_College_Cd]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<299>,1:91]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_6875_220752_46090864, interface={*={column={name=*, table_ref=t}}}, hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<299>,1:91]}}, interface={02_College_Name={column={name=College_Name, table_ref=sub}}, 01_College_Cd={column={name=College_Code, table_ref=sub}}}, query0={College_Name=[@7,42:44='sub',<299>,1:42], College_Code=[@1,7:9='sub',<299>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void real3SelectListNumericPrefixAliasingTest() {
+		final String query = "SELECT sub.Course_Registration_Code AS 01_COURSE_REGISTRATION_CD, sub.Course_Registration_Description AS 02_COURSE_REGISTRATION_DESC FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_5223_164727_46090703 t) sub"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Course_Registration_Code, table_ref=sub}, alias=01_COURSE_REGISTRATION_CD}, 2={column={name=Course_Registration_Description, table_ref=sub}, alias=02_COURSE_REGISTRATION_DESC}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164727_46090703}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[02_COURSE_REGISTRATION_DESC, 01_COURSE_REGISTRATION_CD]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<299>,1:146]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<299>,1:146]}, interface={*={column={name=*, table_ref=t}}}}, interface={02_COURSE_REGISTRATION_DESC={column={name=Course_Registration_Description, table_ref=sub}}, 01_COURSE_REGISTRATION_CD={column={name=Course_Registration_Code, table_ref=sub}}}, query0={Course_Registration_Description=[@7,66:68='sub',<299>,1:66], Course_Registration_Code=[@1,7:9='sub',<299>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 	/* ===========================================================
 	 * Basic Variable Name Tests
 	 * Default names with spaces and mixed case

@@ -277,7 +277,7 @@ select_item
   ;
 
 as_clause
-  : (AS)? identifier
+  : (AS)? alias_identifier
   ;
 
 select_all_columns
@@ -1125,6 +1125,15 @@ identifier
   : simple_identifier
   | logical_identifier
   | nonreserved_keywords
+  | snowflake_quoted_numeric_identifier
+  ;
+
+alias_identifier
+   :simple_identifier
+  | logical_identifier
+  | nonreserved_keywords
+  | simple_numeric_identifier
+  | snowflake_quoted_numeric_identifier
   ;
 
 variable_identifier
@@ -1151,6 +1160,10 @@ extended_variable_identifier
 simple_numeric_identifier
    :	Numeric_Identifier
    |	NUMBER
+   ;
+   
+snowflake_quoted_numeric_identifier
+   :	Double_Quoted_Numeric_Identifier
    ;
    
 nonreserved_keywords
@@ -2067,6 +2080,7 @@ Population_Identifier
 	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')*'}'
 	;
 
+
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
   | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')* DOUBLE_QUOTE
@@ -2076,6 +2090,10 @@ EXPONEN : E ('+' | '-')?;
   
 Numeric_Identifier
   :  Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')*
+  ;
+
+Double_Quoted_Numeric_Identifier
+  : DOUBLE_QUOTE Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')* DOUBLE_QUOTE
   ;
 
 BlockComment

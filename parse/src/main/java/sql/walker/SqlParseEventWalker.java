@@ -3973,6 +3973,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitAlias_identifier(@NotNull SQLSelectParserParser.Alias_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		handleOneChild(ruleIndex);
+	}
+
+	@Override
 	public void exitVariable_identifier(@NotNull SQLSelectParserParser.Variable_identifierContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		handleOneChild(ruleIndex);
