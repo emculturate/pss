@@ -1,8 +1,10 @@
 package sql.walker;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -32,16 +34,6 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
-	public void concatenationInTest() {
-		//TODO: the concatenated elements work when in parentheses, otherwise grammar is indeterminate
-		final String query = "SELECT apple"
-				+ " from tab1 where subj_cd || crs_nm in (select fld from orange)";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-	
-	@Test
 	public void topXv1Test() {
 		//TODO: TOP 100 does not parse
 		final String query = "SELECT top 100 apple"
@@ -60,6 +52,27 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void concatenationInTest() {
+		// the concatenated elements as a predicand in an IN statement
+		final String query = "SELECT apple"
+				+ " from tab1 where subj_cd || crs_nm in (select fld from orange)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={in={item={concatenate={1={column={name=subj_cd, table_ref=null}}, 2={column={name=crs_nm, table_ref=null}}}}, in_list={select={1={column={name=fld, table_ref=null}}}, from={table={alias=null, table=orange}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[apple]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{orange={fld=[@11,58:60='fld',<299>,1:58]}, tab1={apple=[@1,7:11='apple',<299>,1:7], crs_nm=[@7,40:45='crs_nm',<299>,1:40], subj_cd=[@5,29:35='subj_cd',<299>,1:29]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={tab1={apple=[@1,7:11='apple',<299>,1:7], crs_nm=[@7,40:45='crs_nm',<299>,1:40], subj_cd=[@5,29:35='subj_cd',<299>,1:29]}, interface={apple={column={name=apple, table_ref=null}}}, query0={orange={fld=[@11,58:60='fld',<299>,1:58]}, interface={fld={column={name=fld, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	// Simple Select with Predicands (Casting and Not Casting)
@@ -5204,7 +5217,6 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void basicColumnPredicandWithSubstitutionTest() {
-		//TODO: Does not parse; qualified substitution should produce COLUMN substitution
 		String sql = "table1.<emp_sales_count>";
 		final SQLSelectParserParser parser = parse(sql);
 		runPredicandParsertest(sql, parser);
@@ -5361,7 +5373,6 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void conditionWithSubstitutionInV1Test() {
-		// TODO: Does not parse; fails on "in" after the variable
 		String sql = "<columnName> in (25, 26)";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
@@ -5369,7 +5380,6 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void conditionWithSubstitutionInV2Test() {
-		// TODO: Does not parse; fails on "in" after the first variable
 		String sql = "<columnName> in <inList>";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
@@ -5377,7 +5387,6 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void conditionWithSubstitutionInV3Test() {
-		// TODO: Does not parse; can't handle in list type variable
 		String sql = "column in <inList>";
 		final SQLSelectParserParser parser = parse(sql);
 		runConditionParsertest(sql, parser);
@@ -5396,7 +5405,16 @@ public class SqlParseEventWalkerTest {
 			System.out.println();
 			// There should be zero errors
 			SqlContext tree = parser.sql();
-			final int numErrors = parser.getNumberOfSyntaxErrors();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               
+	               System.out.println(obj.toString());
+	        }}
+
+	        final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
@@ -5423,6 +5441,13 @@ public class SqlParseEventWalkerTest {
 			System.out.println();
 			// There should be zero errors
 			Predicand_valueContext tree = parser.predicand_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -5446,6 +5471,13 @@ public class SqlParseEventWalkerTest {
 			System.out.println();
 			// There should be zero errors
 			Condition_valueContext tree = parser.condition_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -5467,6 +5499,9 @@ public class SqlParseEventWalkerTest {
 		SQLSelectParserLexer lexer = new SQLSelectParserLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
+		
+		SQLWalkerErrorListener errorListener = new SQLWalkerErrorListener();
+        parser.addErrorListener(errorListener);
 
 		return parser;
 	}
