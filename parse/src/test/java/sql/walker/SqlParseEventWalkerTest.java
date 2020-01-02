@@ -5495,6 +5495,7 @@ public class SqlParseEventWalkerTest {
 	}
 
 	private static final SQLSelectParserParser parse(final String query) {
+		/*
 		CharStream input = new ANTLRInputStream(query);
 		SQLSelectParserLexer lexer = new SQLSelectParserLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -5502,8 +5503,9 @@ public class SqlParseEventWalkerTest {
 		
 		SQLWalkerErrorListener errorListener = new SQLWalkerErrorListener();
         parser.addErrorListener(errorListener);
-
-		return parser;
+*/
+		SQLSelectParserFactory factory = new SQLSelectParserFactory();
+		return factory.buildParser(query);
 	}
 
 }

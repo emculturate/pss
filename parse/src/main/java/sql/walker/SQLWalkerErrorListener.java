@@ -11,7 +11,7 @@ public class SQLWalkerErrorListener  extends BaseErrorListener
 {
     private final List<SyntaxError> syntaxErrors = new ArrayList<>();
 
-    SQLWalkerErrorListener()
+    public SQLWalkerErrorListener()
     {
     }
 

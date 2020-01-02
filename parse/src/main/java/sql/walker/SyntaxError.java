@@ -12,7 +12,7 @@ public class SyntaxError
     private final String message;
     private final RecognitionException e;
 
-    SyntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e)
+    public SyntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e)
     {
         this.recognizer = recognizer;
         this.offendingSymbol = offendingSymbol;
