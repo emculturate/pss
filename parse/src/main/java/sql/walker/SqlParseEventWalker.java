@@ -1305,7 +1305,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+
+			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
+			if (hold.containsKey("Type")) {
+				Integer childKey = (Integer) hold.remove("Type");
+				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+					item.putAll(hold);
+			} else {
+				item.put(PSS_QUALIFIER_KEY, hold);
+			}
+			
 			subMap.put(PSS_INTERSECT_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -1372,7 +1381,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+
+			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
+			if (hold.containsKey("Type")) {
+				Integer childKey = (Integer) hold.remove("Type");
+				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+					item.putAll(hold);
+			} else {
+				item.put(PSS_QUALIFIER_KEY, hold);
+			}
+			
 			subMap.put(PSS_UNION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -1459,7 +1477,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (childKey == (Integer) SQLSelectParserParser.RULE_select_list) {
 					subMap.put(PSS_SELECT_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier) {
-					subMap.put(PSS_QUALIFIER_KEY, segment);
+					subMap.putAll(value);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
 					if (((HashMap<String, Object>) segment).size() == 1) {
 						subMap.put(PSS_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
@@ -1580,8 +1598,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 */
  // TODO: Select Into Table syntax has not been implemented
 	
-// set_qualifier does NOT need its own method
+// set_qualifier needs to insert into parent object
 	
+
+	@Override
+	public void exitSet_qualifier(@NotNull SQLSelectParserParser.Set_qualifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+		
+		String item = ctx.getChild(0).getText();
+		
+		Map<String, Object> subMap = new HashMap<String, Object>();
+		subMap.put(PSS_QUALIFIER_KEY, item);
+		subMap.put("Type", SQLSelectParserParser.RULE_set_qualifier);
+		
+		showTrace(parseTrace, "Qualifier: " + subMap);
+	
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
 
 	@Override
 	public void exitSelect_list(@NotNull SQLSelectParserParser.Select_listContext ctx) {
@@ -2185,7 +2222,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(PSS_FUNCTION_KEY, item);
 		} else if (subMap.size() == 3) {
 			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, subMap.remove("2"));
+			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
+			if (hold.containsKey("Type")) {
+				Integer childKey = (Integer) hold.remove("Type");
+				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+					item.putAll(hold);
+			} else {
+				item.put(PSS_QUALIFIER_KEY, hold);
+			}
 			item.put(PSS_PARAMETERS_KEY, subMap.remove("3"));
 			subMap.put(PSS_FUNCTION_KEY, item);
 		} else {
