@@ -206,10 +206,10 @@ intersected_query
   ;
 
 intersect_clause
-  : interset_operator set_qualifier?
+  : intersect_operator set_qualifier?
   ;
   
-interset_operator
+intersect_operator
   : (INTERSECT)
   ;
 
@@ -1278,6 +1278,7 @@ nonreserved_keywords
   | 	SMALLSERIAL
   | 	STDDEV_POP
   | 	STDDEV_SAMP
+  |     STRING
   | 	STRUCT   // HIVE
   | 	SUBPARTITION
   | 	SUM
@@ -1476,6 +1477,7 @@ variable_data_type_name
   | VARBINARY 
   // weird types
   | INTERVAL // POSTGRES
+  | STRING
   ;
  
 type_length
@@ -2002,6 +2004,7 @@ VARCHAR : V A R C H A R;
 VARCHAR2 : V A R C H A R '2';
 NCHAR : N C H A R;
 NVARCHAR : N V A R C H A R;
+STRING : S T R I N G;
 
 DATE : D A T E;
 DATETIME : D A T E T I M E;
