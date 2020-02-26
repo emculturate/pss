@@ -778,6 +778,38 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<300>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
+	
+	@Test
+	public void getComplexPredicandVariablesTest() {
+		// Predicand Variable Test
+		String query = " select cec.* " + 
+				"	from <[Enrollment Services].[Client Entering Class]> cec" + 
+				"	where" + 
+				"	(<Permanent Country> is null or <Permanent Country> in <Permanent Country List>)" + 
+				"	and <College Attendance Status> in <College Attendance Status List>" + 
+				"	and (<Graduation Year> is null or <Graduation Year> in <Graduation Year List>)" + 
+				"	and (<Application Admissions Status> is null or <Application Admissions Status> in <Application Admissions Status list>)" + 
+				"	and (<Term Of Interest> is null or <Term Of Interest> in <Term Of Interest List>)" + 
+				"	and (<Date Submitted> is null or <Date Submitted> = '')";
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+	
+	@Test
+	public void getComplexColumnVariablesTest() {
+		// Column Variable Test
+		String query = " select cec.* " + 
+				"	from <[Enrollment Services].[Client Entering Class]> cec" + 
+				"	where" + 
+				"	(cec.<Permanent Country> is null or cec.<Permanent Country> in <Permanent Country List>)" + 
+				"	and cec.<College Attendance Status> in <College Attendance Status List>" + 
+				"	and (cec.<Graduation Year> is null or cec.<Graduation Year> in <Graduation Year List>)" + 
+				"	and (cec.<Application Admissions Status> is null or cec.<Application Admissions Status> in <Application Admissions Status list>)" + 
+				"	and (cec.<Term Of Interest> is null or cec.<Term Of Interest> in <Term Of Interest List>)" + 
+				"	and (cec.<Date Submitted> is null or cec.<Date Submitted> = '')";
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
 
 	// Special Join Extension Variables
 
@@ -1102,6 +1134,87 @@ public class SqlParseEventWalkerTest {
 	
 
 	// END OF RESERVED WORD CONVERSION
+	
+	// Start Table Identifier Tests
+	
+	
+	@Test
+	public void simpleQuotedTableNameTest() {
+		final String query = "SELECT * FROM \"Name\"";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=\"Name\"}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{\"name\"={*=[@1,7:7='*',<286>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"Name\"={*=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void simpleQuotedSchemaAndTableNameTest() {
+		final String query = "SELECT * FROM \"scheme\".\"Name\"";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", alias=null, table=\"Name\"}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{\"name\"={*=[@1,7:7='*',<286>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"Name\"={*=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void simpleQuotedDatabaseSchemaAndTableNameTest() {
+		final String query = "SELECT * FROM \"db\".\"scheme\".\"Name\"";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", dbname=\"db\", alias=null, table=\"Name\"}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{\"name\"={*=[@1,7:7='*',<286>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"Name\"={*=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void quotedGuidDatabaseNameUnquotedSchemaAndUnquotedTableNameTest() {
+		final String query = "SELECT * FROM \"PROD-3beb02cb-f710-4d2d-a6a1-40c229e4a40e\".panto.\"1234_987654\"";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=panto, dbname=\"PROD-3beb02cb-f710-4d2d-a6a1-40c229e4a40e\", alias=null, table=\"1234_987654\"}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{\"1234_987654\"={*=[@1,7:7='*',<286>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"1234_987654\"={*=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	// END OF Table Identifier Tests
 	
 	// Union and Intersect with Qualifiers
 	
@@ -4930,7 +5043,7 @@ public class SqlParseEventWalkerTest {
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}
-
+	
 	@Test
 	public void getRegistrationSqlTest() {
 		/*

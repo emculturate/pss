@@ -2080,13 +2080,13 @@ Extended_Variable_Identifier
 	;
 
 Population_Identifier	
-	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' ')*'}'
+	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'-')*'}'
 	;
 
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
-  | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')* DOUBLE_QUOTE
+  | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_'|'-')* DOUBLE_QUOTE
   ;
 
 EXPONEN : E ('+' | '-')?;
@@ -2096,7 +2096,7 @@ Numeric_Identifier
   ;
 
 Double_Quoted_Numeric_Identifier
-  : DOUBLE_QUOTE Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')* DOUBLE_QUOTE
+  : DOUBLE_QUOTE Digit+ ('a'..'z'|'A'..'Z'|Digit|'_'|'-')* DOUBLE_QUOTE
   ;
 
 BlockComment
