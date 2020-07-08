@@ -41,13 +41,14 @@ sql
   ) (SEMI_COLON)? EOF
   ;
   
+  
 /*
 ===============================================================================
-  Condition Start Symbol
+  Column Start Symbol
 ===============================================================================
 */
-condition_value
-  : search_condition EOF
+column_value
+  : column_primary EOF
   ;
   
 /*
@@ -56,7 +57,52 @@ condition_value
 ===============================================================================
 */
 predicand_value
-  : value_expression_primary EOF
+  : predicand_primary EOF
+  ;
+ 
+/*
+===============================================================================
+  In List Predicate Start Symbol
+===============================================================================
+*/
+in_list_predicate_value
+  : in_predicate_value EOF
+  ;
+
+/*
+===============================================================================
+  Condition Start Symbol
+===============================================================================
+*/
+condition_value
+  : search_condition EOF
+  ;
+
+/*
+===============================================================================
+  Tuple Start Symbol
+===============================================================================
+*/
+tuple_value
+  : tuple_primary EOF
+  ;
+
+/*
+===============================================================================
+  Query Start Symbol
+===============================================================================
+*/
+query_value
+  : query EOF
+  ;
+
+/*
+===============================================================================
+  Join Extension Start Symbol
+===============================================================================
+*/
+join_extension_value
+  :  join_extension_primary EOF
   ;
   
 /*
@@ -303,11 +349,24 @@ table_reference_list
      | (unqualified_join right=table_primary)
      | (qualified_join right=table_primary s=join_specification))*
   ;
+  
+join_extension_primary
+  : ((COMMA table_primary)
+     | (unqualified_join right=table_primary)
+     | (qualified_join right=table_primary s=join_specification))*  join_extension?
+  ;
 
 table_primary
   : table_or_query_name as_clause?
   | subquery as_clause? 
   | variable_identifier as_clause
+  ;
+
+// Used ONLY in the TUPLE Variable Substitution end point
+tuple_primary
+  : table_or_query_name
+  | subquery
+  | variable_identifier
   ;
 
 table_or_query_name
@@ -361,6 +420,12 @@ column_reference
   | tb_name=identifier DOT substitution=variable_identifier
   ;
 
+column_primary
+  : (tb_name=identifier DOT)? name=identifier
+  | tb_name=identifier DOT substitution=variable_identifier
+  | substitution=variable_identifier
+  ;
+
 /*
 ===============================================================================
   Predicands <value expression primary>
@@ -369,6 +434,9 @@ column_reference
    
 predicand_primary
   : value_expression_primary (CAST_OPERATOR data_type)?
+  | trim_function
+  | null_literal
+  | variable_identifier
   ;
 
 value_expression_primary
@@ -981,6 +1049,8 @@ in_predicate
 //  : additive_expression  not? IN in_predicate_value
   : row_value_predicand  not? IN in_predicate_value
   ;
+  
+  
 
 in_predicate_value
   : subquery

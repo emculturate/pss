@@ -17,6 +17,7 @@ import mumble.sql.Snippet;
 
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.Cast_function_expressionContext;
+import sql.SQLSelectParserParser.In_list_predicate_valueContext;
 import sql.SQLSelectParserParser.Static_data_typeContext;
 import sql.SQLSelectParserBaseListener;
 /**
@@ -673,6 +674,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	// Parser End Points: These are independently callable and produce complete set of objects for each call. 
 
+	/*
+	===============================================================================
+	  SQL Tree Start Symbol
+	===============================================================================
+	*/
+
 	@Override
 	public void exitSql(@NotNull SQLSelectParserParser.SqlContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -687,16 +694,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/*
 	===============================================================================
-	  Condition Start Symbol
+	  Column Start Symbol
 	===============================================================================
 	*/
 	@Override
-	public void exitCondition_value(SQLSelectParserParser.Condition_valueContext ctx) {
+	public void exitColumn_value(SQLSelectParserParser.Column_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_CONDITION_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(PSS_COLUMN_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -772,6 +779,171 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 	
+
+	/*
+	===============================================================================
+	  In List Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitIn_list_predicate_value(SQLSelectParserParser.In_list_predicate_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_IN_LIST_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+
+
+	/*
+	===============================================================================
+	  Condition Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitCondition_value(SQLSelectParserParser.Condition_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_CONDITION_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+
+	/*
+	===============================================================================
+	  Tuple Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitTuple_value(SQLSelectParserParser.Tuple_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_TUPLE_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+
+	/*
+	===============================================================================
+	  Query Value Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitQuery_value(SQLSelectParserParser.Query_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_QUERY_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+
+		// Add TABLE references to Table Dictionary
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+
+	/*
+	===============================================================================
+	  Join Extension Value Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitJoin_extension_value(SQLSelectParserParser.Join_extension_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		sqlTree.put(PSS_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
+		// showTrace(resultTrace, collector);
+		showTrace(symbolTrace, symbolTable);
+		showTrace(symbolTrace, tableDictionaryMap);
+	}
+	
 	/*
 	===============================================================================
 	  Literal Value Start Symbol
@@ -782,6 +954,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 //	@Override
 //	public void exitLiteral_value(@NotNull SQLSelectParserParser.Literal_valueContext ctx) {
 //	}
+	
 	
 	// End of Grammar End Points
 	 
@@ -1489,7 +1662,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					subMap.put(PSS_WHERE_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_groupby_clause) {
 					subMap.put(PSS_GROUPBY_KEY, segment);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_having_clause) {
+				} else if (childKey == SQLSelectParserParser.RULE_having_clause) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
 					subMap.put(PSS_HAVING_KEY, item);
@@ -1505,86 +1678,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		showTrace(parseTrace, subMap);
 
-		// Handle symbol tables
-		HashMap<String, Object> symbols = symbolTable;
+		// Handle symbol tables		
+		HashMap<String, Object> symbols = convertSymbolTableToTableDictionary();
 
-		// Special handling of queries with only one source: Move "unknown"
-		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
-
-		Integer count = 0;
-		Integer tableCount = 0;
-		String onlyTableName = null;
-		HashMap<String, Object> hold = new HashMap<String, Object>();
-		String holdTabRef = null;
-
-		for (String tab_ref : symbols.keySet()) {
-			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_insert"))
-					|| (tab_ref.startsWith("def_update")) || (tab_ref.startsWith("def_union"))
-					|| (tab_ref.startsWith("def_intersect"))) {
-			} else {
-				Object item = symbols.get(tab_ref);
-				if (item instanceof HashMap<?, ?>) {
-					hold.put(tab_ref, item);
-					holdTabRef = tab_ref;
-					count++;
-					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
-							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
-					} else {
-						tableCount++;
-						onlyTableName = tab_ref;
-					}
-				}
-			}
-		}
-		if (unks != null) {
-
-			if (count == 1) {
-				// just one table referenced, put all unknowns into it
-				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
-			} else {
-				// Allocate Unknowns
-				for (String tab_ref : hold.keySet()) {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
-					for (String key : currItem.keySet()) {
-						unks.remove(key);
-					}
-				}
-				// put whatever is left back into the unknowns
-				if (unks.size() > 0) {
-					if (tableCount == 1)
-						// just one table remains referenced, put all unknowns
-						// into it
-						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
-					else
-						symbols.put("unknown", unks);
-				}
-			}
-		}
-		// TODO: Add TABLE references to Table Dictionary
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
 		// Retrieve outer symbol table, insert this symbol table into it
 		String key = "query" + queryCount;
 		popSymbolTable(key, symbols);
@@ -1795,6 +1891,108 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	@Override
+	public void exitJoin_extension_primary(@NotNull SQLSelectParserParser.Join_extension_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "Join Extension: " + subMap);
+
+		convertSymbolTableToTableDictionary();
+	}
+
+	private HashMap<String, Object> convertSymbolTableToTableDictionary() {
+		// Handle symbol tables
+		HashMap<String, Object> symbols = symbolTable;
+
+		// Special handling of queries with only one source: Move "unknown"
+		// references to that table
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove("unknown");
+
+		Integer count = 0;
+		Integer tableCount = 0;
+		String onlyTableName = null;
+		HashMap<String, Object> hold = new HashMap<String, Object>();
+		String holdTabRef = null;
+
+		for (String tab_ref : symbols.keySet()) {
+			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_insert"))
+					|| (tab_ref.startsWith("def_update")) || (tab_ref.startsWith("def_union"))
+					|| (tab_ref.startsWith("def_intersect"))) {
+			} else {
+				Object item = symbols.get(tab_ref);
+				if (item instanceof HashMap<?, ?>) {
+					hold.put(tab_ref, item);
+					holdTabRef = tab_ref;
+					count++;
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
+							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
+							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+					} else {
+						tableCount++;
+						onlyTableName = tab_ref;
+					}
+				}
+			}
+		}
+		if (unks != null) {
+
+			if (count == 1) {
+				// just one table referenced, put all unknowns into it
+				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+			} else {
+				// Allocate Unknowns
+				for (String tab_ref : hold.keySet()) {
+					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
+					for (String key : currItem.keySet()) {
+						unks.remove(key);
+					}
+				}
+				// put whatever is left back into the unknowns
+				if (unks.size() > 0) {
+					if (tableCount == 1)
+						// just one table remains referenced, put all unknowns
+						// into it
+						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
+					else
+						symbols.put("unknown", unks);
+				}
+			}
+		}
+		// TODO: Add TABLE references to Table Dictionary
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
+						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+		return symbols;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
 	public void exitTable_primary(@NotNull SQLSelectParserParser.Table_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -1875,6 +2073,57 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 	
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitTuple_primary(@NotNull SQLSelectParserParser.Tuple_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove("Type");
+		Map<String, Object> item;
+		String alias = null;
+
+		item = new HashMap<String, Object>();
+		Map<String, Object> reference = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+					"tuple");
+
+		// Try various alternatives
+		if (reference.containsKey(PSS_TABLE_KEY)) {
+			Object table = reference.get(PSS_TABLE_KEY);
+			symbolTable.put((String) table, new HashMap<String, Object>());
+			tableDictionaryMap.put((String) table, new HashMap<String, Object>());
+			subMap.put(PSS_TABLE_KEY, reference);
+		} else if (reference.containsKey(PSS_SUBSTITUTION_KEY)) {
+			// Check for Substitution Variable
+			Map<String, Object> substitution = (Map<String, Object>) reference.get(PSS_SUBSTITUTION_KEY);
+			// Collect Symbol Table Reference
+			String name = (String) substitution.get("name");
+			symbolTable.put(name, new HashMap<String, Object>());
+			tableDictionaryMap.put(name, new HashMap<String, Object>());
+			subMap.putAll(reference);
+
+		} else { // then it's a query
+			Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(PSS_UPDATE_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(PSS_UNION_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(PSS_INTERSECT_KEY, item, alias, reference);
+			subMap.putAll(reference);
+		}
+
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "TABLE PRIMARY: " + subMap);
+	}
+	
+
 	private Boolean collectQuerySymbolTable(String hdr, Map<String, Object> item, String alias,
 			Map<String, Object> reference) {
 		String queryName = hdr + (queryCount - 1);
@@ -1883,7 +2132,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(hdr, reference);
 
 			// add alias to query
-			collectSymbolTable(alias, queryName);
+			if (alias != null) 
+				collectSymbolTable(alias, queryName);
+			else
+				symbolTable.put(queryName, new HashMap<String, Object>());
 
 			// propagate interface to outer layer of query
 			Map<String, Object> hold = (Map<String, Object>) symbolTable.get(queryName);
@@ -2141,12 +2393,76 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, "Column Reference: " + subMap);
 	}
 
+
+	@Override
+	public void exitColumn_primary(@NotNull SQLSelectParserParser.Column_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		subMap.remove("Type");
+
+		Map<String, Object> columnSubTree = new HashMap<String, Object>();
+		Object columnRef = null;
+		String tableRef = null;
+		String tableRefKey = "unknown";
+		Boolean doNotSkip = true;
+
+		if (subMap.size() == 1) {
+			showTrace(parseTrace, "Just One Identifier: " + subMap);
+			columnRef = subMap.remove("1");
+		} else if (subMap.size() == 2) {
+			showTrace(parseTrace, "Two entries: " + subMap);
+			// tableRefKey = "table_ref";
+			tableRef = (String) subMap.remove("1");
+			tableRefKey = tableRef;
+			columnRef = subMap.remove("2");
+
+		} else {
+			showTrace(parseTrace, "Too many entries: " + subMap);
+			doNotSkip = false;
+		}
+		if (doNotSkip) {
+			// Add column to SQL AST Tree
+			columnSubTree.put(PSS_TABLE_REF_KEY, tableRef);
+			if (columnRef instanceof HashMap<?, ?>) {
+				// should be a substitution
+				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
+				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(PSS_SUBSTITUTION_KEY);
+				substitutionMap.put(PSS_TYPE_KEY, PSS_COLUMN_KEY);
+
+				// Add reference to Substitution Variables list
+				substitutionsMap.put((String) substitutionMap.get("name"), PSS_COLUMN_KEY);
+
+				columnSubTree.putAll((HashMap<String, Object>) columnRef);
+			} else {
+				columnSubTree.put(PSS_NAME_KEY, columnRef);
+			}
+			subMap.put(PSS_COLUMN_KEY, columnSubTree);
+
+			// Capture SymbolTable entry
+			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
+		}
+		showTrace(parseTrace, "Column Reference: " + subMap);
+	}
+
 /*
 ===============================================================================
   Predicands <value expression primary>
 ===============================================================================
 */
 
+
+	@Override
+	public void exitPredicand_primary(@NotNull SQLSelectParserParser.Predicand_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+
+		handleOneChild(ruleIndex);
+	}
 
 	@Override
 	public void exitValue_expression_primary(@NotNull SQLSelectParserParser.Value_expression_primaryContext ctx) {
