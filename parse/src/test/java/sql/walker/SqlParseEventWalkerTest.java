@@ -11,16 +11,21 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import sql.SQLSelectParserParser;
+import sql.SQLSelectParserParser.Column_valueContext;
 import sql.SQLSelectParserParser.Condition_valueContext;
+import sql.SQLSelectParserParser.In_list_predicate_valueContext;
+import sql.SQLSelectParserParser.Join_extension_valueContext;
 import sql.SQLSelectParserParser.Predicand_valueContext;
+import sql.SQLSelectParserParser.Query_valueContext;
 import sql.SQLSelectParserParser.SqlContext;
+import sql.SQLSelectParserParser.Tuple_valueContext;
 
 public class SqlParseEventWalkerTest {
 	// *********************************
 	// Clauses that need to be built out
 	
 	@Test
-	public void concatenationForumlaTest() {
+	public void concatenationFormulaTest() {
 		//TODO: ITEM 24 - the concatenated elements work when in parentheses, otherwise grammar is indeterminate
 		final String query = "SELECT substr(strm, 1, 2) || substr(strm, 3, 1) + 1 || substr(strm, 4,1)"
 				+ " from tab1";
@@ -2715,7 +2720,18 @@ public class SqlParseEventWalkerTest {
 				+ " HAVING <condition> or <condition2>";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={or={1={substitution={name=<condition>, type=condition}}, 2={substitution={name=<condition2>, type=condition}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<condition>=condition, <condition2>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	@Test
@@ -2725,7 +2741,18 @@ public class SqlParseEventWalkerTest {
 				+ " HAVING <condition> > '20130101' ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={substitution={name=<condition>, type=predicand}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<condition>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 	
 	@Test
@@ -2735,7 +2762,18 @@ public class SqlParseEventWalkerTest {
 				+ " HAVING tab1.<condition> > '20130101' ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={column={substitution={name=<condition>, type=column}, table_ref=tab1}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<condition>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={<condition>={substitution={name=<condition>, type=column}}, spriden_id=[@1,8:17='spriden_id',<300>,1:8], TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={<condition>={substitution={name=<condition>, type=column}}, TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	// end of having clause
@@ -5267,27 +5305,6 @@ public class SqlParseEventWalkerTest {
 		runParsertest(sql, parser);
 	}
 
-	@Test
-	public void getDeclarationSqlTest() {
-		// TODO: Hive Lateral Function
-		// *************** ERROR: Hive syntax not handled: "lateral view
-		// explode"
-		/*
-		 * Declaration COLUMNS: RECORD_TYPE, ACTION, PRIMARY_USER_ID, MAJOR_ID
-		 */
-		String sql = "select record_type as record_type,action as action,primary_user_id as primary_user_id, "
-				+ "maj_items.col1 as major_id from (select record_type,action,primary_user_id, "
-				+ "array(struct(major_cd_1), struct(major_cd_2), struct(major_cd_3), struct(major_cd_4)) as major_arr from "
-				+ "(select record_type,action, primary_user_id, major_cd_1,major_cd_2,major_cd_3, major_cd_4 from "
-				+ "(select a.record_type,a.action,primary_user_id, major_cd_1,major_cd_2,major_cd_3,major_cd_4,";
-		sql += "rank() over (partition by primary_user_id order by b.begin_date desc ,b.end_date desc) term_rank from "
-				+ " studentMajorTbl a,  academicPeriodTbl "
-				+ " b where a.term_id=b.external_id and a.major_cd_1 is not null and length(trim(a.major_cd_1))>0 ) tbl where term_rank=1) res) fin_res ";
-		// sql += "lateral view explode(major_arr) exploded_table as maj_items
-		// where length(trim(maj_items.col1)) > 0";
-		final SQLSelectParserParser parser = parse(sql);
-		runParsertest(sql, parser);
-	}
 
 	@Test
 	public void getTagSqlTest() {
@@ -5506,54 +5523,85 @@ public class SqlParseEventWalkerTest {
 		runParsertest(sql, parser);
 	}
 
-	/*
-	 * UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, temp_lo+15,
-	 * DEFAULT) WHERE city = 'San Francisco' AND date = '2003-07-03'
+	/**
+	 * COLUMN VALUE TESTS
 	 * 
-	 * UPDATE accounts SET (contact_first_name, contact_last_name) = (SELECT
-	 * first_name, last_name FROM salesmen WHERE salesmen.id =
-	 * accounts.sales_id);
-	 * 
-	 * UPDATE accounts SET contact_first_name = first_name, contact_last_name =
-	 * last_name FROM salesmen WHERE salesmen.id = accounts.sales_id;
-	 * 
-	 * UPDATE summary s SET (sum_x, sum_y, avg_x, avg_y) = (SELECT sum(x),
-	 * sum(y), avg(x), avg(y) FROM data d WHERE d.group_id = s.group_id);
-	 * 
-	 * UPDATE employees SET sales_count = sales_count + 1 WHERE id = (SELECT
-	 * sales_person FROM accounts WHERE name = 'Acme Corporation');
-	 * 
-	 * UPDATE weather SET temp_lo = temp_lo+1, temp_hi = temp_lo+15, prcp =
-	 * DEFAULT WHERE city = 'San Francisco' AND date = '2003-07-03' RETURNING
-	 * temp_lo, temp_hi, prcp;
-	 * 
-	 * // WITH EXAMPLES
-	 * 
-	 * WITH moved_rows AS ( DELETE FROM products WHERE "date" >= '2010-10-01'
-	 * AND "date" < '2010-11-01' RETURNING * ) INSERT INTO products_log SELECT *
-	 * FROM moved_rows;
-	 * 
-	 * 
-	 * WITH regional_sales AS ( SELECT region, SUM(amount) AS total_sales FROM
-	 * orders GROUP BY region ), top_regions AS ( SELECT region FROM
-	 * regional_sales WHERE total_sales > (SELECT SUM(total_sales)/10 FROM
-	 * regional_sales) ) SELECT region, product, SUM(quantity) AS product_units,
-	 * SUM(amount) AS product_sales FROM orders WHERE region IN (SELECT region
-	 * FROM top_regions) GROUP BY region, product;
-	 * 
-	 * WITH t AS ( UPDATE products SET price = price * 1.05 RETURNING * ) SELECT
-	 * * FROM products;
-	 * 
-	 * WITH t AS ( UPDATE accounts SET (contact_first_name, contact_last_name) =
-	 * (SELECT first_name, last_name FROM salesmen WHERE salesmen.id =
-	 * accounts.sales_id); RETURNING * ) insert into accounts values ((SELECT
-	 * first_name, last_name FROM salesmen WHERE !exists t.id =
-	 * accounts.sales_id))
-	 * 
-	 * INSERT INTO table [ ( column [, ...] ) ] { DEFAULT VALUES | VALUES ( {
-	 * expression | DEFAULT } [, ...] ) [, ...] | query } [ RETURNING * |
-	 * output_expression [ AS output_name ] [, ...] ]
+	 * @param query
+	 * @param parser
 	 */
+
+	@Test
+	public void basicColumnValueTest() {
+		String sql = "emp_sales_count";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{COLUMN={column={name=emp_sales_count, table_ref=null}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicTableColumnValueTest() {
+		String sql = "table1.emp_sales_count";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{COLUMN={column={name=emp_sales_count, table_ref=table1}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicColumnSubstitutionWithPrefixTest() {
+		String sql = "table1.<emp_sales_count>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{COLUMN={column={substitution={name=<emp_sales_count>, type=column}, table_ref=table1}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicColumnVariableTest() {
+		//ITEM 83: Type isn't being set; Substitution List isn't being filled
+		String sql = "<emp_sales_count>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{COLUMN={column={substitution={name=<emp_sales_count>, type=column}, table_ref=null}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getSymbolTable().toString());
+	}
 
 	/**
 	 * PREDICANDS TESTS
@@ -5566,37 +5614,91 @@ public class SqlParseEventWalkerTest {
 	public void basicColumnPredicandTest() {
 		String sql = "table1.emp_sales_count";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={column={name=emp_sales_count, table_ref=table1}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void basicColumnPredicandWithSubstitutionTest() {
 		String sql = "table1.<emp_sales_count>";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={column={substitution={name=<emp_sales_count>, type=column}, table_ref=table1}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={<emp_sales_count>={substitution={name=<emp_sales_count>, type=column}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
-	public void basicColumnSubstitutionTest() {
-		//TODO: Type isn't being set; Substitution List isn't being filled
+	public void basicPredicandSubstitutionTest() {
 		String sql = "<emp_sales_count>";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={substitution={name=<emp_sales_count>, type=predicand}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void basicLiteralValuePredicandTest() {
 		String sql = "'AA'";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={literal='AA'}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void basicNullValuePredicandTest() {
-		// TODO: Null Literal not accepted as a Predicand
+		// ITEM 84 -- Null Literal not accepted as a Predicand
 		String sql = "null";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={null_literal=null}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -5604,43 +5706,281 @@ public class SqlParseEventWalkerTest {
 		// TODO: ITEM 24 - Concatenation outside of parentheses not recognized as a predicand
 		String sql = "a || b || 'oops'";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void concatenationParenthesisPredicandTest() {
+		String sql = "(a || b || 'oops')";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={parentheses={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={literal='oops'}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,1:1='a',<300>,1:1], b=[@3,6:6='b',<300>,1:6]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,1:1='a',<300>,1:1], b=[@3,6:6='b',<300>,1:6]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void functionPredicandTest() {
 		String sql = "concat_ws('-', crs.subject_code, crs.course_number) ";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={function={parameters={1={literal='-'}, 2={column={name=subject_code, table_ref=crs}}, 3={column={name=course_number, table_ref=crs}}}, function_name=concat_ws}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{crs={course_number=[@8,33:35='crs',<300>,1:33], subject_code=[@4,15:17='crs',<300>,1:15]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{crs={subject_code=[@4,15:17='crs',<300>,1:15], course_number=[@8,33:35='crs',<300>,1:33]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void aggregateFunctionPredicandTest() {
 		String sql = "max(scbcrse_eff_term)";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={function={function_name=max, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<300>,1:4]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<300>,1:4]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void caseFunctionPredicandTest() {
 		String sql = "case when true then ‘Y’ when false then ‘N’ else ‘N’ end";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={column={name=Y, table_ref=null}}, when={literal=true}}, 2={then={column={name=N, table_ref=null}}, when={literal=false}}}, else={column={name=N, table_ref=null}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={Y=[@4,21:21='Y',<300>,1:21], N=[@10,50:50='N',<300>,1:50]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={Y=[@4,21:21='Y',<300>,1:21], N=[@10,50:50='N',<300>,1:50]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void trimFunctionPredicandTest() {
+		final String sql = "trim(leading '0' from field1)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={field1=[@5,22:27='field1',<300>,1:22]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={field1=[@5,22:27='field1',<300>,1:22]}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void rankPredicandTest() {
+		final String sql = "rank() OVER (partition by k_stfd, kppi order by OBSERVATION_TM desc, row_num desc)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<300>,1:69], k_stfd=[@7,26:31='k_stfd',<300>,1:26], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<300>,1:26], row_num=[@15,69:75='row_num',<300>,1:69], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void selectLookupSubqueryPredicandTest() {
 		String sql = "(SELECT aa.scbcrse_coll_code FROM scbcrse aa)";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={select={1={column={name=scbcrse_coll_code, table_ref=aa}}}, from={table={alias=aa, table=scbcrse}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[scbcrse_coll_code]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_coll_code=[@2,8:9='aa',<300>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={scbcrse_coll_code=[@2,8:9='aa',<300>,1:8]}, interface={scbcrse_coll_code={column={name=scbcrse_coll_code, table_ref=aa}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void arithmeticExpressionPredicandTest() {
-		//TODO: Predicand formula beginning with a negative sign does not pass as a predicand
+		//TODO: ITEM 85 -- Predicand formula beginning with a negative sign does not pass as a predicand
 		String sql = "-(aa.scbcrse_coll_code * 6 - other) ";
 		final SQLSelectParserParser parser = parse(sql);
-		runPredicandParsertest(sql, parser);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void arithmeticParenExpressionPredicandTest() {
+		String sql = "(-(aa.scbcrse_coll_code * 6 - other) )";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={parentheses={calc={left={literal=-1}, right={parentheses={calc={left={calc={left={column={name=scbcrse_coll_code, table_ref=aa}}, right={literal=6}, operator=*}}, right={column={name=other, table_ref=null}}, operator=-}}}, operator=*}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<300>,1:3]}, unknown={other=[@9,30:34='other',<300>,1:30]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<300>,1:3]}, unknown={other=[@9,30:34='other',<300>,1:30]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * IN LIST PREDICATE TESTS
+	 */
+
+	@Test
+	public void inListVariableSubstitutionTest() {
+		String sql = "<in list>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{IN_LIST={substitution={name=<in list>, type=in_list}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<in list>=in_list}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void inListNumericBasicConditionTest() {
+		String sql = "(1, 2, 3)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{IN_LIST={list={1={literal=1}, 2={literal=2}, 3={literal=3}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void inListAlphaBasicConditionTest() {
+		String sql = "('a', 'dog', 'god')";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{IN_LIST={list={1={literal='a'}, 2={literal='dog'}, 3={literal='god'}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void inListEmbeddedVariablecConditionTest() {
+		String sql = "<var>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{IN_LIST={substitution={name=<var>, type=in_list}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<var>=in_list}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void inListSubqueryBasicConditionTest() {
+		String sql = "(select * from tab1)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{IN_LIST={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@2,8:8='*',<286>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@2,8:8='*',<286>,1:8]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+
 	}
 
 	/**
@@ -5651,101 +5991,592 @@ public class SqlParseEventWalkerTest {
 	public void conditionBasicConditionTest() {
 		String sql = "table1.emp_sales_count >= 25";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+				
+		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, right={literal=25}, operator=>=}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionSimpleBooleanTest() {
 		String sql = "true";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+				
+		Assert.assertEquals("AST is wrong", "{CONDITION={literal=true}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionListOfAndsV1Test() {
 		String sql = "a=b and b=c and x >y";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={and={1={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}, 2={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}, 3={condition={left={column={name=x, table_ref=null}}, right={column={name=y, table_ref=null}}, operator=>}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,16:16='x',<300>,1:16], a=[@0,0:0='a',<300>,1:0], y=[@10,19:19='y',<300>,1:19], b=[@4,8:8='b',<300>,1:8], c=[@6,10:10='c',<300>,1:10]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<300>,1:0], b=[@4,8:8='b',<300>,1:8], c=[@6,10:10='c',<300>,1:10], x=[@8,16:16='x',<300>,1:16], y=[@10,19:19='y',<300>,1:19]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionListOfAndsV2Test() {
-		// Item 51 - Table Dictionary not created when condition parsing is performed on its own
+		// Item 51 (FIXED) - Table Dictionary not created when condition parsing is performed on its own
 		String sql = "a.a=b.b and a.b=b.c and a.x > b.y";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={and={1={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}, 2={condition={left={column={name=b, table_ref=a}}, right={column={name=c, table_ref=b}}, operator==}}, 3={condition={left={column={name=x, table_ref=a}}, right={column={name=y, table_ref=b}}, operator=>}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{a={x=[@16,24:24='a',<300>,1:24], a=[@0,0:0='a',<300>,1:0], b=[@8,12:12='a',<300>,1:12]}, b={y=[@20,30:30='b',<300>,1:30], b=[@4,4:4='b',<300>,1:4], c=[@12,16:16='b',<300>,1:16]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@0,0:0='a',<300>,1:0], b=[@8,12:12='a',<300>,1:12], x=[@16,24:24='a',<300>,1:24]}, b={b=[@4,4:4='b',<300>,1:4], c=[@12,16:16='b',<300>,1:16], y=[@20,30:30='b',<300>,1:30]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionListOfOrsTest() {
 		String sql = "a=b or b=c or x >y";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={or={1={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}, 2={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}, 3={condition={left={column={name=x, table_ref=null}}, right={column={name=y, table_ref=null}}, operator=>}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,14:14='x',<300>,1:14], a=[@0,0:0='a',<300>,1:0], y=[@10,17:17='y',<300>,1:17], b=[@4,7:7='b',<300>,1:7], c=[@6,9:9='c',<300>,1:9]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<300>,1:0], b=[@4,7:7='b',<300>,1:7], c=[@6,9:9='c',<300>,1:9], x=[@8,14:14='x',<300>,1:14], y=[@10,17:17='y',<300>,1:17]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionParentheticalTest() {
 		String sql = "((a=b) or (b=c))";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={parentheses={or={1={parentheses={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}, 2={parentheses={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@2,2:2='a',<300>,1:2], b=[@8,11:11='b',<300>,1:11], c=[@10,13:13='c',<300>,1:13]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@2,2:2='a',<300>,1:2], b=[@8,11:11='b',<300>,1:11], c=[@10,13:13='c',<300>,1:13]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionNotTest() {
 		String sql = "not a = b";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={not={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,4:4='a',<300>,1:4], b=[@3,8:8='b',<300>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,4:4='a',<300>,1:4], b=[@3,8:8='b',<300>,1:8]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionInTest() {
 		String sql = "columnName in (25, 26)";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={column={name=columnName, table_ref=null}}, in_list={list={1={literal=25}, 2={literal=26}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void conditionBetweenTest() {
+		String sql = "columnName between 24 and 28";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={between={item={column={name=columnName, table_ref=null}}, symmetry=null, end={literal=28}, begin={literal=24}, operator=between}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionIsNullTest() {
 		String sql = "table1.emp_sales_count is null";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, operator=is null}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionIsNotNullTest() {
 		String sql = "table1.emp_sales_count is not null";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, operator=is not null}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void substitutionConditionTest() {
 		String sql = "<item> = 26";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={substitution={name=<item>, type=predicand}}, right={literal=26}, operator==}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionWithSubstitutionInV1Test() {
 		String sql = "<columnName> in (25, 26)";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={substitution={name=<columnName>, type=predicand}}, in_list={list={1={literal=25}, 2={literal=26}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<columnName>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionWithSubstitutionInV2Test() {
 		String sql = "<columnName> in <inList>";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={substitution={name=<columnName>, type=predicand}}, in_list={substitution={name=<inList>, type=in_list}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list, <columnName>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void conditionWithSubstitutionInV3Test() {
 		String sql = "column in <inList>";
 		final SQLSelectParserParser parser = parse(sql);
-		runConditionParsertest(sql, parser);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={column={name=column, table_ref=null}}, in_list={substitution={name=<inList>, type=in_list}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@0,0:5='column',<67>,1:0]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column=[@0,0:5='column',<67>,1:0]}}",
+				extractor.getSymbolTable().toString());
 	}
 
+
+	@Test
+	public void conditionVariableSubstitutionInV3Test() {
+		String sql = "<column condition>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{CONDITION={substitution={name=<column condition>, type=condition}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column condition>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * TUPLE VALUE TESTS
+	 */
+
+	@Test
+	public void basicTupleTableTest() {
+		String sql = "schema1.emp_sales";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runTupleParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{TUPLE={table={schema=schema1, table=emp_sales}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{emp_sales={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicTupleSubstitutionVariableTest() {
+		String sql = "<simple variable>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runTupleParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<simple variable>, type=tuple}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<simple variable>={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{<simple variable>={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicTupleSubqueryTest() {
+		String sql = "(select * from schema1.emp_sales)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runTupleParsertest(sql, parser);
+		
+		
+		Assert.assertEquals("AST is wrong", "{TUPLE={select={1={column={name=*, table_ref=*}}}, from={table={schema=schema1, alias=null, table=emp_sales}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={*=[@2,8:8='*',<286>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={}, def_query0={interface={*={column={name=*, table_ref=*}}}, emp_sales={*=[@2,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * QUERY VALUE TESTS
+	 */
+
+	@Test
+	public void basicQueryValueTest() {
+		String sql = "select * from schema1.emp_sales";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runQueryParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{QUERY={select={1={column={name=*, table_ref=*}}}, from={table={schema=schema1, alias=null, table=emp_sales}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={*=[@1,7:7='*',<286>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={interface={*={column={name=*, table_ref=*}}}, emp_sales={*=[@1,7:7='*',<286>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicQuerySubstitutionValueTest() {
+		String sql = "<simple variable>";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runQueryParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{QUERY={substitution={name=<simple variable>, type=query}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=query}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * JOIN EXTENSION VALUE TESTS
+	 */
+
+	@Test
+	public void basicJoinExtensionValueWithOnClauseTest() {
+		String sql = "join schema1.emp_sales as dd on (dd.col1=bb.col1)";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={condition={left={column={name=col1, table_ref=dd}}, right={column={name=col1, table_ref=bb}}, operator==}}}, 2={table={schema=schema1, alias=dd, table=emp_sales}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{bb={col1=[@12,41:42='bb',<300>,1:41]}, emp_sales={col1=[@8,33:34='dd',<300>,1:33]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{dd=emp_sales, bb={col1=[@12,41:42='bb',<300>,1:41]}, emp_sales={col1=[@8,33:34='dd',<300>,1:33]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionLeftJoinWithOnTest() {
+		final String sql = "left join fourth b on  a.a = b.b "; 
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 2={table={alias=b, table=fourth}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{a={a=[@5,23:23='a',<300>,1:23]}, fourth={b=[@9,29:29='b',<300>,1:29]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@5,23:23='a',<300>,1:23]}, b=fourth, fourth={b=[@9,29:29='b',<300>,1:29]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionUnqualifiedJoinWithOnParenthesisTest() {
+		final String sql = "cross join fourth b"; 
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=b, table=fourth}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{b=fourth, fourth={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionFullOuterJoinWithOnOnConditionVariableTest() {
+		final String sql = " full outer join fourth b on <OnJoinCondition> "; 
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=fullouter, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{b=fourth, fourth={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinWithOnConditionVariableInParenthesisTest() {
+		final String sql = "  join fourth b on (<OnJoinCondition>)"; 
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{b=fourth, fourth={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinWithOnTwoConditionVariablesTest() {
+		//  Condition Variable and another join extension variable
+		final String sql = " join fourth b on <OnJoinCondition> <OtherJoinCondition>"; 
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}, 3={substitution={name=<OtherJoinCondition>, type=join_extension}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<OtherJoinCondition>=join_extension, <OnJoinCondition>=condition}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{b=fourth, fourth={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinTableListWithTable() {
+		final String query = " , tab1 as two ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{tab1={}, two=tab1}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinTableListWithTupleVariableV1() {
+		final String query = " , <tuple variable> as two ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, substitution={name=<tuple variable>, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{<tuple variable>={}, two=<tuple variable>}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionOneTableWithJoinExtensionVariableV1() {
+		//  ITEM 17 - Doesn't recognize optional join tree additions after the on clause
+		final String query = ", third <extension> ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=null, table=third}}, 2={substitution={name=<extension>, type=join_extension}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{third={}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinlessJoinExtensionVariableV1() {
+		//  ITEM 17 - Doesn't recognize optional join tree additions after the on clause
+		final String query = ", third as T3, fourth as F4 <extension> ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=T3, table=third}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{third={}, fourth={}, F4=fourth, T3=third}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionJoinWithConditionAndJoinExtensionVariablesTest() {
+		//  ITEM 17 - Doesn't recognize optional join tree additions after the on clause
+		final String query = " join fourth as F4 on <third_fourth_join_condition> <extension> ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<third_fourth_join_condition>, type=condition}}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<third_fourth_join_condition>=condition, <extension>=join_extension}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{fourth={}, F4=fourth}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinExtensionUnionJoinWithSubstitutionV1() {
+		final String query = "  cross join fourth union join fifth natural join sixth ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=null, table=fourth}}, 3={join=unionjoin}, 4={table={alias=null, table=fifth}}, 5={join=naturaljoin}, 6={table={alias=null, table=sixth}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={}, fifth={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{sixth={}, fifth={}, fourth={}}",
+				extractor.getSymbolTable().toString());
+	}
+	
 	// *****************************
 	// COMMON TEST METHODS
 
@@ -5790,6 +6621,36 @@ public class SqlParseEventWalkerTest {
 		}
 	}
 
+	private SqlParseEventWalker runColumnParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Column_valueContext tree = parser.column_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+
+			return extractor;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			return null;
+		} 
+	}
+
 	private SqlParseEventWalker runPredicandParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
@@ -5820,7 +6681,37 @@ public class SqlParseEventWalkerTest {
 		} 
 	}
 
-	private void runConditionParsertest(final String query, final SQLSelectParserParser parser) {
+	private SqlParseEventWalker runInListPredicateParsertest(final String inlist_string, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			In_list_predicate_valueContext tree = parser.in_list_predicate_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + inlist_string, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + inlist_string);
+			return null;
+		}
+	}
+
+	private SqlParseEventWalker runConditionParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
 			// There should be zero errors
@@ -5842,9 +6733,101 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			return null;
+		}
+	}
+
+	private SqlParseEventWalker runTupleParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Tuple_valueContext tree = parser.tuple_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			// DO NOT GET INTERFACE there won't be one
+//			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			return null;
+		}
+	}
+
+	private SqlParseEventWalker runQueryParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Query_valueContext tree = parser.query_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			return null;
+		}
+	}
+
+	private SqlParseEventWalker runJoinExtensionParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Join_extension_valueContext tree = parser.join_extension_value();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			return null;
 		}
 	}
 

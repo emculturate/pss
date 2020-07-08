@@ -12,6 +12,7 @@ public final class MumbleConstants {
 	public static final String PSS_CASE_KEY = "case";
 	public static final String PSS_CLAUSES_KEY = "clauses";
 	public static final String PSS_COLUMN_KEY = "column";
+	public static final String PSS_COLUMN_TREE_KEY = "COLUMN";
 	public static final String PSS_CONCATENATE_KEY = "concatenate";
 	public static final String PSS_CONDITION_KEY = "condition";
 	public static final String PSS_CONDITION_TREE_KEY = "CONDITION";
@@ -26,10 +27,12 @@ public final class MumbleConstants {
 	public static final String PSS_HAVING_KEY = "having";
 	public static final String PSS_IN_KEY = "in";
 	public static final String PSS_IN_LIST_KEY = "in_list";
+	public static final String PSS_IN_LIST_TREE_KEY = "IN_LIST";
 	public static final String PSS_INSERT_KEY = "insert";
 	public static final String PSS_INTERSECT_KEY = "intersect";
 	public static final String PSS_ITEM_KEY = "item";
 	public static final String PSS_JOIN_EXTENSION_KEY = "extension";
+	public static final String PSS_JOIN_EXTENSION_TREE_KEY = "JOIN_EXTENSION";
 	public static final String PSS_JOIN_KEY = "join";
 	public static final String PSS_JOIN_ON_KEY = "on";
 	public static final String PSS_LEFT_FACTOR_KEY = "left";
@@ -57,6 +60,7 @@ public final class MumbleConstants {
 	public static final String PSS_PREDICAND_TREE_KEY = "PREDICAND";
 	public static final String PSS_QUALIFIER_KEY = "qualifier";
 	public static final String PSS_QUERY_KEY = "query";
+	public static final String PSS_QUERY_TREE_KEY = "QUERY";
 	public static final String PSS_RANGE_BEGIN_KEY = "begin";
 	public static final String PSS_RANGE_END_KEY = "end";
 	public static final String PSS_RETURNING_KEY = "returning";
@@ -78,6 +82,7 @@ public final class MumbleConstants {
 	public static final String PSS_THEN_KEY = "then";
 	public static final String PSS_TO_KEY = "to";
 	public static final String PSS_TRIM_CHARACTER_KEY = "trim_character";
+	public static final String PSS_TUPLE_TREE_KEY = "TUPLE";
 	public static final String PSS_TYPE_KEY = "type";
 	public static final String PSS_UNION_KEY = "union";
 	public static final String PSS_UPDATE_KEY = "update";
