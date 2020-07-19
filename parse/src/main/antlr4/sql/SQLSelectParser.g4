@@ -347,13 +347,13 @@ join_extension
 table_reference_list
   : table_primary ((COMMA table_primary)
      | (unqualified_join right=table_primary)
-     | (qualified_join right=table_primary s=join_specification))*
+     | (qualified_join right=table_primary s=join_specification?))*
   ;
   
 join_extension_primary
   : ((COMMA table_primary)
      | (unqualified_join right=table_primary)
-     | (qualified_join right=table_primary s=join_specification))*  join_extension?
+     | (qualified_join right=table_primary s=join_specification?))*  join_extension?
   ;
 
 table_primary
@@ -2146,9 +2146,14 @@ Variable_Identifier
 	;
 
 Extended_Variable_Identifier	
-	:	LTH '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']' ('.''['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']')? ('.''['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']')? GTH
+	:	LTH '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']'  
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    GTH
 	;
 
+fragment
 Population_Identifier	
 	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'-'|'.')*'}'
 	;

@@ -3332,7 +3332,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(PSS_NAME_KEY, variable_name);
 			item.put(PSS_PARTS_KEY, subItem);
 			String[] trim = variable_name.split("\\.",0);
-			if (trim.length == 3) {
+			if (trim.length == 4) {
+				subItem.put("1", trim[0].substring(1));
+				subItem.put("2", trim[1]);
+				subItem.put("3", trim[2]); 
+				subItem.put("4", trim[3].substring(0, trim[3].length()-1)); 
+			} else if (trim.length == 3) {
 				subItem.put("1", trim[0].substring(1));
 				subItem.put("2", trim[1]);
 				subItem.put("3", trim[2].substring(0, trim[2].length()-1));
