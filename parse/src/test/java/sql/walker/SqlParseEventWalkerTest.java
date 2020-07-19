@@ -70,9 +70,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{orange={fld=[@11,58:60='fld',<300>,1:58]}, tab1={apple=[@1,7:11='apple',<300>,1:7], crs_nm=[@7,40:45='crs_nm',<300>,1:40], subj_cd=[@5,29:35='subj_cd',<300>,1:29]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{orange={fld=[@11,58:60='fld',<299>,1:58]}, tab1={apple=[@1,7:11='apple',<299>,1:7], crs_nm=[@7,40:45='crs_nm',<299>,1:40], subj_cd=[@5,29:35='subj_cd',<299>,1:29]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={tab1={apple=[@1,7:11='apple',<300>,1:7], crs_nm=[@7,40:45='crs_nm',<300>,1:40], subj_cd=[@5,29:35='subj_cd',<300>,1:29]}, interface={apple={column={name=apple, table_ref=null}}}, query0={orange={fld=[@11,58:60='fld',<300>,1:58]}, interface={fld={column={name=fld, table_ref=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={tab1={apple=[@1,7:11='apple',<299>,1:7], crs_nm=[@7,40:45='crs_nm',<299>,1:40], subj_cd=[@5,29:35='subj_cd',<299>,1:29]}, interface={apple={column={name=apple, table_ref=null}}}, query0={orange={fld=[@11,58:60='fld',<299>,1:58]}, interface={fld={column={name=fld, table_ref=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -110,9 +110,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<300>,1:8], b=[@3,10:10='b',<300>,1:10], c=[@5,12:12='c',<300>,1:12]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@3,10:10='b',<299>,1:10], c=[@5,12:12='c',<299>,1:12]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<300>,1:8], b=[@3,10:10='b',<300>,1:10], c=[@5,12:12='c',<300>,1:12]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@3,10:10='b',<299>,1:10], c=[@5,12:12='c',<299>,1:12]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -129,9 +129,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={d=[@15,29:29='d',<300>,1:29]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={d=[@15,29:29='d',<299>,1:29]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={d=[@15,29:29='d',<300>,1:29]}, interface={a={calc={left={literal=1}, right={literal=2}, operator=+}}, b={parentheses={calc={left={literal=1}, right={literal=2}, operator=+}}}, c={parentheses={column={name=d, table_ref=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={d=[@15,29:29='d',<299>,1:29]}, interface={a={calc={left={literal=1}, right={literal=2}, operator=+}}, b={parentheses={calc={left={literal=1}, right={literal=2}, operator=+}}}, c={parentheses={column={name=d, table_ref=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -150,9 +150,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@2,17:17='a',<300>,1:17], b=[@4,19:19='b',<300>,1:19], c=[@6,21:21='c',<300>,1:21]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@2,17:17='a',<299>,1:17], b=[@4,19:19='b',<299>,1:19], c=[@6,21:21='c',<299>,1:21]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@2,17:17='a',<300>,1:17], b=[@4,19:19='b',<300>,1:19], c=[@6,21:21='c',<300>,1:21]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@2,17:17='a',<299>,1:17], b=[@4,19:19='b',<299>,1:19], c=[@6,21:21='c',<299>,1:21]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -169,9 +169,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab2={b=[@11,40:40='b',<300>,1:40], c=[@13,42:42='c',<300>,1:42]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab2={b=[@11,40:40='b',<299>,1:40], c=[@13,42:42='c',<299>,1:42]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={def_query0={tab2={b=[@11,40:40='b',<300>,1:40], c=[@13,42:42='c',<300>,1:42]}, interface={b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}, tab1=query0, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}, query0={a=[@2,17:17='a',<300>,1:17], b=[@4,19:19='b',<300>,1:19], c=[@6,21:21='c',<300>,1:21]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={def_query0={tab2={b=[@11,40:40='b',<299>,1:40], c=[@13,42:42='c',<299>,1:42]}, interface={b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}, tab1=query0, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}, query0={a=[@2,17:17='a',<299>,1:17], b=[@4,19:19='b',<299>,1:19], c=[@6,21:21='c',<299>,1:21]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -189,9 +189,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@4,21:21='a',<300>,1:21]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@4,21:21='a',<299>,1:21]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@4,21:21='a',<300>,1:21]}, interface={unnamed_0={function={function_name=max, qualifier=distinct, parameters={column={name=a, table_ref=null}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@4,21:21='a',<299>,1:21]}, interface={unnamed_0={function={function_name=max, qualifier=distinct, parameters={column={name=a, table_ref=null}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -209,9 +209,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<300>,1:8], b=[@5,15:15='b',<300>,1:15], c=[@9,22:22='c',<300>,1:22]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,15:15='b',<299>,1:15], c=[@9,22:22='c',<299>,1:22]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<300>,1:8], b=[@5,15:15='b',<300>,1:15], c=[@9,22:22='c',<300>,1:22]}, interface={x={column={name=a, table_ref=null}}, y={column={name=b, table_ref=null}}, z={column={name=c, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,15:15='b',<299>,1:15], c=[@9,22:22='c',<299>,1:22]}, interface={x={column={name=a, table_ref=null}}, y={column={name=b, table_ref=null}}, z={column={name=c, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -228,9 +228,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<300>,1:8], b=[@5,18:18='b',<300>,1:18], c=[@9,28:28='c',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,18:18='b',<299>,1:18], c=[@9,28:28='c',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<300>,1:8], b=[@5,18:18='b',<300>,1:18], c=[@9,28:28='c',<300>,1:28]}, interface={02_y={column={name=b, table_ref=null}}, 999_z={column={name=c, table_ref=null}}, 01_x={column={name=a, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@5,18:18='b',<299>,1:18], c=[@9,28:28='c',<299>,1:28]}, interface={02_y={column={name=b, table_ref=null}}, 999_z={column={name=c, table_ref=null}}, 01_x={column={name=a, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -247,9 +247,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<303>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<303>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<303>,1:39]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<302>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<302>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<302>,1:39]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<303>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<303>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<303>,1:39]}, interface={\"999_z\"={column={name=\"36_c\", table_ref=null}}, 02_y={column={name=\"22_b\", table_ref=null}}, 01_x={column={name=\"09_a\", table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={\"99tab1\"={\"22_b\"=[@5,24:29='\"22_b\"',<302>,1:24], \"09_a\"=[@1,8:13='\"09_a\"',<302>,1:8], \"36_c\"=[@9,39:44='\"36_c\"',<302>,1:39]}, interface={\"999_z\"={column={name=\"36_c\", table_ref=null}}, 02_y={column={name=\"22_b\", table_ref=null}}, 01_x={column={name=\"09_a\", table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -266,9 +266,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<300>,1:87]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<299>,1:87]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<300>,1:87]}, t=hive_result_pit_5223_164728_46090704, interface={*={column={name=*, table_ref=t}}}}, interface={02_DEGREE_NAME={column={name=Degree_Name, table_ref=sub}}, 01_DEGREE_CD={column={name=Degree_Code, table_ref=sub}}}, query0={Degree_Code=[@1,7:9='sub',<300>,1:7], Degree_Name=[@7,40:42='sub',<300>,1:40]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={hive_result_pit_5223_164728_46090704={*=[@15,87:87='t',<299>,1:87]}, t=hive_result_pit_5223_164728_46090704, interface={*={column={name=*, table_ref=t}}}}, interface={02_DEGREE_NAME={column={name=Degree_Name, table_ref=sub}}, 01_DEGREE_CD={column={name=Degree_Code, table_ref=sub}}}, query0={Degree_Code=[@1,7:9='sub',<299>,1:7], Degree_Name=[@7,40:42='sub',<299>,1:40]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -285,9 +285,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<300>,1:91]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<299>,1:91]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_6875_220752_46090864, interface={*={column={name=*, table_ref=t}}}, hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<300>,1:91]}}, interface={02_College_Name={column={name=College_Name, table_ref=sub}}, 01_College_Cd={column={name=College_Code, table_ref=sub}}}, query0={College_Name=[@7,42:44='sub',<300>,1:42], College_Code=[@1,7:9='sub',<300>,1:7]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_6875_220752_46090864, interface={*={column={name=*, table_ref=t}}}, hive_result_pit_6875_220752_46090864={*=[@15,91:91='t',<299>,1:91]}}, interface={02_College_Name={column={name=College_Name, table_ref=sub}}, 01_College_Cd={column={name=College_Code, table_ref=sub}}}, query0={College_Name=[@7,42:44='sub',<299>,1:42], College_Code=[@1,7:9='sub',<299>,1:7]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -304,9 +304,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<300>,1:146]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<299>,1:146]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<300>,1:146]}, interface={*={column={name=*, table_ref=t}}}}, interface={02_COURSE_REGISTRATION_DESC={column={name=Course_Registration_Description, table_ref=sub}}, 01_COURSE_REGISTRATION_CD={column={name=Course_Registration_Code, table_ref=sub}}}, query0={Course_Registration_Description=[@7,66:68='sub',<300>,1:66], Course_Registration_Code=[@1,7:9='sub',<300>,1:7]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[@15,146:146='t',<299>,1:146]}, interface={*={column={name=*, table_ref=t}}}}, interface={02_COURSE_REGISTRATION_DESC={column={name=Course_Registration_Description, table_ref=sub}}, 01_COURSE_REGISTRATION_CD={column={name=Course_Registration_Code, table_ref=sub}}}, query0={Course_Registration_Description=[@7,66:68='sub',<299>,1:66], Course_Registration_Code=[@1,7:9='sub',<299>,1:7]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -429,6 +429,98 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<[DOMAIN].[ENTITY]>, <[DOMAIN].[ENTITY]>={<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>={substitution={name=<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>, parts={1=[PREFIX-DOMAIN-SUFFIX], 2=[ENTITY-SUFFIX], 3=[Prefix-ATTRIBUTE]}, type=column}}}, interface={<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>={column={substitution={name=<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>, parts={1=[PREFIX-DOMAIN-SUFFIX], 2=[ENTITY-SUFFIX], 3=[Prefix-ATTRIBUTE]}, type=column}, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
+	
+	// Item 91: Curly bracket variable name parts: Population Qualifier Samples
+	
+	@Test
+	public void extendedVariableNamePopulationSubnamerTest() {
+		// ITEM : Add Population Qualifier to Tuple/table variables 
+		final String query = " SELECT  a.col FROM <[schema].[entity].{pop1}>  as a "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}>, parts={1=[schema], 2=[entity], 3={pop1}}, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[schema].[entity].{pop1}>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[schema].[entity].{pop1}>={col=[@1,9:9='a',<299>,1:9]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<[schema].[entity].{pop1}>, <[schema].[entity].{pop1}>={col=[@1,9:9='a',<299>,1:9]}, interface={col={column={name=col, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void extendedVariableNamePopulationQualifierTest() {
+		// ITEM : Add Population Qualifier to Tuple/table variables 
+		final String query = " SELECT  a.col FROM <[schema].[entity].{pop1}.[Current Batch]>  as a "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}.[Current Batch]>, parts={1=[schema], 2=[entity], 3={pop1}, 4=[Current Batch]}, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[schema].[entity].{pop1}.[Current Batch]>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[schema].[entity].{pop1}.[Current Batch]>={col=[@1,9:9='a',<299>,1:9]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<[schema].[entity].{pop1}.[Current Batch]>, <[schema].[entity].{pop1}.[Current Batch]>={col=[@1,9:9='a',<299>,1:9]}, interface={col={column={name=col, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void entityVariableNamePopulationSubnameTest() {
+		// ITEM : Add Population Qualifier to Tuple/table variables 
+		final String query = " SELECT  a.col FROM <[entity].{pop1}>  as a "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}>, parts={1=[entity], 2={pop1}}, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[entity].{pop1}>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[entity].{pop1}>={col=[@1,9:9='a',<299>,1:9]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<[entity].{pop1}>, <[entity].{pop1}>={col=[@1,9:9='a',<299>,1:9]}, interface={col={column={name=col, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void entityVariableNamePopulationQualifierTest() {
+		// ITEM : Add Population Qualifier to Tuple/table variables 
+		final String query = " SELECT  a.col FROM <[entity].{pop1}.[Current Batch]>  as a "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}.[Current Batch]>, parts={1=[entity], 2={pop1}, 3=[Current Batch]}, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[entity].{pop1}.[Current Batch]>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[entity].{pop1}.[Current Batch]>={col=[@1,9:9='a',<299>,1:9]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<[entity].{pop1}.[Current Batch]>, <[entity].{pop1}.[Current Batch]>={col=[@1,9:9='a',<299>,1:9]}, interface={col={column={name=col, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void invalidVariableNamePopulationTest() {
+		// ITEM : Variables cannot start with population qualifiers
+		final String query = " SELECT  a.col FROM <{pop1}>  as a "; 
+
+		final SQLSelectParserParser parser = parse(query);
+		long errors = runExpectSQLParserFailuretest(query, parser);
+		Assert.assertNotEquals("Expected parser error but there were none", 0,errors);
+	}
 
 	/* ===========================================================
 	 * CAST Function Tests
@@ -469,9 +561,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col2=[@11,37:40='col2',<300>,1:37], col3=[@22,65:68='col3',<300>,1:65], col1=[@3,13:16='col1',<300>,1:13]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col2=[@11,37:40='col2',<299>,1:37], col3=[@22,65:68='col3',<299>,1:65], col1=[@3,13:16='col1',<299>,1:13]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={col2=[@11,37:40='col2',<300>,1:37], col3=[@22,65:68='col3',<300>,1:65], col1=[@3,13:16='col1',<300>,1:13]}, interface={a={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=col1, table_ref=null}}}}, b={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}}, c={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={col2=[@11,37:40='col2',<299>,1:37], col3=[@22,65:68='col3',<299>,1:65], col1=[@3,13:16='col1',<299>,1:13]}, interface={a={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=col1, table_ref=null}}}}, b={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}}, c={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -489,9 +581,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col2=[@11,41:44='col2',<300>,1:41], col3=[@22,69:72='col3',<300>,1:69], col1=[@3,17:20='col1',<300>,1:17]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col2=[@11,41:44='col2',<299>,1:41], col3=[@22,69:72='col3',<299>,1:69], col1=[@3,17:20='col1',<299>,1:17]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={col2=[@11,41:44='col2',<300>,1:41], col3=[@22,69:72='col3',<300>,1:69], col1=[@3,17:20='col1',<300>,1:17]}, interface={a={function={function_name=TRY_cast, data_type={type=BOOLEAN}, type=TRY_CAST, value={column={name=col1, table_ref=null}}}}, b={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}}, c={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={col2=[@11,41:44='col2',<299>,1:41], col3=[@22,69:72='col3',<299>,1:69], col1=[@3,17:20='col1',<299>,1:17]}, interface={a={function={function_name=TRY_cast, data_type={type=BOOLEAN}, type=TRY_CAST, value={column={name=col1, table_ref=null}}}}, b={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}}, c={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -509,9 +601,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<300>,1:8], cola=[@7,34:37='cola',<300>,1:34]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<299>,1:8], cola=[@7,34:37='cola',<299>,1:34]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<300>,1:8], cola=[@7,34:37='cola',<300>,1:34]}, interface={colu={column={name=colu, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<299>,1:8], cola=[@7,34:37='cola',<299>,1:34]}, interface={colu={column={name=colu, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -528,9 +620,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<300>,1:8], cola=[@5,20:23='cola',<300>,1:20]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='colu',<299>,1:8], cola=[@5,20:23='cola',<299>,1:20]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<300>,1:8], cola=[@5,20:23='cola',<300>,1:20]}, interface={unnamed_0={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='colu',<299>,1:8], cola=[@5,20:23='cola',<299>,1:20]}, interface={unnamed_0={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -547,9 +639,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='tab1',<300>,1:8], cola=[@9,41:44='tab1',<300>,1:41]}, tab2={cola=[@15,58:61='tab2',<300>,1:58]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={colu=[@1,8:11='tab1',<299>,1:8], cola=[@9,41:44='tab1',<299>,1:41]}, tab2={cola=[@15,58:61='tab2',<299>,1:58]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='tab1',<300>,1:8], cola=[@9,41:44='tab1',<300>,1:41]}, tab2={cola=[@15,58:61='tab2',<300>,1:58]}, interface={colu={column={name=colu, table_ref=tab1}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={colu=[@1,8:11='tab1',<299>,1:8], cola=[@9,41:44='tab1',<299>,1:41]}, tab2={cola=[@15,58:61='tab2',<299>,1:58]}, interface={colu={column={name=colu, table_ref=tab1}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -566,9 +658,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={cola=[@25,86:89='cola',<300>,1:86]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={cola=[@25,86:89='cola',<299>,1:86]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={cola=[@25,86:89='cola',<300>,1:86]}, interface={a={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, b={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={cola=[@25,86:89='cola',<299>,1:86]}, interface={a={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, b={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -585,9 +677,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<300>,1:8], b=[@3,11:11='b',<300>,1:11], cola=[@10,37:40='cola',<300>,1:37]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<299>,1:8], b=[@3,11:11='b',<299>,1:11], cola=[@10,37:40='cola',<299>,1:37]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<300>,1:8], b=[@3,11:11='b',<300>,1:11], cola=[@10,37:40='cola',<300>,1:37]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,8:8='a',<299>,1:8], b=[@3,11:11='b',<299>,1:11], cola=[@10,37:40='cola',<299>,1:37]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -731,9 +823,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<slate_lookup_school>=tuple, <slate_address>=tuple, <slate_dataset>=tuple, <slate_dataset_row>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{schl_type={value=[@50,236:244='schl_type',<300>,1:236], field_record=[@357,1828:1836='schl_type',<300>,1:1828]}, school={school_id=[@4,28:28='s',<300>,1:28], school_country=[@149,712:712='s',<300>,1:712], school_name=[@116,553:553='s',<300>,1:553], school_city=[@215,1026:1026='s',<300>,1:1026], school_region=[@182,874:874='s',<300>,1:874], school_key=[@314,1553:1553='s',<300>,1:1553]}, <slate_lookup_school>={lookup_school_id=[@298,1453:1454='sl',<300>,1:1453], lookup_school_name=[@112,526:527='sl',<300>,1:526]}, <slate_address>={address_county=[@229,1085:1085='a',<300>,1:1085], address_region=[@178,852:852='a',<300>,1:852], address_record=[@340,1724:1724='a',<300>,1:1724], address_country=[@145,689:689='a',<300>,1:689], address_street=[@257,1205:1205='a',<300>,1:1205], address_rank_overall=[@348,1770:1770='a',<300>,1:1770], address_zip=[@243,1148:1148='a',<300>,1:1148], address_city=[@211,1006:1006='a',<300>,1:1006]}, schl_cat={value=[@83,390:397='schl_cat',<300>,1:390], field_record=[@368,1903:1910='schl_cat',<300>,1:1903]}, <slate_dataset>={dataset_name=[@330,1652:1652='d',<300>,1:1652], dataset_id=[@322,1605:1605='d',<300>,1:1605]}, <slate_dataset_row>={dataset_row_created=[@271,1270:1271='dr',<300>,1:1270], dataset_row_updated=[@282,1337:1338='dr',<300>,1:1337], dataset_row_key=[@310,1532:1533='dr',<300>,1:1532], dataset_row_id=[@372,1927:1928='dr',<300>,1:1927], dataset_row_dataset=[@326,1620:1621='dr',<300>,1:1620]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{schl_type={value=[@50,236:244='schl_type',<299>,1:236], field_record=[@357,1828:1836='schl_type',<299>,1:1828]}, school={school_id=[@4,28:28='s',<299>,1:28], school_country=[@149,712:712='s',<299>,1:712], school_name=[@116,553:553='s',<299>,1:553], school_city=[@215,1026:1026='s',<299>,1:1026], school_region=[@182,874:874='s',<299>,1:874], school_key=[@314,1553:1553='s',<299>,1:1553]}, <slate_lookup_school>={lookup_school_id=[@298,1453:1454='sl',<299>,1:1453], lookup_school_name=[@112,526:527='sl',<299>,1:526]}, <slate_address>={address_county=[@229,1085:1085='a',<299>,1:1085], address_region=[@178,852:852='a',<299>,1:852], address_record=[@340,1724:1724='a',<299>,1:1724], address_country=[@145,689:689='a',<299>,1:689], address_street=[@257,1205:1205='a',<299>,1:1205], address_rank_overall=[@348,1770:1770='a',<299>,1:1770], address_zip=[@243,1148:1148='a',<299>,1:1148], address_city=[@211,1006:1006='a',<299>,1:1006]}, schl_cat={value=[@83,390:397='schl_cat',<299>,1:390], field_record=[@368,1903:1910='schl_cat',<299>,1:1903]}, <slate_dataset>={dataset_name=[@330,1652:1652='d',<299>,1:1652], dataset_id=[@322,1605:1605='d',<299>,1:1605]}, <slate_dataset_row>={dataset_row_created=[@271,1270:1271='dr',<299>,1:1270], dataset_row_updated=[@282,1337:1338='dr',<299>,1:1337], dataset_row_key=[@310,1532:1533='dr',<299>,1:1532], dataset_row_id=[@372,1927:1928='dr',<299>,1:1927], dataset_row_dataset=[@326,1620:1621='dr',<299>,1:1620]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<slate_address>, d=<slate_dataset>, interface={school_type={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_type}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_type}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_type}}}}}}, crm_created_at={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_created, table_ref=dr}}}}, school_name={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=lookup_school_name, table_ref=sl}}, when={or={1={condition={left={column={name=school_name, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_name, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_name, table_ref=s}}}}}}, school_city={function={function_name=cast, data_type={length=255, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_city, table_ref=a}}, when={or={1={condition={left={column={name=school_city, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_city, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_city, table_ref=s}}}}}}, school_category={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_cat}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_cat}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_cat}}}}}}, school_state={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_region, table_ref=a}}, when={or={1={condition={left={column={name=school_region, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_region, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_region, table_ref=s}}}}}}, school_id={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=school_id, table_ref=s}}}}, school_country={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_country, table_ref=a}}, when={or={1={condition={left={column={name=school_country, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_country, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_country, table_ref=s}}}}}}, school_ceeb_code={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={column={name=school_key, table_ref=s}}}}, school_address={function={function_name=cast, data_type={length=1000, type=VARCHAR}, type=CAST, value={column={name=address_street, table_ref=a}}}}, school_county={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_county, table_ref=a}}}}, crm_updated_at={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_updated, table_ref=dr}}}}, school_zip={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_zip, table_ref=a}}}}}, <slate_address>={address_county=[@229,1085:1085='a',<300>,1:1085], address_region=[@178,852:852='a',<300>,1:852], address_record=[@340,1724:1724='a',<300>,1:1724], address_country=[@145,689:689='a',<300>,1:689], address_street=[@257,1205:1205='a',<300>,1:1205], address_rank_overall=[@348,1770:1770='a',<300>,1:1770], address_zip=[@243,1148:1148='a',<300>,1:1148], address_city=[@211,1006:1006='a',<300>,1:1006]}, schl_cat={value=[@83,390:397='schl_cat',<300>,1:390], field_record=[@368,1903:1910='schl_cat',<300>,1:1903]}, dr=<slate_dataset_row>, s=school, schl_type={value=[@50,236:244='schl_type',<300>,1:236], field_record=[@357,1828:1836='schl_type',<300>,1:1828]}, school={school_id=[@4,28:28='s',<300>,1:28], school_country=[@149,712:712='s',<300>,1:712], school_name=[@116,553:553='s',<300>,1:553], school_city=[@215,1026:1026='s',<300>,1:1026], school_region=[@182,874:874='s',<300>,1:874], school_key=[@314,1553:1553='s',<300>,1:1553]}, <slate_lookup_school>={lookup_school_name=[@112,526:527='sl',<300>,1:526], lookup_school_id=[@298,1453:1454='sl',<300>,1:1453]}, sl=<slate_lookup_school>, <slate_dataset>={dataset_id=[@322,1605:1605='d',<300>,1:1605], dataset_name=[@330,1652:1652='d',<300>,1:1652]}, <slate_dataset_row>={dataset_row_created=[@271,1270:1271='dr',<300>,1:1270], dataset_row_id=[@372,1927:1928='dr',<300>,1:1927], dataset_row_updated=[@282,1337:1338='dr',<300>,1:1337], dataset_row_key=[@310,1532:1533='dr',<300>,1:1532], dataset_row_dataset=[@326,1620:1621='dr',<300>,1:1620]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=<slate_address>, d=<slate_dataset>, interface={school_type={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_type}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_type}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_type}}}}}}, crm_created_at={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_created, table_ref=dr}}}}, school_name={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=lookup_school_name, table_ref=sl}}, when={or={1={condition={left={column={name=school_name, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_name, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_name, table_ref=s}}}}}}, school_city={function={function_name=cast, data_type={length=255, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_city, table_ref=a}}, when={or={1={condition={left={column={name=school_city, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_city, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_city, table_ref=s}}}}}}, school_category={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_cat}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_cat}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_cat}}}}}}, school_state={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_region, table_ref=a}}, when={or={1={condition={left={column={name=school_region, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_region, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_region, table_ref=s}}}}}}, school_id={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=school_id, table_ref=s}}}}, school_country={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_country, table_ref=a}}, when={or={1={condition={left={column={name=school_country, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_country, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_country, table_ref=s}}}}}}, school_ceeb_code={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={column={name=school_key, table_ref=s}}}}, school_address={function={function_name=cast, data_type={length=1000, type=VARCHAR}, type=CAST, value={column={name=address_street, table_ref=a}}}}, school_county={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_county, table_ref=a}}}}, crm_updated_at={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_updated, table_ref=dr}}}}, school_zip={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_zip, table_ref=a}}}}}, <slate_address>={address_county=[@229,1085:1085='a',<299>,1:1085], address_region=[@178,852:852='a',<299>,1:852], address_record=[@340,1724:1724='a',<299>,1:1724], address_country=[@145,689:689='a',<299>,1:689], address_street=[@257,1205:1205='a',<299>,1:1205], address_rank_overall=[@348,1770:1770='a',<299>,1:1770], address_zip=[@243,1148:1148='a',<299>,1:1148], address_city=[@211,1006:1006='a',<299>,1:1006]}, schl_cat={value=[@83,390:397='schl_cat',<299>,1:390], field_record=[@368,1903:1910='schl_cat',<299>,1:1903]}, dr=<slate_dataset_row>, s=school, schl_type={value=[@50,236:244='schl_type',<299>,1:236], field_record=[@357,1828:1836='schl_type',<299>,1:1828]}, school={school_id=[@4,28:28='s',<299>,1:28], school_country=[@149,712:712='s',<299>,1:712], school_name=[@116,553:553='s',<299>,1:553], school_city=[@215,1026:1026='s',<299>,1:1026], school_region=[@182,874:874='s',<299>,1:874], school_key=[@314,1553:1553='s',<299>,1:1553]}, <slate_lookup_school>={lookup_school_name=[@112,526:527='sl',<299>,1:526], lookup_school_id=[@298,1453:1454='sl',<299>,1:1453]}, sl=<slate_lookup_school>, <slate_dataset>={dataset_id=[@322,1605:1605='d',<299>,1:1605], dataset_name=[@330,1652:1652='d',<299>,1:1652]}, <slate_dataset_row>={dataset_row_created=[@271,1270:1271='dr',<299>,1:1270], dataset_row_id=[@372,1927:1928='dr',<299>,1:1927], dataset_row_updated=[@282,1337:1338='dr',<299>,1:1337], dataset_row_key=[@310,1532:1533='dr',<299>,1:1532], dataset_row_dataset=[@326,1620:1621='dr',<299>,1:1620]}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -752,9 +844,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@11,43:43='a',<300>,1:43], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@15,49:49='b',<300>,1:49]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@11,43:43='a',<299>,1:43], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@15,49:49='b',<299>,1:49]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@11,43:43='a',<300>,1:43], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@15,49:49='b',<300>,1:49]}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@11,43:43='a',<299>,1:43], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@15,49:49='b',<299>,1:49]}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -771,9 +863,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@12,48:48='a',<300>,1:48], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@16,54:54='b',<300>,1:54]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@12,48:48='a',<299>,1:48], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@16,54:54='b',<299>,1:54]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@12,48:48='a',<300>,1:48], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@16,54:54='b',<300>,1:54]}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@12,48:48='a',<299>,1:48], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@16,54:54='b',<299>,1:54]}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -791,9 +883,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@12,43:43='a',<300>,1:43], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@16,49:49='b',<300>,1:49]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[@12,43:43='a',<299>,1:43], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@16,49:49='b',<299>,1:49]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@12,43:43='a',<300>,1:43], *=[@1,8:8='a',<300>,1:8]}, fourth={b=[@16,49:49='b',<300>,1:49]}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={a=[@12,43:43='a',<299>,1:43], *=[@1,8:8='a',<299>,1:8]}, fourth={b=[@16,49:49='b',<299>,1:49]}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -811,9 +903,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<300>,1:8]}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<299>,1:8]}, fourth={}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<300>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<299>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -831,9 +923,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<300>,1:8]}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<299>,1:8]}, fourth={}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<300>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<299>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -851,9 +943,149 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OtherJoinCondition>=condition, <OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<300>,1:8]}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<299>,1:8]}, fourth={}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<300>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<299>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinQualifiedWithTupleVariableT1() {
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=<tuple1>, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinQualifiedWithTupleVariableT2() {
+		// ITEM 34 - Qualified Joins (e.g., left) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 left outer join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=leftouter}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=<tuple1>, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUnQualifiedWithTupleVariableT2() {
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 cross join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=<tuple1>, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUnQualifiedWithTupleVariableT3() {
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 natural join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=naturaljoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=<tuple1>, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUnQualifiedWithTupleVariableT4() {
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 union join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=unionjoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=<tuple1>, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinSubqueryTableV1() {
+		// ITEM 92 - Join with subquery and table shouldn't need on statement
+		final String query = " SELECT * FROM (select * from third) as T3 join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={third={}, fourth={}, interface={*={column={name=*, table_ref=*}}}, F4=fourth, T3=third, unknown={*=[@1,8:8='*',<286>,1:8]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinSubqueryTableV2() {
+		// ITEM 92 - Join with subquery and table shouldn't need on statement
+		final String query = " SELECT * FROM (select * from third) as T3 cross join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@5,23:23='*',<286>,1:23]}, fourth={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={def_query0={third={*=[@5,23:23='*',<286>,1:23]}, interface={*={column={name=*, table_ref=*}}}}, fourth={}, interface={*={column={name=*, table_ref=*}}}, query0={*=[@1,8:8='*',<286>,1:8]}, F4=fourth, T3=query0}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1029,9 +1261,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<300>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<299>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<300>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<299>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1086,9 +1318,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<300>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@6,32:36='apple',<299>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<300>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@6,32:36='apple',<299>,1:32]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1143,9 +1375,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<300>,1:76], k_stfd=[@8,33:38='k_stfd',<300>,1:33], kppi=[@10,41:44='kppi',<300>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<300>,1:55]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<299>,1:76], k_stfd=[@8,33:38='k_stfd',<299>,1:33], kppi=[@10,41:44='kppi',<299>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<299>,1:55]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<300>,1:76], k_stfd=[@8,33:38='k_stfd',<300>,1:33], kppi=[@10,41:44='kppi',<300>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<300>,1:55]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<299>,1:76], k_stfd=[@8,33:38='k_stfd',<299>,1:33], kppi=[@10,41:44='kppi',<299>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<299>,1:55]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1181,9 +1413,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<300>,1:76], k_stfd=[@8,33:38='k_stfd',<300>,1:33], kppi=[@10,41:44='kppi',<300>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<300>,1:55]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,76:82='row_num',<299>,1:76], k_stfd=[@8,33:38='k_stfd',<299>,1:33], kppi=[@10,41:44='kppi',<299>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<299>,1:55]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<300>,1:76], k_stfd=[@8,33:38='k_stfd',<300>,1:33], kppi=[@10,41:44='kppi',<300>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<300>,1:55]}, interface={rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={row_num=[@16,76:82='row_num',<299>,1:76], k_stfd=[@8,33:38='k_stfd',<299>,1:33], kppi=[@10,41:44='kppi',<299>,1:41], OBSERVATION_TM=[@13,55:68='OBSERVATION_TM',<299>,1:55]}, interface={rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1204,9 +1436,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={is_active=[@7,39:47='is_active',<300>,1:39], student=[@15,66:72='student',<300>,1:66], rank=[@11,54:57='rank',<124>,1:54], category=[@5,29:36='category',<300>,1:29], nk=[@9,50:51='nk',<300>,1:50], desc=[@13,60:63='desc',<74>,1:60]}, <NAV>={is_active=[@29,163:171='is_active',<300>,1:163], student=[@37,190:196='student',<300>,1:190], rank=[@33,178:181='rank',<124>,1:178], category=[@27,153:160='category',<300>,1:153], nk=[@31,174:175='nk',<300>,1:174], desc=[@35,184:187='desc',<74>,1:184]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={is_active=[@7,39:47='is_active',<299>,1:39], student=[@15,66:72='student',<299>,1:66], rank=[@11,54:57='rank',<124>,1:54], category=[@5,29:36='category',<299>,1:29], nk=[@9,50:51='nk',<299>,1:50], desc=[@13,60:63='desc',<74>,1:60]}, <NAV>={is_active=[@29,163:171='is_active',<299>,1:163], student=[@37,190:196='student',<299>,1:190], rank=[@33,178:181='rank',<124>,1:178], category=[@27,153:160='category',<299>,1:153], nk=[@31,174:175='nk',<299>,1:174], desc=[@35,184:187='desc',<74>,1:184]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{union2={query0={<Guide>={is_active=[@7,39:47='is_active',<300>,1:39], student=[@15,66:72='student',<300>,1:66], rank=[@11,54:57='rank',<124>,1:54], category=[@5,29:36='category',<300>,1:29], nk=[@9,50:51='nk',<300>,1:50], desc=[@13,60:63='desc',<74>,1:60]}, Guide_Student_Conditions=<Guide>, interface={app_name={literal='Guide'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={is_active=[@29,163:171='is_active',<300>,1:163], student=[@37,190:196='student',<300>,1:190], rank=[@33,178:181='rank',<124>,1:178], category=[@27,153:160='category',<300>,1:153], nk=[@31,174:175='nk',<300>,1:174], desc=[@35,184:187='desc',<74>,1:184]}, interface={app_name={literal='Nav'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{union2={query0={<Guide>={is_active=[@7,39:47='is_active',<299>,1:39], student=[@15,66:72='student',<299>,1:66], rank=[@11,54:57='rank',<124>,1:54], category=[@5,29:36='category',<299>,1:29], nk=[@9,50:51='nk',<299>,1:50], desc=[@13,60:63='desc',<74>,1:60]}, Guide_Student_Conditions=<Guide>, interface={app_name={literal='Guide'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={is_active=[@29,163:171='is_active',<299>,1:163], student=[@37,190:196='student',<299>,1:190], rank=[@33,178:181='rank',<124>,1:178], category=[@27,153:160='category',<299>,1:153], nk=[@31,174:175='nk',<299>,1:174], desc=[@35,184:187='desc',<74>,1:184]}, interface={app_name={literal='Nav'}, is_active={column={name=is_active, table_ref=null}}, student={column={name=student, table_ref=null}}, rank={column={name=rank, table_ref=null}}, category={column={name=category, table_ref=null}}, nk={column={name=nk, table_ref=null}}, desc={column={name=desc, table_ref=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1397,9 +1629,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1417,9 +1649,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1436,9 +1668,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], <subject code>={substitution={name=<subject code>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], <subject code>={substitution={name=<subject code>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], <subject code>={substitution={name=<subject code>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], <subject code>={substitution={name=<subject code>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1455,9 +1687,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other subject code>=predicand, <subject code>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1475,9 +1707,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1495,9 +1727,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1515,9 +1747,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand, <first condition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1535,9 +1767,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj=[@5,29:32='subj',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj=[@5,29:32='subj',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj=[@5,29:32='subj',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj=[@5,29:32='subj',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1555,9 +1787,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj=[@5,29:32='subj',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj=[@5,29:32='subj',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj=[@5,29:32='subj',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj=[@5,29:32='subj',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1576,9 +1808,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1595,9 +1827,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1614,9 +1846,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1633,9 +1865,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition, <other>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1653,9 +1885,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1673,9 +1905,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1693,9 +1925,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code_condition>=condition, <subject_code_predicand>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={banana=[@9,85:90='banana',<300>,1:85], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={banana=[@9,85:90='banana',<299>,1:85], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={banana=[@9,85:90='banana',<300>,1:85], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={banana=[@9,85:90='banana',<299>,1:85], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1714,9 +1946,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1733,9 +1965,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1752,9 +1984,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1771,9 +2003,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<300>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1790,9 +2022,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col2=[@11,49:52='col2',<300>,1:49], col1=[@6,28:31='col1',<300>,1:28]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@1,7:7='*',<286>,1:7], col2=[@11,49:52='col2',<299>,1:49], col1=[@6,28:31='col1',<299>,1:28]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col2=[@11,49:52='col2',<300>,1:49], col1=[@6,28:31='col1',<300>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@1,7:7='*',<286>,1:7], col2=[@11,49:52='col2',<299>,1:49], col1=[@6,28:31='col1',<299>,1:28]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1833,9 +2065,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@7,39:39='c',<300>,1:39], d=[@9,45:45='d',<300>,1:45]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@7,39:39='c',<299>,1:39], d=[@9,45:45='d',<299>,1:45]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@7,39:39='c',<300>,1:39], d=[@9,45:45='d',<300>,1:45]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@7,39:39='c',<299>,1:39], d=[@9,45:45='d',<299>,1:45]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1853,9 +2085,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@8,49:49='c',<300>,1:49], d=[@10,55:55='d',<300>,1:55]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@8,49:49='c',<299>,1:49], d=[@10,55:55='d',<299>,1:55]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@8,49:49='c',<300>,1:49], d=[@10,55:55='d',<300>,1:55]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@8,49:49='c',<299>,1:49], d=[@10,55:55='d',<299>,1:55]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1873,9 +2105,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@8,43:43='c',<300>,1:43], d=[@10,49:49='d',<300>,1:49]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@8,43:43='c',<299>,1:43], d=[@10,49:49='d',<299>,1:49]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@8,43:43='c',<300>,1:43], d=[@10,49:49='d',<300>,1:49]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@8,43:43='c',<299>,1:43], d=[@10,49:49='d',<299>,1:49]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1893,9 +2125,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@9,53:53='c',<300>,1:53], d=[@11,59:59='d',<300>,1:59]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@9,53:53='c',<299>,1:53], d=[@11,59:59='d',<299>,1:59]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@5,29:29='a',<300>,1:29], c=[@9,53:53='c',<300>,1:53], d=[@11,59:59='d',<300>,1:59]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@5,29:29='a',<299>,1:29], c=[@9,53:53='c',<299>,1:53], d=[@11,59:59='d',<299>,1:59]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1913,9 +2145,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<c>=column, <a>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], d=[@13,68:68='d',<300>,1:68], <c>={substitution={name=<c>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], d=[@13,68:68='d',<299>,1:68], <c>={substitution={name=<c>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], d=[@13,68:68='d',<300>,1:68], <c>={substitution={name=<c>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], d=[@13,68:68='d',<299>,1:68], <c>={substitution={name=<c>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1936,9 +2168,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={a=[@9,38:38='a',<300>,1:38], field1=[@6,29:34='field1',<300>,1:29], b=[@11,43:43='b',<300>,1:43], field2=[@17,59:64='field2',<300>,1:59], subj_code=[@25,95:103='subj_code',<300>,1:95]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={a=[@9,38:38='a',<299>,1:38], field1=[@6,29:34='field1',<299>,1:29], b=[@11,43:43='b',<299>,1:43], field2=[@17,59:64='field2',<299>,1:59], subj_code=[@25,95:103='subj_code',<299>,1:95]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={a=[@9,38:38='a',<300>,1:38], field1=[@6,29:34='field1',<300>,1:29], b=[@11,43:43='b',<300>,1:43], field2=[@17,59:64='field2',<300>,1:59], subj_code=[@25,95:103='subj_code',<300>,1:95]}, interface={unnamed_1={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, unnamed_2={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}, unnamed_0={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={a=[@9,38:38='a',<299>,1:38], field1=[@6,29:34='field1',<299>,1:29], b=[@11,43:43='b',<299>,1:43], field2=[@17,59:64='field2',<299>,1:59], subj_code=[@25,95:103='subj_code',<299>,1:95]}, interface={unnamed_1={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, unnamed_2={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}, unnamed_0={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1956,9 +2188,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@18,79:79='*',<286>,1:79]}, scbcrse={item=[@14,63:66='item',<300>,1:63], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<300>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@18,79:79='*',<286>,1:79]}, scbcrse={item=[@14,63:66='item',<299>,1:63], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<299>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@14,63:66='item',<300>,1:63], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<300>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@18,79:79='*',<286>,1:79]}, interface={*={column={name=*, table_ref=*}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@14,63:66='item',<299>,1:63], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<299>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@18,79:79='*',<286>,1:79]}, interface={*={column={name=*, table_ref=*}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1976,9 +2208,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist subquery>=query}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@14,62:65='item',<300>,1:62], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<300>,1:31]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@14,62:65='item',<299>,1:62], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<299>,1:31]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@14,62:65='item',<300>,1:62], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<300>,1:31]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@14,62:65='item',<299>,1:62], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<299>,1:31]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2035,9 +2267,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist substitution>=in_list}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@6,33:36='item',<300>,1:33], *=[@1,7:7='*',<286>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@6,33:36='item',<299>,1:33], *=[@1,7:7='*',<286>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@6,33:36='item',<300>,1:33], *=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@6,33:36='item',<299>,1:33], *=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2055,9 +2287,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@20,87:87='*',<286>,1:87]}, scbcrse={item=[@15,67:70='item',<300>,1:67], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<300>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@20,87:87='*',<286>,1:87]}, scbcrse={item=[@15,67:70='item',<299>,1:67], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<299>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@15,67:70='item',<300>,1:67], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<300>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@20,87:87='*',<286>,1:87]}, interface={*={column={name=*, table_ref=*}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@15,67:70='item',<299>,1:67], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,32:40='subj_code',<299>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@20,87:87='*',<286>,1:87]}, interface={*={column={name=*, table_ref=*}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2075,9 +2307,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist subquery>=query}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@15,66:69='item',<300>,1:66], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<300>,1:31]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@15,66:69='item',<299>,1:66], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<299>,1:31]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@15,66:69='item',<300>,1:66], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<300>,1:31]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@15,66:69='item',<299>,1:66], *=[@1,7:7='*',<286>,1:7], subj_code=[@6,31:39='subj_code',<299>,1:31]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2134,9 +2366,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist substitution>=in_list}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@6,33:36='item',<300>,1:33], *=[@1,7:7='*',<286>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={item=[@6,33:36='item',<299>,1:33], *=[@1,7:7='*',<286>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@6,33:36='item',<300>,1:33], *=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@6,33:36='item',<299>,1:33], *=[@1,7:7='*',<286>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2158,9 +2390,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2179,9 +2411,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@7,42:48='subj_cd',<300>,1:42], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@7,42:48='subj_cd',<299>,1:42], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@7,42:48='subj_cd',<300>,1:42], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@7,42:48='subj_cd',<299>,1:42], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2200,9 +2432,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@8,47:53='subj_cd',<300>,1:47], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@8,47:53='subj_cd',<299>,1:47], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@8,47:53='subj_cd',<300>,1:47], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@8,47:53='subj_cd',<299>,1:47], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2221,9 +2453,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2242,9 +2474,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_cd>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2263,9 +2495,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<300>,1:29], apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={subj_cd=[@5,29:35='subj_cd',<299>,1:29], apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2304,9 +2536,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@2,10:16='column1',<300>,1:10], column2=[@8,39:45='column2',<300>,1:39]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@2,10:16='column1',<299>,1:10], column2=[@8,39:45='column2',<299>,1:39]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@2,10:16='column1',<300>,1:10], column2=[@8,39:45='column2',<300>,1:39]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@2,10:16='column1',<299>,1:10], column2=[@8,39:45='column2',<299>,1:39]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2323,9 +2555,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2342,9 +2574,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2365,9 +2597,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{s949={t_student_last_name=[@23,161:164='S949',<300>,1:161]}, s948={OBSERVATION_TM=[@3,27:30='s948',<300>,1:27], t_student_last_name=[@19,135:138='S948',<300>,1:135]}, unknown={observation_time=[@1,5:20='observation_time',<300>,1:5]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{s949={t_student_last_name=[@23,161:164='S949',<299>,1:161]}, s948={OBSERVATION_TM=[@3,27:30='s948',<299>,1:27], t_student_last_name=[@19,135:138='S948',<299>,1:135]}, unknown={observation_time=[@1,5:20='observation_time',<299>,1:5]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{S948={t_student_last_name=[@19,135:138='S948',<300>,1:135]}, S949={t_student_last_name=[@23,161:164='S949',<300>,1:161]}, unknown={observation_time=[@1,5:20='observation_time',<300>,1:5]}, s948={OBSERVATION_TM=[@3,27:30='s948',<300>,1:27]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{S948={t_student_last_name=[@19,135:138='S948',<299>,1:135]}, S949={t_student_last_name=[@23,161:164='S949',<299>,1:161]}, unknown={observation_time=[@1,5:20='observation_time',<299>,1:5]}, s948={OBSERVATION_TM=[@3,27:30='s948',<299>,1:27]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2386,9 +2618,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column3=[@7,42:48='column3',<300>,1:42], column2=[@3,20:26='column2',<300>,1:20]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column3=[@7,42:48='column3',<299>,1:42], column2=[@3,20:26='column2',<299>,1:20]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column3=[@7,42:48='column3',<300>,1:42], column2=[@3,20:26='column2',<300>,1:20]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column3=[@7,42:48='column3',<299>,1:42], column2=[@3,20:26='column2',<299>,1:20]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2406,9 +2638,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2426,9 +2658,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column5>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column4=[@9,53:59='column4',<300>,1:53], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column4=[@9,53:59='column4',<299>,1:53], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<300>,1:5], column4=[@9,53:59='column4',<300>,1:53], column3=[@7,40:46='column3',<300>,1:40], column2=[@3,18:24='column2',<300>,1:18]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column1=[@1,5:11='column1',<299>,1:5], column4=[@9,53:59='column4',<299>,1:53], column3=[@7,40:46='column3',<299>,1:40], column2=[@3,18:24='column2',<299>,1:18]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2445,9 +2677,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column2=[@8,41:47='column2',<300>,1:41]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column2=[@8,41:47='column2',<299>,1:41]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@8,41:47='column2',<300>,1:41]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@8,41:47='column2',<299>,1:41]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2464,9 +2696,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={<column1>={substitution={name=<column1>, type=column}}, column2=[@10,42:42='a',<300>,1:42]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={<column1>={substitution={name=<column1>, type=column}}, column2=[@10,42:42='a',<299>,1:42]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={column2=[@10,42:42='a',<300>,1:42], <column1>={substitution={name=<column1>, type=column}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={column2=[@10,42:42='a',<299>,1:42], <column1>={substitution={name=<column1>, type=column}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2483,9 +2715,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column2=[@6,34:40='column2',<300>,1:34]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column2=[@6,34:40='column2',<299>,1:34]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@6,34:40='column2',<300>,1:34]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column2=[@6,34:40='column2',<299>,1:34]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2503,9 +2735,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2523,9 +2755,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2542,9 +2774,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], <column4>={substitution={name=<column4>, type=column}}, column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], <column4>={substitution={name=<column4>, type=column}}, column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2561,9 +2793,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], <column4>={substitution={name=<column4>, type=column}}, column2=[@10,40:40='a',<300>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], <column4>={substitution={name=<column4>, type=column}}, column2=[@10,40:40='a',<299>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<300>,1:10], column2=[@10,40:40='a',<300>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={column1=[@2,10:10='a',<299>,1:10], column2=[@10,40:40='a',<299>,1:40], <column4>={substitution={name=<column4>, type=column}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2583,9 +2815,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{sgbstdn={a=[@9,38:38='a',<300>,1:38], b=[@11,42:42='b',<300>,1:42]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{sgbstdn={a=[@9,38:38='a',<299>,1:38], b=[@11,42:42='b',<299>,1:42]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={sgbstdn={a=[@9,38:38='a',<300>,1:38], b=[@11,42:42='b',<300>,1:42]}, interface={case_one={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={sgbstdn={a=[@9,38:38='a',<299>,1:38], b=[@11,42:42='b',<299>,1:42]}, interface={case_one={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2641,9 +2873,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={field2=[@13,50:55='field2',<300>,1:50], field1=[@6,29:34='field1',<300>,1:29]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={field2=[@13,50:55='field2',<299>,1:50], field1=[@6,29:34='field1',<299>,1:29]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={scbcrse={field2=[@13,50:55='field2',<300>,1:50], field1=[@6,29:34='field1',<300>,1:29]}, interface={unnamed_1={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}, unnamed_0={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={scbcrse={field2=[@13,50:55='field2',<299>,1:50], field1=[@6,29:34='field1',<299>,1:29]}, interface={unnamed_1={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}, unnamed_0={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2707,9 +2939,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<300>,1:59], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<299>,1:59], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<300>,1:59], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@9,59:73='TERM_CODE_ADMIT',<299>,1:59], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2728,9 +2960,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=condition, <condition2>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2749,9 +2981,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2770,9 +3002,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={<condition>={substitution={name=<condition>, type=column}}, spriden_id=[@1,8:17='spriden_id',<300>,1:8], TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={<condition>={substitution={name=<condition>, type=column}}, spriden_id=[@1,8:17='spriden_id',<299>,1:8], TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={<condition>={substitution={name=<condition>, type=column}}, TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<300>,1:21], spriden_id=[@1,8:17='spriden_id',<300>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={<condition>={substitution={name=<condition>, type=column}}, TERM_CODE_ADMIT=[@3,21:35='TERM_CODE_ADMIT',<299>,1:21], spriden_id=[@1,8:17='spriden_id',<299>,1:8]}, interface={TERM_CODE_ADMIT={column={name=TERM_CODE_ADMIT, table_ref=null}}, spriden_id={column={name=spriden_id, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2792,9 +3024,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@8,42:46='apple',<300>,1:42], fruit_cd=[@12,52:59='fruit_cd',<300>,1:52]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@8,42:46='apple',<299>,1:42], fruit_cd=[@12,52:59='fruit_cd',<299>,1:52]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@8,42:46='apple',<300>,1:42], fruit_cd=[@12,52:59='fruit_cd',<300>,1:52]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@8,42:46='apple',<299>,1:42], fruit_cd=[@12,52:59='fruit_cd',<299>,1:52]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2812,9 +3044,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand variable>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], fruit_cd=[@11,69:76='fruit_cd',<300>,1:69]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], fruit_cd=[@11,69:76='fruit_cd',<299>,1:69]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], fruit_cd=[@11,69:76='fruit_cd',<300>,1:69]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], fruit_cd=[@11,69:76='fruit_cd',<299>,1:69]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2832,9 +3064,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column variable>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], <column variable>={substitution={name=<column variable>, type=column}}, fruit_cd=[@13,71:78='fruit_cd',<300>,1:71]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], <column variable>={substitution={name=<column variable>, type=column}}, fruit_cd=[@13,71:78='fruit_cd',<299>,1:71]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], <column variable>={substitution={name=<column variable>, type=column}}, fruit_cd=[@13,71:78='fruit_cd',<300>,1:71]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], <column variable>={substitution={name=<column variable>, type=column}}, fruit_cd=[@13,71:78='fruit_cd',<299>,1:71]}, interface={apple={column={name=apple, table_ref=null}}, fruit_cd={column={name=fruit_cd, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2853,9 +3085,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@11,42:46='apple',<300>,1:42]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@11,42:46='apple',<299>,1:42]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@11,42:46='apple',<300>,1:42]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@11,42:46='apple',<299>,1:42]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2874,9 +3106,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], <other>={substitution={name=<other>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], <other>={substitution={name=<other>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2894,9 +3126,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand, <other>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@18,70:70='a',<300>,1:70], <other>={substitution={name=<other>, type=column}}, b=[@20,72:72='b',<300>,1:72], c=[@22,74:74='c',<300>,1:74]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@18,70:70='a',<299>,1:70], <other>={substitution={name=<other>, type=column}}, b=[@20,72:72='b',<299>,1:72], c=[@22,74:74='c',<299>,1:74]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7], a=[@18,70:70='a',<300>,1:70], b=[@20,72:72='b',<300>,1:72], c=[@22,74:74='c',<300>,1:74], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7], a=[@18,70:70='a',<299>,1:70], b=[@20,72:72='b',<299>,1:72], c=[@22,74:74='c',<299>,1:74], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2915,9 +3147,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<300>,1:7]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@1,7:11='apple',<299>,1:7]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<300>,1:7]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@1,7:11='apple',<299>,1:7]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2935,9 +3167,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@13,54:58='apple',<300>,1:54], subj=[@5,20:23='subj',<300>,1:20], object=[@7,27:32='object',<264>,1:27]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@13,54:58='apple',<299>,1:54], subj=[@5,20:23='subj',<299>,1:20], object=[@7,27:32='object',<264>,1:27]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@13,54:58='apple',<300>,1:54], subj=[@5,20:23='subj',<300>,1:20], object=[@7,27:32='object',<264>,1:27]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={calc={left={column={name=subj, table_ref=null}}, right={column={name=object, table_ref=null}}, operator=+}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@13,54:58='apple',<299>,1:54], subj=[@5,20:23='subj',<299>,1:20], object=[@7,27:32='object',<264>,1:27]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={calc={left={column={name=subj, table_ref=null}}, right={column={name=object, table_ref=null}}, operator=+}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2955,9 +3187,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@13,53:57='apple',<300>,1:53], <other>={substitution={name=<other>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@13,53:57='apple',<299>,1:53], <other>={substitution={name=<other>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@13,53:57='apple',<300>,1:53], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@13,53:57='apple',<299>,1:53], <other>={substitution={name=<other>, type=column}}}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -2975,9 +3207,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@11,48:52='apple',<300>,1:48]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={apple=[@11,48:52='apple',<299>,1:48]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@11,48:52='apple',<300>,1:48]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={substitution={name=<other>, type=predicand}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={apple=[@11,48:52='apple',<299>,1:48]}, interface={apple={column={name=apple, table_ref=null}}, unnamed_0={function={function_name=count, qualifier=null, parameters={substitution={name=<other>, type=predicand}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3651,9 +3883,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={item=[@3,12:15='item',<300>,1:12], code=[@19,71:74='code',<300>,1:71], spriden_id=[@16,51:60='spriden_id',<300>,1:51]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={item=[@3,12:15='item',<299>,1:12], code=[@19,71:74='code',<299>,1:71], spriden_id=[@16,51:60='spriden_id',<299>,1:51]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={item=[@3,12:15='item',<300>,1:12], code=[@19,71:74='code',<300>,1:71], spriden_id=[@16,51:60='spriden_id',<300>,1:51]}, interface={unnamed_1={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}, unnamed_0={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={item=[@3,12:15='item',<299>,1:12], code=[@19,71:74='code',<299>,1:71], spriden_id=[@16,51:60='spriden_id',<299>,1:51]}, interface={unnamed_1={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}, unnamed_0={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3672,9 +3904,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,78:84='row_num',<300>,1:78], k_stfd=[@8,35:40='k_stfd',<300>,1:35], kppi=[@10,43:46='kppi',<300>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<300>,1:57]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={row_num=[@16,78:84='row_num',<299>,1:78], k_stfd=[@8,35:40='k_stfd',<299>,1:35], kppi=[@10,43:46='kppi',<299>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<299>,1:57]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={row_num=[@16,78:84='row_num',<300>,1:78], k_stfd=[@8,35:40='k_stfd',<300>,1:35], kppi=[@10,43:46='kppi',<300>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<300>,1:57]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={row_num=[@16,78:84='row_num',<299>,1:78], k_stfd=[@8,35:40='k_stfd',<299>,1:35], kppi=[@10,43:46='kppi',<299>,1:43], OBSERVATION_TM=[@13,57:70='OBSERVATION_TM',<299>,1:57]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3693,9 +3925,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={parm=[@3,14:17='parm',<300>,1:14], row_num=[@17,82:88='row_num',<300>,1:82], k_stfd=[@9,39:44='k_stfd',<300>,1:39], kppi=[@11,47:50='kppi',<300>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<300>,1:61]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={parm=[@3,14:17='parm',<299>,1:14], row_num=[@17,82:88='row_num',<299>,1:82], k_stfd=[@9,39:44='k_stfd',<299>,1:39], kppi=[@11,47:50='kppi',<299>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<299>,1:61]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={parm=[@3,14:17='parm',<300>,1:14], row_num=[@17,82:88='row_num',<300>,1:82], k_stfd=[@9,39:44='k_stfd',<300>,1:39], kppi=[@11,47:50='kppi',<300>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<300>,1:61]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={a=tab1, tab1={parm=[@3,14:17='parm',<299>,1:14], row_num=[@17,82:88='row_num',<299>,1:82], k_stfd=[@9,39:44='k_stfd',<299>,1:39], kppi=[@11,47:50='kppi',<299>,1:47], OBSERVATION_TM=[@14,61:74='OBSERVATION_TM',<299>,1:61]}, interface={key_rank={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3736,9 +3968,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,153:160='major_cd',<300>,1:153], student_id=[@11,58:67='student_id',<300>,1:58], value_partition=[@13,70:84='value_partition',<300>,1:70], term_row=[@16,95:102='term_row',<300>,1:95]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,153:160='major_cd',<299>,1:153], student_id=[@11,58:67='student_id',<299>,1:58], value_partition=[@13,70:84='value_partition',<299>,1:70], term_row=[@16,95:102='term_row',<299>,1:95]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,153:160='major_cd',<300>,1:153], student_id=[@11,58:67='student_id',<300>,1:58], value_partition=[@13,70:84='value_partition',<300>,1:70], term_row=[@16,95:102='term_row',<300>,1:95]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,153:160='major_cd',<299>,1:153], student_id=[@11,58:67='student_id',<299>,1:58], value_partition=[@13,70:84='value_partition',<299>,1:70], term_row=[@16,95:102='term_row',<299>,1:95]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3757,9 +3989,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,154:161='major_cd',<300>,1:154], student_id=[@11,59:68='student_id',<300>,1:59], value_partition=[@13,71:85='value_partition',<300>,1:71], term_row=[@16,96:103='term_row',<300>,1:96]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,154:161='major_cd',<299>,1:154], student_id=[@11,59:68='student_id',<299>,1:59], value_partition=[@13,71:85='value_partition',<299>,1:71], term_row=[@16,96:103='term_row',<299>,1:96]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,154:161='major_cd',<300>,1:154], student_id=[@11,59:68='student_id',<300>,1:59], value_partition=[@13,71:85='value_partition',<300>,1:71], term_row=[@16,96:103='term_row',<300>,1:96]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,154:161='major_cd',<299>,1:154], student_id=[@11,59:68='student_id',<299>,1:59], value_partition=[@13,71:85='value_partition',<299>,1:71], term_row=[@16,96:103='term_row',<299>,1:96]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3778,9 +4010,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,160:167='major_cd',<300>,1:160], student_id=[@11,65:74='student_id',<300>,1:65], value_partition=[@13,77:91='value_partition',<300>,1:77], term_row=[@16,102:109='term_row',<300>,1:102]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,160:167='major_cd',<299>,1:160], student_id=[@11,65:74='student_id',<299>,1:65], value_partition=[@13,77:91='value_partition',<299>,1:77], term_row=[@16,102:109='term_row',<299>,1:102]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,160:167='major_cd',<300>,1:160], student_id=[@11,65:74='student_id',<300>,1:65], value_partition=[@13,77:91='value_partition',<300>,1:77], term_row=[@16,102:109='term_row',<300>,1:102]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,160:167='major_cd',<299>,1:160], student_id=[@11,65:74='student_id',<299>,1:65], value_partition=[@13,77:91='value_partition',<299>,1:77], term_row=[@16,102:109='term_row',<299>,1:102]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3799,9 +4031,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,161:168='major_cd',<300>,1:161], student_id=[@11,66:75='student_id',<300>,1:66], value_partition=[@13,78:92='value_partition',<300>,1:78], term_row=[@16,103:110='term_row',<300>,1:103]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,161:168='major_cd',<299>,1:161], student_id=[@11,66:75='student_id',<299>,1:66], value_partition=[@13,78:92='value_partition',<299>,1:78], term_row=[@16,103:110='term_row',<299>,1:103]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,161:168='major_cd',<300>,1:161], student_id=[@11,66:75='student_id',<300>,1:66], value_partition=[@13,78:92='value_partition',<300>,1:78], term_row=[@16,103:110='term_row',<300>,1:103]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,161:168='major_cd',<299>,1:161], student_id=[@11,66:75='student_id',<299>,1:66], value_partition=[@13,78:92='value_partition',<299>,1:78], term_row=[@16,103:110='term_row',<299>,1:103]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3820,9 +4052,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,161:168='major_cd',<300>,1:161], student_id=[@11,66:75='student_id',<300>,1:66], value_partition=[@13,78:92='value_partition',<300>,1:78], term_row=[@16,103:110='term_row',<300>,1:103]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,161:168='major_cd',<299>,1:161], student_id=[@11,66:75='student_id',<299>,1:66], value_partition=[@13,78:92='value_partition',<299>,1:78], term_row=[@16,103:110='term_row',<299>,1:103]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,161:168='major_cd',<300>,1:161], student_id=[@11,66:75='student_id',<300>,1:66], value_partition=[@13,78:92='value_partition',<300>,1:78], term_row=[@16,103:110='term_row',<300>,1:103]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,161:168='major_cd',<299>,1:161], student_id=[@11,66:75='student_id',<299>,1:66], value_partition=[@13,78:92='value_partition',<299>,1:78], term_row=[@16,103:110='term_row',<299>,1:103]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3841,9 +4073,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,162:169='major_cd',<300>,1:162], student_id=[@11,67:76='student_id',<300>,1:67], value_partition=[@13,79:93='value_partition',<300>,1:79], term_row=[@16,104:111='term_row',<300>,1:104]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@23,162:169='major_cd',<299>,1:162], student_id=[@11,67:76='student_id',<299>,1:67], value_partition=[@13,79:93='value_partition',<299>,1:79], term_row=[@16,104:111='term_row',<299>,1:104]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,162:169='major_cd',<300>,1:162], student_id=[@11,67:76='student_id',<300>,1:67], value_partition=[@13,79:93='value_partition',<300>,1:79], term_row=[@16,104:111='term_row',<300>,1:104]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@23,162:169='major_cd',<299>,1:162], student_id=[@11,67:76='student_id',<299>,1:67], value_partition=[@13,79:93='value_partition',<299>,1:79], term_row=[@16,104:111='term_row',<299>,1:104]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3863,9 +4095,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@25,162:169='major_cd',<300>,1:162], student_id=[@13,67:76='student_id',<300>,1:67], value_partition=[@15,79:93='value_partition',<300>,1:79], term_row=[@18,104:111='term_row',<300>,1:104]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@25,162:169='major_cd',<299>,1:162], student_id=[@13,67:76='student_id',<299>,1:67], value_partition=[@15,79:93='value_partition',<299>,1:79], term_row=[@18,104:111='term_row',<299>,1:104]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@25,162:169='major_cd',<300>,1:162], student_id=[@13,67:76='student_id',<300>,1:67], value_partition=[@15,79:93='value_partition',<300>,1:79], term_row=[@18,104:111='term_row',<300>,1:104]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@25,162:169='major_cd',<299>,1:162], student_id=[@13,67:76='student_id',<299>,1:67], value_partition=[@15,79:93='value_partition',<299>,1:79], term_row=[@18,104:111='term_row',<299>,1:104]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3884,9 +4116,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@25,163:170='major_cd',<300>,1:163], student_id=[@13,68:77='student_id',<300>,1:68], value_partition=[@15,80:94='value_partition',<300>,1:80], term_row=[@18,105:112='term_row',<300>,1:105]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@25,163:170='major_cd',<299>,1:163], student_id=[@13,68:77='student_id',<299>,1:68], value_partition=[@15,80:94='value_partition',<299>,1:80], term_row=[@18,105:112='term_row',<299>,1:105]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@25,163:170='major_cd',<300>,1:163], student_id=[@13,68:77='student_id',<300>,1:68], value_partition=[@15,80:94='value_partition',<300>,1:80], term_row=[@18,105:112='term_row',<300>,1:105]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@25,163:170='major_cd',<299>,1:163], student_id=[@13,68:77='student_id',<299>,1:68], value_partition=[@15,80:94='value_partition',<299>,1:80], term_row=[@18,105:112='term_row',<299>,1:105]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3905,9 +4137,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@27,173:180='major_cd',<300>,1:173], student_id=[@15,78:87='student_id',<300>,1:78], value_partition=[@17,90:104='value_partition',<300>,1:90], term_row=[@20,115:122='term_row',<300>,1:115]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@27,173:180='major_cd',<299>,1:173], student_id=[@15,78:87='student_id',<299>,1:78], value_partition=[@17,90:104='value_partition',<299>,1:90], term_row=[@20,115:122='term_row',<299>,1:115]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@27,173:180='major_cd',<300>,1:173], student_id=[@15,78:87='student_id',<300>,1:78], value_partition=[@17,90:104='value_partition',<300>,1:90], term_row=[@20,115:122='term_row',<300>,1:115]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=first, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@27,173:180='major_cd',<299>,1:173], student_id=[@15,78:87='student_id',<299>,1:78], value_partition=[@17,90:104='value_partition',<299>,1:90], term_row=[@20,115:122='term_row',<299>,1:115]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=first, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3926,9 +4158,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@27,172:179='major_cd',<300>,1:172], student_id=[@15,77:86='student_id',<300>,1:77], value_partition=[@17,89:103='value_partition',<300>,1:89], term_row=[@20,114:121='term_row',<300>,1:114]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student_term_major={major_cd=[@27,172:179='major_cd',<299>,1:172], student_id=[@15,77:86='student_id',<299>,1:77], value_partition=[@17,89:103='value_partition',<299>,1:89], term_row=[@20,114:121='term_row',<299>,1:114]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@27,172:179='major_cd',<300>,1:172], student_id=[@15,77:86='student_id',<300>,1:77], value_partition=[@17,89:103='value_partition',<300>,1:89], term_row=[@20,114:121='term_row',<300>,1:114]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=last, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student_term_major={major_cd=[@27,172:179='major_cd',<299>,1:172], student_id=[@15,77:86='student_id',<299>,1:77], value_partition=[@17,89:103='value_partition',<299>,1:89], term_row=[@20,114:121='term_row',<299>,1:114]}, interface={major_cd_fill={window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=last, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -3946,9 +4178,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<300>,1:69], k_stfd=[@7,26:31='k_stfd',<300>,1:26], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<299>,1:69], k_stfd=[@7,26:31='k_stfd',<299>,1:26], kppi=[@9,34:37='kppi',<299>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<299>,1:48]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<300>,1:26], row_num=[@15,69:75='row_num',<300>,1:69], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<299>,1:26], row_num=[@15,69:75='row_num',<299>,1:69], kppi=[@9,34:37='kppi',<299>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<299>,1:48]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3965,9 +4197,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, row_num=[@19,67:67='a',<300>,1:67], k_stfd=[@10,41:41='a',<300>,1:41], kppi=[@14,51:51='a',<300>,1:51]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, row_num=[@19,67:67='a',<299>,1:67], k_stfd=[@10,41:41='a',<299>,1:41], kppi=[@14,51:51='a',<299>,1:51]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, k_stfd=[@10,41:41='a',<300>,1:41], row_num=[@19,67:67='a',<300>,1:67], kppi=[@14,51:51='a',<300>,1:51]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={<columnParam>={substitution={name=<columnParam>, type=column}}, k_stfd=[@10,41:41='a',<299>,1:41], row_num=[@19,67:67='a',<299>,1:67], kppi=[@14,51:51='a',<299>,1:51]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3984,9 +4216,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<300>,1:5], row_num=[@19,62:62='a',<300>,1:62], kppi=[@14,46:46='a',<300>,1:46], <k_stfd>={substitution={name=<k_stfd>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<299>,1:5], row_num=[@19,62:62='a',<299>,1:62], kppi=[@14,46:46='a',<299>,1:46], <k_stfd>={substitution={name=<k_stfd>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={<k_stfd>={substitution={name=<k_stfd>, type=column}}, column=[@2,5:5='a',<300>,1:5], row_num=[@19,62:62='a',<300>,1:62], kppi=[@14,46:46='a',<300>,1:46]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={<k_stfd>={substitution={name=<k_stfd>, type=column}}, column=[@2,5:5='a',<299>,1:5], row_num=[@19,62:62='a',<299>,1:62], kppi=[@14,46:46='a',<299>,1:46]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4003,9 +4235,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=column}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<300>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, k_stfd=[@10,34:34='a',<300>,1:34], kppi=[@14,44:44='a',<300>,1:44]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={column=[@2,5:5='a',<299>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, k_stfd=[@10,34:34='a',<299>,1:34], kppi=[@14,44:44='a',<299>,1:44]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={k_stfd=[@10,34:34='a',<300>,1:34], column=[@2,5:5='a',<300>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, kppi=[@14,44:44='a',<300>,1:44]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={k_stfd=[@10,34:34='a',<299>,1:34], column=[@2,5:5='a',<299>,1:5], <row_num>={substitution={name=<row_num>, type=column}}, kppi=[@14,44:44='a',<299>,1:44]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4021,9 +4253,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@13,61:67='row_num',<300>,1:61], k_stfd=[@8,39:44='k_stfd',<300>,1:39], kppi=[@10,47:50='kppi',<300>,1:47]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@13,61:67='row_num',<299>,1:61], k_stfd=[@8,39:44='k_stfd',<299>,1:39], kppi=[@10,47:50='kppi',<299>,1:47]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,39:44='k_stfd',<300>,1:39], row_num=[@13,61:67='row_num',<300>,1:61], kppi=[@10,47:50='kppi',<300>,1:47]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,39:44='k_stfd',<299>,1:39], row_num=[@13,61:67='row_num',<299>,1:61], kppi=[@10,47:50='kppi',<299>,1:47]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4039,9 +4271,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], row_num=[@13,56:62='row_num',<300>,1:56], kppi=[@10,42:45='kppi',<300>,1:42]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], row_num=[@13,56:62='row_num',<299>,1:56], kppi=[@10,42:45='kppi',<299>,1:42]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], row_num=[@13,56:62='row_num',<300>,1:56], kppi=[@10,42:45='kppi',<300>,1:42]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], row_num=[@13,56:62='row_num',<299>,1:56], kppi=[@10,42:45='kppi',<299>,1:42]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4057,9 +4289,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], k_stfd=[@8,32:37='k_stfd',<300>,1:32], kppi=[@10,40:43='kppi',<300>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={column=[@2,5:10='column',<67>,1:5], k_stfd=[@8,32:37='k_stfd',<299>,1:32], kppi=[@10,40:43='kppi',<299>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,32:37='k_stfd',<300>,1:32], column=[@2,5:10='column',<67>,1:5], kppi=[@10,40:43='kppi',<300>,1:40]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@8,32:37='k_stfd',<299>,1:32], column=[@2,5:10='column',<67>,1:5], kppi=[@10,40:43='kppi',<299>,1:40]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4455,9 +4687,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<ColumnVariableNoAlias>, <PredicandVariableNoAlias>, predicandAlias, normalias, columnAlias, noalias]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<ColumnVariableNoAlias>=column, <ColumnVariableWithAlias>=column, <StudentTable>=tuple, <PredicandVariableNoAlias>=predicand, <PredicandVariable>=predicand}", extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<StudentTable>={<ColumnVariableNoAlias>={substitution={name=<ColumnVariableNoAlias>, type=column}}, <ColumnVariableWithAlias>={substitution={name=<ColumnVariableWithAlias>, type=column}}, normcol=[@3,17:23='normcol',<300>,1:17], noalias=[@1,8:14='noalias',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<StudentTable>={<ColumnVariableNoAlias>={substitution={name=<ColumnVariableNoAlias>, type=column}}, <ColumnVariableWithAlias>={substitution={name=<ColumnVariableWithAlias>, type=column}}, normcol=[@3,17:23='normcol',<299>,1:17], noalias=[@1,8:14='noalias',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<StudentTable>={<ColumnVariableNoAlias>={substitution={name=<ColumnVariableNoAlias>, type=column}}, <ColumnVariableWithAlias>={substitution={name=<ColumnVariableWithAlias>, type=column}}, normcol=[@3,17:23='normcol',<300>,1:17], noalias=[@1,8:14='noalias',<300>,1:8]}, interface={<ColumnVariableNoAlias>={column={substitution={name=<ColumnVariableNoAlias>, type=column}, table_ref=studentTable}}, <PredicandVariableNoAlias>={substitution={name=<PredicandVariableNoAlias>, type=predicand}}, predicandAlias={substitution={name=<PredicandVariable>, type=predicand}}, normalias={column={name=normcol, table_ref=null}}, columnAlias={column={substitution={name=<ColumnVariableWithAlias>, type=column}, table_ref=studentTable}}, noalias={column={name=noalias, table_ref=null}}}, studentTable=<StudentTable>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<StudentTable>={<ColumnVariableNoAlias>={substitution={name=<ColumnVariableNoAlias>, type=column}}, <ColumnVariableWithAlias>={substitution={name=<ColumnVariableWithAlias>, type=column}}, normcol=[@3,17:23='normcol',<299>,1:17], noalias=[@1,8:14='noalias',<299>,1:8]}, interface={<ColumnVariableNoAlias>={column={substitution={name=<ColumnVariableNoAlias>, type=column}, table_ref=studentTable}}, <PredicandVariableNoAlias>={substitution={name=<PredicandVariableNoAlias>, type=predicand}}, predicandAlias={substitution={name=<PredicandVariable>, type=predicand}}, normalias={column={name=normcol, table_ref=null}}, columnAlias={column={substitution={name=<ColumnVariableWithAlias>, type=column}, table_ref=studentTable}}, noalias={column={name=noalias, table_ref=null}}}, studentTable=<StudentTable>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4475,9 +4707,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Interface is wrong", "[ex]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<today>=column, <substitute_me>=predicand}", extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{old_table={otherColumn=[@7,33:43='otherColumn',<300>,1:33], newColumn=[@3,12:20='old_table',<300>,1:12], <today>={substitution={name=<today>, type=column}}}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{old_table={otherColumn=[@7,33:43='otherColumn',<299>,1:33], newColumn=[@3,12:20='old_table',<299>,1:12], <today>={substitution={name=<today>, type=column}}}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={old_table={newColumn=[@3,12:20='old_table',<300>,1:12], otherColumn=[@7,33:43='otherColumn',<300>,1:33], <today>={substitution={name=<today>, type=column}}}, interface={ex={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={old_table={newColumn=[@3,12:20='old_table',<299>,1:12], otherColumn=[@7,33:43='otherColumn',<299>,1:33], <today>={substitution={name=<today>, type=column}}}, interface={ex={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4519,9 +4751,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<notmissing>=predicand, <missing>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student={normalColumn=[@1,8:19='normalColumn',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student={normalColumn=[@1,8:19='normalColumn',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student={normalColumn=[@1,8:19='normalColumn',<300>,1:8]}, interface={normalColumn={column={name=normalColumn, table_ref=null}}, notMissing={substitution={name=<notmissing>, type=predicand}}, <missing>={substitution={name=<missing>, type=predicand}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student={normalColumn=[@1,8:19='normalColumn',<299>,1:8]}, interface={normalColumn={column={name=normalColumn, table_ref=null}}, notMissing={substitution={name=<notmissing>, type=predicand}}, <missing>={substitution={name=<missing>, type=predicand}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4539,9 +4771,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<notmissing>=predicand, <missing>=predicand}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{student={normalColumn=[@1,8:19='normalColumn',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{student={normalColumn=[@1,8:19='normalColumn',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={student={normalColumn=[@1,8:19='normalColumn',<300>,1:8]}, interface={normalColumn={column={name=normalColumn, table_ref=null}}, notMissing={substitution={name=<notmissing>, type=predicand}}, <missing>={substitution={name=<missing>, type=predicand}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={student={normalColumn=[@1,8:19='normalColumn',<299>,1:8]}, interface={normalColumn={column={name=normalColumn, table_ref=null}}, notMissing={substitution={name=<notmissing>, type=predicand}}, <missing>={substitution={name=<missing>, type=predicand}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4642,9 +4874,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Interface is wrong", "[subj_code, unnamed_1, unnamed_0]", extractor.getInterface().toString());
 		Assert.assertTrue("Substitution List is wrong", extractor.getSubstitutionsMap().isEmpty());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_subj_code=[@23,127:143=\'scbcrse_subj_code\',<300>,1:127], scbcrse_eff_term=[@12,54:69=\'scbcrse_eff_term\',<300>,1:54]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_subj_code=[@23,127:143=\'scbcrse_subj_code\',<299>,1:127], scbcrse_eff_term=[@12,54:69=\'scbcrse_eff_term\',<299>,1:54]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={scbcrse={scbcrse_subj_code=[@23,127:143='scbcrse_subj_code',<300>,1:127], scbcrse_eff_term=[@12,54:69='scbcrse_eff_term',<300>,1:54]}, interface={subj_code={column={name=scbcrse_subj_code, table_ref=null}}, unnamed_1={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={scbcrse={scbcrse_subj_code=[@23,127:143='scbcrse_subj_code',<299>,1:127], scbcrse_eff_term=[@12,54:69='scbcrse_eff_term',<299>,1:54]}, interface={subj_code={column={name=scbcrse_subj_code, table_ref=null}}, unnamed_1={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}, unnamed_0={function={function_name=COUNT, qualifier=null, parameters=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5542,9 +5774,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={emp_sales_count=[@0,0:14='emp_sales_count',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5560,9 +5792,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5622,9 +5854,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5732,9 +5964,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,1:1='a',<300>,1:1], b=[@3,6:6='b',<300>,1:6]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,1:1='a',<299>,1:1], b=[@3,6:6='b',<299>,1:6]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,1:1='a',<300>,1:1], b=[@3,6:6='b',<300>,1:6]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,1:1='a',<299>,1:1], b=[@3,6:6='b',<299>,1:6]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5750,9 +5982,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{crs={course_number=[@8,33:35='crs',<300>,1:33], subject_code=[@4,15:17='crs',<300>,1:15]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{crs={course_number=[@8,33:35='crs',<299>,1:33], subject_code=[@4,15:17='crs',<299>,1:15]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{crs={subject_code=[@4,15:17='crs',<300>,1:15], course_number=[@8,33:35='crs',<300>,1:33]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{crs={subject_code=[@4,15:17='crs',<299>,1:15], course_number=[@8,33:35='crs',<299>,1:33]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5768,9 +6000,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<300>,1:4]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<299>,1:4]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<300>,1:4]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={scbcrse_eff_term=[@2,4:19='scbcrse_eff_term',<299>,1:4]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5786,9 +6018,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={Y=[@4,21:21='Y',<300>,1:21], N=[@10,50:50='N',<300>,1:50]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={Y=[@4,21:21='Y',<299>,1:21], N=[@10,50:50='N',<299>,1:50]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={Y=[@4,21:21='Y',<300>,1:21], N=[@10,50:50='N',<300>,1:50]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={Y=[@4,21:21='Y',<299>,1:21], N=[@10,50:50='N',<299>,1:50]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5804,9 +6036,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={field1=[@5,22:27='field1',<300>,1:22]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={field1=[@5,22:27='field1',<299>,1:22]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={field1=[@5,22:27='field1',<300>,1:22]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={field1=[@5,22:27='field1',<299>,1:22]}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -5822,9 +6054,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<300>,1:69], k_stfd=[@7,26:31='k_stfd',<300>,1:26], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={row_num=[@15,69:75='row_num',<299>,1:69], k_stfd=[@7,26:31='k_stfd',<299>,1:26], kppi=[@9,34:37='kppi',<299>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<299>,1:48]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<300>,1:26], row_num=[@15,69:75='row_num',<300>,1:69], kppi=[@9,34:37='kppi',<300>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<300>,1:48]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={k_stfd=[@7,26:31='k_stfd',<299>,1:26], row_num=[@15,69:75='row_num',<299>,1:69], kppi=[@9,34:37='kppi',<299>,1:34], OBSERVATION_TM=[@12,48:61='OBSERVATION_TM',<299>,1:48]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5840,9 +6072,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_coll_code=[@2,8:9='aa',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_coll_code=[@2,8:9='aa',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={scbcrse_coll_code=[@2,8:9='aa',<300>,1:8]}, interface={scbcrse_coll_code={column={name=scbcrse_coll_code, table_ref=aa}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={scbcrse_coll_code=[@2,8:9='aa',<299>,1:8]}, interface={scbcrse_coll_code={column={name=scbcrse_coll_code, table_ref=aa}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5877,9 +6109,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<300>,1:3]}, unknown={other=[@9,30:34='other',<300>,1:30]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<299>,1:3]}, unknown={other=[@9,30:34='other',<299>,1:30]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<300>,1:3]}, unknown={other=[@9,30:34='other',<300>,1:30]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{aa={scbcrse_coll_code=[@3,3:4='aa',<299>,1:3]}, unknown={other=[@9,30:34='other',<299>,1:30]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5999,9 +6231,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6035,9 +6267,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,16:16='x',<300>,1:16], a=[@0,0:0='a',<300>,1:0], y=[@10,19:19='y',<300>,1:19], b=[@4,8:8='b',<300>,1:8], c=[@6,10:10='c',<300>,1:10]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,16:16='x',<299>,1:16], a=[@0,0:0='a',<299>,1:0], y=[@10,19:19='y',<299>,1:19], b=[@4,8:8='b',<299>,1:8], c=[@6,10:10='c',<299>,1:10]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<300>,1:0], b=[@4,8:8='b',<300>,1:8], c=[@6,10:10='c',<300>,1:10], x=[@8,16:16='x',<300>,1:16], y=[@10,19:19='y',<300>,1:19]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<299>,1:0], b=[@4,8:8='b',<299>,1:8], c=[@6,10:10='c',<299>,1:10], x=[@8,16:16='x',<299>,1:16], y=[@10,19:19='y',<299>,1:19]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6054,9 +6286,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={x=[@16,24:24='a',<300>,1:24], a=[@0,0:0='a',<300>,1:0], b=[@8,12:12='a',<300>,1:12]}, b={y=[@20,30:30='b',<300>,1:30], b=[@4,4:4='b',<300>,1:4], c=[@12,16:16='b',<300>,1:16]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={x=[@16,24:24='a',<299>,1:24], a=[@0,0:0='a',<299>,1:0], b=[@8,12:12='a',<299>,1:12]}, b={y=[@20,30:30='b',<299>,1:30], b=[@4,4:4='b',<299>,1:4], c=[@12,16:16='b',<299>,1:16]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@0,0:0='a',<300>,1:0], b=[@8,12:12='a',<300>,1:12], x=[@16,24:24='a',<300>,1:24]}, b={b=[@4,4:4='b',<300>,1:4], c=[@12,16:16='b',<300>,1:16], y=[@20,30:30='b',<300>,1:30]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@0,0:0='a',<299>,1:0], b=[@8,12:12='a',<299>,1:12], x=[@16,24:24='a',<299>,1:24]}, b={b=[@4,4:4='b',<299>,1:4], c=[@12,16:16='b',<299>,1:16], y=[@20,30:30='b',<299>,1:30]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6072,9 +6304,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,14:14='x',<300>,1:14], a=[@0,0:0='a',<300>,1:0], y=[@10,17:17='y',<300>,1:17], b=[@4,7:7='b',<300>,1:7], c=[@6,9:9='c',<300>,1:9]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={x=[@8,14:14='x',<299>,1:14], a=[@0,0:0='a',<299>,1:0], y=[@10,17:17='y',<299>,1:17], b=[@4,7:7='b',<299>,1:7], c=[@6,9:9='c',<299>,1:9]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<300>,1:0], b=[@4,7:7='b',<300>,1:7], c=[@6,9:9='c',<300>,1:9], x=[@8,14:14='x',<300>,1:14], y=[@10,17:17='y',<300>,1:17]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@0,0:0='a',<299>,1:0], b=[@4,7:7='b',<299>,1:7], c=[@6,9:9='c',<299>,1:9], x=[@8,14:14='x',<299>,1:14], y=[@10,17:17='y',<299>,1:17]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6090,9 +6322,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@2,2:2='a',<300>,1:2], b=[@8,11:11='b',<300>,1:11], c=[@10,13:13='c',<300>,1:13]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@2,2:2='a',<299>,1:2], b=[@8,11:11='b',<299>,1:11], c=[@10,13:13='c',<299>,1:13]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@2,2:2='a',<300>,1:2], b=[@8,11:11='b',<300>,1:11], c=[@10,13:13='c',<300>,1:13]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@2,2:2='a',<299>,1:2], b=[@8,11:11='b',<299>,1:11], c=[@10,13:13='c',<299>,1:13]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6108,9 +6340,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,4:4='a',<300>,1:4], b=[@3,8:8='b',<300>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={a=[@1,4:4='a',<299>,1:4], b=[@3,8:8='b',<299>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,4:4='a',<300>,1:4], b=[@3,8:8='b',<300>,1:8]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={a=[@1,4:4='a',<299>,1:4], b=[@3,8:8='b',<299>,1:8]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6126,9 +6358,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6144,9 +6376,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={columnName=[@0,0:9='columnName',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={columnName=[@0,0:9='columnName',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6162,9 +6394,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6180,9 +6412,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<300>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<299>,1:0]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6391,9 +6623,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{bb={col1=[@12,41:42='bb',<300>,1:41]}, emp_sales={col1=[@8,33:34='dd',<300>,1:33]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{bb={col1=[@12,41:42='bb',<299>,1:41]}, emp_sales={col1=[@8,33:34='dd',<299>,1:33]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{dd=emp_sales, bb={col1=[@12,41:42='bb',<300>,1:41]}, emp_sales={col1=[@8,33:34='dd',<300>,1:33]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{dd=emp_sales, bb={col1=[@12,41:42='bb',<299>,1:41]}, emp_sales={col1=[@8,33:34='dd',<299>,1:33]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6407,9 +6639,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{a={a=[@5,23:23='a',<300>,1:23]}, fourth={b=[@9,29:29='b',<300>,1:29]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{a={a=[@5,23:23='a',<299>,1:23]}, fourth={b=[@9,29:29='b',<299>,1:29]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@5,23:23='a',<300>,1:23]}, b=fourth, fourth={b=[@9,29:29='b',<300>,1:29]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{a={a=[@5,23:23='a',<299>,1:23]}, b=fourth, fourth={b=[@9,29:29='b',<299>,1:29]}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6563,17 +6795,18 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void joinExtensionUnionJoinWithSubstitutionV1() {
-		final String query = "  cross join fourth union join fifth natural join sixth ";
+		// TODO: Error in this parse unless you add an explicit alias to the table fourth, parser thinks "union" is the alias. It does not do this on natural...
+		final String query = "  cross join fourth as a union join fifth natural join sixth ";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
-		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=null, table=fourth}}, 3={join=unionjoin}, 4={table={alias=null, table=fifth}}, 5={join=naturaljoin}, 6={table={alias=null, table=sixth}}}}",
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=a, table=fourth}}, 3={join=unionjoin}, 4={table={alias=null, table=fifth}}, 5={join=naturaljoin}, 6={table={alias=null, table=sixth}}}}",
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{sixth={}, fifth={}, fourth={}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{sixth={}, fifth={}, fourth={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{sixth={}, a=fourth, fifth={}, fourth={}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -6614,6 +6847,29 @@ public class SqlParseEventWalkerTest {
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 			return extractor;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			return null;
+		}
+	}
+
+	private Integer runExpectSQLParserFailuretest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be parser errors
+			SqlContext tree = parser.sql();
+
+	        final int numErrors = parser.getNumberOfSyntaxErrors();
+
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               
+	               System.out.println(obj.toString());
+	        }}
+	        return numErrors;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 			System.err.println("Recognition Exception: " + e.getMessage());
