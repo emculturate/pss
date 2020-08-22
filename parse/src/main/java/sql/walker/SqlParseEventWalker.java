@@ -4361,6 +4361,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitPuml_constant_identifier(@NotNull SQLSelectParserParser.Puml_constant_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+		subMap = makeRuleMap(ruleIndex);
+		subMap.remove("Type");
+		
+		if (ctx.getChildCount() == 1) {
+			showTrace(parseTrace, "one word PUML Constant: " + ctx.getText());
+			String part = ctx.getChild(0).getText().toUpperCase();
+			subMap.put(PSS_PUML_CONSTANT_KEY, part);
+		}
+		// Add item to parent map
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+
+		showTrace(parseTrace, "PUML CONSTANT IDENTIFIER: " + subMap);
+	}
+
+	
+	@Override
 	public void enterEveryRule(@NotNull ParserRuleContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLvl = pushStack(ruleIndex);
