@@ -437,6 +437,7 @@ predicand_primary
   | trim_function
   | null_literal
   | variable_identifier
+  | puml_constant_identifier
   ;
 
 value_expression_primary
@@ -1636,6 +1637,30 @@ static_data_type_name
   | ANYARRAY		// POSTGRES
   ;  
   
+   
+puml_constant_identifier
+  : PUML_CONSTANT_TENANT_SK
+  | PUML_CONSTANT_TENANT_GUID
+  | PUML_CONSTANT_TENANT_NAME
+  | PUML_CONSTANT_TENANT_ACRONYM
+  | PUML_CONSTANT_TENANT_WEB_DOMAIN
+  | PUML_CONSTANT_ES_INSTITUTION_ID
+  | PUML_CONSTANT_ES_INSTITUTION_CODE
+  | PUML_CONSTANT_ES_INSTITUTION_NAME
+  | PUML_CONSTANT_SF_COUNTER_ID
+  | PUML_CONSTANT_FILE_NAME
+  | PUML_CONSTANT_FILE_ID
+  | PUML_CONSTANT_ROW_NUMBER
+  | PUML_CONSTANT_OBSERVATION_TIME
+  | PUML_CONSTANT_SYSTEM_DATE
+  | PUML_CONSTANT_SYSTEM_TIME
+  | PUML_CONSTANT_FEED_RUN_ID
+  | PUML_CONSTANT_FEED_NAME
+  | PUML_CONSTANT_TRANSACTION_RUN_ID
+  | PUML_CONSTANT_TRANSACTION_NAME
+  | PUML_CONSTANT_POPULATION
+  | PUML_CONSTANT_TARGET_MODEL_NAME
+  ;
   
   /**********************************************************
    * 
@@ -2132,6 +2157,35 @@ CAST_OPERATOR : '::';
 
 NUMBER : Digit+;
 
+/*
+===============================================================================
+ Identifiers
+===============================================================================
+ */
+PUML_CONSTANT_TENANT_SK : '#' T E N A N T '_' S K;
+PUML_CONSTANT_TENANT_GUID : '#' T E N A N T '_' G U I D;
+PUML_CONSTANT_TENANT_NAME : '#' T E N A N T '_' N A M E;
+PUML_CONSTANT_TENANT_ACRONYM : '#' T E N A N T '_' A C R O N Y M;
+PUML_CONSTANT_TENANT_WEB_DOMAIN : '#' T E N A N T '_' W E B '_' D O M A I N;
+PUML_CONSTANT_ES_INSTITUTION_ID : '#' E S '_' I N S T I T U T I O N '_' I D;
+PUML_CONSTANT_ES_INSTITUTION_CODE : '#' E S '_' I N S T I T U T I O N '_' C O D E;
+PUML_CONSTANT_ES_INSTITUTION_NAME : '#' E S '_' I N S T I T U T I O N '_' N A M E;
+PUML_CONSTANT_SF_COUNTER_ID : '#' S F '_' C O U N T E R '_' I D;
+  
+PUML_CONSTANT_FILE_NAME : '#' S O U R C E '_' F I L E '_' N A M E;
+PUML_CONSTANT_FILE_ID : '#' F I L E '_' I D;
+PUML_CONSTANT_ROW_NUMBER : '#' R O W '_' I D;
+PUML_CONSTANT_OBSERVATION_TIME : '#' O B S E R V A T I O N '_' T I M E;
+PUML_CONSTANT_SYSTEM_DATE : '#' S Y S T E M '_' D A T E;
+PUML_CONSTANT_SYSTEM_TIME : '#' S Y S T E M '_' T I M E;
+PUML_CONSTANT_FEED_RUN_ID : '#' F E E D '_' R U N '_' I D;
+PUML_CONSTANT_FEED_NAME : '#' F E E D '_' N A M E;
+PUML_CONSTANT_TRANSACTION_RUN_ID : '#' T R A N S A C T I O N '_' R U N '_' I D;
+PUML_CONSTANT_TRANSACTION_NAME : '#' T R A N S A C T I O N '_' N A M E;
+PUML_CONSTANT_POPULATION : '#' P O P U L A T I O N '_' N A M E;
+PUML_CONSTANT_TARGET_MODEL_NAME : '#' T A R G E T '_' M O D E L '_' N A M E;
+  
+  
 /*
 ===============================================================================
  Identifiers

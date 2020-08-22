@@ -58,6 +58,7 @@ public final class MumbleConstants {
 	public static final String PSS_PRECEDING_KEY = "PRECEDING";
 	public static final String PSS_PREDICAND_KEY = "predicand";
 	public static final String PSS_PREDICAND_TREE_KEY = "PREDICAND";
+	public static final String PSS_PUML_CONSTANT_KEY = "puml_constant";
 	public static final String PSS_QUALIFIER_KEY = "qualifier";
 	public static final String PSS_QUERY_KEY = "query";
 	public static final String PSS_QUERY_TREE_KEY = "QUERY";

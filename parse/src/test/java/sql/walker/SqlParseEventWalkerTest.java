@@ -6115,6 +6115,441 @@ public class SqlParseEventWalkerTest {
 				extractor.getSymbolTable().toString());
 	}
 
+	/*
+	/* PUML CONSTANT PREDICAND TESTS 
+		PUML_CONSTANT_TENANT_SK
+	  | PUML_CONSTANT_TENANT_GUID
+	  | PUML_CONSTANT_TENANT_NAME
+	  | PUML_CONSTANT_TENANT_ACRONYM
+	  | PUML_CONSTANT_TENANT_WEB_DOMAIN
+	  | PUML_CONSTANT_ES_INSTITUTION_ID
+	  | PUML_CONSTANT_ES_INSTITUTION_CODE
+	  | PUML_CONSTANT_ES_INSTITUTION_NAME
+	  | PUML_CONSTANT_SF_COUNTER_ID
+	  */
+
+	@Test
+	public void pumlConstantTenantSKPredicandTest() {
+		String sql = "#TENANT_SK";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SK}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void pumlConstantTenantSKMixedCasePredicandTest() {
+		String sql = "#Tenant_SK";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SK}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantTenantGuidMixedCasePredicandTest() {
+		String sql = "#Tenant_GuiD";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_GUID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantTenantNameMixedCasePredicandTest() {
+		String sql = "#Tenant_name";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantTenantAcronymMixedCasePredicandTest() {
+		String sql = "#Tenant_ACRONYM";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_ACRONYM}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantTenantWebDomainMixedCasePredicandTest() {
+		String sql = "#Tenant_WEB_domain";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_WEB_DOMAIN}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantEsInstitutionIdMixedCasePredicandTest() {
+		String sql = "#es_INSTITUTION_id";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantEsInstitutionCodeMixedCasePredicandTest() {
+		String sql = "#es_INSTITUTION_CODE";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_CODE}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantEsInstitutionNameMixedCasePredicandTest() {
+		String sql = "#es_INSTITUTION_naME";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pumlConstantSFCounterIdMixedCasePredicandTest() {
+		String sql = "#SF_COUNTER_ID";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SF_COUNTER_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_FILE_NAME : '#' S O U R C E '_' F I L E '_' N A M E;
+
+	@Test
+	public void pumlConstantSourceFileNameMixedCasePredicandTest() {
+		String sql = "#SOURCE_FILE_NAME";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SOURCE_FILE_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_FILE_ID : '#' F I L E '_' I D;
+
+	@Test
+	public void pumlConstantFileIdCasePredicandTest() {
+		String sql = "#FILE_ID";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FILE_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_ROW_NUMBER : '#' R O W '_' I D;
+
+	@Test
+	public void pumlConstantRowIdPredicandTest() {
+		String sql = "#ROW_ID";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ROW_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_OBSERVATION_TIME : '#' O B S E R V A T I O N '_' T I M E;
+
+	@Test
+	public void pumlConstantObservationTimeMixedCasePredicandTest() {
+		String sql = "#Observation_TIME";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#OBSERVATION_TIME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_SYSTEM_DATE : '#' S Y S T E M '_' D A T E;
+
+	@Test
+	public void pumlConstantSystemDateMixedCasePredicandTest() {
+		String sql = "#System_Date";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SYSTEM_DATE}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_SYSTEM_TIME : '#' S Y S T E M '_' T I M E;
+
+	@Test
+	public void pumlConstantSystemTimeMixedCasePredicandTest() {
+		String sql = "#System_Time";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SYSTEM_TIME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_FEED_RUN_ID : '#' F E E D '_' R U N '_' I D;
+
+	@Test
+	public void pumlConstantFeedRunIdMixedCasePredicandTest() {
+		String sql = "#FEED_RUN_ID";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FEED_RUN_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_FEED_NAME : '#' F E E D '_' N A M E;
+
+	@Test
+	public void pumlConstantFeedNameMixedCasePredicandTest() {
+		String sql = "#feed_name";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FEED_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_TRANSACTION_RUN_ID : '#' T R A N S A C T I O N '_' R U N '_' I D;
+
+	@Test
+	public void pumlConstantTransactionRunIdPredicandTest() {
+		String sql = "#TRANSACTION_RUN_ID";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TRANSACTION_RUN_ID}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_TRANSACTION_NAME : '#' T R A N S A C T I O N '_' N A M E;
+
+	@Test
+	public void pumlConstantTransactionNameMixedCasePredicandTest() {
+		String sql = "#transaction_name";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TRANSACTION_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_POPULATION : '#' P O P U L A T I O N '_' N A M E;
+
+	@Test
+	public void pumlConstantPopulationNameMixedCasePredicandTest() {
+		String sql = "#population_name";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#POPULATION_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_TARGET_MODEL_NAME : '#' T A R G E T '_' M O D E L '_' N A M E;
+
+	@Test
+	public void pumlConstantTargetModelNamePredicandTest() {
+		String sql = "#TARGET_MODEL_NAME";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TARGET_MODEL_NAME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+
 	/**
 	 * IN LIST PREDICATE TESTS
 	 */
