@@ -1,9 +1,101 @@
 package sql.walker;
 
-import java.util.HashMap;
+import static mumble.sql.MumbleConstants.PSS_ALIAS_KEY;
+import static mumble.sql.MumbleConstants.PSS_AND_KEY;
+import static mumble.sql.MumbleConstants.PSS_ASSIGNMENTS_KEY;
+import static mumble.sql.MumbleConstants.PSS_BETWEEN_KEY;
+import static mumble.sql.MumbleConstants.PSS_BRACKET_DIRECTION_KEY;
+import static mumble.sql.MumbleConstants.PSS_BRACKET_FRAME_KEY;
+import static mumble.sql.MumbleConstants.PSS_CALCULATION_KEY;
+import static mumble.sql.MumbleConstants.PSS_CASE_KEY;
+import static mumble.sql.MumbleConstants.PSS_CLAUSES_KEY;
+import static mumble.sql.MumbleConstants.PSS_COLUMN_KEY;
+import static mumble.sql.MumbleConstants.PSS_COLUMN_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_CONCATENATE_KEY;
+import static mumble.sql.MumbleConstants.PSS_CONDITION_KEY;
+import static mumble.sql.MumbleConstants.PSS_CONDITION_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_DATABASE_NAME_KEY;
+import static mumble.sql.MumbleConstants.PSS_DATATYPE_KEY;
+import static mumble.sql.MumbleConstants.PSS_ELSE_KEY;
+import static mumble.sql.MumbleConstants.PSS_FOLLOWING_KEY;
+import static mumble.sql.MumbleConstants.PSS_FROM_KEY;
+import static mumble.sql.MumbleConstants.PSS_FUNCTION_KEY;
+import static mumble.sql.MumbleConstants.PSS_FUNCTION_NAME_KEY;
+import static mumble.sql.MumbleConstants.PSS_GROUPBY_KEY;
+import static mumble.sql.MumbleConstants.PSS_HAVING_KEY;
+import static mumble.sql.MumbleConstants.PSS_INSERT_KEY;
+import static mumble.sql.MumbleConstants.PSS_INTERSECT_KEY;
+import static mumble.sql.MumbleConstants.PSS_IN_KEY;
+import static mumble.sql.MumbleConstants.PSS_IN_LIST_KEY;
+import static mumble.sql.MumbleConstants.PSS_IN_LIST_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_ITEM_KEY;
+import static mumble.sql.MumbleConstants.PSS_JOIN_EXTENSION_KEY;
+import static mumble.sql.MumbleConstants.PSS_JOIN_EXTENSION_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_JOIN_KEY;
+import static mumble.sql.MumbleConstants.PSS_JOIN_ON_KEY;
+import static mumble.sql.MumbleConstants.PSS_LEFT_FACTOR_KEY;
+import static mumble.sql.MumbleConstants.PSS_LENGTH_KEY;
+import static mumble.sql.MumbleConstants.PSS_LIKE_ANY_KEY;
+import static mumble.sql.MumbleConstants.PSS_LIKE_ANY_LIST_KEY;
+import static mumble.sql.MumbleConstants.PSS_LIMIT_KEY;
+import static mumble.sql.MumbleConstants.PSS_LIST_KEY;
+import static mumble.sql.MumbleConstants.PSS_LITERAL_KEY;
+import static mumble.sql.MumbleConstants.PSS_LOOKUP_KEY;
+import static mumble.sql.MumbleConstants.PSS_NAME_KEY;
+import static mumble.sql.MumbleConstants.PSS_NOT_IN_LIST_KEY;
+import static mumble.sql.MumbleConstants.PSS_NOT_LIKE_ANY_LIST_KEY;
+import static mumble.sql.MumbleConstants.PSS_NULL_HANDLING_KEY;
+import static mumble.sql.MumbleConstants.PSS_NULL_LITERAL_KEY;
+import static mumble.sql.MumbleConstants.PSS_NULL_ORDER_KEY;
+import static mumble.sql.MumbleConstants.PSS_OFFSET_KEY;
+import static mumble.sql.MumbleConstants.PSS_OPERATOR_KEY;
+import static mumble.sql.MumbleConstants.PSS_ORDERBY_KEY;
+import static mumble.sql.MumbleConstants.PSS_OR_KEY;
+import static mumble.sql.MumbleConstants.PSS_OVER_KEY;
+import static mumble.sql.MumbleConstants.PSS_PARAMETERS_KEY;
+import static mumble.sql.MumbleConstants.PSS_PARENTHESES_KEY;
+import static mumble.sql.MumbleConstants.PSS_PARTITION_BY_KEY;
+import static mumble.sql.MumbleConstants.PSS_PARTS_KEY;
+import static mumble.sql.MumbleConstants.PSS_PRECEDING_KEY;
+import static mumble.sql.MumbleConstants.PSS_PRECISION_KEY;
+import static mumble.sql.MumbleConstants.PSS_PREDICAND_KEY;
+import static mumble.sql.MumbleConstants.PSS_PREDICAND_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_PUML_CONSTANT_KEY;
+import static mumble.sql.MumbleConstants.PSS_QUALIFIER_KEY;
+import static mumble.sql.MumbleConstants.PSS_QUERY_KEY;
+import static mumble.sql.MumbleConstants.PSS_QUERY_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_RANGE_BEGIN_KEY;
+import static mumble.sql.MumbleConstants.PSS_RANGE_END_KEY;
+import static mumble.sql.MumbleConstants.PSS_RETURNING_KEY;
+import static mumble.sql.MumbleConstants.PSS_RIGHT_FACTOR_KEY;
+import static mumble.sql.MumbleConstants.PSS_SCALE_KEY;
+import static mumble.sql.MumbleConstants.PSS_SCHEMA_KEY;
+import static mumble.sql.MumbleConstants.PSS_SELECT_DIRECTION_KEY;
+import static mumble.sql.MumbleConstants.PSS_SELECT_KEY;
+import static mumble.sql.MumbleConstants.PSS_SET_KEY;
+import static mumble.sql.MumbleConstants.PSS_SORT_ORDER_KEY;
+import static mumble.sql.MumbleConstants.PSS_SQL_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_SUBSTITUTION_KEY;
+import static mumble.sql.MumbleConstants.PSS_SYMMETRY_KEY;
+import static mumble.sql.MumbleConstants.PSS_TABLE_KEY;
+import static mumble.sql.MumbleConstants.PSS_TABLE_REF_KEY;
+import static mumble.sql.MumbleConstants.PSS_THEN_KEY;
+import static mumble.sql.MumbleConstants.PSS_TO_KEY;
+import static mumble.sql.MumbleConstants.PSS_TRIM_CHARACTER_KEY;
+import static mumble.sql.MumbleConstants.PSS_TUPLE_TREE_KEY;
+import static mumble.sql.MumbleConstants.PSS_TYPE_KEY;
+import static mumble.sql.MumbleConstants.PSS_UNION_KEY;
+import static mumble.sql.MumbleConstants.PSS_UPDATE_KEY;
+import static mumble.sql.MumbleConstants.PSS_VALUE_KEY;
+import static mumble.sql.MumbleConstants.PSS_WHEN_KEY;
+import static mumble.sql.MumbleConstants.PSS_WHERE_KEY;
+import static mumble.sql.MumbleConstants.PSS_WINDOW_FUNCTION_KEY;
+import static mumble.sql.MumbleConstants.PSS_WITH_KEY;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.NotNull;
@@ -11,15 +103,9 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import static mumble.sql.MumbleConstants.*;
-
 import mumble.sql.Snippet;
-
-import sql.SQLSelectParserParser;
-import sql.SQLSelectParserParser.Cast_function_expressionContext;
-import sql.SQLSelectParserParser.In_list_predicate_valueContext;
-import sql.SQLSelectParserParser.Static_data_typeContext;
 import sql.SQLSelectParserBaseListener;
+import sql.SQLSelectParserParser;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
  * Base Parser Listener and creates a nested Hashmap Abstract Tree of the SQL
@@ -3787,6 +3873,35 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> item = new HashMap<String, Object>();
 		item.put(PSS_IN_KEY, subMap);
+
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+		addToParent(parentRuleIndex, parentStackLevel, item);
+	}
+
+	@Override
+	public void exitLike_any_predicate(@NotNull SQLSelectParserParser.Like_any_predicateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove("Type");
+
+		if (subMap.size() == 2) {
+			showTrace(parseTrace, "In predicate: " + subMap);
+			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.put(PSS_LIKE_ANY_LIST_KEY, subMap.remove("2"));
+		} else if (subMap.size() == 3) {
+			showTrace(parseTrace, "In predicate: " + subMap);
+			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.remove("2");
+			subMap.put(PSS_NOT_LIKE_ANY_LIST_KEY, subMap.remove("3"));
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		item.put(PSS_LIKE_ANY_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
