@@ -853,6 +853,7 @@ predicate
   : comparison_predicate
   | between_predicate
   | in_predicate
+  | like_any_predicate
   | null_predicate
   | exists_predicate
   | substitution_predicate
@@ -1042,13 +1043,17 @@ symmetry
 
 /*
 ===============================================================================
-  <in predicate>
+  <in predicate> <like any predicate>>
 ===============================================================================
 */
 
 in_predicate
-//  : additive_expression  not? IN in_predicate_value
   : row_value_predicand  not? IN in_predicate_value
+  ;
+  
+  
+like_any_predicate
+  : row_value_predicand  not? LIKE ANY in_predicate_value
   ;
   
   

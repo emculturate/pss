@@ -2390,7 +2390,86 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[@6,33:36='item',<321>,1:33], *=[@1,7:7='*',<287>,1:7]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
-	
+
+	// Like Any IN LIST Statements
+
+	@Test
+	public void likeAnyPredicateSubqueryTest() {
+		final String query = "SELECT * FROM scbcrse aa  WHERE subj_code like any ('AA%', 'BB%') ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void notLikeAnyPredicateSubqueryTest() {
+		final String query = "SELECT * FROM scbcrse aa  WHERE subj_code not  LIKE aNy ('AA%', 'BB%') ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void likeAnyInListVariableSubqueryTest() {
+		final String query = "SELECT * FROM scbcrse aa  WHERE subj_code like any <variable> ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={substitution={name=<variable>, type=in_list}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<variable>=in_list}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void likeAnyWithEscapePredicateSubqueryTest() {
+		// TODO: Item 95 - add support for escape character syntax in Like Any clauses
+		final String query = "SELECT * FROM scbcrse aa  WHERE subj_code like any ('AA%', 'BB%') escape '_'";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+//		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
+//				extractor.getSqlTree().toString());
+//		Assert.assertEquals("Interface is wrong", "[*]", 
+//				extractor.getInterface().toString());
+//		Assert.assertEquals("Substitution List is wrong", "{}", 
+//				extractor.getSubstitutionsMap().toString());
+//		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}}",
+//				extractor.getTableColumnMap().toString());
+//		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[@1,7:7='*',<287>,1:7], subj_code=[@6,32:40='subj_code',<321>,1:32]}, interface={*={column={name=*, table_ref=*}}}}}",
+//				extractor.getSymbolTable().toString());
+	}
+
 	// End of In statements
 	// LIKE Statements
 	
