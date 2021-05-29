@@ -930,7 +930,7 @@ null_first_last
 */
 
 limit_clause
-  : LIMIT e=additive_expression
+  : LIMIT e=additive_expression (OFFSET o=additive_expression)?
   ;
 
 
@@ -1831,6 +1831,7 @@ NULL : N U L L;
 NULLS : N U L L S;
 NUMBER_TYPE : N U M B E R;
 
+OFFSET : O F F S E T;
 ON : O N;
 OUTER : O U T E R;
 OR : O R;

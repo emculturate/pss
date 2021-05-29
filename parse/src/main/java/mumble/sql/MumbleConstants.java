@@ -46,6 +46,7 @@ public final class MumbleConstants {
 	public static final String PSS_NOT_KEY = "not";
 	public static final String PSS_NULL_LITERAL_KEY = "null_literal";
 	public static final String PSS_NULL_ORDER_KEY = "null_order";
+	public static final String PSS_OFFSET_KEY = "offset";
 	public static final String PSS_OPERATOR_KEY = "operator";
 	public static final String PSS_OR_KEY = "or";
 	public static final String PSS_ORDERBY_KEY = "orderby";

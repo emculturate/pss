@@ -1669,8 +1669,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
 					subMap.put(PSS_ORDERBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
-					HashMap<String, Object>  hold = (HashMap<String, Object>) ((HashMap<String, Object>) segment).remove("1");
-					subMap.put(PSS_LIMIT_KEY, hold);
+					subMap.put(PSS_LIMIT_KEY, segment);
 				} else {
 					showTrace(parseTrace, "Too Many Entries" + segment);
 				}
@@ -3409,8 +3408,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+//		Object type = subMap.remove("Type");
 
-		handlePushDown(ruleIndex);
+		if (subMap.size() == 2) {
+			showTrace(parseTrace, "Limit only: " + subMap);
+
+			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
+			subMap.putAll(left);
+
+			showTrace(parseTrace, "Limit only: " + subMap);
+			handlePushDown(ruleIndex);
+			
+		} else if (subMap.size() == 3) {
+			showTrace(parseTrace, "Limit AND OFFSET: " + subMap);
+
+			Map<String, Object> limit = (Map<String, Object>) subMap.remove("1");
+
+			Map<String, Object>  offsetObj = (Map<String, Object> )  subMap.remove("2");
+			Object offset = (Object) offsetObj.remove(PSS_LITERAL_KEY);
+			subMap.put(PSS_OFFSET_KEY, offset);
+			subMap.putAll(limit);
+
+			showTrace(parseTrace, "LIMIT AND OFFSET: " + subMap);
+			handlePushDown(ruleIndex);
+
+		} else {
+			showTrace(parseTrace, "Wrong number of entries: " + subMap);
+		}
 	}
 
 
