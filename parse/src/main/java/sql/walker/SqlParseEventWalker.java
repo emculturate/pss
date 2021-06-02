@@ -171,6 +171,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	/**
 	 * These variables keep track of syntax that can repeat in series so that
 	 * the list can be managed as a whole
+	 * 
+	 * Need to be placed on the stack at the same time as the nested Queries
 	 */
 	private Boolean unionClauseFound = false;
 	private Boolean firstUnionClause = false;
@@ -363,6 +365,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			pushStack("symbolTable", symbols);
 		}
 		symbolTable = new HashMap<String, Object>();
+		
+		// Push current flags onto stack
+		pushFlagMap();
+		
+	}
+
+	private void pushFlagMap() {
+		// Build flag map for stack
+		HashMap<String, Object> flagMap = new HashMap<String, Object> ();
+		flagMap.put("unionClauseFound",unionClauseFound);
+		flagMap.put("firstUnionClause",firstUnionClause);
+		flagMap.put("intersectClauseFound",intersectClauseFound);
+		flagMap.put("firstIntersectClause",firstIntersectClause);
+		flagMap.put("useAsLeaf",useAsLeaf);
+
+		pushStack("flagMapTable", flagMap);
+
+		// Reset Flags
+		unionClauseFound = false;
+		firstUnionClause = false;
+		intersectClauseFound = false;
+		firstIntersectClause = false;
+		useAsLeaf = false;
 	}
 
 	/**
@@ -373,12 +398,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private void popSymbolTable(String key, HashMap<String, Object> symbols) {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
 		symbolTable.put(key, symbols);
+		
+		popFlagMap();
 	}
 
 	@SuppressWarnings("unchecked")
 	private void popSymbolTablePutAll(HashMap<String, Object> symbols) {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
 		symbolTable.putAll(symbols);
+
+		popFlagMap();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void popFlagMap() {
+		// Pop Flags and reset them
+		HashMap<String, Object> flagMap = (HashMap<String, Object>) popStack("flagMapTable");
+
+		// Reset Flags
+		unionClauseFound = (Boolean) flagMap.get ("unionClauseFound");
+		firstUnionClause =  (Boolean) flagMap.get ("firstUnionClause");
+		intersectClauseFound =  (Boolean) flagMap.get ("intersectClauseFound");
+		firstIntersectClause =  (Boolean) flagMap.get ("firstIntersectClause");
+		useAsLeaf =  (Boolean) flagMap.get ("useAsLeaf");
 	}
 
 	private Integer currentStackLevel(String key) {
@@ -1509,7 +1551,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		handleListList(ruleIndex, parentRuleIndex);
 
-		// clear union clause count
+		// clear intersect clause count
 		intersectClauseFound = false;
 	}
 
@@ -2137,7 +2179,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Map<String, Object> substitution = (Map<String, Object>) reference.get(PSS_SUBSTITUTION_KEY);
 				collectSymbolTable(alias, substitution.get("name"));
 
-			} else {
+			} else {// then it's a query, add it to the tree no matter what kind of query it is
+				item.put(PSS_QUERY_KEY, reference);
+				// Add the query to the symbol table tree 
 				Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
 				if (!done)
 					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
@@ -2191,7 +2235,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			tableDictionaryMap.put(name, new HashMap<String, Object>());
 			subMap.putAll(reference);
 
-		} else { // then it's a query
+		} else { // then it's a query, add it to the tree no matter what kind of query it is
+			item.put(PSS_QUERY_KEY, reference);
+			// Add the query to the symbol table tree 
 			Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
 			if (!done)
 					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
@@ -2214,7 +2260,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String queryName = hdr + (queryCount - 1);
 		Map<String, Object> query = (Map<String, Object>) symbolTable.remove(queryName);
 		if (query != null) {
-			item.put(hdr, reference);
+//			item.put(hdr, reference);
 
 			// add alias to query
 			if (alias != null) 
