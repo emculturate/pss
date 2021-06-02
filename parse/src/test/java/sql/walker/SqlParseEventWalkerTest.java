@@ -1525,7 +1525,89 @@ public class SqlParseEventWalkerTest {
 	}
 
 	// END OF Table Identifier Tests
-	
+
+	// Multiple Union and Intersect queries
+	@Test
+	public void simpleMultipleUnionParseTest() {
+
+		final String query = " SELECT first FROM third " + " union select third from fifth "
+				+ " union select fourth from sixth " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={union={qualifier=null, operator=union}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={union={qualifier=null, operator=union}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@11,70:75='fourth',<321>,1:70]}, third={first=[@1,8:12='first',<85>,1:8]}, eighth={seventh=[@16,102:108='seventh',<321>,1:102]}, fifth={third=[@6,39:43='third',<321>,1:39]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union4={query0={third={first=[@1,8:12='first',<85>,1:8]}, interface={first={column={name=first, table_ref=null}}}}, interface={first=query_column}, query1={fifth={third=[@6,39:43='third',<321>,1:39]}, interface={third={column={name=third, table_ref=null}}}}, query2={sixth={fourth=[@11,70:75='fourth',<321>,1:70]}, interface={fourth={column={name=fourth, table_ref=null}}}}, query3={eighth={seventh=[@16,102:108='seventh',<321>,1:102]}, interface={seventh={column={name=seventh, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void simpleMultipleIntersectParseTest() {
+
+		final String query = " SELECT first FROM third " + " intersect select third from fifth "
+				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void simpleMultipleUnion1ParseTest() {
+
+		final String query = " SELECT first FROM third " + " union select second from fifth "
+				+ " union select fourth from sixth " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void simpleMultipleIntersect1ParseTest() {
+
+		final String query = " SELECT first FROM third " + " intersect select second from fifth "
+				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void simpleUnionIntersectParseTest() {
+
+		final String query = " SELECT first FROM third " + " union select third from fifth "
+				+ " intersect select fourth from sixth " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void nestedUnionIntersectAAParseTest() {
+
+		final String query = " SELECT first FROM ( " + "  select third from fifth "
+				+ " intersect select fourth from sixth ) aa " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
+	@Test
+	public void nestedUnionIntersectParseTest() {
+
+		final String query = " SELECT first FROM ( " + "  select third from fifth "
+				+ " intersect select fourth from sixth ) " + " union select seventh from eighth ";
+
+		final SQLSelectParserParser parser = parse(query);
+		runParsertest(query, parser);
+	}
+
 	// Union and Intersect with Qualifiers
 	
 	@Test
@@ -1613,7 +1695,176 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	// End of Union and Intersect with Qualifiers tests
+	// Union and Interesct with embedded Subqueries
 	
+	// Union of queries with embedded subqueries should switch back to standard subquery subtree, and not continue to use "UNION" (or "Intersect") in the tree key
+	// TODO: UNION AND INTERSECT NESTING
+	@Test
+	public void queryWithIntersectSubqueryTest() {
+		final String query = "SELECT * from (select * from problem intersect select * from other) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@10,54:54='*',<287>,1:54]}, problem={*=[@5,22:22='*',<287>,1:22]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={intersect2={*=[@1,7:7='*',<287>,1:7]}, def_intersect2={query0={problem={*=[@5,22:22='*',<287>,1:22]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}, query1={other={*=[@10,54:54='*',<287>,1:54]}, interface={*={column={name=*, table_ref=*}}}}}, tab2=intersect2, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void unionWithSubqueryP1Test() {
+		final String query = "SELECT * from <tuple> tab1 " + 
+				" UNION ALL " + 
+				"SELECT * from (select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@12,60:60='*',<287>,1:60]}, <tuple>={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union3={query0={tab1=<tuple>, interface={*={column={name=*, table_ref=*}}}, <tuple>={*=[@1,7:7='*',<287>,1:7]}}, interface={*=query_column}, query2={def_query1={problem={*=[@12,60:60='*',<287>,1:60]}, interface={*={column={name=*, table_ref=*}}}}, tab2=query1, interface={*={column={name=*, table_ref=*}}}, query1={*=[@8,45:45='*',<287>,1:45]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void unionWithSubqueryWithSubqueryTest() {
+		final String query = "SELECT * from <tuple> tab1 " + 
+				" UNION ALL " + 
+				"SELECT * from (select * from (select * from answer) problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=problem, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{answer={*=[@16,75:75='*',<287>,1:75]}, <tuple>={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union4={query0={tab1=<tuple>, interface={*={column={name=*, table_ref=*}}}, <tuple>={*=[@1,7:7='*',<287>,1:7]}}, interface={*=query_column}, query3={tab2=query2, interface={*={column={name=*, table_ref=*}}}, query2={*=[@8,45:45='*',<287>,1:45]}, def_query2={problem=query1, def_query1={answer={*=[@16,75:75='*',<287>,1:75]}, interface={*={column={name=*, table_ref=*}}}}, interface={*={column={name=*, table_ref=*}}}, query1={*=[@12,60:60='*',<287>,1:60]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void intersectWithSubqueryWithIntersectSubqueryTest() {
+		final String query = "SELECT * from tab1 " + 
+				" intersect " + 
+				"SELECT * from (select * from  answer intersect select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@15,84:84='*',<287>,1:84]}, answer={*=[@10,52:52='*',<287>,1:52]}, tab1={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect5={query0={tab1={*=[@1,7:7='*',<287>,1:7]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}, query4={intersect3={*=[@6,37:37='*',<287>,1:37]}, def_intersect3={interface={*=query_column}, query1={answer={*=[@10,52:52='*',<287>,1:52]}, interface={*={column={name=*, table_ref=*}}}}, query2={problem={*=[@15,84:84='*',<287>,1:84]}, interface={*={column={name=*, table_ref=*}}}}}, tab2=intersect3, interface={*={column={name=*, table_ref=*}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void unionWithSubqueryWithUnionSubqueryTest() {
+		final String query = "SELECT * from tab1 " + 
+				" UNION " + 
+				"SELECT * from (select * from  answer union select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@15,76:76='*',<287>,1:76]}, answer={*=[@10,48:48='*',<287>,1:48]}, tab1={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={def_union3={interface={*=query_column}, query1={answer={*=[@10,48:48='*',<287>,1:48]}, interface={*={column={name=*, table_ref=*}}}}, query2={problem={*=[@15,76:76='*',<287>,1:76]}, interface={*={column={name=*, table_ref=*}}}}}, union3={*=[@6,33:33='*',<287>,1:33]}, tab2=union3, interface={*={column={name=*, table_ref=*}}}}, query0={tab1={*=[@1,7:7='*',<287>,1:7]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void intersectWithSubqueryWithUnionSubqueryTest() {
+		final String query = "SELECT * from tab1 " + 
+				" intersect " + 
+				"SELECT * from (select * from  answer union select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@15,80:80='*',<287>,1:80]}, answer={*=[@10,52:52='*',<287>,1:52]}, tab1={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect5={query0={tab1={*=[@1,7:7='*',<287>,1:7]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}, query4={def_union3={interface={*=query_column}, query1={answer={*=[@10,52:52='*',<287>,1:52]}, interface={*={column={name=*, table_ref=*}}}}, query2={problem={*=[@15,80:80='*',<287>,1:80]}, interface={*={column={name=*, table_ref=*}}}}}, union3={*=[@6,37:37='*',<287>,1:37]}, tab2=union3, interface={*={column={name=*, table_ref=*}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void unionWithSubqueryWithIntersectSubqueryTest() {
+		final String query = "SELECT * from tab1 " + 
+				" UNION " + 
+				"SELECT * from (select * from  answer intersect select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@15,80:80='*',<287>,1:80]}, answer={*=[@10,48:48='*',<287>,1:48]}, tab1={*=[@1,7:7='*',<287>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={intersect3={*=[@6,33:33='*',<287>,1:33]}, def_intersect3={interface={*=query_column}, query1={answer={*=[@10,48:48='*',<287>,1:48]}, interface={*={column={name=*, table_ref=*}}}}, query2={problem={*=[@15,80:80='*',<287>,1:80]}, interface={*={column={name=*, table_ref=*}}}}}, tab2=intersect3, interface={*={column={name=*, table_ref=*}}}}, query0={tab1={*=[@1,7:7='*',<287>,1:7]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	
+	@Test
+	public void selectWithUnionSubqueryTest() {
+		final String query = "SELECT * from (select * from  answer union select * from problem) tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={*=[@10,50:50='*',<287>,1:50]}, answer={*=[@5,22:22='*',<287>,1:22]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={def_union2={query0={answer={*=[@5,22:22='*',<287>,1:22]}, interface={*={column={name=*, table_ref=*}}}}, interface={*=query_column}, query1={problem={*=[@10,50:50='*',<287>,1:50]}, interface={*={column={name=*, table_ref=*}}}}}, union2={*=[@1,7:7='*',<287>,1:7]}, tab2=union2, interface={*={column={name=*, table_ref=*}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	// END of Union and Intersect with Subqueries
 	// WHERE CONDITION VARIATIONS
 	
 	@Test
@@ -5044,75 +5295,6 @@ public class SqlParseEventWalkerTest {
 		runParsertest(query, parser);
 	}
 
-	@Test
-	public void simpleMultipleUnionParseTest() {
-
-		final String query = " SELECT first FROM third " + " union select third from fifth "
-				+ " union select fourth from sixth " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void simpleMultipleIntersectParseTest() {
-
-		final String query = " SELECT first FROM third " + " intersect select third from fifth "
-				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void simpleMultipleUnion1ParseTest() {
-
-		final String query = " SELECT first FROM third " + " union select second from fifth "
-				+ " union select fourth from sixth " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void simpleMultipleIntersect1ParseTest() {
-
-		final String query = " SELECT first FROM third " + " intersect select second from fifth "
-				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void simpleUnionIntersectParseTest() {
-
-		final String query = " SELECT first FROM third " + " union select third from fifth "
-				+ " intersect select fourth from sixth " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void nestedUnionIntersectAAParseTest() {
-
-		final String query = " SELECT first FROM ( " + "  select third from fifth "
-				+ " intersect select fourth from sixth ) aa " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
-	@Test
-	public void nestedUnionIntersectParseTest() {
-
-		final String query = " SELECT first FROM ( " + "  select third from fifth "
-				+ " intersect select fourth from sixth ) " + " union select seventh from eighth ";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
 
 	@Test
 	public void subqueryParseTest() {
