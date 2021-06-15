@@ -6830,6 +6830,63 @@ public class SqlParseEventWalkerTest {
 	}
 
 
+//	PUML_CONSTANT_TENANT_SALT : 
+	@Test
+	public void pumlConstantTenantSaltPredicandTest() {
+		String sql = "#TENANT_salt";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SALT}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_PIT_START_TIME : 
+	@Test
+	public void pumlConstantPITStartTimePredicandTest() {
+		String sql = "#pit_START_time";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#PIT_START_TIME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
+//	PUML_CONSTANT_PIT_START_TIME : 
+	@Test
+	public void pumlConstantPITEndTimePredicandTest() {
+		String sql = "#pit_end_time";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#PIT_END_TIME}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}",
+				extractor.getSymbolTable().toString());
+	}
+
 	/**
 	 * IN LIST PREDICATE TESTS
 	 */

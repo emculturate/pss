@@ -1665,6 +1665,10 @@ puml_constant_identifier
   | PUML_CONSTANT_TRANSACTION_NAME
   | PUML_CONSTANT_POPULATION
   | PUML_CONSTANT_TARGET_MODEL_NAME
+  // Added on June 15, 2021
+  | PUML_CONSTANT_TENANT_SALT 
+  | PUML_CONSTANT_PIT_START_TIME 
+  | PUML_CONSTANT_PIT_END_TIME
   ;
   
   /**********************************************************
@@ -2191,6 +2195,9 @@ PUML_CONSTANT_TRANSACTION_NAME : '#' T R A N S A C T I O N '_' N A M E;
 PUML_CONSTANT_POPULATION : '#' P O P U L A T I O N '_' N A M E;
 PUML_CONSTANT_TARGET_MODEL_NAME : '#' T A R G E T '_' M O D E L '_' N A M E;
   
+ PUML_CONSTANT_TENANT_SALT : '#' T E N A N T '_' S A L T;
+ PUML_CONSTANT_PIT_START_TIME : '#' P I T '_' S T A R T '_' T I M E;
+ PUML_CONSTANT_PIT_END_TIME : '#' P I T '_' E N D '_' T I M E;
   
 /*
 ===============================================================================
