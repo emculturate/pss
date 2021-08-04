@@ -1182,6 +1182,7 @@ function_name
 function_names_for_reserved_words
   : LEFT
   | RIGHT
+  | IN
   ;
 
 sql_argument_list
