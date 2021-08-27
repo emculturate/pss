@@ -1053,10 +1053,12 @@ in_predicate
   
   
 like_any_predicate
-  : row_value_predicand  not? LIKE ANY in_predicate_value
+  : row_value_predicand  not? like_any_operator in_predicate_value
   ;
   
-  
+like_any_operator
+  : (LIKE | ILIKE) ANY
+  ;  
 
 in_predicate_value
   : subquery

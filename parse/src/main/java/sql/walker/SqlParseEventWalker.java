@@ -25,6 +25,7 @@ import static mumble.sql.MumbleConstants.PSS_GROUPBY_KEY;
 import static mumble.sql.MumbleConstants.PSS_HAVING_KEY;
 import static mumble.sql.MumbleConstants.PSS_INSERT_KEY;
 import static mumble.sql.MumbleConstants.PSS_INTERSECT_KEY;
+import static mumble.sql.MumbleConstants.PSS_ILIKE_ANY_KEY;
 import static mumble.sql.MumbleConstants.PSS_IN_KEY;
 import static mumble.sql.MumbleConstants.PSS_IN_LIST_KEY;
 import static mumble.sql.MumbleConstants.PSS_IN_LIST_TREE_KEY;
@@ -3932,26 +3933,46 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove("Type");
+		String type = new String();
 
-		if (subMap.size() == 2) {
+		if (subMap.size() == 3) {
 			showTrace(parseTrace, "In predicate: " + subMap);
 			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
-			subMap.put(PSS_LIKE_ANY_LIST_KEY, subMap.remove("2"));
-		} else if (subMap.size() == 3) {
+			type = (String) subMap.remove("2");
+			subMap.put(PSS_LIKE_ANY_LIST_KEY, subMap.remove("3"));
+		} else if (subMap.size() == 4) {
 			showTrace(parseTrace, "In predicate: " + subMap);
 			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
 			subMap.remove("2");
-			subMap.put(PSS_NOT_LIKE_ANY_LIST_KEY, subMap.remove("3"));
+			type = (String) subMap.remove("3");
+			subMap.put(PSS_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put(PSS_LIKE_ANY_KEY, subMap);
+		if ("ilike".equals(type.toLowerCase()))
+			item.put(PSS_ILIKE_ANY_KEY, subMap);
+		else
+			item.put(PSS_LIKE_ANY_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 		addToParent(parentRuleIndex, parentStackLevel, item);
+	}
+
+	@Override
+	public void exitLike_any_operator(@NotNull SQLSelectParserParser.Like_any_operatorContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+
+		String text = ctx.getChild(0).getText();
+		subMap.remove("Type");
+		subMap.put("Operator", text);
+		
+		handleOneChild(ruleIndex);
 	}
 
 	@Override
@@ -4385,27 +4406,46 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove("Type");
 		HashMap<String, Object> item = new HashMap<String, Object>();
 
-		if (subMap.size() == 1) {
+		if (subMap.size() >= 1) {
 			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
-			item.put(PSS_SORT_ORDER_KEY, "ASC");
-			item.put(PSS_NULL_ORDER_KEY, null);
-			showTrace(parseTrace, "One Entry: " + item);
+			Object item2 = null;
+			Object item3 = null;
+					
+			if (subMap.size() >= 1) {
+				item2 = subMap.remove("2");
+			}
+			if (subMap.size() >= 1) {
+				item3 = subMap.remove("3");
+			}
+			
+			if (item2 == null) {
+				item.put(PSS_SORT_ORDER_KEY, "ASC");
+				item.put(PSS_NULL_ORDER_KEY, null);
+				showTrace(parseTrace, "One Entry: " + item);
+			} else if (item3 != null) {
+				item.put(PSS_SORT_ORDER_KEY, item2);
+				Map<String, Object> hold = (Map<String, Object>) item3;
+				type = hold.remove("Type").toString();
+				item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
+				showTrace(parseTrace, "Three entries: " + item);
 
-		} else if (subMap.size() == 2) {
-			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
-			item.put(PSS_SORT_ORDER_KEY, subMap.remove("2"));
-			item.put(PSS_NULL_ORDER_KEY, null);
-			showTrace(parseTrace, "Two entries: " + item);
-
-		} else if (subMap.size() == 3) {
-			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
-			item.put(PSS_SORT_ORDER_KEY, subMap.remove("2"));
-			Map<String, Object> hold = (Map<String, Object>) subMap.remove("3");
-			type = hold.remove("Type").toString();
-			item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
-			showTrace(parseTrace, "Three entries: " + item);
-
-		} else {
+			} else { // Item 2 is not null and Item 3 is null :- Item 2 could be ASC/DESC or Nulls command
+				if (item2 instanceof Map<?,?>) {
+					// item2 is the null order value
+					item.put(PSS_SORT_ORDER_KEY, "ASC");
+					Map<String, Object> hold = (Map<String, Object>) item2;
+					type = hold.remove("Type").toString();
+					item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
+					showTrace(parseTrace, "Two entries: " + item);
+				} else {
+					//item2 is the ASC/DESC value
+					item.put(PSS_SORT_ORDER_KEY, item2);
+					item.put(PSS_NULL_ORDER_KEY, null);
+					showTrace(parseTrace, "Two entries: " + item);
+				}
+			}
+		}
+		else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
 
