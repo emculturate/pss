@@ -25,6 +25,7 @@ public final class MumbleConstants {
 	public static final String PSS_FUNCTION_NAME_KEY = "function_name";
 	public static final String PSS_GROUPBY_KEY = "groupby";
 	public static final String PSS_HAVING_KEY = "having";
+	public static final String PSS_ILIKE_ANY_KEY = "ilike_any";
 	public static final String PSS_IN_KEY = "in";
 	public static final String PSS_IN_LIST_KEY = "in_list";
 	public static final String PSS_IN_LIST_TREE_KEY = "IN_LIST";
