@@ -1205,6 +1205,7 @@ identifier
   | logical_identifier
   | nonreserved_keywords
   | snowflake_quoted_numeric_identifier
+  | snowflake_dollar_function_identifier
   ;
 
 alias_identifier
@@ -1243,6 +1244,10 @@ simple_numeric_identifier
    
 snowflake_quoted_numeric_identifier
    :	Double_Quoted_Numeric_Identifier
+   ;
+   
+snowflake_dollar_function_identifier
+   : Dollar_Sign_Identifier
    ;
    
 nonreserved_keywords
@@ -2243,6 +2248,11 @@ Numeric_Identifier
 Double_Quoted_Numeric_Identifier
   : DOUBLE_QUOTE Digit+ ('a'..'z'|'A'..'Z'|Digit|'_'|'-')* DOUBLE_QUOTE
   ;
+
+
+Dollar_Sign_Identifier
+  : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_'|'$')*
+;
 
 BlockComment
     :   '/*' .*? '*/' -> skip
