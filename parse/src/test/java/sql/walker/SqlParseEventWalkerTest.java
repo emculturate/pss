@@ -5820,38 +5820,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		runParsertest(query, parser);
 	}
 
-	@Test
-	public void getSectionSqlTest() {
-		// ********* ERROR: Reference in Hive ARRAY object: "sched_arr[0].col1
-		// as BEGIN_DATE"
-		/*
-		 * Section COLUMNS: RECORD_TYPE, ACTION, TERM_ID, COURSE_EXTERNAL_ID,
-		 * SECTION_NAME, SECTION_TAGS,BEGIN_DATE, END_DATE, START_TIME,
-		 * END_TIME, MEETING_DAYS, LOCATION, ADDITIONAL MEETINGS (repeat meeting
-		 * info)
-		 */
-		String query = "select record_type as RECORD_TYPE, action as ACTION,term_id as TERM_ID,course_external_id as COURSE_EXTERNAL_ID ,section_name as SECTION_NAME,"
-				+ "'' as section_tags,  sched_arr[0].col1 as BEGIN_DATE, sched_arr[0].col2 as END_DATE, sched_arr[0].col3 as BEGIN_TIME, sched_arr[0].col4 as END_TIME, sched_arr[0].col5 as MEETING_DAYS,sched_arr[0].col6 as LOCATION from ( "
-				+ "select record_type,action,term_id,course_external_id,section_name, collectarray(sched) as sched_arr from ("
-				+ "select record_type,action,term_id,course_external_id,section_name,struct(begin_date,end_date,start_time,end_time,meeting_days,location) as sched from ("
-				+ "select s.record_type as RECORD_TYPE,s.action as ACTION, s.term_code as TERM_ID, concat_ws('-',s.subject_code,s.course_number) as COURSE_EXTERNAL_ID,"
-				+ "case when s.section_name is null or length(trim(s.section_name))=0 then '' else s.section_name end as SECTION_NAME, case when sec.meet_start_date is not null then datestr(sec.meet_start_date, '"
-				+ " SECTION_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT')  else '' end as BEGIN_DATE, case when sec.meet_end_date is not null then datestr(sec.meet_end_date, '"
-				+ "SECTION_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT') else ''  end as END_DATE, "
-				+ "case when sec.meet_start_time is null or length(trim(sec.meet_start_time))=0 or length(trim(sec.meet_start_time)) < 4 then '' else concat_ws(':',substr(sec.meet_start_time,1,2),substr(sec.meet_start_time,3,2)) end as START_TIME, "
-				+ "case when sec.meet_end_time is null or length(trim(sec.meet_end_time))=0 or length(trim(sec.meet_end_time)) < 4 then '' else concat_ws(':',substr(sec.meet_end_time,1,2),substr(sec.meet_end_time,3,2)) end as END_TIME, "
-				+ "coalesce(concat(sec.meet_sunday,meet_monday,meet_tuesday,meet_wednesday,meet_thursday,meet_friday,meet_saturday),'') as MEETING_DAYS,"
-				+ "case when (meet_building_code is null or length(trim(meet_building_code))=0) and (meet_room_code is null or length(trim(meet_room_code))=0) then '' "
-				+ "when (meet_building_code is null or length(trim(meet_building_code))=0) or (meet_room_code is null or length(trim(meet_room_code))=0) then concat(trim(meet_building_code),trim(meet_room_code)) "
-				+ " else concat_ws('-',meet_building_code,meet_room_code) end as LOCATION from "
-				+ " sectionTbl s inner join termFilterTbl tf on " + "s.term_code = tf.term_id "
-				+ " left join sectionMeetTbl "
-				+ " sec on (sec.course_ref_no=s.course_ref_no and sec.term_code=s.term_code) "
-				+ ") sub_sec) mid_sec group by record_type,action,term_id,course_external_id,section_name) main_sec";
-		final SQLSelectParserParser parser = parse(query);
-		// TODO: change parser to recognize this example
-		// runParsertest(query, parser);
-	}
 
 	@Test
 	public void getSectionSqlV6Test() {
@@ -6370,6 +6338,24 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		Assert.assertEquals("Table Dictionary is wrong", "{crs={course_number=[@8,33:35='crs',<324>,1:33], subject_code=[@4,15:17='crs',<324>,1:15]}}",
 				extractor.getTableColumnMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{crs={subject_code=[@4,15:17='crs',<324>,1:15], course_number=[@8,33:35='crs',<324>,1:33]}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void dollarFunctionPredicandTest() {
+		String sql = "system$typeof(acolumn, bcolumn) ";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
+		
+		Assert.assertEquals("AST is wrong", "{PREDICAND={function={parameters={1={column={name=acolumn, table_ref=null}}, 2={column={name=bcolumn, table_ref=null}}}, function_name=system$typeof}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{unknown={acolumn=[@2,14:20='acolumn',<324>,1:14], bcolumn=[@4,23:29='bcolumn',<324>,1:23]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{unknown={bcolumn=[@4,23:29='bcolumn',<324>,1:23], acolumn=[@2,14:20='acolumn',<324>,1:14]}}",
 				extractor.getSymbolTable().toString());
 	}
 
