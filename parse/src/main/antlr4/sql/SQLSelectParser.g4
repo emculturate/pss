@@ -1235,6 +1235,7 @@ simple_variable_identifier
 
 extended_variable_identifier
 	:  Extended_Variable_Identifier
+	|  Mixed_Variable_Identifier
 	;
  
 simple_numeric_identifier
@@ -2222,6 +2223,15 @@ Variable_Identifier
 
 Extended_Variable_Identifier	
 	:	LTH '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']'  
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
+	    GTH
+	;
+
+Mixed_Variable_Identifier	
+	:	LTH ('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')*
+	    Period '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']'  
 	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
 	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
 	    ('.' ('['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* ']') | (Period Population_Identifier))? 
