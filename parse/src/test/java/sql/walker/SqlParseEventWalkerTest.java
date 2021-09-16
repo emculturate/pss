@@ -777,6 +777,47 @@ public class SqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void castingWithPredicandVariableTest() {
+		// ITEM 104: Cast statements with embedded variables 
+		final String query = " SELECT cast(<var1> as string) a"
+				+ " FROM tab1"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={substitution={name=<var1>, type=predicand}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<var1>=predicand}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={}, interface={a={function={function_name=cast, data_type={type=STRING}, type=CAST, value={substitution={name=<var1>, type=predicand}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void castingWithColumnVariableTest() {
+		// ITEM 104: Cast statements with embedded variables 
+		final String query = " SELECT cast(tab1.<var1> as string) a"
+				+ " FROM tab1"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={column={substitution={name=<var1>, type=column}, table_ref=tab1}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<var1>=column}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={<var1>={substitution={name=<var1>, type=column}}}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={<var1>={substitution={name=<var1>, type=column}}}, interface={a={function={function_name=cast, data_type={type=STRING}, type=CAST, value={column={substitution={name=<var1>, type=column}, table_ref=tab1}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+	@Test
 	public void realisticCastingTest() {
 		final String query = "select distinct" + 
 				"        cast(s.school_id as varchar(100)) as school_id" + 
@@ -1123,12 +1164,43 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void getMixedExtendedVariablesTest() {
-		// Column Variable Test
+		// ITEM 103: tuple variables with up unbracketed prefix and up to five name segments
 		String query = " select cec.* " + 
-				"	from <[Enrollment Services].[Client Entering Class]> cec" + 
+				"	from <fulfill.[domain].[entity].[file category]> cec" + 
 				"	join <fulfill.[domain].[entity]> oth";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=cec}}}, from={join={1={table={alias=cec, substitution={name=<fulfill.[domain].[entity].[file category]>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category]}, type=tuple}}}, 2={join=join}, 3={table={alias=oth, substitution={name=<fulfill.[domain].[entity]>, parts={1=fulfill, 2=[domain], 3=[entity]}, type=tuple}}}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category]>=tuple, <fulfill.[domain].[entity]>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<fulfill.[domain].[entity].[file category]>={*=[@1,8:10='cec',<325>,1:8]}, <fulfill.[domain].[entity]>={}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={cec=<fulfill.[domain].[entity].[file category]>, <fulfill.[domain].[entity].[file category]>={*=[@1,8:10='cec',<325>,1:8]}, oth=<fulfill.[domain].[entity]>, interface={*={column={name=*, table_ref=cec}}}, <fulfill.[domain].[entity]>={}}}",
+				extractor.getSymbolTable().toString());
+	}
+	
+	@Test
+	public void getMixedExtendedVariablesV2Test() {
+		// ITEM 103: tuple variables with up unbracketed prefix and up to five name segments
+		String query = " select oth.* " + 
+				"	from  <fulfill.[domain].[entity].[file category].{snapshot}> oth";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=oth}}}, from={table={alias=oth, substitution={name=<fulfill.[domain].[entity].[file category].{snapshot}>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category], 5={snapshot}}, type=tuple}}}}}",
+				extractor.getSqlTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category].{snapshot}>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<fulfill.[domain].[entity].[file category].{snapshot}>={*=[@1,8:10='oth',<325>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={oth=<fulfill.[domain].[entity].[file category].{snapshot}>, interface={*={column={name=*, table_ref=oth}}}, <fulfill.[domain].[entity].[file category].{snapshot}>={*=[@1,8:10='oth',<325>,1:8]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	// Special Join Extension Variables
