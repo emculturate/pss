@@ -2864,7 +2864,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				String function = (String) subMap.remove("1");
 				item.put(PSS_FUNCTION_NAME_KEY, function);
 				item.put(PSS_TYPE_KEY, function.toUpperCase());
-				item.put(PSS_VALUE_KEY, subMap.remove("2"));
+				// ITEM 104: Set the substitution type if the cast statement has a variable
+				item.put(PSS_VALUE_KEY, checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), "predicand"));
 				item.put(PSS_DATATYPE_KEY, subMap.remove("3"));
 				subMap.put(PSS_FUNCTION_KEY, item);
 			} else {
@@ -3464,7 +3465,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(PSS_NAME_KEY, variable_name);
 			item.put(PSS_PARTS_KEY, subItem);
 			String[] trim = variable_name.split("\\.",0);
-			if (trim.length == 4) {
+			// Added 9/16/2021 GAH: Allow 5 part variable names
+			if (trim.length == 5) {
+				subItem.put("1", trim[0].substring(1));
+				subItem.put("2", trim[1]);
+				subItem.put("3", trim[2]); 
+				subItem.put("4", trim[3]); 
+				subItem.put("5", trim[4].substring(0, trim[4].length()-1)); 
+			} else if (trim.length == 4) {
 				subItem.put("1", trim[0].substring(1));
 				subItem.put("2", trim[1]);
 				subItem.put("3", trim[2]); 
