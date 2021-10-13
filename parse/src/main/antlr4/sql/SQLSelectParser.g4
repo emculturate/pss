@@ -492,6 +492,7 @@ set_function_type
   // Snowflake Set Functions
   | ANY_VALUE
   | CORR
+  | COUNT_IF
   | COVAR_POP
   | COVAR_SAMP
   | LISTAGG
@@ -1897,6 +1898,7 @@ COLLECT : C O L L E C T;
 COALESCE : C O A L E S C E;
 COLUMN : C O L U M N;
 COUNT : C O U N T;
+COUNT_IF : C O U N T '_' I F;
 CUBE : C U B E;
 CURRENT : C U R R E N T;
 
