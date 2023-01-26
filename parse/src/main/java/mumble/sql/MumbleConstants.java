@@ -12,6 +12,7 @@ public final class MumbleConstants {
 	public static final String PSS_CASE_KEY = "case";
 	public static final String PSS_CLAUSES_KEY = "clauses";
 	public static final String PSS_COLUMN_KEY = "column";
+	public static final String PSS_COLUMNS_KEY = "columns";
 	public static final String PSS_COLUMN_TREE_KEY = "COLUMN";
 	public static final String PSS_CONCATENATE_KEY = "concatenate";
 	public static final String PSS_CONDITION_KEY = "condition";
@@ -44,6 +45,7 @@ public final class MumbleConstants {
 	public static final String PSS_LIST_KEY = "list";
 	public static final String PSS_LITERAL_KEY = "literal";
 	public static final String PSS_LOOKUP_KEY = "lookup";
+	public static final String PSS_MATRIX_KEY = "matrix";
 	public static final String PSS_NAME_KEY = "name";
 	public static final String PSS_NOT_IN_LIST_KEY = "not_in_list";
 	public static final String PSS_NOT_LIKE_ANY_LIST_KEY = "not_like_any_list";
@@ -71,6 +73,7 @@ public final class MumbleConstants {
 	public static final String PSS_RANGE_END_KEY = "end";
 	public static final String PSS_RETURNING_KEY = "returning";
 	public static final String PSS_RIGHT_FACTOR_KEY = "right";
+	public static final String PSS_ROW_KEY = "row";
 	public static final String PSS_SCALE_KEY = "scale";
 	public static final String PSS_SCHEMA_KEY = "schema";
 	public static final String PSS_SELECT_KEY = "select";
@@ -90,8 +93,11 @@ public final class MumbleConstants {
 	public static final String PSS_TRIM_CHARACTER_KEY = "trim_character";
 	public static final String PSS_TUPLE_TREE_KEY = "TUPLE";
 	public static final String PSS_TYPE_KEY = "type";
+	public static final String PSS_UNKNOWN_KEY = "unknown";
 	public static final String PSS_UNION_KEY = "union";
 	public static final String PSS_UPDATE_KEY = "update";
+	public static final String PSS_VALUES_TREE_KEY = "VALUES";
+	public static final String PSS_VALUES_KEY = "values";
 	public static final String PSS_VALUE_KEY = "value";
 	public static final String PSS_WHEN_KEY = "when";
 	public static final String PSS_WHERE_KEY = "where";

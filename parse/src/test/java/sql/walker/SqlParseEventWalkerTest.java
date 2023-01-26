@@ -19,6 +19,7 @@ import sql.SQLSelectParserParser.Predicand_valueContext;
 import sql.SQLSelectParserParser.Query_valueContext;
 import sql.SQLSelectParserParser.SqlContext;
 import sql.SQLSelectParserParser.Tuple_valueContext;
+import sql.SQLSelectParserParser.Values_statement_endContext;
 
 public class SqlParseEventWalkerTest {
 	// *********************************
@@ -7643,7 +7644,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runTupleParsertest(sql, parser);
 		
 		
-		Assert.assertEquals("AST is wrong", "{TUPLE={select={1={column={name=*, table_ref=*}}}, from={table={schema=schema1, alias=null, table=emp_sales}}}}",
+		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={schema=schema1, alias=null, table=emp_sales}}, select={1={column={name=*, table_ref=*}}}}}",
 				extractor.getSqlTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
@@ -7894,6 +7895,163 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 				extractor.getSymbolTable().toString());
 	}
 	
+	// **********************   Values clause parse development
+	
+	
+
+		@Test
+		public void valuesStatementAloneTest() {
+			
+			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) ";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getSqlTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}, def_values0={values={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}, interface={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}}, unnamed=values0}",
+					extractor.getSymbolTable().toString());
+		}
+
+		@Test
+		public void valuesStatementAsClauseTest() {
+			
+			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{VALUES={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getSqlTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}, def_values0={source={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}, interface={$1=[@2,9:9='(',<284>,1:9], $2=[@2,9:9='(',<284>,1:9], $3=[@2,9:9='(',<284>,1:9]}}, source=values0}",
+					extractor.getSymbolTable().toString());
+		}
+
+		@Test
+		public void valuesStatementAsClauseAndColumnsTest() {
+			
+			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source (col1, col2, col3)";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{VALUES={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getSqlTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}, def_values0={source={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}, interface={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}}, source=values0}",
+					extractor.getSymbolTable().toString());
+		}
+
+		@Test
+		public void subqueryInTupleVariableTest() {
+			
+			final String query = " (select col1, col2, col3 from source)";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runTupleParsertest(query, parser); 
+			
+		}
+		
+		@Test
+		public void valuesStatementWithAsClauseAndColumnsInTupleVariableTest() {
+				
+				final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source (col1, col2, col3)";
+				final SQLSelectParserParser parser = parse(query);
+				SqlParseEventWalker extractor =  runTupleParsertest(query, parser); 
+				
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{TUPLE={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getSqlTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}, def_values0={interface={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}, source={col2=[@23,57:60='col2',<327>,1:57], col3=[@25,63:66='col3',<327>,1:63], col1=[@21,51:54='col1',<327>,1:51]}}, source=values0}",
+					extractor.getSymbolTable().toString());
+		}
+
+		@Test
+		public void normalMultiTableTest() {
+			
+			final String query = " select source.col1, target.col2 from (select col1 from tab1) as source join (select col2 from tab2) as target";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+		}
+
+		@Test
+		public void multipleValuesStatementWithAsClauseInSelectTest() {
+			
+			final String query = " select source.col1, target.col2 from (values (1, 2, 'aaa')) as source (col1, col2, col3) join (values (92, 3, 'aaa')) as target ";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[col2, col1]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{query2={values0={col2=[@24,78:81='col2',<327>,1:78], col3=[@26,84:87='col3',<327>,1:84], col1=[@22,72:75='col1',<327>,1:72]}, values1={$1=[@31,103:103='(',<284>,1:103], $2=[@31,103:103='(',<284>,1:103], $3=[@31,103:103='(',<284>,1:103]}, def_values1={interface={$1=[@31,103:103='(',<284>,1:103], $2=[@31,103:103='(',<284>,1:103], $3=[@31,103:103='(',<284>,1:103]}, target={$1=[@31,103:103='(',<284>,1:103], $2=[@31,103:103='(',<284>,1:103], $3=[@31,103:103='(',<284>,1:103]}}, def_values0={source={col2=[@24,78:81='col2',<327>,1:78], col3=[@26,84:87='col3',<327>,1:84], col1=[@22,72:75='col1',<327>,1:72]}, interface={col2=[@24,78:81='col2',<327>,1:78], col3=[@26,84:87='col3',<327>,1:84], col1=[@22,72:75='col1',<327>,1:72]}}, source=values0, interface={col2={column={name=col2, table_ref=target}}, col1={column={name=col1, table_ref=source}}}, target=values1}}",
+					extractor.getSymbolTable().toString());
+			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=source}}, 2={column={name=col2, table_ref=target}}}, from={join={1={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}}}}, 2={join=join}, 3={values={alias=target, matrix={1={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}}}",
+					extractor.getSqlTree().toString());
+		}
+
+		@Test
+		public void valuesStatementWithAsClauseInSelectTest() {
+			
+			final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[*]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{query1={values0={*=[@1,8:8='*',<288>,1:8], $1=[@5,23:23='(',<284>,1:23], $2=[@5,23:23='(',<284>,1:23], $3=[@5,23:23='(',<284>,1:23]}, def_values0={source={$1=[@5,23:23='(',<284>,1:23], $2=[@5,23:23='(',<284>,1:23], $3=[@5,23:23='(',<284>,1:23]}, interface={*=[@1,8:8='*',<288>,1:8], $1=[@5,23:23='(',<284>,1:23], $2=[@5,23:23='(',<284>,1:23], $3=[@5,23:23='(',<284>,1:23]}}, source=values0, interface={*={column={name=*, table_ref=*}}}}}",
+					extractor.getSymbolTable().toString());
+			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
+					extractor.getSqlTree().toString());
+		}
+
+		@Test
+		public void valuesStatementWithAsClauseAndColumnsInSelectTest() {
+			
+			final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source (col1, col2, col3)";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[*]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{query1={values0={*=[@1,8:8='*',<288>,1:8], col2=[@26,71:74='col2',<327>,1:71], col3=[@28,77:80='col3',<327>,1:77], col1=[@24,65:68='col1',<327>,1:65]}, def_values0={source={col2=[@26,71:74='col2',<327>,1:71], col3=[@28,77:80='col3',<327>,1:77], col1=[@24,65:68='col1',<327>,1:65]}, interface={*=[@1,8:8='*',<288>,1:8], col2=[@26,71:74='col2',<327>,1:71], col3=[@28,77:80='col3',<327>,1:77], col1=[@24,65:68='col1',<327>,1:65]}}, source=values0, interface={*={column={name=*, table_ref=*}}}}}",
+					extractor.getSymbolTable().toString());
+			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
+					extractor.getSqlTree().toString());
+		}
+		
+		
+		// END OF VALUES STATEMENT TESTING
+		
 	// *****************************
 	// COMMON TEST METHODS
 
@@ -8112,6 +8270,39 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		}
 	}
 
+
+	
+	private SqlParseEventWalker runValuesStatementEndParsertest(final String inlist_string, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Values_statement_endContext tree = parser.values_statement_end();
+			
+	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
+	        for(ANTLRErrorListener i: errorListeners) {
+	        	if (i instanceof SQLWalkerErrorListener) {
+	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	               System.out.println(obj.toString());
+	        }}
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			Assert.assertEquals("Expected no failures with " + inlist_string, 0, numErrors);
+
+			SqlParseEventWalker extractor = new SqlParseEventWalker();
+			ParseTreeWalker.DEFAULT.walk(extractor, tree);
+			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			return extractor;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + inlist_string);
+			return null;
+		}
+	}
+
+	
 	private SqlParseEventWalker runQueryParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
