@@ -360,6 +360,7 @@ table_primary
   : table_or_query_name as_clause?
   | subquery as_clause? 
   | variable_identifier as_clause
+  | values_statement_primary
   ;
 
 // Used ONLY in the TUPLE Variable Substitution end point
@@ -367,6 +368,7 @@ tuple_primary
   : table_or_query_name
   | subquery
   | variable_identifier
+  | fully_defined_values_statement
   ;
 
 table_or_query_name
@@ -1074,7 +1076,49 @@ in_value_list
 
 /*
 ===============================================================================
-  8.7 <null predicate>
+  ( VALUES ( <expr> [ , <expr> [ , ... ] ] ) [ , ( ... ) ] ) [ [ AS ] <table_alias> [ ( <column_alias> [, ... ] ) ] ]
+  * 
+  * Values statement can be used wherever a TUPLE can be referenced
+  *
+  *
+===============================================================================
+*/
+// Used only for Values end points
+values_statement_end
+  : values_statement_primary EOF;
+  
+values_statement_primary
+  : fully_defined_values_statement
+  | aliased_values_statement
+  | values_statement
+  ;
+
+fully_defined_values_statement 
+  : values_statement as_clause values_columns
+  ;
+
+aliased_values_statement 
+  : values_statement as_clause
+  ;
+
+values_statement
+  :  LEFT_PAREN VALUES values_matrix RIGHT_PAREN
+  ;
+  
+values_matrix
+  : values_row ( COMMA values_row)*
+  ;
+  
+values_row
+  : LEFT_PAREN in_value_list RIGHT_PAREN
+  ;
+  
+values_columns
+  : (LEFT_PAREN column_reference_list RIGHT_PAREN)
+  ;
+/*
+===============================================================================
+  <null predicate>
 
   Specify a test for a null value.
 ===============================================================================
