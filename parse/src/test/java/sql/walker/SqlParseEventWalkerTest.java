@@ -7901,7 +7901,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		@Test
 		public void valuesStatementAloneTest() {
-			
 			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) ";
 			final SQLSelectParserParser parser = parse(query);
 			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
