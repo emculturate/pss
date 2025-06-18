@@ -1,4 +1,4 @@
-package pss.parse;
+package puml;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
@@ -11,7 +11,7 @@ import junit.framework.TestSuite;
 import puml3.PUML3Parser;
 import puml3.PUML3Parser.EquationContext;
 import puml3.PUML3Lexer;
-import pss.special.MyListener;
+import puml.special.MyListener;
 
 /**
  * Unit test for simple App.

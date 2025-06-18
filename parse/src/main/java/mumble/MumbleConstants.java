@@ -1,4 +1,4 @@
-package mumble.sql;
+package mumble;
 
 public final class MumbleConstants {
 

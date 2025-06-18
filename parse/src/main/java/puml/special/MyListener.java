@@ -1,4 +1,4 @@
-package pss.special;
+package puml.special;
 
 import puml3.PUML3BaseListener;
 import puml3.PUML3Parser;

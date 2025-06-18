@@ -11,6 +11,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
 
+import puml.treehandler.ConstructSqlTreehandler;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.SqlContext;

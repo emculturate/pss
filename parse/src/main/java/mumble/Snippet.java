@@ -1,7 +1,7 @@
 /**
  * 
  */
-package mumble.sql;
+package mumble;
 
 import java.util.HashMap;
 import java.util.HashSet;

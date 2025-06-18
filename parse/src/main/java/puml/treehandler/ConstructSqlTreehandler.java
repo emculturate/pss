@@ -1,4 +1,4 @@
-package puml;
+package puml.treehandler;
 
 import java.util.Map;
 

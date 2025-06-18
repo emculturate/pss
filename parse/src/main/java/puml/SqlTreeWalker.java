@@ -3,6 +3,8 @@ package puml;
 import java.util.HashMap;
 import java.util.Map;
 
+import puml.treehandler.AbstractSqlTreeHandler;
+
 public class SqlTreeWalker {
 
 	/**
