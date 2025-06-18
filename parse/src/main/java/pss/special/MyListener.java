@@ -1,7 +1,7 @@
 package pss.special;
 
-import pss.parse.PUML3BaseListener;
-import pss.parse.PUML3Parser;
+import puml3.PUML3BaseListener;
+import puml3.PUML3Parser;
 
 public class MyListener extends PUML3BaseListener {
 

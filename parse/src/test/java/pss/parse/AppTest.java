@@ -8,7 +8,9 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import pss.parse.PUML3Parser.EquationContext;
+import puml3.PUML3Parser;
+import puml3.PUML3Parser.EquationContext;
+import puml3.PUML3Lexer;
 import pss.special.MyListener;
 
 /**

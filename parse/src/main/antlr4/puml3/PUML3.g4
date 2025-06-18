@@ -6,7 +6,7 @@ language= Java;
 // Java acion, ehods, tmstadditions
 
 @header {
-package pss.parse;
+package puml3;
 
 }
 
@@ -19,7 +19,7 @@ package pss.parse;
 
 
 // BOOLEAN CONDITIONS
-condition 
+condition
 	:	condition_statement
 	;
 	
@@ -33,26 +33,25 @@ and_condition_statement
 
 
 negative_condition_statement
-	:	NOT condition_parenthetical
-	|	condition_parenthetical
-	;
+	:	NOT  condition_parenthetical					# NEGATIVE_CONDITION_STMT
+	|	condition_parenthetical						# CONDITION_STMT	;
 	
 condition_parenthetical
-	:	condition_expression
-	|	LEFT_PARA condition_statement RIGHT_PARA
+	:	condition_expression						# CONDITION_EXP
+	|	LEFT_PARA condition_statement RIGHT_PARA 	# PARENTHETICAL_CONDITION
 	;
 	
 condition_expression
 	:	truth_value	
 	|	if_function_call
 	|	equation_formula boolean_comparator equation_formula
-	|	boolean_function_call equation_formula
-	|	unit_boolean_comparator equation_formula	
+	|	boolean_function_call 
+	|	equation_formula unit_boolean_comparator	
 
 	;
 
 unit_boolean_comparator
-	:	IS_NULL | IS_NOT_NULL
+	:	IS_NULL | IS_NOT_NULL 
 	;
 	
 truth_value	:	TRUE | FALSE
@@ -63,19 +62,19 @@ equation
 	:	 equation_formula;
 	
 equation_formula
-	:	multdiv_equation_formula add_sub_operator multdiv_equation_formula 
+	:	multdiv_equation_formula (add_sub_operator multdiv_equation_formula)* 
 	;
 	
 multdiv_equation_formula
-	:	power_equation_formula mult_div_operator power_equation_formula 
+	:	power_equation_formula (mult_div_operator power_equation_formula)* 
 	;
 
 power_equation_formula
-	:	string_equation_formula power_operator string_equation_formula 
+	:	string_equation_formula (power_operator string_equation_formula)* 
 	;
 
 string_equation_formula
-	:	equation_parenthetical string_operator equation_parenthetical 
+	:	equation_parenthetical (string_operator equation_parenthetical)* 
 	;
 
 equation_parenthetical
@@ -83,6 +82,16 @@ equation_parenthetical
 	|	expression_term							# BARE_EXPRESSION
 	;
 
+
+expression_term
+	:	number_term
+	|	string_constant
+	|	puml_builtin
+	|	generic_reference
+	|	function_call
+	|	if_function_call
+	//|	condition_statement -- an equation formula should be resolvable to a TRUE FALSE condition, but this makes the grammar left recursive...
+	;
 
 // FUNCTION CALLS
 
@@ -96,8 +105,8 @@ if_function_call
 	;
 
 boolean_function_call
-	:	boolean_function_id
-//	|	if_function_call
+	:	boolean_function_id  LEFT_PARA (bound_function_argument) RIGHT_PARA 
+	//|	if_function_call
 	;
 
 bound_function_argument 
@@ -105,15 +114,6 @@ bound_function_argument
 	|	equation_formula
 	;
 	
-
-expression_term
-	:	number_term
-	|	string_constant
-	|	puml_builtin
-	|	generic_reference
-	|	function_call
-	|	if_function_call
-	;
 
 lookup_var_ref
 	:	transformation_ref DOT generic_reference DOT generic_reference # TRANSREF
@@ -136,7 +136,7 @@ puml_builtin
 	;
 	
 boolean_function_id
-	:	IS_DATE | IS_NUMBER | IS_SPACES | ISNULL | IS_EMPTY | IS_NOT_EMPTY		
+	:	IS_DATE | IS_NUMBER | IS_SPACES | IS_NULL | IS_EMPTY | IS_NOT_EMPTY		
 	;
 	
 lookup_function_id
@@ -175,7 +175,12 @@ modulo		:	MOD;
 power		: 	HAT;
 
 
-boolean_comparator	:	equals | not_equals | less_than | less_or_equal | greater_than | greater_or_equal | CONTAINS | ENDS_WITH | STARTS_WITH | MATCHES | NOT_CONTAINS | NOT_ENDS_WITH | NOT_STARTS_WITH | NOT_MATCHES;
+boolean_comparator	
+	:	equals | not_equals | less_than | less_or_equal 
+	| greater_than | greater_or_equal 
+	| CONTAINS | ENDS_WITH | STARTS_WITH | MATCHES 
+	| NOT_CONTAINS | NOT_ENDS_WITH | NOT_STARTS_WITH | NOT_MATCHES
+	;
 
 // boolean operators
 equals		:	EQU;
@@ -198,8 +203,8 @@ number
 	;
 	
 generic_reference
-	//:	(PUML_ID) -> ^(VARIABLE_REF PUML_ID)
-	:	(BRCKT_ID)  # ATTR_REF
+	:	(BRCKT_ID)  	# ATTR_REF
+	|   PUML_ID			# VAR_REF
 	;
 
 string_constant 
@@ -327,7 +332,6 @@ NOT_STARTS_WITH	: ('N'|'n')('O'|'o')('T'|'t')' '+('S'|'s')('T'|'t')('A'|'a')('R'
 
 IS_EMPTY	: ('I'|'i')('S'|'s')' '+('E'|'e')('M'|'m')('P'|'p')('T'|'t')('Y'|'y');
 IS_NOT_EMPTY: ('I'|'i')('S'|'s')' '+('N'|'n')('O'|'o')('T'|'t')' '+('E'|'e')('M'|'m')('P'|'p')('T'|'t')('Y'|'y');
-ISNULL 		: ('I'|'i')('S'|'s')('N'|'n')('U'|'u')('L'|'l')('L'|'l');
 IS_NULL 	: ('I'|'i')('S'|'s')' '+('N'|'n')('U'|'u')('L'|'l')('L'|'l');
 IS_NOT_NULL	: ('I'|'i')('S'|'s')' '+('N'|'n')('O'|'o')('T'|'t')' '+('N'|'n')('U'|'u')('L'|'l')('L'|'l');
 
@@ -356,25 +360,25 @@ PUML_ID
 	:	('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_')*
 	;
 
-QUOTED_CONSTANT
-	: SINGLE_QUOTE ()* SINGLE_QUOTE 
-	;
-
 STRING_VALUE 
 	:	'"'('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' '|'|'|'['|']'|'+')*'"'
+	;
+
+QUOTED_CONSTANT
+	: SINGLE_QUOTE (.)*? SINGLE_QUOTE 
 	;
 
 // skip these
 
 COMMENT
-    :   '--' ~('\n'|'\r')* ((('\r')*'\n')+ | EOF ) //{$channel=HIDDEN;}
+    :   '--' ~('\n'|'\r')* ((('\r')*'\n')+ | EOF ) -> skip
     ;
 
 WS  :   ( ' '
         | '\t'
         | '\r'
         | '\n'
-        ) //{$channel=HIDDEN;}
+        ) -> skip
     ;
 
 //Reusable fragments
@@ -387,7 +391,7 @@ HEX_DIGIT : ('0'..'9'|'a'..'f'|'A'..'F') ;
 
 fragment
 ESC_SEQ
-    :   '\\' ('b'|'t'|'n'|'f'|'r'|'\"'|'\''|'\\')
+	:   '\\' ('b'|'t'|'n'|'f'|'r'|'"'|'\''|'\\')
     |   UNICODE_ESC
     |   OCTAL_ESC
     ;

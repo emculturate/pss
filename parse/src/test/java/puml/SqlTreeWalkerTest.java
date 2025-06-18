@@ -50,7 +50,7 @@ public class SqlTreeWalkerTest {
 				+ " WHERE sgbstdn_levl_code = 'UG' GROUP BY sgbstdn_pidm "
 				+ " ) undergradOnly ON undergradOnly.sgbstdn_pidm = spriden.spriden_pidm "
 				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi, TERM_CODE_ADMIT "
-				+ " HAVING max(max_term) >= 201310 ";
+				+ " HAVING max(max_term) >!= 201310 ";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = new SqlParseEventWalker();

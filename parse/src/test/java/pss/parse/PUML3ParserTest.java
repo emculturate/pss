@@ -5,8 +5,11 @@ import java.util.List;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
+import puml3.PUML3Parser;
+import puml3.PUML3Lexer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -146,7 +149,7 @@ public class PUML3ParserTest {
 			try {
 				// There should be zero errors
 				parser.condition();
-				final int numErrors = parser.getNumberOfSyntaxErrors();
+				final int numErrors = parser.getNumberOfSyntaxErrors(); 
 				Assert.assertEquals("Expected no failures with " + cond, numErrors, 0);
 			} catch (RecognitionException e) {
 				System.err.println("Exception parsing cond: " + cond);
@@ -314,7 +317,7 @@ public class PUML3ParserTest {
 	}
 
 	private static final PUML3Parser parse(final String condition) {
-		CharStream input = new ANTLRInputStream(condition);
+		CharStream input = CharStreams.fromString(condition);
 		PUML3Lexer lexer = new PUML3Lexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		PUML3Parser parser = new PUML3Parser(tokens);
