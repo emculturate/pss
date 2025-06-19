@@ -1,103 +1,23 @@
 package sql.walker;
+/*
+ * SqlParseEventWalker Class Purpose
+ * ---------------------------------
+ * This class is a listener-based SQL parser implementation that builds an abstract syntax tree (AST)
+ * representation of SQL queries. It extends SQLSelectParserBaseListener and processes events triggered
+ * during the parsing of SQL text. The parser converts the SQL structure into a nested HashMap-based 
+ * tree representation called a "Mumble AST" that can be easily manipulated programmatically.
+ * 
+ * Key Features:
+ * 1. Constructs a hierarchical map representation of SQL statements
+ * 2. Maintains symbol tables for identifiers, columns, and tables
+ * 3. Tracks substitution variables for parameterized queries
+ * 4. Supports nested queries, joins, and complex expressions
+ * 5. Creates data dictionaries mapping tables to their columns
+ * 6. Provides methods to retrieve and manipulate the resulting SQL AST
+ */
 
-import static mumble.sql.MumbleConstants.PSS_ALIAS_KEY;
-import static mumble.sql.MumbleConstants.PSS_AND_KEY;
-import static mumble.sql.MumbleConstants.PSS_ASSIGNMENTS_KEY;
-import static mumble.sql.MumbleConstants.PSS_BETWEEN_KEY;
-import static mumble.sql.MumbleConstants.PSS_BRACKET_DIRECTION_KEY;
-import static mumble.sql.MumbleConstants.PSS_BRACKET_FRAME_KEY;
-import static mumble.sql.MumbleConstants.PSS_CALCULATION_KEY;
-import static mumble.sql.MumbleConstants.PSS_CASE_KEY;
-import static mumble.sql.MumbleConstants.PSS_CLAUSES_KEY;
-import static mumble.sql.MumbleConstants.PSS_COLUMN_KEY;
-import static mumble.sql.MumbleConstants.PSS_COLUMNS_KEY;
-import static mumble.sql.MumbleConstants.PSS_COLUMN_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_CONCATENATE_KEY;
-import static mumble.sql.MumbleConstants.PSS_CONDITION_KEY;
-import static mumble.sql.MumbleConstants.PSS_CONDITION_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_DATABASE_NAME_KEY;
-import static mumble.sql.MumbleConstants.PSS_DATATYPE_KEY;
-import static mumble.sql.MumbleConstants.PSS_ELSE_KEY;
-import static mumble.sql.MumbleConstants.PSS_FOLLOWING_KEY;
-import static mumble.sql.MumbleConstants.PSS_FROM_KEY;
-import static mumble.sql.MumbleConstants.PSS_FUNCTION_KEY;
-import static mumble.sql.MumbleConstants.PSS_FUNCTION_NAME_KEY;
-import static mumble.sql.MumbleConstants.PSS_GROUPBY_KEY;
-import static mumble.sql.MumbleConstants.PSS_HAVING_KEY;
-import static mumble.sql.MumbleConstants.PSS_INSERT_KEY;
-import static mumble.sql.MumbleConstants.PSS_INTERSECT_KEY;
-import static mumble.sql.MumbleConstants.PSS_ILIKE_ANY_KEY;
-import static mumble.sql.MumbleConstants.PSS_IN_KEY;
-import static mumble.sql.MumbleConstants.PSS_IN_LIST_KEY;
-import static mumble.sql.MumbleConstants.PSS_IN_LIST_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_ITEM_KEY;
-import static mumble.sql.MumbleConstants.PSS_JOIN_EXTENSION_KEY;
-import static mumble.sql.MumbleConstants.PSS_JOIN_EXTENSION_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_JOIN_KEY;
-import static mumble.sql.MumbleConstants.PSS_JOIN_ON_KEY;
-import static mumble.sql.MumbleConstants.PSS_LEFT_FACTOR_KEY;
-import static mumble.sql.MumbleConstants.PSS_LENGTH_KEY;
-import static mumble.sql.MumbleConstants.PSS_LIKE_ANY_KEY;
-import static mumble.sql.MumbleConstants.PSS_LIKE_ANY_LIST_KEY;
-import static mumble.sql.MumbleConstants.PSS_LIMIT_KEY;
-import static mumble.sql.MumbleConstants.PSS_LIST_KEY;
-import static mumble.sql.MumbleConstants.PSS_LITERAL_KEY;
-import static mumble.sql.MumbleConstants.PSS_LOOKUP_KEY;
-import static mumble.sql.MumbleConstants.PSS_MATRIX_KEY;
-import static mumble.sql.MumbleConstants.PSS_NAME_KEY;
-import static mumble.sql.MumbleConstants.PSS_NOT_IN_LIST_KEY;
-import static mumble.sql.MumbleConstants.PSS_NOT_LIKE_ANY_LIST_KEY;
-import static mumble.sql.MumbleConstants.PSS_NULL_HANDLING_KEY;
-import static mumble.sql.MumbleConstants.PSS_NULL_LITERAL_KEY;
-import static mumble.sql.MumbleConstants.PSS_NULL_ORDER_KEY;
-import static mumble.sql.MumbleConstants.PSS_OFFSET_KEY;
-import static mumble.sql.MumbleConstants.PSS_OPERATOR_KEY;
-import static mumble.sql.MumbleConstants.PSS_ORDERBY_KEY;
-import static mumble.sql.MumbleConstants.PSS_OR_KEY;
-import static mumble.sql.MumbleConstants.PSS_OVER_KEY;
-import static mumble.sql.MumbleConstants.PSS_PARAMETERS_KEY;
-import static mumble.sql.MumbleConstants.PSS_PARENTHESES_KEY;
-import static mumble.sql.MumbleConstants.PSS_PARTITION_BY_KEY;
-import static mumble.sql.MumbleConstants.PSS_PARTS_KEY;
-import static mumble.sql.MumbleConstants.PSS_PRECEDING_KEY;
-import static mumble.sql.MumbleConstants.PSS_PRECISION_KEY;
-import static mumble.sql.MumbleConstants.PSS_PREDICAND_KEY;
-import static mumble.sql.MumbleConstants.PSS_PREDICAND_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_PUML_CONSTANT_KEY;
-import static mumble.sql.MumbleConstants.PSS_QUALIFIER_KEY;
-import static mumble.sql.MumbleConstants.PSS_QUERY_KEY;
-import static mumble.sql.MumbleConstants.PSS_QUERY_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_RANGE_BEGIN_KEY;
-import static mumble.sql.MumbleConstants.PSS_RANGE_END_KEY;
-import static mumble.sql.MumbleConstants.PSS_RETURNING_KEY;
-import static mumble.sql.MumbleConstants.PSS_RIGHT_FACTOR_KEY;
-import static mumble.sql.MumbleConstants.PSS_ROW_KEY;
-import static mumble.sql.MumbleConstants.PSS_SCALE_KEY;
-import static mumble.sql.MumbleConstants.PSS_SCHEMA_KEY;
-import static mumble.sql.MumbleConstants.PSS_SELECT_DIRECTION_KEY;
-import static mumble.sql.MumbleConstants.PSS_SELECT_KEY;
-import static mumble.sql.MumbleConstants.PSS_SET_KEY;
-import static mumble.sql.MumbleConstants.PSS_SORT_ORDER_KEY;
-import static mumble.sql.MumbleConstants.PSS_SQL_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_SUBSTITUTION_KEY;
-import static mumble.sql.MumbleConstants.PSS_SYMMETRY_KEY;
-import static mumble.sql.MumbleConstants.PSS_TABLE_KEY;
-import static mumble.sql.MumbleConstants.PSS_TABLE_REF_KEY;
-import static mumble.sql.MumbleConstants.PSS_THEN_KEY;
-import static mumble.sql.MumbleConstants.PSS_TO_KEY;
-import static mumble.sql.MumbleConstants.PSS_TRIM_CHARACTER_KEY;
-import static mumble.sql.MumbleConstants.PSS_TUPLE_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_TYPE_KEY;
-import static mumble.sql.MumbleConstants.PSS_UNION_KEY;
-import static mumble.sql.MumbleConstants.PSS_UNKNOWN_KEY;
-import static mumble.sql.MumbleConstants.PSS_UPDATE_KEY;
-import static mumble.sql.MumbleConstants.PSS_VALUES_TREE_KEY;
-import static mumble.sql.MumbleConstants.PSS_VALUES_KEY;
-import static mumble.sql.MumbleConstants.PSS_VALUE_KEY;
-import static mumble.sql.MumbleConstants.PSS_WHEN_KEY;
-import static mumble.sql.MumbleConstants.PSS_WHERE_KEY;
-import static mumble.sql.MumbleConstants.PSS_WINDOW_FUNCTION_KEY;
-import static mumble.sql.MumbleConstants.PSS_WITH_KEY;
+import static mumble.MumbleConstants.*;
+
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -110,12 +30,17 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import mumble.sql.Snippet;
+import mumble.Snippet;
 import sql.SQLSelectParserBaseListener;
 import sql.SQLSelectParserParser;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
- * Base Parser Listener and creates a nested Hashmap Abstract Tree of the SQL
+ * Base Parser Listener and creates a nested Hashmap Abstract Tree of the SQL.
+ * 
+ * As the Parser is called to parse a string, it will send events to this class for each recognized
+ * statement in the grammar. This class contains individual methods for each type of event, pre- and -post- 
+ * encounter by the Parser and it uses the local information from the parse as well as possible children
+ * collected into the growing Mumble Abstract Syntax Tree (AST) to build a nested Map structure.
  * 
  * @author geoffreyhowe
  *
@@ -267,7 +192,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = null;
 		if (symbolTable != null) {
 			for (String key : symbolTable.keySet()) {
-				if (key.equals(PSS_WITH_KEY)) {
+				if (key.equals(MUMBLE_WITH_KEY)) {
 				} else {
 					hold = (HashMap<String, Object>) symbolTable.get(key);
 					break;
@@ -296,22 +221,54 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	// Other Methods
 
 	/**
+	 * Method checks with the level of trace indicated by the calling method
+	 * and if the trace is enabled, it will print the trace to the console.
+	 * This is an in-class built logging capability used for debugging only.
+	 * 
 	 * @param trace
 	 */
 	private void showTrace(Integer traceType, Object trace) {
-		if (traceType == parseTrace && showParse)
+		if (traceType.equals(parseTrace) && showParse)
 			System.out.println(trace);
-		if (traceType == symbolTrace && showSymbols)
+		if (traceType.equals(symbolTrace) && showSymbols)
 			System.out.println(trace);
-		if (traceType == resultTrace && showResults)
+		if (traceType.equals(resultTrace) && showResults)
 			System.out.println(trace);
-		if (traceType == otherTrace && showOther)
+		if (traceType.equals(otherTrace) && showOther)
 			System.out.println(trace);
 	}
 
-	/**
-	 * Multi-stack management operations for recursive clauses
-	 */
+/**
+ * Multiple Stack Operations Explained
+ * ----------------------------------
+ * This parser uses multiple stacks to handle the recursive nature of SQL grammar:
+ * 
+ * 1. stackTree/pushStack/popStack: Manages recursion depth for grammar rules
+ *    - Each rule type can appear at multiple nesting levels in a query
+ *    - Stack operations track which level of a particular rule we're processing
+ *    - Allows the parser to correctly associate child elements with their parent nodes
+ * 
+ * 2. stackSymbols/symbolTable/pushSymbolTable/popSymbolTable: Manages symbol scope
+ *    - SQL has complex scoping rules (subqueries create new scopes)
+ *    - When entering a subquery, current symbols are pushed onto a stack
+ *    - A new symbol table is created for the subquery's scope
+ *    - When exiting, the parent scope is restored with relevant additions
+ *
+ * 3. flagMap stacks: Preserves state across recursive processing
+ *    - Flags like unionClauseFound track the parser's state
+ *    - When processing nested structures, current state needs to be preserved
+ *    - pushFlagMap/popFlagMap save and restore these state variables
+ * 
+ * The multi-stack approach is essential because SQL has:
+ * - Deep nesting (queries within queries)
+ * - Complex scoping rules (column visibility differs by context)
+ * - Repeated rule patterns at different nesting levels
+ * - Context-sensitive interpretation (same syntax means different things in different places)
+ * 
+ * Without these stack operations, the parser couldn't distinguish between identical
+ * structures at different nesting levels or maintain proper symbol resolution across
+ * the complex hierarchical structure of SQL queries.
+ */
 
 	private Integer pushStack(Integer ruleIndex) {
 		Integer context = stackTree.get(ruleIndex);
@@ -503,10 +460,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
-		if (subMap.containsKey(PSS_SUBSTITUTION_KEY)) {
-			Map<String, Object> hold = (Map<String, Object>) subMap.get(PSS_SUBSTITUTION_KEY);
-			if (!hold.containsKey(PSS_TYPE_KEY)) {
-				hold.put(PSS_TYPE_KEY, type);
+		if (subMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Map<String, Object> hold = (Map<String, Object>) subMap.get(MUMBLE_SUBSTITUTION_KEY);
+			if (!hold.containsKey(MUMBLE_TYPE_KEY)) {
+				hold.put(MUMBLE_TYPE_KEY, type);
 				substitutionsMap.put((String) hold.get("name"), type);
 			}
 		}
@@ -586,14 +543,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@SuppressWarnings("unchecked")
 	private void consolidateValuesStatementSymbolTable(String alias) {
 		
-		if (symbolTable.keySet().contains(PSS_UNKNOWN_KEY)) {
-			Map<String, Object> unknownSet = (HashMap<String, Object>)symbolTable.remove(PSS_UNKNOWN_KEY);
-			if (symbolTable.keySet().contains(PSS_VALUES_KEY)) {
-				Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(PSS_VALUES_KEY);
+		if (symbolTable.keySet().contains(MUMBLE_UNKNOWN_KEY)) {
+			Map<String, Object> unknownSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_UNKNOWN_KEY);
+			if (symbolTable.keySet().contains(MUMBLE_VALUES_KEY)) {
+				Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
 			}
 			symbolTable.put(alias, unknownSet);
 		} else  {
-			Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(PSS_VALUES_KEY);
+			Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
 			symbolTable.put(alias, valuesSet);
 		}
 	}
@@ -614,17 +571,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
 		else {
 			HashMap<String, Object> node = (HashMap<String, Object>) item;
-			if (node.containsKey(PSS_SUBSTITUTION_KEY)) {
+			if (node.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 
-				node = (HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY);
-				if (node.get(PSS_TYPE_KEY).equals(PSS_COLUMN_KEY))
+				node = (HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY);
+				if (node.get(MUMBLE_TYPE_KEY).equals(MUMBLE_COLUMN_KEY))
 					// Item is a Column Substitution Variable
 					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
 							(HashMap<String, Object>) item);
 				else
 					// Item is a Predicate Substitution Variable
 					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
-			} else if (node.containsKey(PSS_COLUMN_KEY)) {
+			} else if (node.containsKey(MUMBLE_COLUMN_KEY)) {
 				// Item is a Column and should already be in the Symbol Table
 			} else
 				// Item is a subquery with its own Symbol Table
@@ -647,15 +604,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			prefx = PSS_UNION_KEY;
+			prefx = MUMBLE_UNION_KEY;
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			prefx = PSS_INTERSECT_KEY;
+			prefx = MUMBLE_INTERSECT_KEY;
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac == null) {
-			prefx = PSS_VALUES_KEY;
+			prefx = MUMBLE_VALUES_KEY;
 			interfac = getInterfaceFromQuery(prefx);
 		}
 		if (interfac != null) {
@@ -849,7 +806,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_SQL_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_SQL_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);
@@ -866,7 +823,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_COLUMN_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_COLUMN_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -874,8 +831,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -910,7 +867,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_PREDICAND_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -918,8 +875,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -954,7 +911,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_IN_LIST_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_IN_LIST_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -962,8 +919,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -998,7 +955,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_CONDITION_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_CONDITION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -1006,8 +963,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1049,20 +1006,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() == 2) {
 			// Only VALUES statement with values and alias
 			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_VALUES_KEY);
+			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
 			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
 		
 		} else if (subMap.size() == 3) {
 			// Only VALUES statement with values alias and column list
 			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_VALUES_KEY);
+			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
 			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-			hold.put(PSS_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
+			hold.put(MUMBLE_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
 		} else {	
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 
-		sqlTree.put(PSS_TUPLE_TREE_KEY, item);
+		sqlTree.put(MUMBLE_TUPLE_TREE_KEY, item);
 		
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
@@ -1080,7 +1037,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_QUERY_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_QUERY_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
@@ -1088,8 +1045,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1123,7 +1080,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);
@@ -1149,25 +1106,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 //		} else if (subMap.size() == 2) {
 //			// Only VALUES statement with values and alias
 //			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_VALUES_KEY);
+//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
 //			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
 //		
 //		} else if (subMap.size() == 3) {
 //			// Only VALUES statement with values alias and column list
 //			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_VALUES_KEY);
+//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
 //			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-//			hold.put(PSS_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
+//			hold.put(MUMBLE_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
 //		} else {	
 //			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 //		}
 //		
-//		sqlTree.put(PSS_VALUES_TREE_KEY, item);
+//		sqlTree.put(MUMBLE_VALUES_TREE_KEY, item);
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PSS_VALUES_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(MUMBLE_VALUES_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);
@@ -1218,8 +1175,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> withList = (Map<String, Object>) subMap.remove("1");
 			Map<String, Object> query = (Map<String, Object>) subMap.remove("2");
 
-			subMap.put(PSS_WITH_KEY, withList);
-			subMap.put(PSS_QUERY_KEY, query);
+			subMap.put(MUMBLE_WITH_KEY, withList);
+			subMap.put(MUMBLE_QUERY_KEY, query);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -1270,16 +1227,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			subMap.put(alias, aliasMap);
 			// Add to symbol tree WITH subclause
-			if (symbolTable.containsKey(PSS_WITH_KEY)) {
-				Map<String, Object> with = (Map<String, Object>) symbolTable.remove(PSS_WITH_KEY);
+			if (symbolTable.containsKey(MUMBLE_WITH_KEY)) {
+				Map<String, Object> with = (Map<String, Object>) symbolTable.remove(MUMBLE_WITH_KEY);
 				with.put(alias, symbolTable);
 				symbolTable = new HashMap<String, Object>();
-				symbolTable.put(PSS_WITH_KEY, with);
+				symbolTable.put(MUMBLE_WITH_KEY, with);
 			} else {
 				Map<String, Object> with = new HashMap<String, Object>();
 				with.put(alias, symbolTable);
 				symbolTable = new HashMap<String, Object>();
-				symbolTable.put(PSS_WITH_KEY, with);
+				symbolTable.put(MUMBLE_WITH_KEY, with);
 			}
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -1325,7 +1282,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				HashMap<String, Object> value = (HashMap<String, Object>) obj;
 				Integer childKey = (Integer) (value).remove("Type");
 				if (childKey == null) {
-					if (value.containsKey(PSS_TABLE_KEY)) {
+					if (value.containsKey(MUMBLE_TABLE_KEY)) {
 						subMap.put("insert", value);
 					} else {
 						String nk = "query" + queryCount;
@@ -1337,7 +1294,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					if (childKey == (Integer) SQLSelectParserParser.RULE_column_reference_list) {
 						subMap.put("into", value);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
-						subMap.put(PSS_RETURNING_KEY, segment);
+						subMap.put(MUMBLE_RETURNING_KEY, segment);
 					} else {
 						showTrace(parseTrace, "Too Many Entries" + segment);
 					}
@@ -1351,7 +1308,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Special handling of queries with only one source: Move "unknown"
 		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(PSS_UNKNOWN_KEY);
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
 
 		Integer count = 0;
 		Integer tableCount = 0;
@@ -1370,8 +1327,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					holdTabRef = tab_ref;
 					count++;
 					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
-							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+							|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -1399,7 +1356,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						// into it
 						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
 					else
-						symbols.put(PSS_UNKNOWN_KEY, unks);
+						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
 				}
 			}
 		}
@@ -1407,7 +1364,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert")) || (tab_ref.startsWith("update"))
-						|| (tab_ref.startsWith(PSS_UNION_KEY)) || (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+						|| (tab_ref.startsWith(MUMBLE_UNION_KEY)) || (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1458,18 +1415,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else {
 					Object segment = value.remove(childKey.toString());
 					if (childKey == (Integer) SQLSelectParserParser.RULE_assignment_expression_list) {
-						subMap.put(PSS_ASSIGNMENTS_KEY, segment);
+						subMap.put(MUMBLE_ASSIGNMENTS_KEY, segment);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
 						if (((HashMap<String, Object>) segment).size() == 1) {
-							subMap.put(PSS_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
+							subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 						} else
-							subMap.put(PSS_FROM_KEY, segment);
+							subMap.put(MUMBLE_FROM_KEY, segment);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
 						HashMap<String, Object> item = (HashMap<String, Object>) segment;
 						item = (HashMap<String, Object>) item.remove("1");
-						subMap.put(PSS_WHERE_KEY, item);
+						subMap.put(MUMBLE_WHERE_KEY, item);
 					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
-						subMap.put(PSS_RETURNING_KEY, segment);
+						subMap.put(MUMBLE_RETURNING_KEY, segment);
 					} else {
 						showTrace(parseTrace, "Too Many Entries" + segment);
 					}
@@ -1483,7 +1440,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Special handling of queries with only one source: Move "unknown"
 		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(PSS_UNKNOWN_KEY);
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
 
 		Integer count = 0;
 		Integer tableCount = 0;
@@ -1500,8 +1457,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					hold.put(tab_ref, item);
 					holdTabRef = tab_ref;
 					count++;
-					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-							|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+							|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -1529,15 +1486,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						// into it
 						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
 					else
-						symbols.put(PSS_UNKNOWN_KEY, unks);
+						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
 				}
 			}
 		}
 		// TODO: Add TABLE references to Table Dictionary
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))
@@ -1588,24 +1545,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 2) {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			subMap.put(PSS_SET_KEY, left);
+			subMap.put(MUMBLE_SET_KEY, left);
 
 			Map<String, Object> right = (Map<String, Object>) subMap.remove("2");
-			subMap.put(PSS_TO_KEY, right);
+			subMap.put(MUMBLE_TO_KEY, right);
 
 			showTrace(parseTrace, "Assignment: " + subMap);
 
 			// Put target column symbol into update table's set and interface
-			Map<String, Object> unk = (HashMap<String, Object>) symbolTable.get(PSS_UNKNOWN_KEY);
-			String column = ((HashMap<String, String>) ((HashMap<String, Object>) left).get(PSS_COLUMN_KEY)).get("name");
+			Map<String, Object> unk = (HashMap<String, Object>) symbolTable.get(MUMBLE_UNKNOWN_KEY);
+			String column = ((HashMap<String, String>) ((HashMap<String, Object>) left).get(MUMBLE_COLUMN_KEY)).get("name");
 
 			String[] keys = new String[1];
 			keys = symbolTable.keySet().toArray(keys);
 
 			for (String key : keys) {
-				if (key.equals(PSS_UNKNOWN_KEY)) { // do nothing
+				if (key.equals(MUMBLE_UNKNOWN_KEY)) { // do nothing
 
-				} else if (key.equals(PSS_WITH_KEY)) { // do nothing
+				} else if (key.equals(MUMBLE_WITH_KEY)) { // do nothing
 
 				} else {
 					// must be the table
@@ -1658,13 +1615,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Case: " + item);
 			
 			// Add item to symbol table
-			Map<String, Object> values = (Map<String, Object>) item.get(PSS_VALUES_KEY);
+			Map<String, Object> values = (Map<String, Object>) item.get(MUMBLE_VALUES_KEY);
 			HashMap<String, Object> selectInterface = null;
-			String interfaceAlias = (String) values.get(PSS_ALIAS_KEY);
+			String interfaceAlias = (String) values.get(MUMBLE_ALIAS_KEY);
 
 			if (interfaceAlias == null) {
 				interfaceAlias = "unnamed";
-				selectInterface = (HashMap<String, Object>) symbolTable.get(PSS_VALUES_KEY);
+				selectInterface = (HashMap<String, Object>) symbolTable.get(MUMBLE_VALUES_KEY);
 
 			} else {
 				selectInterface = (HashMap<String, Object>) symbolTable.get("interface");
@@ -1684,7 +1641,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Symbol Table Construction
 			HashMap<String, Object> symbols = symbolTable;
 
-			String key = PSS_VALUES_KEY + queryCount;
+			String key = MUMBLE_VALUES_KEY + queryCount;
 			popSymbolTable("def_" + key, symbols);
 			queryCount++;
 
@@ -1710,15 +1667,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Variation 3: Contains an alias and a list of column name assignments
 				
 				Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-				Map<String, Object> vals = (Map<String, Object>) item.get(PSS_VALUES_KEY);
+				Map<String, Object> vals = (Map<String, Object>) item.get(MUMBLE_VALUES_KEY);
 				Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 				vals.putAll(aliasMap);
-				vals.put(PSS_COLUMNS_KEY,  subMap.remove("3"));
+				vals.put(MUMBLE_COLUMNS_KEY,  subMap.remove("3"));
 
 				subMap.putAll(item);
 
 				// Resolve Symbol Table, eliminate virtual references because this statement has an actual columns list.
-				consolidateValuesStatementSymbolTable((String) aliasMap.get(PSS_ALIAS_KEY));
+				consolidateValuesStatementSymbolTable((String) aliasMap.get(MUMBLE_ALIAS_KEY));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -1742,14 +1699,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() == 2) {
 				// Variation 2: Contains an alias
 				Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-				Map<String, Object> vals = (Map<String, Object>) item.get(PSS_VALUES_KEY);
+				Map<String, Object> vals = (Map<String, Object>) item.get(MUMBLE_VALUES_KEY);
 				Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 				vals.putAll(aliasMap);
 				
 				subMap.putAll(item);
 
 				// Resolve Symbol Table, eliminate virtual references because this statement has an actual columns list.
-				consolidateValuesStatementSymbolTable((String) aliasMap.get(PSS_ALIAS_KEY));
+				consolidateValuesStatementSymbolTable((String) aliasMap.get(MUMBLE_ALIAS_KEY));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -1778,7 +1735,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_VALUES_KEY, subMap);
+			item.put(MUMBLE_VALUES_KEY, subMap);
 			addToParent(parentRuleIndex, parentStackLevel, item);
 			showTrace(parseTrace, "Case: " + item);
 
@@ -1793,14 +1750,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 			subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_MATRIX_KEY, subMap);
+			item.put(MUMBLE_MATRIX_KEY, subMap);
 			
 			// Construct virtual column references from the first row in the values matrix 
 			Map<String, Object> row = (Map<String, Object>) subMap.get("1");
-			row = (Map<String, Object>) row.get(PSS_ROW_KEY);
+			row = (Map<String, Object>) row.get(MUMBLE_ROW_KEY);
 			for (int i = 1; i <= row.size(); i++) {
 				String ref = "$" + i;
-				collectSymbolTableItem(PSS_VALUES_KEY, ref, ctx.getStart());
+				collectSymbolTableItem(MUMBLE_VALUES_KEY, ref, ctx.getStart());
 			}
 			
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -1817,7 +1774,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 			subMap.remove("Type");
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			item.put(PSS_ROW_KEY, item.remove("list"));
+			item.put(MUMBLE_ROW_KEY, item.remove("list"));
 
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
 			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -1832,7 +1789,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 			subMap.remove("Type");
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			item.put(PSS_COLUMNS_KEY, item.remove("list"));
+			item.put(MUMBLE_COLUMNS_KEY, item.remove("list"));
 
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
 			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -1881,14 +1838,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitIntersected_query(@NotNull SQLSelectParserParser.Intersected_queryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, PSS_INTERSECT_KEY);
+		handleOperandList(ruleIndex, MUMBLE_INTERSECT_KEY);
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols = symbolTable;
 
 		if (intersectClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
-			String key = PSS_INTERSECT_KEY + queryCount;
+			String key = MUMBLE_INTERSECT_KEY + queryCount;
 			popSymbolTable(key, symbols);
 			queryCount++;
 		} else {
@@ -1917,12 +1874,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, null);
-			subMap.put(PSS_INTERSECT_KEY, item);
+			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
+			item.put(MUMBLE_QUALIFIER_KEY, null);
+			subMap.put(MUMBLE_INTERSECT_KEY, item);
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
 
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey("Type")) {
@@ -1930,10 +1887,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
-				item.put(PSS_QUALIFIER_KEY, hold);
+				item.put(MUMBLE_QUALIFIER_KEY, hold);
 			}
 			
-			subMap.put(PSS_INTERSECT_KEY, item);
+			subMap.put(MUMBLE_INTERSECT_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -1959,14 +1916,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitUnionized_query(@NotNull SQLSelectParserParser.Unionized_queryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, PSS_UNION_KEY);
+		handleOperandList(ruleIndex, MUMBLE_UNION_KEY);
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols = symbolTable;
 
 		if (unionClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
-			String key = PSS_UNION_KEY + queryCount;
+			String key = MUMBLE_UNION_KEY + queryCount;
 			popSymbolTable(key, symbols);
 			queryCount++;
 		} else {
@@ -1993,12 +1950,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, null);
-			subMap.put(PSS_UNION_KEY, item);
+			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
+			item.put(MUMBLE_QUALIFIER_KEY, null);
+			subMap.put(MUMBLE_UNION_KEY, item);
 		} else if (ctx.getChildCount() == 2) {
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_OPERATOR_KEY, subMap.remove("1"));
+			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
 
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey("Type")) {
@@ -2006,10 +1963,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
-				item.put(PSS_QUALIFIER_KEY, hold);
+				item.put(MUMBLE_QUALIFIER_KEY, hold);
 			}
 			
-			subMap.put(PSS_UNION_KEY, item);
+			subMap.put(MUMBLE_UNION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2058,7 +2015,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			HashMap<String, Object> item = new HashMap<String, Object>();
 
-			item.put(PSS_LOOKUP_KEY, subMap.remove("1"));
+			item.put(MUMBLE_LOOKUP_KEY, subMap.remove("1"));
 
 			subMap.put("1", item);
 			handleListItem(ruleIndex, parentRuleIndex);
@@ -2093,28 +2050,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Integer childKey = (Integer) (value).remove("Type");
 				Object segment = value.remove(childKey.toString());
 				if (childKey == (Integer) SQLSelectParserParser.RULE_select_list) {
-					subMap.put(PSS_SELECT_KEY, segment);
+					subMap.put(MUMBLE_SELECT_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier) {
 					subMap.putAll(value);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
 					if (((HashMap<String, Object>) segment).size() == 1) {
-						subMap.put(PSS_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
+						subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 					} else
-						subMap.put(PSS_FROM_KEY, segment);
+						subMap.put(MUMBLE_FROM_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put(PSS_WHERE_KEY, item);
+					subMap.put(MUMBLE_WHERE_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_groupby_clause) {
-					subMap.put(PSS_GROUPBY_KEY, segment);
+					subMap.put(MUMBLE_GROUPBY_KEY, segment);
 				} else if (childKey == SQLSelectParserParser.RULE_having_clause) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put(PSS_HAVING_KEY, item);
+					subMap.put(MUMBLE_HAVING_KEY, item);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
-					subMap.put(PSS_ORDERBY_KEY, segment);
+					subMap.put(MUMBLE_ORDERBY_KEY, segment);
 				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
-					subMap.put(PSS_LIMIT_KEY, segment);
+					subMap.put(MUMBLE_LIMIT_KEY, segment);
 				} else {
 					showTrace(parseTrace, "Too Many Entries" + segment);
 				}
@@ -2152,7 +2109,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String item = ctx.getChild(0).getText();
 		
 		Map<String, Object> subMap = new HashMap<String, Object>();
-		subMap.put(PSS_QUALIFIER_KEY, item);
+		subMap.put(MUMBLE_QUALIFIER_KEY, item);
 		subMap.put("Type", SQLSelectParserParser.RULE_set_qualifier);
 		
 		showTrace(parseTrace, "Qualifier: " + subMap);
@@ -2195,17 +2152,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 0) {
 			// Select Item did not have an Alias, construct one from options
 			showTrace(parseTrace, "Just One Item: " + item);
-			HashMap<String, Object> node = (HashMap<String, Object>) item.get(PSS_COLUMN_KEY);
+			HashMap<String, Object> node = (HashMap<String, Object>) item.get(MUMBLE_COLUMN_KEY);
 			if (node == null)
-				node = (HashMap<String, Object>) item.get(PSS_SUBSTITUTION_KEY);
+				node = (HashMap<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 			if (node != null)
-				if (node.containsKey(PSS_NAME_KEY))
+				if (node.containsKey(MUMBLE_NAME_KEY))
 					// Select Item is a column or substitution, use its name
-					interfaceAlias = (String) node.get(PSS_NAME_KEY);
-				else if (node.containsKey(PSS_SUBSTITUTION_KEY))
+					interfaceAlias = (String) node.get(MUMBLE_NAME_KEY);
+				else if (node.containsKey(MUMBLE_SUBSTITUTION_KEY))
 					// then Select Item is a COLUMN Substitution Variable, get
 					// the variable's name
-					interfaceAlias = (String) ((HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY)).get("name");
+					interfaceAlias = (String) ((HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY)).get("name");
 			if (interfaceAlias == null) {
 				// Select Item is a PREDICAND without a name, generate the next
 				// placeholder for the interface
@@ -2218,7 +2175,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Item and Alias: " + item);
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-			interfaceAlias = (String) aliasMap.get(PSS_ALIAS_KEY);
+			interfaceAlias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
 			((Map<String, Object>) item).putAll(aliasMap);
 		}
 		addToParent(parentRuleIndex, parentStackLevel, item);
@@ -2244,7 +2201,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + subMap);
 			String alias = (String) subMap.remove("1");
-			subMap.put(PSS_ALIAS_KEY, alias);
+			subMap.put(MUMBLE_ALIAS_KEY, alias);
 			showTrace(parseTrace, "Alias: " + alias + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -2271,20 +2228,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
-			item.put(PSS_TABLE_REF_KEY, "*");
-			item.put(PSS_NAME_KEY, "*");
+			item.put(MUMBLE_TABLE_REF_KEY, "*");
+			item.put(MUMBLE_NAME_KEY, "*");
 
-			collectSymbolTableItem(PSS_UNKNOWN_KEY, "*", ctx.getStart());
+			collectSymbolTableItem(MUMBLE_UNKNOWN_KEY, "*", ctx.getStart());
 
-			subMap.put(PSS_COLUMN_KEY, item);
+			subMap.put(MUMBLE_COLUMN_KEY, item);
 		} else if (ctx.getChildCount() == 3) {
 			showTrace(parseTrace, "Three entries: " + ctx.getText());
-			item.put(PSS_TABLE_REF_KEY, ctx.getChild(0).getText());
+			item.put(MUMBLE_TABLE_REF_KEY, ctx.getChild(0).getText());
 
-			collectSymbolTableItem(item.get(PSS_TABLE_REF_KEY), "*", ctx.getStart());
+			collectSymbolTableItem(item.get(MUMBLE_TABLE_REF_KEY), "*", ctx.getStart());
 
-			item.put(PSS_NAME_KEY, "*");
-			subMap.put(PSS_COLUMN_KEY, item);
+			item.put(MUMBLE_NAME_KEY, "*");
+			subMap.put(MUMBLE_COLUMN_KEY, item);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -2307,7 +2264,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// handle from clause with extension
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
 			if (subMap.containsKey("2"))
-				subMap.put(PSS_JOIN_EXTENSION_KEY, subMap.remove("2"));
+				subMap.put(MUMBLE_JOIN_EXTENSION_KEY, subMap.remove("2"));
 		}
 		handlePushDown(ruleIndex);
 	}
@@ -2330,7 +2287,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitTable_reference_list(@NotNull SQLSelectParserParser.Table_reference_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		handleOperandList(ruleIndex, PSS_JOIN_KEY);
+		handleOperandList(ruleIndex, MUMBLE_JOIN_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2362,7 +2319,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Special handling of queries with only one source: Move "unknown"
 		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(PSS_UNKNOWN_KEY);
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
 
 		Integer count = 0;
 		Integer tableCount = 0;
@@ -2381,8 +2338,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					holdTabRef = tab_ref;
 					count++;
 					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(PSS_UNION_KEY))
-							|| (tab_ref.startsWith(PSS_INTERSECT_KEY)) || (tab_ref.startsWith(PSS_VALUES_KEY))) {
+							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+							|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY)) || (tab_ref.startsWith(MUMBLE_VALUES_KEY))) {
 					} else {
 						tableCount++;
 						onlyTableName = tab_ref;
@@ -2410,7 +2367,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						// into it
 						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
 					else
-						symbols.put(PSS_UNKNOWN_KEY, unks);
+						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
 				}
 			}
 		}
@@ -2418,11 +2375,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) 
-						|| (tab_ref.startsWith(PSS_UNION_KEY))
-						|| (tab_ref.startsWith(PSS_INTERSECT_KEY))
-						|| (tab_ref.startsWith(PSS_VALUES_KEY))) {
+						|| (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))
+						|| (tab_ref.startsWith(MUMBLE_VALUES_KEY))) {
 //				}
-//				else if (tab_ref.startsWith(PSS_VALUES_KEY)) {
+//				else if (tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
 //					showTrace(parseTrace, "Symbol Tree: " + symbols);
 				} else {
 					String reference;
@@ -2461,28 +2418,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (ctx.getChildCount() == 1) {
 			item = (Map<String, Object>) subMap.remove("1");
-			if (item.keySet().contains(PSS_TABLE_KEY)) {
-				item.put(PSS_ALIAS_KEY, null);
+			if (item.keySet().contains(MUMBLE_TABLE_KEY)) {
+				item.put(MUMBLE_ALIAS_KEY, null);
 
-				Object table = item.get(PSS_TABLE_KEY);
+				Object table = item.get(MUMBLE_TABLE_KEY);
 				if (table != null) {
 					alias = table.toString();
 					collectSymbolTable(alias, table);
 
-					subMap.put(PSS_TABLE_KEY, item);
+					subMap.put(MUMBLE_TABLE_KEY, item);
 				} else {
 					alias = "unnamed";
 					Map<String, Object> aliasMap = new HashMap<String, Object>();
 					aliasMap.put(alias, alias);
-					Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, aliasMap, alias, item);
+					Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, aliasMap, alias, item);
 					if (!done)
 						done = collectQuerySymbolTable("insert", aliasMap, alias, item);
 					if (!done)
 						done = collectQuerySymbolTable("update", aliasMap, alias, item);
 					if (!done)
-						done = collectQuerySymbolTable(PSS_UNION_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_UNION_KEY, aliasMap, alias, item);
 					if (!done)
-						done = collectQuerySymbolTable(PSS_INTERSECT_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, aliasMap, alias, item);
 				}
 			} else { // VALUES STATEMENT can only happen in this instance
 				subMap.putAll(item);
@@ -2497,37 +2454,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					"tuple");
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-			alias = (String) aliasMap.get(PSS_ALIAS_KEY);
+			alias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
 			item.putAll(aliasMap);
 
 			// Try various alternatives
-			if (reference.containsKey(PSS_TABLE_KEY)) {
-				Object table = reference.get(PSS_TABLE_KEY);
+			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
+				Object table = reference.get(MUMBLE_TABLE_KEY);
 				item.putAll(reference);
 				collectSymbolTable(alias, table);
 				
-			} else if (reference.containsKey(PSS_SUBSTITUTION_KEY)) {
+			} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 				// Check for Substitution Variable
 				item.putAll(reference);
 				// Collect Symbol Table Reference
-				Map<String, Object> substitution = (Map<String, Object>) reference.get(PSS_SUBSTITUTION_KEY);
+				Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
 				collectSymbolTable(alias, substitution.get("name"));
 
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
-				item.put(PSS_QUERY_KEY, reference);
+				item.put(MUMBLE_QUERY_KEY, reference);
 				// Add the query to the symbol table tree 
-				Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
+				Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable(PSS_UPDATE_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable(PSS_UNION_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
 				if (!done)
-					done = collectQuerySymbolTable(PSS_INTERSECT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
 			}
 
-			subMap.put(PSS_TABLE_KEY, item);
+			subMap.put(MUMBLE_TABLE_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
@@ -2555,13 +2512,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					"tuple");
 
 		// Try various alternatives
-		if (reference.containsKey(PSS_TABLE_KEY)) {
-			Object table = reference.get(PSS_TABLE_KEY);
+		if (reference.containsKey(MUMBLE_TABLE_KEY)) {
+			Object table = reference.get(MUMBLE_TABLE_KEY);
 			symbolTable.put((String) table, new HashMap<String, Object>());
 			tableDictionaryMap.put((String) table, new HashMap<String, Object>());
-			subMap.put(PSS_TABLE_KEY, reference);
+			subMap.put(MUMBLE_TABLE_KEY, reference);
 
-		} else if (reference.containsKey(PSS_VALUES_KEY)) {
+		} else if (reference.containsKey(MUMBLE_VALUES_KEY)) {
 			
 			subMap.putAll(reference);
 			
@@ -2570,14 +2527,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// empty out symbol table
 			symbolTable = (HashMap<String, Object>) item;
 			// grab reference contents
-			item = (Map<String, Object>) reference.get(PSS_VALUES_KEY);
+			item = (Map<String, Object>) reference.get(MUMBLE_VALUES_KEY);
 			// get alias from values
-			alias=(String) item.get(PSS_ALIAS_KEY);
+			alias=(String) item.get(MUMBLE_ALIAS_KEY);
 			// set default alias if clause doesn't have one
 			if (alias == null)
 				alias = "unnamed";
 			// Construct new Symbol Table
-			String key = PSS_VALUES_KEY + queryCount;
+			String key = MUMBLE_VALUES_KEY + queryCount;
 			symbolTable.put(alias, key);
 			
 			HashMap<String, Object> queryBody =  new HashMap<String, Object>();
@@ -2592,9 +2549,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 //			TODO:??? convertSymbolTableToTableDictionary();
 			
-		} else if (reference.containsKey(PSS_SUBSTITUTION_KEY)) {
+		} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 			// Check for Substitution Variable
-			Map<String, Object> substitution = (Map<String, Object>) reference.get(PSS_SUBSTITUTION_KEY);
+			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
 			String name = (String) substitution.get("name");
 			symbolTable.put(name, new HashMap<String, Object>());
@@ -2602,17 +2559,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll(reference);
 
 		} else { // then it's a query, add it to the tree no matter what kind of query it is
-			item.put(PSS_QUERY_KEY, reference);
+			item.put(MUMBLE_QUERY_KEY, reference);
 			// Add the query to the symbol table tree 
-			Boolean done = collectQuerySymbolTable(PSS_QUERY_KEY, item, alias, reference);
+			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
 			if (!done)
-					done = collectQuerySymbolTable(PSS_INSERT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
 			if (!done)
-					done = collectQuerySymbolTable(PSS_UPDATE_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
 			if (!done)
-					done = collectQuerySymbolTable(PSS_UNION_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
 			if (!done)
-					done = collectQuerySymbolTable(PSS_INTERSECT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
 			subMap.putAll(reference);
 		}
 
@@ -2637,7 +2594,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// propagate interface to outer layer of query
 			Map<String, Object> hold = (Map<String, Object>) symbolTable.get(queryName);
 			// Move unknowns to query
-			Map<String, Object> unk = (Map<String, Object>) symbolTable.remove(PSS_UNKNOWN_KEY);
+			Map<String, Object> unk = (Map<String, Object>) symbolTable.remove(MUMBLE_UNKNOWN_KEY);
 
 			if (unk != null) {
 				// move any other interface elements to query and empty unknowns
@@ -2654,7 +2611,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				// if any unknowns left, put them back into table
 				if (unk.size() > 0)
-					symbolTable.put(PSS_UNKNOWN_KEY, unk);
+					symbolTable.put(MUMBLE_UNKNOWN_KEY, unk);
 			}
 			// Add query definition back into symbol table
 			symbolTable.put("def_" + queryName, query);
@@ -2679,12 +2636,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put(PSS_TABLE_KEY, table);
+			subMap.put(MUMBLE_TABLE_KEY, table);
 			showTrace(parseTrace, "table: " + table + " Map: " + subMap);
 		} else if (subMap.size() == 2) {
 			showTrace(parseTrace, "Two entries: " + subMap);
 			String schema = (String) subMap.remove("1");
-			subMap.put(PSS_SCHEMA_KEY, schema);
+			subMap.put(MUMBLE_SCHEMA_KEY, schema);
 			String table = (String) subMap.remove("2");
 
 			// try swapping names here
@@ -2692,14 +2649,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put(PSS_TABLE_KEY, table);
+			subMap.put(MUMBLE_TABLE_KEY, table);
 			showTrace(parseTrace, "Schema: " + schema + " Table: " + table + " Map: " + subMap);
 		} else if (subMap.size() == 3) {
 			showTrace(parseTrace, "Three entries: " + subMap);
 			String dbname = (String) subMap.remove("1");
-			subMap.put(PSS_DATABASE_NAME_KEY, dbname);
+			subMap.put(MUMBLE_DATABASE_NAME_KEY, dbname);
 			String schema = (String) subMap.remove("2");
-			subMap.put(PSS_SCHEMA_KEY, schema);
+			subMap.put(MUMBLE_SCHEMA_KEY, schema);
 			String table = (String) subMap.remove("3");
 
 			// try swapping names here
@@ -2707,7 +2664,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			collectSymbolTable(table, table);
 
-			subMap.put(PSS_TABLE_KEY, table);
+			subMap.put(MUMBLE_TABLE_KEY, table);
 			showTrace(parseTrace, "Database: " + dbname + "Schema: " + schema + " Table: " + table + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -2726,11 +2683,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, subMap);
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 2)
-			subMap.put(PSS_JOIN_KEY, ctx.getText());
+			subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
 		else if (ctx.getChildCount() == 3) {
 			String type = (String) subMap.remove("1");
-			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
-//			subMap.put(PSS_JOIN_TYPE_KEY, type);
+			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
+//			subMap.put(MUMBLE_JOIN_TYPE_KEY, type);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -2754,14 +2711,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.remove("1");
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1)
-			subMap.put(PSS_JOIN_KEY, ctx.getText());
+			subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
 		else if (ctx.getChildCount() == 2) {
 			// String type = (String) subMap.remove("1");
-			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText());
+			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText());
 			// subMap.put("join_type", type);
 		} else if (ctx.getChildCount() == 3) {
 			// String type = (String) subMap.remove("1");
-			subMap.put(PSS_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(1).getText());
+			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(1).getText());
 			// subMap.put("join_type", type);
 		}
 		// Add item to parent map
@@ -2790,7 +2747,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> join = (Map<String, Object>) pMap.get(indx.toString());
 			// Add On clause to previous Join statement
 			item = (Map<String, Object>) subMap.remove("1");
-			join.put(PSS_JOIN_ON_KEY, item);
+			join.put(MUMBLE_JOIN_ON_KEY, item);
 			showTrace(parseTrace, "join On Clause: " + join);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -2808,10 +2765,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
 		subMap = (Map<String, Object>) subMap.get("1");
-		if (subMap.containsKey(PSS_PARENTHESES_KEY)) {
+		if (subMap.containsKey(MUMBLE_PARENTHESES_KEY)) {
 			// Remove extraneous parentheses from the outermost layer of the On
 			// Condition
-			Map<String, Object> contents = (Map<String, Object>) subMap.remove(PSS_PARENTHESES_KEY);
+			Map<String, Object> contents = (Map<String, Object>) subMap.remove(MUMBLE_PARENTHESES_KEY);
 			subMap.putAll(contents);
 		}
 
@@ -2853,7 +2810,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
 		String tableRef = null;
-		String tableRefKey = PSS_UNKNOWN_KEY;
+		String tableRefKey = MUMBLE_UNKNOWN_KEY;
 		Boolean doNotSkip = true;
 
 		if (subMap.size() == 1) {
@@ -2872,21 +2829,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		if (doNotSkip) {
 			// Add column to SQL AST Tree
-			columnSubTree.put(PSS_TABLE_REF_KEY, tableRef);
+			columnSubTree.put(MUMBLE_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
 				// should be a substitution
 				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
-				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(PSS_SUBSTITUTION_KEY);
-				substitutionMap.put(PSS_TYPE_KEY, PSS_COLUMN_KEY);
+				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
+				substitutionMap.put(MUMBLE_TYPE_KEY, MUMBLE_COLUMN_KEY);
 
 				// Add reference to Substitution Variables list
-				substitutionsMap.put((String) substitutionMap.get("name"), PSS_COLUMN_KEY);
+				substitutionsMap.put((String) substitutionMap.get("name"), MUMBLE_COLUMN_KEY);
 
 				columnSubTree.putAll((HashMap<String, Object>) columnRef);
 			} else {
-				columnSubTree.put(PSS_NAME_KEY, columnRef);
+				columnSubTree.put(MUMBLE_NAME_KEY, columnRef);
 			}
-			subMap.put(PSS_COLUMN_KEY, columnSubTree);
+			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
 			// Capture SymbolTable entry
 			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
@@ -2905,7 +2862,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
 		String tableRef = null;
-		String tableRefKey = PSS_UNKNOWN_KEY;
+		String tableRefKey = MUMBLE_UNKNOWN_KEY;
 		Boolean doNotSkip = true;
 
 		if (subMap.size() == 1) {
@@ -2924,21 +2881,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		if (doNotSkip) {
 			// Add column to SQL AST Tree
-			columnSubTree.put(PSS_TABLE_REF_KEY, tableRef);
+			columnSubTree.put(MUMBLE_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
 				// should be a substitution
 				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
-				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(PSS_SUBSTITUTION_KEY);
-				substitutionMap.put(PSS_TYPE_KEY, PSS_COLUMN_KEY);
+				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
+				substitutionMap.put(MUMBLE_TYPE_KEY, MUMBLE_COLUMN_KEY);
 
 				// Add reference to Substitution Variables list
-				substitutionsMap.put((String) substitutionMap.get("name"), PSS_COLUMN_KEY);
+				substitutionsMap.put((String) substitutionMap.get("name"), MUMBLE_COLUMN_KEY);
 
 				columnSubTree.putAll((HashMap<String, Object>) columnRef);
 			} else {
-				columnSubTree.put(PSS_NAME_KEY, columnRef);
+				columnSubTree.put(MUMBLE_NAME_KEY, columnRef);
 			}
-			subMap.put(PSS_COLUMN_KEY, columnSubTree);
+			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
 			// Capture SymbolTable entry
 			collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
@@ -2981,7 +2938,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			subMap.put(PSS_PARENTHESES_KEY, item);
+			subMap.put(MUMBLE_PARENTHESES_KEY, item);
 			showTrace(parseTrace, "Parenthesed Clause: " + subMap);
 
 		} else {
@@ -3012,10 +2969,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 0) {
-			item.put(PSS_FUNCTION_NAME_KEY, "COUNT");
-			item.put(PSS_QUALIFIER_KEY, null);
-			item.put(PSS_PARAMETERS_KEY, "*");
-			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(MUMBLE_FUNCTION_NAME_KEY, "COUNT");
+			item.put(MUMBLE_QUALIFIER_KEY, null);
+			item.put(MUMBLE_PARAMETERS_KEY, "*");
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -3033,22 +2990,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
-			item.put(PSS_QUALIFIER_KEY, null);
-			item.put(PSS_PARAMETERS_KEY, subMap.remove("2"));
-			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(MUMBLE_QUALIFIER_KEY, null);
+			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else if (subMap.size() == 3) {
-			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey("Type")) {
 				Integer childKey = (Integer) hold.remove("Type");
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
-				item.put(PSS_QUALIFIER_KEY, hold);
+				item.put(MUMBLE_QUALIFIER_KEY, hold);
 			}
-			item.put(PSS_PARAMETERS_KEY, subMap.remove("3"));
-			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove("3"));
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -3083,7 +3040,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else if (subMap.size() == 3) {
 				// Variation 1: Case ITEM in implied equals formula with When
 				// Predicand
-				subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+				subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
 				subMap.putAll((Map<String, Object>) subMap.remove("2"));
 				subMap.putAll((Map<String, Object>) subMap.remove("3"));
 			} else {
@@ -3091,7 +3048,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_CASE_KEY, subMap);
+			item.put(MUMBLE_CASE_KEY, subMap);
 			addToParent(parentRuleIndex, parentStackLevel, item);
 			showTrace(parseTrace, "Case: " + item);
 
@@ -3109,7 +3066,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() >= 1) {
-				item.put(PSS_CLAUSES_KEY, subMap);
+				item.put(MUMBLE_CLAUSES_KEY, subMap);
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3129,8 +3086,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 2) {
-				item.put(PSS_WHEN_KEY, subMap.remove("1"));
-				item.put(PSS_THEN_KEY, subMap.remove("2"));
+				item.put(MUMBLE_WHEN_KEY, subMap.remove("1"));
+				item.put(MUMBLE_THEN_KEY, subMap.remove("2"));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3151,7 +3108,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() >= 1) {
-				item.put(PSS_CLAUSES_KEY, subMap);
+				item.put(MUMBLE_CLAUSES_KEY, subMap);
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3171,8 +3128,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 2) {
-				item.put(PSS_WHEN_KEY, subMap.remove("1"));
-				item.put(PSS_THEN_KEY, subMap.remove("2"));
+				item.put(MUMBLE_WHEN_KEY, subMap.remove("1"));
+				item.put(MUMBLE_THEN_KEY, subMap.remove("2"));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3193,7 +3150,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 1) {
-				item.put(PSS_ELSE_KEY, subMap.remove("1"));
+				item.put(MUMBLE_ELSE_KEY, subMap.remove("1"));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3231,12 +3188,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			if (subMap.size() == 3) {
 				String function = (String) subMap.remove("1");
-				item.put(PSS_FUNCTION_NAME_KEY, function);
-				item.put(PSS_TYPE_KEY, function.toUpperCase());
+				item.put(MUMBLE_FUNCTION_NAME_KEY, function);
+				item.put(MUMBLE_TYPE_KEY, function.toUpperCase());
 				// ITEM 104: Set the substitution type if the cast statement has a variable
-				item.put(PSS_VALUE_KEY, checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), "predicand"));
-				item.put(PSS_DATATYPE_KEY, subMap.remove("3"));
-				subMap.put(PSS_FUNCTION_KEY, item);
+				item.put(MUMBLE_VALUE_KEY, checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), "predicand"));
+				item.put(MUMBLE_DATATYPE_KEY, subMap.remove("3"));
+				subMap.put(MUMBLE_FUNCTION_KEY, item);
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + subMap);
 			}
@@ -3260,9 +3217,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() >=1) {
 				Object item = subMap.remove("1");
 				if (item instanceof String)
-					subMap.put(PSS_TYPE_KEY, item);
+					subMap.put(MUMBLE_TYPE_KEY, item);
 				else
-					subMap.put(PSS_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
+					subMap.put(MUMBLE_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
 			}
 			
 			if (subMap.size() == 2) {
@@ -3326,7 +3283,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.remove("Type");
 			if (ctx.getChildCount() == 3) {
 				showTrace(parseTrace, "Three entries: " + ctx.getText());
-				subMap.put(PSS_LENGTH_KEY, ctx.getChild(1).getText());
+				subMap.put(MUMBLE_LENGTH_KEY, ctx.getChild(1).getText());
 			}
 			// Add item to parent map
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3344,9 +3301,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() >=1) {
 				Object item = subMap.remove("1");
 				if (item instanceof String)
-					subMap.put(PSS_TYPE_KEY, item);
+					subMap.put(MUMBLE_TYPE_KEY, item);
 				else
-					subMap.put(PSS_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
+					subMap.put(MUMBLE_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
 			}
 			
 			if (subMap.size() == 2) {
@@ -3401,11 +3358,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			
 			if (ctx.getChildCount() == 3) {
 				showTrace(parseTrace, "Three entries: " + ctx.getText());
-				subMap.put(PSS_PRECISION_KEY, ctx.getChild(1).getText());
+				subMap.put(MUMBLE_PRECISION_KEY, ctx.getChild(1).getText());
 			} else if (ctx.getChildCount() == 5) {
 				showTrace(parseTrace, "Three entries: " + ctx.getText());
-				subMap.put(PSS_PRECISION_KEY, ctx.getChild(1).getText());
-				subMap.put(PSS_SCALE_KEY, ctx.getChild(3).getText());
+				subMap.put(MUMBLE_PRECISION_KEY, ctx.getChild(1).getText());
+				subMap.put(MUMBLE_SCALE_KEY, ctx.getChild(3).getText());
 			} 
 			// Add item to parent map
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3423,9 +3380,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() ==1) {
 				Object item = subMap.remove("1");
 				if (item instanceof String)
-					subMap.put(PSS_TYPE_KEY, item);
+					subMap.put(MUMBLE_TYPE_KEY, item);
 				else
-					subMap.put(PSS_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
+					subMap.put(MUMBLE_TYPE_KEY, ((HashMap<String, String>) item).get("1"));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -3502,7 +3459,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Map<String, Object> item = new HashMap<String, Object>();
 				item.putAll((Map<String, Object>) subMap.remove("1"));
 				item.putAll((Map<String, Object>) subMap.remove("2"));
-				subMap.put(PSS_WINDOW_FUNCTION_KEY, item);
+				subMap.put(MUMBLE_WINDOW_FUNCTION_KEY, item);
 			} else {
 				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
 			}
@@ -3525,16 +3482,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> hold = new HashMap<String, Object>();
 
 			if (subMap.size() == 0) {
-				item.put(PSS_PARAMETERS_KEY, null);
+				item.put(MUMBLE_PARAMETERS_KEY, null);
 			} else if (subMap.size() >= 1) {
 				hold = (Map<String, Object>) subMap.remove("2");
 				type = hold.remove("Type");
-				item.put(PSS_PARAMETERS_KEY, hold.remove(type.toString()));
+				item.put(MUMBLE_PARAMETERS_KEY, hold.remove(type.toString()));
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
 			
-			item.put(PSS_FUNCTION_NAME_KEY, functType);
+			item.put(MUMBLE_FUNCTION_NAME_KEY, functType);
 
 			if (subMap.containsKey("3")) {
 				item.putAll((Map<String, Object>) subMap.remove("3"));
@@ -3543,7 +3500,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.putAll((Map<String, Object>) subMap.remove("4"));
 			}
 			
-			subMap.put(PSS_FUNCTION_KEY, item);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
 			showTrace(parseTrace, "WINDOW FUNCTION: " + subMap);
@@ -3563,19 +3520,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			HashMap<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 0) {
-				subMap.put(PSS_OVER_KEY, null);
+				subMap.put(MUMBLE_OVER_KEY, null);
 			} else if (subMap.size() == 1) {
 				item.putAll((Map<String, Object>) subMap.remove("1"));
-				subMap.put(PSS_OVER_KEY, item);
+				subMap.put(MUMBLE_OVER_KEY, item);
 			} else if (subMap.size() == 2) {
 				item.putAll((Map<String, Object>) subMap.remove("1"));
 				item.putAll((Map<String, Object>) subMap.remove("2"));
-				subMap.put(PSS_OVER_KEY, item);
+				subMap.put(MUMBLE_OVER_KEY, item);
 			} else if (subMap.size() == 3) {
 				item.putAll((Map<String, Object>) subMap.remove("1"));
 				item.putAll((Map<String, Object>) subMap.remove("2"));
 				item.putAll((Map<String, Object>) subMap.remove("3"));
-				subMap.put(PSS_OVER_KEY, item);
+				subMap.put(MUMBLE_OVER_KEY, item);
 			} else {
 				showTrace(parseTrace, "Wrong number of entries: " + subMap);
 			}
@@ -3597,7 +3554,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
 				type = item.remove("Type");
 
-				item.put(PSS_PARTITION_BY_KEY, item.remove(type.toString()));
+				item.put(MUMBLE_PARTITION_BY_KEY, item.remove(type.toString()));
 				addToParent(parentRuleIndex, parentStackLevel, item);
 			} else {
 				showTrace(parseTrace, "Not enough entries: " + subMap);
@@ -3621,9 +3578,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() == 2) {
 				showTrace(parseTrace, "Window Over Partition: " + subMap);
 				Map<String, Object> item = new HashMap<String, Object>();
-				item.put(PSS_TYPE_KEY, (String) subMap.remove("1"));
+				item.put(MUMBLE_TYPE_KEY, (String) subMap.remove("1"));
 				item.putAll((Map<String, Object>) subMap.remove("2"));
-				subMap.put(PSS_BRACKET_FRAME_KEY, item);
+				subMap.put(MUMBLE_BRACKET_FRAME_KEY, item);
 			} else {
 				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
 			}
@@ -3652,9 +3609,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() == 2) {
 				showTrace(parseTrace, "Window Over Partition: " + subMap);
 				Map<String, Object> item = new HashMap<String, Object>();
-				item.put(PSS_RANGE_BEGIN_KEY,  subMap.remove("1"));
-				item.put(PSS_RANGE_END_KEY,  subMap.remove("2"));
-				subMap.put(PSS_BETWEEN_KEY, item);
+				item.put(MUMBLE_RANGE_BEGIN_KEY,  subMap.remove("1"));
+				item.put(MUMBLE_RANGE_END_KEY,  subMap.remove("2"));
+				subMap.put(MUMBLE_BETWEEN_KEY, item);
 			} else {
 				showTrace(parseTrace, "Incorrect number of entries: " + subMap);
 			}
@@ -3676,8 +3633,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 
 			if (subMap.size() == 1) {
-				subMap.put(PSS_VALUE_KEY, (String) subMap.remove("1"));
-				subMap.put(PSS_BRACKET_DIRECTION_KEY, PSS_PRECEDING_KEY);
+				subMap.put(MUMBLE_VALUE_KEY, (String) subMap.remove("1"));
+				subMap.put(MUMBLE_BRACKET_DIRECTION_KEY, MUMBLE_PRECEDING_KEY);
 				showTrace(parseTrace, "Preceding Edge Clause: " + subMap);
 
 			} else {
@@ -3694,8 +3651,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Object type = subMap.remove("Type");
 
 			if (subMap.size() == 1) {
-				subMap.put(PSS_VALUE_KEY, (String) subMap.remove("1"));
-				subMap.put(PSS_BRACKET_DIRECTION_KEY, PSS_FOLLOWING_KEY);
+				subMap.put(MUMBLE_VALUE_KEY, (String) subMap.remove("1"));
+				subMap.put(MUMBLE_BRACKET_DIRECTION_KEY, MUMBLE_FOLLOWING_KEY);
 				showTrace(parseTrace, "Preceding Edge Clause: " + subMap);
 
 			} else {
@@ -3721,7 +3678,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				showTrace(parseTrace, "two word frame edge: " + ctx.getText());
 				String part = ctx.getChild(0).getText().toUpperCase();
 				part = part + " " + ctx.getChild(1).getText().toUpperCase();
-				subMap.put(PSS_VALUE_KEY, part);
+				subMap.put(MUMBLE_VALUE_KEY, part);
 			} else  {
 				showTrace(parseTrace, "incorrect phrase");
 			}
@@ -3748,7 +3705,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			subMap.remove("Type");
 			if (ctx.getChildCount() == 2) {
-				subMap.put(PSS_SELECT_DIRECTION_KEY, ctx.getChild(1).getText());
+				subMap.put(MUMBLE_SELECT_DIRECTION_KEY, ctx.getChild(1).getText());
 			}
 			// Add item to parent map
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3770,7 +3727,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			subMap.remove("Type");
 			if (ctx.getChildCount() == 2) {
-				subMap.put(PSS_NULL_HANDLING_KEY, ctx.getChild(0).getText());
+				subMap.put(MUMBLE_NULL_HANDLING_KEY, ctx.getChild(0).getText());
 			}
 			// Add item to parent map
 			addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3802,8 +3759,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
-			item.put(PSS_NAME_KEY, ctx.getChild(0).getText());
-			subMap.put(PSS_SUBSTITUTION_KEY, item);
+			item.put(MUMBLE_NAME_KEY, ctx.getChild(0).getText());
+			subMap.put(MUMBLE_SUBSTITUTION_KEY, item);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3831,8 +3788,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + ctx.getText());
 			String variable_name = ctx.getChild(0).getText();
-			item.put(PSS_NAME_KEY, variable_name);
-			item.put(PSS_PARTS_KEY, subItem);
+			item.put(MUMBLE_NAME_KEY, variable_name);
+			item.put(MUMBLE_PARTS_KEY, subItem);
 			String[] trim = variable_name.split("\\.",0);
 			// Added 9/16/2021 GAH: Allow 5 part variable names
 			if (trim.length == 5) {
@@ -3856,7 +3813,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else {
 				subItem.put("1", variable_name.substring(1, variable_name.length()-1));				
 			}
-			subMap.put(PSS_SUBSTITUTION_KEY, item);
+			subMap.put(MUMBLE_SUBSTITUTION_KEY, item);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
@@ -3900,7 +3857,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Part of a window function
 			subMap.remove("Type");
 			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(PSS_ORDERBY_KEY, subMap);
+			item.put(MUMBLE_ORDERBY_KEY, subMap);
 
 			addToParent(parentRuleIndex, parentStackLevel, item);
 		} else
@@ -3935,8 +3892,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> limit = (Map<String, Object>) subMap.remove("1");
 
 			Map<String, Object>  offsetObj = (Map<String, Object> )  subMap.remove("2");
-			Object offset = (Object) offsetObj.remove(PSS_LITERAL_KEY);
-			subMap.put(PSS_OFFSET_KEY, offset);
+			Object offset = (Object) offsetObj.remove(MUMBLE_LITERAL_KEY);
+			subMap.put(MUMBLE_OFFSET_KEY, offset);
 			subMap.putAll(limit);
 
 			showTrace(parseTrace, "LIMIT AND OFFSET: " + subMap);
@@ -3964,7 +3921,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitOr_predicate(@NotNull SQLSelectParserParser.Or_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		String key = PSS_OR_KEY;
+		String key = MUMBLE_OR_KEY;
 
 		handleOperandList(ruleIndex, key);
 	}
@@ -3972,7 +3929,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitAnd_predicate(@NotNull SQLSelectParserParser.And_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		String key = PSS_AND_KEY;
+		String key = MUMBLE_AND_KEY;
 
 		handleOperandList(ruleIndex, key);
 	}
@@ -4027,14 +3984,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// mislabelled as a condition when it should be a predicand.
 			// Fixing it here
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			if (item.containsKey(PSS_SUBSTITUTION_KEY)) {
-				HashMap<String, Object> hold = (HashMap<String, Object>) item.get(PSS_SUBSTITUTION_KEY);
-				hold.put(PSS_TYPE_KEY, "predicand");
+			if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+				HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
+				hold.put(MUMBLE_TYPE_KEY, "predicand");
 				substitutionsMap.put((String) hold.get("name"), "predicand");
 			}
 			HashMap<String, Object> hold = new HashMap<String, Object>();
-			hold.put(PSS_LEFT_FACTOR_KEY, item);
-			subMap.put(PSS_CONDITION_KEY, hold);
+			hold.put(MUMBLE_LEFT_FACTOR_KEY, item);
+			subMap.put(MUMBLE_CONDITION_KEY, hold);
 
 			item = (Map<String, Object>) subMap.remove("2");
 			subMap.putAll(item);
@@ -4060,7 +4017,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll(left);
 			// If the clause remaining is an embedded Condition Substitution
 			// Variable, this captures and labels it
-			subMap = checkForSubstitutionVariable(subMap, PSS_CONDITION_KEY);
+			subMap = checkForSubstitutionVariable(subMap, MUMBLE_CONDITION_KEY);
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
@@ -4079,11 +4036,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			showTrace(parseTrace, "Comparison: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
-			condition.put(PSS_LEFT_FACTOR_KEY, left);
+			condition.put(MUMBLE_LEFT_FACTOR_KEY, left);
 
 			condition.putAll((Map<String, Object>) subMap.remove("2"));
 
-			subMap.put(PSS_CONDITION_KEY, condition);
+			subMap.put(MUMBLE_CONDITION_KEY, condition);
 			showTrace(parseTrace, "IS NULL Clause: " + subMap);
 
 		} else {
@@ -4107,9 +4064,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		subMap.remove("Type");
 		if (ctx.getChildCount() == 2) {
-			subMap.put(PSS_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+			subMap.put(MUMBLE_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
 		} else if (ctx.getChildCount() == 3) {
-			subMap.put(PSS_OPERATOR_KEY,
+			subMap.put(MUMBLE_OPERATOR_KEY,
 					ctx.getChild(0).getText() + " " + ctx.getChild(1).getText() + " " + ctx.getChild(2).getText());
 		}
 		// Add item to parent map
@@ -4130,9 +4087,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap = new HashMap<String, Object>();
 
 		if (ctx.getChildCount() == 2) {
-			subMap.put(PSS_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+			subMap.put(MUMBLE_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
 		} else if (ctx.getChildCount() == 3) {
-			subMap.put(PSS_OPERATOR_KEY,
+			subMap.put(MUMBLE_OPERATOR_KEY,
 					ctx.getChild(0).getText() + " " + ctx.getChild(1).getText() + " " + ctx.getChild(2).getText());
 		}
 		// Add item to parent map
@@ -4149,7 +4106,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			subMap.put(PSS_PARENTHESES_KEY, item);
+			subMap.put(MUMBLE_PARENTHESES_KEY, item);
 			showTrace(parseTrace, "Parenthesed Clause: " + subMap);
 
 		} else {
@@ -4171,19 +4128,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Object operator = subMap.remove("2");
 			if (operator instanceof String)
-				condition.put(PSS_OPERATOR_KEY, operator);
+				condition.put(MUMBLE_OPERATOR_KEY, operator);
 			else
-				condition.put(PSS_OPERATOR_KEY, ((HashMap<String, String>) operator).get("1"));
+				condition.put(MUMBLE_OPERATOR_KEY, ((HashMap<String, String>) operator).get("1"));
 
 			Map<String, Object> left = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"predicand");
-			condition.put(PSS_LEFT_FACTOR_KEY, left);
+			condition.put(MUMBLE_LEFT_FACTOR_KEY, left);
 
 			Map<String, Object> right = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
 					"predicand");
-			condition.put(PSS_RIGHT_FACTOR_KEY, right);
+			condition.put(MUMBLE_RIGHT_FACTOR_KEY, right);
 
-			subMap.put(PSS_CONDITION_KEY, condition);
+			subMap.put(MUMBLE_CONDITION_KEY, condition);
 			showTrace(parseTrace, "Comparison: " + subMap);
 
 		} else {
@@ -4223,50 +4180,50 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() >= 3) {
 			showTrace(parseTrace, "Bewteen: " + subMap);
 			Map<String, Object> condition = new HashMap<String, Object>();
-			condition.put(PSS_ITEM_KEY, subMap.remove("1"));
-			String itemKey = PSS_RANGE_BEGIN_KEY;
+			condition.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
+			String itemKey = MUMBLE_RANGE_BEGIN_KEY;
 
 			Object operator = subMap.remove("2");
 			if (operator instanceof String)
 				if (operator.equals("not"))
-					condition.put(PSS_OPERATOR_KEY, "not between");
+					condition.put(MUMBLE_OPERATOR_KEY, "not between");
 				else {
-					condition.put(PSS_SYMMETRY_KEY, operator);
-					condition.put(PSS_OPERATOR_KEY, PSS_BETWEEN_KEY);
+					condition.put(MUMBLE_SYMMETRY_KEY, operator);
+					condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
 				}
 			else {
 				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
 				condition.put(itemKey, operator);
-				itemKey = PSS_RANGE_END_KEY;
-				condition.put(PSS_OPERATOR_KEY, PSS_BETWEEN_KEY);
-				condition.put(PSS_SYMMETRY_KEY, null);
+				itemKey = MUMBLE_RANGE_END_KEY;
+				condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
+				condition.put(MUMBLE_SYMMETRY_KEY, null);
 			}
 
 			operator = subMap.remove("3");
 			if (operator instanceof String)
-				condition.put(PSS_SYMMETRY_KEY, operator);
+				condition.put(MUMBLE_SYMMETRY_KEY, operator);
 			else {
-				if (!condition.containsKey(PSS_SYMMETRY_KEY))
-					condition.put(PSS_SYMMETRY_KEY, null);
+				if (!condition.containsKey(MUMBLE_SYMMETRY_KEY))
+					condition.put(MUMBLE_SYMMETRY_KEY, null);
 				operator = checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
 				condition.put(itemKey, operator);
-				if (itemKey.equals(PSS_RANGE_BEGIN_KEY))
-					itemKey = PSS_RANGE_END_KEY;
+				if (itemKey.equals(MUMBLE_RANGE_BEGIN_KEY))
+					itemKey = MUMBLE_RANGE_END_KEY;
 				else
 					itemKey = "stop";
 			}
 
-			if (itemKey.equals(PSS_RANGE_BEGIN_KEY)) {
+			if (itemKey.equals(MUMBLE_RANGE_BEGIN_KEY)) {
 				operator = subMap.remove("4");
 				condition.put(itemKey, operator);
 				operator = subMap.remove("5");
-				condition.put(PSS_RANGE_END_KEY, operator);
+				condition.put(MUMBLE_RANGE_END_KEY, operator);
 			} else if (itemKey.equals("end")) {
 				operator = subMap.remove("4");
 				condition.put(itemKey, operator);
 			}
 
-			subMap.put(PSS_BETWEEN_KEY, condition);
+			subMap.put(MUMBLE_BETWEEN_KEY, condition);
 			showTrace(parseTrace, "Comparison: " + subMap);
 
 		} else {
@@ -4284,19 +4241,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 2) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
-			subMap.put(PSS_IN_LIST_KEY, subMap.remove("2"));
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
+			subMap.put(MUMBLE_IN_LIST_KEY, subMap.remove("2"));
 		} else if (subMap.size() == 3) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
 			subMap.remove("2");
-			subMap.put(PSS_NOT_IN_LIST_KEY, subMap.remove("3"));
+			subMap.put(MUMBLE_NOT_IN_LIST_KEY, subMap.remove("3"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put(PSS_IN_KEY, subMap);
+		item.put(MUMBLE_IN_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -4314,24 +4271,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() == 3) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
 			type = (String) subMap.remove("2");
-			subMap.put(PSS_LIKE_ANY_LIST_KEY, subMap.remove("3"));
+			subMap.put(MUMBLE_LIKE_ANY_LIST_KEY, subMap.remove("3"));
 		} else if (subMap.size() == 4) {
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(PSS_ITEM_KEY, subMap.remove("1"));
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
 			subMap.remove("2");
 			type = (String) subMap.remove("3");
-			subMap.put(PSS_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));
+			subMap.put(MUMBLE_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 
 		Map<String, Object> item = new HashMap<String, Object>();
 		if ("ilike".equals(type.toLowerCase()))
-			item.put(PSS_ILIKE_ANY_KEY, subMap);
+			item.put(MUMBLE_ILIKE_ANY_KEY, subMap);
 		else
-			item.put(PSS_LIKE_ANY_KEY, subMap);
+			item.put(MUMBLE_LIKE_ANY_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -4371,7 +4328,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove("Type");
 		Map<String, Object> item = new HashMap<String, Object>();
-		item.put(PSS_LIST_KEY, subMap);
+		item.put(MUMBLE_LIST_KEY, subMap);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -4391,13 +4348,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// multiply by -1
 				// 1={left={literal=-1}, right={...}, operand=*}
 				Map<String, Object> left = new HashMap<String, Object>();
-				left.put(PSS_LITERAL_KEY, "-1");
+				left.put(MUMBLE_LITERAL_KEY, "-1");
 				Map<String, Object> item = new HashMap<String, Object>();
-				item.put(PSS_LEFT_FACTOR_KEY, left);
-				item.put(PSS_OPERATOR_KEY, "*");
-				item.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("2"));
+				item.put(MUMBLE_LEFT_FACTOR_KEY, left);
+				item.put(MUMBLE_OPERATOR_KEY, "*");
+				item.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("2"));
 				Map<String, Object> calc = new HashMap<String, Object>();
-				calc.put(PSS_CALCULATION_KEY, item);
+				calc.put(MUMBLE_CALCULATION_KEY, item);
 				subMap.put("1", calc);
 			} else {
 				subMap.put("1", subMap.remove("2"));
@@ -4440,14 +4397,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
+					calc.put(MUMBLE_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put(PSS_LEFT_FACTOR_KEY, item);
+					calc.put(MUMBLE_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
-				calc.put(PSS_OPERATOR_KEY, ctx.getChild(x).getText());
-				item.put(PSS_CALCULATION_KEY, calc);
+				calc.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(MUMBLE_OPERATOR_KEY, ctx.getChild(x).getText());
+				item.put(MUMBLE_CALCULATION_KEY, calc);
 			}
 
 			subMap = item;
@@ -4472,14 +4429,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(PSS_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
+					calc.put(MUMBLE_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
 				else {
-					calc.put(PSS_LEFT_FACTOR_KEY, item);
+					calc.put(MUMBLE_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put(PSS_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
-				calc.put(PSS_OPERATOR_KEY, ctx.getChild(x).getText());
-				item.put(PSS_CALCULATION_KEY, calc);
+				calc.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(MUMBLE_OPERATOR_KEY, ctx.getChild(x).getText());
+				item.put(MUMBLE_CALCULATION_KEY, calc);
 			}
 
 			subMap = item;
@@ -4510,7 +4467,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitString_value_expression(@NotNull SQLSelectParserParser.String_value_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		handleOperandList(ruleIndex, PSS_CONCATENATE_KEY);
+		handleOperandList(ruleIndex, MUMBLE_CONCATENATE_KEY);
 	}
 
 	@Override
@@ -4540,9 +4497,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put(PSS_FUNCTION_NAME_KEY, subMap.remove("1"));
-			item.put(PSS_PARAMETERS_KEY, subMap.remove("2"));
-			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -4563,13 +4520,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("1"));
-			item.put(PSS_VALUE_KEY, subMap.remove("2"));
+			item.put(MUMBLE_TRIM_CHARACTER_KEY, subMap.remove("1"));
+			item.put(MUMBLE_VALUE_KEY, subMap.remove("2"));
 
 		} else if (subMap.size() == 3) {
-			item.put(PSS_QUALIFIER_KEY, subMap.remove("1"));
-			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("2"));
-			item.put(PSS_VALUE_KEY, subMap.remove("3"));
+			item.put(MUMBLE_QUALIFIER_KEY, subMap.remove("1"));
+			item.put(MUMBLE_TRIM_CHARACTER_KEY, subMap.remove("2"));
+			item.put(MUMBLE_VALUE_KEY, subMap.remove("3"));
 		}
 
 		// Add item to parent map
@@ -4591,8 +4548,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
-			item.put(PSS_TRIM_CHARACTER_KEY, subMap.remove("2"));
-			item.put(PSS_VALUE_KEY, subMap.remove("1"));
+			item.put(MUMBLE_TRIM_CHARACTER_KEY, subMap.remove("2"));
+			item.put(MUMBLE_VALUE_KEY, subMap.remove("1"));
 		}
 
 		// Add item to parent map
@@ -4618,8 +4575,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.putAll((Map<? extends String, ? extends Object>) subMap.remove("1"));
 			subMap = (Map<String, Object>) subMap.remove("2");
 			type = subMap.remove("Type");
-			item.put(PSS_PARAMETERS_KEY, subMap.remove(type.toString()));
-			subMap.put(PSS_FUNCTION_KEY, item);
+			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove(type.toString()));
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -4637,14 +4594,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			showTrace(parseTrace, "Just One Identifier: " + subMap);
 			String functName = (String) subMap.remove("1");
-			subMap.put(PSS_FUNCTION_NAME_KEY, functName);
+			subMap.put(MUMBLE_FUNCTION_NAME_KEY, functName);
 			showTrace(parseTrace, "function_name: " + functName + " Map: " + subMap);
 		} else if (subMap.size() == 2) {
 			showTrace(parseTrace, "Two entries: " + subMap);
 			String schema = (String) subMap.remove("1");
-			subMap.put(PSS_SCHEMA_KEY, schema);
+			subMap.put(MUMBLE_SCHEMA_KEY, schema);
 			String functName = (String) subMap.remove("2");
-			subMap.put(PSS_FUNCTION_NAME_KEY, functName);
+			subMap.put(MUMBLE_FUNCTION_NAME_KEY, functName);
 			showTrace(parseTrace, "Schema: " + schema + " function_name: " + functName + " Map: " + subMap);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
@@ -4680,21 +4637,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				valueExpression = checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
 
 				// Get Value Expression entry
-				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(PSS_COLUMN_KEY);
+				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(MUMBLE_COLUMN_KEY);
 				if (node == null)
-					node = (HashMap<String, Object>) valueExpression.get(PSS_SUBSTITUTION_KEY);
+					node = (HashMap<String, Object>) valueExpression.get(MUMBLE_SUBSTITUTION_KEY);
 				if (node != null) {
-					if (node.containsKey(PSS_TABLE_REF_KEY))
+					if (node.containsKey(MUMBLE_TABLE_REF_KEY))
 						// Value is associated with a table
-						tableRef = (String) node.get(PSS_TABLE_REF_KEY);
-					if (node.containsKey(PSS_NAME_KEY))
+						tableRef = (String) node.get(MUMBLE_TABLE_REF_KEY);
+					if (node.containsKey(MUMBLE_NAME_KEY))
 						// Value Expression is a column or substitution, use its
 						// name
-						name = (String) node.get(PSS_NAME_KEY);
-					else if (node.containsKey(PSS_SUBSTITUTION_KEY))
+						name = (String) node.get(MUMBLE_NAME_KEY);
+					else if (node.containsKey(MUMBLE_SUBSTITUTION_KEY))
 						// then Value Expression is a COLUMN Substitution
 						// Variable, get the variable's name
-						name = (String) ((HashMap<String, Object>) node.get(PSS_SUBSTITUTION_KEY)).get("name");
+						name = (String) ((HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY)).get("name");
 				}
 
 			} else {
@@ -4717,7 +4674,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Get first item, record if it is a Substitution Variable by
 			// adding the Substitution List - This captures when the entire
 			// condition is a Substitution Variable alone
-			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, PSS_CONDITION_KEY);
+			subMap = checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_CONDITION_KEY);
 
 			// NOW handle the child
 			handleOneChild(ruleIndex);
@@ -4784,7 +4741,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() >= 1) {
-			item.put(PSS_PREDICAND_KEY, subMap.remove("1"));
+			item.put(MUMBLE_PREDICAND_KEY, subMap.remove("1"));
 			Object item2 = null;
 			Object item3 = null;
 					
@@ -4796,28 +4753,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			
 			if (item2 == null) {
-				item.put(PSS_SORT_ORDER_KEY, "ASC");
-				item.put(PSS_NULL_ORDER_KEY, null);
+				item.put(MUMBLE_SORT_ORDER_KEY, "ASC");
+				item.put(MUMBLE_NULL_ORDER_KEY, null);
 				showTrace(parseTrace, "One Entry: " + item);
 			} else if (item3 != null) {
-				item.put(PSS_SORT_ORDER_KEY, item2);
+				item.put(MUMBLE_SORT_ORDER_KEY, item2);
 				Map<String, Object> hold = (Map<String, Object>) item3;
 				type = hold.remove("Type").toString();
-				item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
+				item.put(MUMBLE_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
 				showTrace(parseTrace, "Three entries: " + item);
 
 			} else { // Item 2 is not null and Item 3 is null :- Item 2 could be ASC/DESC or Nulls command
 				if (item2 instanceof Map<?,?>) {
 					// item2 is the null order value
-					item.put(PSS_SORT_ORDER_KEY, "ASC");
+					item.put(MUMBLE_SORT_ORDER_KEY, "ASC");
 					Map<String, Object> hold = (Map<String, Object>) item2;
 					type = hold.remove("Type").toString();
-					item.put(PSS_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
+					item.put(MUMBLE_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
 					showTrace(parseTrace, "Two entries: " + item);
 				} else {
 					//item2 is the ASC/DESC value
-					item.put(PSS_SORT_ORDER_KEY, item2);
-					item.put(PSS_NULL_ORDER_KEY, null);
+					item.put(MUMBLE_SORT_ORDER_KEY, item2);
+					item.put(MUMBLE_NULL_ORDER_KEY, null);
 					showTrace(parseTrace, "Two entries: " + item);
 				}
 			}
@@ -4902,7 +4859,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (keys.length == 1) {
 			showTrace(parseTrace, "Just One Entry: " + subMap);
 			Object item = subMap.remove(keys[0]);
-			subMap.put(PSS_LITERAL_KEY, item);
+			subMap.put(MUMBLE_LITERAL_KEY, item);
 		} else {
 			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
@@ -4954,7 +4911,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitNull_literal(@NotNull SQLSelectParserParser.Null_literalContext ctx) {
 		HashMap<String, Object> item = new HashMap<String, Object>();
-		item.put(PSS_NULL_LITERAL_KEY, "null");
+		item.put(MUMBLE_NULL_LITERAL_KEY, "null");
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -4978,7 +4935,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (ctx.getChildCount() == 1) {
 			showTrace(parseTrace, "one word PUML Constant: " + ctx.getText());
 			String part = ctx.getChild(0).getText().toUpperCase();
-			subMap.put(PSS_PUML_CONSTANT_KEY, part);
+			subMap.put(MUMBLE_PUML_CONSTANT_KEY, part);
 		}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
