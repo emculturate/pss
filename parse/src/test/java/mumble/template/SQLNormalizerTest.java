@@ -1,7 +1,7 @@
 package mumble.template;
 
-import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
@@ -72,7 +72,7 @@ public class SQLNormalizerTest {
 	}
 
 	private static final SQLSelectParserParser parse(final String query) {
-		CharStream input = new ANTLRInputStream(query);
+		CharStream input = CharStreams.fromString(query);
 		SQLSelectParserLexer lexer = new SQLSelectParserLexer(input);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
