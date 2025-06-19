@@ -5,13 +5,13 @@
  * 
  * SQL Templates are composable, so long as variables are filled with compatible substitution SQL by type.
  */
-package mumble.sql.template;
+package mumble.template;
 
 import java.util.HashMap;
 
-import static mumble.sql.MumbleConstants.*;
+import static mumble.MumbleConstants.*;
 
-import mumble.sql.Snippet;
+import mumble.Snippet;
 
 /**
  * The SQLNormalizer takes a SQL AST object and applies several transformations
