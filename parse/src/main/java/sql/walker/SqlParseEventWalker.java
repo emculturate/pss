@@ -45,6 +45,7 @@ import sql.SQLSelectParserParser;
  * @author geoffreyhowe
  *
  */
+@SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	final static Boolean showParse = false;
@@ -61,6 +62,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * SQL Abstract Syntax Tree: This collects and constructs a nested Map data
 	 * structure representing the entire SQL statement
 	 */
+       
 	private HashMap<String, Object> sqlTree = new HashMap<String, Object>();
 
 	/**
@@ -2710,17 +2712,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else
 			subMap.remove("1");
 		subMap.remove("Type");
-		if (ctx.getChildCount() == 1)
-			subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
-		else if (ctx.getChildCount() == 2) {
-			// String type = (String) subMap.remove("1");
-			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText());
-			// subMap.put("join_type", type);
-		} else if (ctx.getChildCount() == 3) {
-			// String type = (String) subMap.remove("1");
-			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(1).getText());
-			// subMap.put("join_type", type);
-		}
+			switch (ctx.getChildCount()) {
+				case 1 -> subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
+				case 2 -> subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText());
+				case 3 -> subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(1).getText());
+				default -> {}
+			}
 		// Add item to parent map
 		addToParent(parentRuleIndex, parentStackLevel, subMap);
 		showTrace(parseTrace, "QUALIFIED JOIN: " + subMap);
@@ -3980,7 +3977,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll(left);
 			showTrace(parseTrace, "Clause: " + subMap);
 		} else if (subMap.size() == 2) {
-			// TODO: Grammar peculiarity results in Substitution Variable
+			// Grammar peculiarity results in Substitution Variable
 			// mislabelled as a condition when it should be a predicand.
 			// Fixing it here
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");

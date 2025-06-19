@@ -1,6 +1,5 @@
 // Generated from /Users/ghowe/emculturate-pss/pss/parse/src/main/antlr4/puml3/PUML3.g4 by ANTLR 4.13.1
 
-package puml3;
 
 
 import org.antlr.v4.runtime.Lexer;

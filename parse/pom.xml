@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.example</groupId>
   <artifactId>antlr-multi-grammar-project</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>2.0-SNAPSHOT</version>
 
   <properties>
     <antlr4.version>4.13.1</antlr4.version>
@@ -24,16 +24,6 @@
       <groupId>junit</groupId>
       <version>4.11</version>
     </dependency>
-    <dependency>
-      <artifactId>junit</artifactId>
-      <groupId>junit</groupId>
-      <version>4.11</version>
-    </dependency>
-    <dependency>
-      <artifactId>junit</artifactId>
-      <groupId>junit</groupId>
-      <version>4.11</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -41,32 +31,20 @@
 
     <plugins>
 
-      <!-- ANTLR Plugin for PUML3 -->
+      <!-- ANTLR Plugin for Parsers -->
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
         <version>${antlr4.version}</version>
         <executions>
           <execution>
-            <id>generate-puml3</id>
+            <id>generate-parser-classes</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>antlr4</goal>
             </goals>
             <configuration>
-              <outputDirectory>${project.build.directory}/generated-sources/antlr4/puml3</outputDirectory>
-            </configuration>
-          </execution>
-
-          <!-- ANTLR Plugin for SQLSelectParser -->
-          <execution>
-            <id>generate-sql</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>antlr4</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/generated-sources/antlr4/sql</outputDirectory>
+              <outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -86,9 +64,8 @@
             </goals>
             <configuration>
               <sources>
-                <source>${project.build.directory}/generated-sources/antlr4/puml3</source>
-                <source>${project.build.directory}/generated-sources/antlr4/sql</source>
-              </sources>
+                <source>${project.build.directory}/generated-sources/antlr4</source>
+                </sources>
             </configuration>
           </execution>
         </executions>

@@ -1,4 +1,4 @@
-package mumble.sql.template;
+package mumble.template;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CharStream;
@@ -8,7 +8,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
 
-import mumble.sql.Snippet;
+import mumble.Snippet;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.SqlContext;

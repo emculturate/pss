@@ -49,6 +49,7 @@ public class SqlTreeWalker {
 	public HashMap<String, Object> walk(Map<String, Object> nodeList) {
 		String[] keys = new String[1];
 		keys = nodeList.keySet().toArray(keys);
+                @SuppressWarnings("Convert2Diamond")
 		HashMap<String, Object> resTree = new HashMap<String, Object>();
 
 		for (String key : keys) {

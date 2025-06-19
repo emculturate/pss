@@ -6,7 +6,6 @@ language= Java;
 // Java acion, ehods, tmstadditions
 
 @header {
-package puml3;
 
 }
 
