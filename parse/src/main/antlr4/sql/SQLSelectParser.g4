@@ -116,6 +116,16 @@ literal_value
  
 /*
 ===============================================================================
+  Values Statement Start Symbol
+===============================================================================
+*/
+// Used only for Values end points
+values_statement_end
+  : values_statement_primary EOF;
+ 
+ 
+/*
+===============================================================================
   Dependent Grammar Rules
 ===============================================================================
 */
@@ -172,17 +182,11 @@ insert_statement
   : INSERT (OVERWRITE)? INTO table_name (LEFT_PAREN column_name_list RIGHT_PAREN)? query_expression
   | INSERT (OVERWRITE)? INTO LOCATION path=Character_String_Literal (USING file_type=identifier (param_clause)?)? query_expression
   ;
-    
- 
-column_name_list
-  :  identifier  ( COMMA identifier  )*
-  ;
- 
   
  */
 insert_expression
-  : INSERT INTO 
-  table_primary 
+  : INSERT (OVERWRITE)? INTO 
+  table_or_query_name as_clause? 
   (LEFT_PAREN column_reference_list RIGHT_PAREN)? 
   VALUES 
   subquery 
@@ -350,12 +354,14 @@ table_reference_list
      | (qualified_join right=table_primary s=join_specification?))*
   ;
   
+  // Used for inserting optional Join Clauses to a query with a Join Extension variable
 join_extension_primary
   : ((COMMA table_primary)
      | (unqualified_join right=table_primary)
      | (qualified_join right=table_primary s=join_specification?))*  join_extension?
   ;
 
+// Used anywhere a table name is expected
 table_primary
   : table_or_query_name as_clause?
   | subquery as_clause? 
@@ -1083,10 +1089,7 @@ in_value_list
   *
 ===============================================================================
 */
-// Used only for Values end points
-values_statement_end
-  : values_statement_primary EOF;
-  
+ 
 values_statement_primary
   : fully_defined_values_statement
   | aliased_values_statement
