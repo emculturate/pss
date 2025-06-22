@@ -82,23 +82,77 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/**
 	 * Depth of token stack
+	 * HashMap keeps track of the nesting depth for each grammar rule during parsing. 
+	 * It's a crucial component of the parser's context management system that enables 
+	 * processing of recursive SQL structures.
+	 * Specifically, stackTree maps:
+	 * 		Keys: Integer rule indices (from the ANTLR parser)
+	 * 		Values: Integer nesting levels for each rule
+	 * This allows the parser to:
+	 *  1. Track how deeply nested each grammar rule is within the parse tree
+	 *  2. Generate unique keys for AST nodes using makeMapIndex(ruleIndex, stackLevel)
+	 *  3. Associate child elements with the correct parent nodes
+	 *  4. Handle recursive rule patterns that appear at multiple levels in SQL queries
+	 * For example, when processing nested subqueries, stackTree ensures that references
+	 * to columns, tables, and expressions are properly associated with their respective 
+	 * scopes, even when the same rule (like query_expression) appears at different levels of nesting.
 	 */
 	private HashMap<Integer, Integer> stackTree = new HashMap<Integer, Integer>();
 
 	/**
 	 * Depth of token stack; this keeps track of recursive depth in the
 	 * multi-stack dta structure, allowing correct indexing of clauses during
-	 * the walking operation
+	 * the walking operation. 
+	 * In other words, this data structure contains multiple instances of context-specific parser-generated 
+	 * context trees or symbol tables, when needed, corresponding to various levels of context tracked 
+	 * by the stackTree. When a recursive rule is encountered, such as query_expression,
+	 * the parser pushes the current context onto this stack, allowing it to create a new context for the nested rule.
+	 * Several kinds of context maps may be inserted into this stack, including:
+	 * - Symbol tables for identifiers, columns, and tables
+	 * - Substitution variable maps for parameterized queries
+	 * - Flag maps to track state across recursive processing
+	 * This allows the parser to add/alter the correct instance of these context objects
+	 * as it continues to react to the parser events. Knowing the CURRENT level of the stack allows 
+	 * an event handler to obtain the correct context object and apply its additions or changes to the
+	 * correct instance.
 	 */
 	private HashMap<String, Integer> stackSymbols = new HashMap<String, Integer>();
 
 	/**
 	 * Number of query and subqueries encountered
+	 * The counter helps maintain unique identifiers in the AST for nested SQL structures.
+	 * This counter is crucial for:
+	 *  1. Unique Query Identification: Creates sequential IDs (query0, query1, etc.) for 
+	 *     different queries and subqueries and for various clauses like UNION and INTERSECT.
+	 *  2. Symbol Table Management: Ensures that each query has its own symbol table scope
+	 * 	    and interface definition
+	 *  3. Result Set Interface: Helps define the result set interface for each query,
+	 * 	   even when queries are nested
+	 *  4. AST Integrity: Maintains the integrity of the abstract syntax tree by ensuring
+	 * 	   that each query and subquery is uniquely identifiable
+	 *  5. Query Referencing: Allows symbol tables and interfaces from different queries to 
+	 *     be correctly referenced when building the AST. This counter enables the walker to 
+	 *     distinguish between different query blocks and maintain proper scoping 
+	 *     relationships in the resulting AST.
 	 */
 	private Integer queryCount = 0;
 
 	/**
 	 * Number of predicands without aliases encountered
+	 * This counter in SqlParseEventWalker tracks the number of predicands without aliases 
+	 * encountered during SQL parsing. This counter serves a specific purpose. 
+	 * When a SQL statement contains expressions that don't have explicit aliases, 
+	 * the Event Handler needs to generate synthetic names for these columns in the result set. 
+	 * This happens in the exitSelect_item method when processing SELECT list items.
+	 * The counter ensures:
+	 * 1. Unique identifiers: Each unnamed predicand gets a unique synthetic name (unnamed_0, 
+	 *    unnamed_1, etc.)
+	 * 2. Symbol table consistency: These synthetic names are used in the symbol table to 
+	 *    maintain references
+	 * 3. Complete interface definition: The query's result set interface is fully defined 
+	 *    even with unnamed expressions
+	 * 4. AST integrity: Ensures the abstract syntax tree correctly represents all columns, 
+	 *    even without explicit aliases
 	 */
 	private Integer predicandCount = 0;
 
@@ -113,44 +167,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private Boolean intersectClauseFound = false;
 	private Boolean firstIntersectClause = false;
 	private Boolean useAsLeaf = false;
-
-	// Extra-Grammar Identifiers
-
-	/**
-	 * Symbol Swap Maps
-	 */
-	private HashMap<String, String> entityTableNameMap;
-	private HashMap<String, Map<String, String>> attributeColumnMap;
-
-	public void setEntityTableNameMap(HashMap<String, String> entityTableNameMap) {
-		this.entityTableNameMap = entityTableNameMap;
-	}
-
-	public void setAttributeColumnMap(HashMap<String, Map<String, String>> attributeColumnMap) {
-		this.attributeColumnMap = attributeColumnMap;
-	}
-
-	private String getTableName(String entityName) {
-		return getLookupValue(entityTableNameMap, entityName);
-	}
-
-	public HashMap<String, Object> getSubstitutionsMap() {
-		return substitutionsMap;
-	}
-
-	/**
-	 * @param lkp
-	 * @param lkpName
-	 * @return
-	 */
-	private String getLookupValue(HashMap<String, String> lkp, String lkpName) {
-		if (lkp == null)
-			return lkpName;
-		String hold = lkp.get(lkpName);
-		if (hold == null)
-			return lkpName;
-		return hold;
-	}
 
 	// Constructors
 	public SqlParseEventWalker() {
@@ -220,6 +236,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return new Snippet(sqlTree, tableDictionaryMap, symbolTable, substitutionsMap, getInterface());
 	}
 	
+
+
 	// Other Methods
 
 	/**
@@ -272,6 +290,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
  * the complex hierarchical structure of SQL queries.
  */
 
+ // Methods works with the stackTree HashMap data structure.
 	private Integer pushStack(Integer ruleIndex) {
 		Integer context = stackTree.get(ruleIndex);
 		Integer newLevel;
@@ -298,6 +317,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private Integer currentStackLevel(int ruleIndex) {
 		return stackTree.get(ruleIndex);
 	}
+
+// Methods work with the stackSymbols HashMap data structure.
 
 	private Integer pushStack(String key, Object symbols) {
 		Integer level = stackSymbols.get(key);
@@ -337,6 +358,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		
 	}
 
+	// Method works with the Flag Map object to manage the current context of the parser
+	// when these flags are needed.
+
 	private void pushFlagMap() {
 		// Build flag map for stack
 		HashMap<String, Object> flagMap = new HashMap<String, Object> ();
@@ -357,8 +381,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	/**
-	 * @param key
-	 * @param symbols
+	 * These methods work with the SymbolTable stack when the parser is leaving
+	 * a specific Context like finishing a subquery or a substitution variable.
+	 * Upon leaving a context, the current symbol table is popped from the stack
+	 * and the symbols are added to the parent symbol table.
 	 */
 	@SuppressWarnings("unchecked")
 	private void popSymbolTable(String key, HashMap<String, Object> symbols) {
@@ -389,91 +415,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		useAsLeaf =  (Boolean) flagMap.get ("useAsLeaf");
 	}
 
+	/*
+	 * This method figures out which context level the current ruleIndex is
+	 * being considered at. It is used to determine the current stack level
+	 * for the ruleIndex in the stackSymbols map.
+	 */
 	private Integer currentStackLevel(String key) {
 		return stackSymbols.get(key);
 	}
 
 	/**
-	 * Add level map to SQLTree AST by ruleIndex and stackLevel
-	 * 
-	 * @param ruleIndex
-	 * @param stackLevel
-	 * @param hashMap
-	 * @return
-	 */
-	private Object collect(int ruleIndex, Integer stackLevel, Object item) {
-		String index = makeMapIndex(ruleIndex, stackLevel);
-		collect(index, item);
-		if (item instanceof Map<?, ?>)
-			return getNodeMap(ruleIndex, stackLevel);
-		else
-			return getNode(ruleIndex, stackLevel);
-	}
-
-	/**
-	 * @param index
-	 * @param item
-	 */
-	private void collect(String index, Object item) {
-		sqlTree.put(index, item);
-	}
-
-	/**
-	 * SQLTree operations when re-writing the AST during the walk
-	 */
-
-	private Object getNode(int ruleIndex, Integer stackLevel) {
-		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return sqlTree.get(mapIdx);
-	}
-
-	private Object removeNode(int ruleIndex, Integer stackLevel) {
-		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return sqlTree.remove(mapIdx);
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map<String, Object> getNodeMap(int ruleIndex, Integer stackLevel) {
-		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		Map<String, Object> idMap = (Map<String, Object>) sqlTree.get(mapIdx);
-		return idMap;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map<String, Object> removeNodeMap(int ruleIndex, Integer stackLevel) {
-		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return (Map<String, Object>) sqlTree.remove(mapIdx);
-	}
-
-	private String makeMapIndex(int ruleIndex, Integer stackIndex) {
-		return ruleIndex + "_" + stackIndex;
-	}
-
-
-	// SUBSTITUTION VARIABLE HELPER METHODS
-	
-	/**
-	 * If the sub tree is a substitution, add it to the substitution list and
-	 * assign it the given substitution variable type
-	 * 
-	 * @param subMap
-	 * @param type
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
-		if (subMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-			Map<String, Object> hold = (Map<String, Object>) subMap.get(MUMBLE_SUBSTITUTION_KEY);
-			if (!hold.containsKey(MUMBLE_TYPE_KEY)) {
-				hold.put(MUMBLE_TYPE_KEY, type);
-				substitutionsMap.put((String) hold.get("name"), type);
-			}
-		}
-		return subMap;
-	}
-
-	// Standard Actions: Construct Symbol Tables
-
+	 Standard Actions: Construct and Manage Symbol Tables
+    */
 	/**
 	 * Put table aliases into Symbol Tree and move item list to the table
 	 * reference
@@ -536,123 +489,83 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 	
+/**
+ * Standard Actions: SQL AST Tree Manipulation
+ * --------------------------------------
+ * These methods provide essential operations for transforming the raw parse tree
+ * into a structured AST representation. They share common characteristics:
+ * 
+ * 1. Node Transformation:
+ *    - All methods manipulate Map<String,Object> data structures representing AST nodes
+ *    - They retrieve, modify and reattach nodes at different levels of the tree
+ *    - Each handles a specific pattern of tree transformation needed across multiple parser rules
+ *
+ * 2. Stack Management:
+ *    - Work with stackTree and stackLevel to identify correct nesting context
+ *    - Maintain proper parent-child relationships in nested SQL structures
+ *    - Use mapIndex keys (ruleIndex_stackLevel) to uniquely identify nodes
+ *
+ * 3. Key Operations:
+ *    - handleOneChild: Simplifies nodes with exactly one child by promoting the child
+ *    - handleListList/handleListItem: Manages collection-style nodes and their elements
+ *    - handleOperandList: Builds special operator-based structures (AND, OR, etc.)
+ *    - handlePushDown: Creates hierarchical relationships between nodes
+ *    - addToParent: Attaches nodes to their parent in the tree
+ *
+ * These methods are invoked throughout the parser's rule-specific exit methods
+ * to perform common tree manipulations that maintain the AST's structure and semantics.
+ * Without them, every exit method would need to duplicate similar restructuring logic.
+ */
 	/**
-	 * Consolidate VALUES Statement Symbol Table; 
-	 * Parser Walker creates a virtual column list if a real one is not there.
-	 *  But if there is a real column list, then you don't need the virtual one so get rid of it.
-	 * @param alias 
-	 */
-	@SuppressWarnings("unchecked")
-	private void consolidateValuesStatementSymbolTable(String alias) {
-		
-		if (symbolTable.keySet().contains(MUMBLE_UNKNOWN_KEY)) {
-			Map<String, Object> unknownSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_UNKNOWN_KEY);
-			if (symbolTable.keySet().contains(MUMBLE_VALUES_KEY)) {
-				Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
-			}
-			symbolTable.put(alias, unknownSet);
-		} else  {
-			Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
-			symbolTable.put(alias, valuesSet);
-		}
+	 * Add level map to SQLTree AST by ruleIndex and stackLevel
+	 **/
+	private Object collect(int ruleIndex, Integer stackLevel, Object item) {
+		String index = makeMapIndex(ruleIndex, stackLevel);
+		collect(index, item);
+		if (item instanceof Map<?, ?>)
+			return getNodeMap(ruleIndex, stackLevel);
+		else
+			return getNode(ruleIndex, stackLevel);
 	}
 
-	
 	/**
-	 * Determines the type of the item subtree and adds it to the Symbol Table
-	 * in the correct location
-	 * 
-	 * @param localSymbolTable
+	 * @param index
 	 * @param item
-	 * @param token
 	 */
+	private void collect(String index, Object item) {
+		sqlTree.put(index, item);
+	}
+
+	/**
+	 * SQLTree operations when re-writing the AST during the walk
+	 */
+
+	private Object getNode(int ruleIndex, Integer stackLevel) {
+		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
+		return sqlTree.get(mapIdx);
+	}
+
+	private Object removeNode(int ruleIndex, Integer stackLevel) {
+		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
+		return sqlTree.remove(mapIdx);
+	}
+
 	@SuppressWarnings("unchecked")
-	private void addItemToSymbolTable(Object localSymbolTable, Object item, Token token) {
-		if (item instanceof String)
-			// Item is a column reference
-			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
-		else {
-			HashMap<String, Object> node = (HashMap<String, Object>) item;
-			if (node.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-
-				node = (HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY);
-				if (node.get(MUMBLE_TYPE_KEY).equals(MUMBLE_COLUMN_KEY))
-					// Item is a Column Substitution Variable
-					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
-							(HashMap<String, Object>) item);
-				else
-					// Item is a Predicate Substitution Variable
-					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
-			} else if (node.containsKey(MUMBLE_COLUMN_KEY)) {
-				// Item is a Column and should already be in the Symbol Table
-			} else
-				// Item is a subquery with its own Symbol Table
-				((HashMap<String, Object>) localSymbolTable).put("subquery", item);
-		}
+	private Map<String, Object> getNodeMap(int ruleIndex, Integer stackLevel) {
+		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
+		Map<String, Object> idMap = (Map<String, Object>) sqlTree.get(mapIdx);
+		return idMap;
 	}
 
-	/**
-	 * Put the query interface into the Symbol Table
-	 */
-	private void captureQueryInterface() {
-		String prefx = "query";
-		HashMap<String, Object> interfac = getInterfaceFromQuery(prefx);
-		if (interfac == null) {
-			prefx = "insert";
-			interfac = getInterfaceFromQuery(prefx);
-		}
-		if (interfac == null) {
-			prefx = "update";
-			interfac = getInterfaceFromQuery(prefx);
-		}
-		if (interfac == null) {
-			prefx = MUMBLE_UNION_KEY;
-			interfac = getInterfaceFromQuery(prefx);
-		}
-		if (interfac == null) {
-			prefx = MUMBLE_INTERSECT_KEY;
-			interfac = getInterfaceFromQuery(prefx);
-		}
-		if (interfac == null) {
-			prefx = MUMBLE_VALUES_KEY;
-			interfac = getInterfaceFromQuery(prefx);
-		}
-		if (interfac != null) {
-			// need to get the interface from inside the query
-			HashMap<String, Object> newif = new HashMap<String, Object>();
-			for (String key : interfac.keySet()) {
-				newif.put(key, prefx + "_column");
-			}
-			symbolTable.put("interface", newif);
-		}
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> removeNodeMap(int ruleIndex, Integer stackLevel) {
+		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
+		return (Map<String, Object>) sqlTree.remove(mapIdx);
 	}
 
-	/**
-	 * @param hdr
-	 * @return
-	 */
-	private HashMap<String, Object> getInterfaceFromQuery(String hdr) {
-		String queryName = hdr + (queryCount - 1);
-		HashMap<String, Object> query = (HashMap<String, Object>) symbolTable.get(queryName);
-		HashMap<String, Object> interfac = getInterface(query);
-		return interfac;
+	private String makeMapIndex(int ruleIndex, Integer stackIndex) {
+		return ruleIndex + "_" + stackIndex;
 	}
-
-	/**
-	 * @param query
-	 * @return
-	 */
-	private HashMap<String, Object> getInterface(HashMap<String, Object> query) {
-		HashMap<String, Object> interfac = null;
-		if (query != null) {
-			interfac = (HashMap<String, Object>) query.get("interface");
-		} else
-			interfac = null;
-		HashMap<String, Object> interfac1 = interfac;
-		return interfac1;
-	}
-
-	// Standard Actions: SQL
 
 	/**
 	 * Pops node that is a single child entry up one level of SQL Tree and
@@ -782,19 +695,424 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		sqlTree.put("SKIP", "TRUE");
 	}
 
+
+	/* ==================================================================================
+	 *
+	 * SQL Event Walker Helper Methods
+	 *
+	 * These methods are used to manage the SQL AST and Symbol Table and apply specialized functions
+	 * related to the SQL Grammar itself. These are not GENERIC methods so they are placed after
+	 * the Standard Parser Event Walker methods. 
+	 */
+	// Extra-Grammar Identifiers
+
+	/**
+	 * Symbol Swap Maps: Table and Column Name Replacement
+	 * This is an optional operating mode for the event walker that allows it to
+	 * replace table and column names in the SQL AST with alternative names. The SQL AST might
+	 * contain logical names for tables and columns that the calling process
+	 * wants to replace with physical table and column names.	
+	 * This is useful in scenarios where the SQL AST is used to generate
+	 * SQL code that needs to reference specific database objects,
+	 * such as when generating SQL for a specific database schema or when
+	 * the SQL AST is used to generate code for a specific database
+	 * implementation.
+	 */
+	private HashMap<String, String> entityTableNameMap;
+	private HashMap<String, Map<String, String>> attributeColumnMap;
+
+	public void setEntityTableNameMap(HashMap<String, String> entityTableNameMap) {
+		this.entityTableNameMap = entityTableNameMap;
+	}
+
+	public void setAttributeColumnMap(HashMap<String, Map<String, String>> attributeColumnMap) {
+		this.attributeColumnMap = attributeColumnMap;
+	}
+
+	private String getTableName(String entityName) {
+		return getLookupValue(entityTableNameMap, entityName);
+	}
+
+	public HashMap<String, Object> getSubstitutionsMap() {
+		return substitutionsMap;
+	}
+
+	/**
+	 * @param lkp
+	 * @param lkpName
+	 * @return
+	 */
+	private String getLookupValue(HashMap<String, String> lkp, String lkpName) {
+		if (lkp == null)
+			return lkpName;
+		String hold = lkp.get(lkpName);
+		if (hold == null)
+			return lkpName;
+		return hold;
+	}
+
+	/**
+	 * Consolidate SQL VALUES Statement Symbol Table; 
+	 * Parser Walker creates a virtual column list if a real one is not there.
+	 *  But if there is a real column list, then you don't need the virtual one so get rid of it.
+	 * @param alias 
+	 */
+	@SuppressWarnings("unchecked")
+	private void consolidateValuesStatementSymbolTable(String alias) {
+		
+		if (symbolTable.keySet().contains(MUMBLE_UNKNOWN_KEY)) {
+			Map<String, Object> unknownSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_UNKNOWN_KEY);
+			if (symbolTable.keySet().contains(MUMBLE_VALUES_KEY)) {
+				Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
+			}
+			symbolTable.put(alias, unknownSet);
+		} else  {
+			Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(MUMBLE_VALUES_KEY);
+			symbolTable.put(alias, valuesSet);
+		}
+	}
+
+	/**
+	 * 
+	 * Determines the type of the item being inserted into a Variable Substitution and captures
+	 * the SQL SYMBOL TABLE entry for the item.
+	 * 
+	 * @param localSymbolTable
+	 * @param item
+	 * @param token
+	 */
+	@SuppressWarnings("unchecked")
+	private void addItemToSymbolTable(Object localSymbolTable, Object item, Token token) {
+		if (item instanceof String)
+			// Item is a column reference
+			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
+		else {
+			HashMap<String, Object> node = (HashMap<String, Object>) item;
+			if (node.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+
+				node = (HashMap<String, Object>) node.get(MUMBLE_SUBSTITUTION_KEY);
+				if (node.get(MUMBLE_TYPE_KEY).equals(MUMBLE_COLUMN_KEY))
+					// Item is a Column Substitution Variable
+					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
+							(HashMap<String, Object>) item);
+				else
+					// Item is a Predicate Substitution Variable
+					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
+			} else if (node.containsKey(MUMBLE_COLUMN_KEY)) {
+				// Item is a Column and should already be in the Symbol Table
+			} else
+				// Item is a subquery with its own Symbol Table
+				((HashMap<String, Object>) localSymbolTable).put("subquery", item);
+		}
+	}
+
+	/**
+	 * Put the query Interface (its output column list) into the Symbol Table
+	 */
+	private void captureQueryInterface() {
+		String prefx = "query";
+		HashMap<String, Object> interfac = getInterfaceFromQuery(prefx);
+		if (interfac == null) {
+			prefx = "insert";
+			interfac = getInterfaceFromQuery(prefx);
+		}
+		if (interfac == null) {
+			prefx = "update";
+			interfac = getInterfaceFromQuery(prefx);
+		}
+		if (interfac == null) {
+			prefx = MUMBLE_UNION_KEY;
+			interfac = getInterfaceFromQuery(prefx);
+		}
+		if (interfac == null) {
+			prefx = MUMBLE_INTERSECT_KEY;
+			interfac = getInterfaceFromQuery(prefx);
+		}
+		if (interfac == null) {
+			prefx = MUMBLE_VALUES_KEY;
+			interfac = getInterfaceFromQuery(prefx);
+		}
+		if (interfac != null) {
+			// need to get the interface from inside the query
+			HashMap<String, Object> newif = new HashMap<String, Object>();
+			for (String key : interfac.keySet()) {
+				newif.put(key, prefx + "_column");
+			}
+			symbolTable.put("interface", newif);
+		}
+	}
+
+	/**
+	 * @param hdr
+	 * @return
+	 */
+	private HashMap<String, Object> getInterfaceFromQuery(String hdr) {
+		String queryName = hdr + (queryCount - 1);
+		HashMap<String, Object> query = (HashMap<String, Object>) symbolTable.get(queryName);
+		HashMap<String, Object> interfac = getInterface(query);
+		return interfac;
+	}
+
+	/**
+	 * @param query
+	 * @return
+	 */
+	private HashMap<String, Object> getInterface(HashMap<String, Object> query) {
+		HashMap<String, Object> interfac = null;
+		if (query != null) {
+			interfac = (HashMap<String, Object>) query.get("interface");
+		} else
+			interfac = null;
+		HashMap<String, Object> interfac1 = interfac;
+		return interfac1;
+	}
+
+	/*
+	 * HELPER METHODS for SQL With Variable Substitutions
+	 */
+
+/**
+ * Processes and Types Substitution Variables in the AST
+ * -----------------------------------------------------
+ * This method performs a critical role in handling parameterized SQL:
+ * 
+ * 1. Purpose:
+ *    - Identifies and properly marks substitution variables (like <param> syntax)
+ *    - Assigns semantic typing information based on context (e.g., column, predicand, condition)
+ *    - Registers the variable in the global substitutionsMap for later reference
+ * 
+ * 2. Process Flow:
+ *    - Checks if the passed subMap contains a substitution variable marker
+ *    - If found, retrieves the substitution variable node
+ *    - If the node doesn't already have type information, assigns the provided type
+ *    - Updates the global substitutions registry with this variable and its type
+ *    - Returns the modified map to preserve the AST structure
+ * 
+ * 3. Usage Context:
+ *    - Called during AST construction whenever a node might contain a substitution variable
+ *    - Invoked from various context-specific exit methods like exitColumn_reference, 
+ *      exitValue_expression, exitPredicand_primary, etc.
+ *    - Each caller provides the appropriate semantic type based on where the variable appears
+ * 
+ * 4. Types of Variables:
+ *    - "column": Variable represents a column name
+ *    - "predicand": Variable represents a value/expression
+ *    - "condition": Variable represents an entire boolean condition
+ *    - "tuple": Variable represents a table reference
+ *    - "in_list": Variable represents a list of values for IN clauses
+ * 
+ * The method ensures consistent handling of variables across all SQL contexts,
+ * enabling proper parameterized query support and semantic validation.
+ * 
+ * @param subMap The map structure that might contain a substitution variable
+ * @param type The semantic type to assign to the variable based on context
+ * @return The modified map structure with properly typed substitution variable
+ */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
+		if (subMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Map<String, Object> hold = (Map<String, Object>) subMap.get(MUMBLE_SUBSTITUTION_KEY);
+			if (!hold.containsKey(MUMBLE_TYPE_KEY)) {
+				hold.put(MUMBLE_TYPE_KEY, type);
+				substitutionsMap.put((String) hold.get("name"), type);
+			}
+		}
+		return subMap;
+	}
+
+	/*
+	 * This method adds all of the table references in the symbol table
+	 * to the table dictionary map. The table dictionary map is a map of
+	 * table references to their corresponding column definitions.
+	 * 
+	 * It ensures that all table references are stored in a consistent format
+	 * (lowercase) and that they are not duplicated.
+	 * 
+	 * This is used to build the SQL AST Tree and to resolve table references
+	 * in the SQL statements.
+	*/ 
+	private void addTableReferencesToTableDictionary() {
+		HashMap<String, Object> hold = symbolTable;
+		if (hold.size() > 0) {
+			for (String tab_ref : hold.keySet()) {
+				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
+						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
+				} else {
+					String reference;
+					if (tab_ref.startsWith("<"))
+						// Tuple Substitution Variable, do NOT alter case
+						reference = tab_ref;
+					else
+						reference = tab_ref.toLowerCase();
+					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currItem != null)
+						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					else {
+						HashMap<String, Object> newItem = new HashMap<String, Object>();
+						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newItem);
+					}
+				}
+			}
+		}
+	}
+
 	/*****************************************************************************************************
 	 * Grammar Clauses Start Here
 	 * 
 	 * The following methods act as overrides on the default Walker Exit and Entry logic for each clause.
 	 * 
 	 */
+	
+	/*****************************************************************************************************
+	 *
+	 * Common Parser Rule Entry and Exit Methods - Generically Useful for Any Grammar Walker 
+	 * 
+	 * This method is called automatically by ANTLR when entering any rule in the grammar. It 
+	 * 1. Pushes the current rule onto the stack to track nesting level 
+	 * 2. Creates an initial AST node for the rule
+	 * 3. Logs tracing information if enabled
+	 * 
+	 * The Parser stream is traversed in a depth-first manner, and each rule is entered 
+	 * before its custom methods are processed. Most rules only need an Exit method to
+	 * finish.
+	 * 
+	 * When the specific Exit method for a particular rule is called, the information
+	 * collected has been "collected" into the RULE MAP in a raw form. The Exit method
+	 * will then process the raw information and add it to the SQL AST Tree, editing and 
+	 * adjusting the raw format data from the Parser stream into the final structure 
+	 * defined for the SQL AST Tree.
+	 */
+	@Override
+	public void enterEveryRule(@NotNull ParserRuleContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLvl = pushStack(ruleIndex);
+
+		if (ctx.getChildCount() == 1)
+			if (ctx.getChild(0) instanceof TerminalNodeImpl) {
+				// I'm a leaf
+			} else {
+				collectNewRuleMap(ruleIndex, stackLvl);
+			}
+		else {
+			collectNewRuleMap(ruleIndex, stackLvl);
+		}
+
+		showTrace(parseTrace, "Enter " + makeMapIndex(ruleIndex, stackLvl) + ": "
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
+		showTrace(parseTrace, "");
+	}
+
+	/**
+	 * Create an empty ruleMap with ruleIndex and stackLvl key containing Type
+	 * code
+	 * 
+	 * @param ruleIndex
+	 * @param stackLvl
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> collectNewRuleMap(int ruleIndex, Integer stackLvl) {
+		HashMap<String, Object> item = makeRuleMap(ruleIndex);
+		return (Map<String, Object>) collect(ruleIndex, stackLvl, item);
+
+	}
+
+	/**
+	 * Create new ruleMap with a ruleIndex Type
+	 * 
+	 * @param ruleIndex
+	 * @return
+	 */
+	private HashMap<String, Object> makeRuleMap(int ruleIndex) {
+		HashMap<String, Object> item = new HashMap<String, Object>();
+		item.put("Type", ruleIndex);
+		return item;
+	}
+
+	/**
+	 * This method is called automatically by ANTLR when exiting any rule in the grammar. It
+	 * 1. Pops the current rule from the stack to track nesting level
+	 * 2. Removes the current rule's AST node from the SQL AST Tree
+	 * 3. Processes the collected information from the rule's context
+	 * 4. Adds the processed information to the parent rule's AST node
+	 * 5. Logs tracing information if enabled
+	 */
+	@Override
+	public void exitEveryRule(@NotNull ParserRuleContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Object item = null;
+
+		Object skip = sqlTree.remove("SKIP");
+		if (skip == null) {
+			if (useAsLeaf) {
+				item = ctx.getText();
+				removeNode(ruleIndex, stackLevel);
+				useAsLeaf = false;
+			} else if (ctx.getChildCount() == 1)
+				if (ctx.getChild(0) instanceof TerminalNodeImpl) {
+					// I'm a leaf
+					item = ctx.getText();
+				} else
+					item = removeNode(ruleIndex, stackLevel);
+			else
+				item = removeNode(ruleIndex, stackLevel);
+
+			// Add item to parent map
+			if (ctx.getParent() != null) {
+				int parentNodeIndex = ctx.getParent().getRuleIndex();
+				Integer parentStackIndex = currentStackLevel(parentNodeIndex);
+				if (ruleIndex == parentNodeIndex && stackLevel == parentStackIndex) {
+					// oddity - in case it appears my parent is myself
+					collect(ruleIndex, stackLevel, item);
+				} else {
+					Map<String, Object> idMap = getNodeMap(parentNodeIndex, parentStackIndex);
+					if (idMap == null) {
+						showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
+								+ SQLSelectParserParser.ruleNames[ruleIndex] + ": Missing pMap");
+						showTrace(parseTrace, "");
+					} else
+						idMap.put(((Integer) (idMap.size())).toString(), item);
+				}
+			} else {
+				showTrace(parseTrace, sqlTree);
+			}
+		}
+
+		popStack(ruleIndex);
+		showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
+		showTrace(parseTrace, "");
+	}
+
+	/*
+	 * These are placeholder methods that will eventually be implemented to handle
+	 * Could handle syntax error reporting but is currently not implemented
+	 */
+	@Override
+	public void visitTerminal(@NotNull TerminalNode node) {
+	}
+
+	@Override
+	public void visitErrorNode(@NotNull ErrorNode node) {
+	}
+
+	/******************************************************************************
+	 * 
+	 * RULE EXIT METHODS
+	 * 
+	 * Below are methods specific to the SQLSelectParser Grammar.
+	 * They are called by the ANTLR Parser when the Walker is traversing the
+	 * parse tree.
+	 */
 	/*
 	===============================================================================
 	  Start Statements: SQL, Condition, Predicand and Literal
+	  Parser End Points: These are independently callable and produce complete set 
+	  of objects for each call. 
 	===============================================================================
 	*/
-
-	// Parser End Points: These are independently callable and produce complete set of objects for each call. 
 
 	/*
 	===============================================================================
@@ -829,35 +1147,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
-		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		addTableReferencesToTableDictionary();
 
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
-	  
 	/*
 	===============================================================================
 	  Predicand Start Symbol
@@ -873,30 +1167,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
-		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		addTableReferencesToTableDictionary();
 
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
@@ -917,30 +1188,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
-		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		addTableReferencesToTableDictionary();
 
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
@@ -961,30 +1209,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 
-		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		addTableReferencesToTableDictionary();
 
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
@@ -1044,29 +1269,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(symbolTrace, symbolTable);
 
 		// Add TABLE references to Table Dictionary
-		HashMap<String, Object> hold = symbolTable;
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		addTableReferencesToTableDictionary();
 
 		showTrace(symbolTrace, tableDictionaryMap);
 	}
@@ -1096,32 +1299,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	*/
 	@Override
 	public void exitValues_statement_end(SQLSelectParserParser.Values_statement_endContext ctx) {
-//		int ruleIndex = ctx.getRuleIndex();
-//		Integer stackLevel = currentStackLevel(ruleIndex);
-//		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-//		Object type = subMap.remove("Type");
-//		HashMap<String, Object> item = new HashMap<String, Object> ();
-//		if (subMap.size() == 1) {
-//			// normal TUPLE value
-//			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-//			
-//		} else if (subMap.size() == 2) {
-//			// Only VALUES statement with values and alias
-//			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
-//			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-//		
-//		} else if (subMap.size() == 3) {
-//			// Only VALUES statement with values alias and column list
-//			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-//			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
-//			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-//			hold.put(MUMBLE_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
-//		} else {	
-//			showTrace(parseTrace, "Wrong number of entries: " + subMap);
-//		}
-//		
-//		sqlTree.put(MUMBLE_VALUES_TREE_KEY, item);
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
@@ -1148,6 +1325,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	/*
 	===============================================================================
 	  Dependent Grammar Rules
+
+	  The remaining methods represent internal Grammar rules and are used to
+	  build the SQL AST Tree. They are called by the ANTLR Parser when the Walker
+	  is traversing the parse tree. They are not independently callable and
+	  produce no complete set of objects for each call. They are used to
+	  transform the raw parse tree into a structured AST representation.
 	===============================================================================
 	*/
 	/*
@@ -4940,107 +5123,4 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		showTrace(parseTrace, "PUML CONSTANT IDENTIFIER: " + subMap);
 	}
 
-	
-	@Override
-	public void enterEveryRule(@NotNull ParserRuleContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLvl = pushStack(ruleIndex);
-
-		if (ctx.getChildCount() == 1)
-			if (ctx.getChild(0) instanceof TerminalNodeImpl) {
-				// I'm a leaf
-			} else {
-				collectNewRuleMap(ruleIndex, stackLvl);
-			}
-		else {
-			collectNewRuleMap(ruleIndex, stackLvl);
-		}
-
-		showTrace(parseTrace, "Enter " + makeMapIndex(ruleIndex, stackLvl) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
-		showTrace(parseTrace, "");
-	}
-
-	/**
-	 * Create an empty ruleMap with ruleIndex and stackLvl key containing Type
-	 * code
-	 * 
-	 * @param ruleIndex
-	 * @param stackLvl
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	private Map<String, Object> collectNewRuleMap(int ruleIndex, Integer stackLvl) {
-		HashMap<String, Object> item = makeRuleMap(ruleIndex);
-		return (Map<String, Object>) collect(ruleIndex, stackLvl, item);
-
-	}
-
-	/**
-	 * Create new ruleMap with a ruleIndex Type
-	 * 
-	 * @param ruleIndex
-	 * @return
-	 */
-	private HashMap<String, Object> makeRuleMap(int ruleIndex) {
-		HashMap<String, Object> item = new HashMap<String, Object>();
-		item.put("Type", ruleIndex);
-		return item;
-	}
-
-	@Override
-	public void exitEveryRule(@NotNull ParserRuleContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = currentStackLevel(ruleIndex);
-		Object item = null;
-
-		Object skip = sqlTree.remove("SKIP");
-		if (skip == null) {
-			if (useAsLeaf) {
-				item = ctx.getText();
-				removeNode(ruleIndex, stackLevel);
-				useAsLeaf = false;
-			} else if (ctx.getChildCount() == 1)
-				if (ctx.getChild(0) instanceof TerminalNodeImpl) {
-					// I'm a leaf
-					item = ctx.getText();
-				} else
-					item = removeNode(ruleIndex, stackLevel);
-			else
-				item = removeNode(ruleIndex, stackLevel);
-
-			// Add item to parent map
-			if (ctx.getParent() != null) {
-				int parentNodeIndex = ctx.getParent().getRuleIndex();
-				Integer parentStackIndex = currentStackLevel(parentNodeIndex);
-				if (ruleIndex == parentNodeIndex && stackLevel == parentStackIndex) {
-					// oddity - in case it appears my parent is myself
-					collect(ruleIndex, stackLevel, item);
-				} else {
-					Map<String, Object> idMap = getNodeMap(parentNodeIndex, parentStackIndex);
-					if (idMap == null) {
-						showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
-								+ SQLSelectParserParser.ruleNames[ruleIndex] + ": Missing pMap");
-						showTrace(parseTrace, "");
-					} else
-						idMap.put(((Integer) (idMap.size())).toString(), item);
-				}
-			} else {
-				showTrace(parseTrace, sqlTree);
-			}
-		}
-
-		popStack(ruleIndex);
-		showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " + sqlTree);
-		showTrace(parseTrace, "");
-	}
-
-	@Override
-	public void visitTerminal(@NotNull TerminalNode node) {
-	}
-
-	@Override
-	public void visitErrorNode(@NotNull ErrorNode node) {
-	}
 }
