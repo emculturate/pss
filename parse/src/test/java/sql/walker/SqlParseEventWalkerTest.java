@@ -5,11 +5,15 @@ import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRErrorListener;
+import org.antlr.v4.runtime.ANTLRErrorStrategy;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
 
+import errorhandling.ParseErrorCollector;
+import errorhandling.ParseErrorListener;
+import errorhandling.SyntaxError;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.Column_valueContext;
 import sql.SQLSelectParserParser.Condition_valueContext;
@@ -20,6 +24,7 @@ import sql.SQLSelectParserParser.Query_valueContext;
 import sql.SQLSelectParserParser.SqlContext;
 import sql.SQLSelectParserParser.Tuple_valueContext;
 import sql.SQLSelectParserParser.Values_statement_endContext;
+import sql.factory.SQLSelectParserFactory;
 
 public class SqlParseEventWalkerTest {
 	// *********************************
@@ -8067,9 +8072,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
-	               
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 
@@ -8091,6 +8095,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8105,8 +8111,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               
 	               System.out.println(obj.toString());
 	        }}
@@ -8114,6 +8120,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8126,8 +8134,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8144,6 +8152,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		} 
 	}
@@ -8156,8 +8166,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8174,6 +8184,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		} 
 	}
@@ -8186,8 +8198,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8204,6 +8216,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + inlist_string);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8216,8 +8230,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8234,6 +8248,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8246,8 +8262,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8265,6 +8281,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8279,8 +8297,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8297,6 +8315,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + inlist_string);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8310,8 +8330,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8328,6 +8348,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
@@ -8340,8 +8362,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			
 	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
 	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof SQLWalkerErrorListener) {
-	               List<SyntaxError> obj = ((SQLWalkerErrorListener) i).getSyntaxErrors();
+	        	if (i instanceof ParseErrorListener) {
+	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
 	               System.out.println(obj.toString());
 	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
@@ -8357,20 +8379,20 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 			return null;
 		}
 	}
 
+	/*
+	 * method generates a parser object for each test, then passes the query to it.
+	 * This is to ensure that the parser is always fresh and does not carry over
+	 * state from previous tests.
+	 * The returned parser is used to parse the query and extract the
+	 */
 	private static final SQLSelectParserParser parse(final String query) {
-		/*
-		CharStream input = new ANTLRInputStream(query);
-		SQLSelectParserLexer lexer = new SQLSelectParserLexer(input);
-		CommonTokenStream tokens = new CommonTokenStream(lexer);
-		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
-		
-		SQLWalkerErrorListener errorListener = new SQLWalkerErrorListener();
-        parser.addErrorListener(errorListener);
-*/
+
 		SQLSelectParserFactory factory = new SQLSelectParserFactory();
 		return factory.buildParser(query);
 	}

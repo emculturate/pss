@@ -1,4 +1,4 @@
-package sql.walker;
+package errorhandling;
 
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
