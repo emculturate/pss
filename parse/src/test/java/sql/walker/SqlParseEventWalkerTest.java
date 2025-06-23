@@ -6,7 +6,9 @@ import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.ANTLRErrorStrategy;
+import org.antlr.v4.runtime.ConsoleErrorListener;
 import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
@@ -8069,14 +8071,36 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			System.out.println();
 			// There should be zero errors
 			SqlContext tree = parser.sql();
-			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 
+			return runAnyParsertest(query, parser, tree, entityMap, attributeMap);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+		}
+		return null;
+	}
+
+
+	private SqlParseEventWalker runColumnParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Column_valueContext tree = parser.column_value();
+			
+			return runAnyParsertest(query, parser, tree, null, null);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+		}
+		return null;
+	}
+
+	private SqlParseEventWalker runAnyParsertest(final String query, final SQLSelectParserParser parser, 
+		SqlContext tree,
+		HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
+		try {	
 	        final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -8091,12 +8115,35 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.out.println("Parser Errors: " + v.getErrorList());
+
+			// check for Syntax Errors Captured by the Listeners
+			List<?> listeners = parser.getErrorListeners();
+			for (Object listener : listeners) {
+				if (listener instanceof ParseErrorListener){
+					System.out.println(listener.getClass().getName() 
+					+ " found Syntax errors:/n" 
+					+ ((ParseErrorListener) listener).getSyntaxErrors());
+				}
+			}
 			return extractor;
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 			System.err.println("Recognition Exception: " + e.getMessage());
+
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-			System.err.println(v.getErrorList());
+			System.out.println("Parser Errors: " + v.getErrorList());
+
+			// check for Syntax Errors Captured by the Listeners
+			List<?> listeners = parser.getErrorListeners();
+			for (Object listener : listeners) {
+				if (listener instanceof ParseErrorListener){
+					System.out.println(listener.getClass().getName() + " Syntax Errors: " + ((ParseErrorListener) listener).getSyntaxErrors());
+				}
+			}
+			
 			return null;
 		}
 	}
@@ -8126,50 +8173,12 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		}
 	}
 
-	private SqlParseEventWalker runColumnParsertest(final String query, final SQLSelectParserParser parser) {
-		try {
-			System.out.println();
-			// There should be zero errors
-			Column_valueContext tree = parser.column_value();
-			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
-			final int numErrors = parser.getNumberOfSyntaxErrors();
-			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
-
-			SqlParseEventWalker extractor = new SqlParseEventWalker();
-			ParseTreeWalker.DEFAULT.walk(extractor, tree);
-			System.out.println("Result: " + extractor.getSqlTree());
-			System.out.println("Interface: " + extractor.getInterface());
-			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
-			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
-			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
-
-			return extractor;
-		} catch (RecognitionException e) {
-			System.err.println("Exception parsing eqn: " + query);
-			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-			System.err.println(v.getErrorList());
-			return null;
-		} 
-	}
-
 	private SqlParseEventWalker runPredicandParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
 			// There should be zero errors
 			Predicand_valueContext tree = parser.predicand_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -8196,12 +8205,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			// There should be zero errors
 			In_list_predicate_valueContext tree = parser.in_list_predicate_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + inlist_string, 0, numErrors);
 
@@ -8228,12 +8231,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			// There should be zero errors
 			Condition_valueContext tree = parser.condition_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -8260,20 +8257,13 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			// There should be zero errors
 			Tuple_valueContext tree = parser.tuple_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
-			// DO NOT GET INTERFACE there won't be one
-//			System.out.println("Interface: " + extractor.getInterface());
+			System.out.println("Interface: " + extractor.getInterface());
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
@@ -8294,13 +8284,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			System.out.println();
 			// There should be zero errors
 			Values_statement_endContext tree = parser.values_statement_end();
-			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + inlist_string, 0, numErrors);
 
@@ -8328,12 +8311,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			// There should be zero errors
 			Query_valueContext tree = parser.query_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
@@ -8360,12 +8337,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			// There should be zero errors
 			Join_extension_valueContext tree = parser.join_extension_value();
 			
-	        List<ANTLRErrorListener> errorListeners = (List<ANTLRErrorListener>) parser.getErrorListeners();
-	        for(ANTLRErrorListener i: errorListeners) {
-	        	if (i instanceof ParseErrorListener) {
-	               List<SyntaxError> obj = ((ParseErrorListener) i).getSyntaxErrors();
-	               System.out.println(obj.toString());
-	        }}
 			final int numErrors = parser.getNumberOfSyntaxErrors();
 			Assert.assertEquals("Expected no failures with " + query, 0, numErrors);
 
