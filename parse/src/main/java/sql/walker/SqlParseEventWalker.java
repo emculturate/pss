@@ -4442,6 +4442,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitLike_any_predicate(@NotNull SQLSelectParserParser.Like_any_predicateContext ctx) {
+		// Item 95 - add support for PostgresSQL escape character syntax in Like Any clauses
 		int ruleIndex = ctx.getRuleIndex();
 
 		Integer stackLevel = currentStackLevel(ruleIndex);
@@ -4450,16 +4451,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String type = new String();
 
 		if (subMap.size() == 3) {
+			// Matches the minimum mandatory entries of the rule:
+			// row_value_predicand like_any_operator in_predicate_value
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
-			type = (String) subMap.remove("2");
-			subMap.put(MUMBLE_LIKE_ANY_LIST_KEY, subMap.remove("3"));
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));// This is the row_value_predicand
+			type = (String) subMap.remove("2");// This is the like_any_operator
+			subMap.put(MUMBLE_LIKE_ANY_LIST_KEY, subMap.remove("3")); // This is the in_predicate_value for the LIKE ANY
 		} else if (subMap.size() == 4) {
+			// Matches the minimum mandatory entries plus one of the optional items:
+			// row_value_predicand not? like_any_operator in_predicate_value
+			// row_value_predicand like_any_operator in_predicate_value escape_character_clause
 			showTrace(parseTrace, "In predicate: " + subMap);
-			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));
-			subMap.remove("2");
-			type = (String) subMap.remove("3");
-			subMap.put(MUMBLE_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));
+
+			// Has to determine which of the two possible constructions is presented and then build the AST entry
+			Object clause = subMap.get("2"); // If this is the "not" operator, construct the NOT LIKE ANY, Else Construct the Escape Clause
+			if (clause instanceof String && ((String) clause).equals("not")) {
+				// This is the NOT LIKE ANY construction without escape clause
+				subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));// This is the row_value_predicand
+				subMap.remove("2"); // This is the "not" operator, We don't need it in the AST since it's implied by the
+				// MUMBLE_NOT_LIKE_ANY_LIST_KEY used to hold the list of values
+				type = (String) subMap.remove("3");// The type is the like_any_operator
+				subMap.put(MUMBLE_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));// This is the in_predicate_value for the NOT LIKE ANY
+			} else {
+				// This is the LIKE ANY construction with an escape clause
+				subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));// This is the row_value_predicand
+				type = (String) subMap.remove("2");// The type is the like_any_operator
+				subMap.put(MUMBLE_NOT_LIKE_ANY_LIST_KEY, subMap.remove("3"));// This is the in_predicate_value for the NOT LIKE ANY
+				subMap.putAll((Map<String, Object>) subMap.remove("4")); // This is the escape_character_clause, pulled up
+			}
+		} else if (subMap.size() == 5) {
+			// Matches the maximum number of entries:
+			// row_value_predicand not? like_any_operator in_predicate_value escape_character_clause
+			showTrace(parseTrace, "In predicate: " + subMap);
+			subMap.put(MUMBLE_ITEM_KEY, subMap.remove("1"));// This is the row_value_predicand
+			subMap.remove("2"); // This is the "not" operator, We don't need it in the AST since it's implied by the
+			// MUMBLE_NOT_LIKE_ANY_LIST_KEY used to hold the list of values
+			type = (String) subMap.remove("3");// The type is the like_any_operator
+			subMap.put(MUMBLE_NOT_LIKE_ANY_LIST_KEY, subMap.remove("4"));// This is the in_predicate_value for the NOT LIKE ANY
+			subMap.putAll((Map<String, Object>) subMap.remove("5")); // This is the escape_character_clause, pulled up
 		} else {
 			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
@@ -4515,6 +4544,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		addToParent(parentRuleIndex, parentStackLevel, item);
 	}
 	
+
+	@Override
+	public void exitEscape_character_clause(@NotNull SQLSelectParserParser.Escape_character_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+
+		subMap = makeRuleMap(ruleIndex);
+		subMap.remove("Type");
+		
+		if (ctx.getChildCount() == 2) {
+			showTrace(parseTrace, "TWO WORD lexer objects: " + ctx.getText());
+			String escape_key_word = ctx.getChild(0).getText().toUpperCase();
+			String escape_string = ctx.getChild(1).getText();
+			subMap.put(MUMBLE_ESCAPE_KEY, escape_string);
+		} else  {
+			showTrace(parseTrace, "incorrect phrase");
+		}
+		// Add item to parent map
+		addToParent(parentRuleIndex, parentStackLevel, subMap);
+		showTrace(parseTrace, "Static Data Type: " + subMap);
+	}
 
 	@Override
 	public void exitFactor(@NotNull SQLSelectParserParser.FactorContext ctx) {

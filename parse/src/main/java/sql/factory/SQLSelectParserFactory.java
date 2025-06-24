@@ -1,7 +1,5 @@
 package sql.factory;
 
-import java.util.List;
-
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -46,19 +44,31 @@ public class SQLSelectParserFactory {
 		}
 
 		// For debugging - correctly cast to List
+		/******* 
     	List<?> listeners = parser.getErrorListeners();
     	System.out.println("Number of error listeners: " + listeners.size());
     	for (Object listener : listeners) {
         	System.out.println("Registered listener: " + listener.getClass().getName() + "  - hashCode: " + listener.hashCode());
     	}
- 
+		*/
+
 		// There is only one ErrorCollector in the Parser.
-		// It is used to collect parse errors and provide a way to recover from them.
-		// The ParseErrorCollector will collect errors and store them in a list.
+		// It is used to collect parse errors and provide a way to recover from them
+		// while the Parser is working through the text (not implemented yet).
+		// The ParseErrorCollector is a custom error strategy that only collects parse errors.
+		// It does not handle errors in any specific way, but allows the parser to continue parsing
+		// even if there are syntax errors.
+		// This is useful for collecting all errors in a single pass, rather than stopping at the first error.
+		// The ParseErrorCollector is not used by default, but can be set as the error handler for the parser.
+		// It is not a listener, but an error strategy that can be used to recover
+		// from errors and continue parsing.
+
 		// You can retrieve the errors later using the getErrorList() method.
-		// The ParseErrorCollector is used to handle errors that occur during parsing.
-		// It implements the ANTLRErrorStrategy interface and provides methods to handle errors.
-		// It is used to recover from errors and continue parsing.
+		// This class partially implements the ANTLRErrorStrategy interface and ignores 
+		// the methods to handle errors.
+
+		// Create a different class if you need to recover from errors and inject context
+		// sesnsitive changes to what the parser does when it encounters an error.
 		ParseErrorCollector errorCollector = new ParseErrorCollector();
 		parser.setErrorHandler(errorCollector);
 

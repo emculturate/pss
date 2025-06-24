@@ -26,6 +26,7 @@ public final class MumbleConstants {
 	public static final String MUMBLE_DATATYPE_KEY = "data_type";
 	public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
 	public static final String MUMBLE_ELSE_KEY = "else";
+	public static final String MUMBLE_ESCAPE_KEY = "escape";
 	public static final String MUMBLE_FOLLOWING_KEY = "FOLLOWING";
 	public static final String MUMBLE_FROM_KEY = "from";
 	public static final String MUMBLE_FUNCTION_KEY = "function";

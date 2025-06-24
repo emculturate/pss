@@ -13,6 +13,19 @@ import org.antlr.v4.runtime.Token;
  * ParseErrorCollector is an implementation of ANTLRErrorStrategy that collects syntax errors
  * encountered during parsing. It overrides methods to handle errors and recover from them,
  * allowing the parser to continue processing even when errors occur.
+ * 
+ * The ParseErrorCollector is a custom error strategy that only collects parse errors.
+	It does not handle errors in any specific way, but allows the parser to continue parsing
+	even if there are syntax errors.
+	This is useful for collecting all errors in a single pass, rather than stopping at the first error.
+	The ParseErrorCollector is not used by default, but can be set as the error handler for the parser.
+	It is not a listener, but an error strategy that can be used to recover
+	from errors and continue parsing.
+
+	Inserting this into the parser makes the parser COLLECT any syntax errors but then continue parsing.
+	It does not stop at the first error, but collects all errors and allows the parser to continue
+	processing the input. This is useful for collecting all errors in a single pass, rather than
+	stopping at the first error.
  */
 public class ParseErrorCollector implements ANTLRErrorStrategy {
 
@@ -22,6 +35,10 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 		return errorList;
 	}
 
+	public int getErrorCount() {
+		return errorList.size();
+	}
+	
 	@Override
 	public void reset(Parser recognizer) {
 		// TODO Auto-generated method stub

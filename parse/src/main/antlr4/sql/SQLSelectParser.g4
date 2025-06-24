@@ -1062,7 +1062,7 @@ in_predicate
   
   
 like_any_predicate
-  : row_value_predicand  not? like_any_operator in_predicate_value
+  : row_value_predicand  not? like_any_operator in_predicate_value escape_character_clause?
   ;
   
 like_any_operator
@@ -1079,6 +1079,9 @@ in_value_list
   : row_value_expression  ( COMMA row_value_expression )*
   ;
 
+escape_character_clause
+  : ESCAPE Character_String_Literal
+  ;
 
 /*
 ===============================================================================
@@ -1501,7 +1504,8 @@ nonreserved_keywords
   |     IGNORE
   |     RESPECT
   |		NULLS
-  
+  // 2025 Additions
+  | ESCAPE
   ;
 
 /*
@@ -1958,6 +1962,7 @@ DOY : D O Y;
 DROP : D R O P;
 
 EPOCH : E P O C H;
+ESCAPE: E S C A P E;
 EVERY : E V E R Y;
 EXISTS : E X I S T S;
 EXTERNAL : E X T E R N A L;
