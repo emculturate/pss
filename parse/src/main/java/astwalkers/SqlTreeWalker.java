@@ -1,10 +1,15 @@
-package puml;
+package astwalkers;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import puml.treehandler.AbstractSqlTreeHandler;
-
+/**
+ * SqlTreeWalker is a utility class that traverses a nested Map structure
+ * representing an SQL statement. It uses a depth-first approach to walk through
+ * the tree and applies a handler at each level. The handler can perform
+ * various actions based on the structure of the SQL statement, allowing for
+ * custom processing of SQL queries.
+ */
 public class SqlTreeWalker {
 
 	/**

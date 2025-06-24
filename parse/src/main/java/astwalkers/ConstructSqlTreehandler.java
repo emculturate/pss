@@ -1,4 +1,4 @@
-package puml.treehandler;
+package astwalkers;
 
 import java.util.Map;
 

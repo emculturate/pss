@@ -1,6 +1,6 @@
 package astwalkers;
 
-public abstract class AbstractASTWalker {
+public abstract class AbstractASTWalker implements InterfaceASTWalker {
     
     /*************************************
      * AbstractASTWalker is an abstract class providing a base for AST walkers.

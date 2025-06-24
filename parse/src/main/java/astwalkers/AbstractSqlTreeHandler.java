@@ -1,8 +1,8 @@
-package puml.treehandler;
+package astwalkers;
 
 import java.util.Map;
 
-public abstract class AbstractSqlTreeHandler implements SqlTreeHandlerInterface {
+public abstract class AbstractSqlTreeHandler implements InterfaceASTWalker {
 
 	@Override
 	public Map<String, Object> handle(String key, Map<String, Object> map, Map<String, Object> resTree) {
