@@ -62,7 +62,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={concatenate={1={function={parameters={1={column={name=strm, table_ref=null}}, 2={literal=1}, 3={literal=2}}, function_name=substr}}, 2={parentheses={calc={left={function={parameters={1={column={name=strm, table_ref=null}}, 2={literal=3}, 3={literal=1}}, function_name=substr}}, right={literal=1}, operator=+}}}, 3={function={parameters={1={column={name=strm, table_ref=null}}, 2={literal=4}, 3={literal=1}}, function_name=substr}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -106,7 +106,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={in={item={concatenate={1={column={name=subj_cd, table_ref=null}}, 2={column={name=crs_nm, table_ref=null}}}}, in_list={select={1={column={name=fld, table_ref=null}}}, from={table={alias=null, table=orange}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -127,7 +127,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -146,7 +146,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -165,7 +165,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=a, calc={left={literal=1}, right={literal=2}, operator=+}}, 2={parentheses={calc={left={literal=1}, right={literal=2}, operator=+}}, alias=b}, 3={parentheses={column={name=d, table_ref=null}}, alias=c}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -186,7 +186,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, qualifier=distinct, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -205,7 +205,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, qualifier=distinct, from={table={alias=tab1, query={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}}, qualifier=all, from={table={alias=null, table=tab2}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -225,7 +225,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=max, qualifier=distinct, parameters={column={name=a, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -245,7 +245,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}, 3={column={name=c, table_ref=null}, alias=z}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[x, y, z]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -264,7 +264,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=01_x}, 2={column={name=b, table_ref=null}, alias=02_y}, 3={column={name=c, table_ref=null}, alias=999_z}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[02_y, 999_z, 01_x]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -283,7 +283,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=\"09_a\", table_ref=null}, alias=01_x}, 2={column={name=\"22_b\", table_ref=null}, alias=02_y}, 3={column={name=\"36_c\", table_ref=null}, alias=\"999_z\"}}, from={table={alias=null, table=\"99tab1\"}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[\"999_z\", 02_y, 01_x]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -302,7 +302,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Degree_Code, table_ref=sub}, alias=01_DEGREE_CD}, 2={column={name=Degree_Name, table_ref=sub}, alias=02_DEGREE_NAME}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164728_46090704}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[02_DEGREE_NAME, 01_DEGREE_CD]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -321,7 +321,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=College_Code, table_ref=sub}, alias=01_College_Cd}, 2={column={name=College_Name, table_ref=sub}, alias=02_College_Name}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_6875_220752_46090864}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[02_College_Name, 01_College_Cd]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -340,7 +340,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Course_Registration_Code, table_ref=sub}, alias=01_COURSE_REGISTRATION_CD}, 2={column={name=Course_Registration_Description, table_ref=sub}, alias=02_COURSE_REGISTRATION_DESC}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164727_46090703}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[02_COURSE_REGISTRATION_DESC, 01_COURSE_REGISTRATION_CD]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -365,7 +365,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with blanks in name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<with blanks in name>, <simple>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<with blanks in name>=column, <simple>=column}", 
@@ -384,7 +384,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with.dots.in.name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<simple>, <with.dots.in.name>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple>=column, <with.dots.in.name>=column}", 
@@ -403,7 +403,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with-dash-in - name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<simple>, <with-dash-in - name>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple>=column, <with-dash-in - name>=column}", 
@@ -422,7 +422,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[simple]>, parts={1=[simple]}, type=column}, table_ref=a}}, 2={column={substitution={name=<[DOMAIN].[ENTITY].[ATTRIBUTE]>, parts={1=[DOMAIN], 2=[ENTITY], 3=[ATTRIBUTE]}, type=column}, table_ref=a}}, 3={column={substitution={name=<[another].[item]>, parts={1=[another], 2=[item]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<[another].[item]>, <[DOMAIN].[ENTITY].[ATTRIBUTE]>, <[simple]>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[another].[item]>=column, <[DOMAIN].[ENTITY].[ATTRIBUTE]>=column, <[DOMAIN].[ENTITY]>=tuple, <[simple]>=column}", 
@@ -441,7 +441,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]>, parts={1=[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[DOMAIN].[ENTITY]>=tuple, <[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]>=column}", 
@@ -460,7 +460,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>, parts={1=[PREFIX-DOMAIN-SUFFIX], 2=[ENTITY-SUFFIX], 3=[Prefix-ATTRIBUTE]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[DOMAIN].[ENTITY]>=tuple, <[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>=column}", 
@@ -482,7 +482,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}>, parts={1=[schema], 2=[entity], 3={pop1}}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[schema].[entity].{pop1}>=tuple}", 
@@ -502,7 +502,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}.[Current Batch]>, parts={1=[schema], 2=[entity], 3={pop1}, 4=[Current Batch]}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[schema].[entity].{pop1}.[Current Batch]>=tuple}", 
@@ -522,7 +522,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}>, parts={1=[entity], 2={pop1}}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[entity].{pop1}>=tuple}", 
@@ -542,7 +542,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}.[Current Batch]>, parts={1=[entity], 2={pop1}, 3=[Current Batch]}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[entity].{pop1}.[Current Batch]>=tuple}", 
@@ -576,7 +576,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=col1, table_ref=null}}}, alias=a}, 2={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}, alias=c}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -596,7 +596,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=TRY_cast, data_type={type=BOOLEAN}, type=TRY_CAST, value={column={name=col1, table_ref=null}}}, alias=a}, 2={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}, alias=c}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -616,7 +616,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, operator=is true}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[colu]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -635,7 +635,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -654,7 +654,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=tab1}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join, on={condition={left={column={name=cola, table_ref=tab1}}, right={function={function_name=cast, data_type={type=CHARACTER VARYING}, type=CAST, value={column={name=cola, table_ref=tab2}}}}, operator==}}}, 3={table={alias=null, table=tab2}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[colu]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -673,7 +673,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}, alias=a}, 2={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, alias=b}}, from={table={alias=null, table=tab1}}, groupby={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -692,7 +692,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, orderby={1={null_order=null, predicand={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -717,7 +717,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={length=10, type=CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=NATIONAL CHARACTER}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={length=256, type=NATIONAL CHARACTER}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={type=NATIONAL CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={length=1000, type=NATIONAL CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c, d, e]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -741,7 +741,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=NUMERIC}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=7, type=DECIMAL}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={precision=98, scale=7, type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={precision=2, type=FLOAT}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c, d, e]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -765,7 +765,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=FLOAT4}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={type=TIME WITH TIME ZONE}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={type=TIMESTAMP WITH TIME ZONE}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={type=INET4}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c, d, e]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -785,7 +785,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={null_literal=null}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -806,7 +806,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={substitution={name=<var1>, type=predicand}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<var1>=predicand}", 
@@ -827,7 +827,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={column={substitution={name=<var1>, type=column}, table_ref=tab1}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<var1>=column}", 
@@ -879,7 +879,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={11={function={function_name=cast, data_type={length=1000, type=VARCHAR}, type=CAST, value={column={name=address_street, table_ref=a}}}, alias=school_address}, 12={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_created, table_ref=dr}}}, alias=crm_created_at}, 13={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_updated, table_ref=dr}}}, alias=crm_updated_at}, 1={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=school_id, table_ref=s}}}, alias=school_id}, 2={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={column={name=school_key, table_ref=s}}}, alias=school_ceeb_code}, 3={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_type}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_type}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_type}}}}}, alias=school_type}, 4={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_cat}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_cat}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_cat}}}}}, alias=school_category}, 5={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=lookup_school_name, table_ref=sl}}, when={or={1={condition={left={column={name=school_name, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_name, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_name, table_ref=s}}}}}, alias=school_name}, 6={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_country, table_ref=a}}, when={or={1={condition={left={column={name=school_country, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_country, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_country, table_ref=s}}}}}, alias=school_country}, 7={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_region, table_ref=a}}, when={or={1={condition={left={column={name=school_region, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_region, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_region, table_ref=s}}}}}, alias=school_state}, 8={function={function_name=cast, data_type={length=255, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_city, table_ref=a}}, when={or={1={condition={left={column={name=school_city, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_city, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_city, table_ref=s}}}}}, alias=school_city}, 9={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_county, table_ref=a}}}, alias=school_county}, 10={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_zip, table_ref=a}}}, alias=school_zip}}, qualifier=distinct, from={join={11={table={alias=null, table=schl_type}}, 12={join=left, on={condition={left={column={name=field_record, table_ref=schl_cat}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}}, 13={table={alias=null, table=schl_cat}}, 1={table={alias=s, table=school}}, 2={join=left, on={condition={left={column={name=lookup_school_id, table_ref=sl}}, right={column={name=school_key, table_ref=s}}, operator==}}}, 3={table={alias=sl, substitution={name=<slate_lookup_school>, type=tuple}}}, 4={join=left, on={condition={left={column={name=dataset_row_key, table_ref=dr}}, right={column={name=school_key, table_ref=s}}, operator==}}}, 5={table={alias=dr, substitution={name=<slate_dataset_row>, type=tuple}}}, 6={join=left, on={and={1={condition={left={column={name=dataset_id, table_ref=d}}, right={column={name=dataset_row_dataset, table_ref=dr}}, operator==}}, 2={condition={left={column={name=dataset_name, table_ref=d}}, right={literal='Organizations'}, operator==}}}}}, 7={table={alias=d, substitution={name=<slate_dataset>, type=tuple}}}, 8={join=left, on={and={1={condition={left={column={name=address_record, table_ref=a}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}, 2={condition={left={column={name=address_rank_overall, table_ref=a}}, right={literal=1}, operator==}}}}}, 9={table={alias=a, substitution={name=<slate_address>, type=tuple}}}, 10={join=left, on={condition={left={column={name=field_record, table_ref=schl_type}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[school_type, crm_created_at, school_name, school_city, school_category, school_state, school_id, school_country, school_ceeb_code, school_address, school_county, crm_updated_at, school_zip]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<slate_lookup_school>=tuple, <slate_address>=tuple, <slate_dataset>=tuple, <slate_dataset_row>=tuple}", 
@@ -900,7 +900,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -919,7 +919,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -939,7 +939,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -959,7 +959,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
@@ -979,7 +979,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
@@ -999,7 +999,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={and={1={substitution={name=<OnJoinCondition>, type=condition}}, 2={substitution={name=<OtherJoinCondition>, type=condition}}}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OtherJoinCondition>=condition, <OnJoinCondition>=condition}", 
@@ -1019,7 +1019,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
@@ -1039,7 +1039,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=leftouter}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
@@ -1059,7 +1059,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
@@ -1079,7 +1079,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=naturaljoin}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
@@ -1099,7 +1099,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=unionjoin}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
@@ -1119,7 +1119,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1139,7 +1139,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1192,7 +1192,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=cec}}}, from={join={1={table={alias=cec, substitution={name=<fulfill.[domain].[entity].[file category]>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category]}, type=tuple}}}, 2={join=join}, 3={table={alias=oth, substitution={name=<fulfill.[domain].[entity]>, parts={1=fulfill, 2=[domain], 3=[entity]}, type=tuple}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category]>=tuple, <fulfill.[domain].[entity]>=tuple}", 
@@ -1212,7 +1212,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=oth}}}, from={table={alias=oth, substitution={name=<fulfill.[domain].[entity].[file category].{snapshot}>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category], 5={snapshot}}, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category].{snapshot}>=tuple}", 
@@ -1233,7 +1233,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1252,7 +1252,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={table={alias=two, substitution={name=<tuple variable>, type=tuple}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=tuple}", 
@@ -1293,7 +1293,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, table={alias=null, table=third}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
@@ -1313,7 +1313,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, join={1={table={alias=T3, table=third}}, 2={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
@@ -1333,7 +1333,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, join={1={table={alias=T3, table=third}}, 2={join=join, on={substitution={name=<third_fourth_join_condition>, type=condition}}}, 3={table={alias=F4, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<third_fourth_join_condition>=condition, <extension>=join_extension}", 
@@ -1358,7 +1358,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1377,7 +1377,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[desc]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1396,7 +1396,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=desc, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[desc]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1415,7 +1415,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1434,7 +1434,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[asc]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1453,7 +1453,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=asc, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[asc]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1472,7 +1472,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[key_rank]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1491,7 +1491,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=rank, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[rank]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1510,7 +1510,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[rank]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1533,7 +1533,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[app_name, is_active, student, rank, category, nk, desc]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
@@ -1558,7 +1558,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=\"Name\"}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1577,7 +1577,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", alias=null, table=\"Name\"}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1596,7 +1596,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", dbname=\"db\", alias=null, table=\"Name\"}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1615,7 +1615,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=panto, dbname=\"PROD-3beb02cb-f710-4d2d-a6a1-40c229e4a40e\", alias=null, table=\"1234_987654\"}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1639,7 +1639,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={union={qualifier=null, operator=union}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={union={qualifier=null, operator=union}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[first]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1722,7 +1722,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1743,7 +1743,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=ALL, operator=INTERSECT}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1764,7 +1764,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=distinct, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1785,7 +1785,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=distinct, operator=INTERSECT}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1809,7 +1809,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1830,7 +1830,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple>=tuple}", 
@@ -1851,7 +1851,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=problem, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple>=tuple}", 
@@ -1872,7 +1872,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1893,7 +1893,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1914,7 +1914,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1935,7 +1935,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1955,7 +1955,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1977,7 +1977,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={not={literal=true}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -1997,7 +1997,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={substitution={name=<subject code>, type=condition}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
@@ -2016,7 +2016,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={column={substitution={name=<subject code>, type=column}, table_ref=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=column}", 
@@ -2035,7 +2035,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, right={substitution={name=<other subject code>, type=predicand}}, operator==}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other subject code>=predicand, <subject code>=predicand}", 
@@ -2055,7 +2055,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
@@ -2075,7 +2075,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is not null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
@@ -2095,7 +2095,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<first condition>, type=condition}}, 2={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is null}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand, <first condition>=condition}", 
@@ -2115,7 +2115,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj, table_ref=null}}}, operator=is true}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2135,7 +2135,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj, table_ref=null}}}, operator=is not true}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2156,7 +2156,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}}, operator=is true}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=predicand}", 
@@ -2175,7 +2175,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<subject code>, type=condition}}, 2={literal=true}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
@@ -2194,7 +2194,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={substitution={name=<subject code>, type=condition}}, 2={literal=true}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
@@ -2213,7 +2213,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={substitution={name=<subject code>, type=condition}}, 2={parentheses={substitution={name=<other>, type=condition}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition, <other>=condition}", 
@@ -2233,7 +2233,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={parentheses={substitution={name=<subject code>, type=condition}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
@@ -2253,7 +2253,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={parentheses={substitution={name=<subject code>, type=condition}}}, 2={literal=true}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}", 
@@ -2273,7 +2273,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<subject code_condition>, type=condition}}, 2={condition={left={substitution={name=<subject_code_predicand>, type=predicand}}, right={column={name=banana, table_ref=null}}, operator==}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subject code_condition>=condition, <subject_code_predicand>=predicand}", 
@@ -2294,7 +2294,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2313,7 +2313,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2332,7 +2332,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=DESC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2351,7 +2351,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2370,7 +2370,7 @@ public class SqlParseEventWalkerTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=first, predicand={column={name=col2, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2391,7 +2391,7 @@ public void selectOrderByNullsLastStatementTest() {
 	SqlParseEventWalker extractor = runParsertest(query, parser);
 	
 	Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={literal=1}, sort_order=ASC}}, from={table={alias=null, table=dual}}}}",
-			extractor.getSqlTree().toString());
+			extractor.getAsTree().toString());
 	Assert.assertEquals("Interface is wrong", "[*]", 
 			extractor.getInterface().toString());
 	Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2412,7 +2412,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 	SqlParseEventWalker extractor = runParsertest(query, parser);
 	
 	Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={substitution={name=<var1>, type=predicand}}, sort_order=ASC}}, from={table={alias=null, table=dual}}}}",
-			extractor.getSqlTree().toString());
+			extractor.getAsTree().toString());
 	Assert.assertEquals("Interface is wrong", "[*]", 
 			extractor.getInterface().toString());
 	Assert.assertEquals("Substitution List is wrong", "{<var1>=predicand}", 
@@ -2433,7 +2433,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, limit={literal=100}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2452,7 +2452,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, limit={offset=300, literal=100}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2474,7 +2474,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=null, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=between}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2494,7 +2494,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=between}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2514,7 +2514,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=null, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=not between}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2534,7 +2534,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=not between}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2554,7 +2554,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={substitution={name=<a>, type=predicand}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={substitution={name=<c>, type=column}, table_ref=tab1}}, operator=not between}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<c>=column, <a>=predicand}", 
@@ -2577,7 +2577,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}, 2={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, 3={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_2, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2597,7 +2597,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, in_list={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2617,7 +2617,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, in_list={substitution={name=<inlist subquery>, type=query}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist subquery>=query}", 
@@ -2636,7 +2636,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={substitution={name=<subj_code>, type=column}, table_ref=aa}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_code>=column}", 
@@ -2656,7 +2656,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={substitution={name=<subj_code>, type=predicand}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_code>=predicand}", 
@@ -2676,7 +2676,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=item, table_ref=null}}, in_list={substitution={name=<inlist substitution>, type=in_list}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist substitution>=in_list}", 
@@ -2696,7 +2696,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, not_in_list={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2716,7 +2716,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, not_in_list={substitution={name=<inlist subquery>, type=query}}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist subquery>=query}", 
@@ -2735,7 +2735,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={substitution={name=<subj_code>, type=column}, table_ref=aa}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_code>=column}", 
@@ -2755,7 +2755,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={substitution={name=<subj_code>, type=predicand}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_code>=predicand}", 
@@ -2775,7 +2775,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=item, table_ref=null}}, not_in_list={substitution={name=<inlist substitution>, type=in_list}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inlist substitution>=in_list}", 
@@ -2796,7 +2796,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2815,7 +2815,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2834,7 +2834,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2853,7 +2853,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={substitution={name=<variable>, type=in_list}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<variable>=in_list}", 
@@ -2874,7 +2874,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2894,7 +2894,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2914,7 +2914,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2934,7 +2934,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -2955,7 +2955,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, like_any_list={substitution={name=<variable>, type=in_list}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<variable>=in_list}", 
@@ -2979,7 +2979,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={literal='%STUFF%'}, operator=like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3000,7 +3000,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3021,7 +3021,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=not_like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3042,7 +3042,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={function={parameters={1={literal='%STUFF%'}}, function_name=lower}}, operator=like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3063,7 +3063,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subj_cd>, type=predicand}}, right={literal='%STUFF%'}, operator=like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<subj_cd>=predicand}", 
@@ -3084,7 +3084,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={substitution={name=<predicand>, type=predicand}}, operator=like}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
@@ -3106,7 +3106,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={literal=true}}, 2={then={literal='N'}, when={literal=false}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3125,7 +3125,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=null}}, right={literal=true}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3144,7 +3144,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={literal=true}}, 2={then={literal='N'}, when={literal=false}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3163,7 +3163,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3186,7 +3186,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=observation_time, table_ref=null}}, clauses={1={then={column={name=t_student_last_name, table_ref=S948}}, when={column={name=OBSERVATION_TM, table_ref=s948}}}, 2={then={column={name=t_student_last_name, table_ref=S949}}, when={substitution={name=<item>, type=predicand}}}}, else={function={parameters={1={column={name=t_student_last_name, table_ref=S948}}, 2={column={name=t_student_last_name, table_ref=S949}}}, function_name=COALESCE}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
@@ -3207,7 +3207,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={substitution={name=<column1>, type=predicand}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={literal='N'}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
@@ -3227,7 +3227,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={substitution={name=<column4>, type=predicand}}, when={column={name=column3, table_ref=null}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=predicand}", 
@@ -3247,7 +3247,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={item={column={name=column1, table_ref=null}}, clauses={1={then={literal='Y'}, when={column={name=column2, table_ref=null}}}, 2={then={column={name=column4, table_ref=null}}, when={column={name=column3, table_ref=null}}}}, else={substitution={name=<column5>, type=predicand}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column5>=predicand}", 
@@ -3266,7 +3266,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={substitution={name=<column1>, type=predicand}}, right={literal=true}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
@@ -3285,7 +3285,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={substitution={name=<column1>, type=column}, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
@@ -3304,7 +3304,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={substitution={name=<column1>, type=condition}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=null}}, right={literal=false}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=condition}", 
@@ -3324,7 +3324,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={substitution={name=<predicand>, type=predicand}}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
@@ -3344,7 +3344,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={substitution={name=<predicand>, type=predicand}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
@@ -3363,7 +3363,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={column={substitution={name=<column4>, type=column}, table_ref=a}}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={literal='N'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
@@ -3382,7 +3382,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={literal='Y'}, when={condition={left={column={name=column1, table_ref=a}}, right={literal=700}, operator==}}}, 2={then={literal='N'}, when={condition={left={column={name=column2, table_ref=a}}, right={literal=800}, operator==}}}}, else={column={substitution={name=<column4>, type=column}, table_ref=a}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
@@ -3404,7 +3404,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=case_one, case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}, from={table={alias=null, table=sgbstdn}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[case_one]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3462,7 +3462,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}, 2={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=null, table=scbcrse}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3483,7 +3483,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={substitution={name=<field1>, type=column}, table_ref=a}}}}}, 2={function={parameters={1={concatenate={1={literal='0'}, 2={column={substitution={name=<field2>, type=column}, table_ref=a}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=a, table=scbcrse}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<field2>=column, <field1>=column}", 
@@ -3504,7 +3504,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={substitution={name=<field1>, type=predicand}}}}}, 2={function={parameters={1={substitution={name=<field2>, type=predicand}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=a, table=scbcrse}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<field2>=predicand, <field1>=predicand}", 
@@ -3528,7 +3528,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={function={function_name=max, qualifier=null, parameters={column={name=TERM_CODE_ADMIT, table_ref=null}}}}, right={literal=201310}, operator=>=}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3549,7 +3549,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={or={1={substitution={name=<condition>, type=condition}}, 2={substitution={name=<condition2>, type=condition}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=condition, <condition2>=condition}", 
@@ -3570,7 +3570,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={substitution={name=<condition>, type=predicand}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=predicand}", 
@@ -3591,7 +3591,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={column={substitution={name=<condition>, type=column}, table_ref=tab1}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[TERM_CODE_ADMIT, spriden_id]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<condition>=column}", 
@@ -3613,7 +3613,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={literal=2}, sort_order=ASC}, 3={null_order=null, predicand={calc={left={column={name=fruit_cd, table_ref=null}}, right={literal=1}, operator=+}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, fruit_cd]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3633,7 +3633,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<predicand variable>, type=predicand}}, sort_order=desc}, 2={null_order=null, predicand={column={name=fruit_cd, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, fruit_cd]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand variable>=predicand}", 
@@ -3653,7 +3653,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={substitution={name=<column variable>, type=column}, table_ref=tab1}}, sort_order=desc}, 2={null_order=null, predicand={column={name=fruit_cd, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, fruit_cd]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column variable>=column}", 
@@ -3674,7 +3674,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3695,7 +3695,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=column}", 
@@ -3715,7 +3715,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={substitution={name=<other>, type=column}, table_ref=tab1}}, 2={substitution={name=<predicand>, type=predicand}}, 3={parentheses={calc={left={column={name=a, table_ref=null}}, right={calc={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator=*}}, operator=+}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand, <other>=column}", 
@@ -3736,7 +3736,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={substitution={name=<other>, type=predicand}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=predicand}", 
@@ -3756,7 +3756,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={calc={left={column={name=subj, table_ref=null}}, right={column={name=object, table_ref=null}}, operator=+}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -3776,7 +3776,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=column}", 
@@ -3796,7 +3796,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={substitution={name=<other>, type=predicand}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[apple, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<other>=predicand}", 
@@ -3820,7 +3820,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=ANY_VALUE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function CORR
@@ -3833,7 +3833,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=CORR, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function COVAR_POP
@@ -3846,7 +3846,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=COVAR_POP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function COVAR_SAMP
@@ -3859,7 +3859,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=COVAR_SAMP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function LISTAGG
@@ -3872,7 +3872,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=LISTAGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function MEDIAN
@@ -3885,7 +3885,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MEDIAN, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function PERCENTILE_CONT
@@ -3898,7 +3898,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENTILE_CONT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function PERCENTILE_DISC
@@ -3911,7 +3911,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENTILE_DISC, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function STDDEV
@@ -3924,7 +3924,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=STDDEV, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function VARIANCE_POP
@@ -3937,7 +3937,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE_POP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function VARIANCE
@@ -3950,7 +3950,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function VARIANCE_SAMP
@@ -3963,7 +3963,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE_SAMP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function CUME_DIST
@@ -3976,7 +3976,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=CUME_DIST, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function DENSE_RANK
@@ -3989,7 +3989,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=DENSE_RANK, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function NTILE
@@ -4002,7 +4002,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=NTILE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function PERCENT_RANK
@@ -4015,7 +4015,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENT_RANK, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function WIDTH_BUCKET
@@ -4028,7 +4028,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=WIDTH_BUCKET, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function BITAND_AGG
@@ -4041,7 +4041,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITAND_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function BITOR_AGG
@@ -4054,7 +4054,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITOR_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function BITXOR_AGG
@@ -4067,7 +4067,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITXOR_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HASH_AGG
@@ -4080,7 +4080,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HASH_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function ARRAY_AGG
@@ -4093,7 +4093,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=ARRAY_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function OBJECT_AGG
@@ -4106,7 +4106,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=OBJECT_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_AVGX
@@ -4119,7 +4119,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_AVGX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_AVGY
@@ -4132,7 +4132,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_AVGY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_COUNT
@@ -4145,7 +4145,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_COUNT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_INTERCEPT
@@ -4158,7 +4158,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_INTERCEPT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_R2
@@ -4171,7 +4171,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_R2, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_SLOPE
@@ -4184,7 +4184,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SLOPE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_SXX
@@ -4197,7 +4197,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SXX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_SXY
@@ -4210,7 +4210,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SXY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function REGR_SYY
@@ -4223,7 +4223,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SYY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_COUNT_DISTINCT
@@ -4236,7 +4236,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_COUNT_DISTINCT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HLL
@@ -4249,7 +4249,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HLL_ACCUMULATE
@@ -4262,7 +4262,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HLL_COMBINE
@@ -4275,7 +4275,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HLL_EXPORT
@@ -4288,7 +4288,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_EXPORT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function HLL_IMPORT
@@ -4301,7 +4301,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_IMPORT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROXIMATE_JACCARD_INDEX
@@ -4314,7 +4314,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROXIMATE_JACCARD_INDEX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROXIMATE_SIMILARITY
@@ -4327,7 +4327,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROXIMATE_SIMILARITY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function MINHASH
@@ -4340,7 +4340,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MINHASH, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function MINHASH_COMBINE
@@ -4353,7 +4353,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MINHASH_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_TOP_K
@@ -4366,7 +4366,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_TOP_K_ACCUMULATE
@@ -4379,7 +4379,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_TOP_K_COMBINE
@@ -4392,7 +4392,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_PERCENTILE
@@ -4405,7 +4405,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_PERCENTILE_ACCUMULATE
@@ -4418,7 +4418,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   // Snowflake Aggregate Function APPROX_PERCENTILE_COMBINE
@@ -4431,7 +4431,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	
@@ -4445,7 +4445,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=col1, table_ref=null}}}, function_name=GROUPING}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -4456,7 +4456,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=null}}, 2={function={parameters={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, function_name=GROUPING}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=col, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
   	// END OF SNOWFLAKE AGGREGATES
@@ -4472,7 +4472,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}, 2={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_1, unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4493,7 +4493,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[key_rank]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4514,7 +4514,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[key_rank]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4557,7 +4557,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4578,7 +4578,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4599,7 +4599,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4620,7 +4620,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4641,7 +4641,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4662,7 +4662,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4684,7 +4684,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4705,7 +4705,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4726,7 +4726,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=first, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4747,7 +4747,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=last, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[major_cd_fill]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4768,7 +4768,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={window_function={over={bracket={type=rows, between={end={value=CURRENT ROW}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={substitution={name=<expression2>, type=predicand}}}, orderby={1={null_order=null, predicand={substitution={name=<expression3>, type=predicand}}, sort_order=asc}}}, function={function_name=count_if, parameters={1={condition={left={substitution={name=<expression1>, type=predicand}}, right={literal='Y'}, operator==}}}}}}}, from={table={alias=null, table=dual}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<expression2>=predicand, <expression1>=predicand, <expression3>=predicand}", 
@@ -4788,7 +4788,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -4807,7 +4807,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={substitution={name=<columnParam>, type=column}, table_ref=a}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=column}", 
@@ -4826,7 +4826,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={substitution={name=<k_stfd>, type=column}, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=a}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=column}", 
@@ -4845,7 +4845,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=a}}, 2={column={name=kppi, table_ref=a}}}, orderby={1={null_order=null, predicand={column={substitution={name=<row_num>, type=column}, table_ref=a}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=a}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=column}", 
@@ -4863,7 +4863,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={substitution={name=<columnParam>, type=predicand}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=predicand}", 
@@ -4881,7 +4881,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={substitution={name=<k_stfd>, type=predicand}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=predicand}", 
@@ -4899,7 +4899,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<row_num>, type=predicand}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=predicand}", 
@@ -4922,7 +4922,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -4936,7 +4936,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=PRECEDING}, begin={value=unbounded, direction=FOLLOWING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 
 @Test
@@ -4951,7 +4951,7 @@ public void windowOrderByNullsLastInOverStatementTest() {
 	SqlParseEventWalker extractor = runParsertest(query, parser);
 	
 	Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=Classification_Description, window_function={over={partition_by={1={column={substitution={name=<Student Classification Code>, type=column}, table_ref=a}}}, orderby={1={null_order=last, predicand={column={substitution={name=<Classification Description>, type=column}, table_ref=a}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={substitution={name=<Classification Description>, type=column}, table_ref=a}}}}}}}, from={table={alias=a, substitution={name=<[HEDGSS].[student_class_lkp]>, parts={1=[HEDGSS], 2=[student_class_lkp]}, type=tuple}}}}}",
-			extractor.getSqlTree().toString());
+			extractor.getAsTree().toString());
 	Assert.assertEquals("Interface is wrong", "[Classification_Description]", 
 			extractor.getInterface().toString());
 	Assert.assertEquals("Substitution List is wrong", "{<[HEDGSS].[student_class_lkp]>=tuple, <Classification Description>=column, <Student Classification Code>=column}", 
@@ -4974,7 +4974,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 	SqlParseEventWalker extractor = runParsertest(query, parser);
 	
 	Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=100, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-			extractor.getSqlTree().toString());
+			extractor.getAsTree().toString());
 }
 	
 	@Test
@@ -4988,7 +4988,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5002,7 +5002,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=10, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5016,7 +5016,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=CURRENT ROW}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5030,7 +5030,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=CURRENT ROW}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5044,7 +5044,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=unbounded, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5058,7 +5058,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=30, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5072,7 +5072,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=CURRENT ROW}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5086,7 +5086,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=unboundED, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5100,7 +5100,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=30, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	@Test
@@ -5114,7 +5114,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=CURRENT ROW}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 
 	@Test
@@ -5128,7 +5128,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, between={end={value=10, direction=FOLLOWING}, begin={value=10, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 
 	@Test
@@ -5186,7 +5186,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 			
 		Assert.assertEquals("AST is wrong", "{SQL={select={44={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_3_new}, 45={column={name=department_code_4, table_ref=null}}, 46={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_4_new}, 47={alias=academic_standing_code_new, window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=as_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=academic_standing_code, table_ref=st}}}}}}, 48={column={name=academic_standing_code, table_ref=null}}, 10={alias=concentration_code_1_new, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 11={column={name=campus_code, table_ref=null}}, 12={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=campus_code_new}, 13={column={name=college_code, table_ref=null}}, 14={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=college_code_new}, 15={column={name=department_code, table_ref=null}}, 16={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=department_code_new}, 17={column={name=major_code_2, table_ref=null}}, 18={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_2_new}, 19={column={name=concentration_code_2, table_ref=null}}, 1={column={name=student_id, table_ref=st}}, 2={column={name=term_code, table_ref=st}}, 3={column={name=level_code, table_ref=st}}, 4={column={name=major_code_1, table_ref=null}}, 5={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=major_code_1_new}, 6={column={name=degree_code_1, table_ref=null}}, 7={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=degree_code_1_new}, 8={column={name=concentration_code_1, table_ref=null}}, 9={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 20={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_2_new}, 21={column={name=degree_code_2, table_ref=null}}, 22={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_2_new}, 23={column={name=college_code_2, table_ref=null}}, 24={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_2_new}, 25={column={name=major_code_3, table_ref=null}}, 26={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_3_new}, 27={column={name=concentration_code_3, table_ref=null}}, 28={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_3_new}, 29={column={name=degree_code_3, table_ref=null}}, 30={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_3_new}, 31={column={name=college_code_3, table_ref=null}}, 32={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_3_new}, 33={column={name=major_code_4, table_ref=null}}, 34={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_4_new}, 35={column={name=concentration_code_4, table_ref=null}}, 36={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_4_new}, 37={column={name=degree_code_4, table_ref=null}}, 38={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_4_new}, 39={column={name=college_code_4, table_ref=null}}, 40={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_4_new}, 41={column={name=department_code_2, table_ref=null}}, 42={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_2_new}, 43={column={name=department_code_3, table_ref=null}}}, from={join={1={table={alias=st, table=sar_student_term}}, 2={join=JOIN, on={and={1={condition={left={column={name=term_code, table_ref=st}}, right={column={name=term_code, table_ref=bfdf}}, operator==}}, 2={condition={left={column={name=student_id, table_ref=st}}, right={column={name=student_id, table_ref=bfdf}}, operator==}}, 3={condition={left={column={name=level_code, table_ref=st}}, right={column={name=level_code, table_ref=bfdf}}, operator==}}}}}, 3={table={alias=bfdf, table=bf_df_values}}}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 	}
 	
 	// end of Window Functions
@@ -5304,7 +5304,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<column1>, type=column}, table_ref=tt}, alias=redvalue}, 2={column={substitution={name=<column2>, type=column}, table_ref=tt}, alias=greenvalue}}, from={table={alias=tt, substitution={name=<table>, type=tuple}}}, where={condition={left={column={substitution={name=<column1>, type=column}, table_ref=tt}}, right={column={substitution={name=<column2>, type=column}, table_ref=tt}}, operator=>}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[redvalue, greenvalue]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<table>=tuple, <column1>=column, <column2>=column}", 
@@ -5326,7 +5326,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=noalias, table_ref=null}}, 2={column={name=normcol, table_ref=null}, alias=normalias}, 3={substitution={name=<PredicandVariableNoAlias>, type=predicand}}, 4={substitution={name=<PredicandVariable>, type=predicand}, alias=predicandAlias}, 5={column={substitution={name=<ColumnVariableNoAlias>, type=column}, table_ref=studentTable}}, 6={column={substitution={name=<ColumnVariableWithAlias>, type=column}, table_ref=studentTable}, alias=columnAlias}}, from={table={alias=studentTable, substitution={name=<StudentTable>, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[<ColumnVariableNoAlias>, <PredicandVariableNoAlias>, predicandAlias, normalias, columnAlias, noalias]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<ColumnVariableNoAlias>=column, <ColumnVariableWithAlias>=column, <StudentTable>=tuple, <PredicandVariableNoAlias>=predicand, <PredicandVariable>=predicand}", extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<StudentTable>={<ColumnVariableNoAlias>={substitution={name=<ColumnVariableNoAlias>, type=column}}, <ColumnVariableWithAlias>={substitution={name=<ColumnVariableWithAlias>, type=column}}, normcol=[@3,17:23='normcol',<328>,1:17], noalias=[@1,8:14='noalias',<328>,1:8]}}",
@@ -5346,7 +5346,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}, alias=ex}}, from={table={alias=null, table=old_table}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[ex]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<today>=column, <substitute_me>=predicand}", extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{old_table={otherColumn=[@7,33:43='otherColumn',<328>,1:33], newColumn=[@3,12:20='old_table',<328>,1:12], <today>={substitution={name=<today>, type=column}}}}",
@@ -5388,7 +5388,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=normalColumn, table_ref=null}}, 2={substitution={name=<missing>, type=predicand}}, 3={substitution={name=<notmissing>, type=predicand}, alias=notMissing}}, from={table={alias=null, table=student}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[normalColumn, notMissing, <missing>]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<notmissing>=predicand, <missing>=predicand}", 
@@ -5409,7 +5409,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={join=crossjoin}, 3={table={alias=union, substitution={name=<fourth>, type=tuple}}}, 4={join=join}, 5={table={alias=fth, substitution={name=<fifth>, type=tuple}}}, 6={join=naturaljoin}, 7={table={alias=null, table=sixth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fifth>=tuple, <fourth>=tuple}", 
@@ -5433,7 +5433,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<fourth>, type=join_extension}}, table={alias=union, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={union={1={substitution={name=<sixth>, type=query}}, 2={union={qualifier=null, operator=union}}, 3={substitution={name=<fifth>, type=query}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		// <fourth> should be a query variable but currently (June 2025) is a join extension
@@ -5456,7 +5456,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<optionalAllStudent>, type=join_extension}}, table={alias=union, table=student}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		// <optionalAllStudent> should be a query variable but currently (june 2025) is a join extension
@@ -5545,7 +5545,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=scbcrse_subj_code, table_ref=null}, alias=subj_code}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}, 3={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}}, orderby={1={null_order=null, predicand={literal=2}, sort_order=ASC}, 2={null_order=null, predicand={column={name=scbcrse_subj_code, table_ref=null}}, sort_order=ASC}, 3={null_order=null, predicand={literal=1}, sort_order=ASC}}, from={table={alias=null, table=scbcrse}}, groupby={1={column={name=scbcrse_subj_code, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[subj_code, unnamed_1, unnamed_0]", extractor.getInterface().toString());
 		Assert.assertTrue("Substitution List is wrong", extractor.getSubstitutionsMap().isEmpty());
 		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_subj_code=[@23,127:143=\'scbcrse_subj_code\',<328>,1:127], scbcrse_eff_term=[@12,54:69=\'scbcrse_eff_term\',<328>,1:54]}}",
@@ -6342,7 +6342,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{COLUMN={column={name=emp_sales_count, table_ref=null}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6360,7 +6360,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{COLUMN={column={name=emp_sales_count, table_ref=table1}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6378,7 +6378,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{COLUMN={column={substitution={name=<emp_sales_count>, type=column}, table_ref=table1}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
@@ -6397,7 +6397,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runColumnParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{COLUMN={column={substitution={name=<emp_sales_count>, type=column}, table_ref=null}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
@@ -6422,7 +6422,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={column={name=emp_sales_count, table_ref=table1}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6440,7 +6440,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={column={substitution={name=<emp_sales_count>, type=column}, table_ref=table1}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
@@ -6458,7 +6458,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={substitution={name=<emp_sales_count>, type=predicand}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=predicand}", 
@@ -6476,7 +6476,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={literal='AA'}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6495,7 +6495,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={null_literal=null}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6522,7 +6522,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={parentheses={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={literal='oops'}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6540,7 +6540,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={function={parameters={1={literal='-'}, 2={column={name=subject_code, table_ref=crs}}, 3={column={name=course_number, table_ref=crs}}}, function_name=concat_ws}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6558,7 +6558,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={function={parameters={1={column={name=acolumn, table_ref=null}}, 2={column={name=bcolumn, table_ref=null}}}, function_name=system$typeof}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6576,7 +6576,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={function={function_name=max, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6594,7 +6594,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={case={clauses={1={then={column={name=Y, table_ref=null}}, when={literal=true}}, 2={then={column={name=N, table_ref=null}}, when={literal=false}}}, else={column={name=N, table_ref=null}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6612,7 +6612,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6630,7 +6630,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6648,7 +6648,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={select={1={column={name=scbcrse_coll_code, table_ref=aa}}}, from={table={alias=aa, table=scbcrse}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[scbcrse_coll_code]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6666,7 +6666,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={parentheses={calc={left={literal=-1}, right={parentheses={calc={left={calc={left={column={name=scbcrse_coll_code, table_ref=aa}}, right={literal=6}, operator=*}}, right={column={name=other, table_ref=null}}, operator=-}}}, operator=*}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6697,7 +6697,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SK}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6716,7 +6716,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SK}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6734,7 +6734,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_GUID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6752,7 +6752,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_MASTER_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6770,7 +6770,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6788,7 +6788,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_ACRONYM}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6806,7 +6806,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_WEB_DOMAIN}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6824,7 +6824,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6842,7 +6842,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_CODE}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6860,7 +6860,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ES_INSTITUTION_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6878,7 +6878,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SF_COUNTER_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6898,7 +6898,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SOURCE_FILE_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6918,7 +6918,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FILE_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6938,7 +6938,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#ROW_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6958,7 +6958,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#OBSERVATION_TIME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6978,7 +6978,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SYSTEM_DATE}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -6998,7 +6998,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#SYSTEM_TIME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7018,7 +7018,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FEED_RUN_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7038,7 +7038,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#FEED_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7058,7 +7058,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TRANSACTION_RUN_ID}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7078,7 +7078,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TRANSACTION_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7098,7 +7098,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#POPULATION_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7118,7 +7118,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TARGET_MODEL_NAME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7138,7 +7138,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#TENANT_SALT}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7157,7 +7157,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#PIT_START_TIME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7176,7 +7176,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={puml_constant=#PIT_END_TIME}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7200,7 +7200,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}, 3={literal=0}}, function_name=in}, alias=colum}}, from={table={alias=null, table=dual}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[colum]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7219,7 +7219,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={substitution={name=<in_list>, type=in_list}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<in_list>=in_list}", 
@@ -7238,7 +7238,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7256,7 +7256,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{PREDICAND={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}, 3={literal=0}}, function_name=in}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7275,7 +7275,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}, 3={literal=0}}, function_name=in}}, in_list={list={1={literal='A'}, 2={literal='B'}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7299,7 +7299,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{IN_LIST={substitution={name=<in list>, type=in_list}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<in list>=in_list}", 
@@ -7318,7 +7318,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{IN_LIST={list={1={literal=1}, 2={literal=2}, 3={literal=3}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7337,7 +7337,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{IN_LIST={list={1={literal='a'}, 2={literal='dog'}, 3={literal='god'}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7356,7 +7356,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{IN_LIST={substitution={name=<var>, type=in_list}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<var>=in_list}", 
@@ -7375,7 +7375,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{IN_LIST={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7398,7 +7398,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 				
 		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, right={literal=25}, operator=>=}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7416,7 +7416,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 				
 		Assert.assertEquals("AST is wrong", "{CONDITION={literal=true}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7434,7 +7434,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={and={1={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}, 2={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}, 3={condition={left={column={name=x, table_ref=null}}, right={column={name=y, table_ref=null}}, operator=>}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7453,7 +7453,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={and={1={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}, 2={condition={left={column={name=b, table_ref=a}}, right={column={name=c, table_ref=b}}, operator==}}, 3={condition={left={column={name=x, table_ref=a}}, right={column={name=y, table_ref=b}}, operator=>}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7471,7 +7471,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={or={1={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}, 2={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}, 3={condition={left={column={name=x, table_ref=null}}, right={column={name=y, table_ref=null}}, operator=>}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7489,7 +7489,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={parentheses={or={1={parentheses={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}, 2={parentheses={condition={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator==}}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7507,7 +7507,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={not={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7525,7 +7525,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={column={name=columnName, table_ref=null}}, in_list={list={1={literal=25}, 2={literal=26}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7543,7 +7543,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={between={item={column={name=columnName, table_ref=null}}, symmetry=null, end={literal=28}, begin={literal=24}, operator=between}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7561,7 +7561,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, operator=is null}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7579,7 +7579,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runConditionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={column={name=emp_sales_count, table_ref=table1}}, operator=is not null}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7598,7 +7598,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={condition={left={substitution={name=<item>, type=predicand}}, right={literal=26}, operator==}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
@@ -7617,7 +7617,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={substitution={name=<columnName>, type=predicand}}, in_list={list={1={literal=25}, 2={literal=26}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnName>=predicand}", 
@@ -7636,7 +7636,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={substitution={name=<columnName>, type=predicand}}, in_list={substitution={name=<inList>, type=in_list}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list, <columnName>=predicand}", 
@@ -7655,7 +7655,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={in={item={column={name=column, table_ref=null}}, in_list={substitution={name=<inList>, type=in_list}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list}", 
@@ -7675,7 +7675,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{CONDITION={substitution={name=<column condition>, type=condition}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column condition>=condition}", 
@@ -7698,7 +7698,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{TUPLE={table={schema=schema1, table=emp_sales}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={}}",
@@ -7715,7 +7715,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<simple variable>, type=tuple}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<simple variable>={}}",
@@ -7732,7 +7732,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		
 		
 		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={schema=schema1, alias=null, table=emp_sales}}, select={1={column={name=*, table_ref=*}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={*=[@2,8:8='*',<289>,1:8]}}",
@@ -7752,7 +7752,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runQueryParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{QUERY={select={1={column={name=*, table_ref=*}}}, from={table={schema=schema1, alias=null, table=emp_sales}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
@@ -7770,7 +7770,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runQueryParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{QUERY={substitution={name=<simple variable>, type=query}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=query}", 
@@ -7792,7 +7792,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={condition={left={column={name=col1, table_ref=dd}}, right={column={name=col1, table_ref=bb}}, operator==}}}, 2={table={schema=schema1, alias=dd, table=emp_sales}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{bb={col1=[@12,41:42='bb',<328>,1:41]}, emp_sales={col1=[@8,33:34='dd',<328>,1:33]}}",
@@ -7808,7 +7808,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 2={table={alias=b, table=fourth}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{a={a=[@5,23:23='a',<328>,1:23]}, fourth={b=[@9,29:29='b',<328>,1:29]}}",
@@ -7824,7 +7824,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=b, table=fourth}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
@@ -7840,7 +7840,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=fullouter, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
@@ -7856,7 +7856,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
@@ -7873,7 +7873,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}, 3={substitution={name=<OtherJoinCondition>, type=join_extension}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OtherJoinCondition>=join_extension, <OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
@@ -7889,7 +7889,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, table=tab1}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
@@ -7905,7 +7905,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, substitution={name=<tuple variable>, type=tuple}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
@@ -7922,7 +7922,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=null, table=third}}, 2={substitution={name=<extension>, type=join_extension}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={}}",
@@ -7939,7 +7939,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=T3, table=third}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
@@ -7956,7 +7956,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<third_fourth_join_condition>, type=condition}}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<third_fourth_join_condition>=condition, <extension>=join_extension}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
@@ -7973,7 +7973,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=a, table=fourth}}, 3={join=unionjoin}, 4={table={alias=null, table=fifth}}, 5={join=naturaljoin}, 6={table={alias=null, table=sixth}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{sixth={}, fifth={}, fourth={}}",
@@ -7995,7 +7995,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
 			Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
@@ -8014,7 +8014,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
 			Assert.assertEquals("AST is wrong", "{VALUES={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
@@ -8033,7 +8033,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
 			Assert.assertEquals("AST is wrong", "{VALUES={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
@@ -8061,7 +8061,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
 			Assert.assertEquals("AST is wrong", "{TUPLE={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
@@ -8094,7 +8094,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Symbol Table is wrong", "{query2={values0={col2=[@24,78:81='col2',<328>,1:78], col3=[@26,84:87='col3',<328>,1:84], col1=[@22,72:75='col1',<328>,1:72]}, values1={$1=[@31,103:103='(',<285>,1:103], $2=[@31,103:103='(',<285>,1:103], $3=[@31,103:103='(',<285>,1:103]}, def_values1={interface={$1=[@31,103:103='(',<285>,1:103], $2=[@31,103:103='(',<285>,1:103], $3=[@31,103:103='(',<285>,1:103]}, target={$1=[@31,103:103='(',<285>,1:103], $2=[@31,103:103='(',<285>,1:103], $3=[@31,103:103='(',<285>,1:103]}}, def_values0={source={col2=[@24,78:81='col2',<328>,1:78], col3=[@26,84:87='col3',<328>,1:84], col1=[@22,72:75='col1',<328>,1:72]}, interface={col2=[@24,78:81='col2',<328>,1:78], col3=[@26,84:87='col3',<328>,1:84], col1=[@22,72:75='col1',<328>,1:72]}}, source=values0, interface={col2={column={name=col2, table_ref=target}}, col1={column={name=col1, table_ref=source}}}, target=values1}}",
 					extractor.getSymbolTable().toString());
 			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=source}}, 2={column={name=col2, table_ref=target}}}, from={join={1={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}}}}, 2={join=join}, 3={values={alias=target, matrix={1={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 		}
 
 		@Test
@@ -8113,7 +8113,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Symbol Table is wrong", "{query1={values0={*=[@1,8:8='*',<289>,1:8], $1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}, def_values0={source={$1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}, interface={*=[@1,8:8='*',<289>,1:8], $1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}}, source=values0, interface={*={column={name=*, table_ref=*}}}}}",
 					extractor.getSymbolTable().toString());
 			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 		}
 
 		@Test
@@ -8132,7 +8132,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("Symbol Table is wrong", "{query1={values0={*=[@1,8:8='*',<289>,1:8], col2=[@26,71:74='col2',<328>,1:71], col3=[@28,77:80='col3',<328>,1:77], col1=[@24,65:68='col1',<328>,1:65]}, def_values0={source={col2=[@26,71:74='col2',<328>,1:71], col3=[@28,77:80='col3',<328>,1:77], col1=[@24,65:68='col1',<328>,1:65]}, interface={*=[@1,8:8='*',<289>,1:8], col2=[@26,71:74='col2',<328>,1:71], col3=[@28,77:80='col3',<328>,1:77], col1=[@24,65:68='col1',<328>,1:65]}}, source=values0, interface={*={column={name=*, table_ref=*}}}}}",
 					extractor.getSymbolTable().toString());
 			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
-					extractor.getSqlTree().toString());
+					extractor.getAsTree().toString());
 		}
 		
 		
@@ -8373,7 +8373,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 			// walk the tree and extract the SQL USING THE CUSTOM Extractor
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
-			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Result: " + extractor.getAsTree());
 			if (getInterface) {
 				System.out.println("Interface: " + extractor.getInterface());
 			} else {

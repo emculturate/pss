@@ -24,7 +24,7 @@ public class SnippetTest {
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 3={table={alias=b, table=fourth}}}}}}",
-				extractor.getSqlTree().toString());
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
@@ -66,7 +66,7 @@ public class SnippetTest {
 
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
-			System.out.println("Result: " + extractor.getSqlTree());
+			System.out.println("Result: " + extractor.getAsTree());
 			System.out.println("Interface: " + extractor.getInterface());
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());

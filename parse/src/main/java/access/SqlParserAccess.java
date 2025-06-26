@@ -153,7 +153,7 @@ public class SqlParserAccess extends AbstractParserAccess {
 
             // Save the results in a local Snippet object
             this.snippet = new Snippet(
-                this.extractor.getSqlTree(),
+                this.extractor.getAsTree(),
                 this.extractor.getTableColumnMap(),
                 this.extractor.getSymbolTable(),
                 this.extractor.getSubstitutionsMap(),
