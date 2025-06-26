@@ -1,10 +1,13 @@
 /**
  * 
  */
-package mumble;
+package access;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+
+import errorhandling.SyntaxError;
 
 /**
  * Snippet holds all required elements for working with a PSS SQL AST. Having parsed a SQL statement, the PSS SQL Parse Event Walker 
@@ -40,6 +43,23 @@ public class Snippet {
 	 * For complete SQL trees, this holds the output interface produced by the SQL statement
 	 */
 	private  HashSet<String> queryInterface;
+
+	/**
+	 * Parser Message Lists
+	 * This holds the all of the messages generated during parsing, including errors, Ambiguities,
+	 * and information messages.
+	 */
+	private List<SyntaxError> parserMessageList;
+
+	private List<String> parserMessageStringList;
+
+	/**
+	 * Fatal Error Count
+	 * This holds the number of fatal errors encountered during parsing.
+	 */
+	private int fatalErrorCount;
+
+	private List<String> fatalErrorStringList;
 
 	// Constructors
 	
@@ -104,5 +124,44 @@ public class Snippet {
 		this.queryInterface = queryInterface;
 	} 
 	
+	public List<String> getFatalErrorStringList() {
+		return fatalErrorStringList;
+	}
+
+	public int getFatalErrorCount() {
+		return fatalErrorCount;
+	}	
+
+	public void setFatalErrorStringList(List<String> fatalErrorStringList) {
+		this.fatalErrorStringList = fatalErrorStringList;
+		if (fatalErrorStringList == null) {
+			this.fatalErrorCount = 0;
+		} else if (fatalErrorStringList.isEmpty()) {
+			this.fatalErrorCount = 0;
+		} else {
+			this.fatalErrorCount = fatalErrorStringList.size();
+		}
 	
+	}
+	
+	public List<SyntaxError> getParserMessageList() {
+		return parserMessageList;
+	}
+	public void setParserMessageList(List<SyntaxError> parserMessageList) {
+		this.parserMessageList = parserMessageList;
+	}
+	public List<String> getParserMessageStringList() {
+		return parserMessageStringList;
+	}
+	public void setParserMessageStringList(List<String> parserMessageStringList) {
+		this.parserMessageStringList = parserMessageStringList;
+	}
+
+	public String toString() {
+		return "Snippet [sqlAbstractTree=" + sqlAbstractTree + ", tableDictionary=" + tableDictionary
+				+ ", symbolTable=" + symbolTable + ", substitutionsMap=" + substitutionsMap + ", queryInterface="
+				+ queryInterface + ", parserMessageList=" + parserMessageList + ", parserMessageStringList="
+				+ parserMessageStringList + ", fatalErrorCount=" + fatalErrorCount + ", fatalErrorStringList="
+				+ fatalErrorStringList + "]";
+	}	
 }

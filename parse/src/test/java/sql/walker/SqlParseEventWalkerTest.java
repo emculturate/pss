@@ -8370,6 +8370,8 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 				extractor.setEntityTableNameMap(entityMap);
 			if (attributeMap != null)
 				extractor.setAttributeColumnMap(attributeMap);
+
+			// walk the tree and extract the SQL USING THE CUSTOM Extractor
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
 			System.out.println("Result: " + extractor.getSqlTree());
 			if (getInterface) {

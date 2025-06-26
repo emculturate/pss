@@ -30,7 +30,7 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import mumble.Snippet;
+import access.Snippet;
 import sql.SQLSelectParserBaseListener;
 import sql.SQLSelectParserParser;
 /**

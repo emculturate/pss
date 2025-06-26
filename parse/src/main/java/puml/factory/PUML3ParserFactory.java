@@ -1,4 +1,4 @@
-package sql.factory;
+package puml.factory;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -6,35 +6,35 @@ import org.antlr.v4.runtime.CommonTokenStream;
 
 import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
-import sql.SQLSelectParserLexer;
-import sql.SQLSelectParserParser;
+import puml3.PUML3Lexer;
+import puml3.PUML3Parser;
 
 /**
- * SQLSelectParserFactory.java
- * This factory class is responsible for creating instances of SQLSelectParserParser.
- * It prepares the parser with the provided SQL query string and sets up error handling.
+ * PUML3ParserFactory.java
+ * This factory class is responsible for creating instances of PUML3Parser.
+ * It prepares the parser with the provided PUML Statement string and sets up error handling.
  * 
- * The parser can be used to parse SQL SELECT statements and collect syntax errors.
+ * The parser can be used to parse PUML expressiin and condition statements and collect syntax errors.
  */
-public class SQLSelectParserFactory {
+public class PUML3ParserFactory {
 
-	public SQLSelectParserFactory () {
+	public PUML3ParserFactory () {
 		
 	}
 
 	/**
-	 * Builds a bespoke SQLSelectParserParser instance for the given SQL query string.
+	 * Builds a bespoke PUML3Parser instance for the given SQL query string.
 	 * Does not run the parser, but prepares it for parsing.
 	 * 
-	 * @param query The SQL query string to parse.
-	 * @return An instance of SQLSelectParserParser ready to parse the provided query.
+	 * @param pumlStmt The SQL query string to parse.
+	 * @return An instance of PUML3Parser ready to parse the provided query.
 	 */
-	public  SQLSelectParserParser buildParser(final String query) {
-		CharStream qryStream = CharStreams.fromString(query);
+	public  PUML3Parser buildParser(final String pumlStmt) {
+		CharStream qryStream = CharStreams.fromString(pumlStmt);
     
-    	SQLSelectParserLexer lexer = new SQLSelectParserLexer(qryStream);
+    	PUML3Lexer lexer = new PUML3Lexer(qryStream);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
-		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
+		PUML3Parser parser = new PUML3Parser(tokens);
 		
 		// There can be multiple ErrorListeners in the Parser. Each one can handle errors differently.
 		// Here we add a custom error listener to collect syntax errors.

@@ -1,18 +1,12 @@
 package puml;
 
-
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
-
+import access.PUML3ParserAccess;
+import access.Snippet;
+import access.SqlParserAccess;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import puml3.PUML3Parser;
-import puml3.PUML3Parser.EquationContext;
-import puml3.PUML3Lexer;
-import puml.special.PUML3Listener;
+
 
 /**
  * Unit test for simple App.
@@ -41,17 +35,24 @@ public class AppTest
     /**
      * Rigourous Test :-)
      */
-    public void testApp()
+    public void testPUML3Parser()
     {
         assertTrue( true );
-        CharStream input = CharStreams.fromString("if(true, [a], 99)");
-        PUML3Lexer lexer = new PUML3Lexer(input);
-        CommonTokenStream tokens = new CommonTokenStream((org.antlr.v4.runtime.TokenSource) lexer);
-        PUML3Parser parser = new PUML3Parser(tokens);
-        EquationContext tree = parser.equation(); // parse an equation
-
-        PUML3Listener extractor = new PUML3Listener(parser);
-        ParseTreeWalker.DEFAULT.walk(extractor, tree); 
-        System.out.println(tree);
+        PUML3ParserAccess parserAccess = new PUML3ParserAccess(false, false, false);
+        String pumlStmt = "SYSDATE > SYSDATE";
+        parserAccess.executeTheParse(pumlStmt, "condition");
+        Snippet snippet = parserAccess.getSnippet();
+        System.out.println(snippet.toString());
     }
+
+    public void testSQLParser()
+    {
+        assertTrue( true );
+        SqlParserAccess parserAccess = new SqlParserAccess(true, true, true);
+        String stmt = "(SYSDATE + SYSDATE)";
+        parserAccess.executeTheParse(stmt, "predicand_value");
+        Snippet snippet = parserAccess.getSnippet();
+        System.out.println(snippet.toString());
+    }
+
 }

@@ -16,9 +16,24 @@ language= Java;
 // Parser Elements
 /* GRAMMAR */
 
+// Grammar End Points
+
+condition
+	:	condition_principal EOF
+	;
+equation
+	:	equation_principal EOF
+	;
+
+//	|	function_call EOF
+//	|	if_function_call EOF
+//	|	boolean_function_call EOF
+//	|	puml_builtin EOF
+//	|	generic_reference EOF
+//	;
 
 // BOOLEAN CONDITIONS
-condition
+condition_principal
 	:	condition_statement
 	;
 	
@@ -57,7 +72,7 @@ truth_value	:	TRUE | FALSE
 	;
 	
 // Equations
-equation 
+equation_principal 
 	:	 equation_formula;
 	
 equation_formula
@@ -229,17 +244,105 @@ VARIABLE_REF	:	'variable_ref';
 ATTR_REF	:	'attr_ref';
 PARENTHETICAL
 	:	'parenthetical'	; */
-	
-// Primary tokens
-AND		:	('A'|'a')('N'|'n')('D'|'d');
+
+/*
+===============================================================================
+  Tokens for Case Insensitive Keywords
+===============================================================================
+*/
+fragment A
+	:	'A' | 'a';
+
+fragment B
+	:	'B' | 'b';
+
+fragment C
+	:	'C' | 'c';
+
+fragment D
+	:	'D' | 'd';
+
+fragment E
+	:	'E' | 'e';
+
+fragment F
+	:	'F' | 'f';
+
+fragment G
+	:	'G' | 'g';
+
+fragment H
+	:	'H' | 'h';
+
+fragment I
+	:	'I' | 'i';
+
+fragment J
+	:	'J' | 'j';
+
+fragment K
+	:	'K' | 'k';
+
+fragment L
+	:	'L' | 'l';
+
+fragment M
+	:	'M' | 'm';
+
+fragment N
+	:	'N' | 'n';
+
+fragment O
+	:	'O' | 'o';
+
+fragment P
+	:	'P' | 'p';
+
+fragment Q
+	:	'Q' | 'q';
+
+fragment R
+	:	'R' | 'r';
+
+fragment S
+	:	'S' | 's';
+
+fragment T
+	:	'T' | 't';
+
+fragment U
+	:	'U' | 'u';
+
+fragment V
+	:	'V' | 'v';
+
+fragment W
+	:	'W' | 'w';
+
+fragment X
+	:	'X' | 'x';
+
+fragment Y
+	:	'Y' | 'y';
+
+fragment Z
+	:	'Z' | 'z';
+
+/*
+===============================================================================
+  Primary tokens
+===============================================================================
+*/
+
+AND		:	A N D;
 BARBAR	:	'||';
-FALSE	:	('F'|'f')('A'|'a')('L'|'l')('S'|'s')('E'|'e');
+FALSE	:	F A L S E;
 GE		:	'>=';
 LE		:	'<=';
-NOT		:	('N'|'n')('O'|'o')('T'|'t');
+NOT		:	N O T;
 NOT_EQU	:	'!=';
-OR		:	('O'|'o')('R'|'r');
-TRUE	:	('T'|'t')('R'|'r')('U'|'u')('E'|'e');
+OR		:	O R;
+TRUE	:	T R U E;
 
 LEFT_PARA	:	'(';
 DOT		:	'.';
@@ -263,76 +366,76 @@ STAR		:	'*';
 
 // PUML CONSTANTS/BUILTIN VALUES
 
-SYSDATE 	: ('S'|'s')('Y'|'y')('S'|'s')('D'|'d')('A'|'a')('T'|'t')('E'|'e');
-DD_INSERT	: ('D'|'d')('D'|'d')'_'('I'|'i')('N'|'n')('S'|'s')('E'|'e')('R'|'r')('T'|'t');
-DD_UPDATE	: ('D'|'d')('D'|'d')'_'('U'|'u')('P'|'p')('D'|'d')('A'|'a')('T'|'t')('E'|'e');
-DD_REJECT	: ('D'|'d')('D'|'d')'_'('R'|'r')('E'|'e')('J'|'j')('E'|'e')('C'|'c')('T'|'t');
-DD_DELETE	: ('D'|'d')('D'|'d')'_'('D'|'d')('E'|'e')('L'|'l')('E'|'e')('T'|'t')('E'|'e');
-NULL		: ('N'|'n')('U'|'u')('L'|'l')('L'|'l');
+SYSDATE 	: S Y S D A T E;
+DD_INSERT	: D D '_' I N S E R T;
+DD_UPDATE	: D D '_' U P D A T E;
+DD_REJECT	: D D '_' R E J E C T;
+DD_DELETE	: D D '_' D E L E T E;
+NULL		: N U L L;
 
 // PUML Functions
-COALESCE	: ('C'|'c')('O'|'o')('A'|'a')('L'|'l')('E'|'e')('S'|'s')('C'|'c')('E'|'e');
-DATESTR 	: ('D'|'d')('A'|'a')('T'|'t')('E'|'e')('S'|'s')('T'|'t')('R'|'r');
-REGEXP_REPLACE	: ('R'|'r')('E'|'e')('G'|'g')('E'|'e')('X'|'x')('P'|'p')'_'('R'|'r')('E'|'e')('P'|'p')('L'|'l')('A'|'a')('C'|'c')('E'|'e');
-REGEXP_EXTRACT	: ('R'|'r')('E'|'e')('G'|'g')('E'|'e')('X'|'x')('P'|'p')'_'('E'|'e')('X'|'x')('T'|'t')('R'|'r')('A'|'a')('C'|'c')('T'|'t');
-DATE_ADD 	: ('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('A'|'a')('D'|'d')('D'|'d');
-DATE_SUB 	: ('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('S'|'s')('U'|'u')('B'|'b');
-CONCAT 		: ('C'|'c')('O'|'o')('N'|'n')('C'|'c')('A'|'a')('T'|'t');
-COUNT 		: ('C'|'c')('O'|'o')('U'|'u')('N'|'n')('T'|'t');
-IN 			: ('I'|'i')('N'|'n');
-INITCAP 	: ('I'|'i')('N'|'n')('I'|'i')('T'|'t')('C'|'c')('A'|'a')('P'|'p');
-INSTR 		: ('I'|'i')('N'|'n')('S'|'s')('T'|'t')('R'|'r');
-LOG 		: ('L'|'l')('O'|'o')('G'|'g');
-POWER 		: ('P'|'p')('O'|'o')('W'|'w')('E'|'e')('R'|'r');
-SQRT 		: ('S'|'s')('Q'|'q')('R'|'r')('T'|'t');
-ABORT 		: ('A'|'a')('B'|'b')('O'|'o')('R'|'r')('T'|'t');
-LOWER 		: ('L'|'l')('O'|'o')('W'|'w')('E'|'e')('R'|'r');
-UPPER 		: ('U'|'u')('P'|'p')('P'|'p')('E'|'e')('R'|'r');
-REPLACECHR 	: ('R'|'r')('E'|'e')('P'|'p')('L'|'l')('A'|'a')('C'|'c')('E'|'e')('C'|'c')('H'|'h')('R'|'r');
-DATE_COMPARE 	: ('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('C'|'c')('O'|'o')('M'|'m')('P'|'p')('A'|'a')('R'|'r')('E'|'e');
-DATE_DIFF 	: ('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('D'|'d')('I'|'i')('F'|'f')('F'|'f');
-DECODE 		: ('D'|'d')('E'|'e')('C'|'c')('O'|'o')('D'|'d')('E'|'e');
-ERROR 		: ('E'|'e')('R'|'r')('R'|'r')('O'|'o')('R'|'r');
-GET_DATE_PART 	: ('G'|'g')('E'|'e')('T'|'t')'_'('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('P'|'p')('A'|'a')('R'|'r')('T'|'t');
-IF 		: ('I'|'i')('F'|'f');
-IS_DATE 	: ('I'|'i')('S'|'s')'_'('D'|'d')('A'|'a')('T'|'t')('E'|'e');
-IS_NUMBER 	: ('I'|'i'('S'|'s'))'_'('N'|'n')('U'|'u')('M'|'m')('B'|'b')('E'|'e')('R'|'r');
-IS_SPACES 	: ('I'|'i')('S'|'s')'_'('S'|'s')('P'|'p')('A'|'a')('C'|'c')('E'|'e')('S'|'s');
-LAST_DAY 	: ('L'|'l')('A'|'a')('S'|'s')('T'|'t')'_'('D'|'d')('A'|'a')('Y'|'y');
-LENGTH 		: ('L'|'l')('E'|'e')('N'|'n')('G'|'g')('T'|'t')('H'|'h');
-LOOKUP 		: ('L'|'l')('O'|'o')('O'|'o')('K'|'k')('U'|'u')('P'|'p');
-LPAD 		: ('L'|'l')('P'|'p')('A'|'a')('D'|'d');
-LTRIM 		: ('L'|'l')('T'|'t')('R'|'r')('I'|'i')('M'|'m');
-MAX 		: ('M'|'m')('A'|'a')('X'|'x');
-MIN 		: ('M'|'m')('I'|'i')('N'|'n');
-REPLACESTR 	: ('R'|'r')('E'|'e')('P'|'p')('L'|'l')('A'|'a')('C'|'c')('E'|'e')('S'|'s')('T'|'t')('R'|'r');
-REVERSE 	: ('R'|'r')('E'|'e')('V'|'v')('E'|'e')('R'|'r')('S'|'s')('E'|'e');
-ROUND 		: ('R'|'r')('O'|'o')('U'|'u')('N'|'n')('D'|'d');
-RPAD 		: ('R'|'r')('P'|'p')('A'|'a')('D'|'d');
-RTRIM 		: ('R'|'r')('T'|'t')('R'|'r')('I'|'i')('M'|'m');
-SET_DATE_PART 	: ('S'|'s')('E'|'e')('T'|'t')'_'('D'|'d')('A'|'a')('T'|'t')('E'|'e')'_'('P'|'p')('A'|'a')('R'|'r')('T'|'t');
-SUBSTRING	: ('S'|'s')('U'|'u')('B'|'b')('S'|'s')('T'|'t')('R'|'r')('I'|'i')('N'|'n')('G'|'g');
-SUM 		: ('S'|'s')('U'|'u')('M'|'m');
-TO_CHAR 	: ('T'|'t')('O'|'o')'_'('C'|'c')('H'|'h')('A'|'a')('R'|'r');
-TO_DATE 	: ('T'|'t')('O'|'o')'_'('D'|'d')('A'|'a')('T'|'t')('E'|'e');
-TO_DECIMAL 	: ('T'|'t')('O'|'o')'_'('D'|'d')('E'|'e')('C'|'c')('I'|'i')('M'|'m')('A'|'a')('L'|'l');
-TO_FLOAT 	: ('T'|'t')('O'|'o')'_'('F'|'f')('L'|'l')('O'|'o')('A'|'a')('T'|'t');
-TO_INTEGER 	: ('T'|'t')('O'|'o')'_'('I'|'i')('N'|'n')('T'|'t')('E'|'e')('G'|'g')('E'|'e')('R'|'r');
-TRUNC 		: ('T'|'t')('R'|'r')('U'|'u')('N'|'n')('C'|'c');
+COALESCE	: C O A L E S C E;
+DATESTR 	: D A T E S T R;
+REGEXP_REPLACE	: R E G E X P '_' R E P L A C E;
+REGEXP_EXTRACT	: R E G E X P '_' E X T R A C T;
+DATE_ADD 	: D A T E '_' A D D;
+DATE_SUB 	: D A T E '_' S U B;
+CONCAT 		: C O N C A T;
+COUNT 		: C O U N T;
+IN 			: I N;
+INITCAP 	: I N I T C A P;
+INSTR 		: I N S T R;
+LOG 		: L O G;
+POWER 		: P O W E R;
+SQRT 		: S Q R T;
+ABORT 		: A B O R T;
+LOWER 		: L O W E R;
+UPPER 		: U P P E R;
+REPLACECHR 	: R E P L A C E C H R;
+DATE_COMPARE 	: D A T E '_' C O M P A R E;
+DATE_DIFF 	: D A T E '_' D I F F;
+DECODE 		: D E C O D E;
+ERROR 		: E R R O R;
+GET_DATE_PART 	: G E T '_' D A T E '_' P A R T;
+IF 			: I F;
+IS_DATE 	: I S '_' D A T E;
+IS_NUMBER 	: I S '_' N U M B E R;
+IS_SPACES 	: I S '_' S P A C E S;
+LAST_DAY 	: L A S T '_' D A Y;
+LENGTH 		: L E N G T H;
+LOOKUP 		: L O O K U P;
+LPAD 		: L P A D;
+LTRIM 		: L T R I M;
+MAX 		: M A X;
+MIN 		: M I N;
+REPLACESTR 	: R E P L A C E S T R;
+REVERSE 	: R E V E R S E;
+ROUND 		: R O U N D;
+RPAD 		: R P A D;
+RTRIM 		: R T R I M;
+SET_DATE_PART 	: S E T '_' D A T E '_' P A R T;
+SUBSTRING 	: S U B S T R I N G;
+SUM 		: S U M;
+TO_CHAR 	: T O '_' C H A R;
+TO_DATE 	: T O '_' D A T E;
+TO_DECIMAL 	: T O '_' D E C I M A L;
+TO_FLOAT 	: T O '_' F L O A T;
+TO_INTEGER 	: T O '_' I N T E G E R;
+TRUNC 		: T R U N C;
 
-CONTAINS	: ('C'|'c')('O'|'o')('N'|'n')('T'|'t')('A'|'a')('I'|'i')('N'|'n')('S'|'s');
-ENDS_WITH	: ('E'|'e')('N'|'n')('D'|'d')('S'|'s')' '+('W'|'w')('I'|'i')('T'|'t')('H'|'h');
-MATCHES		: ('M'|'m')('A'|'a')('T'|'t')('C'|'c')('H'|'h')('E'|'e')('S'|'s');
-STARTS_WITH	: ('S'|'s')('T'|'t')('A'|'a')('R'|'r')('T'|'t')('S'|'s')' '+('W'|'w')('I'|'i')('T'|'t')('H'|'h');
-NOT_CONTAINS	: ('N'|'n')('O'|'o')('T'|'t')' '+('C'|'c')('O'|'o')('N'|'n')('T'|'t')('A'|'a')('I'|'i')('N'|'n')('S'|'s');
-NOT_ENDS_WITH	: ('N'|'n')('O'|'o')('T'|'t')' '+('E'|'e')('N'|'n')('D'|'d')('S'|'s')' '+('W'|'w')('I'|'i')('T'|'t')('H'|'h');
-NOT_MATCHES		: ('N'|'n')('O'|'o')('T'|'t')' '+('M'|'m')('A'|'a')('T'|'t')('C'|'c')('H'|'h')('E'|'e')('S'|'s');
-NOT_STARTS_WITH	: ('N'|'n')('O'|'o')('T'|'t')' '+('S'|'s')('T'|'t')('A'|'a')('R'|'r')('T'|'t')('S'|'s')' '+('W'|'w')('I'|'i')('T'|'t')('H'|'h');
+CONTAINS	: C O N T A I N S;
+ENDS_WITH	: E N D S '_' W I T H;
+MATCHES		: M A T C H E S;
+STARTS_WITH	: S T A R T S '_' W I T H;
+NOT_CONTAINS	: N O T '_' C O N T A I N S;
+NOT_ENDS_WITH	: N O T '_' E N D S '_' W I T H;
+NOT_MATCHES		: N O T '_' M A T C H E S;
+NOT_STARTS_WITH	: N O T '_' S T A R T S '_' W I T H;
 
-IS_EMPTY	: ('I'|'i')('S'|'s')' '+('E'|'e')('M'|'m')('P'|'p')('T'|'t')('Y'|'y');
-IS_NOT_EMPTY: ('I'|'i')('S'|'s')' '+('N'|'n')('O'|'o')('T'|'t')' '+('E'|'e')('M'|'m')('P'|'p')('T'|'t')('Y'|'y');
-IS_NULL 	: ('I'|'i')('S'|'s')' '+('N'|'n')('U'|'u')('L'|'l')('L'|'l');
-IS_NOT_NULL	: ('I'|'i')('S'|'s')' '+('N'|'n')('O'|'o')('T'|'t')' '+('N'|'n')('U'|'u')('L'|'l')('L'|'l');
+IS_EMPTY	: I S '_' E M P T Y;
+IS_NOT_EMPTY	: I S '_' N O T '_' E M P T Y;
+IS_NULL 	: I S '_' N U L L;
+IS_NOT_NULL	: I S '_' N O T '_' N U L L;
 
 
 // standard token rules
