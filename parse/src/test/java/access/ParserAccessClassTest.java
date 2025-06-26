@@ -34,10 +34,11 @@ public class ParserAccessClassTest
      */
 
     // Test the PUML3ParserAccess class for condition and equation parsing.
+
     public void testConditionEndPointPUML3Parser()
     {
         assertTrue( true );
-        PUML3ParserAccess parserAccess = new PUML3ParserAccess(false, false, false);
+        PUML3ParserAccess parserAccess = new PUML3ParserAccess(true, true, true);
         String pumlStmt = "SYSDATE > SYSDATE";
         parserAccess.executeTheParse(pumlStmt, PUML3Constants.PUML3_CONDITION_TREE_KEY);
         Snippet snippet = parserAccess.getSnippet();
@@ -47,7 +48,7 @@ public class ParserAccessClassTest
     public void testEquationEndPointPUML3Parser()
     {
         assertTrue( true );
-        PUML3ParserAccess parserAccess = new PUML3ParserAccess(false, false, false);
+        PUML3ParserAccess parserAccess = new PUML3ParserAccess(true, true, true);
         String pumlStmt = "SYSDATE";
         parserAccess.executeTheParse(pumlStmt, PUML3Constants.PUML3_EQUATION_TREE_KEY);
         Snippet snippet = parserAccess.getSnippet();
@@ -55,6 +56,7 @@ public class ParserAccessClassTest
     }
 
     // Test the SqlParserAccess class for various SQL parsing scenarios.
+
     public void testSQLParser()
     {
         assertTrue( true );
