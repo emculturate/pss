@@ -6,6 +6,15 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import static mumble.MumbleConstants.MUMBLE_COLUMN_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_CONDITION_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_IN_LIST_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_JOIN_EXTENSION_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_PREDICAND_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_QUERY_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_SQL_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_TUPLE_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_VALUES_TREE_KEY;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 import sql.walker.SqlParseEventWalker;
@@ -104,26 +113,26 @@ public class SqlParserAccess extends AbstractParserAccess {
         // This method runs the parser on the input text and returns the parse tree.
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
-        } else if (type.equals("sql")) {
+        } else if (type.equals(MUMBLE_SQL_TREE_KEY)) {
             this.parserTree = parser.sql();
-        } else if (type.equals("column_value")) {
+        } else if (type.equals(MUMBLE_COLUMN_TREE_KEY)) {
             this.parserTree = parser.column_value();
-        } else if (type.equals("predicand_value")) {
+        } else if (type.equals(MUMBLE_PREDICAND_TREE_KEY)) {
             this.parserTree = parser.predicand_value();
-        } else if (type.equals("in_list_predicate_value")) {
+        } else if (type.equals(MUMBLE_IN_LIST_TREE_KEY)) {
             this.parserTree = parser.in_list_predicate_value();
-        } else if (type.equals("condition_value")) {
+        } else if (type.equals(MUMBLE_CONDITION_TREE_KEY)) {
             this.parserTree = parser.condition_value();
-        } else if (type.equals("tuple_value")) {
+        } else if (type.equals(MUMBLE_TUPLE_TREE_KEY)) {
             this.parserTree = parser.tuple_value();
-        } else if (type.equals("values_statement_end")) {
+        } else if (type.equals(MUMBLE_VALUES_TREE_KEY)) {
             this.parserTree = parser.values_statement_end();
-        } else if (type.equals("query_value")) {
+        } else if (type.equals(MUMBLE_QUERY_TREE_KEY)) {
             this.parserTree = parser.query_value();
-        } else if (type.equals("join_extension_value")) {
+        } else if (type.equals(MUMBLE_JOIN_EXTENSION_TREE_KEY)) {
             this.parserTree = parser.join_extension_value();
         } else {
-            throw new IllegalArgumentException("Invalid type: " + type + ". Expected 'query' or 'tree'.");
+            throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }
     }
 

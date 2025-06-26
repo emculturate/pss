@@ -5,9 +5,11 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import static mumble.PUML3Constants.PUML3_CONDITION_TREE_KEY;
+import static mumble.PUML3Constants.PUML3_EQUATION_TREE_KEY;
+import puml.walker.PUML3EventWalker;
 import puml3.PUML3Lexer;
 import puml3.PUML3Parser;
-import puml.walker.PUML3EventWalker;
 
 /*
  * PUML3ParserAccess.java
@@ -90,12 +92,12 @@ public class PUML3ParserAccess extends AbstractParserAccess {
         // This method runs the parser on the input text and returns the parse tree.
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
-        } else if (type.equals("condition")) {
+        } else if (type.equals(PUML3_CONDITION_TREE_KEY)) {
             this.parserTree = parser.condition();
-        } else if (type.equals("equation")) {
+        } else if (type.equals(PUML3_EQUATION_TREE_KEY)) {
             this.parserTree = parser.equation();
          } else {
-            throw new IllegalArgumentException("Invalid type: " + type + ". Expected 'condition' or 'equation'.");
+            throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }
     }
 

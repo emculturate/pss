@@ -1,4 +1,4 @@
-package mumble;
+package access;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -8,7 +8,6 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
 
-import access.Snippet;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.SqlContext;
