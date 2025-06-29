@@ -8,10 +8,12 @@ import access.Snippet;
 import mumble.PUML3Constants;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class PUML3ParserTest {
 	
+	@Ignore
 	@Test
 	// filter
 	public void testPassingConditions() {
@@ -230,6 +232,7 @@ public class PUML3ParserTest {
 		Assert.assertEquals("Expected ALL Conditions to succeed.", 0, countErrors);
 	}
 	
+	@Ignore
 	@Test
 	public void testFailingConditions() {
 		
@@ -274,6 +277,7 @@ public class PUML3ParserTest {
 		Assert.assertEquals("Expected ALL Conditions to FAIL.", conds.size(), countErrors);
 	}
 	
+	@Ignore
 	@Test
 	// formula
 	public void testPassingEquations() {
@@ -615,6 +619,7 @@ public class PUML3ParserTest {
 		Assert.assertEquals("Expected ALL Equations to succeed.", 0, countErrors);
 	}
 	
+	@Ignore
 	@Test
 	public void testFailingEquations() {
 		

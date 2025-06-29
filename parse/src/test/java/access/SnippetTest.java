@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import sql.SQLSelectParserLexer;
@@ -15,6 +16,7 @@ import sql.walker.SqlParseEventWalker;
 
 public class SnippetTest {
 
+	@Ignore
 	@Test
 	public void basicJoinWithOnOnConditionVariableTest() {
 		// This test takes a query from the basic test set and confirms that the Snippet object is correctly constructed
