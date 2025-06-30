@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
+import com.google.gson.Gson;
+
 import errorhandling.SyntaxError;
 
 /**
@@ -156,6 +158,61 @@ public class Snippet {
 	public void setParserMessageStringList(List<String> parserMessageStringList) {
 		this.parserMessageStringList = parserMessageStringList;
 	}
+
+	/**
+	 * Get JSON Objects as Strings from the Snippet
+	 * 
+	 */
+	// Returns the SQL Abstract Tree as a JSON String
+	public String getSqlAbstractTreeJson() {
+		Gson gson = new Gson();
+		return gson.toJson(sqlAbstractTree);
+	}
+	// Returns the Table Dictionary as a JSON String
+	public String getTableDictionaryJson() {
+		Gson gson = new Gson();
+		return gson.toJson(tableDictionary);
+	}
+	// Returns the Symbol Table as a JSON String
+	public String getSymbolTableJson() {
+		Gson gson = new Gson();
+		return gson.toJson(symbolTable);
+	}
+	// Returns the Substitutions Map as a JSON String
+	public String getSubstitutionsMapJson() {
+		Gson gson = new Gson();
+		return gson.toJson(substitutionsMap);
+	}
+	// Returns the Query Interface as a JSON String
+	public String getQueryInterfaceJson() {
+		Gson gson = new Gson();
+		return gson.toJson(queryInterface);
+	}
+	// Returns the Fatal Error String List as a JSON String
+	public String getFatalErrorStringListJson() {
+		Gson gson = new Gson();
+		return gson.toJson(fatalErrorStringList);
+	}
+	// Returns the Fatal Error Count as a JSON String
+	public String getFatalErrorCountJson() {
+		Gson gson = new Gson();
+		return gson.toJson(fatalErrorCount);
+	}
+	// Returns the Parser Message String List as a JSON String
+	public String getParserMessageStringListJson() {
+		Gson gson = new Gson();
+		return gson.toJson(parserMessageStringList);
+	}
+	// Returns the Parser Message List as a JSON String
+	public String getParserMessageListJson() {
+		Gson gson = new Gson();
+		return gson.toJson(parserMessageList);
+	}
+	/**
+	 * Returns a string representation of the Snippet object
+	 * 
+	 * @return String representation of the Snippet
+	 */
 
 	public String toString() {
 		return "Snippet [sqlAbstractTree=" + sqlAbstractTree + ", tableDictionary=" + tableDictionary

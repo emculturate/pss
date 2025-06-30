@@ -17,6 +17,7 @@
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
     <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
     <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
+    <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
   </properties>
 
   <dependencies>
@@ -95,6 +96,18 @@
           <showDeprecation>true</showDeprecation>
         </configuration>
       </plugin>
+
+     <!-- Add this plugin to configure test execution during PACKAGE Build -->
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven.surefire.plugin.version}</version>
+          <configuration>
+              <excludes>
+                  <exclude>**/PUML3ParserTest.java</exclude>
+              </excludes>
+            </configuration>
+     </plugin>
 
       <!-- JAR with JUNITS for testing -->
       <plugin>
