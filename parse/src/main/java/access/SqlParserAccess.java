@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import static mumble.MumbleConstants.MUMBLE_COLUMN_TREE_KEY;
 import static mumble.MumbleConstants.MUMBLE_CONDITION_TREE_KEY;
+import static mumble.MumbleConstants.MUMBLE_INSERT_TREE_KEY;
 import static mumble.MumbleConstants.MUMBLE_IN_LIST_TREE_KEY;
 import static mumble.MumbleConstants.MUMBLE_JOIN_EXTENSION_TREE_KEY;
 import static mumble.MumbleConstants.MUMBLE_PREDICAND_TREE_KEY;
@@ -108,30 +109,34 @@ public class SqlParserAccess extends AbstractParserAccess {
         return tokens;
     }
 
+    // This method runs the parser on the input text and returns the parse tree.
+    // It is called by the executeTheParse method in the parent class AbstractParserAccess.
     @Override
     public void runParser(String type) {
         // This method runs the parser on the input text and returns the parse tree.
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
         } else if (type.equals(MUMBLE_SQL_TREE_KEY)) {
-            this.parserTree = parser.sql();
+            this.parserEmitPoint = parser.sql();
         } else if (type.equals(MUMBLE_COLUMN_TREE_KEY)) {
-            this.parserTree = parser.column_value();
+            this.parserEmitPoint = parser.column_value();
         } else if (type.equals(MUMBLE_PREDICAND_TREE_KEY)) {
-            this.parserTree = parser.predicand_value();
+            this.parserEmitPoint = parser.predicand_value();
         } else if (type.equals(MUMBLE_IN_LIST_TREE_KEY)) {
-            this.parserTree = parser.in_list_predicate_value();
+            this.parserEmitPoint = parser.in_list_predicate_value();
         } else if (type.equals(MUMBLE_CONDITION_TREE_KEY)) {
-            this.parserTree = parser.condition_value();
+            this.parserEmitPoint = parser.condition_value();
         } else if (type.equals(MUMBLE_TUPLE_TREE_KEY)) {
-            this.parserTree = parser.tuple_value();
+            this.parserEmitPoint = parser.tuple_value();
         } else if (type.equals(MUMBLE_VALUES_TREE_KEY)) {
-            this.parserTree = parser.values_statement_end();
+            this.parserEmitPoint = parser.values_statement_end();
         } else if (type.equals(MUMBLE_QUERY_TREE_KEY)) {
-            this.parserTree = parser.query_value();
+            this.parserEmitPoint = parser.query_value();
         } else if (type.equals(MUMBLE_JOIN_EXTENSION_TREE_KEY)) {
-            this.parserTree = parser.join_extension_value();
-        } else {
+            this.parserEmitPoint = parser.join_extension_value();
+        } else if (type.equals(MUMBLE_INSERT_TREE_KEY)) {
+            this.parserEmitPoint = parser.insert_end_point();
+         } else {
             throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }
     }
@@ -140,7 +145,7 @@ public class SqlParserAccess extends AbstractParserAccess {
     public void generateAST() {
         // This method generates the Abstract Syntax Tree (AST) from the parse tree.
         // Walk the parse tree using the extractor.
-        if (this.parserTree != null) {
+        if (this.parserEmitPoint != null) {
             // Initialize the extractor if it is not already initialized.
             if (this.extractor == null)
                 // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
@@ -149,7 +154,7 @@ public class SqlParserAccess extends AbstractParserAccess {
  			// walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
             // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
             // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
-			ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserTree);
+			ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
 
             // Save the results in a local Snippet object
             this.snippet = new Snippet(

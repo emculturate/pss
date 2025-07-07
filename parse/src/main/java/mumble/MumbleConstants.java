@@ -38,7 +38,11 @@ public final class MumbleConstants {
 	public static final String MUMBLE_IN_LIST_KEY = "in_list";
 	public static final String MUMBLE_IN_LIST_TREE_KEY = "IN_LIST";
 	public static final String MUMBLE_INSERT_KEY = "insert";
+	public static final String MUMBLE_INSERT_TREE_KEY = "INSERT";
+	public static final String MUMBLE_INSERT_INTO_KEY = "insert_into";
+	public static final String MUMBLE_INSERT_INTO_OVERWRITE_KEY = "insert_overwrite_into";
 	public static final String MUMBLE_INTERSECT_KEY = "intersect";
+	public static final String MUMBLE_INTO_KEY = "into";
 	public static final String MUMBLE_ITEM_KEY = "item";
 	public static final String MUMBLE_JOIN_EXTENSION_KEY = "extension";
 	public static final String MUMBLE_JOIN_EXTENSION_TREE_KEY = "JOIN_EXTENSION";
@@ -68,6 +72,7 @@ public final class MumbleConstants {
 	public static final String MUMBLE_PARENTHESES_KEY = "parentheses";
 	public static final String MUMBLE_PARTITION_BY_KEY = "partition_by";
 	public static final String MUMBLE_PARTS_KEY = "parts";
+	public static final String MUMBLE_INSERT_PREAMBLE_KEY = "Preamble";
 	public static final String MUMBLE_PRECISION_KEY = "precision";
 	public static final String MUMBLE_PRECEDING_KEY = "PRECEDING";
 	public static final String MUMBLE_PREDICAND_KEY = "predicand";

@@ -93,9 +93,9 @@ public class PUML3ParserAccess extends AbstractParserAccess {
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
         } else if (type.equals(PUML3_CONDITION_TREE_KEY)) {
-            this.parserTree = parser.condition();
+            this.parserEmitPoint = parser.condition();
         } else if (type.equals(PUML3_EQUATION_TREE_KEY)) {
-            this.parserTree = parser.equation();
+            this.parserEmitPoint = parser.equation();
          } else {
             throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }
@@ -105,7 +105,7 @@ public class PUML3ParserAccess extends AbstractParserAccess {
     public void generateAST() {
         // This method generates the Abstract Syntax Tree (AST) from the parse tree.
         // Walk the parse tree using the extractor.
-        if (this.parserTree != null) {
+        if (this.parserEmitPoint != null) {
             // Initialize the extractor if it is not already initialized.
             if (this.extractor == null)
                 // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
@@ -114,7 +114,7 @@ public class PUML3ParserAccess extends AbstractParserAccess {
  			// walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
             // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
             // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
-			ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserTree);
+			ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
 
             // Save the results in a local Snippet object
             this.snippet = new Snippet(

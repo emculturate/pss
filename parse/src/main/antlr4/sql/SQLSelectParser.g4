@@ -123,7 +123,16 @@ literal_value
 values_statement_end
   : values_statement_primary EOF;
  
+ /*
+===============================================================================
+  Insert Statement Start Symbol
+===============================================================================
+*/
+// Used only for Insert end points
+insert_end_point
+  : insert_expression EOF;
  
+
 /*
 ===============================================================================
   Dependent Grammar Rules
@@ -183,16 +192,32 @@ insert_statement
   | INSERT (OVERWRITE)? INTO LOCATION path=Character_String_Literal (USING file_type=identifier (param_clause)?)? query_expression
   ;
   
+Snowflake Syntax:
+INSERT [ OVERWRITE ] INTO <target_table> [ ( <target_col_name> [ , ... ] ) ]
+       {
+         VALUES ( { <value> | DEFAULT | NULL } [ , ... ] ) [ , ( ... ) ]  |
+         <query>
+       }
  */
 insert_expression
-  : INSERT (OVERWRITE)? INTO 
-  table_or_query_name as_clause? 
-  (LEFT_PAREN column_reference_list RIGHT_PAREN)? 
-  VALUES 
-  subquery 
-  returning?
+  : snowflake_insert
+//   | postgres_insert
+;
+
+snowflake_insert
+  : insert_preamble  table_primary insert_source_primary
+  | insert_preamble  table_primary LEFT_PAREN column_reference_list RIGHT_PAREN insert_source_primary
   ;
   
+postgres_insert // this syntax is not complete for POSTGRES
+  : snowflake_insert  returning? // Returning clause for Postgres
+  ;
+
+insert_preamble
+  : INSERT (OVERWRITE)? INTO 
+  ;
+
+
 /*
 ===============================================================================
   UPDATE Statement <update expression>
@@ -375,6 +400,14 @@ tuple_primary
   | subquery
   | variable_identifier
   | fully_defined_values_statement
+  ;
+
+
+// Used ONLY in the TUPLE Variable Substitution end point
+insert_source_primary
+  : query_expression
+  | variable_identifier
+  | insert_values_statement
   ;
 
 table_or_query_name
@@ -1122,6 +1155,13 @@ values_row
 values_columns
   : (LEFT_PAREN column_reference_list RIGHT_PAREN)
   ;
+
+insert_values_statement
+  :  VALUES values_matrix
+  ;
+
+  
+
 /*
 ===============================================================================
   <null predicate>

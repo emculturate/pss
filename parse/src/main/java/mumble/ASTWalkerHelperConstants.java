@@ -18,4 +18,7 @@ public final class ASTWalkerHelperConstants {
 	public static final String ASTWALKER_VALUES_KEY = "values";
 	public static final String ASTWALKER_INSERT_KEY = "insert";
 	public static final String ASTWALKER_UPDATE_KEY = "update";
+
+	public static final String ASTWALKER_RULE_TYPE_KEY = "Type";
+	
 }

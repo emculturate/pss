@@ -17,7 +17,7 @@ package sql.walker;
  */
 
 import static mumble.MumbleConstants.*;
-
+import static mumble.ASTWalkerHelperConstants.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -316,7 +316,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_SQL_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -333,7 +333,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_COLUMN_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -353,7 +353,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -374,7 +374,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_IN_LIST_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -395,7 +395,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_CONDITION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -415,7 +415,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		HashMap<String, Object> item = new HashMap<String, Object> ();
 		if (subMap.size() == 1) {
 			// normal TUPLE value
@@ -454,7 +454,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_QUERY_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -475,7 +475,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -493,7 +493,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.getAsTree().put(MUMBLE_VALUES_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -504,6 +504,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  Literal Value Start Symbol
 	===============================================================================
 	*/
+
+		/*
+	===============================================================================
+	  Insert Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void exitInsert_end_point(SQLSelectParserParser.Insert_end_pointContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		 walker.getAsTree().put(MUMBLE_INSERT_TREE_KEY, subMap.remove("1"));
+		// walker.showTrace(resultTrace, collector);
+		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
+		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+	}
+	/*
 
 	// TODO: Add to AST
 //	@Override
@@ -539,7 +557,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 
 		if (subMap.size() == 1) {
@@ -566,10 +584,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
-		type = newMap.remove("Type");
+		type = newMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
@@ -591,7 +609,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		String alias = null;
 
@@ -644,123 +662,73 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitInsert_expression(@NotNull SQLSelectParserParser.Insert_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		String[] keys = new String[1];
-		Object type = subMap.remove("Type");
+		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
 
-		keys = subMap.keySet().toArray(keys);
+		walker.handleOneChild(ruleIndex);
+		walker.showTrace(walker.parseTrace, "INSERT EXPRESSION: " + subMap);
+	}
 
-		for (String key : keys) {
-			Object obj = subMap.remove(key);
-			if (obj instanceof String) {
+	@Override
+	public void exitSnowflake_insert(@NotNull SQLSelectParserParser.Snowflake_insertContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		String type = new String();
 
-			} else {
-				HashMap<String, Object> value = (HashMap<String, Object>) obj;
-				Integer childKey = (Integer) (value).remove("Type");
-				if (childKey == null) {
-					if (value.containsKey(MUMBLE_TABLE_KEY)) {
-						subMap.put("insert", value);
-					} else {
-						String nk = "query" + walker.queryCount;
-						subMap.put(nk, value);
-						walker.queryCount++;
-					}
-				} else {
-					Object segment = value.remove(childKey.toString());
-					if (childKey == (Integer) SQLSelectParserParser.RULE_column_reference_list) {
-						subMap.put("into", value);
-					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
-						subMap.put(MUMBLE_RETURNING_KEY, segment);
-					} else {
-						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
-					}
-				}
-			}
+		if (subMap.size() == 3) {
+			// Matches the minimum mandatory entries of the rule:
+			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, (String) subMap.remove("1"));	// this is the insert preamble
+			subMap.put(MUMBLE_TABLE_KEY,(Map<String, Object>)subMap.remove("2"));  // This is the table primary
+            Map<String, Object> item = (Map<String, Object>) subMap.remove("3");
+			subMap.putAll(item); // This is the insert_source
+			walker.showTrace(walker.parseTrace, "Snowflake insert: " + subMap);
+		} else if (subMap.size() == 4) {
+			// Matches the minimum mandatory entries of the rule:
+			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, (String) subMap.remove("1"));	// this is the insert preamble
+			subMap.put(MUMBLE_TABLE_KEY,(Map<String, Object>)subMap.remove("2"));  // This is the table primary
+			subMap.put(MUMBLE_COLUMNS_KEY,(Map<String, Object>)subMap.remove("3")); // This is the column reference list
+            Map<String, Object> item = (Map<String, Object>) subMap.remove("4");
+			subMap.putAll(item); // This is the insert_source
+			walker.showTrace(walker.parseTrace, "Snowflake insert: " + subMap);
+		} else {
+			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
 		}
-		walker.showTrace(walker.parseTrace, subMap);
+		// Add the type to the subMap
 
-		// Handle symbol tables
-		HashMap<String, Object> symbols =  walker.symbolTable;
-
-		// Special handling of queries with only one source: Move "unknown"
-		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
-
-		Integer count = 0;
-		Integer tableCount = 0;
-		String onlyTableName = null;
-		HashMap<String, Object> hold = new HashMap<String, Object>();
-		String holdTabRef = null;
-
-		for (String tab_ref : symbols.keySet()) {
-			if ((tab_ref.equals("interface")) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_insert"))
-					|| (tab_ref.startsWith("def_update")) || (tab_ref.startsWith("def_union"))
-					|| (tab_ref.startsWith("def_intersect"))) {
-			} else {
-				Object item = symbols.get(tab_ref);
-				if (item instanceof HashMap<?, ?>) {
-					hold.put(tab_ref, item);
-					holdTabRef = tab_ref;
-					count++;
-					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-							|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-					} else {
-						tableCount++;
-						onlyTableName = tab_ref;
-					}
-				}
-			}
-		}
-		if (unks != null) {
-
-			if (count == 1) {
-				// just one table referenced, put all unknowns into it
-				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
-			} else {
-				// Allocate Unknowns
-				for (String tab_ref : hold.keySet()) {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
-					for (String key : currItem.keySet()) {
-						unks.remove(key);
-					}
-				}
-				// put whatever is left back into the unknowns
-				if (unks.size() > 0) {
-					if (tableCount == 1)
-						// just one table remains referenced, put all unknowns
-						// into it
-						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
-					else
-						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
-				}
-			}
-		}
-		// TODO: Add TABLE references to Table Dictionary
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert")) || (tab_ref.startsWith("update"))
-						|| (tab_ref.startsWith(MUMBLE_UNION_KEY)) || (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))) {
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>)  walker.tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						 walker.tableDictionaryMap.put(reference, newItem);
-					}
-				}
-			}
-		}
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+		
 	}
 	  
+	
+	@Override
+	public void exitInsert_preamble(@NotNull SQLSelectParserParser.Insert_preambleContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+
+		if (ctx.getChildCount() <= 2) {
+			// just the insert into statement
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_KEY);
+		} else if (ctx.getChildCount() == 3) {
+			// Insert with override
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_OVERWRITE_KEY);
+			walker.showTrace(walker.parseTrace, "Insert Preamble: " + subMap);
+		} else {
+			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+
+		walker.handleOneChild(ruleIndex);
+	}
+
 	/*
 	===============================================================================
 	  UPDATE Statement <update expression>
@@ -773,7 +741,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		String[] keys = new String[1];
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		keys = subMap.keySet().toArray(keys);
 
@@ -783,7 +751,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			} else {
 				HashMap<String, Object> value = (HashMap<String, Object>) obj;
-				Integer childKey = (Integer) (value).remove("Type");
+				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
 				if (childKey == null) {
 					String k2 = "update" + walker.queryCount;
 					walker.queryCount++;
@@ -916,7 +884,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 2) {
 			walker.showTrace(walker.parseTrace, "Comparison: " + subMap);
@@ -980,7 +948,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 1) {
 				item.putAll((Map<String, Object>) subMap.remove("1"));
@@ -1038,7 +1006,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (subMap.size() == 3) {
 				// Variation 3: Contains an alias and a list of column name assignments
 				
@@ -1071,7 +1039,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (subMap.size() == 2) {
 				// Variation 2: Contains an alias
 				Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
@@ -1102,7 +1070,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (subMap.size() == 1) {
 				// Variation 1: Just a matrix of rows
 				subMap.putAll((Map<String, Object>) subMap.remove("1"));
@@ -1116,6 +1084,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.showTrace(walker.parseTrace, "Case: " + item);
 
 		}
+
+				
+		@SuppressWarnings("unchecked")
+		@Override
+		public void exitInsert_values_statement(@NotNull SQLSelectParserParser.Insert_values_statementContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			if (subMap.size() == 1) {
+				// Variation 1: Just a matrix of rows
+				subMap.putAll((Map<String, Object>) subMap.remove("1"));
+			} else {
+				walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			}
+
+			Map<String, Object> item = new HashMap<String, Object>();
+			item.put(MUMBLE_VALUES_KEY, subMap);
+			walker.addToParent(parentRuleIndex, parentStackLevel, item);
+			walker.showTrace(walker.parseTrace, "Case: " + item);
+
+		}
+
 	// TODO: add symbol tree collection
 		
 		@Override
@@ -1124,7 +1119,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.put(MUMBLE_MATRIX_KEY, subMap);
 			
@@ -1148,7 +1143,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
 			item.put(MUMBLE_ROW_KEY, item.remove("list"));
 
@@ -1163,7 +1158,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
 			item.put(MUMBLE_COLUMNS_KEY, item.remove("list"));
 
@@ -1246,7 +1241,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
@@ -1258,8 +1253,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
 
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
-			if (hold.containsKey("Type")) {
-				Integer childKey = (Integer) hold.remove("Type");
+			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
+				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
@@ -1322,7 +1317,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (ctx.getChildCount() == 1) {
 			Map<String, Object> item = new HashMap<String, Object>();
@@ -1334,8 +1329,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(MUMBLE_OPERATOR_KEY, subMap.remove("1"));
 
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
-			if (hold.containsKey("Type")) {
-				Integer childKey = (Integer) hold.remove("Type");
+			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
+				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
@@ -1388,7 +1383,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Subquery is acting as a lookup function
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			HashMap<String, Object> item = new HashMap<String, Object>();
 
 			item.put(MUMBLE_LOOKUP_KEY, subMap.remove("1"));
@@ -1413,7 +1408,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		String[] keys = new String[1];
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		keys = subMap.keySet().toArray(keys);
 
@@ -1423,7 +1418,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			} else {
 				HashMap<String, Object> value = (HashMap<String, Object>) obj;
-				Integer childKey = (Integer) (value).remove("Type");
+				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
 				Object segment = value.remove(childKey.toString());
 				if (childKey == (Integer) SQLSelectParserParser.RULE_select_list) {
 					subMap.put(MUMBLE_SELECT_KEY, segment);
@@ -1486,7 +1481,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		
 		Map<String, Object> subMap = new HashMap<String, Object>();
 		subMap.put(MUMBLE_QUALIFIER_KEY, item);
-		subMap.put("Type", SQLSelectParserParser.RULE_set_qualifier);
+		subMap.put(ASTWALKER_RULE_TYPE_KEY, SQLSelectParserParser.RULE_set_qualifier);
 		
 		walker.showTrace(walker.parseTrace, "Qualifier: " + subMap);
 	
@@ -1512,7 +1507,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 
 		// variables for constructing the Symbol Table Interface
@@ -1572,7 +1567,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + subMap);
@@ -1601,7 +1596,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// unqualified select all has no map
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + ctx.getText());
 			item.put(MUMBLE_TABLE_REF_KEY, "*");
@@ -1676,7 +1671,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "Join Extension: " + subMap);
@@ -1788,7 +1783,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		String alias = null;
 
@@ -1868,6 +1863,81 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.parseTrace, "TABLE PRIMARY: " + subMap);
 	}
 	
+	@Override
+	public void exitInsert_source_primary(@NotNull SQLSelectParserParser.Insert_source_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> item;
+		String alias = null;
+
+		item = new HashMap<String, Object>();
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+					"tuple");
+
+		if (reference.containsKey(MUMBLE_VALUES_KEY)) {
+			
+			subMap.putAll(reference);
+			
+			// Symbol Table Construction
+			HashMap<String, Object> symbols =  walker.symbolTable;
+			// empty out symbol table
+			 walker.symbolTable = (HashMap<String, Object>) item;
+			// grab reference contents
+			item = (Map<String, Object>) reference.get(MUMBLE_VALUES_KEY);
+			// get alias from values
+			alias=(String) item.get(MUMBLE_ALIAS_KEY);
+			// set default alias if clause doesn't have one
+			if (alias == null)
+				alias = "unnamed";
+			// Construct new Symbol Table
+			String key = MUMBLE_VALUES_KEY + walker.queryCount;
+			 walker.symbolTable.put(alias, key);
+			
+			HashMap<String, Object> queryBody =  new HashMap<String, Object>();
+			queryBody.putAll(symbols);
+			queryBody.put("interface",symbols.get(alias));
+			
+			 walker.symbolTable.put(key,symbols.get(alias));
+			 walker.symbolTable.put("def_" + key, queryBody);
+			
+			
+			// Construct Table Dictionary
+
+//			TODO:??? convertSymbolTableToTableDictionary();
+			
+		} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			// Check for Substitution Variable
+			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
+			// Collect Symbol Table Reference
+			String name = (String) substitution.get("name");
+			 walker.symbolTable.put(name, new HashMap<String, Object>());
+			 walker.tableDictionaryMap.put(name, new HashMap<String, Object>());
+			subMap.putAll(reference);
+
+		} else { // then it's a query, add it to the tree no matter what kind of query it is
+			item.put(MUMBLE_QUERY_KEY, reference);
+			// Add the query to the symbol table tree 
+			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
+			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
+			subMap.putAll(reference);
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+		walker.showTrace(walker.parseTrace, "TABLE PRIMARY: " + subMap);
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -1879,7 +1949,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		String alias = null;
 
@@ -2001,7 +2071,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + subMap);
@@ -2057,7 +2127,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		walker.showTrace(walker.parseTrace, subMap);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 2)
 			subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
 		else if (ctx.getChildCount() == 3) {
@@ -2085,7 +2155,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap = walker.makeRuleMap(ruleIndex);
 		} else
 			subMap.remove("1");
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			switch (ctx.getChildCount()) {
 				case 1 -> subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
 				case 2 -> subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText());
@@ -2109,7 +2179,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		if (subMap.size() == 1) {
 			// get the most recent JOIN condition
@@ -2168,7 +2238,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 	}
 
 	@Override
@@ -2176,7 +2246,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
@@ -2228,7 +2298,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> columnSubTree = new HashMap<String, Object>();
 		Object columnRef = null;
@@ -2305,7 +2375,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
@@ -2335,7 +2405,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
@@ -2356,7 +2426,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
@@ -2368,8 +2438,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (subMap.size() == 3) {
 			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
-			if (hold.containsKey("Type")) {
-				Integer childKey = (Integer) hold.remove("Type");
+			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
+				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
 				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
 					item.putAll(hold);
 			} else {
@@ -2403,7 +2473,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (subMap.size() == 2) {
 				// Variation 2: When contains CONDITIONS
 				subMap.putAll((Map<String, Object>) subMap.remove("1"));
@@ -2434,7 +2504,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() >= 1) {
 				item.put(MUMBLE_CLAUSES_KEY, subMap);
@@ -2454,7 +2524,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 2) {
 				item.put(MUMBLE_WHEN_KEY, subMap.remove("1"));
@@ -2476,7 +2546,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() >= 1) {
 				item.put(MUMBLE_CLAUSES_KEY, subMap);
@@ -2496,7 +2566,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 2) {
 				item.put(MUMBLE_WHEN_KEY, subMap.remove("1"));
@@ -2518,7 +2588,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 1) {
 				item.put(MUMBLE_ELSE_KEY, subMap.remove("1"));
@@ -2553,7 +2623,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			Map<String, Object> item = new HashMap<String, Object>();
 
@@ -2583,7 +2653,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() >=1) {
 				Object item = subMap.remove("1");
@@ -2613,7 +2683,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 			subMap = walker.makeRuleMap(ruleIndex);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			
 			if (ctx.getChildCount() == 1) {
 				walker.showTrace(walker.parseTrace, "one word data type: " + ctx.getText());
@@ -2651,7 +2721,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// unqualified select all has no map
 				subMap = walker.makeRuleMap(ruleIndex);
 			}
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (ctx.getChildCount() == 3) {
 				walker.showTrace(walker.parseTrace, "Three entries: " + ctx.getText());
 				subMap.put(MUMBLE_LENGTH_KEY, ctx.getChild(1).getText());
@@ -2667,7 +2737,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() >=1) {
 				Object item = subMap.remove("1");
@@ -2697,7 +2767,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 			subMap = walker.makeRuleMap(ruleIndex);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			
 			if (ctx.getChildCount() == 1) {
 				walker.showTrace(walker.parseTrace, "one word data type: " + ctx.getText());
@@ -2725,7 +2795,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 			subMap = walker.makeRuleMap(ruleIndex);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			
 			if (ctx.getChildCount() == 3) {
 				walker.showTrace(walker.parseTrace, "Three entries: " + ctx.getText());
@@ -2746,7 +2816,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() ==1) {
 				Object item = subMap.remove("1");
@@ -2771,7 +2841,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 			subMap = walker.makeRuleMap(ruleIndex);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			
 			if (ctx.getChildCount() == 1) {
 				walker.showTrace(walker.parseTrace, "one word data type: " + ctx.getText());
@@ -2823,7 +2893,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() == 2) {
 				walker.showTrace(walker.parseTrace, "Window Over Partition: " + subMap);
@@ -2846,7 +2916,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			String functType = (String) subMap.remove("1");
 
 			Map<String, Object> item = new HashMap<String, Object>();
@@ -2856,7 +2926,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.put(MUMBLE_PARAMETERS_KEY, null);
 			} else if (subMap.size() >= 1) {
 				hold = (Map<String, Object>) subMap.remove("2");
-				type = hold.remove("Type");
+				type = hold.remove(ASTWALKER_RULE_TYPE_KEY);
 				item.put(MUMBLE_PARAMETERS_KEY, hold.remove(type.toString()));
 			} else {
 				walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -2887,7 +2957,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			HashMap<String, Object> item = new HashMap<String, Object>();
 			if (subMap.size() == 0) {
@@ -2919,11 +2989,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() >= 1) {
 				HashMap<String, Object> item = (HashMap<String, Object>) subMap.remove("1");
-				type = item.remove("Type");
+				type = item.remove(ASTWALKER_RULE_TYPE_KEY);
 
 				item.put(MUMBLE_PARTITION_BY_KEY, item.remove(type.toString()));
 				walker.addToParent(parentRuleIndex, parentStackLevel, item);
@@ -2944,7 +3014,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() == 2) {
 				walker.showTrace(walker.parseTrace, "Window Over Partition: " + subMap);
@@ -2975,7 +3045,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() == 2) {
 				walker.showTrace(walker.parseTrace, "Window Over Partition: " + subMap);
@@ -3001,7 +3071,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() == 1) {
 				subMap.put(MUMBLE_VALUE_KEY, (String) subMap.remove("1"));
@@ -3019,7 +3089,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove("Type");
+			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			if (subMap.size() == 1) {
 				subMap.put(MUMBLE_VALUE_KEY, (String) subMap.remove("1"));
@@ -3043,7 +3113,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 			subMap = walker.makeRuleMap(ruleIndex);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			
 			if (ctx.getChildCount() == 2) {
 				walker.showTrace(walker.parseTrace, "two word frame edge: " + ctx.getText());
@@ -3074,7 +3144,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// unqualified select all has no map
 				subMap = walker.makeRuleMap(ruleIndex);
 			}
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (ctx.getChildCount() == 2) {
 				subMap.put(MUMBLE_SELECT_DIRECTION_KEY, ctx.getChild(1).getText());
 			}
@@ -3096,7 +3166,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// unqualified select all has no map
 				subMap = walker.makeRuleMap(ruleIndex);
 			}
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			if (ctx.getChildCount() == 2) {
 				subMap.put(MUMBLE_NULL_HANDLING_KEY, ctx.getChild(0).getText());
 			}
@@ -3127,7 +3197,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// unqualified select all has no map
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + ctx.getText());
 			item.put(MUMBLE_NAME_KEY, ctx.getChild(0).getText());
@@ -3155,7 +3225,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// unqualified select all has no map
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + ctx.getText());
 			String variable_name = ctx.getChild(0).getText();
@@ -3226,7 +3296,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 			// Part of a window function
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.put(MUMBLE_ORDERBY_KEY, subMap);
 
@@ -3246,7 +3316,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-//		Object type = subMap.remove("Type");
+//		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 2) {
 			walker.showTrace(walker.parseTrace, "Limit only: " + subMap);
@@ -3311,7 +3381,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Not negated predicate: " + subMap);
@@ -3344,7 +3414,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
@@ -3381,7 +3451,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
@@ -3401,7 +3471,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 2) {
 			walker.showTrace(walker.parseTrace, "Comparison: " + subMap);
@@ -3433,7 +3503,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// unqualified select all has no map
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (ctx.getChildCount() == 2) {
 			subMap.put(MUMBLE_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
 		} else if (ctx.getChildCount() == 3) {
@@ -3473,7 +3543,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
@@ -3491,7 +3561,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 3) {
 			walker.showTrace(walker.parseTrace, "Comparison: " + subMap);
@@ -3525,7 +3595,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Comparison Operator: " + subMap);
@@ -3546,7 +3616,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() >= 3) {
 			walker.showTrace(walker.parseTrace, "Bewteen: " + subMap);
@@ -3608,7 +3678,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 2) {
 			walker.showTrace(walker.parseTrace, "In predicate: " + subMap);
@@ -3638,7 +3708,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String type = new String();
 
 		if (subMap.size() == 3) {
@@ -3703,7 +3773,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 
 		String text = ctx.getChild(0).getText();
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		subMap.put("Operator", text);
 		
 		walker.handleOneChild(ruleIndex);
@@ -3726,7 +3796,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item = new HashMap<String, Object>();
 		item.put(MUMBLE_LIST_KEY, subMap);
 
@@ -3747,7 +3817,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 		subMap = walker.makeRuleMap(ruleIndex);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		
 		if (ctx.getChildCount() == 2) {
 			walker.showTrace(walker.parseTrace, "TWO WORD lexer objects: " + ctx.getText());
@@ -3813,7 +3883,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
@@ -3845,7 +3915,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
@@ -3905,7 +3975,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Item: " + subMap);
@@ -3918,7 +3988,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
@@ -3941,7 +4011,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
@@ -3969,7 +4039,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
@@ -3993,14 +4063,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() == 2) {
 			item.putAll((Map<? extends String, ? extends Object>) subMap.remove("1"));
 			subMap = (Map<String, Object>) subMap.remove("2");
-			type = subMap.remove("Type");
+			type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove(type.toString()));
 			subMap.put(MUMBLE_FUNCTION_KEY, item);
 		} else {
@@ -4015,7 +4085,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			walker.showTrace(walker.parseTrace, "Just One Identifier: " + subMap);
@@ -4049,7 +4119,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_sql_argument_list) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			subMap.remove("Type");
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			Map<String, Object> valueExpression = null;
 			String tableRef = null;
@@ -4163,7 +4233,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		HashMap<String, Object> item = new HashMap<String, Object>();
 
 		if (subMap.size() >= 1) {
@@ -4185,7 +4255,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else if (item3 != null) {
 				item.put(MUMBLE_SORT_ORDER_KEY, item2);
 				Map<String, Object> hold = (Map<String, Object>) item3;
-				type = hold.remove("Type").toString();
+				type = hold.remove(ASTWALKER_RULE_TYPE_KEY).toString();
 				item.put(MUMBLE_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
 				walker.showTrace(walker.parseTrace, "Three entries: " + item);
 
@@ -4194,7 +4264,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					// item2 is the null order value
 					item.put(MUMBLE_SORT_ORDER_KEY, "ASC");
 					Map<String, Object> hold = (Map<String, Object>) item2;
-					type = hold.remove("Type").toString();
+					type = hold.remove(ASTWALKER_RULE_TYPE_KEY).toString();
 					item.put(MUMBLE_NULL_ORDER_KEY, ((HashMap<String, Object>) hold.get(type)).get("1"));
 					walker.showTrace(walker.parseTrace, "Two entries: " + item);
 				} else {
@@ -4278,7 +4348,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
 
@@ -4356,7 +4426,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 
 		subMap = walker.makeRuleMap(ruleIndex);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		
 		if (ctx.getChildCount() == 1) {
 			walker.showTrace(walker.parseTrace, "one word PUML Constant: " + ctx.getText());
