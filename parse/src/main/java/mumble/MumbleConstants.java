@@ -19,10 +19,8 @@ public final class MumbleConstants {
 	public static final String MUMBLE_CLAUSES_KEY = "clauses";
 	public static final String MUMBLE_COLUMN_KEY = "column";
 	public static final String MUMBLE_COLUMNS_KEY = "columns";
-	public static final String MUMBLE_COLUMN_TREE_KEY = "COLUMN";
 	public static final String MUMBLE_CONCATENATE_KEY = "concatenate";
 	public static final String MUMBLE_CONDITION_KEY = "condition";
-	public static final String MUMBLE_CONDITION_TREE_KEY = "CONDITION";
 	public static final String MUMBLE_DATATYPE_KEY = "data_type";
 	public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
 	public static final String MUMBLE_ELSE_KEY = "else";
@@ -36,16 +34,13 @@ public final class MumbleConstants {
 	public static final String MUMBLE_ILIKE_ANY_KEY = "ilike_any";
 	public static final String MUMBLE_IN_KEY = "in";
 	public static final String MUMBLE_IN_LIST_KEY = "in_list";
-	public static final String MUMBLE_IN_LIST_TREE_KEY = "IN_LIST";
 	public static final String MUMBLE_INSERT_KEY = "insert";
-	public static final String MUMBLE_INSERT_TREE_KEY = "INSERT";
 	public static final String MUMBLE_INSERT_INTO_KEY = "insert_into";
 	public static final String MUMBLE_INSERT_INTO_OVERWRITE_KEY = "insert_overwrite_into";
 	public static final String MUMBLE_INTERSECT_KEY = "intersect";
 	public static final String MUMBLE_INTO_KEY = "into";
 	public static final String MUMBLE_ITEM_KEY = "item";
 	public static final String MUMBLE_JOIN_EXTENSION_KEY = "extension";
-	public static final String MUMBLE_JOIN_EXTENSION_TREE_KEY = "JOIN_EXTENSION";
 	public static final String MUMBLE_JOIN_KEY = "join";
 	public static final String MUMBLE_JOIN_ON_KEY = "on";
 	public static final String MUMBLE_LEFT_FACTOR_KEY = "left";
@@ -72,15 +67,13 @@ public final class MumbleConstants {
 	public static final String MUMBLE_PARENTHESES_KEY = "parentheses";
 	public static final String MUMBLE_PARTITION_BY_KEY = "partition_by";
 	public static final String MUMBLE_PARTS_KEY = "parts";
-	public static final String MUMBLE_INSERT_PREAMBLE_KEY = "Preamble";
+	public static final String MUMBLE_INSERT_PREAMBLE_KEY = "preamble";
 	public static final String MUMBLE_PRECISION_KEY = "precision";
 	public static final String MUMBLE_PRECEDING_KEY = "PRECEDING";
 	public static final String MUMBLE_PREDICAND_KEY = "predicand";
-	public static final String MUMBLE_PREDICAND_TREE_KEY = "PREDICAND";
 	public static final String MUMBLE_PUML_CONSTANT_KEY = "puml_constant";
 	public static final String MUMBLE_QUALIFIER_KEY = "qualifier";
 	public static final String MUMBLE_QUERY_KEY = "query";
-	public static final String MUMBLE_QUERY_TREE_KEY = "QUERY";
 	public static final String MUMBLE_RANGE_BEGIN_KEY = "begin";
 	public static final String MUMBLE_RANGE_END_KEY = "end";
 	public static final String MUMBLE_RETURNING_KEY = "returning";
@@ -95,7 +88,6 @@ public final class MumbleConstants {
 	
 	public static final String MUMBLE_SET_KEY = "set";
 	public static final String MUMBLE_SORT_ORDER_KEY = "sort_order";
-	public static final String MUMBLE_SQL_TREE_KEY = "SQL";
 	public static final String MUMBLE_SUBSTITUTION_KEY = "substitution";
 	public static final String MUMBLE_SYMMETRY_KEY = "symmetry";
 	public static final String MUMBLE_TABLE_KEY = "table";
@@ -103,12 +95,10 @@ public final class MumbleConstants {
 	public static final String MUMBLE_THEN_KEY = "then";
 	public static final String MUMBLE_TO_KEY = "to";
 	public static final String MUMBLE_TRIM_CHARACTER_KEY = "trim_character";
-	public static final String MUMBLE_TUPLE_TREE_KEY = "TUPLE";
 	public static final String MUMBLE_TYPE_KEY = "type";
 	public static final String MUMBLE_UNKNOWN_KEY = "unknown";
 	public static final String MUMBLE_UNION_KEY = "union";
 	public static final String MUMBLE_UPDATE_KEY = "update";
-	public static final String MUMBLE_VALUES_TREE_KEY = "VALUES";
 	public static final String MUMBLE_VALUES_KEY = "values";
 	public static final String MUMBLE_VALUE_KEY = "value";
 	public static final String MUMBLE_WHEN_KEY = "when";

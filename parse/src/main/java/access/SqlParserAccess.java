@@ -6,16 +6,16 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import static mumble.MumbleConstants.MUMBLE_COLUMN_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_CONDITION_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_INSERT_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_IN_LIST_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_JOIN_EXTENSION_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_PREDICAND_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_QUERY_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_SQL_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_TUPLE_TREE_KEY;
-import static mumble.MumbleConstants.MUMBLE_VALUES_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_IN_LIST_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_JOIN_EXTENSION_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 import sql.walker.SqlParseEventWalker;
@@ -116,25 +116,25 @@ public class SqlParserAccess extends AbstractParserAccess {
         // This method runs the parser on the input text and returns the parse tree.
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
-        } else if (type.equals(MUMBLE_SQL_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_SQL_TREE_KEY)) {
             this.parserEmitPoint = parser.sql();
-        } else if (type.equals(MUMBLE_COLUMN_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_COLUMN_TREE_KEY)) {
             this.parserEmitPoint = parser.column_value();
-        } else if (type.equals(MUMBLE_PREDICAND_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_PREDICAND_TREE_KEY)) {
             this.parserEmitPoint = parser.predicand_value();
-        } else if (type.equals(MUMBLE_IN_LIST_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_IN_LIST_TREE_KEY)) {
             this.parserEmitPoint = parser.in_list_predicate_value();
-        } else if (type.equals(MUMBLE_CONDITION_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_CONDITION_TREE_KEY)) {
             this.parserEmitPoint = parser.condition_value();
-        } else if (type.equals(MUMBLE_TUPLE_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_TUPLE_TREE_KEY)) {
             this.parserEmitPoint = parser.tuple_value();
-        } else if (type.equals(MUMBLE_VALUES_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_VALUES_TREE_KEY)) {
             this.parserEmitPoint = parser.values_statement_end();
-        } else if (type.equals(MUMBLE_QUERY_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_QUERY_TREE_KEY)) {
             this.parserEmitPoint = parser.query_value();
-        } else if (type.equals(MUMBLE_JOIN_EXTENSION_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_JOIN_EXTENSION_TREE_KEY)) {
             this.parserEmitPoint = parser.join_extension_value();
-        } else if (type.equals(MUMBLE_INSERT_TREE_KEY)) {
+        } else if (type.equals(SQLPARSER_INSERT_TREE_KEY)) {
             this.parserEmitPoint = parser.insert_end_point();
          } else {
             throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);

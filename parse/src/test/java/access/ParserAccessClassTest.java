@@ -3,8 +3,8 @@ package access;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
-import mumble.MumbleConstants;
 import mumble.PUML3Constants;
+import mumble.SQLParserEndPoints;
 /**
  * Unit test for simple App.
  */
@@ -62,7 +62,7 @@ public class ParserAccessClassTest
         assertTrue( true );
         SqlParserAccess parserAccess = new SqlParserAccess(true, true, true);
         String stmt = "(SYSDATE + SYSDATE)";
-        parserAccess.executeTheParse(stmt, MumbleConstants.MUMBLE_PREDICAND_TREE_KEY);
+        parserAccess.executeTheParse(stmt, SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY);
         Snippet snippet = parserAccess.getSnippet();
         System.out.println(snippet.toString());
     }

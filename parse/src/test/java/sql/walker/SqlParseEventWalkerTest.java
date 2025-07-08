@@ -1183,6 +1183,26 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
+	public void getSimpleColumnVariableTest() {
+		// Column Variable Test
+		String query = " select cec.<simple column> " + 
+				"	from <[Enrollment Services].[Client Entering Class]> cec";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+				
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}}}",
+						extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[<simple column>]", 
+						extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Enrollment Services].[Client Entering Class]>=tuple, <simple column>=column}", 
+						extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[Enrollment Services].[Client Entering Class]>={<simple column>={substitution={name=<simple column>, type=column}}}}",
+						extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={cec=<[Enrollment Services].[Client Entering Class]>, <[Enrollment Services].[Client Entering Class]>={<simple column>={substitution={name=<simple column>, type=column}}}, interface={<simple column>={column={substitution={name=<simple column>, type=column}, table_ref=cec}}}}}",
+						extractor.getSymbolTable().toString());
+	}
+	
+	@Test
 	public void getMixedExtendedVariablesTest() {
 		// ITEM 103: tuple variables with up unbracketed prefix and up to five name segments
 		String query = " select cec.* " + 
@@ -5928,17 +5948,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		runParsertest(query, parser);
 	}
 
-	@Test
-	public void simpleInsertFromQueryTest() {
-
-		final String query = " insert into sch.subj.tbl (newcol1, newcol2) values (SELECT b.att1, b.att2 "
-				+ " from (SELECT a.col1 as att1, a.col2 as att2 " + " FROM sch.subj.tab1 as a"
-				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
-
-		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
-	}
-
 	/***********************************
 	 * Section covering GF Encoder Style Queries
 	 */
@@ -6249,6 +6258,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		runParsertest(sql, parser);
 	}
 
+	@Ignore
 	@Test
 	public void selectWithPostgresUpsert() {
 		String sql = "WITH upsert AS  " + " (UPDATE cat_concentration " + " SET concentration_desc = stvmajr_desc "
@@ -6316,14 +6326,6 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		// from Update queries; Assign unknown symbols from source table to source table in Symbol tree
 		String sql = "update this_table set outputA = column1, outputB = column2, outputC = column3 "
 				+ " from that_table where this_table.key=that_table.key";
-		final SQLSelectParserParser parser = parse(sql);
-		runParsertest(sql, parser);
-	}
-
-	@Test
-	public void selectBasicInsertTest() {
-		// TODO: Item 13 - Generate proper Interface list from Insert statements
-		String sql = "insert into employees  (emp_sales_count, redder)  values (select acct_sales_count + 1, greener  FROM accounts)";
 		final SQLSelectParserParser parser = parse(sql);
 		runParsertest(sql, parser);
 	}

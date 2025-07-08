@@ -18,6 +18,7 @@ package sql.walker;
 
 import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
+import static mumble.SQLParserEndPoints.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -317,7 +318,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_SQL_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -334,7 +335,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_COLUMN_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -354,7 +355,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_PREDICAND_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -375,7 +376,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_IN_LIST_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -396,7 +397,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_CONDITION_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -437,7 +438,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
 		}
 
-		 walker.getAsTree().put(MUMBLE_TUPLE_TREE_KEY, item);
+		 walker.getAsTree().put(SQLPARSER_TUPLE_TREE_KEY, item);
 		
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -455,7 +456,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_QUERY_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_QUERY_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -476,7 +477,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -494,7 +495,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_VALUES_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -516,7 +517,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(MUMBLE_INSERT_TREE_KEY, subMap.remove("1"));
+		 walker.getAsTree().put(SQLPARSER_INSERT_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -758,18 +759,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					subMap.put(k2, value);
 				} else {
 					Object segment = value.remove(childKey.toString());
-					if (childKey == (Integer) SQLSelectParserParser.RULE_assignment_expression_list) {
+					if (childKey.equals((Integer) SQLSelectParserParser.RULE_assignment_expression_list)) {
 						subMap.put(MUMBLE_ASSIGNMENTS_KEY, segment);
-					} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_from_clause)) {
 						if (((HashMap<String, Object>) segment).size() == 1) {
 							subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 						} else
 							subMap.put(MUMBLE_FROM_KEY, segment);
-					} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
 						HashMap<String, Object> item = (HashMap<String, Object>) segment;
 						item = (HashMap<String, Object>) item.remove("1");
 						subMap.put(MUMBLE_WHERE_KEY, item);
-					} else if (childKey == (Integer) SQLSelectParserParser.RULE_returning) {
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_returning)) {
 						subMap.put(MUMBLE_RETURNING_KEY, segment);
 					} else {
 						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
@@ -867,8 +868,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitAssignment_expression_list(@NotNull SQLSelectParserParser.Assignment_expression_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_partition_by_clause) {
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_partition_by_clause)) {
 			walker.handleListList(ruleIndex, parentRuleIndex);
 		} else {
 			// then parent is normal query
@@ -1255,7 +1256,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
 				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
-				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+				if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier))
 					item.putAll(hold);
 			} else {
 				item.put(MUMBLE_QUALIFIER_KEY, hold);
@@ -1331,7 +1332,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
 				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
-				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+				if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier))
 					item.putAll(hold);
 			} else {
 				item.put(MUMBLE_QUALIFIER_KEY, hold);
@@ -1378,8 +1379,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSubquery(@NotNull SQLSelectParserParser.SubqueryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_nonparenthesized_value_expression_primary) {
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_nonparenthesized_value_expression_primary)) {
 			// Subquery is acting as a lookup function
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -1412,6 +1413,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		keys = subMap.keySet().toArray(keys);
 
+		// Since there are too many combinations of clauses, we will
+		// have to cycle through them one at a time and figure out what kind
+		// of clause they are.  The keys will be the rule type, so we
+		// can use that to determine what kind of clause it is.
+		// Then we construct the final AST map from the availble parts of the query.
 		for (String key : keys) {
 			Object obj = subMap.remove(key);
 			if (obj instanceof String) {
@@ -1420,28 +1426,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				HashMap<String, Object> value = (HashMap<String, Object>) obj;
 				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
 				Object segment = value.remove(childKey.toString());
-				if (childKey == (Integer) SQLSelectParserParser.RULE_select_list) {
+				if (childKey.equals((Integer) SQLSelectParserParser.RULE_select_list)) {
 					subMap.put(MUMBLE_SELECT_KEY, segment);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier)) {
 					subMap.putAll(value);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_from_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_from_clause)) {
 					if (((HashMap<String, Object>) segment).size() == 1) {
 						subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
 					} else
 						subMap.put(MUMBLE_FROM_KEY, segment);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_where_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
 					subMap.put(MUMBLE_WHERE_KEY, item);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_groupby_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_groupby_clause)) {
 					subMap.put(MUMBLE_GROUPBY_KEY, segment);
-				} else if (childKey == SQLSelectParserParser.RULE_having_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_having_clause)) {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
 					subMap.put(MUMBLE_HAVING_KEY, item);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_orderby_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_orderby_clause)) {
 					subMap.put(MUMBLE_ORDERBY_KEY, segment);
-				} else if (childKey == (Integer) SQLSelectParserParser.RULE_limit_clause) {
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_limit_clause)) {
 					subMap.put(MUMBLE_LIMIT_KEY, segment);
 				} else {
 					walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
@@ -2440,7 +2446,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
 			if (hold.containsKey(ASTWALKER_RULE_TYPE_KEY)) {
 				Integer childKey = (Integer) hold.remove(ASTWALKER_RULE_TYPE_KEY);
-				if (childKey == (Integer) SQLSelectParserParser.RULE_set_qualifier)
+				if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier))
 					item.putAll(hold);
 			} else {
 				item.put(MUMBLE_QUALIFIER_KEY, hold);
@@ -3288,8 +3294,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// TODO: ITEM 36 - Add Substitution Variables to Order By: Subs Variable
 		// List, Table Dictionary, Symbol Table, AST Tree
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_over_clause) {
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_over_clause)) {
 
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
@@ -4115,8 +4121,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitValue_expression(@NotNull SQLSelectParserParser.Value_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_sql_argument_list) {
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_sql_argument_list)) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
@@ -4161,9 +4167,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				subMap.putAll(valueExpression);
 			}
 			walker.showTrace(walker.parseTrace, "Column Reference: " + subMap);
-		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_search_condition)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_condition_value)) {
+		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_search_condition))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_condition_value))) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 			subMap = (Map<String, Object>) subMap.get("1");
@@ -4174,9 +4180,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// NOW handle the child
 			walker.handleOneChild(ruleIndex);
-		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_case_expression)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_when_value_clause)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_case_result)) {
+		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_expression))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_when_value_clause))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_result))) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 			subMap = (Map<String, Object>) subMap.get("1");
@@ -4187,8 +4193,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// NOW handle the child
 			walker.handleOneChild(ruleIndex);
-		} else if ((parentRuleIndex == (Integer) SQLSelectParserParser.RULE_aggregate_function)
-				|| (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_trim_operands)) {
+		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_aggregate_function))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_trim_operands))) {
 			// Trim and Aggregate Function Parameter
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -4211,8 +4217,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitRow_value_expression(@NotNull SQLSelectParserParser.Row_value_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == (Integer) SQLSelectParserParser.RULE_in_value_list) {
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_in_value_list)) {
 			walker.handleListItem(ruleIndex, parentRuleIndex);
 		} else {
 			// then parent is probably Rule_value_expression and this should
@@ -4316,10 +4322,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitOrdinary_grouping_set(@NotNull SQLSelectParserParser.Ordinary_grouping_setContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		if (parentRuleIndex == SQLSelectParserParser.RULE_grouping_element)
+		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_grouping_element))
 			walker.handleOneChild(ruleIndex);
-		else if (parentRuleIndex == SQLSelectParserParser.RULE_ordinary_grouping_set_list)
+		else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_ordinary_grouping_set_list))
 			walker.handleListItem(ruleIndex, parentRuleIndex);
 	}
 

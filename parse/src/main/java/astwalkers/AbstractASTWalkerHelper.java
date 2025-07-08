@@ -426,6 +426,9 @@ public Integer pushStack(String key, Object symbols) {
 	 * If the Node has one level of children, use this to push the children down
 	 * one level of a tree with the current node as parent
 	 * 
+	 * Then the Exit Every Rule will pull it up one level to the parent again where it can be handled
+	 * with its siblings.
+	 * 
 	 * @param ruleIndex
 	 */
 	public void handlePushDown(int ruleIndex) {
