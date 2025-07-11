@@ -139,6 +139,14 @@ public abstract class AbstractParserAccess {
         return List.of(); // Return an empty list if no errors are collected
     }
 
+    public void addFatalError(String errorMessage) {
+        // This method adds a fatal error message to the ParseErrorCollector.
+        // It allows you to manually add errors that are not captured by the parser.
+        if (errorCollector != null) {
+            errorCollector.addError(errorMessage);
+        }
+    }
+    
     // This method retrieves the list of error messages collected by the ParseErrorListener.
     // This could be a list of syntax errors, ambiguities, or context sensitivity messages,
     // depending on the configuration of the ParseErrorListener.

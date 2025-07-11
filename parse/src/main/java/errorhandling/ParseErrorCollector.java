@@ -39,6 +39,11 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 		return errorList.size();
 	}
 	
+	public void addError(String errorMessage) {
+		// This method adds an error message to the error list.
+		errorList.add(errorMessage);
+	}	
+	
 	@Override
 	public void reset(Parser recognizer) {
 		// TODO Auto-generated method stub

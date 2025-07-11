@@ -8,14 +8,38 @@ import org.junit.Test;
 import access.Snippet;
 import access.SqlParserAccess;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 
 public class SqlParseEventWalkerWithAccessObjectTest {
 
    
 	@Test
+	public void basicSelectSyntaxFailureTest1() {
+		final String query = "select from";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		
+		final int numErrors = snippet.getFatalErrorCount();
+		Assert.assertTrue("Expected failures with " + query + " but got " + numErrors, 
+			numErrors > 1);
+
+	}				
+
+   
+	@Test
+	public void basicSelectSyntaxFailureTest2() {
+		final String query = "not a sql statement at all";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		
+		final int numErrors = snippet.getFatalErrorCount();
+		Assert.assertTrue("Expected failures with " + query + " but got " + numErrors, 
+			numErrors > 1);
+
+	}				
+
+	@Test
 	public void basicInsertFromQueryTest() {
 		final String query = "insert into tab1 select a,b from tab2";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query,SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}, table={table={alias=null, table=tab1}}}}",
@@ -35,7 +59,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicInsertFromVariableTest() {
 		final String query = "insert into tab1 <tuple variable>";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, substitution={name=<tuple variable>, type=query}, table={table={alias=null, table=tab1}}}}",
@@ -55,7 +79,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicInsertFromValuesTest() {
 		final String query = "insert into tab1 values (1,2,3), (2,3,4)";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, table={table={alias=null, table=tab1}}}}",
@@ -76,7 +100,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicInsertWithColumnsFromQueryTest() {
 		final String query = "insert into tab1 (c ,d) select a,b from tab2";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
@@ -97,7 +121,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicInsertWithColumnsFromVariableTest() {
 		final String query = "insert into tab1 (c ,d, e)  <tuple variable>";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={substitution={name=<tuple variable>, type=query}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
@@ -118,7 +142,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicInsertWithColumnsFromValuesTest() {
 		final String query = "insert into tab1  (c ,d)  values (1,2,3), (2,3,4)";
-        final Snippet snippet = runSQLParsertest(query);
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
@@ -144,7 +168,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				+ " FROM sch.subj.tab1 as a"
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
-		final Snippet snippet = runSQLParsertest(query);
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
 		Assert.assertEquals("AST is wrong", "{INSERT={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
@@ -173,23 +197,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	 * @param query
 	 * @return
 	 */
-	private Snippet runSQLParsertest(final String query) {
+	private Snippet runSuccessfulSQLParserTest(final String query, String endPoint) {
 		try {
-			System.out.println();
-			// There should be zero errors
-			SqlParserAccess accessObject = new SqlParserAccess(true, true, true);
-
-			accessObject.executeTheParse(query, SQLPARSER_INSERT_TREE_KEY);
-
-            Snippet snippet = accessObject.getSnippet();
-
-			System.out.println("Result: " + snippet.getSqlAbstractTree());
-			System.out.println("Result JSON: " + snippet.getSqlAbstractTreeJson());
-			System.out.println("Interface: " + snippet.getQueryInterface());
-			System.out.println("Symbol Tree: " + snippet.getSymbolTable());
-			System.out.println("Table Dictionary: " + snippet.getTableDictionary());
-			System.out.println("Substitution Variables: " + snippet.getSubstitutionsMap());
-
+			Snippet snippet = runParserGetSnippet(query, endPoint);
 
 			final int numErrors = snippet.getFatalErrorCount();
 			Assert.assertEquals("Expected no failures with " + query + " but got " + snippet.getFatalErrorStringList(), 
@@ -205,6 +215,44 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		return null;
 	}
 
+	private Snippet runFailedSyntaxSQLParserTest(final String query, String endPoint) {
+		try {
+			Snippet snippet = runParserGetSnippet(query, endPoint);
+
+			final int numErrors = snippet.getFatalErrorCount();
+			Assert.assertTrue("Expected failures with " + query + " but got " + snippet.getFatalErrorStringList(), 
+				numErrors >= 1);
+	
+			return snippet;
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+            Assert.fail("Recognition Exception: " + e.getMessage());    
+        }
+		return null;
+	}
+
+
+	private Snippet runParserGetSnippet(final String query, String endPoint) {
+		System.out.println();
+		
+		SqlParserAccess accessObject = new SqlParserAccess(true, true, true);
+
+		accessObject.executeTheParse(query, endPoint);
+
+		Snippet snippet = accessObject.getSnippet();
+
+		System.out.println("Result: " + snippet.getSqlAbstractTree());
+		System.out.println("Result JSON: " + snippet.getSqlAbstractTreeJson());
+		System.out.println("Interface: " + snippet.getQueryInterface());
+		System.out.println("Symbol Tree: " + snippet.getSymbolTable());
+		System.out.println("Table Dictionary: " + snippet.getTableDictionary());
+		System.out.println("Substitution Variables: " + snippet.getSubstitutionsMap());
+		System.out.println("Fatal Errors: " + snippet.getFatalErrorStringList());
+		
+		return snippet;
+	}
 
 }
 
