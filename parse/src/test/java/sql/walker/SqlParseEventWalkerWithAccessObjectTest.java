@@ -17,11 +17,21 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	public void basicSelectSyntaxFailureTest1() {
 		final String query = "select from";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
-		
-		final int numErrors = snippet.getFatalErrorCount();
-		Assert.assertTrue("Expected failures with " + query + " but got " + numErrors, 
-			numErrors > 1);
+				
+		String text = snippet.getFatalErrorStringList().get(0);
+		Assert.assertTrue("Expected a syntax error with " + query,
+			text.equals("Line 1:7 - null - unexpected input: 'from'"));
 
+		text = snippet.getFatalErrorStringList().get(1);
+		Assert.assertTrue("Expected a syntax error with " + query,
+				text.equals("Line 1:7 - Syntax error, attempting recovery")
+			);
+
+		text = snippet.getFatalErrorStringList().get(2);
+		Assert.assertTrue("Expected a syntax error with " + query,
+					text.equals("Exception when walking the parse tree: Cannot "
+					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
+			);
 	}				
 
    
@@ -29,11 +39,22 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	public void basicSelectSyntaxFailureTest2() {
 		final String query = "not a sql statement at all";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
-		
-		final int numErrors = snippet.getFatalErrorCount();
-		Assert.assertTrue("Expected failures with " + query + " but got " + numErrors, 
-			numErrors > 1);
+				
+		String text = snippet.getFatalErrorStringList().get(0);
+		Assert.assertTrue("Expected a syntax error with " + query,
+			text.equals("Line 1:0 - null - unexpected input: 'not'"));
 
+		text = snippet.getFatalErrorStringList().get(1);
+		Assert.assertTrue("Expected a syntax error with " + query,
+				text.equals("Line 1:0 - Syntax error, attempting recovery")
+			);
+
+		text = snippet.getFatalErrorStringList().get(2);
+		Assert.assertTrue("Expected a syntax error with " + query,
+					text.equals("Exception when walking the parse tree: Cannot "
+					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
+			);
+			
 	}				
 
 	@Test
