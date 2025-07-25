@@ -7819,6 +7819,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 				extractor.getSymbolTable().toString());
 	}
 
+
 	@Test
 	public void joinExtensionUnqualifiedJoinWithOnParenthesisTest() {
 		final String sql = "cross join fourth b"; 

@@ -92,7 +92,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (String key :  walker.symbolTable.keySet()) {
 				if (key.equals(MUMBLE_WITH_KEY)) {
 				} else {
-					hold = (HashMap<String, Object>)  walker.symbolTable.get(key);
+					Object holdObj = walker.symbolTable.get(key);
+					if (!(holdObj instanceof HashMap)) {
+						continue; // Skip this iteration if not a HashMap
+					}
+					hold = (HashMap<String, Object>) holdObj;
 					break;
 				}
 			}

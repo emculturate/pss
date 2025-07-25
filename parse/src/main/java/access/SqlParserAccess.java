@@ -83,7 +83,10 @@ public class SqlParserAccess extends AbstractParserAccess {
 
         } catch (Exception e) {
             System.err.println("EXCEPTION when adding listener: " + e.getMessage());
-            e.printStackTrace();
+            // Log the full stack trace to standard error
+            for (StackTraceElement element : e.getStackTrace()) {
+                System.err.println("\tat " + element);
+            }
         }
 
 	}
