@@ -2,6 +2,8 @@ package astwalkers;
 
 import java.util.HashMap;
 import java.util.Map;
+import static mumble.ASTWalkerHelperConstants.*;
+
 
 public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelper {
     
@@ -289,7 +291,7 @@ public Integer pushStack(String key, Object symbols) {
 	 */
 	public HashMap<String, Object> makeRuleMap(int ruleIndex) {
 		HashMap<String, Object> item = new HashMap<String, Object>();
-		item.put("Type", ruleIndex);
+		item.put(ASTWALKER_RULE_TYPE_KEY, ruleIndex);
 		return item;
 	}
 
@@ -333,7 +335,7 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleOneChild(int ruleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
 
@@ -355,7 +357,7 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleListList(int ruleIndex, int parentRuleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> item = removeNodeMap(ruleIndex, stackLevel);
-		item.remove("Type");
+		item.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 
@@ -374,7 +376,7 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleListItem(int ruleIndex, int parentRuleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove("Type");
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
 
@@ -404,7 +406,7 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleOperandList(int ruleIndex, String operand) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
@@ -434,7 +436,7 @@ public Integer pushStack(String key, Object symbols) {
 	public void handlePushDown(int ruleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove("Type");
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> newMap = collectNewRuleMap(ruleIndex, stackLevel);
 		newMap.put(type.toString(), subMap);

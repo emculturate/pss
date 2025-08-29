@@ -7991,51 +7991,51 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 		@Test
 		public void valuesStatementAloneTest() {
-			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) ";
+			final String query = " (values (1, 'aaa'), (92, 'aaa')) ";
 			final SQLSelectParserParser parser = parse(query);
 			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
 			
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
-			Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+			Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnMap().toString());
-			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, def_values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}, unnamed=values0}",
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}, def_values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}}, unnamed=values0}",
 					extractor.getSymbolTable().toString());
 		}
 
 		@Test
 		public void valuesStatementAsClauseTest() {
 			
-			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source";
+			final String query = " (values (1, 'aaa'), (92, 'aaa')) as source";
 			final SQLSelectParserParser parser = parse(query);
 			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
 			
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
-			Assert.assertEquals("AST is wrong", "{VALUES={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+			Assert.assertEquals("AST is wrong", "{VALUES={values={alias=source, matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnMap().toString());
-			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, def_values0={source={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}, source=values0}",
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}, def_values0={source={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9]}}, source=values0}",
 					extractor.getSymbolTable().toString());
 		}
 
 		@Test
 		public void valuesStatementAsClauseAndColumnsTest() {
 			
-			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source (col1, col2, col3)";
+			final String query = " (values (1, 'aaa'), (92, 'aaa')) as source (col1, col2)";
 			final SQLSelectParserParser parser = parse(query);
 			SqlParseEventWalker extractor =  runValuesStatementEndParsertest(query, parser);
 			
 			Assert.assertEquals("Interface is wrong", "[]", 
 					extractor.getInterface().toString());
-			Assert.assertEquals("AST is wrong", "{VALUES={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+			Assert.assertEquals("AST is wrong", "{VALUES={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, alias=source, matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
@@ -8052,6 +8052,43 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			final SQLSelectParserParser parser = parse(query);
 			SqlParseEventWalker extractor =  runTupleParsertest(query, parser); 
 			
+		}
+
+		@Test
+		public void valuesStatementAloneInTupleVariableTest() {
+			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) ";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runTupleParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{TUPLE={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getAsTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, def_values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}, unnamed=values0}",
+					extractor.getSymbolTable().toString());
+		}
+
+		@Test
+		public void valuesStatementAsClauseInTupleVariableTest() {
+			
+			final String query = " (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor =  runTupleParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("AST is wrong", "{TUPLE={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+					extractor.getAsTree().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, def_values0={source={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}, source=values0}",
+					extractor.getSymbolTable().toString());
 		}
 		
 		@Test
@@ -8099,6 +8136,26 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=source}}, 2={column={name=col2, table_ref=target}}}, from={join={1={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}, columns=null}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}}}}, 2={join=join}, 3={values={alias=target, matrix={1={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}}}",
 					extractor.getAsTree().toString());
 		}
+
+		@Test
+		public void valuesStatementAloneSelectTest() {
+			
+			final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa'))";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			
+			Assert.assertEquals("Interface is wrong", "[*]", 
+					extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{}", 
+					extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{}",
+					extractor.getTableColumnMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{query1={values0={*=[@1,8:8='*',<289>,1:8], $1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}, def_values0={values={*=[@1,8:8='*',<289>,1:8], $1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}, interface={*=[@1,8:8='*',<289>,1:8], $1=[@5,23:23='(',<285>,1:23], $2=[@5,23:23='(',<285>,1:23], $3=[@5,23:23='(',<285>,1:23]}}, unnamed=values0, interface={*={column={name=*, table_ref=*}}}}}",
+					extractor.getSymbolTable().toString());
+			Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
+					extractor.getAsTree().toString());
+		}
+
 
 		@Test
 		public void valuesStatementWithAsClauseInSelectTest() {

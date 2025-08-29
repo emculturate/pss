@@ -399,7 +399,7 @@ tuple_primary
   : table_or_query_name
   | subquery
   | variable_identifier
-  | fully_defined_values_statement
+  | values_statement_primary
   ;
 
 
@@ -1133,7 +1133,7 @@ values_statement_primary
   ;
 
 fully_defined_values_statement 
-  : values_statement as_clause values_columns
+  : values_statement as_clause values_aliases
   ;
 
 aliased_values_statement 
@@ -1144,6 +1144,7 @@ values_statement
   :  LEFT_PAREN VALUES values_matrix RIGHT_PAREN
   ;
   
+// Rows of values in a matrix for use in a Values statement  
 values_matrix
   : values_row ( COMMA values_row)*
   ;
@@ -1152,10 +1153,16 @@ values_row
   : LEFT_PAREN in_value_list RIGHT_PAREN
   ;
   
-values_columns
-  : (LEFT_PAREN column_reference_list RIGHT_PAREN)
+// Values Aliases for the columns of a Values matrix  
+values_aliases
+  : (LEFT_PAREN values_aliases_list RIGHT_PAREN)
+  ;
+  
+values_aliases_list
+  :  alias_identifier ( COMMA alias_identifier)* 
   ;
 
+// Used by substitution to insert a values matrix into a variable
 insert_values_statement
   :  VALUES values_matrix
   ;

@@ -8,7 +8,7 @@
   <artifactId>pss-parse</artifactId>
 	<name>pss-parse</name>
 	<packaging>jar</packaging>
-	<version>5.0.0-3</version>
+	<version>5.0.1-1</version>
   <description>Parser for several PSS Grammars using ANTLR4</description>
 
   <properties>

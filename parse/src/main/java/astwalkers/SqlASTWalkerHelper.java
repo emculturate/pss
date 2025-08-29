@@ -304,7 +304,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				symbolTable.put((String) tableReference, localSymbolTable);
 			}
 			if (localSymbolTable instanceof String) {
-				// tableReference is an ALIAS to a different table
+				// tableReference is an ALIAS to a different table, retrieve the actual table
+				// and add the item to its symbol table
 				localSymbolTable = symbolTable.get((String) localSymbolTable);
 				addItemToSymbolTable(localSymbolTable, item, token);
 			} else if (localSymbolTable instanceof HashMap<?, ?>) {
@@ -329,9 +330,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void addItemToSymbolTable(Object localSymbolTable, Object item, Token token) {
-		if (item instanceof String)
-			// Item is a column reference
-			((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
+		if (item instanceof String) {
+			HashMap<String, Object> symtab = (HashMap<String, Object>) localSymbolTable;
+			// Item is a column reference, add it if we haven't captured it yet
+			if (!symtab.containsKey(item)) {
+				((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
+			}
+		}
 		else {
 			HashMap<String, Object> node = (HashMap<String, Object>) item;
 			if (node.containsKey(getASTWALKER_SUBSTITUTION_KEY())) {
