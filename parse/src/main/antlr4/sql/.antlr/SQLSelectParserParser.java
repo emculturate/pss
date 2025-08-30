@@ -2680,14 +2680,14 @@ public class SQLSelectParserParser extends Parser {
 		public As_clauseContext as_clause() {
 			return getRuleContext(As_clauseContext.class,0);
 		}
-		public SubqueryContext subquery() {
-			return getRuleContext(SubqueryContext.class,0);
-		}
 		public Variable_identifierContext variable_identifier() {
 			return getRuleContext(Variable_identifierContext.class,0);
 		}
 		public Values_statement_primaryContext values_statement_primary() {
 			return getRuleContext(Values_statement_primaryContext.class,0);
+		}
+		public SubqueryContext subquery() {
+			return getRuleContext(SubqueryContext.class,0);
 		}
 		public Table_primaryContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -2723,33 +2723,33 @@ public class SQLSelectParserParser extends Parser {
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(692);
-				subquery();
-				setState(694);
-				_errHandler.sync(this);
-				switch ( getInterpreter().adaptivePredict(_input,40,_ctx) ) {
-				case 1:
-					{
-					setState(693);
-					as_clause();
-					}
-					break;
-				}
+				variable_identifier();
+				setState(693);
+				as_clause();
 				}
 				break;
 			case 3:
 				enterOuterAlt(_localctx, 3);
 				{
-				setState(696);
-				variable_identifier();
-				setState(697);
-				as_clause();
+				setState(695);
+				values_statement_primary();
 				}
 				break;
 			case 4:
 				enterOuterAlt(_localctx, 4);
 				{
-				setState(699);
-				values_statement_primary();
+				setState(696);
+				subquery();
+				setState(698);
+				_errHandler.sync(this);
+				switch ( getInterpreter().adaptivePredict(_input,40,_ctx) ) {
+				case 1:
+					{
+					setState(697);
+					as_clause();
+					}
+					break;
+				}
 				}
 				break;
 			}
@@ -2770,14 +2770,14 @@ public class SQLSelectParserParser extends Parser {
 		public Table_or_query_nameContext table_or_query_name() {
 			return getRuleContext(Table_or_query_nameContext.class,0);
 		}
-		public SubqueryContext subquery() {
-			return getRuleContext(SubqueryContext.class,0);
-		}
 		public Variable_identifierContext variable_identifier() {
 			return getRuleContext(Variable_identifierContext.class,0);
 		}
 		public Values_statement_primaryContext values_statement_primary() {
 			return getRuleContext(Values_statement_primaryContext.class,0);
+		}
+		public SubqueryContext subquery() {
+			return getRuleContext(SubqueryContext.class,0);
 		}
 		public Tuple_primaryContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -2803,21 +2803,21 @@ public class SQLSelectParserParser extends Parser {
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(703);
-				subquery();
+				variable_identifier();
 				}
 				break;
 			case 3:
 				enterOuterAlt(_localctx, 3);
 				{
 				setState(704);
-				variable_identifier();
+				values_statement_primary();
 				}
 				break;
 			case 4:
 				enterOuterAlt(_localctx, 4);
 				{
 				setState(705);
-				values_statement_primary();
+				subquery();
 				}
 				break;
 			}
@@ -13545,8 +13545,8 @@ public class SQLSelectParserParser extends Parser {
 		"+\u0001+\u0001+\u0001+\u0001+\u0001+\u0001+\u0003+\u0298\b+\u0005+\u029a"+
 		"\b+\n+\f+\u029d\t+\u0001,\u0001,\u0001,\u0001,\u0001,\u0001,\u0001,\u0001"+
 		",\u0003,\u02a7\b,\u0005,\u02a9\b,\n,\f,\u02ac\t,\u0001,\u0003,\u02af\b"+
-		",\u0001-\u0001-\u0003-\u02b3\b-\u0001-\u0001-\u0003-\u02b7\b-\u0001-\u0001"+
-		"-\u0001-\u0001-\u0003-\u02bd\b-\u0001.\u0001.\u0001.\u0001.\u0003.\u02c3"+
+		",\u0001-\u0001-\u0003-\u02b3\b-\u0001-\u0001-\u0001-\u0001-\u0001-\u0001"+
+		"-\u0003-\u02bb\b-\u0003-\u02bd\b-\u0001.\u0001.\u0001.\u0001.\u0003.\u02c3"+
 		"\b.\u0001/\u0001/\u0001/\u0003/\u02c8\b/\u00010\u00010\u00010\u00010\u0003"+
 		"0\u02ce\b0\u00030\u02d0\b0\u00010\u00010\u00010\u00030\u02d5\b0\u0003"+
 		"0\u02d7\b0\u00011\u00011\u00011\u00011\u00011\u00011\u00031\u02df\b1\u0001"+
@@ -13950,38 +13950,38 @@ public class SQLSelectParserParser extends Parser {
 		"\u02ad\u0001\u0000\u0000\u0000\u02ae\u02af\u0001\u0000\u0000\u0000\u02af"+
 		"Y\u0001\u0000\u0000\u0000\u02b0\u02b2\u0003`0\u0000\u02b1\u02b3\u0003"+
 		"N\'\u0000\u02b2\u02b1\u0001\u0000\u0000\u0000\u02b2\u02b3\u0001\u0000"+
-		"\u0000\u0000\u02b3\u02bd\u0001\u0000\u0000\u0000\u02b4\u02b6\u0003B!\u0000"+
-		"\u02b5\u02b7\u0003N\'\u0000\u02b6\u02b5\u0001\u0000\u0000\u0000\u02b6"+
-		"\u02b7\u0001\u0000\u0000\u0000\u02b7\u02bd\u0001\u0000\u0000\u0000\u02b8"+
-		"\u02b9\u0003\u0168\u00b4\u0000\u02b9\u02ba\u0003N\'\u0000\u02ba\u02bd"+
-		"\u0001\u0000\u0000\u0000\u02bb\u02bd\u0003\u012e\u0097\u0000\u02bc\u02b0"+
-		"\u0001\u0000\u0000\u0000\u02bc\u02b4\u0001\u0000\u0000\u0000\u02bc\u02b8"+
-		"\u0001\u0000\u0000\u0000\u02bc\u02bb\u0001\u0000\u0000\u0000\u02bd[\u0001"+
-		"\u0000\u0000\u0000\u02be\u02c3\u0003`0\u0000\u02bf\u02c3\u0003B!\u0000"+
-		"\u02c0\u02c3\u0003\u0168\u00b4\u0000\u02c1\u02c3\u0003\u012e\u0097\u0000"+
-		"\u02c2\u02be\u0001\u0000\u0000\u0000\u02c2\u02bf\u0001\u0000\u0000\u0000"+
-		"\u02c2\u02c0\u0001\u0000\u0000\u0000\u02c2\u02c1\u0001\u0000\u0000\u0000"+
-		"\u02c3]\u0001\u0000\u0000\u0000\u02c4\u02c8\u00032\u0019\u0000\u02c5\u02c8"+
-		"\u0003\u0168\u00b4\u0000\u02c6\u02c8\u0003\u013e\u009f\u0000\u02c7\u02c4"+
-		"\u0001\u0000\u0000\u0000\u02c7\u02c5\u0001\u0000\u0000\u0000\u02c7\u02c6"+
-		"\u0001\u0000\u0000\u0000\u02c8_\u0001\u0000\u0000\u0000\u02c9\u02cf\u0003"+
-		"\u0164\u00b2\u0000\u02ca\u02cd\u0005\u0124\u0000\u0000\u02cb\u02ce\u0003"+
-		"\u0172\u00b9\u0000\u02cc\u02ce\u0003\u0164\u00b2\u0000\u02cd\u02cb\u0001"+
-		"\u0000\u0000\u0000\u02cd\u02cc\u0001\u0000\u0000\u0000\u02ce\u02d0\u0001"+
-		"\u0000\u0000\u0000\u02cf\u02ca\u0001\u0000\u0000\u0000\u02cf\u02d0\u0001"+
-		"\u0000\u0000\u0000\u02d0\u02d6\u0001\u0000\u0000\u0000\u02d1\u02d4\u0005"+
-		"\u0124\u0000\u0000\u02d2\u02d5\u0003\u0172\u00b9\u0000\u02d3\u02d5\u0003"+
-		"\u0164\u00b2\u0000\u02d4\u02d2\u0001\u0000\u0000\u0000\u02d4\u02d3\u0001"+
-		"\u0000\u0000\u0000\u02d5\u02d7\u0001\u0000\u0000\u0000\u02d6\u02d1\u0001"+
-		"\u0000\u0000\u0000\u02d6\u02d7\u0001\u0000\u0000\u0000\u02d7a\u0001\u0000"+
-		"\u0000\u0000\u02d8\u02d9\u0005\n\u0000\u0000\u02d9\u02e2\u0005\u001b\u0000"+
-		"\u0000\u02da\u02db\u00055\u0000\u0000\u02db\u02e2\u0005\u001b\u0000\u0000"+
-		"\u02dc\u02de\u0005 \u0000\u0000\u02dd\u02df\u0003f3\u0000\u02de\u02dd"+
-		"\u0001\u0000\u0000\u0000\u02de\u02df\u0001\u0000\u0000\u0000\u02df\u02e0"+
-		"\u0001\u0000\u0000\u0000\u02e0\u02e2\u0005\u001b\u0000\u0000\u02e1\u02d8"+
-		"\u0001\u0000\u0000\u0000\u02e1\u02da\u0001\u0000\u0000\u0000\u02e1\u02dc"+
-		"\u0001\u0000\u0000\u0000\u02e2c\u0001\u0000\u0000\u0000\u02e3\u02e5\u0003"+
-		"f3\u0000\u02e4\u02e3\u0001\u0000\u0000\u0000\u02e4\u02e5\u0001\u0000\u0000"+
+		"\u0000\u0000\u02b3\u02bd\u0001\u0000\u0000\u0000\u02b4\u02b5\u0003\u0168"+
+		"\u00b4\u0000\u02b5\u02b6\u0003N\'\u0000\u02b6\u02bd\u0001\u0000\u0000"+
+		"\u0000\u02b7\u02bd\u0003\u012e\u0097\u0000\u02b8\u02ba\u0003B!\u0000\u02b9"+
+		"\u02bb\u0003N\'\u0000\u02ba\u02b9\u0001\u0000\u0000\u0000\u02ba\u02bb"+
+		"\u0001\u0000\u0000\u0000\u02bb\u02bd\u0001\u0000\u0000\u0000\u02bc\u02b0"+
+		"\u0001\u0000\u0000\u0000\u02bc\u02b4\u0001\u0000\u0000\u0000\u02bc\u02b7"+
+		"\u0001\u0000\u0000\u0000\u02bc\u02b8\u0001\u0000\u0000\u0000\u02bd[\u0001"+
+		"\u0000\u0000\u0000\u02be\u02c3\u0003`0\u0000\u02bf\u02c3\u0003\u0168\u00b4"+
+		"\u0000\u02c0\u02c3\u0003\u012e\u0097\u0000\u02c1\u02c3\u0003B!\u0000\u02c2"+
+		"\u02be\u0001\u0000\u0000\u0000\u02c2\u02bf\u0001\u0000\u0000\u0000\u02c2"+
+		"\u02c0\u0001\u0000\u0000\u0000\u02c2\u02c1\u0001\u0000\u0000\u0000\u02c3"+
+		"]\u0001\u0000\u0000\u0000\u02c4\u02c8\u00032\u0019\u0000\u02c5\u02c8\u0003"+
+		"\u0168\u00b4\u0000\u02c6\u02c8\u0003\u013e\u009f\u0000\u02c7\u02c4\u0001"+
+		"\u0000\u0000\u0000\u02c7\u02c5\u0001\u0000\u0000\u0000\u02c7\u02c6\u0001"+
+		"\u0000\u0000\u0000\u02c8_\u0001\u0000\u0000\u0000\u02c9\u02cf\u0003\u0164"+
+		"\u00b2\u0000\u02ca\u02cd\u0005\u0124\u0000\u0000\u02cb\u02ce\u0003\u0172"+
+		"\u00b9\u0000\u02cc\u02ce\u0003\u0164\u00b2\u0000\u02cd\u02cb\u0001\u0000"+
+		"\u0000\u0000\u02cd\u02cc\u0001\u0000\u0000\u0000\u02ce\u02d0\u0001\u0000"+
+		"\u0000\u0000\u02cf\u02ca\u0001\u0000\u0000\u0000\u02cf\u02d0\u0001\u0000"+
+		"\u0000\u0000\u02d0\u02d6\u0001\u0000\u0000\u0000\u02d1\u02d4\u0005\u0124"+
+		"\u0000\u0000\u02d2\u02d5\u0003\u0172\u00b9\u0000\u02d3\u02d5\u0003\u0164"+
+		"\u00b2\u0000\u02d4\u02d2\u0001\u0000\u0000\u0000\u02d4\u02d3\u0001\u0000"+
+		"\u0000\u0000\u02d5\u02d7\u0001\u0000\u0000\u0000\u02d6\u02d1\u0001\u0000"+
+		"\u0000\u0000\u02d6\u02d7\u0001\u0000\u0000\u0000\u02d7a\u0001\u0000\u0000"+
+		"\u0000\u02d8\u02d9\u0005\n\u0000\u0000\u02d9\u02e2\u0005\u001b\u0000\u0000"+
+		"\u02da\u02db\u00055\u0000\u0000\u02db\u02e2\u0005\u001b\u0000\u0000\u02dc"+
+		"\u02de\u0005 \u0000\u0000\u02dd\u02df\u0003f3\u0000\u02de\u02dd\u0001"+
+		"\u0000\u0000\u0000\u02de\u02df\u0001\u0000\u0000\u0000\u02df\u02e0\u0001"+
+		"\u0000\u0000\u0000\u02e0\u02e2\u0005\u001b\u0000\u0000\u02e1\u02d8\u0001"+
+		"\u0000\u0000\u0000\u02e1\u02da\u0001\u0000\u0000\u0000\u02e1\u02dc\u0001"+
+		"\u0000\u0000\u0000\u02e2c\u0001\u0000\u0000\u0000\u02e3\u02e5\u0003f3"+
+		"\u0000\u02e4\u02e3\u0001\u0000\u0000\u0000\u02e4\u02e5\u0001\u0000\u0000"+
 		"\u0000\u02e5\u02e6\u0001\u0000\u0000\u0000\u02e6\u02e7\u0005\u001b\u0000"+
 		"\u0000\u02e7e\u0001\u0000\u0000\u0000\u02e8\u02ee\u0005\u0017\u0000\u0000"+
 		"\u02e9\u02eb\u0007\u0002\u0000\u0000\u02ea\u02ec\u0005\'\u0000\u0000\u02eb"+
@@ -14532,7 +14532,7 @@ public class SQLSelectParserParser extends Parser {
 		"\u009b\u01a8\u01ab\u01c6\u01d1\u01db\u01e9\u01f8\u01fc\u0200\u0209\u020c"+
 		"\u020f\u0219\u022d\u0232\u023c\u0241\u0248\u0250\u0253\u0258\u025b\u025e"+
 		"\u0261\u0264\u0266\u0272\u0277\u027a\u027d\u0283\u028a\u0297\u0299\u029b"+
-		"\u02a6\u02a8\u02aa\u02ae\u02b2\u02b6\u02bc\u02c2\u02c7\u02cd\u02cf\u02d4"+
+		"\u02a6\u02a8\u02aa\u02ae\u02b2\u02ba\u02bc\u02c2\u02c7\u02cd\u02cf\u02d4"+
 		"\u02d6\u02de\u02e1\u02e4\u02eb\u02ed\u02f1\u0302\u0308\u030f\u0314\u031c"+
 		"\u0321\u0327\u032b\u0339\u0341\u0345\u034a\u0354\u035b\u035f\u0364\u036e"+
 		"\u037a\u038d\u0396\u0399\u039b\u03a0\u03a3\u03a6\u03b6\u03c0\u03d9\u03de"+

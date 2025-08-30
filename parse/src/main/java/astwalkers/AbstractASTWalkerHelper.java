@@ -124,12 +124,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 			System.out.println(trace);
 	}
 
-
-
-    public HashMap<String, Object> getAsTree() {
-        return asTree;
-    }
-
     
 /**
  * Multiple Stack Operations Explained

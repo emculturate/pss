@@ -87,9 +87,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@7,28:28='a',<328>,1:28], b=[@9,32:32='b',<328>,1:32]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@7,28:28='a',<328>,1:28], b=[@9,32:32='b',<328>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
@@ -104,9 +104,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@7,28:28='a',<328>,1:28], b=[@9,32:32='b',<328>,1:32]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@7,28:28='a',<328>,1:28], b=[@9,32:32='b',<328>,1:32]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
@@ -224,9 +224,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		
 			Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
 					snippet.getSqlAbstractTree().toString());
-			Assert.assertEquals("Interface is wrong", "[]", 
+			Assert.assertEquals("Interface is wrong", "[$1, $2, $3]", 
 					snippet.getQueryInterface().toString());
-			Assert.assertEquals("Symbol Table is wrong", "{values0={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, def_values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}, unnamed=values0}",
+			Assert.assertEquals("Symbol Table is wrong", "{values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}}",
 					snippet.getSymbolTable().toString()); 
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
 					snippet.getTableDictionary().toString());
@@ -295,7 +295,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values0=null, def_values0={interface=null, tab1={}, values={$1=[@4,24:24='(',<285>,1:24], $2=[@4,24:24='(',<285>,1:24], $3=[@4,24:24='(',<285>,1:24]}}, unnamed=values0}",
+		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[@4,24:24='(',<285>,1:24], $2=[@4,24:24='(',<285>,1:24], $3=[@4,24:24='(',<285>,1:24]}, tab1={}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
         	snippet.getTableDictionary().toString());

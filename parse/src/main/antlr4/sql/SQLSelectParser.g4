@@ -389,18 +389,18 @@ join_extension_primary
 // Used anywhere a table name is expected
 table_primary
   : table_or_query_name as_clause?
-  | subquery as_clause? 
   | variable_identifier as_clause
   | values_statement_primary
+  | subquery as_clause? 
   ;
 
 // Used ONLY in the TUPLE Variable Substitution end point
 tuple_primary
   : table_or_query_name
-  | subquery
   | variable_identifier
   | values_statement_primary
-  ;
+  | subquery
+ ;
 
 
 // Used ONLY in the TUPLE Variable Substitution end point

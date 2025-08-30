@@ -154,8 +154,7 @@ public class SqlParserAccess extends AbstractParserAccess {
                 // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
                 this.extractor = new SqlParseEventWalker();
 		
-        String exceptionString = null;
-        try{
+         try{
  			// walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
             // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
             // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
@@ -167,13 +166,8 @@ public class SqlParserAccess extends AbstractParserAccess {
             System.out.println("Exception: " + this.getFatalErrorList());
         }
             // Save the results in a local Snippet object
-            this.snippet = new Snippet(
-                this.extractor.getAsTree(),
-                this.extractor.getTableColumnMap(),
-                this.extractor.getSymbolTable(),
-                this.extractor.getSubstitutionsMap(),
-                this.extractor.getInterface()
-            );
+            this.snippet = this.extractor.getSnippet();
+ 
             // Add the error and other messages to the Snippet object
             snippet.setParserMessageList(this.getAllErrors());
             snippet.setParserMessageStringList(this.getAllErrorStrings());

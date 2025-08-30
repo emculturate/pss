@@ -182,6 +182,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return stackSymbols.get(key);
 	}
 
+	// For nested Queries especially, when managing individual symbol tables, the symbol table should be managed 
+	// from the stack. This method pushes a new symbol table onto the stack where the symbol table
+	// logic should work. As the parser leaves the context, the symbol table is popped from the stack
+	// and the symbols are added to the parent symbol table.
 	public void pushSymbolTable() {
 		Object symbols = symbolTable;
 		if (symbols != null) {

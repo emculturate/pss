@@ -118,11 +118,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	public Snippet getSnippet() {
-		//TODO: What the hell
-		return new Snippet(walker.getAsTree(), walker.tableDictionaryMap,  walker.symbolTable, walker.substitutionsMap, null);
+		return new Snippet(walker.asTree, walker.tableDictionaryMap,  walker.symbolTable, walker.substitutionsMap, getInterface());
 	}
-	
-
 
 	/* ==================================================================================
 	 *
@@ -222,7 +219,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.showTrace(walker.parseTrace, "Enter " + walker.makeMapIndex(ruleIndex, stackLvl) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " +  walker.getAsTree());
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " +  walker.asTree);
 		walker.showTrace(walker.parseTrace, "");
 	}
 
@@ -240,7 +237,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Object item = null;
 
-		Object skip =  walker.getAsTree().remove("SKIP");
+		Object skip =  walker.asTree.remove("SKIP");
 		if (skip == null) {
 			if (walker.useAsLeaf) {
 				item = ctx.getText();
@@ -272,14 +269,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						idMap.put(((Integer) (idMap.size())).toString(), item);
 				}
 			} else {
-				walker.showTrace(walker.parseTrace,  walker.getAsTree());
+				walker.showTrace(walker.parseTrace,  walker.asTree);
 			}
 		}
 
 		walker.popStack(ruleIndex);
 
 		walker.showTrace(walker.parseTrace, "EXIT " + walker.makeMapIndex(ruleIndex, stackLevel) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " +  walker.getAsTree());
+				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " +  walker.asTree);
 		walker.showTrace(walker.parseTrace, "");
 	}
 
@@ -323,7 +320,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -340,7 +337,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -360,7 +357,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -381,7 +378,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -402,7 +399,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -427,25 +424,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// normal TUPLE value
 			item.putAll((HashMap<String, Object>) subMap.remove("1"));
 			
-		} else if (subMap.size() == 2) {
-			// Only VALUES statement with values and alias
-			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
-			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-		
-		} else if (subMap.size() == 3) {
-			// Only VALUES statement with values alias and column list
-			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-			HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_VALUES_KEY);
-			hold.putAll((HashMap<String, Object>)  subMap.remove("2"));
-			hold.put(MUMBLE_COLUMNS_KEY, (HashMap<String, Object>)  subMap.remove("3"));
 		} else {	
 			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
 		}
 
-		 walker.getAsTree().put(SQLPARSER_TUPLE_TREE_KEY, item);
+		 walker.asTree.put(SQLPARSER_TUPLE_TREE_KEY, item);
 		
-		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -461,7 +445,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_QUERY_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_QUERY_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
@@ -482,7 +466,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -500,7 +484,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -522,7 +506,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.getAsTree().put(SQLPARSER_INSERT_TREE_KEY, subMap.remove("1"));
+		 walker.asTree.put(SQLPARSER_INSERT_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
@@ -937,16 +921,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	===============================================================================
 	*/
 
-	// 
-		
+	@Override
+	public void enterValues_statement_primary(@NotNull SQLSelectParserParser.Values_statement_primaryContext ctx) {
+		walker.pushSymbolTable();
+	}
 
-		@Override
-		public void enterValues_statement_primary(@NotNull SQLSelectParserParser.Values_statement_primaryContext ctx) {
-			walker.pushSymbolTable();
-		}
-
-		@Override
-		public void exitValues_statement_primary(@NotNull SQLSelectParserParser.Values_statement_primaryContext ctx) {
+	@Override
+	public void exitValues_statement_primary(@NotNull SQLSelectParserParser.Values_statement_primaryContext ctx) {
 			int ruleIndex = ctx.getRuleIndex();
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -964,40 +945,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.addToParent(parentRuleIndex, parentStackLevel, item);
 			walker.showTrace(walker.parseTrace, "Case: " + item);
 			
-			// Add item to symbol table
-			Map<String, Object> values = (Map<String, Object>) item.get(MUMBLE_VALUES_KEY);
-			HashMap<String, Object> selectInterface = null;
-			String interfaceAlias = (String) values.get(MUMBLE_ALIAS_KEY);
-
-			if (interfaceAlias == null) {
-				interfaceAlias = "unnamed";
-				selectInterface = (HashMap<String, Object>)  walker.symbolTable.get(MUMBLE_VALUES_KEY);
-
-			} else {
-				selectInterface = (HashMap<String, Object>)  walker.symbolTable.get(MUMBLE_INTERFACE_KEY);
-			
-				if (selectInterface == null) {
-					selectInterface = new HashMap<String, Object>();
-					HashMap<String, Object> gfg = (HashMap<String, Object>)  walker.symbolTable.get(interfaceAlias);
-					for (Map.Entry<String, Object> entry : gfg.entrySet()) {
-						System.out.println("Key = " + entry.getKey() +
-		                             ", Value = " + entry.getValue());
-						selectInterface.put(entry.getKey(), entry.getValue());
-					}
-				}
-			}
-			 walker.symbolTable.put(MUMBLE_INTERFACE_KEY, selectInterface);
-
-			// Symbol Table Construction
+			// Finish Symbol Table Construction
 			HashMap<String, Object> symbols =  walker.symbolTable;
-
 			String key = MUMBLE_VALUES_KEY + walker.queryCount;
-			walker.popSymbolTable("def_" + key, symbols);
+			walker.popSymbolTable(key, symbols);
 			walker.queryCount++;
-
-			 walker.symbolTable.put(interfaceAlias, key);
-			 walker.symbolTable.put(key,selectInterface);
-			
+	
 			// Construct Table Dictionary
 
 		}
@@ -1024,14 +977,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				subMap.putAll(item);
 
-				// Resolve Symbol Table, eliminate virtual references because this statement has an actual columns list.
-				// walker.consolidateValuesStatementSymbolTable((String) aliasMap.get(MUMBLE_ALIAS_KEY));
+				// Replace the interface entry in the symbol table from the values statement
+				Map<String, Object> hold = (Map<String, Object>) walker.symbolTable.get(MUMBLE_VALUES_KEY);
+				walker.symbolTable.put(MUMBLE_INTERFACE_KEY, hold);
+				
+				// Resolve Symbol Table, add alias from Values statement to the Symbol Table.
+				walker.symbolTable.put((String) aliasMap.get(MUMBLE_ALIAS_KEY), MUMBLE_VALUES_KEY);
 			} else {
 				walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
-			// Replace the interface entry in the symbol table from the values statement
-			Map<String, Object> hold = (Map<String, Object>) walker.symbolTable.get(MUMBLE_VALUES_KEY);
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, hold);
 
 			walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 			walker.showTrace(walker.parseTrace, "Case: " + subMap);
@@ -1058,8 +1012,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				
 				subMap.putAll(item);
 
-				// Resolve Symbol Table, eliminate virtual references because this statement has an actual columns list.
-				// walker.consolidateValuesStatementSymbolTable((String) aliasMap.get(MUMBLE_ALIAS_KEY));
+				// Resolve Symbol Table, add alias from Values statement to the Symbol Table.
+				walker.symbolTable.put((String) aliasMap.get(MUMBLE_ALIAS_KEY), MUMBLE_VALUES_KEY);
 			} else {
 				walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
 			}
@@ -1844,20 +1798,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					alias = "unnamed";
 					Map<String, Object> aliasMap = new HashMap<String, Object>();
 					aliasMap.put(alias, alias);
-					Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, aliasMap, alias, item);
+					Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
 					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
 					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
 					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_UNION_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, aliasMap, alias, item);
+						done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 				}
 			} else { // VALUES STATEMENT can only happen in this instance
 				subMap.putAll(item);
-				
-//				TODO:??? convertSymbolTableToTableDictionary();
 
 			}
 
@@ -1886,15 +1838,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
 				item.put(MUMBLE_QUERY_KEY, reference);
 				// Add the query to the symbol table tree 
-				Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
+				Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
 				if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
 				if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
 				if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 				if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 			}
 
 			subMap.put(MUMBLE_TABLE_KEY, item);
@@ -1926,33 +1878,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			
 			subMap.putAll(reference);
 			
-			// Symbol Table Construction
-			HashMap<String, Object> symbols =  walker.symbolTable;
-			// empty out symbol table
-			 walker.symbolTable = (HashMap<String, Object>) item;
-			// grab reference contents
-			item = (Map<String, Object>) reference.get(MUMBLE_VALUES_KEY);
-			// get alias from values
-			alias=(String) item.get(MUMBLE_ALIAS_KEY);
-			// set default alias if clause doesn't have one
-			if (alias == null)
-				alias = "unnamed";
-			// Construct new Symbol Table
-			String key = MUMBLE_VALUES_KEY + walker.queryCount;
-			 walker.symbolTable.put(alias, key);
-			
-			HashMap<String, Object> queryBody =  new HashMap<String, Object>();
-			queryBody.putAll(symbols);
-			queryBody.put(MUMBLE_INTERFACE_KEY,symbols.get(alias));
-			
-			 walker.symbolTable.put(key,symbols.get(alias));
-			 walker.symbolTable.put("def_" + key, queryBody);
-			
-			
-			// Construct Table Dictionary
-
-//			TODO:??? convertSymbolTableToTableDictionary();
-			
 		} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 			// Check for Substitution Variable
 			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
@@ -1965,15 +1890,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else { // then it's a query, add it to the tree no matter what kind of query it is
 			item.put(MUMBLE_QUERY_KEY, reference);
 			// Add the query to the symbol table tree 
-			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
+			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 			subMap.putAll(reference);
 		}
 
@@ -1992,87 +1917,63 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		Map<String, Object> item;
-		String alias = null;
-
-		item = new HashMap<String, Object>();
-		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+		// Get the referenced AST segment from the stack and collect any Substitution Variables in the process
+		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"tuple");
+		
+		// allocate work vriables if needed later
 
-		// Try various alternatives
-		if (reference.containsKey(MUMBLE_TABLE_KEY)) {
-			Object table = reference.get(MUMBLE_TABLE_KEY);
+		// Figure out what kind of Tuple entry you've got, and construct the next level's subtree
+		if (item.containsKey(MUMBLE_TABLE_KEY)) {
+			// Table Reference
+			Object table = item.get(MUMBLE_TABLE_KEY);
 			 walker.symbolTable.put((String) table, new HashMap<String, Object>());
 			 walker.tableDictionaryMap.put((String) table, new HashMap<String, Object>());
-			subMap.put(MUMBLE_TABLE_KEY, reference);
+			 // Table reference needs an AST Key added to it
+			subMap.put(MUMBLE_TABLE_KEY, item);
 
-		} else if (reference.containsKey(MUMBLE_VALUES_KEY)) {
-			
-			subMap.putAll(reference);
-			
-			// Symbol Table Construction
-			HashMap<String, Object> symbols =  walker.symbolTable;
-			// empty out symbol table
-			 walker.symbolTable = (HashMap<String, Object>) item;
-			// grab reference contents
-			item = (Map<String, Object>) reference.get(MUMBLE_VALUES_KEY);
-			// get alias from values
-			alias=(String) item.get(MUMBLE_ALIAS_KEY);
-			// set default alias if clause doesn't have one
-			if (alias == null)
-				alias = "unnamed";
-			// Construct new Symbol Table
-			String key = MUMBLE_VALUES_KEY + walker.queryCount;
-			 walker.symbolTable.put(alias, key);
-			
-			HashMap<String, Object> queryBody =  new HashMap<String, Object>();
-			queryBody.putAll(symbols);
-			queryBody.put(MUMBLE_INTERFACE_KEY,symbols.get(alias));
-			
-			 walker.symbolTable.put(key,symbols.get(alias));
-			 walker.symbolTable.put("def_" + key, queryBody);
-			
-			
-			// Construct Table Dictionary
-
-//			TODO:??? convertSymbolTableToTableDictionary();
-			
-		} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-			// Check for Substitution Variable
-			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
+		} else if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			// Substitution Variable
+			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
 			String name = (String) substitution.get("name");
 			 walker.symbolTable.put(name, new HashMap<String, Object>());
 			 walker.tableDictionaryMap.put(name, new HashMap<String, Object>());
-			subMap.putAll(reference);
+			// Substitution Variable is ready for use
+			subMap.putAll(item);
 
-		} else { // then it's a query, add it to the tree no matter what kind of query it is
-			item.put(MUMBLE_QUERY_KEY, reference);
-			// Add the query to the symbol table tree 
-			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, item, alias, reference);
+		} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
+			//	Values Statement is simply ready for use
+			subMap.putAll(item);
+			
+		} else { 
+			// Only other option is a QUERY Object of some kind
+			// Add the query to the symbol table tree and collect any interface elements
+			String alias = null;
+		
+			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, item, alias, reference);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, item, alias, reference);
-			subMap.putAll(reference);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
+			// Add the query AST to the tree, it is ready for use As Is
+			subMap.putAll(item);
 		}
 
+		// Put nearly-completed AST back into parent rule and stack level
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		walker.showTrace(walker.parseTrace, "TABLE PRIMARY: " + subMap);
+		walker.showTrace(walker.parseTrace, "TUPLE PRIMARY: " + subMap);
 	}
 	
 
-	private Boolean collectQuerySymbolTable(String hdr, Map<String, Object> item, String alias,
-			Map<String, Object> reference) {
+	private Boolean collectQuerySymbolTable(String hdr, String alias) {
 		String queryName = hdr + (walker.queryCount - 1);
 		Map<String, Object> query = (Map<String, Object>)  walker.symbolTable.remove(queryName);
 		if (query != null) {
-//			item.put(hdr, reference);
-
 			// add alias to query
 			if (alias != null) 
 				walker.collectSymbolTable(alias, queryName);
@@ -2235,7 +2136,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
 		}
-		 walker.getAsTree().put("SKIP", "TRUE");
+		 walker.asTree.put("SKIP", "TRUE");
 	}
 
 	@Override
