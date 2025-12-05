@@ -8,7 +8,7 @@
   <artifactId>pss-parse</artifactId>
 	<name>pss-parse</name>
 	<packaging>jar</packaging>
-	<version>5.0.1-1</version>
+	<version>5.0.2-1</version>
   <description>Parser for several PSS Grammars using ANTLR4</description>
 
   <properties>
@@ -120,6 +120,9 @@
             <goals>
                 <goal>test-jar</goal>
             </goals>
+            <configuration>
+              <classifier>tests</classifier>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -136,6 +139,7 @@
                 <goal>single</goal>
               </goals>
               <configuration>
+                <finalName>${project.artifactId}-${project.version}-fat</finalName>
                 <appendAssemblyId>false</appendAssemblyId>
                 <descriptorRefs>
                   <descriptorRef>jar-with-dependencies</descriptorRef>
