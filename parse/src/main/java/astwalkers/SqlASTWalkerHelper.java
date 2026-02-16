@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
 
+import static mumble.MumbleConstants.*;
+
 import static mumble.ASTWalkerHelperConstants.*;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
@@ -512,7 +514,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith(getASTWALKER_QUERY_KEY())) || (tab_ref.startsWith(getASTWALKER_UNION_KEY()))
-						|| (tab_ref.startsWith(getASTWALKER_INTERSECT_KEY()))) {
+						|| (tab_ref.startsWith(getASTWALKER_INTERSECT_KEY()) 
+						|| (tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
+						|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
+						|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))
+						|| (tab_ref.startsWith("def_")))) {
 				} else {
 					String reference;
 					if (tab_ref.startsWith("<"))

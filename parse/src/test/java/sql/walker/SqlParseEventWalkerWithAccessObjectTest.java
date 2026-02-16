@@ -234,7 +234,57 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 					snippet.getSubstitutionsMap().toString());
 		}
 
+/****
+ * Ambiguous Symbol Table Tests
+ * These tests check for scenarios where there are unresolved symbols in the symbol table due to ambiguity.
+ */
+    @Test
+    public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
+        // Parent query selects alias 'c' which is not produced by the single subquery source
+		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		
+		Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
 
+        Assert.assertNotNull("Snippet should not be null", snippet);
+        
+        // Non-fatal warnings list should include an alias-aware message describing the mismatch
+        boolean hasWarning = snippet.getParserMessageStringList() != null &&
+                snippet.getParserMessageStringList().stream().anyMatch(m ->
+                    m.contains("Interface alias 'c' references column 'c' not found in single source 'query0' of 'query1'"));
+
+        Assert.assertTrue("Expected ambiguity/mismatch warning was not found in parser messages", hasWarning);
+
+        // Fatal errors should not be produced by this scenario
+        Assert.assertEquals("No fatal errors expected", 0, snippet.getFatalErrorCount());
+    }
+
+	    @Test
+    public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery2() {
+        // Parent query selects column 'a'which is not produced by the single subquery source
+		String query = " SELECT distinct a,b,c FROM (select all b,c from tab2) tab1";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		
+		Assert.assertEquals("AST is wrong", "{}",
+			snippet.getSqlAbstractTree().toString());
+
+        Assert.assertNotNull("Snippet should not be null", snippet);
+        
+        // Non-fatal warnings list should include an alias-aware message describing the mismatch
+        boolean hasWarning = snippet.getParserMessageStringList() != null &&
+                snippet.getParserMessageStringList().stream().anyMatch(m ->
+                    m.contains("Interface alias 'c' references column 'c' not found in single source 'query0' of 'query1'"));
+
+        Assert.assertTrue("Expected ambiguity/mismatch warning was not found in parser messages", hasWarning);
+
+        // Fatal errors should not be produced by this scenario
+        Assert.assertEquals("No fatal errors expected", 0, snippet.getFatalErrorCount());
+    }
+
+/****
+ * END OF Ambiguous Symbol Table Tests
+*/
 	/**** END OF SNIPPET TESTS */
 
 	/**** START OF INSERT STATEMENT TESTS */

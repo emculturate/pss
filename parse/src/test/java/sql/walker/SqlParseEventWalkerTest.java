@@ -114,7 +114,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{orange={fld=[@11,58:60='fld',<328>,1:58]}, tab1={subj_cd=[@5,29:35='subj_cd',<328>,1:29], apple=[@1,7:11='apple',<328>,1:7], crs_nm=[@7,40:45='crs_nm',<328>,1:40]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={tab1={subj_cd=[@5,29:35='subj_cd',<328>,1:29], apple=[@1,7:11='apple',<328>,1:7], crs_nm=[@7,40:45='crs_nm',<328>,1:40]}, interface={apple={column={name=apple, table_ref=null}}}, query0={orange={fld=[@11,58:60='fld',<328>,1:58]}, interface={fld={column={name=fld, table_ref=null}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={in_list1=query0, def_query0={orange={fld=[@11,58:60='fld',<328>,1:58]}, interface={fld={column={name=fld, table_ref=null}}}}, tab1={subj_cd=[@5,29:35='subj_cd',<328>,1:29], apple=[@1,7:11='apple',<328>,1:7], crs_nm=[@7,40:45='crs_nm',<328>,1:40]}, interface={apple={column={name=apple, table_ref=null}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
@@ -1657,7 +1657,18 @@ public class SqlParseEventWalkerTest {
 				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={intersect={qualifier=null, operator=intersect}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={intersect={qualifier=null, operator=intersect}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@11,78:83='fourth',<328>,1:78]}, third={first=[@1,8:12='first',<87>,1:8]}, eighth={seventh=[@16,114:120='seventh',<328>,1:114]}, fifth={third=[@6,43:47='third',<328>,1:43]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect4={query0={third={first=[@1,8:12='first',<87>,1:8]}, interface={first={column={name=first, table_ref=null}}}}, interface={first=query_column}, query1={fifth={third=[@6,43:47='third',<328>,1:43]}, interface={third={column={name=third, table_ref=null}}}}, query2={sixth={fourth=[@11,78:83='fourth',<328>,1:78]}, interface={fourth={column={name=fourth, table_ref=null}}}}, query3={eighth={seventh=[@16,114:120='seventh',<328>,1:114]}, interface={seventh={column={name=seventh, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -1667,7 +1678,18 @@ public class SqlParseEventWalkerTest {
 				+ " union select fourth from sixth " + " union select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=second, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={union={qualifier=null, operator=union}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={union={qualifier=null, operator=union}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@11,71:76='fourth',<328>,1:71]}, third={first=[@1,8:12='first',<87>,1:8]}, eighth={seventh=[@16,103:109='seventh',<328>,1:103]}, fifth={second=[@6,39:44='second',<134>,1:39]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union4={query0={third={first=[@1,8:12='first',<87>,1:8]}, interface={first={column={name=first, table_ref=null}}}}, interface={first=query_column}, query1={fifth={second=[@6,39:44='second',<134>,1:39]}, interface={second={column={name=second, table_ref=null}}}}, query2={sixth={fourth=[@11,71:76='fourth',<328>,1:71]}, interface={fourth={column={name=fourth, table_ref=null}}}}, query3={eighth={seventh=[@16,103:109='seventh',<328>,1:103]}, interface={seventh={column={name=seventh, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -1677,7 +1699,18 @@ public class SqlParseEventWalkerTest {
 				+ " intersect select fourth from sixth " + " intersect select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=second, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={intersect={qualifier=null, operator=intersect}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={intersect={qualifier=null, operator=intersect}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@11,79:84='fourth',<328>,1:79]}, third={first=[@1,8:12='first',<87>,1:8]}, eighth={seventh=[@16,115:121='seventh',<328>,1:115]}, fifth={second=[@6,43:48='second',<134>,1:43]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect4={query0={third={first=[@1,8:12='first',<87>,1:8]}, interface={first={column={name=first, table_ref=null}}}}, interface={first=query_column}, query1={fifth={second=[@6,43:48='second',<134>,1:43]}, interface={second={column={name=second, table_ref=null}}}}, query2={sixth={fourth=[@11,79:84='fourth',<328>,1:79]}, interface={fourth={column={name=fourth, table_ref=null}}}}, query3={eighth={seventh=[@16,115:121='seventh',<328>,1:115]}, interface={seventh={column={name=seventh, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -1687,7 +1720,18 @@ public class SqlParseEventWalkerTest {
 				+ " intersect select fourth from sixth " + " union select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@11,74:79='fourth',<328>,1:74]}, third={first=[@1,8:12='first',<87>,1:8]}, eighth={seventh=[@16,106:112='seventh',<328>,1:106]}, fifth={third=[@6,39:43='third',<328>,1:39]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect6={union5={query4={eighth={seventh=[@16,106:112='seventh',<328>,1:106]}, interface={seventh={column={name=seventh, table_ref=null}}}}, interface={fourth=query_column}, query3={sixth={fourth=[@11,74:79='fourth',<328>,1:74]}, interface={fourth={column={name=fourth, table_ref=null}}}}}, union2={query0={third={first=[@1,8:12='first',<87>,1:8]}, interface={first={column={name=first, table_ref=null}}}}, interface={first=query_column}, query1={fifth={third=[@6,39:43='third',<328>,1:39]}, interface={third={column={name=third, table_ref=null}}}}}, interface={first=union_column}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -1697,7 +1741,18 @@ public class SqlParseEventWalkerTest {
 				+ " intersect select fourth from sixth ) aa " + " union select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=aa, query={intersect={1={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}}}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@10,65:70='fourth',<328>,1:65]}, eighth={seventh=[@17,102:108='seventh',<328>,1:102]}, fifth={third=[@5,30:34='third',<328>,1:30]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={eighth={seventh=[@17,102:108='seventh',<328>,1:102]}, interface={seventh={column={name=seventh, table_ref=null}}}}, interface={first=query_column}, query3={aa=intersect2, intersect2={third=third, first=[@1,8:12='first',<87>,1:8]}, def_intersect2={query0={fifth={third=[@5,30:34='third',<328>,1:30]}, interface={third={column={name=third, table_ref=null}}}}, interface={third=query_column}, query1={sixth={fourth=[@10,65:70='fourth',<328>,1:65]}, interface={fourth={column={name=fourth, table_ref=null}}}}}, interface={first={column={name=first, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -1707,7 +1762,18 @@ public class SqlParseEventWalkerTest {
 				+ " intersect select fourth from sixth ) " + " union select seventh from eighth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={intersect={1={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[@10,65:70='fourth',<328>,1:65]}, eighth={seventh=[@16,99:105='seventh',<328>,1:99]}, fifth={third=[@5,30:34='third',<328>,1:30]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={eighth={seventh=[@16,99:105='seventh',<328>,1:99]}, interface={seventh={column={name=seventh, table_ref=null}}}}, interface={first=query_column}, query3={intersect2={query0={fifth={third=[@5,30:34='third',<328>,1:30]}, interface={third={column={name=third, table_ref=null}}}}, interface={third=query_column}, query1={sixth={fourth=[@10,65:70='fourth',<328>,1:65]}, interface={fourth={column={name=fourth, table_ref=null}}}}, first=[@1,8:12='first',<87>,1:8]}, interface={first={column={name=first, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	// Union and Intersect with Qualifiers
@@ -1800,7 +1866,6 @@ public class SqlParseEventWalkerTest {
 	// Union and Interesct with embedded Subqueries
 	
 	// Union of queries with embedded subqueries should switch back to standard subquery subtree, and not continue to use "UNION" (or "Intersect") in the tree key
-	// TODO: UNION AND INTERSECT NESTING
 	@Test
 	public void queryWithIntersectSubqueryTest() {
 		final String query = "SELECT * from (select * from problem intersect select * from other) tab2";
@@ -2604,7 +2669,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@18,79:79='*',<289>,1:79]}, scbcrse={item=[@14,63:66='item',<328>,1:63], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@14,63:66='item',<328>,1:63], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@18,79:79='*',<289>,1:79]}, interface={*={column={name=*, table_ref=*}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[@14,63:66='item',<328>,1:63], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}, def_query0={other={*=[@18,79:79='*',<289>,1:79]}, interface={*={column={name=*, table_ref=*}}}}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2703,7 +2768,7 @@ public void selectOrderByVariableNullsLastStatementTest() {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{other={*=[@20,87:87='*',<289>,1:87]}, scbcrse={item=[@15,67:70='item',<328>,1:67], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={aa=scbcrse, scbcrse={item=[@15,67:70='item',<328>,1:67], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}, interface={*={column={name=*, table_ref=*}}}, query0={other={*=[@20,87:87='*',<289>,1:87]}, interface={*={column={name=*, table_ref=*}}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[@15,67:70='item',<328>,1:67], *=[@1,7:7='*',<289>,1:7], subj_code=[@6,32:40='subj_code',<328>,1:32]}, def_query0={other={*=[@20,87:87='*',<289>,1:87]}, interface={*={column={name=*, table_ref=*}}}}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -5188,8 +5253,277 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		Assert.assertEquals("AST is wrong", "{SQL={select={44={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_3_new}, 45={column={name=department_code_4, table_ref=null}}, 46={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_4_new}, 47={alias=academic_standing_code_new, window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=as_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=academic_standing_code, table_ref=st}}}}}}, 48={column={name=academic_standing_code, table_ref=null}}, 10={alias=concentration_code_1_new, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 11={column={name=campus_code, table_ref=null}}, 12={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=campus_code_new}, 13={column={name=college_code, table_ref=null}}, 14={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=college_code_new}, 15={column={name=department_code, table_ref=null}}, 16={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=department_code_new}, 17={column={name=major_code_2, table_ref=null}}, 18={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_2_new}, 19={column={name=concentration_code_2, table_ref=null}}, 1={column={name=student_id, table_ref=st}}, 2={column={name=term_code, table_ref=st}}, 3={column={name=level_code, table_ref=st}}, 4={column={name=major_code_1, table_ref=null}}, 5={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=major_code_1_new}, 6={column={name=degree_code_1, table_ref=null}}, 7={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=degree_code_1_new}, 8={column={name=concentration_code_1, table_ref=null}}, 9={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 20={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_2_new}, 21={column={name=degree_code_2, table_ref=null}}, 22={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_2_new}, 23={column={name=college_code_2, table_ref=null}}, 24={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_2_new}, 25={column={name=major_code_3, table_ref=null}}, 26={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_3_new}, 27={column={name=concentration_code_3, table_ref=null}}, 28={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_3_new}, 29={column={name=degree_code_3, table_ref=null}}, 30={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_3_new}, 31={column={name=college_code_3, table_ref=null}}, 32={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_3_new}, 33={column={name=major_code_4, table_ref=null}}, 34={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_4_new}, 35={column={name=concentration_code_4, table_ref=null}}, 36={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_4_new}, 37={column={name=degree_code_4, table_ref=null}}, 38={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_4_new}, 39={column={name=college_code_4, table_ref=null}}, 40={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_4_new}, 41={column={name=department_code_2, table_ref=null}}, 42={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_2_new}, 43={column={name=department_code_3, table_ref=null}}}, from={join={1={table={alias=st, table=sar_student_term}}, 2={join=JOIN, on={and={1={condition={left={column={name=term_code, table_ref=st}}, right={column={name=term_code, table_ref=bfdf}}, operator==}}, 2={condition={left={column={name=student_id, table_ref=st}}, right={column={name=student_id, table_ref=bfdf}}, operator==}}, 3={condition={left={column={name=level_code, table_ref=st}}, right={column={name=level_code, table_ref=bfdf}}, operator==}}}}}, 3={table={alias=bfdf, table=bf_df_values}}}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}",
 				extractor.getAsTree().toString());
 	}
-	
-	// end of Window Functions
+
+// end of Window Functions
+
+
+	// Proper Symbol Table Constructions
+
+	//select a aa,b,c from tab1 dd - Assumes all input columns come from the only table in the query
+	@Test
+	public void simpleColumnAllocationTest() {
+		String query = " select a aa,b,c from tab1 dd";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:8='a',<328>,1:8], b=[@4,13:13='b',<328>,1:13], c=[@6,15:15='c',<328>,1:15]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, tab1={a=[@1,8:8='a',<328>,1:8], b=[@4,13:13='b',<328>,1:13], c=[@6,15:15='c',<328>,1:15]}, interface={aa={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	// Explicit column association for 2 out of 3 input columns and only one input table
+	@Test
+	public void explicitButPartialColumnAllocationTest() {
+		String query = " select dd.a aa, dd.b, c from tab1 dd";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=dd}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:9='dd',<328>,1:8], b=[@6,17:18='dd',<328>,1:17], c=[@10,23:23='c',<328>,1:23]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, tab1={a=[@1,8:9='dd',<328>,1:8], b=[@6,17:18='dd',<328>,1:17], c=[@10,23:23='c',<328>,1:23]}, interface={aa={column={name=a, table_ref=dd}}, b={column={name=b, table_ref=dd}}, c={column={name=c, table_ref=null}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	//Explicit column association for 2 out of 3 input columns, but 1 column has multiple unspecified choices
+	// making the origin of column c unknown and possibly a runtime error
+	@Test
+	public void ambiguousColumnAllocationTest() {
+		String query = " select dd.a aa, cc.b, c from tab1 dd join tab2 cc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, table=tab1}}, 2={join=join}, 3={table={alias=cc, table=tab2}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,8:9='dd',<328>,1:8]}, tab2={b=[@6,17:18='cc',<328>,1:17]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, cc=tab2, tab1={a=[@1,8:9='dd',<328>,1:8]}, tab2={b=[@6,17:18='cc',<328>,1:17]}, interface={aa={column={name=a, table_ref=dd}}, b={column={name=b, table_ref=cc}}, c={column={name=c, table_ref=null}}}, unknown={c=[@10,23:23='c',<328>,1:23]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unresolvedUnknownSymbolTableWithSimpleSubqueryTest() {
+		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{ee={a=[@10,32:32='a',<328>,1:32], e=[@12,35:35='e',<328>,1:35]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={dd=query0, def_query0={ee={a=[@10,32:32='a',<328>,1:32], e=[@12,35:35='e',<328>,1:35]}, interface={a={column={name=a, table_ref=null}}, b={column={name=e, table_ref=null}}}}, interface={aa={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}, c={column={name=c, table_ref=null}}}, query0={a=[@1,8:8='a',<328>,1:8], b=[@4,14:14='b',<328>,1:14], c=[@6,17:17='c',<328>,1:17]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTest() {
+		String query = " select a aa, (select max(D) from ee where 1=1) dd from tab1" +
+		" where a in (select c from ff where 1=1) ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={lookup={from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=dd}}, from={table={alias=null, table=tab1}}, where={in={item={column={name=a, table_ref=null}}, in_list={select={1={column={name=c, table_ref=null}}}, from={table={alias=null, table=ff}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, dd]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+				//{ee={D=[@8,26:26='D',<328>,1:26]}, ff={c=[@21,70:70='c',<328>,1:70]}, tab1={a=[@1,8:8='a',<328>,1:8]}}
+		Assert.assertEquals("Table Dictionary is wrong", "{ee={D=[@8,26:26='D',<328>,1:26]}, ff={c=[@25,80:80='c',<328>,1:80]}, tab1={a=[@1,8:8='a',<328>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query4={in_list3=query2, def_query0={ee={D=[@8,26:26='D',<328>,1:26]}, interface={unnamed_0={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, tab1={a=[@1,8:8='a',<328>,1:8]}, predicand1=query0, interface={aa={column={name=a, table_ref=null}}, dd={from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}}, def_query2={ff={c=[@25,80:80='c',<328>,1:80]}, interface={c={column={name=c, table_ref=null}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void multipleScalarAndOtherSubqueriesSymbolTableTest() {
+		String query = " select tab1.a aa, (select max(D) from ee) max_D, (select min(D) from ee) min_D,  kk.w from tab1" +
+		" join (select w from jj) kk" +
+		" where a in (select c from ff) ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=tab1}, alias=aa}, 2={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=max_D}, 3={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=min, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=min_D}, 4={column={name=w, table_ref=kk}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join}, 3={table={alias=kk, query={select={1={column={name=w, table_ref=null}}}, from={table={alias=null, table=jj}}}}}}}, where={in={item={column={name=a, table_ref=null}}, in_list={select={1={column={name=c, table_ref=null}}}, from={table={alias=null, table=ff}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, max_D, min_D, w]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+				//{ee={D=[@8,26:26='D',<328>,1:26]}, ff={c=[@21,70:70='c',<328>,1:70]}, tab1={a=[@1,8:8='a',<328>,1:8]}}
+		Assert.assertEquals("Table Dictionary is wrong", "{ee={D=[@21,62:62='D',<328>,1:62]}, jj={w=[@36,110:110='w',<328>,1:110]}, ff={c=[@46,143:143='c',<328>,1:143]}, tab1={a=[@1,8:11='tab1',<328>,1:8]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query7={kk=query4, in_list6=query5, query4={w=[@28,82:83='kk',<328>,1:82]}, def_query0={ee={D=[@10,31:31='D',<328>,1:31]}, interface={unnamed_0={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, predicand3=query2, tab1={a=[@1,8:11='tab1',<328>,1:8]}, predicand1=query0, interface={aa={column={name=a, table_ref=tab1}}, max_D={from={table={alias=null, table=ee}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, min_D={from={table={alias=null, table=ee}}, select={1={function={function_name=min, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, w={column={name=w, table_ref=kk}}}, def_query5={ff={c=[@46,143:143='c',<328>,1:143]}, interface={c={column={name=c, table_ref=null}}}}, def_query4={jj={w=[@36,110:110='w',<328>,1:110]}, interface={w={column={name=w, table_ref=null}}}}, def_query2={ee={D=[@21,62:62='D',<328>,1:62]}, interface={unnamed_1={function={function_name=min, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selectWhereExists() {
+		// TODO: Add Exists clause logic to SQL Parse Event Walker; add subquery handling for Exists
+		String query = "SELECT s.stvmajr_code AS concentration_code," +
+			" s.stvmajr_desc AS concentration_desc, 'T' AS active_ind" +
+			" FROM bnr_stvmajr s WHERE s.stvmajr_valid_concentratn_ind = 'Y'" +
+			" AND NOT EXISTS ( SELECT 1 FROM cat_concentration c" +
+    		" WHERE c.concentration_code = s.stvmajr_code )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={and={1={condition={left={column={name=stvmajr_valid_concentratn_ind, table_ref=s}}, right={literal='Y'}, operator==}}, 2={NOT={exists={select={1={literal=1}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator==}}, operator=EXISTS}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[concentration_desc, concentration_code, active_ind]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{cat_concentration={concentration_code=[@35,221:221='c',<328>,1:221]}, s={stvmajr_code=[@39,244:244='s',<328>,1:244]}, bnr_stvmajr={stvmajr_valid_concentratn_ind=[@20,126:126='s',<328>,1:126], stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={s=bnr_stvmajr, def_query0={cat_concentration={concentration_code=[@35,221:221='c',<328>,1:221]}, c=cat_concentration, s={stvmajr_code=[@39,244:244='s',<328>,1:244]}, interface={unnamed_0={literal=1}}}, interface={concentration_desc={column={name=stvmajr_desc, table_ref=s}}, concentration_code={column={name=stvmajr_code, table_ref=s}}, active_ind={literal='T'}}, bnr_stvmajr={stvmajr_valid_concentratn_ind=[@20,126:126='s',<328>,1:126], stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}, exists1=query0}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selectWhereVariableExists() {
+		String query = "SELECT s.stvmajr_code AS concentration_code," +
+			" s.stvmajr_desc AS concentration_desc, 'T' AS active_ind" +
+			" FROM bnr_stvmajr s WHERE s.stvmajr_valid_concentratn_ind = 'Y'" +
+			" AND NOT EXISTS <table_variable>";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={and={1={condition={left={column={name=stvmajr_valid_concentratn_ind, table_ref=s}}, right={literal='Y'}, operator==}}, 2={NOT={exists={substitution={name=<table_variable>, type=tuple}, operator=EXISTS}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[concentration_desc, concentration_code, active_ind]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<table_variable>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{bnr_stvmajr={stvmajr_valid_concentratn_ind=[@20,126:126='s',<328>,1:126], stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={s=bnr_stvmajr, interface={concentration_desc={column={name=stvmajr_desc, table_ref=s}}, concentration_code={column={name=stvmajr_code, table_ref=s}}, active_ind={literal='T'}}, bnr_stvmajr={stvmajr_valid_concentratn_ind=[@20,126:126='s',<328>,1:126], stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void havingScalarSubqueryComparisonTest() {
+		// TODO:  the interface for a function should be transformed into a submap of input column references, and not 
+		// contain the full function definition from teh AST tree.
+		String query = "SELECT e.dept, SUM(e.salary) AS total_salary " +
+			"FROM employees e " +
+			"GROUP BY e.dept " +
+			"HAVING SUM(e.salary) > (SELECT AVG(salary) FROM employees)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=dept, table_ref=e}}, 2={function={function_name=SUM, qualifier=null, parameters={column={name=salary, table_ref=e}}}, alias=total_salary}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=salary, table_ref=e}}}}, right={select={1={function={function_name=AVG, qualifier=null, parameters={column={name=salary, table_ref=null}}}}}, from={table={alias=null, table=employees}}}, operator=>}}, from={table={alias=e, table=employees}}, groupby={1={column={name=dept, table_ref=e}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total_salary, dept]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={salary=[@7,19:19='e',<328>,1:19], dept=[@1,7:7='e',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={e=employees, def_query0={interface={unnamed_0={function={function_name=AVG, qualifier=null, parameters={column={name=salary, table_ref=null}}}}}, employees={salary=[@33,113:118='salary',<328>,1:113]}}, predicand1=query0, interface={total_salary={function={function_name=SUM, qualifier=null, parameters={column={name=salary, table_ref=e}}}}, dept={column={name=dept, table_ref=e}}}, employees={salary=[@7,19:19='e',<328>,1:19], dept=[@1,7:7='e',<328>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void havingExistsCorrelatedSubqueryTest() {
+		// EXISTS subquery in HAVING, correlated on customer_id
+		String query = "SELECT e.customer_id, COUNT(*) AS order_count \n" +
+			"FROM customers e \n" +
+			"GROUP BY e.customer_id \n" +
+			"HAVING EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = e.customer_id)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=customer_id, table_ref=e}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=order_count}}, having={exists={select={1={literal=1}}, from={table={alias=o, table=orders}}, where={condition={left={column={name=customer_id, table_ref=o}}, right={column={name=customer_id, table_ref=e}}, operator==}}, operator=EXISTS}}, from={table={alias=e, table=customers}}, groupby={1={column={name=customer_id, table_ref=e}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[order_count, customer_id]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{e={customer_id=[@32,149:149='e',<328>,4:60]}, orders={customer_id=[@28,133:133='o',<328>,4:44]}, customers={customer_id=[@1,7:7='e',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={e=customers, def_query0={e={customer_id=[@32,149:149='e',<328>,4:60]}, orders={customer_id=[@28,133:133='o',<328>,4:44]}, interface={unnamed_0={literal=1}}, o=orders}, customers={customer_id=[@1,7:7='e',<328>,1:7]}, interface={order_count={function={function_name=COUNT, qualifier=null, parameters=*}}, customer_id={column={name=customer_id, table_ref=e}}}, exists1=query0}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selectWhereScalarCondition() {
+		// TODO: Correlated subquery should validate that s.stvmajr_code is properly resolved to the outer query's table and column in the symbol table construction
+		String query = "SELECT s.stvmajr_code AS concentration_code," +
+			" s.stvmajr_desc AS concentration_desc, 'T' AS active_ind" +
+			" FROM bnr_stvmajr s WHERE " +
+			" s.stvmajr_code > ( SELECT max(c.concentration_code) FROM cat_concentration c" +
+    		" WHERE c.concentration_code != s.stvmajr_code )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={condition={left={column={name=stvmajr_code, table_ref=s}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=concentration_code, table_ref=c}}}}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator=!=}}}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[concentration_desc, concentration_code, active_ind]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+				//{ee={D=[@8,26:26='D',<328>,1:26]}, ff={c=[@21,70:70='c',<328>,1:70]}, tab1={a=[@1,8:8='a',<328>,1:8]}}
+		Assert.assertEquals("Table Dictionary is wrong", "{cat_concentration={concentration_code=[@28,157:157='c',<328>,1:157]}, s={stvmajr_code=[@40,234:234='s',<328>,1:234]}, bnr_stvmajr={stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={s=bnr_stvmajr, def_query0={c=cat_concentration, cat_concentration={concentration_code=[@28,157:157='c',<328>,1:157]}, s={stvmajr_code=[@40,234:234='s',<328>,1:234]}, interface={unnamed_0={function={function_name=max, qualifier=null, parameters={column={name=concentration_code, table_ref=c}}}}}}, predicand1=query0, interface={concentration_desc={column={name=stvmajr_desc, table_ref=s}}, concentration_code={column={name=stvmajr_code, table_ref=s}}, active_ind={literal='T'}}, bnr_stvmajr={stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selectOrderByScalarSubquery() {
+		String query = "SELECT s.stvmajr_code AS concentration_code," +
+			" s.stvmajr_desc AS concentration_desc, 'T' AS active_ind" +
+			" FROM bnr_stvmajr s order by ( SELECT min(c.code) FROM cat_concentration c" +
+    		" WHERE c.concentration_code = s.stvmajr_code )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, orderby={1={null_order=null, predicand={select={1={function={function_name=min, qualifier=null, parameters={column={name=code, table_ref=c}}}}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator==}}}, sort_order=ASC}}, from={table={alias=s, table=bnr_stvmajr}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[concentration_desc, concentration_code, active_ind]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+				//{ee={D=[@8,26:26='D',<328>,1:26]}, ff={c=[@21,70:70='c',<328>,1:70]}, tab1={a=[@1,8:8='a',<328>,1:8]}}
+		Assert.assertEquals("Table Dictionary is wrong", "{cat_concentration={code=[@25,142:142='c',<328>,1:142], concentration_code=[@33,181:181='c',<328>,1:181]}, s={stvmajr_code=[@37,204:204='s',<328>,1:204]}, bnr_stvmajr={stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}",
+				extractor.getTableColumnMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={s=bnr_stvmajr, def_query0={c=cat_concentration, cat_concentration={code=[@25,142:142='c',<328>,1:142], concentration_code=[@33,181:181='c',<328>,1:181]}, s={stvmajr_code=[@37,204:204='s',<328>,1:204]}, interface={unnamed_0={function={function_name=min, qualifier=null, parameters={column={name=code, table_ref=c}}}}}}, predicand1=query0, interface={concentration_desc={column={name=stvmajr_desc, table_ref=s}}, concentration_code={column={name=stvmajr_code, table_ref=s}}, active_ind={literal='T'}}, bnr_stvmajr={stvmajr_desc=[@7,45:45='s',<328>,1:45], stvmajr_code=[@1,7:7='s',<328>,1:7]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+// end of Proper Symbol Table Constructions
 	// Miscellaneous
 	@Test
 	public void doubleQuotedEscapeSequenceV1Test() {
@@ -6629,7 +6963,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
-		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={select={1={column={name=scbcrse_coll_code, table_ref=aa}}}, from={table={alias=aa, table=scbcrse}}}}}",
+		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={from={table={alias=aa, table=scbcrse}}, select={1={column={name=scbcrse_coll_code, table_ref=aa}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[scbcrse_coll_code]", 
 				extractor.getInterface().toString());
@@ -6637,7 +6971,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_coll_code=[@2,8:9='aa',<328>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={scbcrse_coll_code=[@2,8:9='aa',<328>,1:8]}, interface={scbcrse_coll_code={column={name=scbcrse_coll_code, table_ref=aa}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={aa=scbcrse, scbcrse={scbcrse_coll_code=[@2,8:9='aa',<328>,1:8]}, interface={scbcrse_coll_code={column={name=scbcrse_coll_code, table_ref=aa}}}}, predicand1=query0}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -7364,7 +7698,7 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[@2,8:8='*',<289>,1:8]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[@2,8:8='*',<289>,1:8]}, interface={*={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{in_list1=query0, def_query0={tab1={*=[@2,8:8='*',<289>,1:8]}, interface={*={column={name=*, table_ref=*}}}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -7708,18 +8042,18 @@ public void windowWithLeftBoundRightUnboundedFrameTest() {
 
 	@Test
 	public void basicTupleSubqueryTest() {
-		String sql = "(select * from schema1.emp_sales)";
+		String sql = "(select * from schema1.emp_sales where emp_sales.col1 > 100)";
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runTupleParsertest(sql, parser);
 		
 		
-		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={schema=schema1, alias=null, table=emp_sales}}, select={1={column={name=*, table_ref=*}}}}}",
+		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={schema=schema1, alias=null, table=emp_sales}}, where={condition={left={column={name=col1, table_ref=emp_sales}}, right={literal=100}, operator=>}}, select={1={column={name=*, table_ref=*}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={*=[@2,8:8='*',<289>,1:8]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{emp_sales={*=[@2,8:8='*',<289>,1:8], col1=[@8,39:47='emp_sales',<328>,1:39]}}",
 				extractor.getTableColumnMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={}, def_query0={interface={*={column={name=*, table_ref=*}}}, emp_sales={*=[@2,8:8='*',<289>,1:8]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={}, def_query0={interface={*={column={name=*, table_ref=*}}}, emp_sales={*=[@2,8:8='*',<289>,1:8], col1=[@8,39:47='emp_sales',<328>,1:39]}}}",
 				extractor.getSymbolTable().toString());
 	}
 

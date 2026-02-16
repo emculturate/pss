@@ -16,6 +16,8 @@ package sql.walker;
  * 6. Provides methods to retrieve and manipulate the resulting SQL AST
  */
 
+import java.awt.KeyEventPostProcessor;
+
 import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
 import static mumble.SQLParserEndPoints.*;
@@ -803,8 +805,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (unks != null) {
 
 			if (count == 1) {
-				// just one table referenced, put all unknowns into it
-				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+				// just one source referenced
+				// If the single source is a real table, assign unknowns to it.
+				// If it is a subquery/union/intersect/values (e.g., "query0"), do NOT force unknowns into it;
+				// leave them in the unknown bucket for post-parse validation.
+				if (holdTabRef != null && (
+						holdTabRef.startsWith("query")
+						|| holdTabRef.startsWith(MUMBLE_UNION_KEY)
+						|| holdTabRef.startsWith(MUMBLE_INTERSECT_KEY)
+						|| holdTabRef.startsWith(MUMBLE_VALUES_KEY))) {
+					symbols.put(MUMBLE_UNKNOWN_KEY, unks);
+				} else {
+					((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+				}
 			} else {
 				// Allocate Unknowns
 				for (String tab_ref : hold.keySet()) {
@@ -1495,7 +1508,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitSelect_item(@NotNull SQLSelectParserParser.Select_itemContext ctx) {
-		// TODO
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -1543,6 +1555,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			interfaceAlias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
+			if (item.containsKey(MUMBLE_SELECT_KEY)) {
+			// then this item is a subquery, so we need to push it down under a LOOKUP subtree in the AST
+				Map<String, Object> lookup = new HashMap<String, Object>();
+				lookup.putAll(item);
+				item = new HashMap<String, Object>();
+				item.put(MUMBLE_LOOKUP_KEY, lookup);
+			 	walker.showTrace(walker.parseTrace, "Select Item is a Lookup Subquery: " + item);
+			}
+			// Add the alias back into the item map for use in the SQL Tree and Symbol Table construction
 			((Map<String, Object>) item).putAll(aliasMap);
 		}
 		walker.addToParent(parentRuleIndex, parentStackLevel, item);
@@ -1717,8 +1738,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (unks != null) {
 
 			if (count == 1) {
-				// just one table referenced, put all unknowns into it
-				((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+				// just one source referenced
+				// If the single source is a real table, assign unknowns to it.
+				// If it is a subquery/union/intersect/values (e.g., "query0"), do NOT force unknowns into it;
+				// leave them in the unknown bucket for post-parse validation.
+				if (holdTabRef != null && (
+						holdTabRef.startsWith("query") 
+						|| holdTabRef.startsWith(MUMBLE_UNION_KEY)
+						|| holdTabRef.startsWith(MUMBLE_INTERSECT_KEY)
+						|| holdTabRef.startsWith(MUMBLE_VALUES_KEY))) {
+					symbols.put(MUMBLE_UNKNOWN_KEY, unks);
+				} else {
+					((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
+				}
 			} else {
 				// Allocate Unknowns
 				for (String tab_ref : hold.keySet()) {
@@ -1921,15 +1953,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
 					"tuple");
 		
-		// allocate work vriables if needed later
+		// allocate work variables if needed later
 
 		// Figure out what kind of Tuple entry you've got, and construct the next level's subtree
 		if (item.containsKey(MUMBLE_TABLE_KEY)) {
 			// Table Reference
 			Object table = item.get(MUMBLE_TABLE_KEY);
-			 walker.symbolTable.put((String) table, new HashMap<String, Object>());
-			 walker.tableDictionaryMap.put((String) table, new HashMap<String, Object>());
-			 // Table reference needs an AST Key added to it
+			walker.symbolTable.put((String) table, new HashMap<String, Object>());
+			walker.tableDictionaryMap.put((String) table, new HashMap<String, Object>());
+			// Table reference needs an AST Key added to it
 			subMap.put(MUMBLE_TABLE_KEY, item);
 
 		} else if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
@@ -2301,7 +2333,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+
+
+		if (item.containsKey(MUMBLE_SELECT_KEY)) {
+			// then this item is a subquery, so we need to push it down under a LOOKUP subtree in the AST
+				Map<String, Object> lookup = new HashMap<String, Object>();
+				lookup.putAll(item);
+				item = new HashMap<String, Object>();
+				item.put(MUMBLE_LOOKUP_KEY, lookup);
+			 	walker.showTrace(walker.parseTrace, "Select Item is a Lookup Subquery: " + item);
+				// replace the first entry in the AST Tree with the modified item subtree for scalar SQL trees
+				subMap.put("1", item);
+			}
 
 		walker.handleOneChild(ruleIndex);
 	}
@@ -3723,6 +3767,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void enterIn_predicate_value(@NotNull SQLSelectParserParser.In_predicate_valueContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
 	public void exitIn_predicate_value(@NotNull SQLSelectParserParser.In_predicate_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -3731,6 +3780,181 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "in_list");
 
 		walker.handleOneChild(ruleIndex);
+
+		// Conditionally restore or inject based on whether the IN value is a subquery.
+		HashMap<String, Object> symbols = walker.symbolTable;
+
+		// Decide based on the subtree content in reference: true when it contains SELECT key
+		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
+		
+		if (isSubquery) {
+			// Subquery case: inject the subquery's local symbol table under IN_LIST<N>
+			String key = MUMBLE_IN_LIST_KEY + walker.queryCount;
+			// Extract the singular query reference key from the local symbol table (e.g., "query0")
+			String queryRefKey = null;
+			if (symbols != null && !symbols.isEmpty()) {
+				queryRefKey = symbols.keySet().iterator().next();
+			}
+			// Store only the query reference key under the IN_LIST<N> entry
+			symbols.put(key, queryRefKey);
+			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
+			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			// Merge local symbol table back into parent
+			walker.popSymbolTablePutAll(symbols);
+			// Advance query counter after recording the injection
+			walker.queryCount++;
+
+		} else {
+			// Default: not a subquery, just restore the parent's symbol table
+			walker.popSymbolTablePutAll(symbols);
+		}
+			
+	}
+
+	/*
+==============================================================================================
+  8.9 <exists predicate>
+
+  Specify a test for a non_empty set.
+==============================================================================================
+*/
+
+	@Override
+	public void exitExists_predicate(@NotNull SQLSelectParserParser.Exists_predicateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (subMap.size() == 2) {
+			// Variation 2: When contains CONDITIONS
+			subMap.putAll((Map<String, Object>) subMap.remove("1"));
+			subMap.putAll((Map<String, Object>) subMap.remove("2"));
+		} else {
+			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+		}
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		item.put(MUMBLE_EXISTS_KEY, subMap);
+		walker.addToParent(parentRuleIndex, parentStackLevel, item);
+		walker.showTrace(walker.parseTrace, "Case: " + item);
+	}
+
+	@Override
+	public void exitExists_operator(@NotNull SQLSelectParserParser.Exists_operatorContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+
+		if (subMap == null) {
+			// unqualified select all has no map
+			subMap = walker.makeRuleMap(ruleIndex);
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (ctx.getChildCount() == 1) {
+			subMap.put(MUMBLE_OPERATOR_KEY, ctx.getChild(0).getText());
+		} else if (ctx.getChildCount() == 2) {
+			subMap.put(MUMBLE_OPERATOR_KEY, ctx.getChild(0).getText() + " " + ctx.getChild(1).getText());
+		}
+		// Add item to parent map
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	@Override
+	public void enterExists_predicate_value(@NotNull SQLSelectParserParser.Exists_predicate_valueContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
+	public void exitExists_predicate_value(@NotNull SQLSelectParserParser.Exists_predicate_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
+
+		walker.handleOneChild(ruleIndex);
+
+		// Conditionally restore or inject based on whether the IN value is a subquery.
+		HashMap<String, Object> symbols = walker.symbolTable;
+
+		// Decide based on the subtree content in reference: true when it contains SELECT key
+		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
+		
+		if (isSubquery) {
+			// Subquery case: inject the subquery's local symbol table under EXISTS<N>
+			String key = MUMBLE_EXISTS_KEY + walker.queryCount;
+			// Extract the singular query reference key from the local symbol table (e.g., "query0")
+			String queryRefKey = null;
+			if (symbols != null && !symbols.isEmpty()) {
+				queryRefKey = symbols.keySet().iterator().next();
+			}
+			// Store only the query reference key under the EXISTS<N> entry
+			symbols.put(key, queryRefKey);
+			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
+			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			// Merge local symbol table back into parent
+			walker.popSymbolTablePutAll(symbols);
+			// Advance query counter after recording the injection
+			walker.queryCount++;
+
+		} else {
+			// Default: not a subquery, just restore the parent's symbol table
+			walker.popSymbolTablePutAll(symbols);
+		}
+			
+	}
+
+	@Override
+	public void enterPredicand_subquery(@NotNull SQLSelectParserParser.Predicand_subqueryContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
+	public void exitPredicand_subquery(@NotNull SQLSelectParserParser.Predicand_subqueryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
+
+		walker.handleOneChild(ruleIndex);
+
+		// Conditionally restore or inject based on whether the IN value is a subquery.
+		HashMap<String, Object> symbols = walker.symbolTable;
+
+		// Decide based on the subtree content in reference: true when it contains SELECT key
+		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
+		
+		if (isSubquery) {
+			// Subquery case: inject the subquery's local symbol table under predicand<N>
+			String key = MUMBLE_PREDICAND_KEY + walker.queryCount;
+			// Extract the singular query reference key from the local symbol table (e.g., "query0")
+			String queryRefKey = null;
+			if (symbols != null && !symbols.isEmpty()) {
+				queryRefKey = symbols.keySet().iterator().next();
+			}
+			// Store only the query reference key under the PREDICAND<N> entry
+			symbols.put(key, queryRefKey);
+			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
+			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			// Merge local symbol table back into parent
+			walker.popSymbolTablePutAll(symbols);
+			// Advance query counter after recording the injection
+			walker.queryCount++;
+
+		} else {
+			// Default: not a subquery, just restore the parent's symbol table
+			walker.popSymbolTablePutAll(symbols);
+		}
+			
 	}
 
 	@Override

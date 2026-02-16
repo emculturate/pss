@@ -498,9 +498,14 @@ nonparenthesized_value_expression_primary
   | cast_function_expression
   | routine_invocation
   | window_over_partition_expression
-  | subquery
+  | predicand_subquery
   ;
 
+predicand_subquery
+// scalar subquery used in an anonymous location in a condition or value expression, such as in a comparison predicate 
+//or in a select item expression
+  : subquery
+  ;
 /*
 ===============================================================================
   Aggregate Over Sets Functions
@@ -1167,7 +1172,28 @@ insert_values_statement
   :  VALUES values_matrix
   ;
 
-  
+ /*
+==============================================================================================
+  8.9 <exists predicate>
+
+  Specify a test for a non_empty set.
+==============================================================================================
+*/
+
+exists_predicate
+  : exists_operator exists_predicate_value
+  ;
+
+exists_operator
+  : EXISTS
+  ;  
+
+exists_predicate_value
+  : subquery
+  | variable_identifier
+  ;
+
+ 
 
 /*
 ===============================================================================
@@ -1215,18 +1241,6 @@ quantifier : all  | some ;
 all : ALL;
 
 some : SOME | ANY;
-
-/*
-==============================================================================================
-  8.9 <exists predicate>
-
-  Specify a test for a non_empty set.
-==============================================================================================
-*/
-
-exists_predicate
-  : NOT? EXISTS s=subquery
-  ;
 
 
 /*
