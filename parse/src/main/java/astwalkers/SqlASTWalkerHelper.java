@@ -1,5 +1,7 @@
 package astwalkers;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -295,7 +297,16 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	/**
-	 * Add the item subtree to the Symbol Table
+	 * Add the Column reference or Values Column Reference to the Source Table Reference in the Symbol Table
+	 * Unless the column is fully specified with its table reference, it gets added to the "UNKNOWN" table reference 
+	 * in the Symbol Table and then gets moved to the correct table reference when the table reference is fully specified. 
+	 * This allows the walker to capture column references before their corresponding table references are fully 
+	 * specified in the SQL statement.
+	 * 
+	 * If the same column is referenced multiple times in the SQL statement, we'll collect the parser token for each reference in a list under the column name in the Symbol Table. This allows the walker to keep track of all of the references to a column in the SQL statement and to use that information when building the AST Tree and resolving references.
+	 * in an array list under the column name in the Symbol Table. This allows the walker to keep track of all of the 
+	 * references to a column in the SQL statement and to use that information when building the AST Tree and 
+	 * resolving references.
 	 * 
 	 * @param tableReference
 	 * @param token
@@ -303,21 +314,27 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	@SuppressWarnings("unchecked")
 	public void collectSymbolTableItem(Object tableReference, Object item, Token token) {
 		if (tableReference instanceof String) {
-			Object localSymbolTable = symbolTable.get((String) tableReference);
-			if (localSymbolTable == null) {
-				// tableReference has not been added to Symbol Table before
-				localSymbolTable = new HashMap<String, Object>();
-				symbolTable.put((String) tableReference, localSymbolTable);
-			}
-			if (localSymbolTable instanceof String) {
-				// tableReference is an ALIAS to a different table, retrieve the actual table
-				// and add the item to its symbol table
-				localSymbolTable = symbolTable.get((String) localSymbolTable);
-				addItemToSymbolTable(localSymbolTable, item, token);
-			} else if (localSymbolTable instanceof HashMap<?, ?>) {
-				// tableReference is new entry for existing table in the symbol
-				// table
-				addItemToSymbolTable(localSymbolTable, item, token);
+			// Get existing Symbol Table element for the table reference
+			Object refItem = symbolTable.get((String) tableReference);
+			// If there is no existing Symbol Table element for the table reference, create an empty new one
+			if (refItem instanceof String) {
+                // If the table reference is a string, its an alias to an actual table reference. Retrieve the actual table reference 
+				// from the Symbol Table and add the item to its symbol table.
+                Object refItem2 = symbolTable.get((String) refItem);
+				if (refItem2 == null) {
+				    // tableReference has not been added to Symbol Table before
+				    refItem2 = new HashMap<String, Object>();
+				    symbolTable.put((String) tableReference, refItem2);
+			    }
+				addItemToSymbolTable(refItem2, item, token);
+			} else if (refItem == null) {
+				// referenced table has not been added to Symbol Table before
+				refItem = new HashMap<String, Object>();
+				symbolTable.put((String) tableReference, refItem);
+				addItemToSymbolTable(refItem, item, token);
+			} else if (refItem instanceof HashMap<?, ?>) {
+				// tableReference is new entry for existing table in the symbol table for this reference
+				addItemToSymbolTable(refItem, item, token);
 			}
 		} else if (tableReference instanceof HashMap<?, ?>) {
 			showTrace(symbolTrace, "Error collecting table: " + tableReference);
@@ -327,20 +344,37 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
     
 	/**
 	 * 
-	 * Determines the type of the item being inserted into a Variable Substitution and captures
-	 * the SQL SYMBOL TABLE entry for the item.
+	 * Adds column references and column substitution variables to the symbol table. If the item is a column reference, 
+	 * it gets added to the symbol table under the column name and collects an array of tokens for each reference to that 
+	 * column in the SQL statement. Columns that appear in multiple locations will have multiple token strings, which
+	 * can be used later to locate the reference position in the original SQL string.
+	 * 
+	 * If the item is a column substitution variable, it gets added to the symbol table under its name with its own 
+	 * nested symbol table for its properties and references. 
+	 * 
+	 * If the item is a predicate substitution variable, it gets added to the symbol table with its own nested symbol 
+	 * table for its properties and references. If the item is a subquery, it gets added to the symbol table under a 
+	 * "subquery" key with its own nested symbol table for its properties and references.
 	 * 
 	 * @param localSymbolTable
 	 * @param item
 	 * @param token
 	 */
 	@SuppressWarnings("unchecked")
-	public void addItemToSymbolTable(Object localSymbolTable, Object item, Token token) {
+	public void addItemToSymbolTable(Object tableDictObject, Object item, Token token) {
 		if (item instanceof String) {
-			HashMap<String, Object> symtab = (HashMap<String, Object>) localSymbolTable;
+			HashMap<String, Object> tableDictMap = (HashMap<String, Object>) tableDictObject;
 			// Item is a column reference, add it if we haven't captured it yet
-			if (!symtab.containsKey(item)) {
-				((HashMap<String, Object>) localSymbolTable).put((String) item, token.toString());
+			if (!tableDictMap.containsKey(item)) {
+				ArrayList<String> tokenList = new ArrayList<String>();
+				tokenList.add(token.toString());
+				tableDictMap.put((String) item, tokenList);
+			} else {
+				String tokenStr = token.toString();
+                Object  entry = tableDictMap.get((String) item);
+				ArrayList<String> tokenList = (ArrayList<String>) entry;
+				if (!tokenList.contains(tokenStr))
+					tokenList.add(tokenStr);
 			}
 		}
 		else {
@@ -350,16 +384,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				node = (HashMap<String, Object>) node.get(getASTWALKER_SUBSTITUTION_KEY());
 				if (node.get(ASTWALKER_TYPE_KEY).equals(getASTWALKER_COLUMN_KEY()))
 					// Item is a Column Substitution Variable
-					((HashMap<String, Object>) localSymbolTable).put((String) node.get("name"),
+					((HashMap<String, Object>) tableDictObject).put((String) node.get("name"),
 							(HashMap<String, Object>) item);
 				else
 					// Item is a Predicate Substitution Variable
-					((HashMap<String, Object>) localSymbolTable).putAll((HashMap<String, Object>) item);
-			} else if (node.containsKey(getASTWALKER_COLUMN_KEY())) {
-				// Item is a Column and should already be in the Symbol Table
-			} else
-				// Item is a subquery with its own Symbol Table
-				((HashMap<String, Object>) localSymbolTable).put("subquery", item);
+					((HashMap<String, Object>) tableDictObject).putAll((HashMap<String, Object>) item);
+			} else {
+				showTrace(symbolTrace, "Error collecting item: " + item);
+			}
 		}
 	}
 
@@ -526,13 +558,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 						reference = tab_ref;
 					else
 						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+					HashMap<String, Object> currDict = (HashMap<String, Object>) tableDictionaryMap.get(reference);
+					if (currDict != null)
+						currDict.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newItem);
+						HashMap<String, Object> newDict = new HashMap<String, Object>();
+						newDict.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
+						tableDictionaryMap.put(reference, newDict);
 					}
 				}
 			}

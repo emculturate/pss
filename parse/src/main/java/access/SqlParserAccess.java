@@ -159,13 +159,13 @@ public class SqlParserAccess extends AbstractParserAccess {
     public void generateAST() {
         // This method generates the Abstract Syntax Tree (AST) from the parse tree.
         // Walk the parse tree using the extractor.
-        if (this.parserEmitPoint != null) {
-            // Initialize the extractor if it is not already initialized.
-            if (this.extractor == null)
-                // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
-                this.extractor = new SqlParseEventWalker();
+    if (this.parserEmitPoint != null) {
+        // Initialize the extractor if it is not already initialized.
+        if (this.extractor == null)
+            // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
+            this.extractor = new SqlParseEventWalker();
 		
-         try{
+        try{
  			// walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
             // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
             // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
@@ -176,23 +176,23 @@ public class SqlParserAccess extends AbstractParserAccess {
             this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
             System.out.println("Exception: " + this.getFatalErrorList());
         }
-            // Save the results in a local Snippet object
-            this.snippet = this.extractor.getSnippet();
+        // Save the results in a local Snippet object
+        this.snippet = this.extractor.getSnippet();
 
-            // Post-parse validations
-            validateSingleSubqueryUnknownsAndReportErrors(this.snippet);
-            List<String> warnings = validateColumnCoverageWarnings(this.snippet);
+        // Post-parse validations
+        validateSingleSubqueryUnknownsAndReportErrors(this.snippet);
+        List<String> warnings = validateColumnCoverageWarnings(this.snippet);
 
-            // Add the error and other messages to the Snippet object
-            snippet.setParserMessageList(this.getAllErrors());
-            List<String> msgs = new ArrayList<>(this.getAllErrorStrings());
-            if (warnings != null && !warnings.isEmpty()) {
-                msgs.addAll(warnings);
-            }
-            snippet.setParserMessageStringList(msgs);
-            snippet.setFatalErrorStringList(this.getFatalErrorList());
+        // Add the error and other messages to the Snippet object
+        snippet.setParserMessageList(this.getAllErrors());
+        List<String> msgs = new ArrayList<>(this.getAllErrorStrings());
+        if (warnings != null && !warnings.isEmpty()) {
+            msgs.addAll(warnings);
+        }
+        snippet.setParserMessageStringList(msgs);
+        snippet.setFatalErrorStringList(this.getFatalErrorList());
 
-       } else {
+        } else {
             throw new IllegalStateException("Parser tree is null. Ensure the parser was run successfully.");    
         }
     }

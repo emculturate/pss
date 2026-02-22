@@ -17,6 +17,7 @@ package sql.walker;
  */
 
 import java.awt.KeyEventPostProcessor;
+import java.util.ArrayList;
 
 import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
@@ -25,6 +26,7 @@ import static mumble.SQLParserEndPoints.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -1521,15 +1523,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// variables for constructing the Symbol Table Interface
 		String interfaceAlias = null;
 		HashMap<String, Object> interfaceReference = new HashMap<String, Object>();
+		String aliasToken = null;
 
 		// Get first item, record if it is a Substitution Variable by adding the
 		// Substitution List
 		item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
 
+		// make a copy of the item AST subtree without the alias for use in the symbol table interface
 		interfaceReference.putAll(item);
 
+		// derive an alias for the item if it does not have one, and add the alias to the item if it does not have one
 		if (subMap.size() == 0) {
 			// Select Item did not have an Alias, construct one from options
+			aliasToken = ctx.getStop().toString();
 			walker.showTrace(walker.parseTrace, "Just One Item: " + item);
 			HashMap<String, Object> node = (HashMap<String, Object>) item.get(MUMBLE_COLUMN_KEY);
 			if (node == null)
@@ -1550,11 +1556,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 
 		} else {
-			// Select Item has an alias
+			// Select Item has an alias, extract it and add it back into the item map for use in the SQL Tree and Symbol Table construction
 			walker.showTrace(walker.parseTrace, "Item and Alias: " + item);
+			aliasToken = ctx.getStop().toString();	
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			interfaceAlias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
+
 			if (item.containsKey(MUMBLE_SELECT_KEY)) {
 			// then this item is a subquery, so we need to push it down under a LOOKUP subtree in the AST
 				Map<String, Object> lookup = new HashMap<String, Object>();
@@ -1575,7 +1583,38 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			selectInterface = new HashMap<String, Object>();
 			 walker.symbolTable.put(MUMBLE_INTERFACE_KEY, selectInterface);
 		}
-		selectInterface.put(interfaceAlias, interfaceReference);
+
+		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
+		ArrayList<Object> columnList = new ArrayList<Object>();
+		standardizeInterfaceReference(interfaceReference, columnList);
+
+		selectInterface.put(interfaceAlias, columnList);
+	}
+
+	// Standardize the interface reference map into a flat map of column references and not the entire AST subtree
+	// This is a recursive function that traverses the item subtree until it finds column references or substitution variables, 
+	// which it adds to the column list with the alias as the key
+
+	private void standardizeInterfaceReference(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
+			columnList.add(subTree.get(MUMBLE_COLUMN_KEY));
+		} else if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Object subst = subTree.get(MUMBLE_SUBSTITUTION_KEY);
+			if (subst instanceof HashMap) {
+				HashMap<String, Object> substMap = (HashMap<String, Object>) subst;
+				Object type = substMap.get("type");
+				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
+					columnList.add(subst);
+				}
+			}
+		} else {
+			for (Object key : subTree.keySet()) {
+				Object value = subTree.get(key);
+				if (value instanceof HashMap) {
+					standardizeInterfaceReference((HashMap<String, Object>) value, columnList);
+				}
+			}
+		}
 	}
 
 
@@ -1702,103 +1741,79 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	private HashMap<String, Object> convertSymbolTableToTableDictionary() {
-		// Handle symbol tables
-		HashMap<String, Object> symbols =  walker.symbolTable;
-
-		// Special handling of queries with only one source: Move "unknown"
-		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
-
-		Integer count = 0;
-		Integer tableCount = 0;
+	
+		// Special handling of queries with only one table source swallows all unknowns
 		String onlyTableName = null;
-		HashMap<String, Object> hold = new HashMap<String, Object>();
-		String holdTabRef = null;
 
-		for (String tab_ref : symbols.keySet()) {
-			if ((tab_ref.equals(MUMBLE_INTERFACE_KEY)) || (tab_ref.startsWith("def_query")) || (tab_ref.startsWith("def_insert"))
-					|| (tab_ref.startsWith("def_update")) || (tab_ref.startsWith("def_union"))
-					|| (tab_ref.startsWith("def_intersect")) || (tab_ref.startsWith("def_values"))) {
-			} else {
-				Object item = symbols.get(tab_ref);
-				if (item instanceof HashMap<?, ?>) {
-					hold.put(tab_ref, item);
-					holdTabRef = tab_ref;
-					count++;
-					if ((tab_ref.startsWith("query")) || (tab_ref.startsWith("insert"))
-							|| (tab_ref.startsWith("update")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
-							|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY)) || (tab_ref.startsWith(MUMBLE_VALUES_KEY))) {
-					} else {
-						tableCount++;
+		// deconstruct current symbol table into components for analysis
+ 		HashMap<String, Object> unks = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
+        HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+		HashMap<String, Object> aliasCollection = new HashMap<String, Object>();
+		HashMap<String, Object> symbolTableCollection = new HashMap<String, Object>();
+		HashMap<String, Object> queryCollection = new HashMap<String, Object>();
+		HashMap<String, Object> tableCollection = new HashMap<String, Object>();
+
+		Set<String> keys = new HashSet<>(walker.symbolTable.keySet());
+		for (String tab_ref : keys) {
+			Object item = walker.symbolTable.remove(tab_ref);
+			if (item instanceof String) {
+				aliasCollection.put(tab_ref, item);
+			} else if (item instanceof HashMap<?, ?>) {
+				if (tab_ref.startsWith("def_")) {
+					symbolTableCollection.put(tab_ref, item);
+				} else if (tab_ref.startsWith("query") 
+						|| tab_ref.startsWith(MUMBLE_UNION_KEY)
+						|| tab_ref.startsWith(MUMBLE_INTERSECT_KEY)
+						|| tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
+					queryCollection.put(tab_ref, item);
+				} else {
 						onlyTableName = tab_ref;
+						tableCollection.put(tab_ref, item);
 					}
-				}
-			}
+				} 
 		}
-		if (unks != null) {
 
-			if (count == 1) {
+		if (unks != null) {
+			if (tableCollection.size() == 1) {
 				// just one source referenced
 				// If the single source is a real table, assign unknowns to it.
 				// If it is a subquery/union/intersect/values (e.g., "query0"), do NOT force unknowns into it;
 				// leave them in the unknown bucket for post-parse validation.
-				if (holdTabRef != null && (
-						holdTabRef.startsWith("query") 
-						|| holdTabRef.startsWith(MUMBLE_UNION_KEY)
-						|| holdTabRef.startsWith(MUMBLE_INTERSECT_KEY)
-						|| holdTabRef.startsWith(MUMBLE_VALUES_KEY))) {
-					symbols.put(MUMBLE_UNKNOWN_KEY, unks);
-				} else {
-					((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
-				}
+				HashMap<String, Object> symbols=(HashMap<String, Object>) tableCollection.get(onlyTableName);
+				symbols.putAll(unks);
 			} else {
-				// Allocate Unknowns
-				for (String tab_ref : hold.keySet()) {
-					HashMap<String, Object> currItem = (HashMap<String, Object>) hold.get(tab_ref);
-					for (String key : currItem.keySet()) {
-						unks.remove(key);
-					}
-				}
-				// put whatever is left back into the unknowns
-				if (unks.size() > 0) {
-					if (tableCount == 1)
-						// just one table remains referenced, put all unknowns
-						// into it
-						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
-					else
-						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
-				}
+				walker.symbolTable.put(MUMBLE_UNKNOWN_KEY, unks);
 			}
 		}
+
 		// TODO: Add TABLE references to Table Dictionary
-		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith("query")) 
-						|| (tab_ref.startsWith(MUMBLE_UNION_KEY))
-						|| (tab_ref.startsWith(MUMBLE_INTERSECT_KEY))
-						|| (tab_ref.startsWith(MUMBLE_VALUES_KEY))) {
-//				}
-//				else if (tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
-//					walker.showTrace(walker.parseTrace, "Symbol Tree: " + symbols);
-				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>)  walker.tableDictionaryMap.get(reference);
-					if (currItem != null)
-						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newItem = new HashMap<String, Object>();
-						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						 walker.tableDictionaryMap.put(reference, newItem);
-					}
+		if (tableCollection.size() > 0) {
+			for (String tab_ref : tableCollection.keySet()) {
+				String reference;
+				if (tab_ref.startsWith("<"))
+					// Tuple Substitution Variable, do NOT alter case
+					reference = tab_ref;
+				else
+					reference = tab_ref.toLowerCase();
+				HashMap<String, Object> currDict = (HashMap<String, Object>)  walker.tableDictionaryMap.get(reference);
+				if (currDict != null)
+					currDict.putAll((Map<? extends String, ? extends Object>) tableCollection.get(tab_ref));
+				else {
+					HashMap<String, Object> newDict = new HashMap<String, Object>();
+					newDict.putAll((Map<? extends String, ? extends Object>) tableCollection.get(tab_ref));
+					 walker.tableDictionaryMap.put(reference, newDict);
 				}
 			}
 		}
-		return symbols;
+	
+		walker.symbolTable.putAll(aliasCollection);
+		walker.symbolTable.putAll(symbolTableCollection);
+		walker.symbolTable.putAll(queryCollection);
+		walker.symbolTable.putAll(tableCollection);
+		walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
+
+		 walker.showTrace(walker.symbolTrace, "Symbol Table: " + walker.symbolTable);
+		return walker.symbolTable;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2025,9 +2040,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						Object unkItem = unk.remove(key);
 						if (unkItem != null)
 							hold.put(key, unkItem);
-						else
-							hold.put(key, key);
-						;
 					}
 
 				// if any unknowns left, put them back into table
@@ -4289,7 +4301,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 			Map<String, Object> valueExpression = null;
-			String tableRef = null;
+			String tableRef = MUMBLE_UNKNOWN_KEY;
 			String name = null;
 			Boolean doNotSkip = true;
 
@@ -4323,6 +4335,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			if (doNotSkip) {
 				// Capture  walker.symbolTable entry
+				if (tableRef == null)
+					tableRef = MUMBLE_UNKNOWN_KEY;
 				walker.collectSymbolTableItem(tableRef, valueExpression, ctx.getStart());
 				// Add column to SQL AST Tree
 				subMap.putAll(valueExpression);
