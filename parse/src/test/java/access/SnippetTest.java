@@ -32,7 +32,7 @@ public class SnippetTest {
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[@1,8:8='a',<328>,1:8]}, fourth={}}",
-				extractor.getTableColumnMap().toString());
+				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[@1,8:8='a',<328>,1:8]}, fourth={}, interface={*={column={name=*, table_ref=a}}}}}",
 				extractor.getSymbolTable().toString());
 		
@@ -71,7 +71,7 @@ public class SnippetTest {
 			System.out.println("Result: " + extractor.getAsTree());
 			System.out.println("Interface: " + extractor.getInterface());
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
-			System.out.println("Table Dictionary: " + extractor.getTableColumnMap());
+			System.out.println("Table Dictionary: " + extractor.getTableColumnDictionaryMap());
 			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 			return extractor;
 		} catch (RecognitionException e) {

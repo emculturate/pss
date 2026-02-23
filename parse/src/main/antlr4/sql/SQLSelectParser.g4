@@ -75,7 +75,8 @@ in_list_predicate_value
 ===============================================================================
 */
 condition_value
-  : search_condition EOF
+ // : search_condition EOF - search condition fails on building the table dictionary
+  : value_expression EOF
   ;
 
 /*
@@ -618,7 +619,7 @@ when_clause_list
    ;
 
 searched_when_clause
-  : WHEN c=search_condition THEN r=case_result
+  : WHEN c=value_expression THEN r=case_result
   ;
 
 when_value_list

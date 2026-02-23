@@ -35,7 +35,7 @@ public interface InterfaceASTWalkerHelper {
      public HashMap<String, Object> getInterfaceFromQuery(String hdr);
      public HashMap<String, Object> getInterface(HashMap<String, Object> query);
      public Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type);
-     public void addTableReferencesToTableDictionary();
+     public void addQueryInputColumnsToTableAndQueryDictionaries();
      public HashMap<String, Object> makeRuleMap(int ruleIndex);
      public String makeMapIndex(int ruleIndex, Integer stackIndex);
      public Object getNode(int ruleIndex, Integer stackLevel);

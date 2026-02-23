@@ -16,7 +16,6 @@ package sql.walker;
  * 6. Provides methods to retrieve and manipulate the resulting SQL AST
  */
 
-import java.awt.KeyEventPostProcessor;
 import java.util.ArrayList;
 
 import static mumble.MumbleConstants.*;
@@ -78,8 +77,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return walker.asTree;
 	}
 
-	public HashMap<String, Object> getTableColumnMap() {
+	public HashMap<String, Object> getTableColumnDictionaryMap() {
 		return walker.tableDictionaryMap;
+	}
+
+	public HashMap<String, Object> getQueryColumnDictionaryMap() {
+		return walker.queryColumnDictionaryMap;
 	}
 
 	public HashMap<String, Object> getSymbolTable() {
@@ -122,7 +125,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	public Snippet getSnippet() {
-		return new Snippet(walker.asTree, walker.tableDictionaryMap,  walker.symbolTable, walker.substitutionsMap, getInterface());
+		return new Snippet(walker.asTree, walker.tableDictionaryMap, walker.queryColumnDictionaryMap,  walker.symbolTable, walker.substitutionsMap, getInterface());
 	}
 
 	/* ==================================================================================
@@ -345,7 +348,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addTableReferencesToTableDictionary();
+		walker.addQueryInputColumnsToTableAndQueryDictionaries();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -365,7 +368,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addTableReferencesToTableDictionary();
+		walker.addQueryInputColumnsToTableAndQueryDictionaries();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -386,7 +389,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addTableReferencesToTableDictionary();
+		walker.addQueryInputColumnsToTableAndQueryDictionaries();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -407,7 +410,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addTableReferencesToTableDictionary();
+		walker.addQueryInputColumnsToTableAndQueryDictionaries();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -454,7 +457,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		// Add TABLE references to Table Dictionary
-		walker.addTableReferencesToTableDictionary();
+		walker.addQueryInputColumnsToTableAndQueryDictionaries();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -1586,7 +1589,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
-		standardizeInterfaceReference(interfaceReference, columnList);
+		flattenSubTreeForInterfaceColumns(interfaceReference, columnList);
 
 		selectInterface.put(interfaceAlias, columnList);
 	}
@@ -1595,23 +1598,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	// This is a recursive function that traverses the item subtree until it finds column references or substitution variables, 
 	// which it adds to the column list with the alias as the key
 
-	private void standardizeInterfaceReference(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+	private void flattenSubTreeForInterfaceColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
 		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
-			columnList.add(subTree.get(MUMBLE_COLUMN_KEY));
+			Object col = subTree.get(MUMBLE_COLUMN_KEY);
+			if (!columnList.contains(col)) {
+				columnList.add(col);
+			}
 		} else if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 			Object subst = subTree.get(MUMBLE_SUBSTITUTION_KEY);
 			if (subst instanceof HashMap) {
 				HashMap<String, Object> substMap = (HashMap<String, Object>) subst;
 				Object type = substMap.get("type");
 				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
-					columnList.add(subst);
+					if (!columnList.contains(subst)) {
+						columnList.add(subst);
+					}
 				}
 			}
 		} else {
 			for (Object key : subTree.keySet()) {
 				Object value = subTree.get(key);
 				if (value instanceof HashMap) {
-					standardizeInterfaceReference((HashMap<String, Object>) value, columnList);
+					flattenSubTreeForInterfaceColumns((HashMap<String, Object>) value, columnList);
 				}
 			}
 		}
@@ -1748,6 +1756,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// deconstruct current symbol table into components for analysis
  		HashMap<String, Object> unks = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
         HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+        Object filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 		HashMap<String, Object> aliasCollection = new HashMap<String, Object>();
 		HashMap<String, Object> symbolTableCollection = new HashMap<String, Object>();
 		HashMap<String, Object> queryCollection = new HashMap<String, Object>();
@@ -1811,6 +1820,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable.putAll(queryCollection);
 		walker.symbolTable.putAll(tableCollection);
 		walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
+		if (filtersList != null)
+			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
 
 		 walker.showTrace(walker.symbolTrace, "Symbol Table: " + walker.symbolTable);
 		return walker.symbolTable;
@@ -3355,8 +3366,62 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 
+		// FIRST Capture the Filter Dependencies
+		// Remove the FILTERS entry from the symbol table. Create a variable to hold it.
+		// Create a variable to hold the column list value from the filters entry if it exists. 
+		// If there is no filters entry, create an empty map to hold the filters and an empty 
+		// list to hold the column list value
+		Object filters = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
+		ArrayList<Object> flatList;
+		if (filters != null) {
+			flatList = (ArrayList<Object>) filters;
+		} else {
+			flatList = new ArrayList<Object>();
+		}
+
+		// Create a flatten list to contain the column and predicand references, then call the 
+		// existing flatten function used to find column and predicands in a subtree for interface, to populate it
+		flattenSubTreeForFilterColumns((HashMap<String, Object>) subMap, flatList);
+
+		// Add the flatList back into the SymbolTree as the Object part of the filter entry. Use the MUMBLE_FILTERS_KEY as the key
+		walker.symbolTable.put(MUMBLE_FILTERS_KEY, flatList);
+
+		// NOW handle the push down of the search condition as normal
 		walker.handleOneChild(ruleIndex);
 	}
+
+	// Standardize the filters reference map into a flat map of column references and not the entire AST subtree
+	// This is a recursive function that traverses the item subtree until it finds column references or substitution variables, 
+	// which it adds to the column list with the alias as the key
+
+	private void flattenSubTreeForFilterColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
+			Object col = subTree.get(MUMBLE_COLUMN_KEY);
+			if (!columnList.contains(col)) {
+				columnList.add(col);
+			}
+		} else if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Object subst = subTree.get(MUMBLE_SUBSTITUTION_KEY);
+			if (subst instanceof HashMap) {
+				HashMap<String, Object> substMap = (HashMap<String, Object>) subst;
+				Object type = substMap.get("type");
+				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
+					if (!columnList.contains(subst)) {
+						columnList.add(subst);
+					}
+				}
+			}
+		} else if (subTree.containsKey(MUMBLE_SELECT_KEY)) {
+		} else {
+			for (Object key : subTree.keySet()) {
+				Object value = subTree.get(key);
+				if (value instanceof HashMap) {
+					flattenSubTreeForFilterColumns((HashMap<String, Object>) value, columnList);
+				}
+			}
+		}
+	}
+
 
 	@Override
 	public void exitOr_predicate(@NotNull SQLSelectParserParser.Or_predicateContext ctx) {

@@ -1,6 +1,5 @@
 package astwalkers;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +11,6 @@ import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
-
     /*************************************
      * SqlASTWalkerHelper is a concrete class that extends AbstractASTWalkerHelper.
      * It provides specific implementations/overrides for any Grammar
@@ -21,6 +19,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
      * These objects include:
      * * - Abstract Syntax Tree: Nested Map representing a statement
      * * - Table Dictionary Map: Nested Map representing the table dictionary
+     * * - Query Dictionary Map: Nested Map representing the table dictionary
      * * - Symbol Table: Nested Map representing the symbol table
      * * - Substitution Variables: Nested Map representing the substitution variables
      * * - Query Interface: Nested Map representing the query interface
@@ -30,8 +29,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 	/**
 	 * Collect Root Table Column Dictionary
+	 * Contains the input columns from the external TABLE sources that the query pulls from.
 	 */
 	public HashMap<String, Object> tableDictionaryMap;
+
+	/**
+	 * Collect Root Query Column Dictionary
+	 * Contains the query context's input columns from the nested subqueries in the FROM-JOIN clauses
+	 */
+	public HashMap<String, Object> queryColumnDictionaryMap;
 
 	/**
 	 * Collect Nested Symbol Table for the query
@@ -119,6 +125,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
          super();
             // Initialize the remaining objects
          tableDictionaryMap = new HashMap<String, Object>();
+		 queryColumnDictionaryMap = new HashMap<String, Object>();
          symbolTable = new HashMap<String, Object>();
          substitutionsMap = new HashMap<String, Object>();
          initializeAstKeyCrosswalkMap();
@@ -531,45 +538,62 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	/*
-	 * This method adds all of the table references in the symbol table
-	 * to the table dictionary map. The table dictionary map is a map of
+	 * This method adds all of the table and query column references in the symbol table
+	 * to the corresponding dictionary map. The table dictionary map is a map of
 	 * table references to their corresponding column definitions.
 	 * 
-	 * It ensures that all table references are stored in a consistent format
-	 * (lowercase) and that they are not duplicated.
+	 * These references represent the INPUT columns used in the SQL statement context
+	 * which the symbol table represents. The sum total of columns between the table and query dictionaries
+	 * represent the full set of input columns for the SQL statement context which the symbol table represents.
+	 * All of these must be defined and associated to a table or a query in the symbol table or else
+	 * they represent undefined references which will cause execution-time errors.
 	 * 
-	 * This is used to build the SQL AST Tree and to resolve table references
-	 * in the SQL statements.
+	 * The function also ensures that all table and column names are stored in a consistent format
+	 * (lowercase) and that they are not duplicated.
 	*/ 
-	public void addTableReferencesToTableDictionary() {
+	public void addQueryInputColumnsToTableAndQueryDictionaries() {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
-				if ((tab_ref.startsWith(getASTWALKER_QUERY_KEY())) || (tab_ref.startsWith(getASTWALKER_UNION_KEY()))
-						|| (tab_ref.startsWith(getASTWALKER_INTERSECT_KEY()) 
-						|| (tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
-						|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
-						|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))
-						|| (tab_ref.startsWith("def_")))) {
+				if ((tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
+					|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
+					|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))
+					|| (tab_ref.startsWith("def_"))) {
+						continue; // skip symbol table items that are not table or query references
+				} else if ((tab_ref.startsWith(getASTWALKER_QUERY_KEY())) 
+					|| (tab_ref.startsWith(getASTWALKER_UNION_KEY()))
+					|| (tab_ref.startsWith(getASTWALKER_INTERSECT_KEY()))) {
+					// Add nested query column references from the FROM-JOIN stmt to the query dictionary map
+					mergeDictionary(queryColumnDictionaryMap, tab_ref, hold);
 				} else {
-					String reference;
-					if (tab_ref.startsWith("<"))
-						// Tuple Substitution Variable, do NOT alter case
-						reference = tab_ref;
-					else
-						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currDict = (HashMap<String, Object>) tableDictionaryMap.get(reference);
-					if (currDict != null)
-						currDict.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-					else {
-						HashMap<String, Object> newDict = new HashMap<String, Object>();
-						newDict.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						tableDictionaryMap.put(reference, newDict);
-					}
+					// Add table references from any source in the query to the table dictionary map
+					mergeDictionary(tableDictionaryMap, tab_ref, hold);
 				}
 			}
 		}
 	}
 
-    
+    	/**
+	 * Helper function to merge a reference entry into a dictionary map.
+	 * Handles the "<" prefix logic and merging.
+	 */
+	@SuppressWarnings("unchecked")
+	private void mergeDictionary(HashMap<String, Object> dictMap, String tab_ref, HashMap<String, Object> hold) {
+		String reference;
+		if (tab_ref.startsWith("<"))
+			reference = tab_ref;
+		else
+			reference = tab_ref.toLowerCase();
+		HashMap<String, Object> currDict = (HashMap<String, Object>) dictMap.get(reference);
+		Object value =  hold.get(tab_ref);
+		if (currDict != null)
+			currDict.putAll((Map<String, Object>) value);
+		else {
+			HashMap<String, Object> newDict = new HashMap<String, Object>();
+			newDict.putAll((Map<? extends String, ? extends Object>) value);
+			dictMap.put(reference, newDict);
+		}
+	}
+
+
 }

@@ -81,7 +81,7 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		return sqlTree;
 	}
 
-	public HashMap<String, Object> getTableColumnMap() {
+	public HashMap<String, Object> getTableColumnDictionaryMap() {
 		return tableDictionaryMap;
 	}
 

@@ -32,6 +32,11 @@ public class Snippet {
 	private HashMap<String, Object> tableDictionary;
 
 	/**
+	 * Collect Root Query Column Dictionary
+	 */
+	private HashMap<String, Object> queryColumnDictionaryMap;
+
+	/**
 	 * Collect Nested Symbol Table for the query
 	 */
 	private HashMap<String, Object> symbolTable;
@@ -68,16 +73,21 @@ public class Snippet {
 	/**
 	 * @param sqlAbstractTree
 	 * @param tableDictionary
+	 * @param queryColumnDictionaryMap
 	 * @param symbolTable
 	 * @param substitutionsMap
 	 * @param queryInterface
 	 */
-	public Snippet(HashMap<String, Object> sqlAbstractTree, HashMap<String, Object> tableDictionary,
-			HashMap<String, Object> symbolTable, HashMap<String, Object> substitutionsMap,
-			HashSet<String> queryInterface) {
+	public Snippet(HashMap<String, Object> sqlAbstractTree, 
+		HashMap<String, Object> tableDictionary,
+		HashMap<String, Object> queryColumnDictionaryMap, 
+		HashMap<String, Object> symbolTable, 
+		HashMap<String, Object> substitutionsMap,
+		HashSet<String> queryInterface) {
 		super();
 		this.sqlAbstractTree = sqlAbstractTree;
 		this.tableDictionary = tableDictionary;
+		this.queryColumnDictionaryMap = queryColumnDictionaryMap;
 		this.symbolTable = symbolTable;
 		this.substitutionsMap = substitutionsMap;
 		this.queryInterface = queryInterface;
@@ -100,6 +110,14 @@ public class Snippet {
 
 	public void setTableDictionary(HashMap<String, Object> tableDictionary) {
 		this.tableDictionary = tableDictionary;
+	}
+
+	public HashMap<String, Object> getQueryColumnDictionaryMap() {
+		return queryColumnDictionaryMap;
+	}
+
+	public void setQueryColumnDictionaryMap(HashMap<String, Object> queryColumnDictionaryMap) {
+		this.queryColumnDictionaryMap = queryColumnDictionaryMap;
 	}
 
 	public HashMap<String, Object> getSymbolTable() {
@@ -173,6 +191,11 @@ public class Snippet {
 		Gson gson = new Gson();
 		return gson.toJson(tableDictionary);
 	}
+	// Returns the Query Column Dictionary as a JSON String
+	public String getQueryColumnDictionaryJson() {
+		Gson gson = new Gson();
+		return gson.toJson(queryColumnDictionaryMap);
+	}
 	// Returns the Symbol Table as a JSON String
 	public String getSymbolTableJson() {
 		Gson gson = new Gson();
@@ -216,7 +239,8 @@ public class Snippet {
 
 	public String toString() {
 		return "Snippet [sqlAbstractTree=" + sqlAbstractTree + ", tableDictionary=" + tableDictionary
-				+ ", symbolTable=" + symbolTable + ", substitutionsMap=" + substitutionsMap + ", queryInterface="
+				+ ", queryColumnDictionaryMap=" + queryColumnDictionaryMap + ", symbolTable=" + symbolTable 
+				+ ", substitutionsMap=" + substitutionsMap + ", queryInterface="
 				+ queryInterface + ", parserMessageList=" + parserMessageList + ", parserMessageStringList="
 				+ parserMessageStringList + ", fatalErrorCount=" + fatalErrorCount + ", fatalErrorStringList="
 				+ fatalErrorStringList + "]";

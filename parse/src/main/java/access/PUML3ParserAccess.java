@@ -119,7 +119,8 @@ public class PUML3ParserAccess extends AbstractParserAccess {
             // Save the results in a local Snippet object
             this.snippet = new Snippet(
                 this.extractor.getSqlTree(),
-                this.extractor.getTableColumnMap(),
+                this.extractor.getTableColumnDictionaryMap(),
+                null,
                 this.extractor.getSymbolTable(),
                 this.extractor.getSubstitutionsMap(),
                 this.extractor.getInterface()

@@ -547,8 +547,8 @@ public class SQLSelectParserParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class Condition_valueContext extends ParserRuleContext {
-		public Search_conditionContext search_condition() {
-			return getRuleContext(Search_conditionContext.class,0);
+		public Value_expressionContext value_expression() {
+			return getRuleContext(Value_expressionContext.class,0);
 		}
 		public TerminalNode EOF() { return getToken(SQLSelectParserParser.EOF, 0); }
 		public Condition_valueContext(ParserRuleContext parent, int invokingState) {
@@ -564,7 +564,7 @@ public class SQLSelectParserParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(446);
-			search_condition();
+			value_expression();
 			setState(447);
 			match(EOF);
 			}
@@ -4746,12 +4746,12 @@ public class SQLSelectParserParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class Searched_when_clauseContext extends ParserRuleContext {
-		public Search_conditionContext c;
+		public Value_expressionContext c;
 		public Case_resultContext r;
 		public TerminalNode WHEN() { return getToken(SQLSelectParserParser.WHEN, 0); }
 		public TerminalNode THEN() { return getToken(SQLSelectParserParser.THEN, 0); }
-		public Search_conditionContext search_condition() {
-			return getRuleContext(Search_conditionContext.class,0);
+		public Value_expressionContext value_expression() {
+			return getRuleContext(Value_expressionContext.class,0);
 		}
 		public Case_resultContext case_result() {
 			return getRuleContext(Case_resultContext.class,0);
@@ -4771,7 +4771,7 @@ public class SQLSelectParserParser extends Parser {
 			setState(878);
 			match(WHEN);
 			setState(879);
-			((Searched_when_clauseContext)_localctx).c = search_condition();
+			((Searched_when_clauseContext)_localctx).c = value_expression();
 			setState(880);
 			match(THEN);
 			setState(881);
@@ -13925,7 +13925,7 @@ public class SQLSelectParserParser extends Parser {
 		"\u0000\u0000\u0000\u01b8\u01b9\u0003v;\u0000\u01b9\u01ba\u0005\u0000\u0000"+
 		"\u0001\u01ba\u0005\u0001\u0000\u0000\u0000\u01bb\u01bc\u0003\u012a\u0095"+
 		"\u0000\u01bc\u01bd\u0005\u0000\u0000\u0001\u01bd\u0007\u0001\u0000\u0000"+
-		"\u0000\u01be\u01bf\u0003\u00f2y\u0000\u01bf\u01c0\u0005\u0000\u0000\u0001"+
+		"\u0000\u01be\u01bf\u0003\u00ba]\u0000\u01bf\u01c0\u0005\u0000\u0000\u0001"+
 		"\u01c0\t\u0001\u0000\u0000\u0000\u01c1\u01c2\u0003\\.\u0000\u01c2\u01c3"+
 		"\u0005\u0000\u0000\u0001\u01c3\u000b\u0001\u0000\u0000\u0000\u01c4\u01c5"+
 		"\u0003\u001e\u000f\u0000\u01c5\u01c6\u0005\u0000\u0000\u0001\u01c6\r\u0001"+
@@ -14168,7 +14168,7 @@ public class SQLSelectParserParser extends Parser {
 		"\u0000\u0000\u0369\u036b\u0003\u008aE\u0000\u036a\u0369\u0001\u0000\u0000"+
 		"\u0000\u036b\u036c\u0001\u0000\u0000\u0000\u036c\u036a\u0001\u0000\u0000"+
 		"\u0000\u036c\u036d\u0001\u0000\u0000\u0000\u036d\u0089\u0001\u0000\u0000"+
-		"\u0000\u036e\u036f\u00058\u0000\u0000\u036f\u0370\u0003\u00f2y\u0000\u0370"+
+		"\u0000\u036e\u036f\u00058\u0000\u0000\u036f\u0370\u0003\u00ba]\u0000\u0370"+
 		"\u0371\u00051\u0000\u0000\u0371\u0372\u0003\u0092I\u0000\u0372\u008b\u0001"+
 		"\u0000\u0000\u0000\u0373\u0375\u0003\u008eG\u0000\u0374\u0373\u0001\u0000"+
 		"\u0000\u0000\u0375\u0376\u0001\u0000\u0000\u0000\u0376\u0374\u0001\u0000"+

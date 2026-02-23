@@ -31,6 +31,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";
     public static final String MUMBLE_EXISTS_KEY = "exists";
+    public static final String MUMBLE_FILTERS_KEY = "filters";
     public static final String MUMBLE_FOLLOWING_KEY = "FOLLOWING";
     public static final String MUMBLE_FROM_KEY = "from";
     public static final String MUMBLE_FUNCTION_KEY = "function";
