@@ -393,9 +393,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					// Item is a Column Substitution Variable
 					((HashMap<String, Object>) tableDictObject).put((String) node.get("name"),
 							(HashMap<String, Object>) item);
-				else
-					// Item is a Predicate Substitution Variable
-					((HashMap<String, Object>) tableDictObject).putAll((HashMap<String, Object>) item);
+				// else
+				// 	// Item is a Predicate Substitution Variable
+				// 	((HashMap<String, Object>) tableDictObject).putAll((HashMap<String, Object>) item);
 			} else {
 				showTrace(symbolTrace, "Error collecting item: " + item);
 			}
@@ -551,7 +551,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * The function also ensures that all table and column names are stored in a consistent format
 	 * (lowercase) and that they are not duplicated.
 	*/ 
-	public void addQueryInputColumnsToTableAndQueryDictionaries() {
+	public void addQueryInputColumnsToTableDictionary() {
 		HashMap<String, Object> hold = symbolTable;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
@@ -564,7 +564,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					|| (tab_ref.startsWith(getASTWALKER_UNION_KEY()))
 					|| (tab_ref.startsWith(getASTWALKER_INTERSECT_KEY()))) {
 					// Add nested query column references from the FROM-JOIN stmt to the query dictionary map
-					mergeDictionary(queryColumnDictionaryMap, tab_ref, hold);
+//					mergeDictionary(queryColumnDictionaryMap, tab_ref, hold);
 				} else {
 					// Add table references from any source in the query to the table dictionary map
 					mergeDictionary(tableDictionaryMap, tab_ref, hold);

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ErrorNode;
@@ -53,6 +54,8 @@ import sql.SQLSelectParserParser;
  */
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
+
+    private static final String CURRENT_QUERY_COLUMN_DICTIONARY = "CurrentQueryColumnDictionary";
 
 
 	/**
@@ -348,7 +351,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addQueryInputColumnsToTableAndQueryDictionaries();
+		walker.addQueryInputColumnsToTableDictionary();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -368,7 +371,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addQueryInputColumnsToTableAndQueryDictionaries();
+		walker.addQueryInputColumnsToTableDictionary();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -389,7 +392,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addQueryInputColumnsToTableAndQueryDictionaries();
+		walker.addQueryInputColumnsToTableDictionary();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -410,7 +413,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
-		walker.addQueryInputColumnsToTableAndQueryDictionaries();
+		walker.addQueryInputColumnsToTableDictionary();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -457,7 +460,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		// Add TABLE references to Table Dictionary
-		walker.addQueryInputColumnsToTableAndQueryDictionaries();
+		walker.addQueryInputColumnsToTableDictionary();
 
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -474,7 +477,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
-		// walker.showTrace(resultTrace, collector);
+
+		 // Cleanup symbol table and table dictionary for join extension before returning to Snippet requester
+		walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY);
+		walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+		
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
 	}
@@ -966,7 +973,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Finish Symbol Table Construction
 			HashMap<String, Object> symbols =  walker.symbolTable;
 			String key = MUMBLE_VALUES_KEY + walker.queryCount;
+
+			// Capture Query Column Dictionary for this level
+			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
+
+			// Pop the symbol table for this level and add it to the parent level with a unique key
 			walker.popSymbolTable(key, symbols);
+
 			walker.queryCount++;
 	
 			// Construct Table Dictionary
@@ -1149,7 +1162,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int ruleIndex = ctx.getRuleIndex();
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
 			walker.handleListList(ruleIndex, parentRuleIndex);
+
+			// Loop through the ctx children and add the token strings to the Query Column Dictionary for the default "values" table
+			for (int i = 0; i < ctx.getChildCount(); i++) {
+				if (i % 2 == 0) {
+					Object child = ctx.getChild(i);
+					String name = ctx.getChild(i).getText();
+					Token childToken = null;
+					if (child instanceof TerminalNode) {
+						childToken = ((TerminalNode) child).getSymbol();
+					} else if (child instanceof ParserRuleContext) {
+						childToken = ((ParserRuleContext) child).getStart();
+					}
+					String tokenString = childToken != null ? childToken.toString() : ctx.getChild(i).toString();
+				
+					// Add item alias into the Current Query Column Dictionary
+					addAliasTokensObject(name, tokenString);
+				}
 			}
+		}
 						
 		@SuppressWarnings("unchecked")
 		@Override
@@ -1226,6 +1257,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (walker.intersectClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_INTERSECT_KEY + walker.queryCount;
+
 			walker.popSymbolTable(key, symbols);
 			walker.queryCount++;
 		} else {
@@ -1304,6 +1336,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (walker.unionClauseFound) {
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_UNION_KEY + walker.queryCount;
+
 			walker.popSymbolTable(key, symbols);
 			walker.queryCount++;
 		} else {
@@ -1469,6 +1502,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Retrieve outer symbol table, insert this symbol table into it
 		String key = "query" + walker.queryCount;
+
+		// Capture Query Column Dictionary for this level
+		walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
+
 		walker.popSymbolTable(key, symbols);
 		walker.queryCount++;
 	}
@@ -1592,6 +1629,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		flattenSubTreeForInterfaceColumns(interfaceReference, columnList);
 
 		selectInterface.put(interfaceAlias, columnList);
+
+		// Add item alias into the Current Query Column Dictionary
+		addAliasTokensObject(interfaceAlias, aliasToken);
+		
+	}
+
+	private void addAliasTokensObject(String interfaceAlias, String aliasToken) {
+		String queryDictionaryKey = CURRENT_QUERY_COLUMN_DICTIONARY;
+		HashMap<String, Object> queryColumnDictionary = (HashMap<String, Object>) walker.symbolTable.get(queryDictionaryKey);
+		if (queryColumnDictionary == null) {
+			queryColumnDictionary = new HashMap<String, Object>();
+			walker.symbolTable.put(queryDictionaryKey, queryColumnDictionary);
+		}
+
+		Object aliasTokensObject = queryColumnDictionary.get(interfaceAlias);
+		if (aliasTokensObject == null) {
+			aliasTokensObject = new ArrayList<String>();
+			queryColumnDictionary.put(interfaceAlias, aliasTokensObject);
+		} 
+		
+		((ArrayList<String>) aliasTokensObject).add(aliasToken);
 	}
 
 	// Standardize the interface reference map into a flat map of column references and not the entire AST subtree
@@ -1756,11 +1814,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// deconstruct current symbol table into components for analysis
  		HashMap<String, Object> unks = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
         HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+        HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY);
         Object filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 		HashMap<String, Object> aliasCollection = new HashMap<String, Object>();
 		HashMap<String, Object> symbolTableCollection = new HashMap<String, Object>();
-		HashMap<String, Object> queryCollection = new HashMap<String, Object>();
 		HashMap<String, Object> tableCollection = new HashMap<String, Object>();
+		HashMap<String, Object> queryCollection = new HashMap<String, Object>();
 
 		Set<String> keys = new HashSet<>(walker.symbolTable.keySet());
 		for (String tab_ref : keys) {
@@ -1774,7 +1833,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						|| tab_ref.startsWith(MUMBLE_UNION_KEY)
 						|| tab_ref.startsWith(MUMBLE_INTERSECT_KEY)
 						|| tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
-					queryCollection.put(tab_ref, item);
+							queryCollection.put(tab_ref, item);
 				} else {
 						onlyTableName = tab_ref;
 						tableCollection.put(tab_ref, item);
@@ -1820,6 +1879,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable.putAll(queryCollection);
 		walker.symbolTable.putAll(tableCollection);
 		walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
+		walker.symbolTable.put(CURRENT_QUERY_COLUMN_DICTIONARY, localCurrentQueryDictionary);
 		if (filtersList != null)
 			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
 
@@ -3874,10 +3934,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// Store only the query reference key under the IN_LIST<N> entry
 			symbols.put(key, queryRefKey);
+
+			// Capture Query Column Dictionary for this level
+// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
+
 			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
 			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+
 			// Merge local symbol table back into parent
 			walker.popSymbolTablePutAll(symbols);
+
 			// Advance query counter after recording the injection
 			walker.queryCount++;
 
@@ -3975,6 +4041,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// Store only the query reference key under the EXISTS<N> entry
 			symbols.put(key, queryRefKey);
+			// Capture Query Column Dictionary for this level
+// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
 			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
 			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
 			// Merge local symbol table back into parent
@@ -4013,6 +4081,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (isSubquery) {
 			// Subquery case: inject the subquery's local symbol table under predicand<N>
 			String key = MUMBLE_PREDICAND_KEY + walker.queryCount;
+
+			// Capture Query Column Dictionary for this level
+// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
+
 			// Extract the singular query reference key from the local symbol table (e.g., "query0")
 			String queryRefKey = null;
 			if (symbols != null && !symbols.isEmpty()) {
@@ -4409,6 +4481,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.showTrace(walker.parseTrace, "Column Reference: " + subMap);
 		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_search_condition))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_searched_when_clause))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_condition_value))) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
