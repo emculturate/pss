@@ -1,14 +1,15 @@
 package access;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.ParserRuleContext;
 
+import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
-import errorhandling.SyntaxError;
 
 
 /**
@@ -100,10 +101,10 @@ public abstract class AbstractParserAccess {
     protected void addErrorListenerToParser(Parser parser) {
         // Here we add a custom error listener to collect syntax errors and optionally
         // additional Parser generated internal messages (Ambiguities, FullContext and COntextSensitivity).
-        // The ParseErrorListener will collect errors and store them in a list.
-        // You can retrieve the errors later using the getSyntaxErrors() method on the parser.
-        ParseErrorListener errorListener = new ParseErrorListener(showAmbiguities, showFullContext, showContextSensitivty);
-            parser.addErrorListener(errorListener);
+        // The ParseErrorListener will collect diagnostics and store them in a list.
+        // You can retrieve the messages later using the getDiagnostics() method.
+        this.errorListener = new ParseErrorListener(showAmbiguities, showFullContext, showContextSensitivty);
+            parser.addErrorListener(this.errorListener);
     }
 
     /**
@@ -115,12 +116,7 @@ public abstract class AbstractParserAccess {
     // This is the definitive list of errors that failed the parse.  (In contrast to the set of messages in the Listeners
     // which may contain additional messages that are not parse errors, such as ambiguities or context sensitivity messages.)
     public int getFatalErrorCount() {
-        // This method retrieves the number of errors collected by the ParseErrorCollector.
-        // It returns the size of the error list, which contains all parse errors encountered during parsing.
-        if (errorCollector != null) {
-            return errorCollector.getErrorList().size();
-        }
-        return 0;
+        return getFatalErrorList().size();
     }
 
     public boolean hasFatalErrors() {
@@ -131,65 +127,72 @@ public abstract class AbstractParserAccess {
     }    
 
     public List<String> getFatalErrorList() {
-        // This method retrieves the list of error messages collected by the ParseErrorCollector.
-        // It returns a list of error messages that were collected during parsing.
-        if (errorCollector != null) {
-            return errorCollector.getErrorList();
+        List<String> fatalErrors = new ArrayList<>();
+        for (ParseDiagnostic diagnostic : getAllDiagnostics()) {
+            if (diagnostic == null || diagnostic.severity() != ParseDiagnostic.Severity.FATAL) {
+                continue;
+            }
+            String message = diagnostic.message();
+            if (message != null && !fatalErrors.contains(message)) {
+                fatalErrors.add(message);
+            }
         }
-        return List.of(); // Return an empty list if no errors are collected
+        return fatalErrors;
     }
 
     public void addFatalError(String errorMessage) {
         // This method adds a fatal error message to the ParseErrorCollector.
         // It allows you to manually add errors that are not captured by the parser.
         if (errorCollector != null) {
-            errorCollector.addError(errorMessage);
+            errorCollector.addFatalError(errorMessage);
         }
+    }
+
+    public void addWarning(String warningMessage) {
+        if (errorCollector != null) {
+            errorCollector.addWarning(warningMessage);
+        }
+    }
+
+    public List<ParseDiagnostic> getAllDiagnostics() {
+        List<ParseDiagnostic> diagnostics = new ArrayList<>();
+        if (errorCollector != null) {
+            diagnostics.addAll(errorCollector.getDiagnostics());
+        }
+        if (getParser() != null) {
+            List<?> listeners = getParser().getErrorListeners();
+            for (Object listener : listeners) {
+                if (listener instanceof ParseErrorListener parseErrorListener) {
+                    diagnostics.addAll(parseErrorListener.getDiagnostics());
+                }
+            }
+        }
+        return diagnostics;
     }
     
     // This method retrieves the list of error messages collected by the ParseErrorListener.
     // This could be a list of syntax errors, ambiguities, or context sensitivity messages,
     // depending on the configuration of the ParseErrorListener.
     public List<String> getAllErrorStrings() {
-        // This method retrieves the syntax errors collected by the ParseErrorListener.
-        // It returns a list of error messages that were collected during parsing.
-        List<String> errorList = new java.util.ArrayList<>();
-        // check for Syntax Errors Captured by the Listeners
-        List<?> listeners = getParser().getErrorListeners();
-        for (Object listener : listeners) {
-            if (listener instanceof ParseErrorListener) {
-                for (SyntaxError item : ((ParseErrorListener) listener).getSyntaxErrors()) {
-                    errorList.add(item.toString());
-                }
-            }
+        List<String> errorList = new ArrayList<>();
+        for (ParseDiagnostic diagnostic : getAllDiagnostics()) {
+            Integer line = diagnostic.line();
+            Integer pos = diagnostic.charPositionInLine();
+            String linePart = (line == null || pos == null) ? "" : ("Line: " + line + " Character: " + pos + " ");
+            errorList.add(linePart + diagnostic.severity() + " [" + diagnostic.code() + "] " + diagnostic.message());
         }
         return errorList;
     }
 
 
-      // This method retrieves the list of SyntaxError objects collected by the ParseErrorListener.
-      // Each SyntaxError object contains detailed information about a syntax error encountered during parsing.
-      // This could include the line number, character position, and a description of the error.
-      // These errors are typically collected by the ParseErrorListener during the parsing process and could 
-      // include syntax errors, ambiguities, or context sensitivity messages, depending on the configuration of the listener.
-    public List<SyntaxError> getAllErrors() {
-        // This method retrieves the syntax errors collected by the ParseErrorListener.
-        // It returns a list of SyntaxError objects that were collected during parsing.
-        List<SyntaxError> errorList = new java.util.ArrayList<>();
-        // check for Syntax Errors Captured by the Listeners
-        List<?> listeners = getParser().getErrorListeners();
-        for (Object listener : listeners) {
-            if (listener instanceof ParseErrorListener) {
-                errorList.addAll(((ParseErrorListener) listener).getSyntaxErrors());
-            }
-        }
-        return errorList;
+            // This method retrieves all parse diagnostics collected by the listener and collector.
+        public List<ParseDiagnostic> getAllErrors() {
+                return getAllDiagnostics();
     }
 
     public boolean hasErrorMessages() {
-        // Check if there are any syntax errors collected by the ParseErrorListener.
-        List<SyntaxError> syntaxErrors = getAllErrors();
-        return syntaxErrors != null && !syntaxErrors.isEmpty(); 
+        List<ParseDiagnostic> diagnostics = getAllDiagnostics();
+        return diagnostics != null && !diagnostics.isEmpty(); 
     }
 
    /**

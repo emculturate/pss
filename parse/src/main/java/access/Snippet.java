@@ -3,13 +3,15 @@
  */
 package access;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 
-import errorhandling.SyntaxError;
+import errorhandling.ParseDiagnostic;
 
 /**
  * Snippet holds all required elements for working with a PSS SQL AST. Having parsed a SQL statement, the PSS SQL Parse Event Walker 
@@ -56,17 +58,9 @@ public class Snippet {
 	 * This holds the all of the messages generated during parsing, including errors, Ambiguities,
 	 * and information messages.
 	 */
-	private List<SyntaxError> parserMessageList;
+	private List<ParseDiagnostic> parserDiagnosticList;
 
 	private List<String> parserMessageStringList;
-
-	/**
-	 * Fatal Error Count
-	 * This holds the number of fatal errors encountered during parsing.
-	 */
-	private int fatalErrorCount;
-
-	private List<String> fatalErrorStringList;
 
 	// Constructors
 	
@@ -145,36 +139,123 @@ public class Snippet {
 	} 
 	
 	public List<String> getFatalErrorStringList() {
-		return fatalErrorStringList;
+		if (parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
+			return List.of();
+		}
+		return parserDiagnosticList.stream()
+				.filter(diagnostic -> diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL)
+				.map(ParseDiagnostic::message)
+				.filter(message -> message != null)
+				.distinct()
+				.collect(Collectors.toList());
 	}
 
 	public int getFatalErrorCount() {
-		return fatalErrorCount;
+		return getFatalErrorStringList().size();
 	}	
 
 	public void setFatalErrorStringList(List<String> fatalErrorStringList) {
-		this.fatalErrorStringList = fatalErrorStringList;
-		if (fatalErrorStringList == null) {
-			this.fatalErrorCount = 0;
-		} else if (fatalErrorStringList.isEmpty()) {
-			this.fatalErrorCount = 0;
-		} else {
-			this.fatalErrorCount = fatalErrorStringList.size();
+		if (fatalErrorStringList == null || fatalErrorStringList.isEmpty()) {
+			return;
 		}
-	
+		if (this.parserDiagnosticList == null) {
+			this.parserDiagnosticList = new ArrayList<>();
+		}
+		for (String fatalError : fatalErrorStringList) {
+			if (fatalError == null || fatalError.isBlank()) {
+				continue;
+			}
+			boolean alreadyPresent = this.parserDiagnosticList.stream()
+					.anyMatch(existing -> existing != null
+							&& existing.severity() == ParseDiagnostic.Severity.FATAL
+							&& fatalError.equals(existing.message()));
+			if (alreadyPresent) {
+				continue;
+			}
+			this.parserDiagnosticList.add(new ParseDiagnostic(
+					ParseDiagnostic.Severity.FATAL,
+					"MANUAL_FATAL",
+					fatalError,
+					null,
+					null,
+					"Snippet",
+					null,
+					null,
+					false,
+					"access.snippet",
+					null,
+					null));
+		}
+		this.parserDiagnosticList = dedupeDiagnostics(this.parserDiagnosticList);
 	}
 	
-	public List<SyntaxError> getParserMessageList() {
-		return parserMessageList;
+	public List<ParseDiagnostic> getParserMessageList() {
+		return parserDiagnosticList;
 	}
-	public void setParserMessageList(List<SyntaxError> parserMessageList) {
-		this.parserMessageList = parserMessageList;
+	public void setParserMessageList(List<ParseDiagnostic> parserMessageList) {
+		this.parserDiagnosticList = dedupeDiagnostics(parserMessageList);
 	}
 	public List<String> getParserMessageStringList() {
 		return parserMessageStringList;
 	}
 	public void setParserMessageStringList(List<String> parserMessageStringList) {
 		this.parserMessageStringList = parserMessageStringList;
+	}
+
+	public List<ParseDiagnostic> getParserDiagnosticList() {
+		return parserDiagnosticList;
+	}
+	public void setParserDiagnosticList(List<ParseDiagnostic> parserDiagnosticList) {
+		this.parserDiagnosticList = dedupeDiagnostics(parserDiagnosticList);
+	}
+
+	private List<ParseDiagnostic> dedupeDiagnostics(List<ParseDiagnostic> diagnostics) {
+		if (diagnostics == null || diagnostics.isEmpty()) {
+			return diagnostics;
+		}
+		List<ParseDiagnostic> deduped = new ArrayList<>();
+		for (ParseDiagnostic candidate : diagnostics) {
+			if (candidate == null) {
+				continue;
+			}
+			boolean exists = deduped.stream().anyMatch(existing -> sameDiagnostic(existing, candidate));
+			if (!exists) {
+				deduped.add(candidate);
+			}
+		}
+		return deduped;
+	}
+
+	private boolean sameDiagnostic(ParseDiagnostic a, ParseDiagnostic b) {
+		if (a == null || b == null) {
+			return false;
+		}
+		if (a.severity() != b.severity()) {
+			return false;
+		}
+		if (!safeEquals(a.code(), b.code())) {
+			return false;
+		}
+		if (!safeEquals(a.message(), b.message())) {
+			return false;
+		}
+		if (!safeEquals(a.line(), b.line())) {
+			return false;
+		}
+		if (!safeEquals(a.charPositionInLine(), b.charPositionInLine())) {
+			return false;
+		}
+		if (!safeEquals(a.tokenText(), b.tokenText())) {
+			return false;
+		}
+		return safeEquals(a.exceptionType(), b.exceptionType());
+	}
+
+	private boolean safeEquals(Object a, Object b) {
+		if (a == null) {
+			return b == null;
+		}
+		return a.equals(b);
 	}
 
 	/**
@@ -214,12 +295,12 @@ public class Snippet {
 	// Returns the Fatal Error String List as a JSON String
 	public String getFatalErrorStringListJson() {
 		Gson gson = new Gson();
-		return gson.toJson(fatalErrorStringList);
+		return gson.toJson(getFatalErrorStringList());
 	}
 	// Returns the Fatal Error Count as a JSON String
 	public String getFatalErrorCountJson() {
 		Gson gson = new Gson();
-		return gson.toJson(fatalErrorCount);
+		return gson.toJson(getFatalErrorCount());
 	}
 	// Returns the Parser Message String List as a JSON String
 	public String getParserMessageStringListJson() {
@@ -229,7 +310,12 @@ public class Snippet {
 	// Returns the Parser Message List as a JSON String
 	public String getParserMessageListJson() {
 		Gson gson = new Gson();
-		return gson.toJson(parserMessageList);
+		return gson.toJson(parserDiagnosticList);
+	}
+	// Returns the Parser Diagnostic List as a JSON String
+	public String getParserDiagnosticListJson() {
+		Gson gson = new Gson();
+		return gson.toJson(parserDiagnosticList);
 	}
 	/**
 	 * Returns a string representation of the Snippet object
@@ -237,12 +323,13 @@ public class Snippet {
 	 * @return String representation of the Snippet
 	 */
 
+	@Override
 	public String toString() {
 		return "Snippet [sqlAbstractTree=" + sqlAbstractTree + ", tableDictionary=" + tableDictionary
 				+ ", queryColumnDictionaryMap=" + queryColumnDictionaryMap + ", symbolTable=" + symbolTable 
 				+ ", substitutionsMap=" + substitutionsMap + ", queryInterface="
-				+ queryInterface + ", parserMessageList=" + parserMessageList + ", parserMessageStringList="
-				+ parserMessageStringList + ", fatalErrorCount=" + fatalErrorCount + ", fatalErrorStringList="
-				+ fatalErrorStringList + "]";
+				+ queryInterface + ", parserMessageList=" + parserDiagnosticList + ", parserDiagnosticList=" + parserDiagnosticList + ", parserMessageStringList="
+				+ parserMessageStringList + ", fatalErrorCount=" + getFatalErrorCount() + ", fatalErrorStringList="
+				+ getFatalErrorStringList() + "]";
 	}	
 }

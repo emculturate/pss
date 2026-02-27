@@ -17,9 +17,9 @@ import org.antlr.v4.runtime.misc.Utils;
 /*
  * Class implements 
  */
-public class ParseErrorListener  extends BaseErrorListener
+public class ParseErrorListener extends BaseErrorListener
 {
-    private final List<SyntaxError> syntaxErrors = new ArrayList<>();
+    private final List<ParseDiagnostic> diagnostics = new ArrayList<>();
 
     private boolean showAmbiguities = false;
     private boolean showFullContext = false;
@@ -49,146 +49,127 @@ public class ParseErrorListener  extends BaseErrorListener
         this.showContextSensitivity = showContextSensitivity;
     }
 
-    public List<SyntaxError> getSyntaxErrors()
-    {
-        return syntaxErrors;
+    public List<ParseDiagnostic> getDiagnostics() {
+        return diagnostics;
+    }
+
+    private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message,
+                       Integer line, Integer pos, String ruleName, String tokenText,
+                       boolean recoverable, String exceptionType) {
+        diagnostics.add(new ParseDiagnostic(
+                severity, code, message, line, pos,
+            "ParseErrorListener", ruleName, tokenText,
+            recoverable, "parse.listener", exceptionType, null
+        ));
+    }
+
+    private Token safeTokenAt(Parser recognizer, int index) {
+        try {
+            TokenStream ts = recognizer.getInputStream();
+            if (ts == null) return null;
+            return ts.get(index);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private String currentRuleName(Parser recognizer) {
+        List<String> stack = recognizer.getRuleInvocationStack();
+        return (stack == null || stack.isEmpty()) ? null : stack.get(0);
     }
 
     @Override
-	public void reportAmbiguity(Parser recognizer,
-								DFA dfa,
-								int startIndex,
-								int stopIndex,
-								boolean exact,
-								BitSet ambigAlts,
-								ATNConfigSet configs)
-	{
-        if (!showAmbiguities) {
-            return; // Skip if we are not showing ambiguities
-        }
+    public void reportAmbiguity(Parser recognizer,
+                            DFA dfa,
+                            int startIndex,
+                            int stopIndex,
+                            boolean exact,
+                            BitSet ambigAlts,
+                            ATNConfigSet configs)
+    {
+        if (!showAmbiguities) return;
 
-    // Get input stream and extract the ambiguous text
         TokenStream tokens = recognizer.getInputStream();
-        String input = tokens.getText(new Interval(startIndex, stopIndex));
-    
-    // Get information about the current rule
-        String ruleName = "unknown";
-        try {
-            int ruleIndex = recognizer.getContext().getRuleIndex();
-            if (ruleIndex >= 0 && ruleIndex < recognizer.getRuleNames().length) {
-                ruleName = recognizer.getRuleNames()[ruleIndex];
-            }
-        } catch (Exception ex) {
-    // Fallback if we can't get the rule name
-            ruleName = "unknown_rule";
-        }
+        String text = (tokens == null) ? null : tokens.getText(Interval.of(startIndex, stopIndex));
+        String msg = "Ambiguity" + (exact ? " (exact)" : "") + ": " + Utils.escapeWhitespace(text, false);
 
-    // Extract current token where ambiguity was detected
-        Token ambiguousToken = tokens.get(startIndex);
-        int line = ambiguousToken.getLine();
-        int position = ambiguousToken.getCharPositionInLine();
-    
-    // Convert ambiguous alternatives to readable format
-        List<Integer> alternativesList = new ArrayList<>();
-        for (int i = 0; i < ambigAlts.size(); i++) {
-            if (ambigAlts.get(i)) {
-                alternativesList.add(i);
-            }
-        }
-    
-        String message = String.format(
-            "Ambiguity detected at line %d:%d while parsing '%s' in rule '%s'\n" +
-            "Ambiguous alternatives: %s\n" +
-            "Input text causing ambiguity: '%s'",
-            line, position, 
-            ambiguousToken.getText(),
-            ruleName,
-            alternativesList,
-            input
-        );
-    
-        SyntaxError error = new SyntaxError(
-            recognizer, 
-            ambiguousToken,
-            line,
-            position,
-            message,
+        Token token = safeTokenAt(recognizer, startIndex);
+        int line = token != null ? token.getLine() : -1;
+        int pos  = token != null ? token.getCharPositionInLine() : -1;
+
+        addDiagnostic(
+            ParseDiagnostic.Severity.WARNING,
+            "AMBIGUITY",
+            msg,
+            line >= 0 ? line : null,
+            pos >= 0 ? pos : null,
+            currentRuleName(recognizer),
+            token != null ? token.getText() : null,
+            true,
             null
         );
-    
-        syntaxErrors.add(error);
-    
-    // Optionally print the ambiguity details immediately
-        System.out.println("AMBIGUITY DETECTED: " + message);
-	}
+    }
 
     @Override
     public void reportAttemptingFullContext(Parser recognizer,
-                                      DFA dfa,
-                                      int startIndex,
-                                      int stopIndex,
-                                      BitSet conflictingAlts,
-                                      ATNConfigSet configs) {
-       if (!showFullContext) {
-            return; // Skip if we are not showing Full Context findings
-        }
-    // Get information about where this happened
+                                        DFA dfa,
+                                        int startIndex,
+                                        int stopIndex,
+                                        BitSet conflictingAlts,
+                                        ATNConfigSet configs)
+    {
+        if (!showFullContext) return;
+
         TokenStream tokens = recognizer.getInputStream();
-        String input = tokens.getText(new Interval(startIndex, stopIndex));
-        Token token = tokens.get(startIndex);
-    
-        String message = String.format(
-            "Full context parsing required at line %d:%d for input '%s' - " +
-            "This may indicate grammar inefficiency",
-            token.getLine(), token.getCharPositionInLine(), input);
-    
-    // Store for later analysis - this is often a performance warning, not an error
-        SyntaxError warning = new SyntaxError(
-            recognizer,
-            token,
-            token.getLine(),
-            token.getCharPositionInLine(),
-            message,
-            null);
-    
-        syntaxErrors.add(warning);
+        String text = (tokens == null) ? null : tokens.getText(Interval.of(startIndex, stopIndex));
+        String msg = "Attempting full context: " + Utils.escapeWhitespace(text, false);
+
+        Token token = safeTokenAt(recognizer, startIndex);
+        int line = token != null ? token.getLine() : -1;
+        int pos  = token != null ? token.getCharPositionInLine() : -1;
+
+        addDiagnostic(
+            ParseDiagnostic.Severity.WARNING,
+            "FULL_CONTEXT",
+            msg,
+            line >= 0 ? line : null,
+            pos >= 0 ? pos : null,
+            currentRuleName(recognizer),
+            token != null ? token.getText() : null,
+            true,
+            null
+        );
     }
 
     @Override
     public void reportContextSensitivity(Parser recognizer,
-                                       DFA dfa,
-                                       int startIndex,
-                                       int stopIndex,
-                                       int prediction,
-                                       ATNConfigSet configs) {
-     
-        if (!showContextSensitivity) {
-            return; // Skip if we are not showing Context Sensitivity findings
-        }
-        // Get information about where this happened
-        // This is where the parser had to make a decision based on context
-        // and could not resolve it with a single token lookahead.
-        // This often indicates a grammar that is too complex or ambiguous.
+                                     DFA dfa,
+                                     int startIndex,
+                                     int stopIndex,
+                                     int prediction,
+                                     ATNConfigSet configs)
+    {
+        if (!showContextSensitivity) return;
+
         TokenStream tokens = recognizer.getInputStream();
-        String input = tokens.getText(new Interval(startIndex, stopIndex));
-        Token token = tokens.get(startIndex);
-        
-        String message = String.format(
-            "Context sensitivity detected at line %d:%d for input '%s' - " +
-            "Parser chose alternative %d after full context analysis",
-            token.getLine(), token.getCharPositionInLine(),
-            input, prediction);
-        
-        // This is primarily useful for performance optimization and grammar debugging
-        SyntaxError info = new SyntaxError(
-            recognizer,
-            token,
-            token.getLine(),
-            token.getCharPositionInLine(),
-            message,
-            null);
-        
-        syntaxErrors.add(info);
+        String text = (tokens == null) ? null : tokens.getText(Interval.of(startIndex, stopIndex));
+        String msg = "Context sensitivity: " + Utils.escapeWhitespace(text, false);
+
+        Token token = safeTokenAt(recognizer, startIndex);
+        int line = token != null ? token.getLine() : -1;
+        int pos  = token != null ? token.getCharPositionInLine() : -1;
+
+        addDiagnostic(
+            ParseDiagnostic.Severity.WARNING,
+            "CONTEXT_SENSITIVITY",
+            msg,
+            line >= 0 ? line : null,
+            pos >= 0 ? pos : null,
+            currentRuleName(recognizer),
+            token != null ? token.getText() : null,
+            true,
+            null
+        );
     }
 
     @Override
@@ -197,15 +178,14 @@ public class ParseErrorListener  extends BaseErrorListener
                             int line, int charPositionInLine,
                             String msg, RecognitionException e)
     {
-         // Create and collect a SyntaxError object
-        SyntaxError error = new SyntaxError(recognizer, offendingSymbol, 
-                                line, charPositionInLine, msg, e);
-        syntaxErrors.add(error);
-}
+        addDiagnostic(ParseDiagnostic.Severity.FATAL, "SYNTAX_ERROR", msg,
+            line, charPositionInLine, null, offendingSymbol == null ? null : offendingSymbol.toString(), false,
+            e == null ? null : e.getClass().getSimpleName());
+    }
 
     @Override
     public String toString()
     {
-        return Utils.join(syntaxErrors.iterator(), "\n");
+        return Utils.join(diagnostics.iterator(), "\n");
     }
 }

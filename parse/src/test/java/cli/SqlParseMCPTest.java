@@ -111,14 +111,20 @@ public class SqlParseMCPTest {
                 parse.get("sqlTree").toString()
         );
         assertTrue(parse.has("symbolTable"));
-        assertEquals(
-                "{\"query0\":{\"mytable\":{\"*\":\"[@1,7:7='*',<289>,1:7]\"},\"interface\":{\"*\":{\"column\":{\"name\":\"*\",\"table_ref\":\"*\"}}}}}",
+    	System.out.println("Symbol Table: " + parse.get("symbolTable").toString());
+	    assertEquals(
+                "{\"query0\":{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]},\"interface\":{\"*\":[{\"name\":\"*\",\"table_ref\":\"*\"}]}}}",
                 parse.get("symbolTable").toString()
         );
         assertTrue(parse.has("tableDictionary"));
         assertEquals(
-                "{\"mytable\":{\"*\":\"[@1,7:7='*',<289>,1:7]\"}}",
+                "{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
                 parse.get("tableDictionary").toString()
+        );
+        assertTrue(parse.has("queryColumnDictionary"));
+        assertEquals(
+                "{\"query0\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
+                parse.get("queryColumnDictionary").toString()
         );
         assertTrue(parse.has("substitutionsMap"));
         assertEquals(
@@ -193,8 +199,9 @@ public class SqlParseMCPTest {
         JsonObject errors = result.getAsJsonObject("errors");
         assertTrue(errors.get("fatalErrorCount").getAsInt() > 0);
         assertTrue(errors.get("errors").isJsonArray());
+        System.out.println("Captured errors: " + errors.get("errors").toString());
         assertEquals(
-            "[\"Line 1:11 - null - unexpected input: 'join'\",\"Line 1:11 - Syntax error, attempting recovery\",\"Line 1:11 - Invalid syntax near 'join'\",\"Exception when walking the parse tree: Cannot invoke \\\"java.util.Map.remove(Object)\\\" because \\\"subMap\\\" is null\"]",
+            "[\"Line 1:11 - null - unexpected input: 'join'\",\"Exception when walking the parse tree: Cannot invoke \\\"java.util.Map.remove(Object)\\\" because \\\"subMap\\\" is null\"]",
             errors.get("errors").toString());
     }
 

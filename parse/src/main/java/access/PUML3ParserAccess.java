@@ -60,7 +60,9 @@ public class PUML3ParserAccess extends AbstractParserAccess {
 
         } catch (Exception e) {
             System.err.println("EXCEPTION when adding listener: " + e.getMessage());
-            e.printStackTrace();
+            for (StackTraceElement element : e.getStackTrace()) {
+                System.err.println("\tat " + element);
+            }
         }
  	}
 
@@ -126,9 +128,10 @@ public class PUML3ParserAccess extends AbstractParserAccess {
                 this.extractor.getInterface()
             );
             // Add the error and other messages to the Snippet object
+            snippet.setParserDiagnosticList(this.getAllDiagnostics());
             snippet.setParserMessageList(this.getAllErrors());
             snippet.setParserMessageStringList(this.getAllErrorStrings());
-            snippet.setFatalErrorStringList(this.getFatalErrorList());
+              snippet.setFatalErrorStringList(this.getFatalErrorList());
 
        } else {
             throw new IllegalStateException("Parser tree is null. Ensure the parser was run successfully.");    

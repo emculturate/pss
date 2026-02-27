@@ -40,7 +40,7 @@ public class SQLSelectParserFactory {
 		// Here we add a custom error listener to collect syntax errors.
 		// This allows us to gather all syntax errors encountered during parsing.
 		// The ParseErrorListener will collect errors and store them in a list.
-		// You can retrieve the errors later using the getSyntaxErrors() method.
+		// You can retrieve diagnostics later using the getDiagnostics() method.
 		ParseErrorListener errorListener = new ParseErrorListener(false,false,false);
         try {
 			parser.addErrorListener(errorListener);

@@ -1,22 +1,10 @@
 package access;
 
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import static mumble.MumbleConstants.MUMBLE_EXISTS_KEY;
-import static mumble.MumbleConstants.MUMBLE_INTERFACE_KEY;
-import static mumble.MumbleConstants.MUMBLE_IN_LIST_KEY;
-import static mumble.MumbleConstants.MUMBLE_PREDICAND_KEY;
-import static mumble.MumbleConstants.MUMBLE_UNKNOWN_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
@@ -179,238 +167,15 @@ public class SqlParserAccess extends AbstractParserAccess {
         // Save the results in a local Snippet object
         this.snippet = this.extractor.getSnippet();
 
-        // Post-parse validations
-        validateSingleSubqueryUnknownsAndReportErrors(this.snippet);
-        List<String> warnings = validateColumnCoverageWarnings(this.snippet);
 
         // Add the error and other messages to the Snippet object
+        snippet.setParserDiagnosticList(this.getAllDiagnostics());
         snippet.setParserMessageList(this.getAllErrors());
-        List<String> msgs = new ArrayList<>(this.getAllErrorStrings());
-        if (warnings != null && !warnings.isEmpty()) {
-            msgs.addAll(warnings);
-        }
-        snippet.setParserMessageStringList(msgs);
         snippet.setFatalErrorStringList(this.getFatalErrorList());
 
         } else {
             throw new IllegalStateException("Parser tree is null. Ensure the parser was run successfully.");    
         }
-    }
-
-    /**
-     * If the top-level symbol table has exactly one source and it is a subquery (e.g., "query0"),
-     * and there are unknown (unqualified) column references, then verify those columns exist in the
-     * subquery's interface. If a column is not present, add a runtime error to the access error list.
-     */
-    @SuppressWarnings("unchecked")
-    private void validateSingleSubqueryUnknownsAndReportErrors(Snippet snippet) {
-        if (snippet == null || snippet.getSymbolTable() == null) {
-            return;
-        }
-
-        Map<String, Object> sym = snippet.getSymbolTable();
-
-        int sourceCount = 0;
-        String onlySourceKey = null;
-        for (String key : sym.keySet()) {
-            Object v = sym.get(key);
-            if (!(v instanceof Map)) {
-                continue;
-            }
-            if (key.equals(MUMBLE_INTERFACE_KEY) || key.startsWith("def_")
-               || key.startsWith(MUMBLE_PREDICAND_KEY) || key.startsWith(MUMBLE_EXISTS_KEY)
-               || key.startsWith(MUMBLE_IN_LIST_KEY)) {
-                continue;
-            }
-            sourceCount++;
-            onlySourceKey = key;
-        }
-
-        Map<String, Object> unknowns = (Map<String, Object>) sym.get(MUMBLE_UNKNOWN_KEY);
-        if (sourceCount == 1 && onlySourceKey != null && onlySourceKey.startsWith("query") && unknowns != null && !unknowns.isEmpty()) {
-            Map<String, Object> subq = (Map<String, Object>) sym.get(onlySourceKey);
-            Map<String, Object> iface = subq == null ? null : (Map<String, Object>) subq.get(MUMBLE_INTERFACE_KEY);
-
-            for (String col : unknowns.keySet()) {
-                boolean inInterface = iface != null && iface.containsKey(col);
-                if (!inInterface) {
-                    this.addFatalError("Unqualified column '" + col + "' not found in single FROM subquery interface (" + onlySourceKey + ")");
-                }
-            }
-        }
-    }
-
-    /**
-     * Non-fatal coverage warnings across all sources:
-     * - For each unqualified column in UNKNOWN: warn if found in multiple sources (ambiguous),
-     *   or warn if not found in any source (unmatched).
-     * - For each column recorded under a subquery source, warn if not present in that subquery's interface.
-     * - For each column recorded under a table source, warn if not present in that table's dictionary.
-     */
-    @SuppressWarnings("unchecked")
-    private List<String> validateColumnCoverageWarnings(Snippet snippet) {
-        List<String> warnings = new ArrayList<>();
-        if (snippet == null || snippet.getSymbolTable() == null) {
-            return warnings;
-        }
-
-        Map<String, Object> sym = snippet.getSymbolTable();
-        Map<String, Object> dict = snippet.getTableDictionary();
-
-        Map<String, Set<String>> sourceColumns = new HashMap<>();
-
-        for (String key : sym.keySet()) {
-            Object v = sym.get(key);
-            if (!(v instanceof Map)) {
-                continue; // skip alias entries mapping to strings
-            }
-            if (key.equals(MUMBLE_INTERFACE_KEY) || key.startsWith("def_")
-               || key.startsWith(MUMBLE_PREDICAND_KEY) || key.startsWith(MUMBLE_EXISTS_KEY)
-               || key.startsWith(MUMBLE_IN_LIST_KEY)) {
-                continue;
-            }
-
-            if (key.startsWith("query") || key.startsWith("union") || key.startsWith("intersect") || key.startsWith("values")) {
-                Map<String, Object> subq = (Map<String, Object>) v;
-                Map<String, Object> iface = (Map<String, Object>) subq.get(MUMBLE_INTERFACE_KEY);
-                Set<String> cols = (iface == null) ? java.util.Set.of() : iface.keySet();
-                sourceColumns.put(key, cols);
-            } else {
-                String ref = key.startsWith("<") ? key : key.toLowerCase();
-                Map<String, Object> tableCols = (Map<String, Object>) dict.get(ref);
-                Set<String> cols = (tableCols == null) ? java.util.Set.of() : tableCols.keySet();
-                sourceColumns.put(key, cols);
-            }
-        }
-
-        java.util.function.Function<String, Integer> countMatches = (col) -> {
-            int n = 0;
-            for (Set<String> cols : sourceColumns.values()) {
-                if (cols.contains(col)) {
-                    n++;
-                }
-            }
-            return n;
-        };
-
-        Map<String, Object> unknowns = (Map<String, Object>) sym.get(MUMBLE_UNKNOWN_KEY);
-        if (unknowns != null && !unknowns.isEmpty()) {
-            for (String col : unknowns.keySet()) {
-                int n = countMatches.apply(col);
-                if (n == 0) {
-                    warnings.add("Unqualified column '" + col + "' not found in any source");
-                } else if (n > 1) {
-                    warnings.add("Ambiguous unqualified column '" + col + "' found in " + n + " sources");
-                }
-            }
-        }
-
-        // Interface coverage checks respecting alias semantics:
-        // For each query-like source's interface, resolve the alias reference:
-        // - If the interface entry references a column with a specific table_ref source, check that source has the column.
-        // - If table_ref is null and the query has exactly one local source, check that single source has the column.
-        // - Otherwise, if table_ref is null and multiple local sources exist, emit an ambiguity warning.
-        for (String queryKey : sym.keySet()) {
-            Object q = sym.get(queryKey);
-            if (!(q instanceof Map)) {
-                continue;
-            }
-            if (!(queryKey.startsWith("query") || queryKey.startsWith("union") || queryKey.startsWith("intersect") || queryKey.startsWith("values"))) {
-                continue;
-            }
-            Map<String, Object> qmap = (Map<String, Object>) q;
-            Map<String, Object> iface = (Map<String, Object>) qmap.get(MUMBLE_INTERFACE_KEY);
-            if (iface == null || iface.isEmpty()) {
-                continue;
-            }
-            // Build local sources for this query
-            Map<String, Set<String>> localSources = new HashMap<>();
-            for (String k : qmap.keySet()) {
-                if (k.equals(MUMBLE_INTERFACE_KEY) || k.startsWith("def_")) {
-                    continue;
-                }
-                Object vv = qmap.get(k);
-                if (vv instanceof Map) {
-                    Map<String, Object> tcols = (Map<String, Object>) vv;
-                    localSources.put(k, tcols.keySet());
-                }
-            }
-            int localCount = localSources.size();
-
-            for (Map.Entry<String, Object> entry : iface.entrySet()) {
-                String alias = entry.getKey();
-                Object ref = entry.getValue();
-                if (!(ref instanceof Map)) {
-                    continue;
-                }
-                Map<String, Object> refMap = (Map<String, Object>) ref;
-                Map<String, Object> col = (Map<String, Object>) refMap.get("column");
-                if (col == null) {
-                    // Not a plain column reference; skip (could be expression/subquery)
-                    continue;
-                }
-                String colName = (String) col.get("name");
-                Object tr = col.get("table_ref");
-                String tableRef = (tr == null) ? null : tr.toString();
-
-                if (tableRef != null) {
-                    // Check specific source
-                    Set<String> cols = localSources.getOrDefault(tableRef, java.util.Set.of());
-                    if (!cols.contains(colName)) {
-                        warnings.add("Interface alias '" + alias + "' references column '" + colName + "' not found in source '" + tableRef + "' of '" + queryKey + "'");
-                    }
-                } else {
-                    // Unqualified: single local source -> check that one; multiple -> ambiguity
-                    if (localCount == 1) {
-                        String onlySrc = localSources.keySet().stream().findFirst().orElse(null);
-                        Set<String> cols = (onlySrc == null) ? java.util.Set.of() : localSources.getOrDefault(onlySrc, java.util.Set.of());
-                        if (!cols.contains(colName)) {
-                            warnings.add("Interface alias '" + alias + "' references column '" + colName + "' not found in single source '" + onlySrc + "' of '" + queryKey + "'");
-                        }
-                    } else if (localCount > 1) {
-                        int n = 0;
-                        for (Set<String> cols : localSources.values()) {
-                            if (cols.contains(colName)) {
-                                n++;
-                            }
-                        }
-                        if (n == 0) {
-                            warnings.add("Interface alias '" + alias + "' references column '" + colName + "' not found in any source of '" + queryKey + "'");
-                        } else if (n > 1) {
-                            warnings.add("Ambiguous interface alias '" + alias + "' for column '" + colName + "' found in " + n + " sources of '" + queryKey + "'");
-                        }
-                    }
-                }
-            }
-        }
-
-        for (String source : sym.keySet()) {
-            Object v = sym.get(source);
-            if (!(v instanceof Map)) {
-                continue;
-            }
-            if (source.equals(MUMBLE_INTERFACE_KEY) || source.startsWith("def_")) {
-                continue;
-            }
-
-            Map<String, Object> entries = (Map<String, Object>) v;
-            Set<String> available = sourceColumns.getOrDefault(source, java.util.Set.of());
-
-            for (String col : entries.keySet()) {
-                if (col.equals(MUMBLE_INTERFACE_KEY)) {
-                    continue;
-                }
-                Object val = entries.get(col);
-                if (!(val instanceof String)) {
-                    continue;
-                }
-                if (!available.contains(col)) {
-                    warnings.add("Column '" + col + "' under source '" + source + "' not present in declared columns");
-                }
-            }
-        }
-
-        return warnings;
     }
 
 }

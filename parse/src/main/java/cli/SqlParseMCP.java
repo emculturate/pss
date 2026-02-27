@@ -102,6 +102,7 @@ When ok is true, the object includes:
   parse.sqlTree: A structured representation of the SQL query (type, selectList, fromClause, whereClause, etc.). Use this to explain the logical structure of the query to the user (what the query selects, from which tables, and how joins/filters work).
   parse.substitutionsMap: Shows variable names and types which need to be resolved in order to actually run the query. Variable types represent specific locations in a SQL statement and must be filled only with syntactically correct substitutions for that type. A very common variable will be the "tuple" type variable which represents a pseudo-name for a table or subquery representing the data given by the name of the variable (for example mapping <[Panto_JMN_Fulfillment].[academic_period_lkp]> to the logical name academic_period_lkp). Use this to clarify how placeholders or logical names map to an actual table containing academic periods, or to a subquery, view or With statement CTE that contains that type of data.
   parse.tableDictionary: Dictionary of tables referenced in the query. Columns are listed within the table (or tuple object, e.g., view, CTE or tuple substitution variable) Use this when the user asks about which columns are referenced or where in the query they appear.
+  parse.queryColumnDictionary: Dictionary of query-level columns referenced and surfaced while building nested query context. Use this to understand how columns are discovered and propagated in nested query scopes.
   parse.symbolTable: Information about tables, aliases, column names introduced at each level of nested subquery. Use this to explain how column names are introduced at each level and act as aliases for column names at deeper levels of the nest.
   parse.queryInterface: Each Select statement has its own set of output columns. This is the interface that the select statement produces when it is run successfully. Use this to describe what attributes of the represented objects are output for each row.
   parse.messages: Additional info about the parse operation. Sometimes the parser can be called with additional flags to report on such things as ambiguities in the grammar, and the number of retries it needed to find a succssful parse.
@@ -195,6 +196,8 @@ When ok is true, you should:
             parseResult.add("symbolTable", jstr);
             jstr = gson.toJsonTree(snippet.getTableDictionary());
             parseResult.add("tableDictionary", jstr);
+            jstr = gson.toJsonTree(snippet.getQueryColumnDictionaryMap());
+            parseResult.add("queryColumnDictionary", jstr);
             jstr = gson.toJsonTree(snippet.getSubstitutionsMap());
             parseResult.add("substitutionsMap", jstr);
             jstr = gson.toJsonTree(snippet.getQueryInterface());

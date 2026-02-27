@@ -1,5 +1,6 @@
 package access;
 
+import errorhandling.ParseDiagnostic;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -61,10 +62,33 @@ public class ParserAccessClassTest
     {
         assertTrue( true );
         SqlParserAccess parserAccess = new SqlParserAccess(true, true, true);
-        String stmt = "(SYSDATE + SYSDATE)";
+        String stmt = "from (SYSDATE + SYSDATE)";
         parserAccess.executeTheParse(stmt, SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY);
         Snippet snippet = parserAccess.getSnippet();
         System.out.println(snippet.toString());
+    }
+
+    public void testBadSQLCollectsFatalErrors()
+    {
+        SqlParserAccess parserAccess = new SqlParserAccess(true, true, true);
+        String badSql = "SELECT FROM";
+
+        parserAccess.executeTheParse(badSql, SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY);
+
+        assertTrue(parserAccess.hasFatalErrors());
+        assertNotNull(parserAccess.getFatalErrorList());
+        assertFalse(parserAccess.getFatalErrorList().isEmpty());
+
+        Snippet snippet = parserAccess.getSnippet();
+        System.out.println(snippet.toString());
+
+        assertNotNull(snippet);
+        assertNotNull(snippet.getFatalErrorStringList());
+        assertFalse(snippet.getFatalErrorStringList().isEmpty());
+        assertNotNull(snippet.getParserDiagnosticList());
+        assertTrue(snippet.getParserDiagnosticList().stream()
+            .anyMatch(d -> d.severity() == ParseDiagnostic.Severity.FATAL));
+        assertEquals(snippet.getFatalErrorCount(), snippet.getFatalErrorStringList().size());
     }
 
 }

@@ -29,20 +29,55 @@ import org.antlr.v4.runtime.Token;
  */
 public class ParseErrorCollector implements ANTLRErrorStrategy {
 
-	private final List<String> errorList = new ArrayList<String> ();
+	private final List<String> errorList = new ArrayList<>();
+	private final List<ParseDiagnostic> diagnostics = new ArrayList<>();
 	
 	public List<String> getErrorList() {
 		return errorList;
 	}
 
+	public List<ParseDiagnostic> getDiagnostics() {
+		return diagnostics;
+	}
+
 	public int getErrorCount() {
 		return errorList.size();
+	}
+
+	private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message, Token token,
+			boolean recoverable, String exceptionType) {
+		Integer line = token == null ? null : token.getLine();
+		Integer pos = token == null ? null : token.getCharPositionInLine();
+		String tokenText = token == null ? null : token.getText();
+		diagnostics.add(new ParseDiagnostic(
+				severity,
+				code,
+				message,
+				line,
+				pos,
+				"ParseErrorCollector",
+				null,
+				tokenText,
+				recoverable,
+				"parse.strategy",
+				exceptionType,
+				null));
 	}
 	
 	public void addError(String errorMessage) {
 		// This method adds an error message to the error list.
 		errorList.add(errorMessage);
+		addDiagnostic(ParseDiagnostic.Severity.ERROR, "MANUAL_ERROR", errorMessage, null, false, null);
 	}	
+
+	public void addFatalError(String errorMessage) {
+		errorList.add(errorMessage);
+		addDiagnostic(ParseDiagnostic.Severity.FATAL, "MANUAL_FATAL", errorMessage, null, false, null);
+	}
+
+	public void addWarning(String warningMessage) {
+		addDiagnostic(ParseDiagnostic.Severity.WARNING, "MANUAL_WARNING", warningMessage, null, true, null);
+	}
 	
 	@Override
 	public void reset(Parser recognizer) {
@@ -61,6 +96,7 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 			currentToken.getCharPositionInLine(), 
 			currentToken.getText());
 		errorList.add(errorMessage);
+		addDiagnostic(ParseDiagnostic.Severity.WARNING, "RECOVER_INLINE", errorMessage, currentToken, true, null);
 		
 		// Return the current token to continue parsing
 		return currentToken;
@@ -69,10 +105,13 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	@Override
 	public void recover(Parser recognizer, RecognitionException e) throws RecognitionException {
 	    // Add the error to our list
+		Token offendingToken = e == null ? null : e.getOffendingToken();
 		String errorMessage = String.format("Line %d:%d - Syntax error, attempting recovery", 
-        e.getOffendingToken().getLine(),
-        e.getOffendingToken().getCharPositionInLine());
+		offendingToken == null ? -1 : offendingToken.getLine(),
+		offendingToken == null ? -1 : offendingToken.getCharPositionInLine());
     	errorList.add(errorMessage);
+		addDiagnostic(ParseDiagnostic.Severity.WARNING, "RECOVER", errorMessage, offendingToken, true,
+				e == null ? null : e.getClass().getSimpleName());
     
     	// Consume until we find a token that might get us back on track
     	recognizer.consume();
@@ -98,18 +137,21 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 
 	@Override
 	public void reportError(Parser recognizer, RecognitionException e) {
+		Token offendingToken = e == null ? null : e.getOffendingToken();
 	    String errorMessage = String.format("Line %d:%d - %s", 
-        e.getOffendingToken().getLine(),
-        e.getOffendingToken().getCharPositionInLine(),
-        e.getMessage());
+		offendingToken == null ? -1 : offendingToken.getLine(),
+		offendingToken == null ? -1 : offendingToken.getCharPositionInLine(),
+		e == null ? "Unknown parser error" : e.getMessage());
     
     	// Add more context about the error
-    	String unexpectedInput = e.getOffendingToken().getText();
+		String unexpectedInput = offendingToken == null ? null : offendingToken.getText();
     	if (unexpectedInput != null) {
      	   errorMessage += " - unexpected input: '" + unexpectedInput + "'";
     	}
     
     	errorList.add(errorMessage);
+		addDiagnostic(ParseDiagnostic.Severity.FATAL, "REPORT_ERROR", errorMessage, offendingToken, false,
+				e == null ? null : e.getClass().getSimpleName());
 	}
 
 }

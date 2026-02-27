@@ -13,8 +13,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import errorhandling.ParseErrorCollector;
+import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorListener;
-import errorhandling.SyntaxError;
 import static mumble.SQLParserEndPoints.*;
 
 import sql.SQLSelectParserParser;
@@ -9472,6 +9472,7 @@ public class SqlParseEventWalkerTest {
 		
 		
 		// END OF VALUES STATEMENT TESTING
+
 		
 	// *****************************
 	// COMMON TEST METHODS
@@ -9502,8 +9503,8 @@ public class SqlParseEventWalkerTest {
 				// check for Syntax Errors Captured by the Listeners
 				List<?> listeners = parser.getErrorListeners();
 				for (Object listener : listeners) {
-					if (listener instanceof ParseErrorListener){
-						System.out.println(listener.getClass().getName() + " Syntax Errors: " + ((ParseErrorListener) listener).getSyntaxErrors());
+					if (listener instanceof ParseErrorListener parseErrorListener){
+						System.out.println(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
 					}
 				}
 			}
@@ -9725,10 +9726,10 @@ public class SqlParseEventWalkerTest {
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
 			for (Object listener : listeners) {
-				if (listener instanceof ParseErrorListener){
+				if (listener instanceof ParseErrorListener parseErrorListener){
 					System.out.println(listener.getClass().getName() 
-					+ " found Syntax errors: " 
-					+ ((ParseErrorListener) listener).getSyntaxErrors());
+					+ " found Diagnostics: " 
+					+ parseErrorListener.getDiagnostics());
 				}
 			}
 			return extractor;
@@ -9742,8 +9743,8 @@ public class SqlParseEventWalkerTest {
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
 			for (Object listener : listeners) {
-				if (listener instanceof ParseErrorListener){
-					System.out.println(listener.getClass().getName() + " Syntax Errors: " + ((ParseErrorListener) listener).getSyntaxErrors());
+				if (listener instanceof ParseErrorListener parseErrorListener){
+					System.out.println(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
 				}
 			}
 			
@@ -9761,13 +9762,13 @@ public class SqlParseEventWalkerTest {
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
 			for (Object listener : listeners) {
-				if (listener instanceof ParseErrorListener){
-					for (SyntaxError item : ((ParseErrorListener) listener).getSyntaxErrors()) {
+				if (listener instanceof ParseErrorListener parseErrorListener){
+					for (ParseDiagnostic item : parseErrorListener.getDiagnostics()) {
 						errorList.add(item.toString());
 					}					
 					System.out.println(listener.getClass().getName() 
-						+ " found Syntax errors: " 
-						+ ((ParseErrorListener) listener).getSyntaxErrors());
+						+ " found Diagnostics: " 
+						+ parseErrorListener.getDiagnostics());
 							}}
 			// check for Syntax Errors Captured by the ParseErrorCollector
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();

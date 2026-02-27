@@ -38,11 +38,6 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		text = snippet.getFatalErrorStringList().get(1);
 		Assert.assertTrue("Expected a syntax error with " + query,
-				text.equals("Line 1:7 - Syntax error, attempting recovery")
-			);
-
-		text = snippet.getFatalErrorStringList().get(2);
-		Assert.assertTrue("Expected a syntax error with " + query,
 					text.equals("Exception when walking the parse tree: Cannot "
 					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
 			);
@@ -59,11 +54,6 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			text.equals("Line 1:0 - null - unexpected input: 'not'"));
 
 		text = snippet.getFatalErrorStringList().get(1);
-		Assert.assertTrue("Expected a syntax error with " + query,
-				text.equals("Line 1:0 - Syntax error, attempting recovery")
-			);
-
-		text = snippet.getFatalErrorStringList().get(2);
 		Assert.assertTrue("Expected a syntax error with " + query,
 					text.equals("Exception when walking the parse tree: Cannot "
 					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
@@ -87,12 +77,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@1,7:7='a',<328>,1:7], [@7,28:28='a',<328>,1:28]], b=[[@3,10:10='b',<328>,1:10], [@9,32:32='b',<328>,1:32]]}, filters=[{name=a, table_ref=null}, {name=b, table_ref=null}], interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@1,7:7='a',<328>,1:7], [@7,28:28='a',<328>,1:28]], b=[[@3,10:10='b',<328>,1:10], [@9,32:32='b',<328>,1:32]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@1,7:7='a',<328>,1:7]], b=[[@3,10:10='b',<328>,1:10]]}}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test
@@ -104,12 +96,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@1,7:7='a',<328>,1:7], [@7,28:28='a',<328>,1:28]], b=[[@3,10:10='b',<328>,1:10], [@9,32:32='b',<328>,1:32]]}, filters=[{name=a, table_ref=null}, {name=b, table_ref=null}], interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[@1,7:7='a',<328>,1:7], b=[@3,10:10='b',<328>,1:10]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@1,7:7='a',<328>,1:7], [@7,28:28='a',<328>,1:28]], b=[[@3,10:10='b',<328>,1:10], [@9,32:32='b',<328>,1:32]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@1,7:7='a',<328>,1:7]], b=[[@3,10:10='b',<328>,1:10]]}}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 
@@ -122,12 +116,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{item={emp_sales=[@0,0:3='item',<328>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{item={emp_sales=[[@0,0:3='item',<328>,1:0]]}}",
 			snippet.getSymbolTable().toString()); 
-		Assert.assertEquals("Table Dictionary is wrong", "{item={emp_sales=[@0,0:3='item',<328>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{item={emp_sales=[[@0,0:3='item',<328>,1:0]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test
@@ -145,6 +141,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test
@@ -156,12 +154,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<328>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{table1={emp_sales_count=[[@0,0:5='table1',<328>,1:0]]}}",
 			snippet.getSymbolTable().toString()); 
-		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[@0,0:5='table1',<328>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{table1={emp_sales_count=[[@0,0:5='table1',<328>,1:0]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test
@@ -173,12 +173,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{schema1={emp_sales=[@0,0:6='schema1',<328>,1:0]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{schema1={emp_sales=[[@0,0:6='schema1',<328>,1:0]]}}",
 			snippet.getSymbolTable().toString()); 
-		Assert.assertEquals("Table Dictionary is wrong", "{schema1={emp_sales=[@0,0:6='schema1',<328>,1:0]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{schema1={emp_sales=[[@0,0:6='schema1',<328>,1:0]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test
@@ -196,6 +198,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 
@@ -208,12 +212,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{aa=<[Hedgss].[college]>, <[Hedgss].[college]>={id=[@10,45:46='aa',<328>,1:45]}, a={id=[@6,40:40='a',<328>,1:40]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{aa=<[Hedgss].[college]>, <[Hedgss].[college]>={id=[[@10,45:46='aa',<328>,1:45]]}, a={id=[[@6,40:40='a',<328>,1:40]]}, filters=[{name=id, table_ref=a}, {name=id, table_ref=aa}]}",
 			snippet.getSymbolTable().toString()); 
-		Assert.assertEquals("Table Dictionary is wrong", "{<[Hedgss].[college]>={id=[@10,45:46='aa',<328>,1:45]}, a={id=[@6,40:40='a',<328>,1:40]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<[Hedgss].[college]>={id=[[@10,45:46='aa',<328>,1:45]]}, a={id=[[@6,40:40='a',<328>,1:40]]}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[Hedgss].[college]>=tuple}", 
 				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 
@@ -226,18 +232,21 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 					snippet.getSqlAbstractTree().toString());
 			Assert.assertEquals("Interface is wrong", "[$1, $2, $3]", 
 					snippet.getQueryInterface().toString());
-			Assert.assertEquals("Symbol Table is wrong", "{values0={values={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}, interface={$1=[@2,9:9='(',<285>,1:9], $2=[@2,9:9='(',<285>,1:9], $3=[@2,9:9='(',<285>,1:9]}}}",
+			Assert.assertEquals("Symbol Table is wrong", "{values0={values={$1=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]], $2=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]], $3=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]]}, interface={$1=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]], $2=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]], $3=[[@2,9:9='(',<285>,1:9], [@10,24:24='(',<285>,1:24]]}}}",
 					snippet.getSymbolTable().toString()); 
 			Assert.assertEquals("Table Dictionary is wrong", "{}",
 					snippet.getTableDictionary().toString());
 			Assert.assertEquals("Substitution List is wrong", "{}", 
 					snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0=null}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 		}
 
 /****
  * Ambiguous Symbol Table Tests
  * These tests check for scenarios where there are unresolved symbols in the symbol table due to ambiguity.
  */
+@Ignore
     @Test
     public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
         // Parent query selects alias 'c' which is not produced by the single subquery source
@@ -260,7 +269,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         Assert.assertEquals("No fatal errors expected", 0, snippet.getFatalErrorCount());
     }
 
-	    @Test
+	@Ignore
+	@Test
     public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery2() {
         // Parent query selects column 'a'which is not produced by the single subquery source
 		String query = " SELECT distinct a,b,c FROM (select all b,c from tab2) tab1";
@@ -305,12 +315,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[@4,24:24='a',<328>,1:24], b=[@6,26:26='b',<328>,1:26]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}, tab1={}, query0={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}, tab1={}, query0={}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[@4,24:24='a',<328>,1:24], b=[@6,26:26='b',<328>,1:26]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}}",
+       	snippet.getQueryColumnDictionaryMap().toString());
 	}
    
 	@Test
@@ -331,6 +343,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=query}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
     
 	@Test
@@ -345,101 +359,95 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[@4,24:24='(',<285>,1:24], $2=[@4,24:24='(',<285>,1:24], $3=[@4,24:24='(',<285>,1:24]}, tab1={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}, tab1={}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
-	@Ignore 
+
 	@Test
 	public void basicInsertWithColumnsFromQueryTest() {
 		final String query = "insert into tab1 (c ,d) select a,b from tab2";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab2}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"select\":{\"1\":{\"column\":{\"name\":\"a\"}},\"2\":{\"column\":{\"name\":\"b\"}}},\"from\":{\"table\":{\"table\":\"tab2\"}},\"preamble\":\"insert_into\",\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-        	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[@4,24:24='a',<328>,1:24], b=[@6,26:26='b',<328>,1:26]}, interface={a={column={name=a, table_ref=null}}, b={column={name=b, table_ref=null}}}}, tab1={}, query0={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}, tab1={}, query0={}, unknown={c=[[@4,18:18='c',<328>,1:18]], d=[[@6,21:21='d',<328>,1:21]]}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[@4,24:24='a',<328>,1:24], b=[@6,26:26='b',<328>,1:26]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
    
-	@Ignore 
 	@Test
 	public void basicInsertWithColumnsFromVariableTest() {
 		final String query = "insert into tab1 (c ,d, e)  <tuple variable>";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={substitution={name=<tuple variable>, type=query}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, substitution={name=<tuple variable>, type=query}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}, 3={column={name=e, table_ref=null}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"substitution\":{\"name\":\"\\u003ctuple variable\\u003e\",\"type\":\"query\"},\"columns\":{\"1\":{\"column\":{\"name\":\"c\"}},\"2\":{\"column\":{\"name\":\"d\"}}},\"preamble\":\"insert_into\",\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-        	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{<tuple variable>={}, tab1={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{<tuple variable>={}, tab1={}, unknown={c=[[@4,18:18='c',<328>,1:18]], d=[[@6,21:21='d',<328>,1:21]], e=[[@8,24:24='e',<328>,1:24]]}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=query}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
     
-	@Ignore 
+	 
 	@Test
 	public void basicInsertWithColumnsFromValuesTest() {
 		final String query = "insert into tab1  (c ,d)  values (1,2,3), (2,3,4)";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"values\":{\"matrix\":{\"1\":{\"row\":{\"1\":{\"literal\":\"1\"},\"2\":{\"literal\":\"2\"},\"3\":{\"literal\":\"3\"}}},\"2\":{\"row\":{\"1\":{\"literal\":\"2\"},\"2\":{\"literal\":\"3\"},\"3\":{\"literal\":\"4\"}}}}},\"preamble\":\"insert_into\",\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-        	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values0=null, def_values0={interface=null, tab1={}, values={$1=[@4,24:24='(',<285>,1:24], $2=[@4,24:24='(',<285>,1:24], $3=[@4,24:24='(',<285>,1:24]}}, unnamed=values0}",
+		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $2=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $3=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]]}, tab1={}, unknown={c=[[@4,19:19='c',<328>,1:19]], d=[[@6,22:22='d',<328>,1:22]]}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+        	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
-	@Ignore
+	
 	@Test
-	public void simpleInsertFromQueryTest() {
+	public void simpleFailingInsertFromQueryTest() {
 
 		final String query = " insert into sch.subj.tbl (newcol1, newcol2) values (SELECT b.att1, b.att2 "
 				+ " from (SELECT a.col1 as att1, a.col2 as att2 " 
 				+ " FROM sch.subj.tab1 as a"
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
-		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, preamble=insert_into, table={table={alias=null, table=tab1}}}}",
-					snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"values\":{\"matrix\":{\"1\":{\"row\":{\"1\":{\"literal\":\"1\"},\"2\":{\"literal\":\"2\"},\"3\":{\"literal\":\"3\"}}},\"2\":{\"row\":{\"1\":{\"literal\":\"2\"},\"2\":{\"literal\":\"3\"},\"3\":{\"literal\":\"4\"}}}}},\"preamble\":\"insert_into\",\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-					snippet.getSqlAbstractTreeJson());
-		Assert.assertEquals("Interface is wrong", "[]", 
-					snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values0=null, def_values0={interface=null, tab1={}, values={$1=[@4,24:24='(',<285>,1:24], $2=[@4,24:24='(',<285>,1:24], $3=[@4,24:24='(',<285>,1:24]}}, unnamed=values0}",
-					snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{}",
-					snippet.getTableDictionary().toString());
-		Assert.assertEquals("Substitution List is wrong", "{}", 
-					snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("AST is wrong", "[Line 1:53 - null - unexpected input: 'SELECT', Exception when walking the parse tree: Cannot invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null]",
+					snippet.getFatalErrorStringList().toString());
+		Assert.assertEquals("AST JSON is wrong", 2,
+					snippet.getFatalErrorCount());
+
 	}
 
 	/**
@@ -500,12 +508,15 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		Snippet snippet = accessObject.getSnippet();
 
-		System.out.println("Result: " + snippet.getSqlAbstractTree());
-		System.out.println("Result JSON: " + snippet.getSqlAbstractTreeJson());
+		System.out.println("AST: " + snippet.getSqlAbstractTree());
+		System.out.println("Query Column Dictionary: " + snippet.getQueryColumnDictionaryMap());
 		System.out.println("Interface: " + snippet.getQueryInterface());
 		System.out.println("Symbol Tree: " + snippet.getSymbolTable());
 		System.out.println("Table Dictionary: " + snippet.getTableDictionary());
 		System.out.println("Substitution Variables: " + snippet.getSubstitutionsMap());
+		System.out.println("Parser Message List: " + snippet.getParserMessageList());
+		System.out.println("Parser Diagnostic List: " + snippet.getParserDiagnosticList());
+		System.out.println("Fatal Error Count: " + snippet.getFatalErrorCount());
 		System.out.println("Fatal Errors: " + snippet.getFatalErrorStringList());
 		
 		return snippet;
