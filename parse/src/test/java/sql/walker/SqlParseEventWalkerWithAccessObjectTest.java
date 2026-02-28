@@ -33,12 +33,36 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			int expectedLine,
 			int expectedCharPositionInLine,
 			String expectedColumnNameInMessage) {
+		assertUnresolvedUnknownColumnsFatalDiagnostic(
+				snippet,
+				expectedLine,
+				expectedCharPositionInLine,
+				expectedColumnNameInMessage,
+				0,
+				null);
+	}
+
+	private void assertUnresolvedUnknownColumnsFatalDiagnostic(
+			Snippet snippet,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedColumnNameInMessage,
+			int fatalErrorIndex,
+			String expectedFatalErrorText) {
 		Assert.assertNotNull("Snippet should not be null", snippet);
 		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+		Assert.assertNotNull("Fatal error list should not be null", snippet.getFatalErrorStringList());
+		Assert.assertTrue("Fatal error index out of bounds: " + fatalErrorIndex,
+				fatalErrorIndex >= 0 && fatalErrorIndex < snippet.getFatalErrorStringList().size());
 
 		ParseDiagnostic unresolvedUnknown = null;
 		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
-			if (diagnostic != null && "UNRESOLVED_UNKNOWN_COLUMNS".equals(diagnostic.code())) {
+			if (diagnostic != null
+					&& "UNRESOLVED_UNKNOWN_COLUMNS".equals(diagnostic.code())
+					&& ((diagnostic.tokenText() != null
+							&& diagnostic.tokenText().contains(expectedColumnNameInMessage))
+						|| (diagnostic.message() != null
+								&& diagnostic.message().contains(expectedColumnNameInMessage + " (l:")))) {
 				unresolvedUnknown = diagnostic;
 				break;
 			}
@@ -58,8 +82,11 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertTrue("Diagnostic token text should include unknown column " + expectedColumnNameInMessage,
 				unresolvedUnknown.tokenText() != null
 						&& unresolvedUnknown.tokenText().contains(expectedColumnNameInMessage));
-		Assert.assertEquals("Expected one fatal diagnostic for unresolved unknown columns", 1,
-				snippet.getFatalErrorCount());
+		if (expectedFatalErrorText != null) {
+			String fatalErrorText = snippet.getFatalErrorStringList().get(fatalErrorIndex);
+			Assert.assertEquals("Unexpected fatal error text at index " + fatalErrorIndex,
+					expectedFatalErrorText, fatalErrorText);
+		}
 	}
 
    
@@ -297,6 +324,44 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
+	}
+
+	@Test
+	public void ambiguousColumnAllocationInNestedSubqueriesDiagnosticsTest() {
+		// Tests collection of fatal errors in two different subqueries where columns are not defined by their input subqueries
+
+		final String query = " select dd.a aa, cc.b, c from " 
+		+ "\n (select x as a from tab1) dd join (select y as b, missing from "
+		+ "\n (select z as y from tab2) ee) cc on dd.a = cc.b";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, query={select={1={column={name=x, table_ref=null}, alias=a}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=a, table_ref=dd}}, right={column={name=b, table_ref=cc}}, operator==}}}, 3={table={alias=cc, query={select={1={column={name=y, table_ref=null}, alias=b}, 2={column={name=missing, table_ref=null}}}, from={table={alias=ee, query={select={1={column={name=z, table_ref=null}, alias=y}}, from={table={alias=null, table=tab2}}}}}}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={x=[[@14,40:40='x',<328>,2:9]]}, tab2={z=[[@32,105:105='z',<328>,3:9]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@16,45:45='a',<328>,2:14]]}, query1={y=[[@34,110:110='y',<328>,3:14]]}, query2={b=[[@26,79:79='b',<328>,2:48]], missing=[[@28,82:88='missing',<328>,2:51]]}, query3={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={dd=query0, cc=query2, def_query0={tab1={x=[[@14,40:40='x',<328>,2:9]]}, interface={a=[{name=x, table_ref=null}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], query0={a=[[@1,8:9='dd',<328>,1:8], [@42,133:134='dd',<328>,3:37]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, query2={b=[[@6,17:18='cc',<328>,1:17], [@46,140:141='cc',<328>,3:44]]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}, def_query2={ee=query1, def_query1={tab2={z=[[@32,105:105='z',<328>,3:9]]}, interface={y=[{name=z, table_ref=null}]}}, interface={b=[{name=y, table_ref=null}], missing=[{name=missing, table_ref=null}]}, query1={y=[[@24,74:74='y',<328>,2:43]]}, unknown={missing=[[@28,82:88='missing',<328>,2:51]]}}}}",
+				snippet.getSymbolTable().toString());
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(
+				snippet,
+				2,
+				51,
+				"missing",
+				0,
+				"Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: [missing (l:2 c:51)]");
+		assertUnresolvedUnknownColumnsFatalDiagnostic(
+				snippet,
+				1,
+				23,
+				"c",
+				1,
+				"Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: [c (l:1 c:23)]");
 	}
 
 	@Test
