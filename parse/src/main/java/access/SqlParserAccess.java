@@ -1,10 +1,14 @@
 package access;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
@@ -96,6 +100,19 @@ public class SqlParserAccess extends AbstractParserAccess {
         return this.parser; 
     }
 
+    @Override
+    public List<ParseDiagnostic> getAllDiagnostics() {
+        List<ParseDiagnostic> diagnostics = new ArrayList<>(super.getAllDiagnostics());
+        if (this.snippet != null && this.snippet.getParserDiagnosticList() != null) {
+            for (ParseDiagnostic diagnostic : this.snippet.getParserDiagnosticList()) {
+                if (diagnostic != null && !diagnostics.contains(diagnostic)) {
+                    diagnostics.add(diagnostic);
+                }
+            }
+        }
+        return diagnostics;
+    }
+
     // It is used to tokenize the input query and produce a stream of tokens that can be
     // submitted to the parser for parsing.
     @Override
@@ -169,8 +186,19 @@ public class SqlParserAccess extends AbstractParserAccess {
 
 
         // Add the error and other messages to the Snippet object
-        snippet.setParserDiagnosticList(this.getAllDiagnostics());
-        snippet.setParserMessageList(this.getAllErrors());
+        // Merge point: combine walker diagnostics (semantic) with parser diagnostics (syntax/recovery).
+        List<ParseDiagnostic> mergedDiagnostics = new ArrayList<>();
+        List<ParseDiagnostic> walkerDiagnostics = snippet.getParserDiagnosticList();
+        if (walkerDiagnostics != null) {
+            mergedDiagnostics.addAll(walkerDiagnostics);
+        }
+        List<ParseDiagnostic> parserDiagnostics = this.getAllDiagnostics();
+        if (parserDiagnostics != null) {
+            mergedDiagnostics.addAll(parserDiagnostics);
+        }
+        // Final handoff: persist unified diagnostics back onto the access-layer snippet.
+        snippet.setParserDiagnosticList(mergedDiagnostics);
+        snippet.setParserMessageList(mergedDiagnostics);
         snippet.setFatalErrorStringList(this.getFatalErrorList());
 
         } else {

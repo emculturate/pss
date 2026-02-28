@@ -2,6 +2,7 @@ package astwalkers;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
@@ -11,6 +12,8 @@ import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
+		public static final String DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS = "SQL_UNRESOLVED_UNKNOWN_COLUMNS";
+
     /*************************************
      * SqlASTWalkerHelper is a concrete class that extends AbstractASTWalkerHelper.
      * It provides specific implementations/overrides for any Grammar
@@ -129,8 +132,17 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
          symbolTable = new HashMap<String, Object>();
          substitutionsMap = new HashMap<String, Object>();
          initializeAstKeyCrosswalkMap();
+		 initializeSqlDiagnosticCatalog();
 
      }  
+
+	 private void initializeSqlDiagnosticCatalog() {
+		 // SQL-local extension: register walker-specific diagnostic code/message template.
+		 registerDiagnostic(
+				 DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS,
+				 "UNRESOLVED_UNKNOWN_COLUMNS",
+				 "Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: %s");
+	 }
 
  
 	/**
@@ -593,6 +605,139 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			newDict.putAll((Map<? extends String, ? extends Object>) value);
 			dictMap.put(reference, newDict);
 		}
+	}
+
+	/**
+	 * Move column-entry mappings into the only table candidate when exactly one table exists.
+	 * Returns true when the relocation is applied; otherwise false.
+	 */
+	@SuppressWarnings("unchecked")
+	public boolean moveEntriesToSingleTableIfSingleTarget(HashMap<String, Object> columnEntries, HashMap<String, Object> tableCollection) {
+		if (columnEntries == null || tableCollection == null || tableCollection.size() != 1) {
+			return false;
+		}
+
+		String onlyTableName = tableCollection.keySet().iterator().next();
+		Object tableSymbols = tableCollection.get(onlyTableName);
+		if (!(tableSymbols instanceof HashMap<?, ?>)) {
+			return false;
+		}
+
+		((HashMap<String, Object>) tableSymbols).putAll(columnEntries);
+		return true;
+	}
+
+	/**
+	 * Get the first available line/character location from column-entry token values.
+	 * This is used to anchor the top-level unresolved diagnostic location.
+	 */
+	public Integer[] getFirstEntryLineAndCharacter(HashMap<String, Object> columnEntries) {
+		String firstTokenString = getFirstEntryTokenString(columnEntries);
+		if (firstTokenString == null) {
+			return new Integer[] { null, null };
+		}
+		return parseLineAndCharacterFromToken(firstTokenString);
+	}
+
+	/**
+	 * Return the first token string found in column-entry values.
+	 * Supports either token-string lists or direct string payloads.
+	 */
+	public String getFirstEntryTokenString(HashMap<String, Object> columnEntries) {
+		if (columnEntries == null || columnEntries.isEmpty()) {
+			return null;
+		}
+
+		for (Object value : columnEntries.values()) {
+			if (value instanceof List<?> tokenList && !tokenList.isEmpty()) {
+				Object first = tokenList.get(0);
+				if (first != null) {
+					return first.toString();
+				}
+			} else if (value instanceof String) {
+				return value.toString();
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Parse ANTLR token text and extract trailing line/character values.
+	 * Expected token suffix format is line:char (e.g., 2:45).
+	 */
+	public Integer[] parseLineAndCharacterFromToken(String tokenString) {
+		if (tokenString == null) {
+			return new Integer[] { null, null };
+		}
+
+		int lastComma = tokenString.lastIndexOf(',');
+		if (lastComma < 0 || lastComma + 1 >= tokenString.length()) {
+			return new Integer[] { null, null };
+		}
+
+		String lineAndChar = tokenString.substring(lastComma + 1).replaceAll("[^0-9:]", "");
+		String[] parts = lineAndChar.split(":");
+		if (parts.length != 2) {
+			return new Integer[] { null, null };
+		}
+
+		try {
+			Integer line = Integer.valueOf(parts[0]);
+			Integer charPosition = Integer.valueOf(parts[1]);
+			return new Integer[] { line, charPosition };
+		} catch (NumberFormatException ex) {
+			return new Integer[] { null, null };
+		}
+	}
+
+	/**
+	 * Resolve one column-entry token payload into a line/character pair.
+	 * The entry may be a token list or a single token string.
+	 */
+	public Integer[] getLineAndCharacterFromEntry(Object entryValue) {
+		if (entryValue instanceof List<?> tokenList && !tokenList.isEmpty()) {
+			Object first = tokenList.get(0);
+			if (first != null) {
+				return parseLineAndCharacterFromToken(first.toString());
+			}
+		} else if (entryValue instanceof String) {
+			return parseLineAndCharacterFromToken(entryValue.toString());
+		}
+		return new Integer[] { null, null };
+	}
+
+	/**
+	 * Build a compact column list with per-entry location annotations.
+	 * Example: [c (l:1 c:43), doll (l:3 c:22)].
+	 */
+	public String formatColumnEntriesWithLocations(HashMap<String, Object> columnEntries) {
+		if (columnEntries == null || columnEntries.isEmpty()) {
+			return "[]";
+		}
+
+		ArrayList<String> formattedEntries = new ArrayList<String>();
+		for (String columnName : columnEntries.keySet()) {
+			Integer[] location = getLineAndCharacterFromEntry(columnEntries.get(columnName));
+			if (location[0] != null && location[1] != null) {
+				formattedEntries.add(columnName + " (l:" + location[0] + " c:" + location[1] + ")");
+			} else {
+				formattedEntries.add(columnName);
+			}
+		}
+
+		return formattedEntries.toString();
+	}
+
+	/**
+	 * Build a comma-separated list of entry keys for diagnostic tokenText fields.
+	 * Example: c, doll, amount.
+	 */
+	public String formatEntryKeysAsCsv(HashMap<String, Object> entryMap) {
+		if (entryMap == null || entryMap.isEmpty()) {
+			return "";
+		}
+		return String.join(", ", entryMap.keySet());
 	}
 
 

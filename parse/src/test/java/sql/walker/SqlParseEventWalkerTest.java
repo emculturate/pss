@@ -12,6 +12,7 @@ import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import access.Snippet;
 import errorhandling.ParseErrorCollector;
 import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorListener;
@@ -30,6 +31,41 @@ import sql.SQLSelectParserParser.Values_statement_endContext;
 import sql.factory.SQLSelectParserFactory;
 
 public class SqlParseEventWalkerTest {
+
+	private void assertUnresolvedUnknownColumnsFatalDiagnostic(
+			Snippet snippet,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedColumnNameInMessage) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		ParseDiagnostic unresolvedUnknown = null;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic != null && "UNRESOLVED_UNKNOWN_COLUMNS".equals(diagnostic.code())) {
+				unresolvedUnknown = diagnostic;
+				break;
+			}
+		}
+
+		Assert.assertNotNull("Expected unresolved unknown columns diagnostic", unresolvedUnknown);
+		Assert.assertEquals("Unexpected diagnostic severity", ParseDiagnostic.Severity.FATAL,
+				unresolvedUnknown.severity());
+		Assert.assertNotNull("Expected diagnostic line", unresolvedUnknown.line());
+		Assert.assertNotNull("Expected diagnostic character position", unresolvedUnknown.charPositionInLine());
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), unresolvedUnknown.line());
+		Assert.assertEquals("Unexpected diagnostic character position", Integer.valueOf(expectedCharPositionInLine),
+				unresolvedUnknown.charPositionInLine());
+		Assert.assertTrue("Diagnostic message should include unknown column " + expectedColumnNameInMessage,
+				unresolvedUnknown.message() != null
+						&& unresolvedUnknown.message().contains(expectedColumnNameInMessage));
+		Assert.assertTrue("Diagnostic token text should include unknown column " + expectedColumnNameInMessage,
+				unresolvedUnknown.tokenText() != null
+						&& unresolvedUnknown.tokenText().contains(expectedColumnNameInMessage));
+		Assert.assertEquals("Expected one fatal diagnostic for unresolved unknown columns", 1,
+				snippet.getFatalErrorCount());
+	}
+
 	// *********************************
 	// Clauses that need to be built out
 	
@@ -5895,6 +5931,19 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, cc=tab2, tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}}}",
 				extractor.getSymbolTable().toString());
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(extractor.getSnippet(), 1, 23, "c");
+	}
+
+	@Test
+	public void ambiguousColumnAllocationCollectsFatalDiagnosticTest() {
+		String query = " select dd.a aa, cc.b, c from tab1 dd join tab2 cc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
 	}
 
 	@Test
@@ -5917,6 +5966,19 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query1={dd=query0, def_query0={ee={a=[[@10,32:32='a',<328>,1:32]], e=[[@12,35:35='e',<328>,1:35]]}, filters=[], interface={a=[{name=a, table_ref=null}], b=[{name=e, table_ref=null}]}}, query0={a=[[@1,8:8='a',<328>,1:8]], b=[[@4,14:14='b',<328>,1:14]]}, interface={aa=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}, unknown={c=[[@6,17:17='c',<328>,1:17]]}}}",
 				extractor.getSymbolTable().toString());
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(extractor.getSnippet(), 1, 17, "c");
+	}
+
+	@Test
+	public void unresolvedUnknownSymbolTableWithSimpleSubqueryCollectsFatalDiagnosticTest() {
+		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
 	}
 
 	@Test

@@ -1,9 +1,12 @@
 package astwalkers;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
+
+import errorhandling.ParseDiagnostic;
 
 public interface InterfaceASTWalkerHelper {
 
@@ -13,6 +16,32 @@ public interface InterfaceASTWalkerHelper {
      */
     
      public void overrideAstKeyCrosswalkMap(String key, String value);
+         public List<ParseDiagnostic> getWalkerDiagnostics();
+         public void clearWalkerDiagnostics();
+        public void registerDiagnostic(String key, String code, String defaultMessage);
+        public void overrideDiagnosticCode(String key, String code);
+        public void overrideDiagnosticMessage(String key, String message);
+        public String getDiagnosticCode(String key);
+        public String getDiagnosticMessage(String key);
+         public void addWalkerDiagnostic(ParseDiagnostic diagnostic);
+         public void addWalkerDiagnostic(
+             ParseDiagnostic.Severity severity,
+             String code,
+             String message,
+             Integer line,
+             Integer charPositionInLine,
+             String source,
+             String ruleName,
+             String tokenText,
+             boolean recoverable,
+             String phase,
+             String exceptionType,
+             Map<String, String> details);
+         public void addWalkerFatal(String code, String message);
+         public void addWalkerFatal(String code, String message, Integer line, Integer charPositionInLine);
+         public void addWalkerFatal(String code, String message, Integer line, Integer charPositionInLine, String tokenText);
+         public void addWalkerWarning(String code, String message);
+         public void addWalkerWarning(String code, String message, Integer line, Integer charPositionInLine);
      public Integer currentStackLevel(String key);
      public Integer currentStackLevel(int ruleIndex);
      public Integer pushStack(Integer ruleIndex);

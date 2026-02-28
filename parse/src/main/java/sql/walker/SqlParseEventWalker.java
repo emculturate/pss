@@ -128,7 +128,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	public Snippet getSnippet() {
-		return new Snippet(walker.asTree, walker.tableDictionaryMap, walker.queryColumnDictionaryMap,  walker.symbolTable, walker.substitutionsMap, getInterface());
+		Snippet snippet = new Snippet(walker.asTree, walker.tableDictionaryMap, walker.queryColumnDictionaryMap,
+				walker.symbolTable, walker.substitutionsMap, getInterface());
+		// Handoff: copy walker-generated (non-parser) diagnostics into the snippet.
+		snippet.setParserDiagnosticList(new ArrayList<>(walker.getWalkerDiagnostics()));
+		return snippet;
 	}
 
 	/* ==================================================================================
@@ -1808,9 +1812,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	private HashMap<String, Object> convertSymbolTableToTableDictionary() {
 	
-		// Special handling of queries with only one table source swallows all unknowns
-		String onlyTableName = null;
-
 		// deconstruct current symbol table into components for analysis
  		HashMap<String, Object> unks = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
         HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
@@ -1835,22 +1836,30 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						|| tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
 							queryCollection.put(tab_ref, item);
 				} else {
-						onlyTableName = tab_ref;
 						tableCollection.put(tab_ref, item);
 					}
 				} 
 		}
 
 		if (unks != null) {
-			if (tableCollection.size() == 1) {
-				// just one source referenced
-				// If the single source is a real table, assign unknowns to it.
-				// If it is a subquery/union/intersect/values (e.g., "query0"), do NOT force unknowns into it;
-				// leave them in the unknown bucket for post-parse validation.
-				HashMap<String, Object> symbols=(HashMap<String, Object>) tableCollection.get(onlyTableName);
-				symbols.putAll(unks);
-			} else {
+			if (!walker.moveEntriesToSingleTableIfSingleTarget(unks, tableCollection)) {
 				walker.symbolTable.put(MUMBLE_UNKNOWN_KEY, unks);
+				Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unks);
+				String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unks);
+				String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unks);
+				// Detection point: unresolved unknown columns remain after symbol-to-table allocation.
+				String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
+				String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
+				String diagMessage = (diagTemplate == null)
+						? "Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: " + unknownColumnsWithLocations
+						: String.format(diagTemplate, unknownColumnsWithLocations);
+				// Collection point: record fatal diagnostic in walker helper diagnostics list.
+				walker.addWalkerFatal(
+						diagCode,
+						diagMessage,
+						firstTokenLocation[0],
+						firstTokenLocation[1],
+						unknownColumnsCsv);
 			}
 		}
 

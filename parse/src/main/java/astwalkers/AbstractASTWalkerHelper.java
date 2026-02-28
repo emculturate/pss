@@ -1,8 +1,12 @@
 package astwalkers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import static mumble.ASTWalkerHelperConstants.*;
+
+import errorhandling.ParseDiagnostic;
 
 
 public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelper {
@@ -77,6 +81,29 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 	 */
 	public HashMap<String, Integer> stackSymbols;
 
+	/**
+	 * Diagnostics generated during AST walking (non-parser diagnostics).
+	 */
+	protected final List<ParseDiagnostic> walkerDiagnostics;
+
+	/**
+	 * Canonical diagnostics catalog. Keys are stable logical identifiers;
+	 * values are updatable code/message mappings.
+	 */
+	protected final HashMap<String, String> diagnosticCodeMap;
+	protected final HashMap<String, String> diagnosticMessageMap;
+
+	public static final String DIAG_ANTLR_AMBIGUITY = "ANTLR_AMBIGUITY";
+	public static final String DIAG_ANTLR_FULL_CONTEXT = "ANTLR_FULL_CONTEXT";
+	public static final String DIAG_ANTLR_CONTEXT_SENSITIVITY = "ANTLR_CONTEXT_SENSITIVITY";
+	public static final String DIAG_ANTLR_SYNTAX_ERROR = "ANTLR_SYNTAX_ERROR";
+	public static final String DIAG_ANTLR_RECOVER_INLINE = "ANTLR_RECOVER_INLINE";
+	public static final String DIAG_ANTLR_RECOVER = "ANTLR_RECOVER";
+	public static final String DIAG_ANTLR_REPORT_ERROR = "ANTLR_REPORT_ERROR";
+	public static final String DIAG_MANUAL_ERROR = "MANUAL_ERROR";
+	public static final String DIAG_MANUAL_FATAL = "MANUAL_FATAL";
+	public static final String DIAG_MANUAL_WARNING = "MANUAL_WARNING";
+
 
     public AbstractASTWalkerHelper() {
         // Set Tracing Defaults
@@ -88,7 +115,183 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
         this.asTree = new HashMap<String, Object>();
         this.stackTree = new HashMap<Integer, Integer>();
         this.stackSymbols = new HashMap<String, Integer>();
+		this.walkerDiagnostics = new ArrayList<ParseDiagnostic>();
+		this.diagnosticCodeMap = new HashMap<String, String>();
+		this.diagnosticMessageMap = new HashMap<String, String>();
+		initializeDiagnosticCatalog();
     }
+
+	protected void initializeDiagnosticCatalog() {
+		registerDiagnostic(DIAG_ANTLR_AMBIGUITY, "AMBIGUITY", "Ambiguity detected by ANTLR parser");
+		registerDiagnostic(DIAG_ANTLR_FULL_CONTEXT, "FULL_CONTEXT", "ANTLR parser attempted full-context prediction");
+		registerDiagnostic(DIAG_ANTLR_CONTEXT_SENSITIVITY, "CONTEXT_SENSITIVITY", "ANTLR context sensitivity detected");
+		registerDiagnostic(DIAG_ANTLR_SYNTAX_ERROR, "SYNTAX_ERROR", "ANTLR syntax error");
+		registerDiagnostic(DIAG_ANTLR_RECOVER_INLINE, "RECOVER_INLINE", "ANTLR inline recovery occurred");
+		registerDiagnostic(DIAG_ANTLR_RECOVER, "RECOVER", "ANTLR recovery occurred");
+		registerDiagnostic(DIAG_ANTLR_REPORT_ERROR, "REPORT_ERROR", "ANTLR reported parser error");
+		registerDiagnostic(DIAG_MANUAL_ERROR, "MANUAL_ERROR", "Manual parser error");
+		registerDiagnostic(DIAG_MANUAL_FATAL, "MANUAL_FATAL", "Manual fatal parser error");
+		registerDiagnostic(DIAG_MANUAL_WARNING, "MANUAL_WARNING", "Manual parser warning");
+	}
+
+	public void registerDiagnostic(String key, String code, String defaultMessage) {
+		if (key == null || code == null || defaultMessage == null) {
+			throw new IllegalArgumentException("Diagnostic key, code, and message must not be null");
+		}
+		diagnosticCodeMap.put(key, code);
+		diagnosticMessageMap.put(key, defaultMessage);
+	}
+
+	public void overrideDiagnosticCode(String key, String code) {
+		if (key == null || code == null) {
+			throw new IllegalArgumentException("Diagnostic key and code must not be null");
+		}
+		if (!diagnosticCodeMap.containsKey(key)) {
+			throw new IllegalArgumentException("Diagnostic key does not exist in catalog: " + key);
+		}
+		diagnosticCodeMap.put(key, code);
+	}
+
+	public void overrideDiagnosticMessage(String key, String message) {
+		if (key == null || message == null) {
+			throw new IllegalArgumentException("Diagnostic key and message must not be null");
+		}
+		if (!diagnosticMessageMap.containsKey(key)) {
+			throw new IllegalArgumentException("Diagnostic key does not exist in catalog: " + key);
+		}
+		diagnosticMessageMap.put(key, message);
+	}
+
+	public String getDiagnosticCode(String key) {
+		return diagnosticCodeMap.get(key);
+	}
+
+	public String getDiagnosticMessage(String key) {
+		return diagnosticMessageMap.get(key);
+	}
+
+	public List<ParseDiagnostic> getWalkerDiagnostics() {
+		return walkerDiagnostics;
+	}
+
+	public void clearWalkerDiagnostics() {
+		walkerDiagnostics.clear();
+	}
+
+	public void addWalkerDiagnostic(ParseDiagnostic diagnostic) {
+		if (diagnostic == null) {
+			return;
+		}
+		boolean exists = walkerDiagnostics.stream().anyMatch(existing -> sameDiagnostic(existing, diagnostic));
+		if (!exists) {
+			walkerDiagnostics.add(diagnostic);
+		}
+	}
+
+	public void addWalkerDiagnostic(
+			ParseDiagnostic.Severity severity,
+			String code,
+			String message,
+			Integer line,
+			Integer charPositionInLine,
+			String source,
+			String ruleName,
+			String tokenText,
+			boolean recoverable,
+			String phase,
+			String exceptionType,
+			Map<String, String> details) {
+		addWalkerDiagnostic(new ParseDiagnostic(
+				severity,
+				code,
+				message,
+				line,
+				charPositionInLine,
+				source,
+				ruleName,
+				tokenText,
+				recoverable,
+				phase,
+				exceptionType,
+				details));
+	}
+
+	public void addWalkerFatal(String code, String message) {
+		addWalkerFatal(code, message, null, null, null);
+	}
+
+	public void addWalkerFatal(String code, String message, Integer line, Integer charPositionInLine) {
+		addWalkerFatal(code, message, line, charPositionInLine, null);
+	}
+
+	public void addWalkerFatal(String code, String message, Integer line, Integer charPositionInLine, String tokenText) {
+		// Centralized helper path for fatal walker diagnostics.
+		addWalkerDiagnostic(
+				ParseDiagnostic.Severity.FATAL,
+				code,
+				message,
+				line,
+				charPositionInLine,
+				getClass().getSimpleName(),
+				null,
+				tokenText,
+				false,
+				"ast-walk",
+				null,
+				null);
+	}
+
+	public void addWalkerWarning(String code, String message) {
+		addWalkerWarning(code, message, null, null);
+	}
+
+	public void addWalkerWarning(String code, String message, Integer line, Integer charPositionInLine) {
+		addWalkerDiagnostic(
+				ParseDiagnostic.Severity.WARNING,
+				code,
+				message,
+				line,
+				charPositionInLine,
+				getClass().getSimpleName(),
+				null,
+				null,
+				true,
+				"ast-walk",
+				null,
+				null);
+	}
+
+	private boolean sameDiagnostic(ParseDiagnostic a, ParseDiagnostic b) {
+		if (a == null || b == null) {
+			return false;
+		}
+		if (a.severity() != b.severity()) {
+			return false;
+		}
+		if (!safeEquals(a.code(), b.code())) {
+			return false;
+		}
+		if (!safeEquals(a.message(), b.message())) {
+			return false;
+		}
+		if (!safeEquals(a.line(), b.line())) {
+			return false;
+		}
+		if (!safeEquals(a.charPositionInLine(), b.charPositionInLine())) {
+			return false;
+		}
+		if (!safeEquals(a.tokenText(), b.tokenText())) {
+			return false;
+		}
+		return safeEquals(a.exceptionType(), b.exceptionType());
+	}
+
+	private boolean safeEquals(Object a, Object b) {
+		if (a == null) {
+			return b == null;
+		}
+		return a.equals(b);
+	}
 
     public  Boolean getShowparse() {
 		return showParse;

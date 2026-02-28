@@ -2,11 +2,11 @@ package sql.walker;
 
 import org.antlr.v4.runtime.RecognitionException;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import access.Snippet;
 import access.SqlParserAccess;
+import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
@@ -26,11 +26,47 @@ import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
  */
 public class SqlParseEventWalkerWithAccessObjectTest {
 
+	private SqlParserAccess lastAccessObject;
+
+	private void assertUnresolvedUnknownColumnsFatalDiagnostic(
+			Snippet snippet,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedColumnNameInMessage) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		ParseDiagnostic unresolvedUnknown = null;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic != null && "UNRESOLVED_UNKNOWN_COLUMNS".equals(diagnostic.code())) {
+				unresolvedUnknown = diagnostic;
+				break;
+			}
+		}
+
+		Assert.assertNotNull("Expected unresolved unknown columns diagnostic", unresolvedUnknown);
+		Assert.assertEquals("Unexpected diagnostic severity", ParseDiagnostic.Severity.FATAL,
+				unresolvedUnknown.severity());
+		Assert.assertNotNull("Expected diagnostic line", unresolvedUnknown.line());
+		Assert.assertNotNull("Expected diagnostic character position", unresolvedUnknown.charPositionInLine());
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), unresolvedUnknown.line());
+		Assert.assertEquals("Unexpected diagnostic character position", Integer.valueOf(expectedCharPositionInLine),
+				unresolvedUnknown.charPositionInLine());
+		Assert.assertTrue("Diagnostic message should include unknown column " + expectedColumnNameInMessage,
+				unresolvedUnknown.message() != null
+						&& unresolvedUnknown.message().contains(expectedColumnNameInMessage));
+		Assert.assertTrue("Diagnostic token text should include unknown column " + expectedColumnNameInMessage,
+				unresolvedUnknown.tokenText() != null
+						&& unresolvedUnknown.tokenText().contains(expectedColumnNameInMessage));
+		Assert.assertEquals("Expected one fatal diagnostic for unresolved unknown columns", 1,
+				snippet.getFatalErrorCount());
+	}
+
    
 	@Test
 	public void basicSelectSyntaxFailureTest1() {
 		final String query = "select from";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 				
 		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
@@ -47,7 +83,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicSelectSyntaxFailureTest2() {
 		final String query = "not a sql statement at all";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 				
 		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
@@ -242,54 +278,73 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getQueryColumnDictionaryMap().toString());
 		}
 
+	@Test
+	public void ambiguousColumnAllocationWithAccessObjectMergedDiagnosticsTest() {
+		final String query = " select dd.a aa, cc.b, c from tab1 dd join tab2 cc";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, table=tab1}}, 2={join=join}, 3={table={alias=cc, table=tab2}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, cc=tab2, tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}}}",
+				snippet.getSymbolTable().toString());
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
+	}
+
+	@Test
+	public void unresolvedUnknownSymbolTableWithSimpleSubqueryWithAccessObjectMergedDiagnosticsTest() {
+		final String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[aa, b, c]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{ee={a=[[@10,32:32='a',<328>,1:32]], e=[[@12,35:35='e',<328>,1:35]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@10,32:32='a',<328>,1:32]], b=[[@14,40:40='b',<328>,1:40]]}, query1={aa=[[@2,10:11='aa',<328>,1:10]], b=[[@4,14:14='b',<328>,1:14]], c=[[@6,17:17='c',<328>,1:17]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={dd=query0, def_query0={ee={a=[[@10,32:32='a',<328>,1:32]], e=[[@12,35:35='e',<328>,1:35]]}, filters=[], interface={a=[{name=a, table_ref=null}], b=[{name=e, table_ref=null}]}}, query0={a=[[@1,8:8='a',<328>,1:8]], b=[[@4,14:14='b',<328>,1:14]]}, interface={aa=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}, unknown={c=[[@6,17:17='c',<328>,1:17]]}}}",
+				snippet.getSymbolTable().toString());
+
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
+	}
+
 /****
  * Ambiguous Symbol Table Tests
  * These tests check for scenarios where there are unresolved symbols in the symbol table due to ambiguity.
  */
-@Ignore
-    @Test
-    public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
-        // Parent query selects alias 'c' which is not produced by the single subquery source
+	@Test
+	public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
+		// Parent query selects alias 'c' which is not produced by the single subquery source
 		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
-		
-		Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
-			snippet.getSqlAbstractTree().toString());
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
-        Assert.assertNotNull("Snippet should not be null", snippet);
-        
-        // Non-fatal warnings list should include an alias-aware message describing the mismatch
-        boolean hasWarning = snippet.getParserMessageStringList() != null &&
-                snippet.getParserMessageStringList().stream().anyMatch(m ->
-                    m.contains("Interface alias 'c' references column 'c' not found in single source 'query0' of 'query1'"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
 
-        Assert.assertTrue("Expected ambiguity/mismatch warning was not found in parser messages", hasWarning);
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
+	}
 
-        // Fatal errors should not be produced by this scenario
-        Assert.assertEquals("No fatal errors expected", 0, snippet.getFatalErrorCount());
-    }
-
-	@Ignore
 	@Test
     public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery2() {
-        // Parent query selects column 'a'which is not produced by the single subquery source
+		// Parent query selects column 'a'which is not produced by the single subquery source
 		String query = " SELECT distinct a,b,c FROM (select all b,c from tab2) tab1";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
-		
-		Assert.assertEquals("AST is wrong", "{}",
-			snippet.getSqlAbstractTree().toString());
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
-        Assert.assertNotNull("Snippet should not be null", snippet);
-        
-        // Non-fatal warnings list should include an alias-aware message describing the mismatch
-        boolean hasWarning = snippet.getParserMessageStringList() != null &&
-                snippet.getParserMessageStringList().stream().anyMatch(m ->
-                    m.contains("Interface alias 'c' references column 'c' not found in single source 'query0' of 'query1'"));
-
-        Assert.assertTrue("Expected ambiguity/mismatch warning was not found in parser messages", hasWarning);
-
-        // Fatal errors should not be produced by this scenario
-        Assert.assertEquals("No fatal errors expected", 0, snippet.getFatalErrorCount());
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("AST should not be null", snippet.getSqlAbstractTree());
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "a");
     }
 
 /****
@@ -440,7 +495,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				+ " FROM sch.subj.tab1 as a"
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY, 2);
 
 		
 		Assert.assertEquals("AST is wrong", "[Line 1:53 - null - unexpected input: 'SELECT', Exception when walking the parse tree: Cannot invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null]",
@@ -480,21 +535,26 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		return null;
 	}
 
-	private Snippet runFailedSyntaxSQLParserTest(final String query, String endPoint) {
+	private Snippet runFailedSyntaxSQLParserTest(final String query, String endPoint, int expectedFatalCount) {
 		try {
 			Snippet snippet = runParserGetSnippet(query, endPoint);
 
 			final int numErrors = snippet.getFatalErrorCount();
-			Assert.assertTrue("Expected failures with " + query + " but got " + snippet.getFatalErrorStringList(), 
-				numErrors >= 1);
-	
+			Assert.assertEquals("Expected fatal error count mismatch for " + query + " with " + snippet.getFatalErrorStringList(),
+				expectedFatalCount, numErrors);
+			Assert.assertNotNull("Access object should be initialized", this.lastAccessObject);
+			Assert.assertTrue("Access object should report fatal errors for " + query,
+					this.lastAccessObject.hasFatalErrors());
+			Assert.assertEquals("Access object fatal error count should match snippet count",
+				expectedFatalCount, this.lastAccessObject.getFatalErrorCount());
+
 			return snippet;
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
 			System.err.println("Recognition Exception: " + e.getMessage());
-            Assert.fail("Recognition Exception: " + e.getMessage());    
-        }
+			Assert.fail("Recognition Exception: " + e.getMessage());
+		}
 		return null;
 	}
 
@@ -503,6 +563,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		System.out.println();
 		
 		SqlParserAccess accessObject = new SqlParserAccess(true, true, true);
+		this.lastAccessObject = accessObject;
 
 		accessObject.executeTheParse(query, endPoint);
 
