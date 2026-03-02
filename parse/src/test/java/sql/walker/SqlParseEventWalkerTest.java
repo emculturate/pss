@@ -62,8 +62,97 @@ public class SqlParseEventWalkerTest {
 		Assert.assertTrue("Diagnostic token text should include unknown column " + expectedColumnNameInMessage,
 				unresolvedUnknown.tokenText() != null
 						&& unresolvedUnknown.tokenText().contains(expectedColumnNameInMessage));
-		Assert.assertEquals("Expected one fatal diagnostic for unresolved unknown columns", 1,
-				snippet.getFatalErrorCount());
+	}
+
+	private ParseDiagnostic findFatalDiagnosticByCodeAndToken(
+			Snippet snippet,
+			String code,
+			String tokenFragment) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic == null || !ParseDiagnostic.Severity.FATAL.equals(diagnostic.severity())) {
+				continue;
+			}
+			if (!code.equals(diagnostic.code())) {
+				continue;
+			}
+			if (tokenFragment != null
+					&& (diagnostic.tokenText() == null || !diagnostic.tokenText().contains(tokenFragment))) {
+				continue;
+			}
+			return diagnostic;
+		}
+
+		return null;
+	}
+
+	private void assertFatalDiagnosticAtPosition(
+			Snippet snippet,
+			String code,
+			String expectedMessageFragment,
+			String expectedTokenFragment,
+			int expectedLine,
+			int expectedCharPositionInLine) {
+		ParseDiagnostic diagnostic = findFatalDiagnosticByCodeAndToken(snippet, code, expectedTokenFragment);
+		Assert.assertNotNull("Expected fatal diagnostic with code " + code, diagnostic);
+		Assert.assertNotNull("Expected diagnostic line", diagnostic.line());
+		Assert.assertNotNull("Expected diagnostic character position", diagnostic.charPositionInLine());
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), diagnostic.line());
+		Assert.assertEquals("Unexpected diagnostic character position",
+				Integer.valueOf(expectedCharPositionInLine), diagnostic.charPositionInLine());
+
+		if (expectedMessageFragment != null) {
+			Assert.assertTrue(
+					"Diagnostic message should contain '" + expectedMessageFragment + "'",
+					diagnostic.message() != null && diagnostic.message().contains(expectedMessageFragment));
+		}
+	}
+
+	private int countFatalDiagnostics(
+			Snippet snippet,
+			String expectedCode,
+			String expectedMessageFragment,
+			String expectedTokenFragment) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		int count = 0;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic == null || !ParseDiagnostic.Severity.FATAL.equals(diagnostic.severity())) {
+				continue;
+			}
+			if (expectedCode != null && !expectedCode.equals(diagnostic.code())) {
+				continue;
+			}
+			if (expectedMessageFragment != null
+					&& (diagnostic.message() == null || !diagnostic.message().contains(expectedMessageFragment))) {
+				continue;
+			}
+			if (expectedTokenFragment != null
+					&& (diagnostic.tokenText() == null || !diagnostic.tokenText().contains(expectedTokenFragment))) {
+				continue;
+			}
+			count++;
+		}
+
+		return count;
+	}
+
+	private void assertFatalDiagnosticCount(
+			Snippet snippet,
+			String expectedCode,
+			String expectedMessageFragment,
+			String expectedTokenFragment,
+			int expectedCount) {
+		int actualCount = countFatalDiagnostics(snippet, expectedCode, expectedMessageFragment, expectedTokenFragment);
+		Assert.assertEquals(
+				"Unexpected fatal diagnostic count for code=" + expectedCode
+						+ " messageFragment=" + expectedMessageFragment
+						+ " tokenFragment=" + expectedTokenFragment,
+				expectedCount,
+				actualCount);
 	}
 
 	// *********************************
@@ -111,6 +200,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={strm=[[@3,14:17='strm',<328>,1:14], [@13,37:40='strm',<328>,1:37], [@25,64:67='strm',<328>,1:64]]}, interface={unnamed_0=[{name=strm, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 	
 	@Test
@@ -157,6 +250,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query2={in_list1=query0, def_query0={orange={fld=[[@11,58:60='fld',<328>,1:58]]}, interface={fld=[{name=fld, table_ref=null}]}}, tab1={subj_cd=[[@5,29:35='subj_cd',<328>,1:29]], apple=[[@1,7:11='apple',<328>,1:7]], crs_nm=[[@7,40:45='crs_nm',<328>,1:40]]}, filters=[{name=subj_cd, table_ref=null}, {name=crs_nm, table_ref=null}], interface={apple=[{name=apple, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 	
 	// Simple Select with Predicands (Casting and Not Casting)
@@ -180,6 +277,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
@@ -201,6 +302,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@1,8:8='a',<328>,1:8]], b=[[@3,10:10='b',<328>,1:10]], c=[[@5,12:12='c',<328>,1:12]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
@@ -222,6 +327,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={d=[[@15,29:29='d',<328>,1:29]]}, interface={a=[], b=[], c=[{name=d, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	// 1/9/2020 ITEM 78: Add set qualifiers to the AST in SELECT and Aggregate Functions
@@ -245,6 +354,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@2,17:17='a',<328>,1:17]], b=[[@4,19:19='b',<328>,1:19]], c=[[@6,21:21='c',<328>,1:21]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 	
 	@Test
@@ -266,7 +379,13 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query1={def_query0={tab2={b=[[@11,40:40='b',<328>,1:40]], c=[[@13,42:42='c',<328>,1:42]]}, interface={b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}}, tab1=query0, query0={b=[[@4,19:19='b',<328>,1:19]], c=[[@6,21:21='c',<328>,1:21]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}, unknown={a=[[@2,17:17='a',<328>,1:17]]}}}",
 				extractor.getSymbolTable().toString());
-	}
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected two errors but got: " + snippet.getFatalErrorStringList(), 
+				2, snippet.getFatalErrorStringList().size());
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'a'", "a", 1);
+		}
 
 	
 	@Test
@@ -288,6 +407,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@4,21:21='a',<328>,1:21]]}, interface={unnamed_0=[{name=a, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+				
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 // Aliasing in select lists
@@ -310,6 +433,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@1,8:8='a',<328>,1:8]], b=[[@5,15:15='b',<328>,1:15]], c=[[@9,22:22='c',<328>,1:22]]}, interface={x=[{name=a, table_ref=null}], y=[{name=b, table_ref=null}], z=[{name=c, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+	
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
@@ -331,6 +458,10 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={a=[[@1,8:8='a',<328>,1:8]], b=[[@5,18:18='b',<328>,1:18]], c=[[@9,28:28='c',<328>,1:28]]}, interface={02_y=[{name=b, table_ref=null}], 999_z=[{name=c, table_ref=null}], 01_x=[{name=a, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+	
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
@@ -352,14 +483,20 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={\"99tab1\"={\"22_b\"=[[@5,24:29='\"22_b\"',<331>,1:24]], \"36_c\"=[[@9,39:44='\"36_c\"',<331>,1:39]], \"09_a\"=[[@1,8:13='\"09_a\"',<331>,1:8]]}, interface={\"999_z\"=[{name=\"36_c\", table_ref=null}], 02_y=[{name=\"22_b\", table_ref=null}], 01_x=[{name=\"09_a\", table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
+	
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
 	public void real1SelectListNumericPrefixAliasingTest() {
-		final String query = "SELECT sub.Degree_Code AS 01_DEGREE_CD, sub.Degree_Name AS 02_DEGREE_NAME, sub.f1 FROM (SELECT t.f1, t.* FROM pantoresultprod.hive_result_pit_5223_164728_46090704 t) sub"; 
+		final String query = "SELECT sub.Degree_Code AS 01_DEGREE_CD, sub.Degree_Name AS 02_DEGREE_NAME, "
+		+ "sub.f1 FROM (SELECT t.f1, t.* FROM pantoresultprod.hive_result_pit_5223_164728_46090704 t) sub"; 
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Degree_Code, table_ref=sub}, alias=01_DEGREE_CD}, 2={column={name=Degree_Name, table_ref=sub}, alias=02_DEGREE_NAME}, 3={column={name=f1, table_ref=sub}}}, from={table={alias=sub, query={select={1={column={name=f1, table_ref=t}}, 2={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164728_46090704}}}}}}}",
 				extractor.getAsTree().toString());
@@ -382,6 +519,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=tab1}, alias=aa}, 2={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=max_D}, 3={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=min, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=min_D}, 4={column={name=w, table_ref=kk}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join}, 3={table={alias=kk, query={select={1={column={name=w, table_ref=null}}}, from={table={alias=null, table=jj}}}}}}}, where={in={item={column={name=a, table_ref=null}}, in_list={select={1={column={name=c, table_ref=null}}}, from={table={alias=null, table=ff}}}}}}}",
 				extractor.getAsTree().toString());
@@ -401,10 +539,12 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void real2SelectListNumericPrefixAliasingTest() {
-		final String query = "SELECT sub.College_Code AS 01_College_Cd, sub.College_Name AS 02_College_Name FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_6875_220752_46090864 t) sub"; 
+		final String query = "SELECT sub.College_Code AS 01_College_Cd, sub.College_Name AS 02_College_Name "
+		+" FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_6875_220752_46090864 t) sub"; 
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=College_Code, table_ref=sub}, alias=01_College_Cd}, 2={column={name=College_Name, table_ref=sub}, alias=02_College_Name}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_6875_220752_46090864}}}}}}}",
 				extractor.getAsTree().toString());
@@ -412,20 +552,23 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_6875_220752_46090864={*=[[@15,91:91='t',<328>,1:91]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_6875_220752_46090864={*=[[@15,92:92='t',<328>,1:92]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@17,93:93='*',<289>,1:93]]}, query1={02_College_Name=[[@11,62:76='02_College_Name',<330>,1:62]], 01_College_Cd=[[@5,27:39='01_College_Cd',<330>,1:27]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@17,94:94='*',<289>,1:94]]}, query1={02_College_Name=[[@11,62:76='02_College_Name',<330>,1:62]], 01_College_Cd=[[@5,27:39='01_College_Cd',<330>,1:27]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_6875_220752_46090864, interface={*=[{name=*, table_ref=t}]}, hive_result_pit_6875_220752_46090864={*=[[@15,91:91='t',<328>,1:91]]}}, query0={College_Name=[[@7,42:44='sub',<328>,1:42]], College_Code=[[@1,7:9='sub',<328>,1:7]]}, interface={02_College_Name=[{name=College_Name, table_ref=sub}], 01_College_Cd=[{name=College_Code, table_ref=sub}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_6875_220752_46090864, interface={*=[{name=*, table_ref=t}]}, hive_result_pit_6875_220752_46090864={*=[[@15,92:92='t',<328>,1:92]]}}, query0={College_Name=[[@7,42:44='sub',<328>,1:42]], College_Code=[[@1,7:9='sub',<328>,1:7]]}, interface={02_College_Name=[{name=College_Name, table_ref=sub}], 01_College_Cd=[{name=College_Code, table_ref=sub}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void real3SelectListNumericPrefixAliasingTest() {
-		final String query = "SELECT sub.Course_Registration_Code AS 01_COURSE_REGISTRATION_CD, sub.Course_Registration_Description AS 02_COURSE_REGISTRATION_DESC FROM (SELECT t.* FROM pantoresultprod.hive_result_pit_5223_164727_46090703 t) sub"; 
+		final String query = "SELECT sub.Course_Registration_Code AS 01_COURSE_REGISTRATION_CD, "
+		+" sub.Course_Registration_Description AS 02_COURSE_REGISTRATION_DESC FROM "
+		+" (SELECT t.* FROM pantoresultprod.hive_result_pit_5223_164727_46090703 t) sub"; 
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Course_Registration_Code, table_ref=sub}, alias=01_COURSE_REGISTRATION_CD}, 2={column={name=Course_Registration_Description, table_ref=sub}, alias=02_COURSE_REGISTRATION_DESC}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164727_46090703}}}}}}}",
 				extractor.getAsTree().toString());
@@ -433,11 +576,35 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[[@15,146:146='t',<328>,1:146]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[[@15,148:148='t',<328>,1:148]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@17,148:148='*',<289>,1:148]]}, query1={02_COURSE_REGISTRATION_DESC=[[@11,105:131='02_COURSE_REGISTRATION_DESC',<330>,1:105]], 01_COURSE_REGISTRATION_CD=[[@5,39:63='01_COURSE_REGISTRATION_CD',<330>,1:39]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@17,150:150='*',<289>,1:150]]}, query1={02_COURSE_REGISTRATION_DESC=[[@11,106:132='02_COURSE_REGISTRATION_DESC',<330>,1:106]], 01_COURSE_REGISTRATION_CD=[[@5,39:63='01_COURSE_REGISTRATION_CD',<330>,1:39]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[[@15,146:146='t',<328>,1:146]]}, interface={*=[{name=*, table_ref=t}]}}, query0={Course_Registration_Description=[[@7,66:68='sub',<328>,1:66]], Course_Registration_Code=[[@1,7:9='sub',<328>,1:7]]}, interface={02_COURSE_REGISTRATION_DESC=[{name=Course_Registration_Description, table_ref=sub}], 01_COURSE_REGISTRATION_CD=[{name=Course_Registration_Code, table_ref=sub}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[[@15,148:148='t',<328>,1:148]]}, interface={*=[{name=*, table_ref=t}]}}, query0={Course_Registration_Description=[[@7,67:69='sub',<328>,1:67]], Course_Registration_Code=[[@1,7:9='sub',<328>,1:7]]}, interface={02_COURSE_REGISTRATION_DESC=[{name=Course_Registration_Description, table_ref=sub}], 01_COURSE_REGISTRATION_CD=[{name=Course_Registration_Code, table_ref=sub}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void real4SelectListNumericPrefixAliasingTest() {
+		final String query = "SELECT Course_Registration_Code AS 01_COURSE_REGISTRATION_CD, "
+		+" Course_Registration_Description AS 02_COURSE_REGISTRATION_DESC FROM "
+		+" (SELECT t.* FROM pantoresultprod.hive_result_pit_5223_164727_46090703 t) sub"; 
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=Course_Registration_Code, table_ref=null}, alias=01_COURSE_REGISTRATION_CD}, 2={column={name=Course_Registration_Description, table_ref=null}, alias=02_COURSE_REGISTRATION_DESC}}, from={table={alias=sub, query={select={1={column={name=*, table_ref=t}}}, from={table={schema=pantoresultprod, alias=t, table=hive_result_pit_5223_164727_46090703}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[02_COURSE_REGISTRATION_DESC, 01_COURSE_REGISTRATION_CD]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{hive_result_pit_5223_164727_46090703={*=[[@11,140:140='t',<328>,1:140]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@13,142:142='*',<289>,1:142]]}, query1={02_COURSE_REGISTRATION_DESC=[[@7,98:124='02_COURSE_REGISTRATION_DESC',<330>,1:98]], 01_COURSE_REGISTRATION_CD=[[@3,35:59='01_COURSE_REGISTRATION_CD',<330>,1:35]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={sub=query0, def_query0={t=hive_result_pit_5223_164727_46090703, hive_result_pit_5223_164727_46090703={*=[[@11,140:140='t',<328>,1:140]]}, interface={*=[{name=*, table_ref=t}]}}, query0={Course_Registration_Description=[[@5,63:93='Course_Registration_Description',<328>,1:63]], Course_Registration_Code=[[@1,7:30='Course_Registration_Code',<328>,1:7]]}, interface={02_COURSE_REGISTRATION_DESC=[{name=Course_Registration_Description, table_ref=null}], 01_COURSE_REGISTRATION_CD=[{name=Course_Registration_Code, table_ref=null}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -453,6 +620,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with blanks in name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -474,6 +642,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with.dots.in.name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -495,6 +664,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple>, type=column}, table_ref=a}}, 2={column={substitution={name=<with-dash-in - name>, type=column}, table_ref=a}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -516,6 +686,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[simple]>, parts={1=[simple]}, type=column}, table_ref=a}}, 2={column={substitution={name=<[DOMAIN].[ENTITY].[ATTRIBUTE]>, parts={1=[DOMAIN], 2=[ENTITY], 3=[ATTRIBUTE]}, type=column}, table_ref=a}}, 3={column={substitution={name=<[another].[item]>, parts={1=[another], 2=[item]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -537,6 +708,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]>, parts={1=[PREFIX.DOMAIN.SUFFIX].[ENTITY.SUFFIX].[Prefix.ATTRIBUTE]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -558,6 +730,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<[PREFIX-DOMAIN-SUFFIX].[ENTITY-SUFFIX].[Prefix-ATTRIBUTE]>, parts={1=[PREFIX-DOMAIN-SUFFIX], 2=[ENTITY-SUFFIX], 3=[Prefix-ATTRIBUTE]}, type=column}, table_ref=a}}}, from={table={alias=a, substitution={name=<[DOMAIN].[ENTITY]>, parts={1=[DOMAIN], 2=[ENTITY]}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -582,6 +755,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}>, parts={1=[schema], 2=[entity], 3={pop1}}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -604,6 +778,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[schema].[entity].{pop1}.[Current Batch]>, parts={1=[schema], 2=[entity], 3={pop1}, 4=[Current Batch]}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -626,6 +801,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}>, parts={1=[entity], 2={pop1}}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -648,6 +824,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=a}}}, from={table={alias=a, substitution={name=<[entity].{pop1}.[Current Batch]>, parts={1=[entity], 2={pop1}, 3=[Current Batch]}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -684,6 +861,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=col1, table_ref=null}}}, alias=a}, 2={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}, alias=c}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -706,6 +884,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=TRY_cast, data_type={type=BOOLEAN}, type=TRY_CAST, value={column={name=col1, table_ref=null}}}, alias=a}, 2={function={function_name=cast, data_type={length=2, type=VARCHAR}, type=CAST, value={column={name=col2, table_ref=null}}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=3, type=NUMERIC}, type=CAST, value={column={name=col3, table_ref=null}}}, alias=c}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -728,6 +907,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, operator=is true}}}",
 				extractor.getAsTree().toString());
@@ -749,6 +929,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={calc={left={column={name=colu, table_ref=null}}, right={function={function_name=cast, data_type={precision=9, type=NUMERIC}, type=CAST, value={column={name=cola, table_ref=null}}}}, operator=+}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -770,6 +951,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=colu, table_ref=tab1}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join, on={condition={left={column={name=cola, table_ref=tab1}}, right={function={function_name=cast, data_type={type=CHARACTER VARYING}, type=CAST, value={column={name=cola, table_ref=tab2}}}}, operator==}}}, 3={table={alias=null, table=tab2}}}}}}",
 				extractor.getAsTree().toString());
@@ -791,6 +973,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}, alias=a}, 2={function={function_name=max, qualifier=null, parameters={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}, alias=b}}, from={table={alias=null, table=tab1}}, groupby={1={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}}}}",
 				extractor.getAsTree().toString());
@@ -812,6 +995,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, orderby={1={null_order=null, predicand={function={function_name=cast, data_type={type=BOOLEAN}, type=CAST, value={column={name=cola, table_ref=null}}}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -839,6 +1023,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={length=10, type=CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=NATIONAL CHARACTER}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={length=256, type=NATIONAL CHARACTER}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={type=NATIONAL CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={length=1000, type=NATIONAL CHARACTER VARYING}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -865,6 +1050,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=NUMERIC}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={precision=9, scale=7, type=DECIMAL}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={precision=98, scale=7, type=DOUBLE PRECISION}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={precision=2, type=FLOAT}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -891,6 +1077,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={literal='a'}}, alias=a}, 2={function={function_name=cast, data_type={type=FLOAT4}, type=CAST, value={literal='a'}}, alias=b}, 3={function={function_name=cast, data_type={type=TIME WITH TIME ZONE}, type=CAST, value={literal='a'}}, alias=c}, 4={function={function_name=cast, data_type={type=TIMESTAMP WITH TIME ZONE}, type=CAST, value={literal='a'}}, alias=d}, 5={function={function_name=cast, data_type={type=INET4}, type=CAST, value={literal='a'}}, alias=e}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -913,6 +1100,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={null_literal=null}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -936,6 +1124,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={substitution={name=<var1>, type=predicand}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -959,6 +1148,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=STRING}, type=CAST, value={column={substitution={name=<var1>, type=column}, table_ref=tab1}}}, alias=a}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1013,6 +1203,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={11={function={function_name=cast, data_type={length=1000, type=VARCHAR}, type=CAST, value={column={name=address_street, table_ref=a}}}, alias=school_address}, 12={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_created, table_ref=dr}}}, alias=crm_created_at}, 13={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=dataset_row_updated, table_ref=dr}}}, alias=crm_updated_at}, 1={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=school_id, table_ref=s}}}, alias=school_id}, 2={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={column={name=school_key, table_ref=s}}}, alias=school_ceeb_code}, 3={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_type}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_type}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_type}}}}}, alias=school_type}, 4={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=dataset_name, table_ref=d}}, when={or={1={condition={left={column={name=value, table_ref=schl_cat}}, operator=is null}}, 2={condition={left={column={name=value, table_ref=schl_cat}}, right={literal=''}, operator==}}}}}}, else={column={name=value, table_ref=schl_cat}}}}}, alias=school_category}, 5={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=lookup_school_name, table_ref=sl}}, when={or={1={condition={left={column={name=school_name, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_name, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_name, table_ref=s}}}}}, alias=school_name}, 6={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_country, table_ref=a}}, when={or={1={condition={left={column={name=school_country, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_country, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_country, table_ref=s}}}}}, alias=school_country}, 7={function={function_name=cast, data_type={length=50, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_region, table_ref=a}}, when={or={1={condition={left={column={name=school_region, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_region, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_region, table_ref=s}}}}}, alias=school_state}, 8={function={function_name=cast, data_type={length=255, type=VARCHAR}, type=CAST, value={case={clauses={1={then={column={name=address_city, table_ref=a}}, when={or={1={condition={left={column={name=school_city, table_ref=s}}, operator=is null}}, 2={condition={left={column={name=school_city, table_ref=s}}, right={literal=''}, operator==}}}}}}, else={column={name=school_city, table_ref=s}}}}}, alias=school_city}, 9={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_county, table_ref=a}}}, alias=school_county}, 10={function={function_name=cast, data_type={length=100, type=VARCHAR}, type=CAST, value={column={name=address_zip, table_ref=a}}}, alias=school_zip}}, qualifier=distinct, from={join={11={table={alias=null, table=schl_type}}, 12={join=left, on={condition={left={column={name=field_record, table_ref=schl_cat}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}}, 13={table={alias=null, table=schl_cat}}, 1={table={alias=s, table=school}}, 2={join=left, on={condition={left={column={name=lookup_school_id, table_ref=sl}}, right={column={name=school_key, table_ref=s}}, operator==}}}, 3={table={alias=sl, substitution={name=<slate_lookup_school>, type=tuple}}}, 4={join=left, on={condition={left={column={name=dataset_row_key, table_ref=dr}}, right={column={name=school_key, table_ref=s}}, operator==}}}, 5={table={alias=dr, substitution={name=<slate_dataset_row>, type=tuple}}}, 6={join=left, on={and={1={condition={left={column={name=dataset_id, table_ref=d}}, right={column={name=dataset_row_dataset, table_ref=dr}}, operator==}}, 2={condition={left={column={name=dataset_name, table_ref=d}}, right={literal='Organizations'}, operator==}}}}}, 7={table={alias=d, substitution={name=<slate_dataset>, type=tuple}}}, 8={join=left, on={and={1={condition={left={column={name=address_record, table_ref=a}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}, 2={condition={left={column={name=address_rank_overall, table_ref=a}}, right={literal=1}, operator==}}}}}, 9={table={alias=a, substitution={name=<slate_address>, type=tuple}}}, 10={join=left, on={condition={left={column={name=field_record, table_ref=schl_type}}, right={column={name=dataset_row_id, table_ref=dr}}, operator==}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1036,6 +1227,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1057,6 +1249,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1079,6 +1272,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}, where={condition={left={column={name=c, table_ref=b}}, right={literal=1}, operator==}}}}",
 				extractor.getAsTree().toString());
@@ -1101,6 +1295,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1123,6 +1318,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1145,6 +1341,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1167,6 +1364,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=join, on={and={1={substitution={name=<OnJoinCondition>, type=condition}}, 2={substitution={name=<OtherJoinCondition>, type=condition}}}}}, 3={table={alias=b, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1189,6 +1387,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1196,11 +1395,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=<tuple1>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=<tuple1>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1211,6 +1410,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=leftouter}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1218,11 +1418,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=<tuple1>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=<tuple1>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1233,6 +1433,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1240,11 +1441,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=<tuple1>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=<tuple1>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1255,6 +1456,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=naturaljoin}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1262,11 +1464,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=<tuple1>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=<tuple1>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1277,6 +1479,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=unionjoin}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1284,22 +1487,196 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=<tuple1>}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=<tuple1>}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void handlingSelectStarWithExplicitTableRef1() {
+		final String query = " SELECT t3.* FROM <tuple1> as T3 union join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=t3}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=unionjoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:9='t3',<328>,1:8]]}, fourth={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,11:11='*',<289>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple1>={*=[[@1,8:9='t3',<328>,1:8]]}, fourth={}, interface={*=[{name=*, table_ref=t3}]}, F4=fourth, T3=<tuple1>}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void nestedSelectStarV1() {
+		final String query = " SELECT F4.col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select * from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@11,49:49='*',<289>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@11,49:49='*',<289>,3:10]]}, query1={*=[[@7,31:31='*',<289>,2:9]]}, query2={col1=[[@3,11:14='col1',<328>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={*=[[@11,49:49='*',<289>,3:10]]}, interface={*=[{name=*, table_ref=*}]}}, query0={*=[[@7,31:31='*',<289>,2:9]]}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=F4}]}, query1={col1=[[@1,8:9='F4',<328>,1:8]]}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void nestedSelectStarV2() {
+		final String query = " SELECT col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select * from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@9,46:46='*',<289>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@9,46:46='*',<289>,3:10]]}, query1={*=[[@5,28:28='*',<289>,2:9]]}, query2={col1=[[@1,8:11='col1',<328>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={*=[[@9,46:46='*',<289>,3:10]]}, interface={*=[{name=*, table_ref=*}]}}, query0={*=[[@5,28:28='*',<289>,2:9]]}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=null}]}, query1={col1=[[@1,8:11='col1',<328>,1:8]]}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void nestedSelectStarV3() {
+		final String query = " SELECT col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select col1, col2 from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={col2=[[@11,52:55='col2',<328>,3:16]], *=[[@5,28:28='*',<289>,2:9]], col1=[[@9,46:49='col1',<328>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@5,28:28='*',<289>,2:9]], col2=[[@11,52:55='col2',<328>,3:16]], col1=[[@9,46:49='col1',<328>,3:10]]}, query1={*=[[@5,28:28='*',<289>,2:9]]}, query2={col1=[[@1,8:11='col1',<328>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={col2=[[@11,52:55='col2',<328>,3:16]], col1=[[@9,46:49='col1',<328>,3:10]]}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}}, query0={}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=null}]}, query1={col1=[[@1,8:11='col1',<328>,1:8]]}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void nestedSelectStarV4() {
+		final String query = " SELECT F4.col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select col1, col2 from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={col2=[[@13,55:58='col2',<328>,3:16]], *=[[@7,31:31='*',<289>,2:9]], col1=[[@11,49:52='col1',<328>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@7,31:31='*',<289>,2:9]], col2=[[@13,55:58='col2',<328>,3:16]], col1=[[@11,49:52='col1',<328>,3:10]]}, query1={*=[[@7,31:31='*',<289>,2:9]]}, query2={col1=[[@3,11:14='col1',<328>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={col2=[[@13,55:58='col2',<328>,3:16]], col1=[[@11,49:52='col1',<328>,3:10]]}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}}, query0={}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=F4}]}, query1={col1=[[@1,8:9='F4',<328>,1:8]]}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void nestedSelectStarV5() {
+		final String query = " SELECT T3.col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select * from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=T3}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@11,49:49='*',<289>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@11,49:49='*',<289>,3:10]]}, query1={*=[[@7,31:31='*',<289>,2:9]]}, query2={col1=[[@3,11:14='col1',<328>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={*=[[@11,49:49='*',<289>,3:10]]}, interface={*=[{name=*, table_ref=*}]}}, query0={*=[[@7,31:31='*',<289>,2:9]]}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=T3}]}, query1={}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet, "REFERENCED_COLUMN_NOT_FOUND_IN_TABLE",
+				"Referenced column 'col1' at (l:1 c:11) not found in indicated table 'T3'.",
+				"col1", 1, 11);
+	}
+
+	@Test
+	public void nestedSelectStarV6() {
+		final String query = " SELECT T3.col1 FROM "
+			+	"\n (select * from " 
+			+   "\n  (select col1, col2 from third) as T3) F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=T3}}}, from={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=T3, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={col2=[[@13,55:58='col2',<328>,3:16]], *=[[@7,31:31='*',<289>,2:9]], col1=[[@11,49:52='col1',<328>,3:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@7,31:31='*',<289>,2:9]], col2=[[@13,55:58='col2',<328>,3:16]], col1=[[@11,49:52='col1',<328>,3:10]]}, query1={*=[[@7,31:31='*',<289>,2:9]]}, query2={col1=[[@3,11:14='col1',<328>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={def_query1={def_query0={third={col2=[[@13,55:58='col2',<328>,3:16]], col1=[[@11,49:52='col1',<328>,3:10]]}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}}, query0={}, interface={*=[{name=*, table_ref=*}]}, T3=query0}, interface={col1=[{name=col1, table_ref=T3}]}, query1={}, F4=query1}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet, "REFERENCED_COLUMN_NOT_FOUND_IN_TABLE",
+				"Referenced column 'col1' at (l:1 c:11) not found in indicated table 'T3'.",
+				"col1", 1, 11);
 	}
 
 	@Test
 	public void joinSubqueryTableV1() {
 		// ITEM 92 - Join with subquery and table shouldn't need on statement
-		// TODO This SHOULD have a query column dictionary for query0
 		final String query = " SELECT * FROM (select * from third) as T3 join fourth as F4";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1318,11 +1695,11 @@ public class SqlParseEventWalkerTest {
 	@Test
 	public void joinSubqueryWithColumnsTableV1() {
 		// ITEM 92 - Join with subquery and table shouldn't need on statement
-		// TODO This SHOULD have a query column dictionary for query0
 		final String query = " SELECT T3.transcol as outercol, F4.tablecol FROM (select innercol as transcol, othercol from third) as T3 join fourth as F4";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=transcol, table_ref=T3}, alias=outercol}, 2={column={name=tablecol, table_ref=F4}}}, from={join={1={table={alias=T3, query={select={1={column={name=innercol, table_ref=null}, alias=transcol}, 2={column={name=othercol, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1334,8 +1711,9 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={transcol=[[@15,70:77='transcol',<328>,1:70]], othercol=[[@17,80:87='othercol',<328>,1:80]]}, query1={tablecol=[[@9,36:43='tablecol',<328>,1:36]], outercol=[[@5,23:30='outercol',<328>,1:23]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={def_query0={third={innercol=[[@13,58:65='innercol',<328>,1:58]], othercol=[[@17,80:87='othercol',<328>,1:80]]}, interface={transcol=[{name=innercol, table_ref=null}], othercol=[{name=othercol, table_ref=null}]}}, fourth={tablecol=[[@7,33:34='F4',<328>,1:33]]}, query0={transcol=[[@1,8:9='T3',<328>,1:8]]}, interface={tablecol=[{name=tablecol, table_ref=F4}], outercol=[{name=transcol, table_ref=T3}]}, F4=fourth, T3=query0}}",
-				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no fatal errors", 0, snippet.getFatalErrorCount());
 	}
 
 	@Test
@@ -1345,6 +1723,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1374,6 +1753,7 @@ public class SqlParseEventWalkerTest {
 				"	and (<Date Submitted> is null or <Date Submitted> = '')";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={parentheses={or={1={condition={left={substitution={name=<Permanent Country>, type=predicand}}, operator=is null}}, 2={in={item={substitution={name=<Permanent Country>, type=predicand}}, in_list={substitution={name=<Permanent Country List>, type=in_list}}}}}}}, 2={in={item={substitution={name=<College Attendance Status>, type=predicand}}, in_list={substitution={name=<College Attendance Status List>, type=in_list}}}}, 3={parentheses={or={1={condition={left={substitution={name=<Graduation Year>, type=predicand}}, operator=is null}}, 2={in={item={substitution={name=<Graduation Year>, type=predicand}}, in_list={substitution={name=<Graduation Year List>, type=in_list}}}}}}}, 4={parentheses={or={1={condition={left={substitution={name=<Application Admissions Status>, type=predicand}}, operator=is null}}, 2={in={item={substitution={name=<Application Admissions Status>, type=predicand}}, in_list={substitution={name=<Application Admissions Status list>, type=in_list}}}}}}}, 5={parentheses={or={1={condition={left={substitution={name=<Term Of Interest>, type=predicand}}, operator=is null}}, 2={in={item={substitution={name=<Term Of Interest>, type=predicand}}, in_list={substitution={name=<Term Of Interest List>, type=in_list}}}}}}}, 6={parentheses={or={1={condition={left={substitution={name=<Date Submitted>, type=predicand}}, operator=is null}}, 2={condition={left={substitution={name=<Date Submitted>, type=predicand}}, right={literal=''}, operator==}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1403,6 +1783,7 @@ public class SqlParseEventWalkerTest {
 				"	and (cec.<Date Submitted> is null or cec.<Date Submitted> = '')";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={parentheses={or={1={condition={left={column={substitution={name=<Permanent Country>, type=column}, table_ref=cec}}, operator=is null}}, 2={in={item={column={substitution={name=<Permanent Country>, type=column}, table_ref=cec}}, in_list={substitution={name=<Permanent Country List>, type=in_list}}}}}}}, 2={in={item={column={substitution={name=<College Attendance Status>, type=column}, table_ref=cec}}, in_list={substitution={name=<College Attendance Status List>, type=in_list}}}}, 3={parentheses={or={1={condition={left={column={substitution={name=<Graduation Year>, type=column}, table_ref=cec}}, operator=is null}}, 2={in={item={column={substitution={name=<Graduation Year>, type=column}, table_ref=cec}}, in_list={substitution={name=<Graduation Year List>, type=in_list}}}}}}}, 4={parentheses={or={1={condition={left={column={substitution={name=<Application Admissions Status>, type=column}, table_ref=cec}}, operator=is null}}, 2={in={item={column={substitution={name=<Application Admissions Status>, type=column}, table_ref=cec}}, in_list={substitution={name=<Application Admissions Status list>, type=in_list}}}}}}}, 5={parentheses={or={1={condition={left={column={substitution={name=<Term Of Interest>, type=column}, table_ref=cec}}, operator=is null}}, 2={in={item={column={substitution={name=<Term Of Interest>, type=column}, table_ref=cec}}, in_list={substitution={name=<Term Of Interest List>, type=in_list}}}}}}}, 6={parentheses={or={1={condition={left={column={substitution={name=<Date Submitted>, type=column}, table_ref=cec}}, operator=is null}}, 2={condition={left={column={substitution={name=<Date Submitted>, type=column}, table_ref=cec}}, right={literal=''}, operator==}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1425,6 +1806,7 @@ public class SqlParseEventWalkerTest {
 				"	from <[Enrollment Services].[Client Entering Class]> cec";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 				
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<simple column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}}}",
 						extractor.getAsTree().toString());
@@ -1448,6 +1830,7 @@ public class SqlParseEventWalkerTest {
 				"	join <fulfill.[domain].[entity]> oth";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=cec}}}, from={join={1={table={alias=cec, substitution={name=<fulfill.[domain].[entity].[file category]>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category]}, type=tuple}}}, 2={join=join}, 3={table={alias=oth, substitution={name=<fulfill.[domain].[entity]>, parts={1=fulfill, 2=[domain], 3=[entity]}, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1470,6 +1853,7 @@ public class SqlParseEventWalkerTest {
 				"	from  <fulfill.[domain].[entity].[file category].{snapshot}> oth";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=oth}}}, from={table={alias=oth, substitution={name=<fulfill.[domain].[entity].[file category].{snapshot}>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category], 5={snapshot}}, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -1493,6 +1877,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}",
 				extractor.getAsTree().toString());
@@ -1514,6 +1899,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={table={alias=two, substitution={name=<tuple variable>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1521,11 +1907,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}, third={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={*=[[@1,8:8='*',<289>,1:8]]}, third={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 						extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple variable>={}, third={}, interface={*=[{name=*, table_ref=*}]}, two=<tuple variable>, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={<tuple variable>={*=[[@1,8:8='*',<289>,1:8]]}, third={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, two=<tuple variable>}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1536,6 +1922,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, table={alias=null, table=third}}}}",
 				extractor.getAsTree().toString());
@@ -1558,6 +1945,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, join={1={table={alias=T3, table=third}}, 2={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1565,11 +1953,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={third={}, fourth={}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=third}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={third={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=third}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1580,6 +1968,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<extension>, type=join_extension}}, join={1={table={alias=T3, table=third}}, 2={join=join, on={substitution={name=<third_fourth_join_condition>, type=condition}}}, 3={table={alias=F4, table=fourth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1587,11 +1976,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<third_fourth_join_condition>=condition, <extension>=join_extension}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 						extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={third={}, fourth={}, filters=[], interface={*=[{name=*, table_ref=*}]}, F4=fourth, unknown={*=[[@1,8:8='*',<289>,1:8]]}, T3=third}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={third={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, filters=[], interface={*=[{name=*, table_ref=*}]}, F4=fourth, T3=third}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1607,6 +1996,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1628,6 +2018,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1649,6 +2040,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=desc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=desc, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1670,6 +2062,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1691,6 +2084,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1712,6 +2106,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=asc, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=asc, table_ref=null}}, sort_order=asc}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1733,6 +2128,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1754,6 +2150,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=rank, table_ref=null}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1775,6 +2172,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -1791,15 +2189,16 @@ public class SqlParseEventWalkerTest {
 	}
 	
 	@Test
-	public void realisticRankAndDescColumnNameTest() {
+	public void unionWithDuplicateColumnNameTest() {
 		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
 				"FROM  <Guide> AS Guide_Student_Conditions " + 
-				" UNION ALL " + 
-				"SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"\n UNION ALL " + 
+				"\n SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
 				"FROM <NAV> AS  Nav_Student_Conditions";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1807,14 +2206,96 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, <NAV>={rank=[[@33,178:181='rank',<127>,1:178]], is_active=[[@29,163:171='is_active',<328>,1:163]], category=[[@27,153:160='category',<328>,1:153]], student=[[@37,190:196='student',<328>,1:190]], nk=[[@31,174:175='nk',<328>,1:174]], desc=[[@35,184:187='desc',<76>,1:184]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, <NAV>={rank=[[@33,181:184='rank',<127>,3:52]], is_active=[[@29,166:174='is_active',<328>,3:37]], category=[[@27,156:163='category',<328>,3:27]], student=[[@37,193:199='student',<328>,3:64]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@3,18:25='app_name',<328>,1:18]], is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, query1={app_name=[[@25,143:150='app_name',<328>,1:143]], is_active=[[@29,163:171='is_active',<328>,1:163]], student=[[@37,190:196='student',<328>,1:190]], rank=[[@33,178:181='rank',<127>,1:178]], category=[[@27,153:160='category',<328>,1:153]], nk=[[@31,174:175='nk',<328>,1:174]], desc=[[@35,184:187='desc',<76>,1:184]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@3,18:25='app_name',<328>,1:18]], is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, query1={app_name=[[@25,146:153='app_name',<328>,3:17]], is_active=[[@29,166:174='is_active',<328>,3:37]], student=[[@37,193:199='student',<328>,3:64]], rank=[[@33,181:184='rank',<127>,3:52]], category=[[@27,156:163='category',<328>,3:27]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}}",
 						extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{union2={query0={<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, Guide_Student_Conditions=<Guide>, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={rank=[[@33,178:181='rank',<127>,1:178]], is_active=[[@29,163:171='is_active',<328>,1:163]], category=[[@27,153:160='category',<328>,1:153]], student=[[@37,190:196='student',<328>,1:190]], nk=[[@31,174:175='nk',<328>,1:174]], desc=[[@35,184:187='desc',<76>,1:184]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{union2={query0={<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, Guide_Student_Conditions=<Guide>, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={rank=[[@33,181:184='rank',<127>,3:52]], is_active=[[@29,166:174='is_active',<328>,3:37]], category=[[@27,156:163='category',<328>,3:27]], student=[[@37,193:199='student',<328>,3:64]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	
+	@Test
+	public void multipleUnionWithDuplicateColumnNameTest() {
+		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
+				"FROM  <Guide> AS Guide_Student_Conditions " + 
+				"\n UNION ALL " + 
+				"\n SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"FROM <NAV> AS  Nav_Student_Conditions " +
+				"\n UNION ALL " + 
+				"\n SELECT 'Impl' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"FROM <IMPL> AS  IMPL_Student_Conditions";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}, 4={union={qualifier=ALL, operator=UNION}}, 5={select={1={alias=app_name, literal='Impl'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=IMPL_Student_Conditions, substitution={name=<IMPL>, type=tuple}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[app_name, is_active, student, rank, category, nk, desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple, <IMPL>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, <NAV>={rank=[[@33,181:184='rank',<127>,3:52]], is_active=[[@29,166:174='is_active',<328>,3:37]], category=[[@27,156:163='category',<328>,3:27]], student=[[@37,193:199='student',<328>,3:64]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}, <IMPL>={rank=[[@55,305:308='rank',<127>,5:53]], is_active=[[@51,290:298='is_active',<328>,5:38]], category=[[@49,280:287='category',<328>,5:28]], student=[[@59,317:323='student',<328>,5:65]], nk=[[@53,301:302='nk',<328>,5:49]], desc=[[@57,311:314='desc',<76>,5:59]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@3,18:25='app_name',<328>,1:18]], is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, query1={app_name=[[@25,146:153='app_name',<328>,3:17]], is_active=[[@29,166:174='is_active',<328>,3:37]], student=[[@37,193:199='student',<328>,3:64]], rank=[[@33,181:184='rank',<127>,3:52]], category=[[@27,156:163='category',<328>,3:27]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}, query2={app_name=[[@47,270:277='app_name',<328>,5:18]], is_active=[[@51,290:298='is_active',<328>,5:38]], student=[[@59,317:323='student',<328>,5:65]], rank=[[@55,305:308='rank',<127>,5:53]], category=[[@49,280:287='category',<328>,5:28]], nk=[[@53,301:302='nk',<328>,5:49]], desc=[[@57,311:314='desc',<76>,5:59]]}}",
+						extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{union3={query0={<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, Guide_Student_Conditions=<Guide>, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={rank=[[@33,181:184='rank',<127>,3:52]], is_active=[[@29,166:174='is_active',<328>,3:37]], category=[[@27,156:163='category',<328>,3:27]], student=[[@37,193:199='student',<328>,3:64]], nk=[[@31,177:178='nk',<328>,3:48]], desc=[[@35,187:190='desc',<76>,3:58]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, query2={<IMPL>={rank=[[@55,305:308='rank',<127>,5:53]], is_active=[[@51,290:298='is_active',<328>,5:38]], category=[[@49,280:287='category',<328>,5:28]], student=[[@59,317:323='student',<328>,5:65]], nk=[[@53,301:302='nk',<328>,5:49]], desc=[[@57,311:314='desc',<76>,5:59]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}, IMPL_Student_Conditions=<IMPL>}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void intersectWithDuplicateColumnNameTest() {
+		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
+				"FROM  <Guide> AS Guide_Student_Conditions " + 
+				"\n intersect " + 
+				"\n SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"FROM <NAV> AS  Nav_Student_Conditions";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[app_name, is_active, student, rank, category, nk, desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, <NAV>={rank=[[@32,181:184='rank',<127>,3:52]], is_active=[[@28,166:174='is_active',<328>,3:37]], category=[[@26,156:163='category',<328>,3:27]], student=[[@36,193:199='student',<328>,3:64]], nk=[[@30,177:178='nk',<328>,3:48]], desc=[[@34,187:190='desc',<76>,3:58]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@3,18:25='app_name',<328>,1:18]], is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, query1={app_name=[[@24,146:153='app_name',<328>,3:17]], is_active=[[@28,166:174='is_active',<328>,3:37]], student=[[@36,193:199='student',<328>,3:64]], rank=[[@32,181:184='rank',<127>,3:52]], category=[[@26,156:163='category',<328>,3:27]], nk=[[@30,177:178='nk',<328>,3:48]], desc=[[@34,187:190='desc',<76>,3:58]]}}",
+						extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect2={query0={<Guide>={rank=[[@11,54:57='rank',<127>,1:54]], is_active=[[@7,39:47='is_active',<328>,1:39]], category=[[@5,29:36='category',<328>,1:29]], student=[[@15,66:72='student',<328>,1:66]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, Guide_Student_Conditions=<Guide>, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, interface={app_name=query_column, is_active=query_column, student=query_column, rank=query_column, category=query_column, nk=query_column, desc=query_column}, query1={Nav_Student_Conditions=<NAV>, <NAV>={rank=[[@32,181:184='rank',<127>,3:52]], is_active=[[@28,166:174='is_active',<328>,3:37]], category=[[@26,156:163='category',<328>,3:27]], student=[[@36,193:199='student',<328>,3:64]], nk=[[@30,177:178='nk',<328>,3:48]], desc=[[@34,187:190='desc',<76>,3:58]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+		
+	@Test
+	public void joinWithDuplicateColumnNameTest() {
+		// TODO: Wrong table dictionary, should have both <Guide> and <NAV> with same columns. Fix the issue in parser and update the test case accordingly.
+		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
+				"FROM  <Guide> AS Guide_Student_Conditions " + 
+				"\n join " + 
+				"\n (SELECT 'Nav' AS app_name, category, is_active, nk, rank, desc, student " + 
+				"FROM <NAV> AS  Nav_Ss) AS Nav_Student_Conditions on 1=1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "xxx{SQL={select={1={alias=app_name, literal='Guide'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={join={1={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}, 2={join=join, on={condition={left={literal=1}, right={literal=1}, operator==}}}, 3={table={alias=Nav_Student_Conditions, query={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}, 5={column={name=rank, table_ref=null}}, 6={column={name=desc, table_ref=null}}, 7={column={name=student, table_ref=null}}}, from={table={alias=Nav_Ss, substitution={name=<NAV>, type=tuple}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[app_name, is_active, student, rank, category, nk, desc]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={}, <NAV>={rank=[[@33,177:180='rank',<127>,3:53]], is_active=[[@29,162:170='is_active',<328>,3:38]], category=[[@27,152:159='category',<328>,3:28]], student=[[@37,189:195='student',<328>,3:65]], nk=[[@31,173:174='nk',<328>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@25,142:149='app_name',<328>,3:18]], is_active=[[@29,162:170='is_active',<328>,3:38]], student=[[@37,189:195='student',<328>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<328>,3:28]], nk=[[@31,173:174='nk',<328>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}, query1={app_name=[[@3,18:25='app_name',<328>,1:18]], is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}}",
+						extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={<Guide>={}, Guide_Student_Conditions=<Guide>, Nav_Student_Conditions=query0, def_query0={<NAV>={rank=[[@33,177:180='rank',<127>,3:53]], is_active=[[@29,162:170='is_active',<328>,3:38]], category=[[@27,152:159='category',<328>,3:28]], student=[[@37,189:195='student',<328>,3:65]], nk=[[@31,173:174='nk',<328>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}, Nav_Ss=<NAV>, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}, filters=[], query0={is_active=[[@7,39:47='is_active',<328>,1:39]], student=[[@15,66:72='student',<328>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<328>,1:29]], nk=[[@9,50:51='nk',<328>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	// END OF RESERVED WORD CONVERSION
 	
@@ -1827,6 +2308,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=\"Name\"}}}}",
 				extractor.getAsTree().toString());
@@ -1848,6 +2330,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", alias=null, table=\"Name\"}}}}",
 				extractor.getAsTree().toString());
@@ -1869,6 +2352,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=\"scheme\", dbname=\"db\", alias=null, table=\"Name\"}}}}",
 				extractor.getAsTree().toString());
@@ -1890,6 +2374,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=panto, dbname=\"PROD-3beb02cb-f710-4d2d-a6a1-40c229e4a40e\", alias=null, table=\"1234_987654\"}}}}",
 				extractor.getAsTree().toString());
@@ -1916,6 +2401,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={union={qualifier=null, operator=union}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={union={qualifier=null, operator=union}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1939,6 +2425,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={intersect={qualifier=null, operator=intersect}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={intersect={qualifier=null, operator=intersect}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1962,6 +2449,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=second, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={union={qualifier=null, operator=union}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={union={qualifier=null, operator=union}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
 				extractor.getAsTree().toString());
@@ -1985,6 +2473,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=second, table_ref=null}}}, from={table={alias=null, table=fifth}}}, 4={intersect={qualifier=null, operator=intersect}}, 5={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 6={intersect={qualifier=null, operator=intersect}}, 7={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}",
 				extractor.getAsTree().toString());
@@ -2008,6 +2497,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2044,6 +2534,14 @@ public class SqlParseEventWalkerTest {
 						extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={eighth={seventh=[[@17,102:108='seventh',<328>,1:102]]}, interface={seventh=[{name=seventh, table_ref=null}]}}, interface={first=query_column}, query3={aa=intersect2, intersect2={}, def_intersect2={query0={fifth={third=[[@5,30:34='third',<328>,1:30]]}, interface={third=[{name=third, table_ref=null}]}}, interface={third=query_column}, query1={sixth={fourth=[[@10,65:70='fourth',<328>,1:65]]}, interface={fourth=[{name=fourth, table_ref=null}]}}}, interface={first=[{name=first, table_ref=null}]}, unknown={first=[[@1,8:12='first',<87>,1:8]]}}}}",
 				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet, "UNRESOLVED_UNKNOWN_COLUMNS",
+				"Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: [first (l:1 c:8)]",
+				"first", 1, 8);
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
+				"Unknown column reference 'first' at (l:1 c:8). No matching column found in any table/query dictionary in scope.",
+				"first", 1, 8);
 	}
 
 	@Test
@@ -2067,6 +2565,14 @@ public class SqlParseEventWalkerTest {
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{union5={query4={eighth={seventh=[[@16,99:105='seventh',<328>,1:99]]}, interface={seventh=[{name=seventh, table_ref=null}]}}, interface={first=query_column}, query3={intersect2={query0={fifth={third=[[@5,30:34='third',<328>,1:30]]}, interface={third=[{name=third, table_ref=null}]}}, interface={third=query_column}, query1={sixth={fourth=[[@10,65:70='fourth',<328>,1:65]]}, interface={fourth=[{name=fourth, table_ref=null}]}}}, interface={first=[{name=first, table_ref=null}]}, unknown={first=[[@1,8:12='first',<87>,1:8]]}}}}",
 				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet, "UNRESOLVED_UNKNOWN_COLUMNS",
+				"Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: [first (l:1 c:8)]",
+				"first", 1, 8);
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
+				"Unknown column reference 'first' at (l:1 c:8). No matching column found in any table/query dictionary in scope.",
+				"first", 1, 8);
 	}
 
 	// Union and Intersect with Qualifiers
@@ -2079,6 +2585,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
 				extractor.getAsTree().toString());
@@ -2102,6 +2609,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=ALL, operator=INTERSECT}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
 				extractor.getAsTree().toString());
@@ -2125,6 +2633,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=distinct, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
 				extractor.getAsTree().toString());
@@ -2148,6 +2657,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=distinct, operator=INTERSECT}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab2}}}}}}",
 				extractor.getAsTree().toString());
@@ -2173,6 +2683,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2190,12 +2701,13 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void unionWithSubqueryP1Test() {
-		final String query = "SELECT * from <tuple> tab1 " + 
+			final String query = "SELECT * from <tuple> tab1 " + 
 				" UNION ALL " + 
 				"SELECT * from (select * from problem) tab2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2213,12 +2725,13 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void unionWithSubqueryWithSubqueryTest() {
-		final String query = "SELECT * from <tuple> tab1 " + 
+			final String query = "SELECT * from <tuple> tab1 " + 
 				" UNION ALL " + 
 				"SELECT * from (select * from (select * from answer) problem) tab2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab1, substitution={name=<tuple>, type=tuple}}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=problem, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2236,12 +2749,13 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void intersectWithSubqueryWithIntersectSubqueryTest() {
-		final String query = "SELECT * from tab1 " + 
+			final String query = "SELECT * from tab1 " + 
 				" intersect " + 
 				"SELECT * from (select * from  answer intersect select * from problem) tab2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2265,6 +2779,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2282,12 +2797,13 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void intersectWithSubqueryWithUnionSubqueryTest() {
-		final String query = "SELECT * from tab1 " + 
+			final String query = "SELECT * from tab1 " + 
 				" intersect " + 
 				"SELECT * from (select * from  answer union select * from problem) tab2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2305,12 +2821,13 @@ public class SqlParseEventWalkerTest {
 	
 	@Test
 	public void unionWithSubqueryWithIntersectSubqueryTest() {
-		final String query = "SELECT * from tab1 " + 
+			final String query = "SELECT * from tab1 " + 
 				" UNION " + 
 				"SELECT * from (select * from  answer intersect select * from problem) tab2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={intersect={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2333,6 +2850,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=tab2, query={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=problem}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2357,6 +2875,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={not={literal=true}}}}",
 				extractor.getAsTree().toString());
@@ -2379,6 +2898,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={substitution={name=<subject code>, type=condition}}}}",
 				extractor.getAsTree().toString());
@@ -2400,6 +2920,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={column={substitution={name=<subject code>, type=column}, table_ref=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2421,6 +2942,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, right={substitution={name=<other subject code>, type=predicand}}, operator==}}}}",
 				extractor.getAsTree().toString());
@@ -2443,6 +2965,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -2465,6 +2988,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is not null}}}}",
 				extractor.getAsTree().toString());
@@ -2487,6 +3011,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<first condition>, type=condition}}, 2={condition={left={substitution={name=<subject code>, type=predicand}}, operator=is null}}}}}}",
 				extractor.getAsTree().toString());
@@ -2509,6 +3034,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj, table_ref=null}}}, operator=is true}}}",
 				extractor.getAsTree().toString());
@@ -2531,6 +3057,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj, table_ref=null}}}, operator=is not true}}}",
 				extractor.getAsTree().toString());
@@ -2554,6 +3081,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subject code>, type=predicand}}}, operator=is true}}}",
 				extractor.getAsTree().toString());
@@ -2575,6 +3103,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<subject code>, type=condition}}, 2={literal=true}}}}}",
 				extractor.getAsTree().toString());
@@ -2596,6 +3125,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={substitution={name=<subject code>, type=condition}}, 2={literal=true}}}}}",
 				extractor.getAsTree().toString());
@@ -2617,6 +3147,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={substitution={name=<subject code>, type=condition}}, 2={parentheses={substitution={name=<other>, type=condition}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2639,6 +3170,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={parentheses={substitution={name=<subject code>, type=condition}}}}}",
 				extractor.getAsTree().toString());
@@ -2661,6 +3193,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={or={1={parentheses={substitution={name=<subject code>, type=condition}}}, 2={literal=true}}}}}",
 				extractor.getAsTree().toString());
@@ -2683,6 +3216,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={and={1={substitution={name=<subject code_condition>, type=condition}}, 2={condition={left={substitution={name=<subject_code_predicand>, type=predicand}}, right={column={name=banana, table_ref=null}}, operator==}}}}}}",
 				extractor.getAsTree().toString());
@@ -2706,6 +3240,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2727,6 +3262,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2748,6 +3284,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=DESC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2769,6 +3306,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2790,6 +3328,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=first, predicand={column={name=col2, table_ref=null}}, sort_order=desc}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2801,7 +3340,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={col2=[[@11,49:52='col2',<328>,1:49]], *=[[@1,7:7='*',<289>,1:7]], col1=[[@6,28:31='col1',<328>,1:28]]}, interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={tab1={*=[[@1,7:7='*',<289>,1:7]], col2=[[@11,49:52='col2',<328>,1:49]], col1=[[@6,28:31='col1',<328>,1:28]]}, interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2813,6 +3352,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={literal=1}, sort_order=ASC}}, from={table={alias=null, table=dual}}}}",
 				extractor.getAsTree().toString());
@@ -2836,6 +3376,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, orderby={1={null_order=last, predicand={substitution={name=<var1>, type=predicand}}, sort_order=ASC}}, from={table={alias=null, table=dual}}}}",
 			extractor.getAsTree().toString());
@@ -2859,6 +3400,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, limit={literal=100}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2880,6 +3422,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, limit={offset=300, literal=100}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -2904,6 +3447,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=null, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=between}}}}",
 				extractor.getAsTree().toString());
@@ -2926,6 +3470,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=between}}}}",
 				extractor.getAsTree().toString());
@@ -2948,6 +3493,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=null, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=not between}}}}",
 				extractor.getAsTree().toString());
@@ -2970,6 +3516,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={column={name=a, table_ref=null}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={name=c, table_ref=null}}, operator=not between}}}}",
 				extractor.getAsTree().toString());
@@ -2992,6 +3539,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={between={item={substitution={name=<a>, type=predicand}}, symmetry=symmetric, end={column={name=d, table_ref=null}}, begin={column={substitution={name=<c>, type=column}, table_ref=tab1}}, operator=not between}}}}",
 				extractor.getAsTree().toString());
@@ -3017,6 +3565,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}, 2={concatenate={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, 3={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3039,6 +3588,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, in_list={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3050,7 +3600,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@18,79:79='*',<289>,1:79]]}, query2={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[[@14,63:66='item',<328>,1:63]], *=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, def_query0={other={*=[[@18,79:79='*',<289>,1:79]]}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[[@14,63:66='item',<328>,1:63]], subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, def_query0={other={*=[[@18,79:79='*',<289>,1:79]]}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3061,6 +3611,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, in_list={substitution={name=<inlist subquery>, type=query}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3072,7 +3623,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[[@14,62:65='item',<328>,1:62]], *=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,31:39='subj_code',<328>,1:31]]}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[[@14,62:65='item',<328>,1:62]], subj_code=[[@6,31:39='subj_code',<328>,1:31]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3082,6 +3633,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={substitution={name=<subj_code>, type=column}, table_ref=aa}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3104,6 +3656,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={substitution={name=<subj_code>, type=predicand}}, in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3126,6 +3679,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=item, table_ref=null}}, in_list={substitution={name=<inlist substitution>, type=in_list}}}}}}",
 				extractor.getAsTree().toString());
@@ -3148,6 +3702,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, not_in_list={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=other}}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3159,7 +3714,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@20,87:87='*',<289>,1:87]]}, query2={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[[@15,67:70='item',<328>,1:67]], *=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, def_query0={other={*=[[@20,87:87='*',<289>,1:87]]}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={aa=scbcrse, in_list1=query0, scbcrse={item=[[@15,67:70='item',<328>,1:67]], subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, def_query0={other={*=[[@20,87:87='*',<289>,1:87]]}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3170,6 +3725,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={and={1={in={item={column={name=subj_code, table_ref=null}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}, 2={in={item={column={name=item, table_ref=null}}, not_in_list={substitution={name=<inlist subquery>, type=query}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3181,7 +3737,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[[@15,66:69='item',<328>,1:66]], *=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,31:39='subj_code',<328>,1:31]]}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={item=[[@15,66:69='item',<328>,1:66]], subj_code=[[@6,31:39='subj_code',<328>,1:31]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}, {name=item, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3191,6 +3747,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={substitution={name=<subj_code>, type=column}, table_ref=aa}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3213,6 +3770,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={substitution={name=<subj_code>, type=predicand}}, not_in_list={list={1={literal='AA'}, 2={literal='BB'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3235,6 +3793,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={in={item={column={name=item, table_ref=null}}, not_in_list={substitution={name=<inlist substitution>, type=in_list}}}}}}",
 				extractor.getAsTree().toString());
@@ -3258,6 +3817,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3269,7 +3829,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3279,6 +3839,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3290,7 +3851,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3300,6 +3861,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3311,7 +3873,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3321,6 +3883,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, like_any_list={substitution={name=<variable>, type=in_list}}}}}}",
 				extractor.getAsTree().toString());
@@ -3332,7 +3895,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3344,6 +3907,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
 				extractor.getAsTree().toString());
@@ -3355,7 +3919,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3366,6 +3930,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
 				extractor.getAsTree().toString());
@@ -3377,7 +3942,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3388,6 +3953,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={like_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
 				extractor.getAsTree().toString());
@@ -3399,7 +3965,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3410,6 +3976,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, not_like_any_list={list={1={literal='AA%'}, 2={literal='BB%'}}}, escape='_'}}}}",
 				extractor.getAsTree().toString());
@@ -3421,7 +3988,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 // item 95 ends
@@ -3433,6 +4000,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=aa, table=scbcrse}}, where={ilike_any={item={column={name=subj_code, table_ref=null}}, like_any_list={substitution={name=<variable>, type=in_list}}}}}}",
 				extractor.getAsTree().toString());
@@ -3444,7 +4012,7 @@ public class SqlParseEventWalkerTest {
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={*=[[@1,7:7='*',<289>,1:7]], subj_code=[[@6,32:40='subj_code',<328>,1:32]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={aa=scbcrse, scbcrse={subj_code=[[@6,32:40='subj_code',<328>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, filters=[{name=subj_code, table_ref=null}], interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3459,6 +4027,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={literal='%STUFF%'}, operator=like}}}}",
 				extractor.getAsTree().toString());
@@ -3482,6 +4051,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=like}}}}",
 				extractor.getAsTree().toString());
@@ -3505,6 +4075,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={column={name=subj_cd, table_ref=null}}, operator=not_like}}}}",
 				extractor.getAsTree().toString());
@@ -3528,6 +4099,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={function={parameters={1={literal='%STUFF%'}}, function_name=lower}}, operator=like}}}}",
 				extractor.getAsTree().toString());
@@ -3551,6 +4123,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<subj_cd>, type=predicand}}, right={literal='%STUFF%'}, operator=like}}}}",
 				extractor.getAsTree().toString());
@@ -3574,6 +4147,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=subj_cd, table_ref=null}}, right={substitution={name=<predicand>, type=predicand}}, operator=like}}}}",
 				extractor.getAsTree().toString());
@@ -3974,6 +4548,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=case_one, case={clauses={1={then={literal='Y'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=<}}}, 2={then={literal='N'}, when={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}}, else={literal='N'}}}}, from={table={alias=null, table=sgbstdn}}}}",
 				extractor.getAsTree().toString());
@@ -3998,7 +4573,8 @@ public class SqlParseEventWalkerTest {
 				+ " FROM my.234 as s948, my.other5 as s949";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -4009,7 +4585,8 @@ public class SqlParseEventWalkerTest {
 				+ " FROM sgbstdn ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -4021,7 +4598,8 @@ public class SqlParseEventWalkerTest {
 				+ "trim(external_id) as EXTERNAL_ID,case when name is null or length(trim(name)) = 0 then 'Major name not available' else trim(name) end as NAME from "
 				+ " majorTbl where external_id is not null and length(trim(external_id)) > 0";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	// END OF CASE STATEMENTS
@@ -4034,6 +4612,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={name=field1, table_ref=null}}}}}, 2={function={parameters={1={concatenate={1={literal='0'}, 2={column={name=field2, table_ref=null}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=null, table=scbcrse}}}}",
 				extractor.getAsTree().toString());
@@ -4057,6 +4636,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={column={substitution={name=<field1>, type=column}, table_ref=a}}}}}, 2={function={parameters={1={concatenate={1={literal='0'}, 2={column={substitution={name=<field2>, type=column}, table_ref=a}}}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=a, table=scbcrse}}}}",
 				extractor.getAsTree().toString());
@@ -4080,6 +4660,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=trim, parameters={qualifier=leading, trim_character={literal='0'}, value={substitution={name=<field1>, type=predicand}}}}}, 2={function={parameters={1={substitution={name=<field2>, type=predicand}}, 2={literal='0'}}, function_name=trim}}}, from={table={alias=a, table=scbcrse}}}}",
 				extractor.getAsTree().toString());
@@ -4106,6 +4687,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={function={function_name=max, qualifier=null, parameters={column={name=TERM_CODE_ADMIT, table_ref=null}}}}, right={literal=201310}, operator=>=}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4129,6 +4711,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={or={1={substitution={name=<condition>, type=condition}}, 2={substitution={name=<condition2>, type=condition}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4152,6 +4735,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={substitution={name=<condition>, type=predicand}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4175,6 +4759,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=spriden_id, table_ref=null}}, 2={column={name=TERM_CODE_ADMIT, table_ref=null}}}, having={condition={left={column={substitution={name=<condition>, type=column}, table_ref=tab1}}, right={literal='20130101'}, operator=>}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4199,6 +4784,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=apple, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={literal=2}, sort_order=ASC}, 3={null_order=null, predicand={calc={left={column={name=fruit_cd, table_ref=null}}, right={literal=1}, operator=+}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4221,6 +4807,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<predicand variable>, type=predicand}}, sort_order=desc}, 2={null_order=null, predicand={column={name=fruit_cd, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4243,6 +4830,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={column={name=fruit_cd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={substitution={name=<column variable>, type=column}, table_ref=tab1}}, sort_order=desc}, 2={null_order=null, predicand={column={name=fruit_cd, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4267,6 +4855,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -4290,6 +4879,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}",
 				extractor.getAsTree().toString());
@@ -4312,6 +4902,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={column={substitution={name=<other>, type=column}, table_ref=tab1}}, 2={substitution={name=<predicand>, type=predicand}}, 3={parentheses={calc={left={column={name=a, table_ref=null}}, right={calc={left={column={name=b, table_ref=null}}, right={column={name=c, table_ref=null}}, operator=*}}, operator=+}}}}}}",
 				extractor.getAsTree().toString());
@@ -4335,6 +4926,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}}, from={table={alias=null, table=tab1}}, groupby={1={substitution={name=<other>, type=predicand}}}}}",
 				extractor.getAsTree().toString());
@@ -4357,6 +4949,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={calc={left={column={name=subj, table_ref=null}}, right={column={name=object, table_ref=null}}, operator=+}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -4379,6 +4972,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={column={substitution={name=<other>, type=column}, table_ref=tab1}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -4401,6 +4995,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=apple, table_ref=null}}, 2={function={function_name=count, qualifier=null, parameters={substitution={name=<other>, type=predicand}}}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -4427,6 +5022,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=ANY_VALUE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4440,6 +5036,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=CORR, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4453,6 +5050,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=COVAR_POP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4466,6 +5064,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=COVAR_SAMP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4479,6 +5078,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=LISTAGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4492,6 +5092,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MEDIAN, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4505,6 +5106,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENTILE_CONT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4518,6 +5120,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENTILE_DISC, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4531,6 +5134,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=STDDEV, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4544,6 +5148,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE_POP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4557,6 +5162,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4570,6 +5176,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=VARIANCE_SAMP, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4583,6 +5190,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=CUME_DIST, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4596,6 +5204,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=DENSE_RANK, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4609,6 +5218,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=NTILE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4622,6 +5232,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=PERCENT_RANK, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4635,6 +5246,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=WIDTH_BUCKET, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4648,6 +5260,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITAND_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4661,6 +5274,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITOR_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4674,6 +5288,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=BITXOR_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4687,6 +5302,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HASH_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4700,6 +5316,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=ARRAY_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4713,6 +5330,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=OBJECT_AGG, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4726,6 +5344,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_AVGX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4739,6 +5358,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_AVGY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4752,6 +5372,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_COUNT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4765,6 +5386,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_INTERCEPT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4778,6 +5400,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_R2, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4791,6 +5414,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SLOPE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4804,6 +5428,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SXX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4817,6 +5442,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SXY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4830,6 +5456,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=REGR_SYY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4843,6 +5470,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_COUNT_DISTINCT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4856,6 +5484,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4869,6 +5498,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4882,6 +5512,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4895,6 +5526,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_EXPORT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4908,6 +5540,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=HLL_IMPORT, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4921,6 +5554,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROXIMATE_JACCARD_INDEX, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4934,6 +5568,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROXIMATE_SIMILARITY, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4947,6 +5582,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MINHASH, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4960,6 +5596,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=MINHASH_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4973,6 +5610,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4986,6 +5624,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -4999,6 +5638,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_TOP_K_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5012,6 +5652,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5025,6 +5666,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE_ACCUMULATE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5038,6 +5680,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=APPROX_PERCENTILE_COMBINE, qualifier=null, parameters={column={name=col1, table_ref=null}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5052,6 +5695,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=col1, table_ref=null}}}, function_name=GROUPING}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5063,6 +5707,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col, table_ref=null}}, 2={function={parameters={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, function_name=GROUPING}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=col, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -5079,6 +5724,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=item, table_ref=null}}}, function_name=func}}, 2={window_function={over={partition_by={1={column={name=spriden_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=code, table_ref=null}}, sort_order=ASC}}}, function={function_name=lead, parameters={1={column={name=code, table_ref=null}}, 2={literal=1}}}}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5102,6 +5748,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters=null}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5125,6 +5772,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5155,6 +5803,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("Interface is wrong", "[degree_cd_2_fill, concentration_cd_fill, college_cd_fill, major_cd_2_fill, college_cd_2_fill, degree_cd_fill, concentration_cd_2_fill, major_cd_fill]", 
 				extractor.getInterface().toString());
@@ -5172,6 +5821,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lag, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5195,6 +5845,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=lead, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5218,6 +5869,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5241,6 +5893,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=last_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5264,6 +5917,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5287,6 +5941,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=first_value, parameters={1={column={name=major_cd, table_ref=null}}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5311,6 +5966,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5334,6 +5990,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=respect, function_name=nth_value, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5357,6 +6014,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=first, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5380,6 +6038,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=major_cd_fill, window_function={over={partition_by={1={column={name=student_id, table_ref=null}}, 2={column={name=value_partition, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=term_row, table_ref=null}}, sort_order=ASC}}}, function={null_handle=ignore, function_name=nth_value, select_from=last, parameters={1={column={name=major_cd, table_ref=null}}, 2={literal=2}}}}}}, from={table={alias=null, table=student_term_major}}, where={condition={left={column={name=major_cd, table_ref=null}}, operator=is null}}}}",
 				extractor.getAsTree().toString());
@@ -5404,6 +6063,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={window_function={over={bracket={type=rows, between={end={value=CURRENT ROW}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={substitution={name=<expression2>, type=predicand}}}, orderby={1={null_order=null, predicand={substitution={name=<expression3>, type=predicand}}, sort_order=asc}}}, function={function_name=count_if, parameters={1={condition={left={substitution={name=<expression1>, type=predicand}}, right={literal='Y'}, operator==}}}}}}}, from={table={alias=null, table=dual}}}}",
 				extractor.getAsTree().toString());
@@ -5578,6 +6238,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5602,6 +6263,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=PRECEDING}, begin={value=unbounded, direction=FOLLOWING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5619,6 +6281,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=Classification_Description, window_function={over={partition_by={1={column={substitution={name=<Student Classification Code>, type=column}, table_ref=a}}}, orderby={1={null_order=last, predicand={column={substitution={name=<Classification Description>, type=column}, table_ref=a}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={substitution={name=<Classification Description>, type=column}, table_ref=a}}}}}}}, from={table={alias=a, substitution={name=<[HEDGSS].[student_class_lkp]>, parts={1=[HEDGSS], 2=[student_class_lkp]}, type=tuple}}}}}",
 			extractor.getAsTree().toString());
@@ -5644,6 +6307,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=100, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 			extractor.getAsTree().toString());
@@ -5658,6 +6322,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5672,6 +6337,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=10, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5686,6 +6352,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=25, direction=FOLLOWING}, begin={value=CURRENT ROW}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5700,6 +6367,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, between={end={value=CURRENT ROW}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5714,6 +6382,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=unbounded, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5728,6 +6397,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=30, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5742,6 +6412,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=rows, value=CURRENT ROW}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5756,6 +6427,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=unboundED, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5770,6 +6442,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=30, direction=PRECEDING}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5784,6 +6457,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, value=CURRENT ROW}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5798,6 +6472,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=key_rank, window_function={over={bracket={type=range, between={end={value=10, direction=FOLLOWING}, begin={value=10, direction=PRECEDING}}}, partition_by={1={column={name=k_stfd, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=OBSERVATION_TM, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=parm, table_ref=null}}}}}}}, from={table={alias=a, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5856,6 +6531,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 			
 		Assert.assertEquals("AST is wrong", "{SQL={select={44={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_3_new}, 45={column={name=department_code_4, table_ref=null}}, 46={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_4_new}, 47={alias=academic_standing_code_new, window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=as_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=academic_standing_code, table_ref=st}}}}}}, 48={column={name=academic_standing_code, table_ref=null}}, 10={alias=concentration_code_1_new, window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 11={column={name=campus_code, table_ref=null}}, 12={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=campus_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=campus_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=campus_code_new}, 13={column={name=college_code, table_ref=null}}, 14={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=college_code_new}, 15={column={name=department_code, table_ref=null}}, 16={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=dept_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=department_code_new}, 17={column={name=major_code_2, table_ref=null}}, 18={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_2_new}, 19={column={name=concentration_code_2, table_ref=null}}, 1={column={name=student_id, table_ref=st}}, 2={column={name=term_code, table_ref=st}}, 3={column={name=level_code, table_ref=st}}, 4={column={name=major_code_1, table_ref=null}}, 5={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=major_code_1_new}, 6={column={name=degree_code_1, table_ref=null}}, 7={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree1_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_1, table_ref=st}}}}}}, 3={literal='NA'}}, function_name=COALESCE}, alias=degree_code_1_new}, 8={column={name=concentration_code_1, table_ref=null}}, 9={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc1_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_1, table_ref=st}}}}}}, 20={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=conc2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_2_new}, 21={column={name=degree_code_2, table_ref=null}}, 22={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_2_new}, 23={column={name=college_code_2, table_ref=null}}, 24={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=coll2_partition_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_2_new}, 25={column={name=major_code_3, table_ref=null}}, 26={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_3_new}, 27={column={name=concentration_code_3, table_ref=null}}, 28={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_3_new}, 29={column={name=degree_code_3, table_ref=null}}, 30={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_3_new}, 31={column={name=college_code_3, table_ref=null}}, 32={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_3_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_3, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_3_new}, 33={column={name=major_code_4, table_ref=null}}, 34={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=major_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=major_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=major_code_4_new}, 35={column={name=concentration_code_4, table_ref=null}}, 36={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=concentration_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=concentration_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=concentration_code_4_new}, 37={column={name=degree_code_4, table_ref=null}}, 38={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=degree_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=degree_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=degree_code_4_new}, 39={column={name=college_code_4, table_ref=null}}, 40={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=college_code_4_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=college_code_4, table_ref=st}}}}}}}, function_name=COALESCE}, alias=college_code_4_new}, 41={column={name=department_code_2, table_ref=null}}, 42={function={parameters={1={window_function={over={partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_downfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=first_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}, 2={window_function={over={bracket={type=rows, between={end={value=unbounded, direction=FOLLOWING}, begin={value=unbounded, direction=PRECEDING}}}, partition_by={1={column={name=student_id, table_ref=st}}, 2={column={name=department_code_2_backfill, table_ref=bfdf}}}, orderby={1={null_order=null, predicand={column={name=student_id, table_ref=st}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=term_code, table_ref=st}}, sort_order=ASC}}}, function={function_name=last_value, parameters={1={column={name=department_code_2, table_ref=st}}}}}}}, function_name=COALESCE}, alias=department_code_2_new}, 43={column={name=department_code_3, table_ref=null}}}, from={join={1={table={alias=st, table=sar_student_term}}, 2={join=JOIN, on={and={1={condition={left={column={name=term_code, table_ref=st}}, right={column={name=term_code, table_ref=bfdf}}, operator==}}, 2={condition={left={column={name=student_id, table_ref=st}}, right={column={name=student_id, table_ref=bfdf}}, operator==}}, 3={condition={left={column={name=level_code, table_ref=st}}, right={column={name=level_code, table_ref=bfdf}}, operator==}}}}}, 3={table={alias=bfdf, table=bf_df_values}}}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}",
 				extractor.getAsTree().toString());
@@ -5873,6 +6549,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5895,6 +6572,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=dd}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, table=tab1}}}}",
 				extractor.getAsTree().toString());
@@ -5932,7 +6610,10 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, cc=tab2, tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}}}",
 				extractor.getSymbolTable().toString());
 
-		assertUnresolvedUnknownColumnsFatalDiagnostic(extractor.getSnippet(), 1, 23, "c");
+		Snippet snippet = extractor.getSnippet();
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1, 23);
+		Assert.assertEquals("Unexpected total fatal diagnostic count", 2, snippet.getFatalErrorCount());
 	}
 
 	@Test
@@ -5944,6 +6625,8 @@ public class SqlParseEventWalkerTest {
 		Snippet snippet = extractor.getSnippet();
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1, 23);
+		Assert.assertEquals("Unexpected total fatal diagnostic count", 2, snippet.getFatalErrorCount());
 	}
 
 	@Test
@@ -5967,7 +6650,10 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query1={dd=query0, def_query0={ee={a=[[@10,32:32='a',<328>,1:32]], e=[[@12,35:35='e',<328>,1:35]]}, filters=[], interface={a=[{name=a, table_ref=null}], b=[{name=e, table_ref=null}]}}, query0={a=[[@1,8:8='a',<328>,1:8]], b=[[@4,14:14='b',<328>,1:14]]}, interface={aa=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}]}, unknown={c=[[@6,17:17='c',<328>,1:17]]}}}",
 				extractor.getSymbolTable().toString());
 
-		assertUnresolvedUnknownColumnsFatalDiagnostic(extractor.getSnippet(), 1, 17, "c");
+		Snippet snippet = extractor.getSnippet();
+		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1, 17);
+		Assert.assertEquals("Unexpected total fatal diagnostic count", 2, snippet.getFatalErrorCount());
 	}
 
 	@Test
@@ -5979,6 +6665,20 @@ public class SqlParseEventWalkerTest {
 		Snippet snippet = extractor.getSnippet();
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
+		assertFatalDiagnosticAtPosition(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1, 17);
+		Assert.assertEquals("Unexpected total fatal diagnostic count", 2, snippet.getFatalErrorCount());
+	}
+
+	@Test
+	public void ambiguousQueryColumnWithCompetingSubqueryAliasesCollectsFatalDiagnosticTest() {
+		String query = "SELECT a FROM (SELECT x AS a FROM tab1) dd JOIN (SELECT z AS a FROM tab2) cc ON dd.a = cc.a";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPosition(snippet, "AMBIGUOUS_COLUMN_REFERENCE", "Ambiguous column reference 'a'", "a", 1, 7);
+		Assert.assertEquals("Unexpected total fatal diagnostic count", 1, snippet.getFatalErrorCount());
 	}
 
 	@Test
@@ -5988,6 +6688,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={lookup={from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=dd}}, from={table={alias=null, table=tab1}}, where={in={item={column={name=a, table_ref=null}}, in_list={select={1={column={name=c, table_ref=null}}}, from={table={alias=null, table=ff}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
 				extractor.getAsTree().toString());
@@ -6012,6 +6713,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=tab1}, alias=aa}, 2={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=max_D}, 3={lookup={from={table={alias=null, table=ee}}, select={1={function={function_name=min, qualifier=null, parameters={column={name=D, table_ref=null}}}}}}, alias=min_D}, 4={column={name=w, table_ref=kk}}}, from={join={1={table={alias=null, table=tab1}}, 2={join=join}, 3={table={alias=kk, query={select={1={column={name=w, table_ref=null}}}, from={table={alias=null, table=jj}}}}}}}, where={in={item={column={name=a, table_ref=null}}, in_list={select={1={column={name=c, table_ref=null}}}, from={table={alias=null, table=ff}}}}}}}",
 				extractor.getAsTree().toString());
@@ -6038,6 +6740,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={and={1={condition={left={column={name=stvmajr_valid_concentratn_ind, table_ref=s}}, right={literal='Y'}, operator==}}, 2={NOT={exists={select={1={literal=1}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator==}}, operator=EXISTS}}}}}}}",
 				extractor.getAsTree().toString());
@@ -6062,6 +6765,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={and={1={condition={left={column={name=stvmajr_valid_concentratn_ind, table_ref=s}}, right={literal='Y'}, operator==}}, 2={NOT={exists={substitution={name=<table_variable>, type=tuple}, operator=EXISTS}}}}}}}",
 				extractor.getAsTree().toString());
@@ -6086,6 +6790,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=dept, table_ref=e}}, 2={function={function_name=SUM, qualifier=null, parameters={column={name=salary, table_ref=e}}}, alias=total_salary}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=salary, table_ref=e}}}}, right={select={1={function={function_name=AVG, qualifier=null, parameters={column={name=salary, table_ref=null}}}}}, from={table={alias=null, table=employees}}}, operator=>}}, from={table={alias=e, table=employees}}, groupby={1={column={name=dept, table_ref=e}}}}}",
 				extractor.getAsTree().toString());
@@ -6111,6 +6816,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=customer_id, table_ref=e}}, 2={function={function_name=COUNT, qualifier=null, parameters=*}, alias=order_count}}, having={exists={select={1={literal=1}}, from={table={alias=o, table=orders}}, where={condition={left={column={name=customer_id, table_ref=o}}, right={column={name=customer_id, table_ref=e}}, operator==}}, operator=EXISTS}}, from={table={alias=e, table=customers}}, groupby={1={column={name=customer_id, table_ref=e}}}}}",
 				extractor.getAsTree().toString());
@@ -6137,6 +6843,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, from={table={alias=s, table=bnr_stvmajr}}, where={condition={left={column={name=stvmajr_code, table_ref=s}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=concentration_code, table_ref=c}}}}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator=!=}}}, operator=>}}}}",
 				extractor.getAsTree().toString());
@@ -6162,6 +6869,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=stvmajr_code, table_ref=s}, alias=concentration_code}, 2={column={name=stvmajr_desc, table_ref=s}, alias=concentration_desc}, 3={alias=active_ind, literal='T'}}, orderby={1={null_order=null, predicand={select={1={function={function_name=min, qualifier=null, parameters={column={name=code, table_ref=c}}}}}, from={table={alias=c, table=cat_concentration}}, where={condition={left={column={name=concentration_code, table_ref=c}}, right={column={name=stvmajr_code, table_ref=s}}, operator==}}}, sort_order=ASC}}, from={table={alias=s, table=bnr_stvmajr}}}}",
 				extractor.getAsTree().toString());
@@ -6186,7 +6894,8 @@ public class SqlParseEventWalkerTest {
 				+ " from tab1 ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 	
 	@Test
@@ -6209,7 +6918,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <second_predicand> = <third_predicand> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6218,7 +6928,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <second_predicand> = <third_predicand> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6227,7 +6938,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <condition_substitute> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6236,7 +6948,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <first_condition> or <second_condition> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6245,7 +6958,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <second_predicand> or <third_predicand> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6255,7 +6969,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE  <second_predicand> or <third_predicand> ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6265,6 +6980,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={substitution={name=<column1>, type=predicand}, alias=redvalue}, 2={substitution={name=<column2>, type=predicand}, alias=greenvalue}}, from={table={alias=tab, substitution={name=<table>, type=tuple}}}, where={condition={left={substitution={name=<column1>, type=predicand}}, right={substitution={name=<column2>, type=predicand}}, operator=>}}}}",
 				extractor.getAsTree().toString());
@@ -6288,6 +7004,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={substitution={name=<column1>, type=column}, table_ref=tt}, alias=redvalue}, 2={column={substitution={name=<column2>, type=column}, table_ref=tt}, alias=greenvalue}}, from={table={alias=tt, substitution={name=<table>, type=tuple}}}, where={condition={left={column={substitution={name=<column1>, type=column}, table_ref=tt}}, right={column={substitution={name=<column2>, type=column}, table_ref=tt}}, operator=>}}}}",
 				extractor.getAsTree().toString());
@@ -6312,6 +7029,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=noalias, table_ref=null}}, 2={column={name=normcol, table_ref=null}, alias=normalias}, 3={substitution={name=<PredicandVariableNoAlias>, type=predicand}}, 4={substitution={name=<PredicandVariable>, type=predicand}, alias=predicandAlias}, 5={column={substitution={name=<ColumnVariableNoAlias>, type=column}, table_ref=studentTable}}, 6={column={substitution={name=<ColumnVariableWithAlias>, type=column}, table_ref=studentTable}, alias=columnAlias}}, from={table={alias=studentTable, substitution={name=<StudentTable>, type=tuple}}}}}",
 				extractor.getAsTree().toString());
@@ -6334,6 +7052,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=newColumn, table_ref=old_table}}, 2={column={name=otherColumn, table_ref=null}}, 3={substitution={name=<substitute_me>, type=predicand}}, 4={column={substitution={name=<today>, type=column}, table_ref=old_table}}, 5={literal=128.9}, 6={literal='A'}}, function_name=func}, alias=ex}}, from={table={alias=null, table=old_table}}}}",
 				extractor.getAsTree().toString());
@@ -6368,7 +7087,21 @@ public class SqlParseEventWalkerTest {
 				+ " select *, <missing>, <notmissing> as notMissing from student ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={with={getLastXTerms={substitution={name=<GetLastXTerms>, type=query}}, student={select={1={substitution={name=<StudentIdentifier>, type=predicand}, alias=nk}, 2={column={substitution={name=<StudentId>, type=column}, table_ref=studentTable}, alias=username}, 3={substitution={name=<StudentEmailAddress>, type=predicand}, alias=email}, 4={column={substitution={name=<StudentFirstName>, type=column}, table_ref=studentTable}, alias=first_name}, 5={substitution={name=<StudentLastName>, type=predicand}, alias=last_name}, 6={substitution={name=<Birthdate>, type=predicand}, alias=birthdate}, 7={substitution={name=<ActiveStudent>, type=predicand}, alias=is_active}}, qualifier=distinct, from={join={1={table={alias=studentTable, substitution={name=<StudentTable>, type=tuple}}}, 2={join=join, on={substitution={name=<studentPopulationJoinCondition>, type=condition}}}, 3={table={alias=null, table=studentPopulation}}, 4={join=Left, on={substitution={name=<personTableJoinCondition>, type=condition}}}, 5={table={alias=personTable, substitution={name=<PersonTable>, type=tuple}}}}}, where={substitution={name=<whereClause>, type=condition}}}, studentPopulation={substitution={name=<studentPopulation>, type=query}}}, query={select={1={column={name=*, table_ref=*}}, 2={substitution={name=<missing>, type=predicand}}, 3={substitution={name=<notmissing>, type=predicand}, alias=notMissing}}, from={table={alias=null, table=student}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[notMissing, *, <missing>]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<GetLastXTerms>=query, <StudentIdentifier>=predicand, <personTableJoinCondition>=condition, <StudentId>=column, <studentPopulationJoinCondition>=condition, <missing>=predicand, <StudentFirstName>=column, <StudentLastName>=predicand, <whereClause>=condition, <studentPopulation>=query, <PersonTable>=tuple, <StudentTable>=tuple, <StudentEmailAddress>=predicand, <Birthdate>=predicand, <notmissing>=predicand, <ActiveStudent>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<PersonTable>={*=[[@70,562:562='*',<289>,1:562]]}, <StudentTable>={<StudentFirstName>={substitution={name=<StudentFirstName>, type=column}}, <StudentId>={substitution={name=<StudentId>, type=column}}, *=[[@70,562:562='*',<289>,1:562]]}, studentpopulation={*=[[@70,562:562='*',<289>,1:562]]}, student={*=[[@70,562:562='*',<289>,1:562]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={birthdate=[[@44,317:325='birthdate',<328>,1:317]], is_active=[[@48,348:356='is_active',<328>,1:348]], last_name=[[@40,290:298='last_name',<328>,1:290]], *=[[@70,562:562='*',<289>,1:562]], nk=[[@20,144:145='nk',<328>,1:144]], first_name=[[@36,256:265='first_name',<328>,1:256]], email=[[@30,213:217='email',<328>,1:213]], username=[[@26,177:184='username',<328>,1:177]]}, query1={notMissing=[[@76,592:601='notMissing',<328>,1:592]], *=[[@70,562:562='*',<289>,1:562]], <missing>=[[@72,565:573='<missing>',<325>,1:565]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{with={getLastXTerms={}, student={query0={<PersonTable>={}, <StudentTable>={<StudentFirstName>={substitution={name=<StudentFirstName>, type=column}}, <StudentId>={substitution={name=<StudentId>, type=column}}}, studentPopulation={}, personTable=<PersonTable>, filters=[], interface={birthdate=[{name=<Birthdate>, type=predicand}], is_active=[{name=<ActiveStudent>, type=predicand}], last_name=[{name=<StudentLastName>, type=predicand}], nk=[{name=<StudentIdentifier>, type=predicand}], first_name=[{substitution={name=<StudentFirstName>, type=column}, table_ref=studentTable}], email=[{name=<StudentEmailAddress>, type=predicand}], username=[{substitution={name=<StudentId>, type=column}, table_ref=studentTable}]}, studentTable=<StudentTable>}}, studentPopulation={}}, query1={student={*=[[@70,562:562='*',<289>,1:562]]}, interface={notMissing=[{name=<notmissing>, type=predicand}], *=[{name=*, table_ref=*}], <missing>=[{name=<missing>, type=predicand}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -6378,6 +7111,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=normalColumn, table_ref=null}}, 2={substitution={name=<missing>, type=predicand}}, 3={substitution={name=<notmissing>, type=predicand}, alias=notMissing}}, from={table={alias=null, table=student}}}}",
 				extractor.getAsTree().toString());
@@ -6401,6 +7135,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={join=crossjoin}, 3={table={alias=union, substitution={name=<fourth>, type=tuple}}}, 4={join=join}, 5={table={alias=fth, substitution={name=<fifth>, type=tuple}}}, 6={join=naturaljoin}, 7={table={alias=null, table=sixth}}}}}}",
 				extractor.getAsTree().toString());
@@ -6408,11 +7143,11 @@ public class SqlParseEventWalkerTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fifth>=tuple, <fourth>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{sixth={}, third={}, <fifth>={}, <fourth>={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={*=[[@1,8:8='*',<289>,1:8]]}, third={*=[[@1,8:8='*',<289>,1:8]]}, <fifth>={*=[[@1,8:8='*',<289>,1:8]]}, <fourth>={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={sixth={}, third={}, <fifth>={}, <fourth>={}, union=<fourth>, fth=<fifth>, interface={*=[{name=*, table_ref=*}]}, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={sixth={*=[[@1,8:8='*',<289>,1:8]]}, third={*=[[@1,8:8='*',<289>,1:8]]}, <fifth>={*=[[@1,8:8='*',<289>,1:8]]}, <fourth>={*=[[@1,8:8='*',<289>,1:8]]}, union=<fourth>, fth=<fifth>, interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -6427,6 +7162,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<fourth>, type=join_extension}}, table={alias=union, table=third}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={union={1={substitution={name=<sixth>, type=query}}, 2={union={qualifier=null, operator=union}}, 3={substitution={name=<fifth>, type=query}}}}}}}",
 				extractor.getAsTree().toString());
@@ -6452,6 +7188,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={extension={substitution={name=<optionalAllStudent>, type=join_extension}}, table={alias=union, table=student}}}}",
 				extractor.getAsTree().toString());
@@ -6478,7 +7215,8 @@ public class SqlParseEventWalkerTest {
 		final String query = " SELECT 123 as intgr, 56.98 as decml, 34.0 e+8 as expon from h.5463_77 ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	// *********************************
@@ -6491,7 +7229,8 @@ public class SqlParseEventWalkerTest {
 				+ " AND aa.scbcrse_crse_numb = courses.crse_numb ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6532,7 +7271,8 @@ public class SqlParseEventWalkerTest {
 				+ " AND (aa.scbcrse_crse_numb = courses.crse_numb " + " or aa.scbcrse_crse_numb = courses.crse_numb) ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6543,6 +7283,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=scbcrse_subj_code, table_ref=null}, alias=subj_code}, 2={function={function_name=COUNT, qualifier=null, parameters=*}}, 3={function={function_name=MAX, qualifier=null, parameters={column={name=scbcrse_eff_term, table_ref=null}}}}}, orderby={1={null_order=null, predicand={literal=2}, sort_order=ASC}, 2={null_order=null, predicand={column={name=scbcrse_subj_code, table_ref=null}}, sort_order=ASC}, 3={null_order=null, predicand={literal=1}, sort_order=ASC}}, from={table={alias=null, table=scbcrse}}, groupby={1={column={name=scbcrse_subj_code, table_ref=null}}}}}",
 				extractor.getAsTree().toString());
@@ -6563,7 +7304,8 @@ public class SqlParseEventWalkerTest {
 				+ " FROM scbcrse " + " group by scbcrse_subj_code " + " order by 2, scbcrse_subj_code, 1 ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6572,7 +7314,8 @@ public class SqlParseEventWalkerTest {
 		final String query = " SELECT scbcrse_subj_code FROM scbcrse " + " where a = b AND c=d  OR e=f and g=h ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6581,7 +7324,8 @@ public class SqlParseEventWalkerTest {
 		final String query = " SELECT * FROM tab1 ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6590,7 +7334,8 @@ public class SqlParseEventWalkerTest {
 		final String query = " SELECT * FROM third, fourth, fifth, sixth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6599,7 +7344,8 @@ public class SqlParseEventWalkerTest {
 		final String query = " SELECT * FROM third cross join fourth union join fifth natural join sixth ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6609,7 +7355,8 @@ public class SqlParseEventWalkerTest {
 				+ " union join fifth natural join sixth natural inner join seventh";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6619,7 +7366,26 @@ public class SqlParseEventWalkerTest {
 		+ " left outer join fifth on b = d ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+				
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={join=join, on={condition={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator==}}}, 3={table={alias=null, table=fourth}}, 4={join=leftouter, on={condition={left={column={name=b, table_ref=null}}, right={column={name=d, table_ref=null}}, operator==}}}, 5={table={alias=null, table=fifth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='*',<289>,1:8]]}, fifth={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<289>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={third={*=[[@1,8:8='*',<289>,1:8]]}, fifth={*=[[@1,8:8='*',<289>,1:8]]}, fourth={*=[[@1,8:8='*',<289>,1:8]]}, filters=[{name=a, table_ref=null}, {name=b, table_ref=null}, {name=d, table_ref=null}], interface={*=[{name=*, table_ref=*}]}, unknown={a=[[@7,36:36='a',<328>,1:36]], b=[[@9,40:40='b',<328>,1:40], [@15,68:68='b',<328>,1:68]], d=[[@17,72:72='d',<328>,1:72]]}}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet, "UNRESOLVED_UNKNOWN_COLUMNS",
+				"Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: [a (l:1 c:36), b (l:1 c:40), d (l:1 c:72)]",
+				"a", 1, 36);
+
 	}
 
 
@@ -6634,7 +7400,8 @@ public class SqlParseEventWalkerTest {
 				+ " AND scbcrse_eff_term <= courses.term) ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6642,7 +7409,8 @@ public class SqlParseEventWalkerTest {
 		final String query = "SELECT (6 * 9 - 100 + a)  FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6652,7 +7420,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6661,7 +7430,8 @@ public class SqlParseEventWalkerTest {
 		final String query = "SELECT 5+8+9-2+9 FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6670,7 +7440,8 @@ public class SqlParseEventWalkerTest {
 		final String query = "SELECT 5*8*9/2*9 FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6679,7 +7450,8 @@ public class SqlParseEventWalkerTest {
 		final String query = "SELECT 5*(8*9)/(2*9) FROM scbcrse aa " + " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6689,7 +7461,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE aa.scbcrse_subj_code is not null ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 	@Test
 	public void selectItemSubqueryStatementParseTest() {
@@ -6697,7 +7470,8 @@ public class SqlParseEventWalkerTest {
 				+ " WHERE sgbstdn_levl_code = 'US' " + " ) AS INTERNATIONAL_IND " + " FROM sgbstdn ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -6706,21 +7480,24 @@ public class SqlParseEventWalkerTest {
 				+ " FROM tab1 as a" + " WHERE a.col1 <> a.col3 " + " ) AS b ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
 	public void largeStudentgeneralQueryParseTest() {
-
-		final String query = "SELECT " + " population.spriden_id AS STUDENT_ID "
+		// Part of this is the problem of correlated subquery. Each predicand is referencing a field from the outer join's 
+		// from statement, but we haven't implemented that capability yet.
+	
+		final String query = "\n select " + " population.spriden_id AS STUDENT_ID "
 				+ " , population.spriden_first_name AS FIRST_NAME " + " , population.spriden_mi AS MIDDLE_INITIAL "
 				+ " , population.spriden_last_name AS LAST_NAME "
 				+ " , TO_CHAR(demographic.spbpers_birth_date, 'yyyymmdd') AS DATE_OF_BIRTH "
 				+ " , NVL(demographic.spbpers_sex,'') AS GENDER " + " , NVL(f.goremal_email_address,'') AS EMAIL_ID "
 				+ " , NVL(demographic.spbpers_ethn_code,'') AS ETHNICITY_CD "
 				+ " , NVL(demographic.spbpers_dead_ind,'') AS DECEASED_IND " + " , '' AS Field10 " + " , ( "
-				+ " SELECT CASE WHEN sgbstdn.sgbstdn_resd_code in ('G') THEN 'Y'	 " + " ELSE 'N' END "
-				+ " FROM sgbstdn " + " JOIN ( " + " SELECT sgbstdn_pidm, max(sgbstdn_term_code_eff) AS max_term "
+				+ " \n select CASE WHEN sgbstdn.sgbstdn_resd_code in ('G') THEN 'Y'	 " + " ELSE 'N' END "
+				+ " FROM sgbstdn " + " JOIN ( " + " \n select sgbstdn_pidm, max(sgbstdn_term_code_eff) AS max_term "
 				+ " FROM sgbstdn " + " WHERE sgbstdn_levl_code = 'US' " + " GROUP BY sgbstdn_pidm "
 				+ " ) m on sgbstdn.sgbstdn_pidm = m.sgbstdn_pidm and sgbstdn.sgbstdn_term_code_eff = m.max_term "
 				+ " WHERE sgbstdn.sgbstdn_pidm = population.spriden_pidm " + " 		) AS INTERNATIONAL_IND "
@@ -6735,10 +7512,10 @@ public class SqlParseEventWalkerTest {
 				+ " , address.spraddr_street_line2 AS MAIL_ADDRESS2 " + " , address.spraddr_city AS MAIL_CITY "
 				+ " , address.spraddr_stat_code AS MAIL_STATE " + " , address.spraddr_zip AS MAIL_ZIP_CODE "
 				+ " , '' AS Field30 " + " , '' AS Field31 " + " , demographic.SPBPERS_LGCY_CODE AS STUDENT_LEGACY_CD "
-				+ " , ( " + " SELECT SGBSTDN_ADMT_CODE " + " FROM sgbstdn "
+				+ " , ( " + " \n select SGBSTDN_ADMT_CODE " + " FROM sgbstdn "
 				+ " WHERE sgbstdn_pidm = population.spriden_pidm " + " AND sgbstdn_levl_code = 'US'			 "
 				// --MODIFY PER MEMBER
-				+ " AND sgbstdn_term_code_eff = ( " + " SELECT max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
+				+ " AND sgbstdn_term_code_eff = ( " + " \n select max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
 				+ " WHERE sgbstdn_pidm = population.spriden_pidm " + " AND sgbstdn_levl_code = 'US')		 "
 				// --MODIFY PER MEMBER
 				+ " 		) AS STUDENT_ADMIT_CD "
@@ -6748,35 +7525,35 @@ public class SqlParseEventWalkerTest {
 				+ " , CASE WHEN readmit.saradap_pidm IS NULL THEN 'N' ELSE 'Y' END as READMIT_IND "
 				+ " , CASE WHEN RCRAPP3_1.pidm IS NOT NULL THEN 'Y' ELSE 'N' END AS FIRST_GEN_IND  "
 				+ " , sobsbgi.SOBSBGI_ZIP AS HS_ZIP_CODE " + " , '' AS ADMISSION_ZIP_CODE " + " , '' AS REGION_CD "
-				+ " , ( " + " SELECT CASE WHEN SGBSTDN_STST_CODE = 'AS' THEN 'Y' ELSE 'N' END "
+				+ " , ( " + " \n select CASE WHEN SGBSTDN_STST_CODE = 'AS' THEN 'Y' ELSE 'N' END "
 				// --MODIFY PER MEMBER
 				+ " FROM sgbstdn " + " WHERE sgbstdn_pidm = population.spriden_pidm "
 				+ " AND sgbstdn_levl_code = 'US'			 "
 				// --MODIFY PER MEMBER
-				+ " AND sgbstdn_term_code_eff = ( " + " SELECT max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
+				+ " AND sgbstdn_term_code_eff = ( " + " \n select max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
 				+ " WHERE sgbstdn_pidm = population.spriden_pidm " + " 	AND sgbstdn_levl_code = 'US')		 "
 				// --MODIFY PER MEMBER
 				+ " ) AS ACTIVE_IND "
 
 				+ " FROM  "
 				// --STUDENT POPULATION
-				+ " ( " + " SELECT "
+				+ " ( " + " \n select "
 				+ " spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi "
 				+ " FROM ( "
-				+ " SELECT spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden WHERE spriden_change_ind is null "
-				+ " ) spriden " + " JOIN ( " + " SELECT pidm, max(term) AS max_term " + " FROM ( "
-				+ " SELECT shrtgpa_pidm AS pidm, shrtgpa_term_code AS term "
+				+ " \n select spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden WHERE spriden_change_ind is null "
+				+ " ) spriden " + " JOIN ( " + " \n select pidm, max(term) AS max_term " + " FROM ( "
+				+ " \n select shrtgpa_pidm AS pidm, shrtgpa_term_code AS term "
 				+ "	FROM shrtgpa WHERE shrtgpa_levl_code = 'US'	 "
 				// -- MODIFY PER MEMBER
-				+ " UNION ALL SELECT shrtrce_pidm AS pidm, shrtrce_term_code_eff AS term "
+				+ " UNION ALL \n select shrtrce_pidm AS pidm, shrtrce_term_code_eff AS term "
 				+ " FROM shrtrce WHERE shrtrce_levl_code = 'US'	 "
 				// -- MODIFY PER MEMBER
-				+ " UNION ALL SELECT sfrstcr_pidm AS pidm, sfrstcr_term_code AS term " + " FROM sfrstcr "
+				+ " UNION ALL \n select sfrstcr_pidm AS pidm, sfrstcr_term_code AS term " + " FROM sfrstcr "
 				+ " JOIN stvterm ON stvterm_code = sfrstcr_term_code " + " WHERE sfrstcr_levl_code = 'US'		 "
 				// -- MODIFY PER MEMBER
 				+ " AND stvterm_end_date > SYSDATE - 365		 "
 				// --INSTATED TO REDUCE RUN TIME
-				+ " UNION ALL SELECT sgbstdn_pidm AS pidm, sgbstdn_term_code_eff AS term 	FROM sgbstdn WHERE sgbstdn_levl_code = 'US'	 "
+				+ " UNION ALL \n select sgbstdn_pidm AS pidm, sgbstdn_term_code_eff AS term 	FROM sgbstdn WHERE sgbstdn_levl_code = 'US'	 "
 				// -- MODIFY PER MEMBER
 				+ " ) x " + " GROUP BY pidm " + " ) terms ON spriden.spriden_pidm = terms.pidm "
 				/*
@@ -6806,8 +7583,8 @@ public class SqlParseEventWalkerTest {
 				+ " LEFT OUTER JOIN spbpers demographic " + " ON population.spriden_pidm = demographic.spbpers_pidm "
 				// --ADDRESS
 				+ " LEFT OUTER JOIN ( "
-				+ " SELECT spraddr.spraddr_pidm, spraddr.spraddr_street_line1, spraddr.spraddr_street_line2, spraddr_city, spraddr_stat_code, spraddr_zip "
-				+ " FROM spraddr " + " JOIN ( " + " SELECT spraddr_pidm, max(spraddr_seqno) AS max_seqno "
+				+ " \n select spraddr.spraddr_pidm, spraddr.spraddr_street_line1, spraddr.spraddr_street_line2, spraddr_city, spraddr_stat_code, spraddr_zip "
+				+ " FROM spraddr " + " JOIN ( " + " \n select spraddr_pidm, max(spraddr_seqno) AS max_seqno "
 				+ " FROM spraddr " + " WHERE spraddr_atyp_code = 'MA'							 "
 				// --MODIFY PER MEMBER
 				+ " AND spraddr_status_ind is null " + " GROUP BY spraddr_pidm "
@@ -6819,8 +7596,8 @@ public class SqlParseEventWalkerTest {
 				+ " ) address ON population.spriden_pidm = address.spraddr_pidm "
 				// --HOME PHONE
 				+ " LEFT OUTER JOIN ( "
-				+ " SELECT sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
-				+ " FROM sprtele " + " JOIN ( " + " SELECT sprtele_pidm, max(sprtele_seqno) AS max_seqno "
+				+ " \n select sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
+				+ " FROM sprtele " + " JOIN ( " + " \n select sprtele_pidm, max(sprtele_seqno) AS max_seqno "
 				+ " FROM sprtele  " + " WHERE sprtele_tele_code = 'MA' 	 "
 				// --MODIFY PER MEMBER
 				+ " AND sprtele_status_ind is null " + " GROUP BY sprtele_pidm "
@@ -6831,8 +7608,8 @@ public class SqlParseEventWalkerTest {
 
 				// --MOBILE PHONE
 				+ " LEFT OUTER JOIN ( "
-				+ " SELECT sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
-				+ " FROM sprtele " + " JOIN ( " + " SELECT sprtele_pidm, max(sprtele_seqno) as max_seqno "
+				+ " \n select sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
+				+ " FROM sprtele " + " JOIN ( " + " \n select sprtele_pidm, max(sprtele_seqno) as max_seqno "
 				+ " FROM sprtele  " + " WHERE sprtele_tele_code = 'CP'  "
 				// --MODIFY PER MEMBER
 				+ " AND sprtele_status_ind is null " + " GROUP BY sprtele_pidm "
@@ -6854,8 +7631,8 @@ public class SqlParseEventWalkerTest {
 				+ " LEFT OUTER JOIN stvlgcy leg " + " ON demographic.spbpers_lgcy_code = leg.stvlgcy_code "
 				// --HIGH SCHOOL
 				+ " LEFT OUTER JOIN ( "
-				+ " SELECT sorhsch.sorhsch_pidm, sorhsch_gpa, sorhsch_class_rank, sorhsch_percentile, sorhsch_class_size, stvsbgi.stvsbgi_desc, sorhsch_sbgi_code "
-				+ " FROM sorhsch " + " JOIN ( " + " SELECT sorhsch_pidm, max(sorhsch_activity_date) AS max_date "
+				+ " \n select sorhsch.sorhsch_pidm, sorhsch_gpa, sorhsch_class_rank, sorhsch_percentile, sorhsch_class_size, stvsbgi.stvsbgi_desc, sorhsch_sbgi_code "
+				+ " FROM sorhsch " + " JOIN ( " + " \n select sorhsch_pidm, max(sorhsch_activity_date) AS max_date "
 				+ " FROM sorhsch " + " GROUP BY sorhsch_pidm "
 				+ " ) crit ON sorhsch.sorhsch_pidm = crit.sorhsch_pidm AND sorhsch.sorhsch_activity_date = crit.max_date "
 				+ " JOIN stvsbgi on sorhsch.sorhsch_sbgi_code = stvsbgi.stvsbgi_code "
@@ -6865,32 +7642,212 @@ public class SqlParseEventWalkerTest {
 				// --COUNTRY CODE
 				+ " LEFT OUTER JOIN gobintl  " + " 	ON gobintl.gobintl_pidm = population.spriden_pidm "
 				// --TRANSFER INSTITUTION
-				+ " LEFT OUTER JOIN ( " + " SELECT * " + " FROM shrtrit " + " JOIN ( "
-				+ " SELECT a.shrtrit_pidm AS pidm, max(a.shrtrit_seq_no) AS max_date " + " FROM shrtrit a "
+				+ " LEFT OUTER JOIN ( " + " \n select * " + " FROM shrtrit " + " JOIN ( "
+				+ " \n select a.shrtrit_pidm AS pidm, max(a.shrtrit_seq_no) AS max_date " + " FROM shrtrit a "
 				+ " GROUP BY a.shrtrit_pidm "
 				+ " ) shrtrit_max ON shrtrit.shrtrit_pidm = shrtrit_max.pidm AND shrtrit.shrtrit_seq_no = shrtrit_max.max_date "
 				+ " ) shrtrit_primary ON shrtrit_primary.pidm = population.spriden_pidm "
 				// --FIRST GEN INDICATOR
-				+ " LEFT JOIN ( " + " SELECT DISTINCT rcrapp3.rcrapp3_pidm as pidm " + " FROM rcrapp3 " + " JOIN ( "
-				+ " SELECT a.rcrapp3_pidm, max(a.rcrapp3_aidy_code) as max_aidy " + " FROM rcrapp3 a "
+				+ " LEFT JOIN ( " + " \n select DISTINCT rcrapp3.rcrapp3_pidm as pidm " + " FROM rcrapp3 " + " JOIN ( "
+				+ " \n select a.rcrapp3_pidm, max(a.rcrapp3_aidy_code) as max_aidy " + " FROM rcrapp3 a "
 				+ " GROUP BY a.rcrapp3_pidm, a.rcrapp3_seq_no "
 				+ " ) rcrapp3_max on rcrapp3.rcrapp3_pidm = rcrapp3_max.rcrapp3_pidm AND rcrapp3.rcrapp3_aidy_code = rcrapp3_max.max_aidy "
 				+ " WHERE rcrapp3.rcrapp3_seq_no = '1' AND (rcrapp3.RCRAPP3_FATHER_HI_GRADE IN ('1','2') OR rcrapp3.RCRAPP3_MOTHER_HI_GRADE IN ('1','2')) "
 				+ " ) RCRAPP3_1 ON population.spriden_pidm = RCRAPP3_1.pidm "
 				// READMIT INDICATOR
-				+ " LEFT OUTER JOIN ( " + " SELECT DISTINCT SARADAP_PIDM " + " FROM SARADAP  "
+				+ " LEFT OUTER JOIN ( " + " \n select DISTINCT SARADAP_PIDM " + " FROM SARADAP  "
 				+ " WHERE SARADAP_ADMT_CODE = 'RE' AND SARADAP_LEVL_CODE = 'US'  "
 				// --MODIFY PER MEMBER
 				+ " ) readmit ON readmit.SARADAP_PIDM = population.spriden_pidm " + " WHERE 1=1 " + " ORDER BY 1";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+	}
+
+	@Test
+	public void siblingPredicandSubqueriesCorrelatedSubqueriesParseTest() {
+		// Part of this is the problem of correlated subquery. Each predicand is referencing a field from the outer join's 
+		// from statement, but we haven't implemented that capability yet.
+		final String query = "SELECT " 
+				+ " ( "
+				+ " SELECT CASE WHEN sgbstdn.sgbstdn_resd_code in ('G') THEN 'Y' ELSE 'N' END "
+				+ " FROM sgbstdn " 
+				+ "\n JOIN ( " 
+				+ " SELECT sgbstdn_pidm, max(sgbstdn_term_code_eff) AS max_term "
+				+ " FROM sgbstdn " 
+				+ " WHERE sgbstdn_levl_code = 'US' GROUP BY sgbstdn_pidm "
+				+ " ) m on sgbstdn.sgbstdn_pidm = m.sgbstdn_pidm and sgbstdn.sgbstdn_term_code_eff = m.max_term "
+				+ " WHERE sgbstdn.sgbstdn_pidm = population.spriden_pidm ) AS INTERNATIONAL_IND "
+				+ " , \n ( " 
+				+ " SELECT SGBSTDN_ADMT_CODE  FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm " 
+				+ " AND sgbstdn_levl_code = 'US'			 "
+				+ " AND sgbstdn_term_code_eff = " 
+				+ "\n ( SELECT max(sgbstdn_term_code_eff) FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm  AND sgbstdn_levl_code = 'US')		 "
+				+ " ) AS STUDENT_ADMIT_CD "
+				+ " ,\n ( " 
+				+ " SELECT CASE WHEN SGBSTDN_STST_CODE = 'AS' THEN 'Y' ELSE 'N' END "
+				+ " FROM sgbstdn WHERE sgbstdn_pidm = population.spriden_pidm "
+				+ " AND sgbstdn_levl_code = 'US' "
+				+ " AND sgbstdn_term_code_eff =  " 
+				+ "\n ( SELECT max(sgbstdn_term_code_eff)  FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm  	AND sgbstdn_levl_code = 'US')		 "
+				+ " ) AS ACTIVE_IND "
+				+ "\n FROM  spriden as population" ;
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+	}
+
+	@Test
+	public void shortenedStudentgeneralQueryParseTest() {
+	// Part of this is the problem of correlated subquery. Each predicand is referencing a field from the outer join's 
+		// from statement, but we haven't implemented that capability yet.
+			final String query = "SELECT " 
+				+ " ( "
+				+ " \n select CASE WHEN sgbstdn.sgbstdn_resd_code in ('G') THEN 'Y'	 " + " ELSE 'N' END "
+				+ " FROM sgbstdn " + " JOIN ( " + " \n select sgbstdn_pidm, max(sgbstdn_term_code_eff) AS max_term "
+				+ " FROM sgbstdn " + " WHERE sgbstdn_levl_code = 'US' " + " GROUP BY sgbstdn_pidm "
+				+ " ) m on sgbstdn.sgbstdn_pidm = m.sgbstdn_pidm and sgbstdn.sgbstdn_term_code_eff = m.max_term "
+				+ " WHERE sgbstdn.sgbstdn_pidm = population.spriden_pidm " + " 		) AS INTERNATIONAL_IND "
+				+ " , \n ( " 
+				+ " \n select SGBSTDN_ADMT_CODE " + " FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm " 
+				+ " AND sgbstdn_levl_code = 'US'			 "
+				+ " AND sgbstdn_term_code_eff = ( " + " \n select max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm " + " AND sgbstdn_levl_code = 'US')		 "
+				+ " 		) AS STUDENT_ADMIT_CD "
+				+ " ,\n ( " 
+				+ " \n select CASE WHEN SGBSTDN_STST_CODE = 'AS' THEN 'Y' ELSE 'N' END "
+				+ " FROM sgbstdn " + " WHERE sgbstdn_pidm = population.spriden_pidm "
+				+ " AND sgbstdn_levl_code = 'US'			 "
+				+ " AND sgbstdn_term_code_eff = ( " + " \n select max(sgbstdn_term_code_eff) " + " FROM sgbstdn "
+				+ " WHERE sgbstdn_pidm = population.spriden_pidm " + " 	AND sgbstdn_levl_code = 'US')		 "
+				+ " ) AS ACTIVE_IND "
+
+				+ "\n FROM  "
+				// --STUDENT POPULATION
+				+ " ( " 
+				+ " \n select "
+				+ " spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi "
+				+ " FROM ( "
+				+ " \n select spriden_id, spriden_pidm, spriden_first_name, spriden_last_name, spriden_mi FROM spriden WHERE spriden_change_ind is null "
+				+ " ) spriden " 
+				+ "\n JOIN ( " 
+				+ " \n select pidm, max(term) AS max_term " 
+				+ " FROM ( "
+				+ " \n select shrtgpa_pidm AS pidm, shrtgpa_term_code AS term "
+				+ "	FROM shrtgpa WHERE shrtgpa_levl_code = 'US'	 "
+				// -- MODIFY PER MEMBER
+				+ "\n UNION ALL \n select shrtrce_pidm AS pidm, shrtrce_term_code_eff AS term "
+				+ " FROM shrtrce WHERE shrtrce_levl_code = 'US'	 "
+				// -- MODIFY PER MEMBER
+				+ "\n UNION ALL \n select sfrstcr_pidm AS pidm, sfrstcr_term_code AS term " + " FROM sfrstcr "
+				+ "\n JOIN stvterm ON stvterm_code = sfrstcr_term_code " + " WHERE sfrstcr_levl_code = 'US'		 "
+				// -- MODIFY PER MEMBER
+				+ " AND stvterm_end_date > SYSDATE - 365		 "
+				// --INSTATED TO REDUCE RUN TIME
+				+ "\n UNION ALL \n select sgbstdn_pidm AS pidm, sgbstdn_term_code_eff AS term 	FROM sgbstdn WHERE sgbstdn_levl_code = 'US'	 "
+				// -- MODIFY PER MEMBER
+				+ " ) x " + " GROUP BY pidm " + " ) terms ON spriden.spriden_pidm = terms.pidm "
+				+ " JOIN STVTERM termDates ON termDates.STVTERM_CODE = terms.max_term "
+				+ " GROUP BY spriden_id, spriden_pidm, terms.max_term, spriden_first_name, spriden_last_name, spriden_mi "
+				// --DAILY FILTER
+				+ " HAVING max(termDates.STVTERM_START_DATE) > SYSDATE - 730 "
+				// --ADJUST IF WANT DIFFERENT THAN 2 YEARS
+				+ " ) population "
+				// --DEMOGRAPHIC INFORMATION
+				+ "\n LEFT OUTER JOIN spbpers demographic " + " ON population.spriden_pidm = demographic.spbpers_pidm "
+				// --ADDRESS
+				+ "\n LEFT OUTER JOIN \n ( "
+				+ " \n select spraddr.spraddr_pidm, spraddr.spraddr_street_line1, spraddr.spraddr_street_line2, spraddr_city, spraddr_stat_code, spraddr_zip "
+				+ " FROM spraddr " 
+				+ "\n JOIN ( \n select spraddr_pidm, max(spraddr_seqno) AS max_seqno "
+				+ " FROM spraddr  WHERE spraddr_atyp_code = 'MA'							 "
+				// --MODIFY PER MEMBER
+				+ " AND spraddr_status_ind is null  GROUP BY spraddr_pidm "
+				+ " ) addr_max ON spraddr.spraddr_pidm = addr_max.spraddr_pidm AND spraddr.spraddr_seqno = addr_max.max_seqno "
+				+ "\n WHERE spraddr.spraddr_atyp_code = 'MA' "
+				// --MODIFY PER MEMBER
+				+ " AND spraddr.spraddr_status_ind is null " + " AND spraddr_FROM_date <= sysdate "
+				+ " AND (spraddr_to_date >= sysdate or spraddr_to_date is null) "
+				+ " ) address ON population.spriden_pidm = address.spraddr_pidm "
+				// --HOME PHONE
+				+ "\n LEFT OUTER JOIN ( "
+				+ " \n select sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
+				+ " FROM sprtele " 
+				+ "\n JOIN ( \n select sprtele_pidm, max(sprtele_seqno) AS max_seqno "
+				+ " FROM sprtele  " + " WHERE sprtele_tele_code = 'MA' 	 "
+				// --MODIFY PER MEMBER
+				+ " AND sprtele_status_ind is null " + " GROUP BY sprtele_pidm "
+				+ " ) tele_max ON sprtele.sprtele_pidm = tele_max.sprtele_pidm AND sprtele.sprtele_seqno = tele_max.max_seqno "
+				+ "\n WHERE sprtele.sprtele_tele_code = 'MA'  "
+				// --MODIFY PER MEMBER
+				+ " AND sprtele.sprtele_status_ind is null " + " ) hp ON population.spriden_pidm = hp.sprtele_pidm "
+
+				// --MOBILE PHONE
+				+ "\n LEFT OUTER JOIN ( "
+				+ " \n select sprtele.sprtele_pidm, sprtele.sprtele_phone_area, sprtele.sprtele_phone_number "
+				+ " FROM sprtele " 
+				+ "\n JOIN ( \n select sprtele_pidm, max(sprtele_seqno) as max_seqno "
+				+ " FROM sprtele  " + " WHERE sprtele_tele_code = 'CP'  "
+				// --MODIFY PER MEMBER
+				+ " AND sprtele_status_ind is null " + " GROUP BY sprtele_pidm "
+				+ " ) tele_max ON sprtele.sprtele_pidm = tele_max.sprtele_pidm AND sprtele.sprtele_seqno = tele_max.max_seqno "
+				+ " WHERE sprtele.sprtele_tele_code = 'CP'  "
+				// --MODIFY PER MEMBER
+				+ " AND sprtele.sprtele_status_ind is null " + " ) cp ON population.spriden_pidm = cp.sprtele_pidm "
+				// --EMAIL
+				+ "\n LEFT OUTER JOIN goremal f  " + " ON population.spriden_pidm = f.goremal_pidm "
+				+ " 	AND f.goremal_emal_code = 'GSU' AND f.goremal_status_ind = 'A' AND f.goremal_preferred_ind = 'Y' "
+				// --MODIFY PER MEMBER
+				// --LEGACY
+				+ "\n LEFT OUTER JOIN stvlgcy leg " + " ON demographic.spbpers_lgcy_code = leg.stvlgcy_code "
+				// --HIGH SCHOOL
+				+ "\n LEFT OUTER JOIN ( "
+				+ " \n select sorhsch.sorhsch_pidm, sorhsch_gpa, sorhsch_class_rank, sorhsch_percentile, sorhsch_class_size, stvsbgi.stvsbgi_desc, sorhsch_sbgi_code "
+				+ " FROM sorhsch " + " JOIN ( " + " \n select sorhsch_pidm, max(sorhsch_activity_date) AS max_date "
+				+ " FROM sorhsch " + " GROUP BY sorhsch_pidm "
+				+ " ) crit ON sorhsch.sorhsch_pidm = crit.sorhsch_pidm AND sorhsch.sorhsch_activity_date = crit.max_date "
+				+ " JOIN stvsbgi on sorhsch.sorhsch_sbgi_code = stvsbgi.stvsbgi_code "
+				+ " ) hs ON population.spriden_pidm = hs.sorhsch_pidm "
+				// --HIGH SCHOOL PT2
+				+ "\n LEFT OUTER JOIN sobsbgi  " + " ON hs.sorhsch_sbgi_code = sobsbgi.sobsbgi_sbgi_code "
+				// --COUNTRY CODE
+				+ " LEFT OUTER JOIN gobintl  " + " 	ON gobintl.gobintl_pidm = population.spriden_pidm "
+				// --TRANSFER INSTITUTION
+				+ "\n LEFT OUTER JOIN ( " + " \n select * " + " FROM shrtrit " + " JOIN ( "
+				+ " \n select a.shrtrit_pidm AS pidm, max(a.shrtrit_seq_no) AS max_date " + " FROM shrtrit a "
+				+ " GROUP BY a.shrtrit_pidm "
+				+ " ) shrtrit_max ON shrtrit.shrtrit_pidm = shrtrit_max.pidm AND shrtrit.shrtrit_seq_no = shrtrit_max.max_date "
+				+ " ) shrtrit_primary ON shrtrit_primary.pidm = population.spriden_pidm "
+				// --FIRST GEN INDICATOR
+				+ "\n LEFT JOIN ( " + " \n select DISTINCT rcrapp3.rcrapp3_pidm as pidm " + " FROM rcrapp3 " + " JOIN ( "
+				+ " \n select a.rcrapp3_pidm, max(a.rcrapp3_aidy_code) as max_aidy " + " FROM rcrapp3 a "
+				+ " GROUP BY a.rcrapp3_pidm, a.rcrapp3_seq_no "
+				+ " ) rcrapp3_max on rcrapp3.rcrapp3_pidm = rcrapp3_max.rcrapp3_pidm AND rcrapp3.rcrapp3_aidy_code = rcrapp3_max.max_aidy "
+				+ " WHERE rcrapp3.rcrapp3_seq_no = '1' AND (rcrapp3.RCRAPP3_FATHER_HI_GRADE IN ('1','2') OR rcrapp3.RCRAPP3_MOTHER_HI_GRADE IN ('1','2')) "
+				+ " ) RCRAPP3_1 ON population.spriden_pidm = RCRAPP3_1.pidm "
+				// READMIT INDICATOR
+				+ "\n LEFT OUTER JOIN ( " + " \n select DISTINCT SARADAP_PIDM " + " FROM SARADAP  "
+				+ " WHERE SARADAP_ADMT_CODE = 'RE' AND SARADAP_LEVL_CODE = 'US'  "
+				// --MODIFY PER MEMBER
+				+ " ) readmit ON readmit.SARADAP_PIDM = population.spriden_pidm " + " WHERE 1=1 " + " ORDER BY 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
 	public void complexHiveQueryJoinTest() {
-
-		final String query = " SELECT " + " CASE   "
+		// Part of this is the problem of correlated subquery. Each predicand is referencing a field from the outer join's 
+		// from statement, but we haven't implemented that capability yet.
+	
+		final String query = " \n select " + " CASE   "
 				+ " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_last_name   "
 				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_last_name   "
 				+ " ELSE COALESCE(S948.t_student_last_name, S949.t_student_last_name) END AS t_student_last_name, "
@@ -6901,21 +7858,21 @@ public class SqlParseEventWalkerTest {
 				+ " WHEN COALESCE( S948.OBSERVATION_TM>=S949.OBSERVATION_TM , FALSE) THEN S948.t_student_first_name   "
 				+ " WHEN COALESCE( S949.OBSERVATION_TM>=S948.OBSERVATION_TM , FALSE) THEN S949.t_student_first_name   "
 				+ " ELSE COALESCE(S948.t_student_first_name, S949.t_student_first_name) END AS t_student_first_name "
-				+ " FROM ( " + " SELECT  " + " t_student_first_name, " + " t_sur_name, " + " t_student_last_name, "
-				+ " k_stfd, " + " OBSERVATION_TM " + " from ( " + " SELECT  " + " t_student_first_name, "
+				+ " FROM ( " + " \n select  " + " t_student_first_name, " + " t_sur_name, " + " t_student_last_name, "
+				+ " k_stfd, " + " OBSERVATION_TM " + " from ( " + " \n select  " + " t_student_first_name, "
 				+ " t_sur_name, " + " t_student_last_name, " + " k_stfd, " + " OBSERVATION_TM,  "
 				+ " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank "
-				+ " from ( " + " SELECT  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
+				+ " from ( " + " \n select  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
 				+ " LOCATION AS t_student_last_name, " + " NAME AS k_stfd, " + " OBSERVATION_TM,  "
 				+ " pantodev.row_num() as row_num " + " FROM pantodev.23810_949 " + " WHERE  "
 				+ " OBSERVATION_DT <= 20160321  "
 				+ " AND unix_timestamp(OBSERVATION_TM) <= unix_timestamp('2016-03-21 10:43:15.0') " + " ) a "
-				+ " ) b where key_rank =1 " + " ) S949  " + " FULL OUTER JOIN ( " + "  SELECT  "
+				+ " ) b where key_rank =1 " + " ) S949  " + " FULL OUTER JOIN ( " + "  \n select  "
 				+ "  t_student_first_name, " + " t_sur_name, " + " t_student_last_name, " + " k_stfd, "
-				+ " OBSERVATION_TM " + " from ( " + " SELECT  " + " t_student_first_name, " + " t_sur_name, "
+				+ " OBSERVATION_TM " + " from ( " + " \n select  " + " t_student_first_name, " + " t_sur_name, "
 				+ " t_student_last_name, " + " k_stfd, " + " OBSERVATION_TM,  "
 				+ " rank() OVER (partition by k_stfd order by OBSERVATION_TM desc, row_num desc) AS key_rank "
-				+ " from ( " + " SELECT  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
+				+ " from ( " + " \n select  " + " DOB AS t_student_first_name, " + " NAME AS t_sur_name, "
 				+ " LOCATION AS t_student_last_name, " + " NAME AS k_stfd, " + " OBSERVATION_TM,  "
 				+ " pantodev.row_num() as row_num " + " FROM pantodev.23810_948 " + " WHERE  "
 				+ " OBSERVATION_DT <= 20160309  "
@@ -6927,7 +7884,8 @@ public class SqlParseEventWalkerTest {
 				+ " AND (unix_timestamp(S948.observation_tm) <= unix_timestamp('2016-03-30 11:04:40.484')))) ";
 
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	/***********************************
@@ -7002,7 +7960,8 @@ public class SqlParseEventWalkerTest {
 				+ " cgpa.term_id=tgpa.term_id ) ) gpatbl on (reg.primary_user_id=gpatbl.primary_user_id and reg.term_id=gpatbl.term_id) "
 				+ " inner join termFilterTbl  tf on reg.term_id = tf.term_id";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -7015,7 +7974,8 @@ public class SqlParseEventWalkerTest {
 				+ " 'TERM_SOURCE_DATE_FORMAT', 'SSCPLUS_DEFAULT_DATE_FORMAT') as BEGIN_DATE, datestr(term.end_date, 'TERM_SOURCE_DATE_FORMAT', "
 				+ "'SSCPLUS_DEFAULT_DATE_FORMAT') as END_DATE from academicPeriodTbl " + " term";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -7028,7 +7988,8 @@ public class SqlParseEventWalkerTest {
 				+ " crs.course_title as TITLE, COALESCE(crs.credit_hour_low,crs.credit_hour_high,0) as CREDIT_HOURS from "
 				+ " courseTbl crs";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 
@@ -7044,7 +8005,8 @@ public class SqlParseEventWalkerTest {
 				+ "else s.section_name  " + "end as SECTION_NAME, " + "s.section_tag as SECTION_TAGS "
 				+ "from sectionTbl s  " + "inner join termFilterTbl tf  " + "on s.term_code = tf.term_id ";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -7059,7 +8021,8 @@ public class SqlParseEventWalkerTest {
 				+ " from courseWorkTbl  cw,  sectionTbl  s inner join termFilterTbl tf on cw.term_code = tf.term_id "
 				+ "where cw.course_ref_no=s.course_ref_no and cw.term_code=s.term_code and cw.registration_status_cd in ('regCodes')";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -7072,7 +8035,8 @@ public class SqlParseEventWalkerTest {
 				+ "as COURSE_EXTERNAL_ID,ia.section_name as SECTION_NAME ,ia.instructor_id as PRIMARY_USER_ID "
 				+ "from instructorAssgnmtTbl  ia inner join termFilterTbl  tf on " + "ia.term_code = tf.term_id";
 		final SQLSelectParserParser parser = parse(query);
-		runParsertest(query, parser);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test
@@ -8336,6 +9300,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}, 3={literal=0}}, function_name=in}, alias=colum}}, from={table={alias=null, table=dual}}}}",
 				extractor.getAsTree().toString());
@@ -8357,6 +9322,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={substitution={name=<in_list>, type=in_list}}}}}}",
 				extractor.getAsTree().toString());
@@ -8378,6 +9344,7 @@ public class SqlParseEventWalkerTest {
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
 				extractor.getAsTree().toString());
@@ -8943,7 +9910,6 @@ public class SqlParseEventWalkerTest {
 
 	@Test
 	public void basicQueryValueTest() {
-		// TODO Query Dictionary filled incorrectly
 		String sql = "select * from schema1.emp_sales";
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runQueryParsertest(sql, parser);
@@ -9411,6 +10377,7 @@ public class SqlParseEventWalkerTest {
 		final String query = " select source.col1, target.col2 from (select col1 from tab1) as source join (select col2 from tab2) as target";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 				
 		Assert.assertEquals("Interface is wrong", "[col2, col1]", 
 					extractor.getInterface().toString());
@@ -9432,6 +10399,7 @@ public class SqlParseEventWalkerTest {
 		final String query = " select * from (values (1, 2, 'aaa')) as source join (values (92, 3, 'aaa')) as target ";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 			
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}}}}, 2={join=join}, 3={values={alias=target, matrix={1={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}}}",
 					extractor.getAsTree().toString());
@@ -9441,18 +10409,19 @@ public class SqlParseEventWalkerTest {
 					extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0=null, values1=null, query2={*=[[@1,8:8='*',<289>,1:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={*=[[@1,8:8='*',<289>,1:8]]}, values1={*=[[@1,8:8='*',<289>,1:8]]}, query2={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={values0={values={$1=[[@5,23:23='(',<285>,1:23]], $2=[[@5,23:23='(',<285>,1:23]], $3=[[@5,23:23='(',<285>,1:23]]}, source=values, interface={$1=[[@5,23:23='(',<285>,1:23]], $2=[[@5,23:23='(',<285>,1:23]], $3=[[@5,23:23='(',<285>,1:23]]}}, values1={values={$1=[[@18,61:61='(',<285>,1:61]], $2=[[@18,61:61='(',<285>,1:61]], $3=[[@18,61:61='(',<285>,1:61]]}, interface={$1=[[@18,61:61='(',<285>,1:61]], $2=[[@18,61:61='(',<285>,1:61]], $3=[[@18,61:61='(',<285>,1:61]]}, target=values}, interface={*=[{name=*, table_ref=*}]}, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={values0={values={$1=[[@5,23:23='(',<285>,1:23]], $2=[[@5,23:23='(',<285>,1:23]], $3=[[@5,23:23='(',<285>,1:23]]}, source=values, interface={$1=[[@5,23:23='(',<285>,1:23]], $2=[[@5,23:23='(',<285>,1:23]], $3=[[@5,23:23='(',<285>,1:23]]}}, values1={values={$1=[[@18,61:61='(',<285>,1:61]], $2=[[@18,61:61='(',<285>,1:61]], $3=[[@18,61:61='(',<285>,1:61]]}, interface={$1=[[@18,61:61='(',<285>,1:61]], $2=[[@18,61:61='(',<285>,1:61]], $3=[[@18,61:61='(',<285>,1:61]]}, target=values}, source=values0, interface={*=[{name=*, table_ref=*}]}, target=values1}}",
 					extractor.getSymbolTable().toString());
 	}
 
 	@Test
 	public void multipleValuesStatementWithColumnAliasesClauseInSelectTest() {
-			
+			// valid errors thrown because target.col2 doesn't match the column names in the target values clause
 		final String query = " select source.col1, target.col2 from (values (1, 2, 'aaa')) as source (col1, col2, col3) join (values (92, 3, 'aaa')) as target (c1, c3, c2)";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 			
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=source}}, 2={column={name=col2, table_ref=target}}}, from={join={1={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}}}}, 2={join=join}, 3={values={columns={1={column={name=c1, table_ref=null}}, 2={column={name=c3, table_ref=null}}, 3={column={name=c2, table_ref=null}}}, alias=target, matrix={1={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}}}",
 					extractor.getAsTree().toString());
@@ -9460,11 +10429,11 @@ public class SqlParseEventWalkerTest {
 					extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 					extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{source={col1=[[@1,8:13='source',<328>,1:8]]}, target={col2=[[@5,21:26='target',<328>,1:21]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@24,78:81='col2',<328>,1:78]], col3=[[@26,84:87='col3',<328>,1:84]], col1=[[@22,72:75='col1',<328>,1:72]]}, values1={c3=[[@44,134:135='c3',<328>,1:134]], c1=[[@42,130:131='c1',<328>,1:130]], c2=[[@46,138:139='c2',<328>,1:138]]}, query2={col2=[[@7,28:31='col2',<328>,1:28]], col1=[[@3,15:18='col1',<328>,1:15]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@24,78:81='col2',<328>,1:78]], col3=[[@26,84:87='col3',<328>,1:84]], col1=[[@22,72:75='col1',<328>,1:72], [@1,8:13='source',<328>,1:8]]}, values1={c3=[[@44,134:135='c3',<328>,1:134]], c1=[[@42,130:131='c1',<328>,1:130]], c2=[[@46,138:139='c2',<328>,1:138]]}, query2={col2=[[@7,28:31='col2',<328>,1:28]], col1=[[@3,15:18='col1',<328>,1:15]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={values0={values={col2=[[@11,46:46='(',<285>,1:46]], col3=[[@11,46:46='(',<285>,1:46]], col1=[[@11,46:46='(',<285>,1:46]]}, source=values, interface={col2=[[@11,46:46='(',<285>,1:46]], col3=[[@11,46:46='(',<285>,1:46]], col1=[[@11,46:46='(',<285>,1:46]]}}, values1={values={c3=[[@31,103:103='(',<285>,1:103]], c1=[[@31,103:103='(',<285>,1:103]], c2=[[@31,103:103='(',<285>,1:103]]}, interface={c3=[[@31,103:103='(',<285>,1:103]], c1=[[@31,103:103='(',<285>,1:103]], c2=[[@31,103:103='(',<285>,1:103]]}, target=values}, source={col1=[[@1,8:13='source',<328>,1:8]]}, interface={col2=[{name=col2, table_ref=target}], col1=[{name=col1, table_ref=source}]}, target={col2=[[@5,21:26='target',<328>,1:21]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={values0={values={col2=[[@11,46:46='(',<285>,1:46]], col3=[[@11,46:46='(',<285>,1:46]], col1=[[@11,46:46='(',<285>,1:46]]}, source=values, interface={col2=[[@11,46:46='(',<285>,1:46]], col3=[[@11,46:46='(',<285>,1:46]], col1=[[@11,46:46='(',<285>,1:46]]}}, values1={values={c3=[[@31,103:103='(',<285>,1:103]], c1=[[@31,103:103='(',<285>,1:103]], c2=[[@31,103:103='(',<285>,1:103]]}, interface={c3=[[@31,103:103='(',<285>,1:103]], c1=[[@31,103:103='(',<285>,1:103]], c2=[[@31,103:103='(',<285>,1:103]]}, target=values}, source=values0, interface={col2=[{name=col2, table_ref=target}], col1=[{name=col1, table_ref=source}]}, unknown={col2=[[@5,21:26='target',<328>,1:21]]}, target=values1}}",
 					extractor.getSymbolTable().toString());
 	}
 
@@ -9474,6 +10443,7 @@ public class SqlParseEventWalkerTest {
 		final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa'))";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 			
 		Assert.assertEquals("Interface is wrong", "[*]", 
 					extractor.getInterface().toString());
@@ -9481,9 +10451,9 @@ public class SqlParseEventWalkerTest {
 					extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0=null, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={*=[[@1,8:8='*',<289>,1:8]]}, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, interface={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, interface={*=[{name=*, table_ref=*}]}, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, interface={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, interface={*=[{name=*, table_ref=*}]}}}",
 					extractor.getSymbolTable().toString());
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
 					extractor.getAsTree().toString());
@@ -9503,12 +10473,16 @@ public class SqlParseEventWalkerTest {
 					extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0=null, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={*=[[@1,8:8='*',<289>,1:8]]}, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, source=values, interface={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, interface={*=[{name=*, table_ref=*}]}, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, source=values, interface={$1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], $3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, source=values0, interface={*=[{name=*, table_ref=*}]}}}",
 					extractor.getSymbolTable().toString());
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
 					extractor.getAsTree().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
 	}
 
 	@Test
@@ -9517,6 +10491,7 @@ public class SqlParseEventWalkerTest {
 		final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source (col1, col2, col3)";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 			
 		Assert.assertEquals("Interface is wrong", "[*]", 
 					extractor.getInterface().toString());
@@ -9524,9 +10499,9 @@ public class SqlParseEventWalkerTest {
 					extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@26,71:74='col2',<328>,1:71]], col3=[[@28,77:80='col3',<328>,1:77]], col1=[[@24,65:68='col1',<328>,1:65]]}, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={*=[[@1,8:8='*',<289>,1:8]], col2=[[@26,71:74='col2',<328>,1:71]], col3=[[@28,77:80='col3',<328>,1:77]], col1=[[@24,65:68='col1',<328>,1:65]]}, query1={*=[[@1,8:8='*',<289>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={col2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, source=values, interface={col2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, interface={*=[{name=*, table_ref=*}]}, unknown={*=[[@1,8:8='*',<289>,1:8]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={values0={values={col2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}, source=values, interface={col2=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col3=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]], col1=[[@5,23:23='(',<285>,1:23], [@13,38:38='(',<285>,1:38]]}}, source=values0, interface={*=[{name=*, table_ref=*}]}}}",
 					extractor.getSymbolTable().toString());
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}}",
 					extractor.getAsTree().toString());
@@ -9538,6 +10513,13 @@ public class SqlParseEventWalkerTest {
 		
 	// *****************************
 	// COMMON TEST METHODS
+
+	private void assertNoFatalErrors(SqlParseEventWalker extractor) {
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
+				0, snippet.getFatalErrorStringList().size());
+	}
+
 
 	private SqlParseEventWalker runParsertest(final String query, final SQLSelectParserParser parser) {
 		return runSQLParsertest(query, parser, null, null);
@@ -9644,118 +10626,118 @@ public class SqlParseEventWalkerTest {
 		}
 	
 
-		private SqlParseEventWalker runConditionParsertest(final String query, final SQLSelectParserParser parser) {
-			try {
-				System.out.println();
-				// There should be zero errors
-				Condition_valueContext tree = parser.condition_value();
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+	private SqlParseEventWalker runConditionParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Condition_valueContext tree = parser.condition_value();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			
-				final int numErrors = v.getErrorCount();
-				Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 					0, numErrors);
 		
-				return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, null, null, true);
 
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + query);
-				System.err.println("Recognition Exception: " + e.getMessage());
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-				System.err.println(v.getErrorList());
-			}
-			return null;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 		}
+		return null;
+	}
 	
-		private SqlParseEventWalker runTupleParsertest(final String query, final SQLSelectParserParser parser) {
-			try {
-				System.out.println();
-				// There should be zero errors
-				Tuple_valueContext tree = parser.tuple_value();
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+	private SqlParseEventWalker runTupleParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Tuple_valueContext tree = parser.tuple_value();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			
-				final int numErrors = v.getErrorCount();
-				Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
-					0, numErrors);
-		
-				return runAnyParsertest(query, parser, tree, null, null, true);
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
+				0, numErrors);
+	
+			return runAnyParsertest(query, parser, tree, null, null, true);
 
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + query);
-				System.err.println("Recognition Exception: " + e.getMessage());
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-				System.err.println(v.getErrorList());
-			}
-			return null;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 		}
+		return null;
+	}
 	
-	
-		
-		private SqlParseEventWalker runValuesStatementEndParsertest(final String query, final SQLSelectParserParser parser) {
-			try {
-				System.out.println();
-				// There should be zero errors
-				Values_statement_endContext tree = parser.values_statement_end();
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-			
-				final int numErrors = v.getErrorCount();
-				Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
-					0, numErrors);
-		
-				return runAnyParsertest(query, parser, tree, null, null, true);
-
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + query);
-				System.err.println("Recognition Exception: " + e.getMessage());
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-				System.err.println(v.getErrorList());
-			}
-			return null;
-		}	
 	
 		
-		private SqlParseEventWalker runQueryParsertest(final String query, final SQLSelectParserParser parser) {
-			try {
-				System.out.println();
-				// There should be zero errors
-				Query_valueContext tree = parser.query_value();
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+	private SqlParseEventWalker runValuesStatementEndParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Values_statement_endContext tree = parser.values_statement_end();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			
-				final int numErrors = v.getErrorCount();
-				Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
-					0, numErrors);
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
+				0, numErrors);
 		
-				return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, null, null, true);
 
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + query);
-				System.err.println("Recognition Exception: " + e.getMessage());
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-				System.err.println(v.getErrorList());
-			}
-			return null;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 		}
+		return null;
+	}	
+	
 		
-		private SqlParseEventWalker runJoinExtensionParsertest(final String query, final SQLSelectParserParser parser) {
-			try {
-				System.out.println();
-				// There should be zero errors
-				Join_extension_valueContext tree = parser.join_extension_value();
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+	private SqlParseEventWalker runQueryParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Query_valueContext tree = parser.query_value();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			
-				final int numErrors = v.getErrorCount();
-				Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
-					0, numErrors);
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
+				0, numErrors);
 		
-				return runAnyParsertest(query, parser, tree, null, null, false);
+			return runAnyParsertest(query, parser, tree, null, null, true);
 
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + query);
-				System.err.println("Recognition Exception: " + e.getMessage());
-				ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-				System.err.println(v.getErrorList());
-			}
-			return null;
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
 		}
+		return null;
+	}
+		
+	private SqlParseEventWalker runJoinExtensionParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Join_extension_valueContext tree = parser.join_extension_value();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
+				0, numErrors);
+		
+			return runAnyParsertest(query, parser, tree, null, null, false);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
 	
 
 	private SqlParseEventWalker runAnyParsertest(final String query, final SQLSelectParserParser parser, 
@@ -9784,6 +10766,9 @@ public class SqlParseEventWalkerTest {
 
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			System.out.println("Parser Errors: " + v.getErrorList());
+
+			Snippet snippet = extractor.getSnippet();
+			System.out.println("Walker Errors: " + snippet.getFatalErrorStringList());
 
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
