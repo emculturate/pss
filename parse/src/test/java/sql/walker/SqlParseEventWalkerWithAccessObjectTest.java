@@ -59,7 +59,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		ParseDiagnostic unresolvedUnknown = null;
 		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
 			if (diagnostic != null
-					&& "UNRESOLVED_UNKNOWN_COLUMNS".equals(diagnostic.code())
+					&& "UNRESOLVED_COLUMNS".equals(diagnostic.code())
 					&& ((diagnostic.tokenText() != null
 							&& diagnostic.tokenText().contains(expectedColumnNameInMessage))
 						|| (diagnostic.message() != null
@@ -404,7 +404,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
 	}
 
@@ -432,8 +432,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 2, 51, "missing");
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "missing", 1);
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "missing", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'missing'", "missing", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
 	}
@@ -457,7 +457,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
 	}
 
@@ -475,7 +475,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSqlAbstractTree().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
 	}
 
@@ -488,7 +488,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertNotNull("Snippet should not be null", snippet);
 		Assert.assertNotNull("AST should not be null", snippet.getSqlAbstractTree());
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
 		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'a'", "a", 1);
     }
 
@@ -502,7 +502,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				"UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
 				"Unknown column reference 'a'",
 				"a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
@@ -515,7 +515,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				"AMBIGUOUS_COLUMN_REFERENCE",
 				"Ambiguous column reference 'a'",
 				"a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
@@ -549,7 +549,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		String query = "SELECT dd.missing FROM (VALUES (1)) dd(a)";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNKNOWN_COLUMNS", null, "missing", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "missing", 1);
 		assertFatalDiagnosticCount(snippet, "INTERFACE_COLUMN_UNRESOLVED", "Output column 'missing'", "missing", 1);
 	}
 
@@ -579,8 +579,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	public void explicitTableReferenceMissingColumnDiagnosticCatalogTest() {
 		SqlASTWalkerHelper helper = new SqlASTWalkerHelper();
 
-		String tableCode = helper.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE);
-		String tableTemplate = helper.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE);
+		String tableCode = helper.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+		String tableTemplate = helper.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
 
 		Assert.assertEquals("Expected table-specific diagnostic code mapping",
 				"REFERENCED_COLUMN_NOT_FOUND_IN_TABLE",

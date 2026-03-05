@@ -13,13 +13,14 @@ import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
-		public static final String DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS = "SQL_UNRESOLVED_UNKNOWN_COLUMNS";
-		public static final String DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED = "SQL_INTERFACE_COLUMN_UNRESOLVED";
-		public static final String DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE";
-		public static final String DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_QUERY = "SQL_REFERENCED_COLUMN_NOT_FOUND_IN_QUERY";
-		public static final String DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE = "SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE";
+		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
+		public static final String DIAG_SQL_UNRESOLVED_COLUMNS = "SQL_UNRESOLVED_COLUMNS";
 
+		// checks if output columns are dependent on unresolved columns
+		// public static final String DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED = "SQL_INTERFACE_COLUMN_UNRESOLVED";
+     	//public static final String DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE = "SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE";
+		
     /*************************************
      * SqlASTWalkerHelper is a concrete class that extends AbstractASTWalkerHelper.
      * It provides specific implementations/overrides for any Grammar
@@ -144,31 +145,133 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 	 private void initializeSqlDiagnosticCatalog() {
 		 // SQL-local extension: register walker-specific diagnostic code/message template.
-		 registerDiagnostic(
-				 DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS,
-				 "UNRESOLVED_UNKNOWN_COLUMNS",
-				 "Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: %s");
-		 registerDiagnostic(
-				 DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED,
-				 "INTERFACE_COLUMN_UNRESOLVED",
-				 "Output column '%s' at (l:%s c:%s) has unresolved source reference(s): %s");
-		 registerDiagnostic(
-				 DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE,
-				 "REFERENCED_COLUMN_NOT_FOUND_IN_TABLE",
-				 "Referenced column '%s' at (l:%s c:%s) not found in indicated table '%s'.");
-		 registerDiagnostic(
-				 DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_QUERY,
-				 "REFERENCED_COLUMN_NOT_FOUND_IN_QUERY",
-				 "Referenced column '%s' at (l:%s c:%s) not found in indicated query '%s'.");
-		 registerDiagnostic(
-				 DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE,
-				 "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
-				 "Unknown column reference '%s' at (l:%s c:%s). No matching column found in any table/query dictionary in scope.");
+		 registerDiagnostic(DIAG_SQL_UNRESOLVED_COLUMNS,
+				 "UNRESOLVED_COLUMNS",
+				 "Unresolved column reference(s) remain after symbol resolution: %s");
+		//  registerDiagnostic(
+		// 		 DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED,
+		// 		 "INTERFACE_COLUMN_UNRESOLVED",
+		// 		 "Output column '%s' at (l:%s c:%s) has unresolved source reference(s): %s");
+		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE,
+				 "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				 "Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.");
+		//  registerDiagnostic(
+		// 		 DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE,
+		// 		 "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
+		// 		 "Unknown column reference '%s' at (l:%s c:%s). No matching column found in any table/query dictionary in scope.");
 		 registerDiagnostic(
 				 DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE,
 				 "AMBIGUOUS_COLUMN_REFERENCE",
 				 "Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s");
 	 }
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> getCurrentTableDictionary() {
+		Object tableDictionaryObject = symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (!(tableDictionaryObject instanceof HashMap<?, ?>)) {
+			tableDictionaryObject = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionaryObject);
+		}
+		return (HashMap<String, Object>) tableDictionaryObject;
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> peekCurrentTableDictionary() {
+		Object tableDictionaryObject = symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (tableDictionaryObject instanceof HashMap<?, ?>) {
+			return (HashMap<String, Object>) tableDictionaryObject;
+		}
+		return new HashMap<String, Object>();
+	}
+
+	public HashMap<String, Object> getWalkerTableDictionary() {
+		if (tableDictionaryMap == null) {
+			tableDictionaryMap = new HashMap<String, Object>();
+		}
+		return tableDictionaryMap;
+	}
+
+	/**
+	 * Merge a query-local table dictionary into the walker's global table dictionary map.
+	 *
+	 * Rules:
+	 * - New table keys are copied in full.
+	 * - Existing table keys merge column-by-column.
+	 * - Existing column entries are never replaced.
+	 * - If both existing and incoming column entries are reference arrays, append only
+	 *   references not already captured.
+	 */
+	@SuppressWarnings("unchecked")
+	public void mergeTableDictionaryIntoWalkerTableDictionary(HashMap<String, Object> localTableDictionary) {
+		if (localTableDictionary == null || localTableDictionary.isEmpty()) {
+			return;
+		}
+		HashMap<String, Object> globalTableDictionary = getWalkerTableDictionary();
+
+		for (Map.Entry<String, Object> tableEntry : localTableDictionary.entrySet()) {
+			String tableRef = tableEntry.getKey();
+			Object incomingColumnsObject = tableEntry.getValue();
+			if (!(incomingColumnsObject instanceof Map<?, ?> incomingColumns)) {
+				continue;
+			}
+
+			String normalizedTableRef = tableRef.startsWith("<") ? tableRef : tableRef.toLowerCase();
+			Object existingColumnsObject = globalTableDictionary.get(normalizedTableRef);
+
+			if (!(existingColumnsObject instanceof HashMap<?, ?>)) {
+				HashMap<String, Object> newColumns = new HashMap<String, Object>();
+				for (Map.Entry<?, ?> columnEntry : incomingColumns.entrySet()) {
+					if (columnEntry.getKey() instanceof String columnName) {
+						newColumns.put(columnName, columnEntry.getValue());
+					}
+				}
+				globalTableDictionary.put(normalizedTableRef, newColumns);
+				continue;
+			}
+
+			HashMap<String, Object> existingColumns = (HashMap<String, Object>) existingColumnsObject;
+			for (Map.Entry<?, ?> columnEntry : incomingColumns.entrySet()) {
+				if (!(columnEntry.getKey() instanceof String columnName)) {
+					continue;
+				}
+
+				Object incomingRefs = columnEntry.getValue();
+				Object existingRefs = existingColumns.get(columnName);
+				if (existingRefs == null) {
+					existingColumns.put(columnName, incomingRefs);
+				} else if (existingRefs instanceof ArrayList<?> existingRefList
+						&& incomingRefs instanceof ArrayList<?> incomingRefList) {
+					for (Object incomingRef : incomingRefList) {
+						if (!((ArrayList<Object>) existingRefList).contains(incomingRef)) {
+							((ArrayList<Object>) existingRefList).add(incomingRef);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void ensureTableDictionaryEntry(String tableRef) {
+		if (tableRef == null) {
+			return;
+		}
+		String reference;
+		if (tableRef.startsWith("<")) {
+			reference = tableRef;
+		} else {
+			reference = tableRef.toLowerCase();
+		}
+		HashMap<String, Object> tableDictionary = getCurrentTableDictionary();
+		Object existing = tableDictionary.get(reference);
+		if (!(existing instanceof Map<?, ?>)) {
+			tableDictionary.put(reference, new HashMap<String, Object>());
+		}
+	}
+
+	public boolean isTopLevelSymbolScope() {
+		Integer symbolScopeLevel = stackSymbols.get("symbolTable");
+		return symbolScopeLevel == null || symbolScopeLevel == 1;
+	}
 
  
 	/**
@@ -318,33 +421,44 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	
 	
 	@SuppressWarnings("unchecked")
-	public void collectSymbolTable(String alias, Object tableReference) {
+	public void collectTableAlias(String alias, Object tableReference) {
 		if (tableReference instanceof String) {
-			// TODO: How does Symbol Table work?
-			Object aliasSet = symbolTable.get((String) alias);
-			HashMap<String, Object> ref = (HashMap<String, Object>) symbolTable.get((String) tableReference);
+			String tableRef = (String) tableReference;
+
+			Object qryTableAliasObject = symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+			if (!(qryTableAliasObject instanceof Map<?, ?>)) {
+				qryTableAliasObject = new HashMap<String, Object>();
+				symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, qryTableAliasObject);
+			}
+			Map<String, Object> qryTableAlias = (Map<String, Object>) qryTableAliasObject;
+
+			Object ref = symbolTable.get(tableRef);
+			if (!(ref instanceof Map<?, ?>)) {
+				if (!(tableRef.startsWith(MUMBLE_QUERY_KEY)
+						|| tableRef.startsWith(MUMBLE_INSERT_KEY)
+						|| tableRef.startsWith(MUMBLE_UPDATE_KEY)
+						|| tableRef.startsWith(MUMBLE_UNION_KEY)
+						|| tableRef.startsWith(MUMBLE_INTERSECT_KEY))) {
+					ensureTableDictionaryEntry(tableRef);
+				}
+			}
+
+			Object aliasSet = qryTableAlias.get((String) alias);
 			if (aliasSet == null) {
-				if (!alias.equals((String) tableReference))
-					symbolTable.put(alias, (String) tableReference);
-				if (ref == null)
-					symbolTable.put((String) tableReference, new HashMap<String, Object>());
-			} else {
-				if (!alias.equals((String) tableReference))
-					symbolTable.put(alias, (String) tableReference);
-				if (ref == null)
-					symbolTable.put((String) tableReference, aliasSet);
-				else
-					ref.putAll((Map<String, Object>) aliasSet);
+				// Alias is not already mapped, add it to the alias map
+				if (!alias.equals(tableRef))
+					// Only add the alias if it's different from the table reference; otherwise, it doesn't need to be added as an alias
+					qryTableAlias.put(alias, tableRef);
 			}
 		} else if (tableReference instanceof HashMap<?, ?>) {
-			showTrace(symbolTrace, "Error collecting table: " + tableReference);
+			showTrace(symbolTrace, "Error collecting table reference: " + tableReference);
 		}
 	}
 
 	/**
 	 * Add the Column reference or Values Column Reference to the Source Table Reference in the Symbol Table
 	 * Unless the column is fully specified with its table reference, it gets added to the "UNKNOWN" table reference 
-	 * in the Symbol Table and then gets moved to the correct table reference when the table reference is fully specified. 
+	 * in the Symbol Table
 	 * This allows the walker to capture column references before their corresponding table references are fully 
 	 * specified in the SQL statement.
 	 * 
@@ -357,49 +471,69 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * @param token
 	 */
 	@SuppressWarnings("unchecked")
-	public void collectSymbolTableItem(Object tableReference, Object item, Token token) {
-		if (tableReference instanceof String) {
-			String tableReferenceKey = (String) tableReference;
-			// Get existing Symbol Table element for the table reference
-			Object refItem = symbolTable.get(tableReferenceKey);
-			if (refItem == null) {
-				String caseInsensitiveAliasKey = findSymbolTableAliasKeyIgnoreCase(tableReferenceKey);
-				if (caseInsensitiveAliasKey != null) {
-					tableReferenceKey = caseInsensitiveAliasKey;
-					refItem = symbolTable.get(caseInsensitiveAliasKey);
-				}
-			}
-			// If there is no existing Symbol Table element for the table reference, create an empty new one
-			if (refItem instanceof String) {
-                // If the table reference is a string, its an alias to an actual table reference. Retrieve the actual table reference 
-				// from the Symbol Table and add the item to its symbol table.
-                Object refItem2 = symbolTable.get((String) refItem);
-				if (refItem2 == null) {
-				    // tableReference has not been added to Symbol Table before
-				    refItem2 = new HashMap<String, Object>();
-				    symbolTable.put((String) refItem, refItem2);
-			    }
-				addItemToSymbolTable(refItem2, item, token);
-			} else if (refItem == null) {
-				// referenced table has not been added to Symbol Table before
-				refItem = new HashMap<String, Object>();
-				symbolTable.put(tableReferenceKey, refItem);
-				addItemToSymbolTable(refItem, item, token);
-			} else if (refItem instanceof HashMap<?, ?>) {
-				// tableReference is new entry for existing table in the symbol table for this reference
-				addItemToSymbolTable(refItem, item, token);
-			}
-		} else if (tableReference instanceof HashMap<?, ?>) {
-			showTrace(symbolTrace, "Error collecting table: " + tableReference);
+	public void collectUnresolvedColumnReference(Object tableReference, Object item, Token token) {
+	
+		Object qryTableDictObject = symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(qryTableDictObject instanceof Map<?, ?>)) {
+			qryTableDictObject = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qryTableDictObject);
 		}
+		Map<String, Object> qryTableDict = (Map<String, Object>) qryTableDictObject;
+
+		Object normalizedItem = normalizeUnresolvedColumnItem(item);
+		if (normalizedItem == null) {
+			return;
+		}
+		// Add column reference to the unresolved column dictionary in the symbol table under the column name with the token for that reference. If the column is already there, add the token to the list of tokens for that column.
+		addColumnTokenToColumnDict(qryTableDict, normalizedItem, token);
 	}
 
-	private String findSymbolTableAliasKeyIgnoreCase(String tableReference) {
+	@SuppressWarnings("unchecked")
+	private Object normalizeUnresolvedColumnItem(Object item) {
+		if (item == null) {
+			return null;
+		}
+
+		if (item instanceof String) {
+			return item;
+		}
+
+		if (!(item instanceof Map<?, ?> itemMap)) {
+			return null;
+		}
+
+		if (itemMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			return item;
+		}
+
+		Object columnObj = itemMap.get(MUMBLE_COLUMN_KEY);
+		if (columnObj instanceof Map<?, ?> columnMap) {
+			if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+				return columnMap;
+			}
+			Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String) {
+				return nameObj;
+			}
+		}
+
+		return null;
+	}
+
+	/* Find table name for table alias, ignore case */
+	private String findTableAliasIgnoreCase(String tableReference) {
 		if (tableReference == null || symbolTable == null || symbolTable.isEmpty()) {
 			return null;
 		}
 
-		for (Map.Entry<String, Object> entry : symbolTable.entrySet()) {
+		Object qryTableAliasObject = symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (!(qryTableAliasObject instanceof Map<?, ?>)) {
+			qryTableAliasObject = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, qryTableAliasObject);
+		}
+		Map<String, Object> qryTableAlias = (Map<String, Object>) qryTableAliasObject;
+		
+		for (Map.Entry<String, Object> entry : qryTableAlias.entrySet()) {
 			if (!(entry.getValue() instanceof String)) {
 				continue;
 			}
@@ -431,7 +565,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * @param token
 	 */
 	@SuppressWarnings("unchecked")
-	public void addItemToSymbolTable(Object tableDictObject, Object item, Token token) {
+	public void addColumnTokenToColumnDict(Object tableDictObject, Object item, Token token) {
 		if (item instanceof String) {
 			HashMap<String, Object> tableDictMap = (HashMap<String, Object>) tableDictObject;
 			// Item is a column reference, add it if we haven't captured it yet
@@ -616,6 +750,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	*/ 
 	public void addQueryInputColumnsToTableDictionary() {
 		HashMap<String, Object> hold = symbolTable;
+		HashMap<String, Object> tableDictionary = null;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
@@ -630,7 +765,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 //					mergeDictionary(queryColumnDictionaryMap, tab_ref, hold);
 				} else {
 					// Add table references from any source in the query to the table dictionary map
-					mergeDictionary(tableDictionaryMap, tab_ref, hold);
+					if (tableDictionary == null) {
+						tableDictionary = getCurrentTableDictionary();
+					}
+					mergeDictionary(tableDictionary, tab_ref, hold);
 				}
 			}
 		}
@@ -689,6 +827,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		((HashMap<String, Object>) tableSymbols).putAll(columnEntries);
+		columnEntries.clear();
 		return true;
 	}
 
@@ -1146,6 +1285,27 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 	}
 
+	// @SuppressWarnings("unchecked")
+	// public HashMap<String, Object> flattenUnresolvedColumnMap(HashMap<String, Object> unresolvedMap) {
+	// 	if (unresolvedMap == null || unresolvedMap.isEmpty()) {
+	// 		return unresolvedMap;
+	// 	}
+
+	// 	HashMap<String, Object> flattened = new HashMap<String, Object>();
+	// 	for (String key : unresolvedMap.keySet()) {
+	// 		Object value = unresolvedMap.get(key);
+
+	// 		if ((MUMBLE_UNRESOLVED_COLUMN_KEY.equals(key) || MUMBLE_UNKNOWN_KEY.equals(key))
+	// 				&& value instanceof HashMap<?, ?>) {
+	// 			mergeUnknownEntries(flattened, (HashMap<String, Object>) value);
+	// 		} else {
+	// 			flattened.put(key, value);
+	// 		}
+	// 	}
+
+	// 	return flattened;
+	// }
+
 	/**
 	 * Distributes UNKNOWN '*' references into table/query dictionaries using explicit source when present.
 	 */
@@ -1156,6 +1316,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			HashMap<String, Object> tableAliasCollection,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection) {
+		HashMap<String, Object> tableDictionary = getCurrentTableDictionary();
 		if (unknownCollection == null || !unknownCollection.containsKey("*")) {
 			return;
 		}
@@ -1204,13 +1365,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					continue;
 				}
 
-				if (mergeColumnReferenceIntoTableDictionary(tableDictionaryMap, resolvedTableRef, "*", wildcardRefs)) {
+				if (mergeColumnReferenceIntoTableDictionary(tableDictionary, resolvedTableRef, "*", wildcardRefs)) {
 					mergedTargets++;
 				}
 			}
 		} else {
 			mergedTargets += mergeWildcardIntoAllDictionaryEntries(tableCollection, wildcardRefs);
-			mergedTargets += mergeWildcardIntoAllDictionaryEntries(tableDictionaryMap, wildcardRefs);
+			mergedTargets += mergeWildcardIntoAllDictionaryEntries(tableDictionary, wildcardRefs);
 			mergedTargets += mergeWildcardIntoAllQueryDictionaryEntries(queryColumnDictionaryMap, wildcardRefs);
 		}
 
@@ -1671,14 +1832,29 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> tableAliasCollection,
-			HashMap<String, Object> tableCollection,
-			Object filtersList) {
+			HashMap<String, Object> tableCollection) {
 		if (localInterface == null || outputCol == null || !localInterface.containsKey(outputCol)) {
 			return false;
 		}
 
 		Object refsObj = localInterface.get(outputCol);
 		if (!(refsObj instanceof List<?> refs)) {
+			return false;
+		}
+
+		return validateReferenceEntries(
+				refs,
+				tableAliasCollection,
+				tableCollection,
+				localCurrentQueryDictionary);
+	}
+
+	@SuppressWarnings("unchecked")
+	public boolean validateReferenceEntries(List<?> refs,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		if (refs == null) {
 			return false;
 		}
 
@@ -1691,7 +1867,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				continue;
 			}
 
-			Map<String, Object> refMap = (Map<String, Object>) refObj;
 			String substitutionType = extractSubstitutionTypeFromInterfaceEntry(refObj);
 			if (substitutionType != null) {
 				if (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType)) {
@@ -1710,29 +1885,36 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 			if (tableRef != null) {
 				String resolvedTableRef = resolveAliasToTableName(tableRef, tableAliasCollection);
-				if (resolvedTableRef != null
-						&& (resolvedTableRef.startsWith("query")
-								|| resolvedTableRef.startsWith(MUMBLE_VALUES_KEY)
-								|| resolvedTableRef.startsWith(MUMBLE_UNION_KEY)
-								|| resolvedTableRef.startsWith(MUMBLE_INTERSECT_KEY))) {
-					resolved = queryDictionaryContainsColumn(resolvedTableRef, columnName);
+				String resolvedNonTableSourceRef = resolveAliasToNonTableSourceQueryKey(tableRef,
+						localCurrentQueryDictionary);
+				boolean explicitQueryReference = resolvedNonTableSourceRef != null
+						|| isNonTableQuerySource(resolvedTableRef);
+
+				if (explicitQueryReference) {
+					String queryDictionaryKey = (resolvedNonTableSourceRef != null)
+							? resolvedNonTableSourceRef
+							: resolvedTableRef;
+					resolved = queryDictionaryContainsColumn(queryDictionaryKey, columnName);
+					if (!resolved && queryDictionaryKey != null
+							&& (queryDictionaryKey.startsWith(MUMBLE_QUERY_KEY)
+									|| queryDictionaryKey.startsWith(MUMBLE_UNION_KEY)
+									|| queryDictionaryKey.startsWith(MUMBLE_INTERSECT_KEY)
+									|| queryDictionaryKey.startsWith(MUMBLE_VALUES_KEY)
+									|| MUMBLE_VALUES_KEY.equals(queryDictionaryKey))) {
+						// Query-backed source dictionaries can be finalized after alias resolution;
+						// treat these as resolvable at this stage.
+						resolved = true;
+					}
 				} else {
 					HashMap<String, Object> indicatedTableDictionary = getTableDictionaryForReference(resolvedTableRef,
 							tableCollection);
 					resolved = indicatedTableDictionary != null && indicatedTableDictionary.containsKey(columnName);
 				}
 			} else {
-				resolved = tableCollectionContainsColumn(columnName, tableCollection);
-				if (!resolved) {
-					ArrayList<String> queryMatches = collectSourceReferencesForColumn(columnName,
-							null,
-							null);
-					resolved = !queryMatches.isEmpty();
-				}
-			}
-
-			if (!resolved && containsColumnName(filtersList, columnName)) {
-				resolved = true;
+				ArrayList<String> sourceRefs = collectSourceReferencesForColumn(columnName,
+						tableCollection,
+						localCurrentQueryDictionary);
+				resolved = !sourceRefs.isEmpty();
 			}
 
 			if (!resolved) {
@@ -1746,8 +1928,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public void validateQueryInterface(HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> tableAliasCollection,
-			HashMap<String, Object> tableCollection,
-			Object filtersList) {
+			HashMap<String, Object> tableCollection) {
 		if (localInterface == null || localInterface.isEmpty()) {
 			return;
 		}
@@ -1757,9 +1938,23 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					localInterface,
 					localCurrentQueryDictionary,
 					tableAliasCollection,
-					tableCollection,
-					filtersList);
+					tableCollection);
 		}
+	}
+
+	public boolean validateFilterReferences(Object filtersList,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> tableCollection) {
+		if (!(filtersList instanceof List<?> refs)) {
+			return true;
+		}
+
+		return validateReferenceEntries(
+				refs,
+				tableAliasCollection,
+				tableCollection,
+				localCurrentQueryDictionary);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1772,6 +1967,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
 			return queryDictionary.containsKey(columnName)
 					|| queryDictionary.containsKey("*");
+		}
+
+		Object queryDefinitionObject = symbolTable.get("def_" + queryRef);
+		if (queryDefinitionObject instanceof Map<?, ?> queryDefinition) {
+			Object interfaceObject = queryDefinition.get(MUMBLE_INTERFACE_KEY);
+			if (interfaceObject instanceof Map<?, ?> queryInterface) {
+				return queryInterface.containsKey(columnName)
+						|| queryInterface.containsKey("*");
+			}
 		}
 		return false;
 	}

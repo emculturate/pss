@@ -44,7 +44,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_INSERT_KEY = "insert";
     public static final String MUMBLE_INSERT_INTO_KEY = "insert_into";
     public static final String MUMBLE_INSERT_INTO_OVERWRITE_KEY = "insert_overwrite_into";
-    public static final String MUMBLE_INTERFACE_KEY = "interface";
+    public static final String MUMBLE_INTERFACE_KEY = "interface"; // Special key for the symbol table to store interface references
     public static final String MUMBLE_INTERSECT_KEY = "intersect";
     public static final String MUMBLE_INTO_KEY = "into";
     public static final String MUMBLE_ITEM_KEY = "item";
@@ -83,11 +83,13 @@ public final class MumbleConstants {
     public static final String MUMBLE_PUML_CONSTANT_KEY = "puml_constant";
     public static final String MUMBLE_QUALIFIER_KEY = "qualifier";
     public static final String MUMBLE_QUERY_KEY = "query";
+    public static final String MUMBLE_QUERY_DICTIONARY_KEY = "query_dictionary"; // Special key for the symbol table to store query references
     public static final String MUMBLE_RANGE_BEGIN_KEY = "begin";
     public static final String MUMBLE_RANGE_END_KEY = "end";
     public static final String MUMBLE_RETURNING_KEY = "returning";
     public static final String MUMBLE_RIGHT_FACTOR_KEY = "right";
     public static final String MUMBLE_ROW_KEY = "row";
+    public static final String MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY = "scalar_subquery_aliases"; // Special key for the symbol table to store scalar subquery aliases
     public static final String MUMBLE_SCALE_KEY = "scale";
     public static final String MUMBLE_SCHEMA_KEY = "schema";
     public static final String MUMBLE_SELECT_KEY = "select";
@@ -97,6 +99,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_SORT_ORDER_KEY = "sort_order";
     public static final String MUMBLE_SUBSTITUTION_KEY = "substitution";
     public static final String MUMBLE_SYMMETRY_KEY = "symmetry";
+    public static final String MUMBLE_TABLE_ALIAS_KEY = "table_alias";
+    public static final String MUMBLE_TABLE_DICTIONARY_KEY = "table_dictionary"; // Special key for the symbol table to store table references
     public static final String MUMBLE_TABLE_KEY = "table";
     public static final String MUMBLE_TABLE_REF_KEY = "table_ref";
     public static final String MUMBLE_THEN_KEY = "then";
@@ -105,6 +109,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_TYPE_KEY = "type";
     public static final String MUMBLE_UNKNOWN_KEY = "unknown";
     public static final String MUMBLE_UNION_KEY = "union";
+    public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
     public static final String MUMBLE_UPDATE_KEY = "update";
     public static final String MUMBLE_VALUES_KEY = "values";
     public static final String MUMBLE_VALUE_KEY = "value";

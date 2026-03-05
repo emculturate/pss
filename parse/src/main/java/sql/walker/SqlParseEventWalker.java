@@ -55,8 +55,6 @@ import sql.SQLSelectParserParser;
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
-    private static final String CURRENT_QUERY_COLUMN_DICTIONARY = "CurrentQueryColumnDictionary";
-	private static final String CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES = "CurrentQueryScalarSubqueryAliases";
 
 
 	/**
@@ -82,7 +80,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	public HashMap<String, Object> getTableColumnDictionaryMap() {
-		return walker.tableDictionaryMap;
+		return walker.getWalkerTableDictionary();
 	}
 
 	public HashMap<String, Object> getQueryColumnDictionaryMap() {
@@ -95,31 +93,48 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	public HashSet<String> getInterface() {
-		// TODO: When a query has a with, the interface can appear in anyone of
-		// the symbol table queries, because it will be a list.
-		// TODO: Values statement without an alias missing interface object
 		HashSet<String> interfac = new HashSet<String>();
-		HashMap<String, Object> hold = null;
-		if ( walker.symbolTable != null) {
-			for (String key :  walker.symbolTable.keySet()) {
-				if (key.equals(MUMBLE_WITH_KEY)) {
-				} else {
-					Object holdObj = walker.symbolTable.get(key);
-					if (!(holdObj instanceof HashMap)) {
-						continue; // Skip this iteration if not a HashMap
-					}
-					hold = (HashMap<String, Object>) holdObj;
-					break;
-				}
+		if (walker.symbolTable == null || walker.symbolTable.isEmpty()) {
+			return interfac;
+		}
+
+		Map<String, Object> queryMap = null;
+		int topQueryIndex = -1;
+		for (String key : walker.symbolTable.keySet()) {
+			if (!key.startsWith("query")) {
+				continue;
 			}
-			if (hold != null) {
-				hold = (HashMap<String, Object>) hold.get(MUMBLE_INTERFACE_KEY);
+			Object queryObject = walker.symbolTable.get(key);
+			if (!(queryObject instanceof HashMap<?, ?>)) {
+				continue;
+			}
+			String suffix = key.substring("query".length());
+			int queryIndex;
+			try {
+				queryIndex = Integer.parseInt(suffix);
+			} catch (NumberFormatException ex) {
+				continue;
+			}
+			if (queryIndex > topQueryIndex) {
+				topQueryIndex = queryIndex;
+				queryMap = (Map<String, Object>) queryObject;
 			}
 		}
-		if (hold != null)
-			for (String key : hold.keySet()) {
+
+		if (queryMap == null) {
+			return interfac;
+		}
+
+		Object interfaceObject = queryMap.get(MUMBLE_INTERFACE_KEY);
+		if (!(interfaceObject instanceof Map<?, ?> interfaceMap)) {
+			return interfac;
+		}
+
+		for (Object keyObj : interfaceMap.keySet()) {
+			if (keyObj instanceof String key) {
 				interfac.add(key);
 			}
+		}
 		return interfac;
 	}
 
@@ -129,7 +144,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	public Snippet getSnippet() {
-		Snippet snippet = new Snippet(walker.asTree, walker.tableDictionaryMap, walker.queryColumnDictionaryMap,
+		Snippet snippet = new Snippet(walker.asTree, walker.getWalkerTableDictionary(), walker.queryColumnDictionaryMap,
 				walker.symbolTable, walker.substitutionsMap, getInterface());
 		// Handoff: copy walker-generated (non-parser) diagnostics into the snippet.
 		snippet.setParserDiagnosticList(new ArrayList<>(walker.getWalkerDiagnostics()));
@@ -336,9 +351,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
+		finalizeTopLevelUnresolvedColumns();
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -358,7 +374,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		walker.addQueryInputColumnsToTableDictionary();
 
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -378,7 +394,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		walker.addQueryInputColumnsToTableDictionary();
 
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	
 
@@ -399,7 +415,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		walker.addQueryInputColumnsToTableDictionary();
 
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 
@@ -420,7 +436,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		walker.addQueryInputColumnsToTableDictionary();
 
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -446,7 +462,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_TUPLE_TREE_KEY, item);
 		
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -461,13 +477,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_QUERY_TREE_KEY, subMap.remove("1"));
+		finalizeTopLevelUnresolvedColumns();
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		// Add TABLE references to Table Dictionary
 		walker.addQueryInputColumnsToTableDictionary();
 
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
+	}
+
+	@SuppressWarnings("unchecked")
+	private void finalizeTopLevelUnresolvedColumns() {
+		Object unresolvedObject = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(unresolvedObject instanceof HashMap<?, ?> unresolvedMapObject)) {
+			return;
+		}
+
+		HashMap<String, Object> unresolvedMap = unresolvedObject instanceof HashMap<?, ?> 
+											  ? (HashMap<String, Object>) unresolvedMapObject : null;
+		if (unresolvedMap == null || unresolvedMap.isEmpty()) {
+			return;
+		}
+
+		Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unresolvedMap);
+		String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unresolvedMap);
+		String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unresolvedMap);
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_COLUMNS);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_COLUMNS);
+		String diagMessage =  String.format(diagTemplate, unknownColumnsWithLocations);
+
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				firstTokenLocation[0],
+				firstTokenLocation[1],
+				unknownColumnsCsv);
 	}
 
 	/*
@@ -484,12 +529,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_JOIN_EXTENSION_TREE_KEY, subMap.remove("1"));
 
 		 // Cleanup symbol table and table dictionary for join extension before returning to Snippet requester
-		walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY);
-		walker.symbolTable.remove(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES);
+		walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 		walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
 		
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	
 
@@ -507,7 +552,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	/*
 	===============================================================================
@@ -529,7 +574,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_INSERT_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.tableDictionaryMap);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	/*
 
@@ -794,7 +839,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Special handling of queries with only one source: Move "unknown"
 		// references to that table
-		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNKNOWN_KEY);
+		HashMap<String, Object> unks = (HashMap<String, Object>) symbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 
 		Integer count = 0;
 		Integer tableCount = 0;
@@ -832,7 +877,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						|| holdTabRef.startsWith(MUMBLE_UNION_KEY)
 						|| holdTabRef.startsWith(MUMBLE_INTERSECT_KEY)
 						|| holdTabRef.startsWith(MUMBLE_VALUES_KEY))) {
-					symbols.put(MUMBLE_UNKNOWN_KEY, unks);
+					symbols.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unks);
 				} else {
 					((HashMap<String, Object>) hold.get(holdTabRef)).putAll(unks);
 				}
@@ -851,11 +896,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						// into it
 						((HashMap<String, Object>) hold.get(onlyTableName)).putAll(unks);
 					else
-						symbols.put(MUMBLE_UNKNOWN_KEY, unks);
+						symbols.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unks);
 				}
 			}
 		}
 		// TODO: Add TABLE references to Table Dictionary
+		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
 				if ((tab_ref.startsWith("query")) || (tab_ref.startsWith(MUMBLE_UNION_KEY))
@@ -867,13 +913,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						reference = tab_ref;
 					else
 						reference = tab_ref.toLowerCase();
-					HashMap<String, Object> currItem = (HashMap<String, Object>)  walker.tableDictionaryMap.get(reference);
+					HashMap<String, Object> currItem = (HashMap<String, Object>)  currentTableDictionary.get(reference);
 					if (currItem != null)
 						currItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
 					else {
 						HashMap<String, Object> newItem = new HashMap<String, Object>();
 						newItem.putAll((Map<? extends String, ? extends Object>) hold.get(tab_ref));
-						 walker.tableDictionaryMap.put(reference, newItem);
+						 currentTableDictionary.put(reference, newItem);
 					}
 				}
 			}
@@ -918,14 +964,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.showTrace(walker.parseTrace, "Assignment: " + subMap);
 
 			// Put target column symbol into update table's set and interface
-			Map<String, Object> unk = (HashMap<String, Object>)  walker.symbolTable.get(MUMBLE_UNKNOWN_KEY);
+			Map<String, Object> unk = (HashMap<String, Object>)  walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
 			String column = ((HashMap<String, String>) ((HashMap<String, Object>) left).get(MUMBLE_COLUMN_KEY)).get("name");
 
 			String[] keys = new String[1];
 			keys =  walker.symbolTable.keySet().toArray(keys);
 
 			for (String key : keys) {
-				if (key.equals(MUMBLE_UNKNOWN_KEY)) { // do nothing
+				if (key.equals(MUMBLE_UNRESOLVED_COLUMN_KEY)) { // do nothing
 
 				} else if (key.equals(MUMBLE_WITH_KEY)) { // do nothing
 
@@ -981,8 +1027,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String key = MUMBLE_VALUES_KEY + walker.queryCount;
 
 			// Capture Query Column Dictionary for this level
-			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
-			walker.symbolTable.remove(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES);
+			HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+			if (localCurrentQueryDictionary == null)
+				localCurrentQueryDictionary = new HashMap<String, Object>();
+			walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
+			symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+			walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 
 			// Pop the symbol table for this level and add it to the parent level with a unique key
 			walker.popSymbolTable(key, symbols);
@@ -1122,7 +1172,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Put these in the symbol table dictionary for the default "values" table
 			for (int i = 1; i <= row.size(); i++) {
 				String ref = "$" + i;
-				walker.collectSymbolTableItem(MUMBLE_VALUES_KEY, ref, ctx.getStart());
+				walker.collectUnresolvedColumnReference(MUMBLE_VALUES_KEY, ref, ctx.getStart());
 			}
 
 			int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -1504,18 +1554,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		walker.showTrace(walker.parseTrace, subMap);
 
+		Integer symbolScopeLevel = walker.stackSymbols.get("symbolTable");
+		boolean hasParentQueryScope = symbolScopeLevel != null && symbolScopeLevel > 2;
+		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
 		// Handle symbol tables		
-		HashMap<String, Object> symbols = convertSymbolTableToTableDictionary();
+		HashMap<String, Object> symbols = convertSymbolTableToTableDictionary(emitFinalUnresolvedUnknownFatal);
 
 		// Retrieve outer symbol table, insert this symbol table into it
 		String key = "query" + walker.queryCount;
 
 		// Capture Query Column Dictionary for this level
-		walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
-		walker.symbolTable.remove(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES);
+		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (localCurrentQueryDictionary == null)
+			localCurrentQueryDictionary = new HashMap<String, Object>();
+		walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
+		symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 
+		// Get the remaining unresolved column references from this query and push them up one level with the query key as a prefix
+		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
+			symbols.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unresolvedMap);
+		}
+	
 		walker.popSymbolTable(key, symbols);
 		walker.queryCount++;
+		if (!hasParentQueryScope) {
+			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		}
+
+		if (hasParentQueryScope && unresolvedMap != null && !unresolvedMap.isEmpty()) {
+			Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+			if (parentUnresolvedObject instanceof HashMap<?, ?>) {
+				walker.mergeUnknownEntries((HashMap<String, Object>) parentUnresolvedObject, unresolvedMap);
+			} else {
+				walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unresolvedMap);
+			}
+		}
+
 	}
 
 /*
@@ -1647,7 +1723,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	private void addAliasTokensObject(String interfaceAlias, String aliasToken) {
-		String queryDictionaryKey = CURRENT_QUERY_COLUMN_DICTIONARY;
+		String queryDictionaryKey = MUMBLE_QUERY_DICTIONARY_KEY;
 		HashMap<String, Object> queryColumnDictionary = (HashMap<String, Object>) walker.symbolTable.get(queryDictionaryKey);
 		if (queryColumnDictionary == null) {
 			queryColumnDictionary = new HashMap<String, Object>();
@@ -1668,13 +1744,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		Object scalarAliasObject = walker.symbolTable.get(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES);
+		Object scalarAliasObject = walker.symbolTable.get(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 		HashSet<String> scalarAliases;
 		if (scalarAliasObject instanceof HashSet<?>) {
 			scalarAliases = (HashSet<String>) scalarAliasObject;
 		} else {
 			scalarAliases = new HashSet<String>();
-			walker.symbolTable.put(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES, scalarAliases);
+			walker.symbolTable.put(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY, scalarAliases);
 		}
 
 		scalarAliases.add(interfaceAlias);
@@ -1751,14 +1827,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(MUMBLE_TABLE_REF_KEY, "*");
 			item.put(MUMBLE_NAME_KEY, "*");
 
-			walker.collectSymbolTableItem(MUMBLE_UNKNOWN_KEY, "*", ctx.getStart());
+			walker.collectUnresolvedColumnReference(MUMBLE_UNKNOWN_KEY, "*", ctx.getStart());
 
 			subMap.put(MUMBLE_COLUMN_KEY, item);
 		} else if (ctx.getChildCount() == 3) {
 			walker.showTrace(walker.parseTrace, "Three entries: " + ctx.getText());
 			item.put(MUMBLE_TABLE_REF_KEY, ctx.getChild(0).getText());
 
-			walker.collectSymbolTableItem(item.get(MUMBLE_TABLE_REF_KEY), "*", ctx.getStart());
+			walker.collectUnresolvedColumnReference(item.get(MUMBLE_TABLE_REF_KEY), "*", ctx.getStart());
 
 			item.put(MUMBLE_NAME_KEY, "*");
 			subMap.put(MUMBLE_COLUMN_KEY, item);
@@ -1825,188 +1901,99 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "Join Extension: " + subMap);
 
-		convertSymbolTableToTableDictionary();
+		convertSymbolTableToTableDictionary(false);
 	}
 
 	/**
 	 * Create Dictionary from Symbol Table
+	 * Validate and assign all columns to a specific source table or query
+	 * Perform quality diagnostics for any unresolved columns, and if emitFinalUnresolvedUnknownFatal is true,
+	 * then add fatal diagnostics to parser resultfor any remaining unresolved columns after this process
 	 * 
 	 * @return
 	 */
-	private HashMap<String, Object> convertSymbolTableToTableDictionary() {
+	private HashMap<String, Object> convertSymbolTableToTableDictionary(boolean emitFinalUnresolvedUnknownFatal) {
 	
 		// deconstruct current symbol table into components for analysis
- 		HashMap<String, Object> unks = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
-        HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
-        HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY);
-		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES);
-        Object filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
-		HashMap<String, Object> tableAliasCollection = new HashMap<String, Object>();
-		HashMap<String, Object> symbolTableCollection = new HashMap<String, Object>();
-		HashMap<String, Object> tableCollection = new HashMap<String, Object>();
-		HashMap<String, Object> queryCollection = new HashMap<String, Object>();
-		HashMap<String, Object> pinnedUnknowns = new HashMap<String, Object>();
-		HashSet<String> forcedUnknownExplicitRefs = new HashSet<String>();
+ 		HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+		HashMap<String, Object> localUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (localUnresolvedColumnMap == null)
+			localUnresolvedColumnMap = new HashMap<String, Object>();
+		HashMap<String, Object> localTableAliasMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_ALIAS_KEY);
+		if (localTableAliasMap == null)
+			localTableAliasMap = new HashMap<String, Object>();
+		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (localTableCollection == null)
+			localTableCollection = new HashMap<String, Object>();
+		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (localCurrentQueryDictionary == null)
+			localCurrentQueryDictionary = new HashMap<String, Object>();
 
-		// Iterate through symbol table and move entries into the appropriate collection based on entry type and key name.
-		// This allows us to analyze the components of the symbol table and make decisions about how to handle unknown 
-		// columns before we merge everything back together into the final symbol table for this level of the query.
-		Set<String> keys = new HashSet<>(walker.symbolTable.keySet());
-		for (String tab_ref : keys) {
-			Object item = walker.symbolTable.remove(tab_ref);
-			if (item instanceof String) {
-				tableAliasCollection.put(tab_ref, item);
-			} else if (item instanceof HashMap<?, ?>) {
-				if (tab_ref.startsWith("def_")) {
-					symbolTableCollection.put(tab_ref, item);
-				} else if (tab_ref.startsWith("query") 
-						|| tab_ref.startsWith(MUMBLE_UNION_KEY)
-						|| tab_ref.startsWith(MUMBLE_INTERSECT_KEY)
-						|| tab_ref.startsWith(MUMBLE_VALUES_KEY)) {
-							queryCollection.put(tab_ref, item);
-				} else {
-						tableCollection.put(tab_ref, item);
-					}
-				} 
-		}
+		// Leave these null if they don't exist
+		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
+        Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 
-		// Preserve explicit alias-qualified refs that target non-table sources and pin unresolved ones.
-		walker.reconcileExplicitAliasReferencesAgainstNonTableSources(
-				tableCollection,
-				queryCollection,
-				localInterface,
-				pinnedUnknowns,
-				forcedUnknownExplicitRefs);
+
 		// Add query/derived-source aliases into the alias collection for downstream source resolution.
-		walker.mergeNonTableAliasMappingsIntoAliasCollection(queryCollection, tableAliasCollection);
+		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
+
 		// Resolve alias-backed table refs so tableCollection keys align with canonical table references.
-		walker.reconcileAliasBackedTableReferences(tableCollection, tableAliasCollection);
-		HashMap<String, Object> scopedTableCollection = walker.scopeTableCollectionToCurrentLevel(
-				tableCollection,
-				tableAliasCollection,
-				symbolTableCollection);
-		HashMap<String, Object> scopedQueryCollection = queryCollection;
-		HashMap<String, Object> aliasReachableQueryCollection = walker.scopeQueryCollectionForSetOperationValidation(
-				queryCollection,
-				tableAliasCollection);
-		if (aliasReachableQueryCollection != null && !aliasReachableQueryCollection.isEmpty()) {
-			scopedQueryCollection = aliasReachableQueryCollection;
-		} else if ((scopedTableCollection == null || scopedTableCollection.isEmpty())
-				&& queryCollection != null
-				&& queryCollection.size() == 1) {
-			// No table sources and one query source: keep single source visible for resolution.
-			scopedQueryCollection = queryCollection;
-		} else {
-			// Otherwise, ignore sibling/non-reachable query sources during this level's validation.
-			scopedQueryCollection = aliasReachableQueryCollection;
-		}
+		walker.reconcileAliasBackedTableReferences(localTableCollection, localTableAliasMap);
+
 		// Expand wildcard unknown entries (for example *, alias.*) into concrete source-scoped unknowns.
 		walker.processWildcardUnknownEntries(
-				unks,
+				localUnresolvedColumnMap,
 				localInterface,
-				tableAliasCollection,
-				scopedTableCollection,
-				scopedQueryCollection);
+				localTableAliasMap,
+				localTableCollection,
+				localCurrentQueryDictionary);
+
 		walker.moveUnknownEntriesToSingleWildcardBackedNonTableSource(
-				unks,
-				scopedQueryCollection,
-				tableAliasCollection);
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				localTableAliasMap);
 
-		if (pinnedUnknowns.isEmpty()) {
-			if (unks != null && !unks.isEmpty()) {
-				if (!walker.moveEntriesToSingleTableIfSingleTarget(unks, scopedTableCollection)) {
-					walker.symbolTable.put(MUMBLE_UNKNOWN_KEY, unks);
-					Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unks);
-					String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unks);
-					String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unks);
-					// Detection point: unresolved unknown columns remain after symbol-to-table allocation.
-					String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
-					String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
-					String diagMessage = (diagTemplate == null)
-							? "Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: " + unknownColumnsWithLocations
-							: String.format(diagTemplate, unknownColumnsWithLocations);
-					// Collection point: record fatal diagnostic in walker helper diagnostics list.
-					walker.addWalkerFatal(
-							diagCode,
-							diagMessage,
-							firstTokenLocation[0], // line number
-							firstTokenLocation[1], // character position
-							unknownColumnsCsv);
-				}
-			}
-		} else {
-			if (unks == null) {
-				unks = new HashMap<String, Object>();
-			}
-			walker.mergeUnknownEntries(unks, pinnedUnknowns);
+		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 
-			// Allocatable unknown: unresolved column refs that are not explicitly tied to a specific source, 
-			// so the walker is allowed to auto-assign them when there’s a single unambiguous table target.
+		if (!localUnresolvedColumnMap.isEmpty()) {
+			// Check for explicitly qualified columns whose table qualifiers do not exist
+			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
+					localUnresolvedColumnMap,
+					localInterface,
+					filtersList);
+			emitExplicitQualifiedUnknownDiagnostics(
+					explicitQualifiedUnknownEntries,
+					localInterface,
+					filtersList,
+					localTableAliasMap,
+					localCurrentQueryDictionary,
+					localCurrentQueryDictionary);
 
-			// Pinned unknown: unresolved column refs that are explicitly tied to a specific source (for example, 
-			// by alias qualification) but do not match any available source columns. Pinned cases are not only 
-			// “table ref doesn’t exist in query”; they also include explicit-source mismatches (for example, 
-			// explicit source exists but that column is not found there).
-
-			// Allocatable unknowns are not pinned by explicit-source constraints, so they can be auto-assigned.
-			// Pinned unknowns: explicit refs preserved as unresolved for diagnostic reporting and to prevent
-			// auto-assignment to an incorrect source.
-			HashMap<String, Object> allocatableUnknowns = new HashMap<String, Object>();
-			for (String unknownKey : unks.keySet()) {
-				if (!pinnedUnknowns.containsKey(unknownKey)) {
-					allocatableUnknowns.put(unknownKey, unks.get(unknownKey));
-				}
-			}
-
-			if (!allocatableUnknowns.isEmpty()) {
-				walker.moveEntriesToSingleTableIfSingleTarget(allocatableUnknowns, scopedTableCollection);
-			}
-
-			// Any remaining allocatable unknowns that could not be auto-assigned, plus all pinned 
-			// unknowns, are merged back into the symbol table as unresolved unknowns.
-			HashMap<String, Object> unresolvedUnknowns = new HashMap<String, Object>();
-			walker.mergeUnknownEntries(unresolvedUnknowns, allocatableUnknowns);
-			walker.mergeUnknownEntries(unresolvedUnknowns, pinnedUnknowns);
-
-			if (!unresolvedUnknowns.isEmpty()) {
-				// Put unresolved unknowns back into symbol table and report a fatal diagnostic
-				walker.symbolTable.put(MUMBLE_UNKNOWN_KEY, unresolvedUnknowns);
-				Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unresolvedUnknowns);
-				String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unresolvedUnknowns);
-				String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unresolvedUnknowns);
-				// Detection point: unresolved unknown columns remain after symbol-to-table allocation.
-				String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
-				String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNKNOWN_COLUMNS);
-				String diagMessage = (diagTemplate == null)
-						? "Unresolved column reference(s) remain in UNKNOWN scope after symbol resolution: " + unknownColumnsWithLocations
-						: String.format(diagTemplate, unknownColumnsWithLocations);
-				// Collection point: record fatal diagnostic in walker helper diagnostics list.
-				walker.addWalkerFatal(
-						diagCode,
-						diagMessage,
-						firstTokenLocation[0], // line number
-						firstTokenLocation[1], // character position
-						unknownColumnsCsv);
+			// Attempt to resolve any remaining unqualified unknowns that only have one possible source table, and move them to the resolved table dictionary for downstream resolution.  This allows us to resolve queries with unqualified columns that only have one possible source.
+			boolean movedToSingleTableTarget = 
+				walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, localTableCollection);
+			if (!movedToSingleTableTarget && !localUnresolvedColumnMap.isEmpty()) {
+				walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, currentTableDictionary);
 			}
 		}
 
 		// Merge table collection into the table dictionary map, which is used for symbol resolution in the rest of the query processing.
 		//   This allows all table references to be resolved against the same dictionary regardless of where they are defined in the query.
-		if (scopedTableCollection.size() > 0) {
-			for (String tab_ref : scopedTableCollection.keySet()) {
+		if (localTableCollection != null && localTableCollection.size() > 0) {
+			for (String tab_ref : localTableCollection.keySet()) {
 				String reference;
 				if (tab_ref.startsWith("<"))
 					// Tuple Substitution Variable, do NOT alter case
 					reference = tab_ref;
 				else
 					reference = tab_ref.toLowerCase();
-				HashMap<String, Object> currDict = (HashMap<String, Object>)  walker.tableDictionaryMap.get(reference);
+				HashMap<String, Object> currDict = (HashMap<String, Object>)  currentTableDictionary.get(reference);
 				if (currDict != null)
-					currDict.putAll((Map<? extends String, ? extends Object>) scopedTableCollection.get(tab_ref));
+					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
 				else {
 					HashMap<String, Object> newDict = new HashMap<String, Object>();
-					newDict.putAll((Map<? extends String, ? extends Object>) scopedTableCollection.get(tab_ref));
-					 walker.tableDictionaryMap.put(reference, newDict);
+					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+					 currentTableDictionary.put(reference, newDict);
 				}
 			}
 		}
@@ -2030,41 +2017,47 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 					if (substitutionType != null
 							&& (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
-						// Scenario: interface reference is a supported substitution (column/predicand); no additional resolution needed here.
-					} else if (tableRef != null) {
-						// Scenario: explicit table/query-qualified reference; validate against the indicated source only.
-						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, tableAliasCollection);
-						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, queryCollection);
+						continue;
+					}
+
+					if (columnName == null || "*".equals(columnName)) {
+						continue;
+					}
+
+					if (tableRef != null) {
+						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, localCurrentQueryDictionary);
 						boolean explicitQueryReference = resolvedNonTableSourceRef != null
 								|| (resolvedTableRef != null && resolvedTableRef.startsWith("query"));
 						boolean resolvedInSource = false;
-						if (columnName != null) {
-							if (explicitQueryReference) {
-								// Scenario: explicit query alias/tableRef points to a query dictionary entry.
-								String queryDictionaryKey = (resolvedNonTableSourceRef != null)
-										? resolvedNonTableSourceRef
-										: resolvedTableRef;
-								Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
-								if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
-									resolvedInSource = queryDictionary.containsKey(columnName)
-											|| queryDictionary.containsKey("*");
-								}
-							} else {
-								// Scenario: explicit table alias/tableRef points to a physical table dictionary entry.
-								HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-										resolvedTableRef,
-										scopedTableCollection);
-								resolvedInSource = indicatedTableDictionary != null
-										&& indicatedTableDictionary.containsKey(columnName);
+
+						if (explicitQueryReference) {
+							String queryDictionaryKey = (resolvedNonTableSourceRef != null)
+									? resolvedNonTableSourceRef
+									: resolvedTableRef;
+							Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
+							if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
+								resolvedInSource = queryDictionary.containsKey(columnName)
+										|| queryDictionary.containsKey("*");
 							}
+							if (!resolvedInSource && queryDictionaryKey != null
+									&& (queryDictionaryKey.startsWith(MUMBLE_QUERY_KEY)
+											|| queryDictionaryKey.startsWith(MUMBLE_UNION_KEY)
+											|| queryDictionaryKey.startsWith(MUMBLE_INTERSECT_KEY)
+											|| queryDictionaryKey.startsWith(MUMBLE_VALUES_KEY)
+											|| MUMBLE_VALUES_KEY.equals(queryDictionaryKey))) {
+								// Query-backed source dictionary may be finalized after this validation step.
+								resolvedInSource = true;
+							}
+						} else {
+							HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
+									resolvedTableRef,
+									localTableCollection);
+							resolvedInSource = indicatedTableDictionary != null
+									&& indicatedTableDictionary.containsKey(columnName);
 						}
 
-						if (columnName != null && !resolvedInSource) {
-							String explicitRefKey = tableRef + "." + columnName;
-							if (forcedUnknownExplicitRefs.contains(explicitRefKey)) {
-								continue;
-							}
-							// Scenario: explicit source was indicated, but column is missing in that source.
+						if (!resolvedInSource) {
 							Integer[] refLocation = (localCurrentQueryDictionary == null)
 									? new Integer[] { null, null }
 									: walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
@@ -2072,27 +2065,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 								refLocation = walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
 							}
 
-							String explicitRefDiagKey = explicitQueryReference
-									? SqlASTWalkerHelper.DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_QUERY
-									: SqlASTWalkerHelper.DIAG_SQL_REFERENCED_COLUMN_NOT_FOUND_IN_TABLE;
-
-							String diagCode = walker.getDiagnosticCode(
-									explicitRefDiagKey);
-							String diagTemplate = walker.getDiagnosticMessage(
-									explicitRefDiagKey);
+							String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+							String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
 							String indicatedSourceRef = (resolvedNonTableSourceRef != null)
 									? resolvedNonTableSourceRef
 									: resolvedTableRef;
-							String diagMessage = (diagTemplate == null)
-									? String.format(
-											explicitQueryReference
-													? "Referenced column '%s' at (l:%s c:%s) not found in indicated query '%s'."
-													: "Referenced column '%s' at (l:%s c:%s) not found in indicated table '%s'.",
-											columnName,
-											refLocation[0],
-											refLocation[1],
-											indicatedSourceRef)
-									: String.format(diagTemplate,
+							String diagMessage =  String.format(diagTemplate,
 											columnName,
 											refLocation[0],
 											refLocation[1],
@@ -2106,8 +2084,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 									columnName);
 							hasSpecificResolutionFatalForOutputColumn = true;
 						}
-					} else if (columnName != null && !"*".equals(columnName)) {
-						// Scenario: implicit unqualified column reference; resolve by scanning available table/query sources in scope.
+					} else {
 						Integer[] refLocation = (localCurrentQueryDictionary == null)
 								? new Integer[] { null, null }
 								: walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
@@ -2117,33 +2094,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 						ArrayList<String> sourceRefs = walker.collectSourceReferencesForColumn(
 								columnName,
-								scopedTableCollection,
-								scopedQueryCollection);
+								localTableCollection,
+								localCurrentQueryDictionary);
 
 						if (sourceRefs.isEmpty()) {
 							// Scenario: implicit reference has no candidate source.
-							String diagCode = walker.getDiagnosticCode(
-									SqlASTWalkerHelper.DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE);
-							String diagTemplate = walker.getDiagnosticMessage(
-									SqlASTWalkerHelper.DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE);
-							String diagMessage = (diagTemplate == null)
-									? String.format(
-											"Unknown column reference '%s' at (l:%s c:%s). No matching column found in any table/query dictionary in scope.",
-											columnName,
-											refLocation[0],
-											refLocation[1])
-									: String.format(diagTemplate,
-											columnName,
-											refLocation[0],
-											refLocation[1]);
+							continue;
+							// String diagCode = walker.getDiagnosticCode(
+							// 		SqlASTWalkerHelper.DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE);
+							// String diagTemplate = walker.getDiagnosticMessage(
+							// 		SqlASTWalkerHelper.DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE);
+							// String diagMessage = (diagTemplate == null)
+							// 		? String.format(
+							// 				"Unknown column reference '%s' at (l:%s c:%s). No matching column found in any table/query dictionary in scope.",
+							// 				columnName,
+							// 				refLocation[0],
+							// 				refLocation[1])
+							// 		: String.format(diagTemplate,
+							// 				columnName,
+							// 				refLocation[0],
+							// 				refLocation[1]);
 
-							walker.addWalkerFatal(
-									diagCode,
-									diagMessage,
-									refLocation[0],
-									refLocation[1],
-									columnName);
-							hasSpecificResolutionFatalForOutputColumn = true;
+							// walker.addWalkerFatal(
+							// 		diagCode,
+							// 		diagMessage,
+							// 		refLocation[0],
+							// 		refLocation[1],
+							// 		columnName);
+							// hasSpecificResolutionFatalForOutputColumn = true;
 						} else if (sourceRefs.size() > 1) {
 							// Scenario: implicit reference matches multiple candidate sources.
 							String possibleSources = sourceRefs.toString();
@@ -2172,74 +2150,213 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 									columnName);
 							hasSpecificResolutionFatalForOutputColumn = true;
 						} else {
-							// Scenario: implicit reference resolved to exactly one source; no diagnostic needed.
+							// resolved by exactly one source
 						}
-					} else {
-						// Scenario: non-column output (e.g., wildcard/literal/function-only) or missing name; no implicit source validation needed.
 					}
 				}
 			}
-			if (!hasSpecificResolutionFatalForOutputColumn
-					&& !walker.validateInterfaceColumn(outputCol, localInterface, localCurrentQueryDictionary,
-				tableAliasCollection, scopedTableCollection, filtersList)) {
-				Integer[] outputColLocation = walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
-				if (outputColLocation[0] == null || outputColLocation[1] == null) {
-					outputColLocation = walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
-				}
-				String unresolvedSourceRefs = walker.formatInterfaceColumnReferences(localInterface.get(outputCol));
-				// Detection point: output column in query interface has unresolved references that cannot be resolved to any 
-				// available column in the table or query dictionaries.
-				String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED);
-				String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED);
-				String diagMessage = (diagTemplate == null)
-						? String.format("Output column '%s' at (l:%s c:%s) has unresolved source reference(s): %s",
-								outputCol,
-								outputColLocation[0],
-								outputColLocation[1],
-								unresolvedSourceRefs)
-						: String.format(diagTemplate,
-								outputCol,
-								outputColLocation[0],
-								outputColLocation[1],
-								unresolvedSourceRefs);
-				// Collection point: record fatal diagnostic in walker helper diagnostics list.
-				walker.addWalkerFatal(
-						diagCode,
-						diagMessage,
-						outputColLocation[0], // line number
-						outputColLocation[1], // character position
-						outputCol);
-			}
+			// if (!hasSpecificResolutionFatalForOutputColumn
+			// 		&& !walker.validateInterfaceColumn(outputCol, localInterface, localCurrentQueryDictionary,
+			// 	localTableAliasMap, localTableCollection)) {
+			// 	Integer[] outputColLocation = walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
+			// 	if (outputColLocation[0] == null || outputColLocation[1] == null) {
+			// 		outputColLocation = walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
+			// 	}
+			// 	String unresolvedSourceRefs = walker.formatInterfaceColumnReferences(localInterface.get(outputCol));
+			// 	// Detection point: output column in query interface has unresolved references that cannot be resolved to any 
+			// 	// available column in the table or query dictionaries.
+			// 	String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED);
+			// 	String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED);
+			// 	String diagMessage = (diagTemplate == null)
+			// 			? String.format("Output column '%s' at (l:%s c:%s) has unresolved source reference(s): %s",
+			// 					outputCol,
+			// 					outputColLocation[0],
+			// 					outputColLocation[1],
+			// 					unresolvedSourceRefs)
+			// 			: String.format(diagTemplate,
+			// 					outputCol,
+			// 					outputColLocation[0],
+			// 					outputColLocation[1],
+			// 					unresolvedSourceRefs);
+			// 	// Collection point: record fatal diagnostic in walker helper diagnostics list.
+			// 	walker.addWalkerFatal(
+			// 			diagCode,
+			// 			diagMessage,
+			// 			outputColLocation[0], // line number
+			// 			outputColLocation[1], // character position
+			// 			outputCol);
+			// }
 		}
 		}
 
-		 walker.showTrace(walker.symbolTrace, "Table Aliases: " + tableAliasCollection);
-		 walker.showTrace(walker.symbolTrace, "Symbol Table Entries: " + symbolTableCollection);
-		 walker.showTrace(walker.symbolTrace, "Query Entries: " + queryCollection);
-		 walker.showTrace(walker.symbolTrace, "Table Entries: " + scopedTableCollection);
-		 walker.showTrace(walker.symbolTrace, "Interface: " + localInterface);
-		 walker.showTrace(walker.symbolTrace, "Current Query Dictionary: " + localCurrentQueryDictionary);
-		 walker.showTrace(walker.symbolTrace, "Filters List: " + filtersList);
-
-		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, tableAliasCollection, scopedTableCollection,
-				 filtersList);
+		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
+		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
 
 		// Merge everything back together into the final symbol table for this level of the query, with table aliases first, 
 		// then symbol table entries, then query entries, then table entries, then the interface and current query dictionary 
 		// for this level, and finally any filters list for this level if it exists.
-		walker.symbolTable.putAll(tableAliasCollection);
-		walker.symbolTable.putAll(symbolTableCollection);
-		walker.symbolTable.putAll(queryCollection);
-		walker.symbolTable.putAll(scopedTableCollection);
+		if (localTableAliasMap != null && !localTableAliasMap.isEmpty())
+			walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, localTableAliasMap);
+		walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, localTableCollection);
+		walker.symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		//walker.symbolTable.putAll(localCurrentQueryDictionary);
+		//walker.symbolTable.putAll(localTableCollection);
 		walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
-		walker.symbolTable.put(CURRENT_QUERY_COLUMN_DICTIONARY, localCurrentQueryDictionary);
+		if (!localUnresolvedColumnMap.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
+		}
+		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
+		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
+		
 		if (localScalarSubqueryAliases != null)
-			walker.symbolTable.put(CURRENT_QUERY_SCALAR_SUBQUERY_ALIASES, localScalarSubqueryAliases);
+			walker.symbolTable.put(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY, localScalarSubqueryAliases);
 		if (filtersList != null)
 			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
 
 		 walker.showTrace(walker.symbolTrace, "Symbol Table: " + walker.symbolTable);
 		return walker.symbolTable;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> extractExplicitQualifiedUnknownEntries(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localInterface,
+			Object filtersList) {
+		HashMap<String, Object> explicitQualified = new HashMap<String, Object>();
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return explicitQualified;
+		}
+
+		HashSet<String> explicitQualifiedNames = new HashSet<String>();
+
+		if (localInterface != null) {
+			for (Object refsObj : localInterface.values()) {
+				if (!(refsObj instanceof ArrayList<?> refs)) {
+					continue;
+				}
+				for (Object refObj : refs) {
+					String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+					String refTable = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+					if (refName != null && refTable != null && !"*".equals(refTable) && unresolvedColumnMap.containsKey(refName)) {
+						explicitQualifiedNames.add(refName);
+					}
+				}
+			}
+		}
+
+		if (filtersList instanceof ArrayList<?> filters) {
+			for (Object filterObj : filters) {
+				if (!(filterObj instanceof Map<?, ?> filterMap)) {
+					continue;
+				}
+				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
+				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
+				if (filterNameObj instanceof String filterName
+						&& filterTableRefObj instanceof String filterTableRef
+						&& !"*".equals(filterTableRef)
+						&& unresolvedColumnMap.containsKey(filterName)) {
+					explicitQualifiedNames.add(filterName);
+				}
+			}
+		}
+
+		for (String qualifiedName : explicitQualifiedNames) {
+			Object removed = unresolvedColumnMap.remove(qualifiedName);
+			if (removed != null) {
+				explicitQualified.put(qualifiedName, removed);
+			}
+		}
+
+		return explicitQualified;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void emitExplicitQualifiedUnknownDiagnostics(
+			HashMap<String, Object> explicitQualifiedUnknownEntries,
+			HashMap<String, Object> localInterface,
+			Object filtersList,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> scopedQueryCollection,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		if (explicitQualifiedUnknownEntries == null || explicitQualifiedUnknownEntries.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, String> explicitTableRefByColumn = new HashMap<String, String>();
+		if (localInterface != null) {
+			for (Object refsObj : localInterface.values()) {
+				if (!(refsObj instanceof ArrayList<?> refs)) {
+					continue;
+				}
+				for (Object refObj : refs) {
+					String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+					String refTable = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+					if (refName != null && refTable != null && !"*".equals(refTable)) {
+						explicitTableRefByColumn.putIfAbsent(refName, refTable);
+					}
+				}
+			}
+		}
+
+		if (filtersList instanceof ArrayList<?> filters) {
+			for (Object filterObj : filters) {
+				if (!(filterObj instanceof Map<?, ?> filterMap)) {
+					continue;
+				}
+				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
+				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
+				if (filterNameObj instanceof String filterName
+						&& filterTableRefObj instanceof String filterTableRef
+						&& !"*".equals(filterTableRef)) {
+					explicitTableRefByColumn.putIfAbsent(filterName, filterTableRef);
+				}
+			}
+		}
+
+		for (Map.Entry<String, Object> unknownEntry : explicitQualifiedUnknownEntries.entrySet()) {
+			String columnName = unknownEntry.getKey();
+			if (localCurrentQueryDictionary != null && localCurrentQueryDictionary.containsKey(columnName)) {
+				// This column is already represented at the current query level; defer to interface validation
+				// so diagnostics use the query-level token location and are emitted once.
+				continue;
+			}
+			String tableRef = explicitTableRefByColumn.get(columnName);
+			if (tableRef == null) {
+				continue;
+			}
+
+			String resolvedTableRef = walker.resolveAliasToTableName(tableRef, tableAliasCollection);
+			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, scopedQueryCollection);
+			boolean explicitQueryReference = resolvedNonTableSourceRef != null
+					|| (resolvedTableRef != null && resolvedTableRef.startsWith("query"));
+			if (explicitQueryReference) {
+				continue;
+			}
+
+			String indicatedSourceRef = (resolvedNonTableSourceRef != null)
+					? resolvedNonTableSourceRef
+					: (resolvedTableRef != null ? resolvedTableRef : tableRef);
+
+			Integer[] refLocation = walker.getLineAndCharacterFromEntry(unknownEntry.getValue());
+			if (refLocation[0] == null || refLocation[1] == null) {
+				refLocation = walker.getFirstEntryLineAndCharacter(explicitQualifiedUnknownEntries);
+			}
+
+			String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+			String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+			String diagMessage =  String.format(diagTemplate,
+							columnName,
+							refLocation[0],
+							refLocation[1],
+							indicatedSourceRef);
+
+			walker.addWalkerFatal(
+					diagCode,
+					diagMessage,
+					refLocation[0],
+					refLocation[1],
+					columnName);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2263,14 +2380,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				Object table = item.get(MUMBLE_TABLE_KEY);
 				if (table != null) {
-					alias = table.toString();
-					walker.collectSymbolTable(alias, table);
+					// Table doesn't have an Alias, so it doesn't need to be collected in the Table ALias map
+					// walker.collectTableAlias(alias, table);
 
+					// However, we still need to collect the table reference in the AST 
 					subMap.put(MUMBLE_TABLE_KEY, item);
+
+					// And add the table header to the local Table_Dictionary
+					walker.ensureTableDictionaryEntry(table.toString());
 				} else {
+					// TODO: not sure this can get called. 
 					alias = "unnamed";
-					Map<String, Object> aliasMap = new HashMap<String, Object>();
-					aliasMap.put(alias, alias);
+					
 					Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
 					if (!done)
 						done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
@@ -2283,6 +2404,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			} else { // VALUES STATEMENT can only happen in this instance
 				subMap.putAll(item);
+				
+				// And add the table header to the local Table_Dictionary
+				String table = (String) item.get(MUMBLE_VALUES_KEY);
+				walker.ensureTableDictionaryEntry(table);
 
 			}
 
@@ -2299,14 +2424,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
 				Object table = reference.get(MUMBLE_TABLE_KEY);
 				item.putAll(reference);
-				walker.collectSymbolTable(alias, table);
+				walker.collectTableAlias(alias, table);
+				walker.ensureTableDictionaryEntry(table.toString());
 				
 			} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 				// Check for Substitution Variable
 				item.putAll(reference);
 				// Collect Symbol Table Reference
 				Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
-				walker.collectSymbolTable(alias, substitution.get("name"));
+				String tableName = (String) substitution.get("name");
+				walker.collectTableAlias(alias, tableName);
+				walker.ensureTableDictionaryEntry(tableName);
 
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
 				item.put(MUMBLE_QUERY_KEY, reference);
@@ -2356,8 +2484,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
 			String name = (String) substitution.get("name");
-			 walker.symbolTable.put(name, new HashMap<String, Object>());
-			 walker.tableDictionaryMap.put(name, new HashMap<String, Object>());
+			walker.ensureTableDictionaryEntry(name);
 			subMap.putAll(reference);
 
 		} else { // then it's a query, add it to the tree no matter what kind of query it is
@@ -2400,8 +2527,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (item.containsKey(MUMBLE_TABLE_KEY)) {
 			// Table Reference
 			Object table = item.get(MUMBLE_TABLE_KEY);
-			walker.symbolTable.put((String) table, new HashMap<String, Object>());
-			walker.tableDictionaryMap.put((String) table, new HashMap<String, Object>());
+			walker.ensureTableDictionaryEntry((String) table);
 			// Table reference needs an AST Key added to it
 			subMap.put(MUMBLE_TABLE_KEY, item);
 
@@ -2410,8 +2536,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
 			String name = (String) substitution.get("name");
-			 walker.symbolTable.put(name, new HashMap<String, Object>());
-			 walker.tableDictionaryMap.put(name, new HashMap<String, Object>());
+			walker.ensureTableDictionaryEntry(name);
 			// Substitution Variable is ready for use
 			subMap.putAll(item);
 
@@ -2448,29 +2573,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> query = (Map<String, Object>)  walker.symbolTable.remove(queryName);
 		if (query != null) {
 			// add alias to query
-			if (alias != null) 
-				walker.collectSymbolTable(alias, queryName);
-			else
+			if (alias != null) {
+				walker.collectTableAlias(alias, queryName);
+			} else
 				 walker.symbolTable.put(queryName, new HashMap<String, Object>());
 
 			// propagate interface to outer layer of query
 			Map<String, Object> hold = (Map<String, Object>)  walker.symbolTable.get(queryName);
 			// Move unknowns to query
-			Map<String, Object> unk = (Map<String, Object>)  walker.symbolTable.remove(MUMBLE_UNKNOWN_KEY);
+			Map<String, Object> unk = (Map<String, Object>)  walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 
 			if (unk != null) {
-				// move any other interface elements to query and empty unknowns
-				Map<String, Object> interfac = (Map<String, Object>) query.get(MUMBLE_INTERFACE_KEY);
-				if (interfac != null)
-					for (String key : interfac.keySet()) {
-						Object unkItem = unk.remove(key);
-						if (unkItem != null)
-							hold.put(key, unkItem);
-					}
+				if (hold != null) {
+					// move any other interface elements to query and empty unknowns
+					Map<String, Object> interfac = (Map<String, Object>) query.get(MUMBLE_INTERFACE_KEY);
+					if (interfac != null)
+						for (String key : interfac.keySet()) {
+							Object unkItem = unk.remove(key);
+							if (unkItem != null)
+								hold.put(key, unkItem);
+						}
+				}
 
 				// if any unknowns left, put them back into table
 				if (unk.size() > 0)
-					 walker.symbolTable.put(MUMBLE_UNKNOWN_KEY, unk);
+					 walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unk);
 			}
 			// Add query definition back into symbol table
 			 walker.symbolTable.put("def_" + queryName, query);
@@ -2493,8 +2620,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// try swapping names here
 			table = getTableName(table);
 
-			walker.collectSymbolTable(table, table);
-
 			subMap.put(MUMBLE_TABLE_KEY, table);
 			walker.showTrace(walker.parseTrace, "table: " + table + " Map: " + subMap);
 		} else if (subMap.size() == 2) {
@@ -2505,8 +2630,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// try swapping names here
 			table = getTableName(table);
-
-			walker.collectSymbolTable(table, table);
 
 			subMap.put(MUMBLE_TABLE_KEY, table);
 			walker.showTrace(walker.parseTrace, "Schema: " + schema + " Table: " + table + " Map: " + subMap);
@@ -2520,8 +2643,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// try swapping names here
 			table = getTableName(table);
-
-			walker.collectSymbolTable(table, table);
 
 			subMap.put(MUMBLE_TABLE_KEY, table);
 			walker.showTrace(walker.parseTrace, "Database: " + dbname + "Schema: " + schema + " Table: " + table + " Map: " + subMap);
@@ -2700,7 +2821,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
 			// Capture  walker.symbolTable entry
-			walker.collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
+			walker.collectUnresolvedColumnReference(tableRefKey, columnRef, ctx.getStart());
 		}
 		walker.showTrace(walker.parseTrace, "Column Reference: " + subMap);
 	}
@@ -2752,7 +2873,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
 			// Capture  walker.symbolTable entry
-			walker.collectSymbolTableItem(tableRefKey, columnRef, ctx.getStart());
+			walker.collectUnresolvedColumnReference(tableRefKey, columnRef, ctx.getStart());
 		}
 		walker.showTrace(walker.parseTrace, "Column Reference: " + subMap);
 	}
@@ -4829,7 +4950,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Capture  walker.symbolTable entry
 				if (tableRef == null)
 					tableRef = MUMBLE_UNKNOWN_KEY;
-				walker.collectSymbolTableItem(tableRef, valueExpression, ctx.getStart());
+				walker.collectUnresolvedColumnReference(tableRef, valueExpression, ctx.getStart());
 				// Add column to SQL AST Tree
 				subMap.putAll(valueExpression);
 			}
