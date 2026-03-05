@@ -14,8 +14,10 @@ import static mumble.ASTWalkerHelperConstants.*;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
+		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
 		public static final String DIAG_SQL_UNRESOLVED_COLUMNS = "SQL_UNRESOLVED_COLUMNS";
+		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
 
 		// checks if output columns are dependent on unresolved columns
 		// public static final String DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED = "SQL_INTERFACE_COLUMN_UNRESOLVED";
@@ -155,6 +157,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
 				 "Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.");
+		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS,
+				 "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				 "Qualified column '%s' at (l:%s c:%s) was not found in output interface of query alias '%s'.");
 		//  registerDiagnostic(
 		// 		 DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE,
 		// 		 "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
@@ -163,6 +168,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE,
 				 "AMBIGUOUS_COLUMN_REFERENCE",
 				 "Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s");
+		 registerDiagnostic(
+				 DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS,
+				 "DUPLICATE_INTERFACE_COLUMNS",
+				 "Duplicate interface columns defined: %s at (l:%s c:%s) and %s at (l:%s c:%s).");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -480,12 +489,170 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 		Map<String, Object> qryTableDict = (Map<String, Object>) qryTableDictObject;
 
-		Object normalizedItem = normalizeUnresolvedColumnItem(item);
-		if (normalizedItem == null) {
+		HashMap<String, Object> unresolvedColumnEntry = buildUnresolvedColumnEntry(tableReference, item, token);
+		if (unresolvedColumnEntry == null) {
 			return;
 		}
-		// Add column reference to the unresolved column dictionary in the symbol table under the column name with the token for that reference. If the column is already there, add the token to the list of tokens for that column.
-		addColumnTokenToColumnDict(qryTableDict, normalizedItem, token);
+
+		String unresolvedKey = buildUnresolvedColumnKey(tableReference, unresolvedColumnEntry);
+		if (unresolvedKey == null) {
+			return;
+		}
+
+		Object existingEntry = qryTableDict.get(unresolvedKey);
+		if (existingEntry instanceof Map<?, ?> existingMap) {
+			Object existingLocationsObj = ((Map<String, Object>) existingMap).get("locations");
+			Object incomingLocationsObj = unresolvedColumnEntry.get("locations");
+			if (existingLocationsObj instanceof ArrayList<?> existingLocations
+					&& incomingLocationsObj instanceof ArrayList<?> incomingLocations) {
+				for (Object location : incomingLocations) {
+					if (!((ArrayList<Object>) existingLocations).contains(location)) {
+						((ArrayList<Object>) existingLocations).add(location);
+					}
+				}
+			}
+			if (!((Map<String, Object>) existingMap).containsKey(MUMBLE_COLUMN_KEY)) {
+				((Map<String, Object>) existingMap).put(MUMBLE_COLUMN_KEY, unresolvedColumnEntry.get(MUMBLE_COLUMN_KEY));
+			}
+		} else {
+			qryTableDict.put(unresolvedKey, unresolvedColumnEntry);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildUnresolvedColumnEntry(Object tableReference, Object item, Token token) {
+		HashMap<String, Object> columnMetadata = extractUnresolvedColumnMetadata(tableReference, item);
+		if (columnMetadata == null) {
+			return null;
+		}
+
+		HashMap<String, Object> unresolvedEntry = new HashMap<String, Object>();
+		unresolvedEntry.put(MUMBLE_COLUMN_KEY, columnMetadata);
+
+		ArrayList<String> locations = new ArrayList<String>();
+		if (token != null) {
+			locations.add(token.toString());
+		}
+		unresolvedEntry.put("locations", locations);
+		return unresolvedEntry;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> extractUnresolvedColumnMetadata(Object tableReference, Object item) {
+		if (item == null) {
+			return null;
+		}
+
+		if (item instanceof String columnName) {
+			HashMap<String, Object> columnMap = new HashMap<String, Object>();
+			columnMap.put(MUMBLE_NAME_KEY, columnName);
+			String normalizedTableRef = normalizeUnresolvedTableRef(tableReference);
+			columnMap.put(MUMBLE_TABLE_REF_KEY, normalizedTableRef);
+			return columnMap;
+		}
+
+		if (!(item instanceof Map<?, ?> itemMap)) {
+			return null;
+		}
+
+		if (itemMap.containsKey(MUMBLE_COLUMN_KEY)) {
+			Object columnObj = itemMap.get(MUMBLE_COLUMN_KEY);
+			if (columnObj instanceof Map<?, ?>) {
+				HashMap<String, Object> columnMap = new HashMap<String, Object>();
+				columnMap.putAll((Map<String, Object>) columnObj);
+				if (!columnMap.containsKey(MUMBLE_TABLE_REF_KEY)) {
+					columnMap.put(MUMBLE_TABLE_REF_KEY, normalizeUnresolvedTableRef(tableReference));
+				}
+				return columnMap;
+			}
+		}
+
+		if (itemMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			HashMap<String, Object> substitutionContainer = new HashMap<String, Object>();
+			substitutionContainer.putAll((Map<String, Object>) itemMap);
+			String normalizedTableRef = normalizeUnresolvedTableRef(tableReference);
+			if (normalizedTableRef != null) {
+				substitutionContainer.put(MUMBLE_TABLE_REF_KEY, normalizedTableRef);
+			}
+			return substitutionContainer;
+		}
+
+		if (itemMap.containsKey(MUMBLE_NAME_KEY)) {
+			HashMap<String, Object> columnMap = new HashMap<String, Object>();
+			columnMap.putAll((Map<String, Object>) itemMap);
+			if (!columnMap.containsKey(MUMBLE_TABLE_REF_KEY)) {
+				columnMap.put(MUMBLE_TABLE_REF_KEY, normalizeUnresolvedTableRef(tableReference));
+			}
+			return columnMap;
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String buildUnresolvedColumnKey(Object tableReference, HashMap<String, Object> unresolvedColumnEntry) {
+		if (unresolvedColumnEntry == null) {
+			return null;
+		}
+
+		Object columnObj = unresolvedColumnEntry.get(MUMBLE_COLUMN_KEY);
+		if (!(columnObj instanceof Map<?, ?>)) {
+			return null;
+		}
+
+		Map<String, Object> columnMetadata = (Map<String, Object>) columnObj;
+		String tableRef = null;
+		String columnName = null;
+
+		Object tableRefObj = columnMetadata.get(MUMBLE_TABLE_REF_KEY);
+		if (tableRefObj != null) {
+			tableRef = normalizeUnresolvedTableRef(tableRefObj);
+		}
+		if (tableRef == null) {
+			tableRef = normalizeUnresolvedTableRef(tableReference);
+		}
+
+		Object nameObj = columnMetadata.get(MUMBLE_NAME_KEY);
+		if (nameObj instanceof String) {
+			columnName = (String) nameObj;
+		}
+
+		if (columnName == null && columnMetadata.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Object substitutionObj = columnMetadata.get(MUMBLE_SUBSTITUTION_KEY);
+			if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+				Object substitutionNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
+				if (substitutionNameObj instanceof String) {
+					columnName = (String) substitutionNameObj;
+				}
+			}
+		}
+
+		if (columnName == null) {
+			return null;
+		}
+
+		if (tableRef != null) {
+			return tableRef + "." + columnName;
+		}
+		return columnName;
+	}
+
+	private String normalizeUnresolvedTableRef(Object tableReference) {
+		if (tableReference == null) {
+			return null;
+		}
+		String tableRef = tableReference.toString();
+		if (tableRef == null) {
+			return null;
+		}
+		tableRef = tableRef.trim();
+		if (tableRef.isEmpty()
+				|| MUMBLE_UNKNOWN_KEY.equalsIgnoreCase(tableRef)
+				|| "*".equals(tableRef)
+				|| "null".equalsIgnoreCase(tableRef)) {
+			return null;
+		}
+		return tableRef;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -796,16 +963,20 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (currDict.containsKey("*")) {
 				for (Map.Entry<String, Object> entry : incoming.entrySet()) {
 					if (!"*".equals(entry.getKey())) {
-						currDict.put(entry.getKey(), entry.getValue());
+						mergeColumnEntry(currDict, entry.getKey(), entry.getValue());
 					}
 				}
 			} else {
-				currDict.putAll(incoming);
+				for (Map.Entry<String, Object> entry : incoming.entrySet()) {
+					mergeColumnEntry(currDict, entry.getKey(), entry.getValue());
+				}
 			}
 		}
 		else {
 			HashMap<String, Object> newDict = new HashMap<String, Object>();
-			newDict.putAll(incoming);
+			for (Map.Entry<String, Object> entry : incoming.entrySet()) {
+				mergeColumnEntry(newDict, entry.getKey(), entry.getValue());
+			}
 			dictMap.put(reference, newDict);
 		}
 	}
@@ -826,7 +997,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return false;
 		}
 
-		((HashMap<String, Object>) tableSymbols).putAll(columnEntries);
+		HashMap<String, Object> targetTableSymbols = (HashMap<String, Object>) tableSymbols;
+		for (Map.Entry<String, Object> entry : columnEntries.entrySet()) {
+			mergeColumnEntry(targetTableSymbols, entry.getKey(), entry.getValue());
+		}
 		columnEntries.clear();
 		return true;
 	}
@@ -1063,6 +1237,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		for (Object value : columnEntries.values()) {
+			if (value instanceof Map<?, ?> valueMap) {
+				Object locationsObj = ((Map<String, Object>) valueMap).get("locations");
+				if (locationsObj instanceof List<?> locationList && !locationList.isEmpty()) {
+					Object first = locationList.get(0);
+					if (first != null) {
+						return first.toString();
+					}
+				}
+			}
 			if (value instanceof List<?> tokenList && !tokenList.isEmpty()) {
 				Object first = tokenList.get(0);
 				if (first != null) {
@@ -1110,6 +1293,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * The entry may be a token list or a single token string.
 	 */
 	public Integer[] getLineAndCharacterFromEntry(Object entryValue) {
+		if (entryValue instanceof Map<?, ?> entryMap) {
+			Object locationsObj = ((Map<String, Object>) entryMap).get("locations");
+			if (locationsObj instanceof List<?> locationList && !locationList.isEmpty()) {
+				Object first = locationList.get(0);
+				if (first != null) {
+					return parseLineAndCharacterFromToken(first.toString());
+				}
+			}
+		}
 		if (entryValue instanceof List<?> tokenList && !tokenList.isEmpty()) {
 			Object first = tokenList.get(0);
 			if (first != null) {
@@ -1277,10 +1469,150 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 			if (targetValue == null) {
 				target.put(key, sourceValue);
+			} else if (targetValue instanceof Map<?, ?> targetMap && sourceValue instanceof Map<?, ?> sourceMap) {
+				Object targetLocationsObj = ((Map<String, Object>) targetMap).get("locations");
+				Object sourceLocationsObj = ((Map<String, Object>) sourceMap).get("locations");
+				if (targetLocationsObj instanceof ArrayList<?> targetLocations
+						&& sourceLocationsObj instanceof ArrayList<?> sourceLocations) {
+					for (Object location : sourceLocations) {
+						if (!((ArrayList<Object>) targetLocations).contains(location)) {
+							((ArrayList<Object>) targetLocations).add(location);
+						}
+					}
+				} else {
+					target.put(key, sourceValue);
+				}
 			} else if (targetValue instanceof ArrayList<?> targetList && sourceValue instanceof ArrayList<?> sourceList) {
 				((ArrayList<Object>) targetList).addAll((ArrayList<Object>) sourceList);
 			} else {
 				target.put(key, sourceValue);
+			}
+		}
+	}
+
+	/**
+	 * Partition unresolved columns into qualified and unqualified sets by checking
+	 * reference entries from the query interface first, then the filter list.
+	 * This method does not modify unresolved, interface, or filter inputs.
+	 */
+	@SuppressWarnings("unchecked")
+	public void splitExplicitlyQualifiedUnknownEntriesFromUnqualified(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localInterface,
+			Object filtersList,
+			HashMap<String, Object> qualifiedUnknownEntries,
+			HashMap<String, Object> unqualifiedUnknownEntries) {
+		if (qualifiedUnknownEntries != null) {
+			qualifiedUnknownEntries.clear();
+		}
+		if (unqualifiedUnknownEntries != null) {
+			unqualifiedUnknownEntries.clear();
+		}
+
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+
+		// Pass 1: interface references
+		if (localInterface != null) {
+			for (Object refsObj : localInterface.values()) {
+				if (!(refsObj instanceof List<?> refs)) {
+					continue;
+				}
+				for (Object refObj : refs) {
+					if (!(refObj instanceof Map<?, ?>)) {
+						continue;
+					}
+					Map<String, Object> interfaceRefMap = (Map<String, Object>) refObj;
+					String columnName = extractReferenceNameFromInterfaceEntry(interfaceRefMap);
+					if (columnName == null) {
+						continue;
+					}
+
+					String interfaceTableRef = extractReferenceTableRefFromInterfaceEntry(interfaceRefMap);
+					String unresolvedKey = (interfaceTableRef == null)
+							? columnName
+							: interfaceTableRef + "." + columnName;
+
+					Object unresolvedLocations = unresolvedColumnMap.get(unresolvedKey);
+					if (unresolvedLocations == null) {
+						unresolvedLocations = unresolvedColumnMap.get(columnName);
+					}
+					if (unresolvedLocations == null) {
+						continue;
+					}
+
+					Object locationList = unresolvedLocations;
+					if (unresolvedLocations instanceof Map<?, ?> unresolvedEntryMap) {
+						Object extractedLocations = ((Map<String, Object>) unresolvedEntryMap).get("locations");
+						if (extractedLocations != null) {
+							locationList = extractedLocations;
+						}
+					}
+
+					HashMap<String, Object> resultEntry = new HashMap<String, Object>();
+					resultEntry.put(MUMBLE_COLUMN_KEY, interfaceRefMap);
+					resultEntry.put("locations", locationList);
+
+					String tableRef = interfaceTableRef;
+					if (tableRef == null) {
+						if (unqualifiedUnknownEntries != null) {
+							unqualifiedUnknownEntries.put(columnName, resultEntry);
+						}
+					} else {
+						if (qualifiedUnknownEntries != null) {
+							qualifiedUnknownEntries.put(columnName, resultEntry);
+						}
+					}
+				}
+			}
+		}
+
+		// Pass 2: filter references
+		if (filtersList instanceof List<?> filters) {
+			for (Object filterObj : filters) {
+				if (!(filterObj instanceof Map<?, ?>)) {
+					continue;
+				}
+				Map<String, Object> filterEntry = (Map<String, Object>) filterObj;
+				Object filterNameObj = filterEntry.get(MUMBLE_NAME_KEY);
+				if (!(filterNameObj instanceof String columnName)) {
+					continue;
+				}
+
+				Object tableRefObj = filterEntry.get(MUMBLE_TABLE_REF_KEY);
+				String unresolvedKey = (tableRefObj == null)
+						? columnName
+						: tableRefObj.toString() + "." + columnName;
+				Object unresolvedLocations = unresolvedColumnMap.get(unresolvedKey);
+				if (unresolvedLocations == null) {
+					unresolvedLocations = unresolvedColumnMap.get(columnName);
+				}
+				if (unresolvedLocations == null) {
+					continue;
+				}
+
+				Object locationList = unresolvedLocations;
+				if (unresolvedLocations instanceof Map<?, ?> unresolvedEntryMap) {
+					Object extractedLocations = ((Map<String, Object>) unresolvedEntryMap).get("locations");
+					if (extractedLocations != null) {
+						locationList = extractedLocations;
+					}
+				}
+
+				HashMap<String, Object> resultEntry = new HashMap<String, Object>();
+				resultEntry.put(MUMBLE_COLUMN_KEY, filterEntry);
+				resultEntry.put("locations", locationList);
+
+				if (tableRefObj == null) {
+					if (unqualifiedUnknownEntries != null) {
+						unqualifiedUnknownEntries.put(columnName, resultEntry);
+					}
+				} else {
+					if (qualifiedUnknownEntries != null) {
+						qualifiedUnknownEntries.put(columnName, resultEntry);
+					}
+				}
 			}
 		}
 	}
@@ -1797,16 +2129,33 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
+		Object normalizedColumnRefs = normalizeColumnRefsForDictionary(columnRefs);
+
 		Object existingRefs = dictionary.get(columnName);
 		if (existingRefs == null) {
-			dictionary.put(columnName, columnRefs);
+			dictionary.put(columnName, normalizedColumnRefs);
 		} else if ("*".equals(columnName)) {
 			return;
-		} else if (existingRefs instanceof ArrayList<?> existingList && columnRefs instanceof ArrayList<?> incomingList) {
+		} else if (existingRefs instanceof ArrayList<?> existingList && normalizedColumnRefs instanceof ArrayList<?> incomingList) {
 			((ArrayList<Object>) existingList).addAll((ArrayList<Object>) incomingList);
 		} else {
-			dictionary.put(columnName, columnRefs);
+			dictionary.put(columnName, normalizedColumnRefs);
 		}
+	}
+
+	public void mergeResolvedColumnIntoDictionary(HashMap<String, Object> dictionary, String columnName, Object columnRefs) {
+		mergeColumnEntry(dictionary, columnName, columnRefs);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object normalizeColumnRefsForDictionary(Object columnRefs) {
+		if (columnRefs instanceof Map<?, ?> refsMap) {
+			Object locationsObj = ((Map<String, Object>) refsMap).get("locations");
+			if (locationsObj instanceof ArrayList<?>) {
+				return locationsObj;
+			}
+		}
+		return columnRefs;
 	}
 
 	@SuppressWarnings("unchecked")
