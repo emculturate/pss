@@ -16,12 +16,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
-		public static final String DIAG_SQL_UNRESOLVED_COLUMNS = "SQL_UNRESOLVED_COLUMNS";
+		public static final String DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS = "SQL_UNRESOLVED_UNQUALIFIED_COLUMNS";
+		public static final String DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS = "SQL_UNRESOLVED_QUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
+		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
 
-		// checks if output columns are dependent on unresolved columns
-		// public static final String DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED = "SQL_INTERFACE_COLUMN_UNRESOLVED";
-     	//public static final String DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE = "SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE";
 		
     /*************************************
      * SqlASTWalkerHelper is a concrete class that extends AbstractASTWalkerHelper.
@@ -147,23 +146,18 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 	 private void initializeSqlDiagnosticCatalog() {
 		 // SQL-local extension: register walker-specific diagnostic code/message template.
-		 registerDiagnostic(DIAG_SQL_UNRESOLVED_COLUMNS,
-				 "UNRESOLVED_COLUMNS",
-				 "Unresolved column reference(s) remain after symbol resolution: %s");
-		//  registerDiagnostic(
-		// 		 DIAG_SQL_INTERFACE_COLUMN_UNRESOLVED,
-		// 		 "INTERFACE_COLUMN_UNRESOLVED",
-		// 		 "Output column '%s' at (l:%s c:%s) has unresolved source reference(s): %s");
+		 registerDiagnostic(DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS,
+				 "UNRESOLVED_UNQUALIFIED_COLUMNS",
+				 "Unresolved unqualified column reference(s): %s");
+		 registerDiagnostic(DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS,
+				 "UNRESOLVED_QUALIFIED_COLUMNS",
+				 "Unresolved qualified column reference(s): %s");
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
 				 "Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.");
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				 "Qualified column '%s' at (l:%s c:%s) was not found in output interface of query alias '%s'.");
-		//  registerDiagnostic(
-		// 		 DIAG_SQL_UNKNOWN_IMPLICIT_COLUMN_REFERENCE,
-		// 		 "UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
-		// 		 "Unknown column reference '%s' at (l:%s c:%s). No matching column found in any table/query dictionary in scope.");
 		 registerDiagnostic(
 				 DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE,
 				 "AMBIGUOUS_COLUMN_REFERENCE",
@@ -172,6 +166,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS,
 				 "DUPLICATE_INTERFACE_COLUMNS",
 				 "Duplicate interface columns defined: %s at (l:%s c:%s) and %s at (l:%s c:%s).");
+		 registerDiagnostic(
+				 DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH,
+				 "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				 "%s has different column counts. Expected %s but there were %s at (l:%s).");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -790,7 +788,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	/**
 	 * Put the query Interface (its output column list) into the Symbol Table
 	 */
-	public void captureQueryInterface() {
+	public HashMap<String, Object> captureQueryInterface() {
 		String prefx = getASTWALKER_QUERY_KEY();
 		HashMap<String, Object> interfac = getInterfaceFromQuery(prefx);
 		if (interfac == null) {
@@ -819,8 +817,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			for (String key : interfac.keySet()) {
 				newif.put(key, prefx + "_column");
 			}
-			symbolTable.put("interface", newif);
+			symbolTable.put(MUMBLE_INTERFACE_KEY, newif);
+			return newif;
 		}
+		return null;
 	}
 
 	/**
@@ -846,6 +846,148 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			interfac = null;
 		HashMap<String, Object> interfac1 = interfac;
 		return interfac1;
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> resolveSetOperationInterfaceMapFromSymbolTable() {
+		Object interfaceObj = symbolTable.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof HashMap<?, ?>) {
+			return (HashMap<String, Object>) interfaceObj;
+		}
+		if (interfaceObj instanceof Map<?, ?> interfaceMap) {
+			return new HashMap<String, Object>((Map<String, Object>) interfaceMap);
+		}
+
+		Map.Entry<String, HashMap<String, Object>> topSetEntry = getTopSetOperationSymbolEntry();
+		if (topSetEntry == null) {
+			return null;
+		}
+
+		Object setInterfaceObj = topSetEntry.getValue().get(MUMBLE_INTERFACE_KEY);
+		if (setInterfaceObj instanceof HashMap<?, ?>) {
+			return (HashMap<String, Object>) setInterfaceObj;
+		}
+		if (setInterfaceObj instanceof Map<?, ?> setInterfaceMap) {
+			return new HashMap<String, Object>((Map<String, Object>) setInterfaceMap);
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map.Entry<String, HashMap<String, Object>> getTopSetOperationSymbolEntry() {
+		if (symbolTable == null || symbolTable.isEmpty()) {
+			return null;
+		}
+
+		Map.Entry<String, HashMap<String, Object>> topSetEntry = null;
+		int highestIndex = Integer.MIN_VALUE;
+		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
+			String key = symbolEntry.getKey();
+			if (key == null || !(key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY))) {
+				continue;
+			}
+			if (!(symbolEntry.getValue() instanceof HashMap<?, ?> entryMap)) {
+				continue;
+			}
+
+			int index = extractTrailingNumericSuffix(key);
+			if (index >= highestIndex) {
+				highestIndex = index;
+				topSetEntry = Map.entry(key, (HashMap<String, Object>) entryMap);
+			}
+		}
+
+		return topSetEntry;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void validateSetOperationInterface(HashMap<String, Object> interfaceMap, String locationTokenString) {
+		if (interfaceMap == null || interfaceMap.isEmpty() || symbolTable == null || symbolTable.isEmpty()) {
+			return;
+		}
+
+		Map.Entry<String, HashMap<String, Object>> topSetEntry = getTopSetOperationSymbolEntry();
+
+		if (topSetEntry == null) {
+			return;
+		}
+
+		String setOperationType = topSetEntry.getKey().startsWith(MUMBLE_INTERSECT_KEY) ? "INTERSECTION" : "UNION";
+		HashMap<String, Object> setOperationMap = topSetEntry.getValue();
+		int expectedCount = interfaceMap.size();
+
+		Integer[] location = getLineAndCharacterFromEntry(locationTokenString);
+		Integer line = location[0];
+		Integer charPosition = location[1];
+		String locationText = (line == null || charPosition == null)
+				? "? c:?"
+				: line + " c:" + charPosition;
+
+		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
+		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
+
+		for (Map.Entry<String, Object> setEntry : setOperationMap.entrySet()) {
+			String setEntryKey = setEntry.getKey();
+			if (setEntryKey == null
+					|| !(setEntryKey.startsWith(MUMBLE_QUERY_KEY)
+							|| setEntryKey.startsWith(MUMBLE_UNION_KEY)
+							|| setEntryKey.startsWith(MUMBLE_INTERSECT_KEY)
+							|| setEntryKey.startsWith(MUMBLE_VALUES_KEY))) {
+				continue;
+			}
+			if (!(setEntry.getValue() instanceof Map<?, ?> queryMap)) {
+				continue;
+			}
+
+			Object queryInterfaceObj = ((Map<String, Object>) queryMap).get(MUMBLE_INTERFACE_KEY);
+			if (!(queryInterfaceObj instanceof Map<?, ?> queryInterfaceMap)) {
+				continue;
+			}
+
+			int actualCount = ((Map<String, Object>) queryInterfaceMap).size();
+			if (actualCount == expectedCount) {
+				continue;
+			}
+
+			String diagMessage = (diagTemplate == null)
+					? String.format(
+							"%s has different column counts. Expected %s but there were %s at (l:%s).",
+							setOperationType,
+							expectedCount,
+							actualCount,
+							locationText)
+					: String.format(
+							diagTemplate,
+							setOperationType,
+							expectedCount,
+							actualCount,
+							locationText);
+
+			addWalkerFatal(
+					diagCode,
+					diagMessage,
+					line,
+					charPosition,
+					setEntryKey);
+		}
+	}
+
+	private int extractTrailingNumericSuffix(String key) {
+		if (key == null || key.isBlank()) {
+			return -1;
+		}
+
+		String suffix = key.replaceFirst("^[^0-9]+", "");
+		if (suffix.isBlank()) {
+			return -1;
+		}
+
+		try {
+			return Integer.parseInt(suffix);
+		} catch (NumberFormatException ex) {
+			return -1;
+		}
 	}
 
 	/*

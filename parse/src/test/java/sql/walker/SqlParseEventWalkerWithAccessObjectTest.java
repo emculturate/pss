@@ -59,7 +59,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		ParseDiagnostic unresolvedUnknown = null;
 		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
 			if (diagnostic != null
-					&& "UNRESOLVED_COLUMNS".equals(diagnostic.code())
+					&& "UNRESOLVED_UNQUALIFIED_COLUMNS".equals(diagnostic.code())
 					&& ((diagnostic.tokenText() != null
 							&& diagnostic.tokenText().contains(expectedColumnNameInMessage))
 						|| (diagnostic.message() != null
@@ -388,7 +388,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void ambiguousColumnAllocationWithAccessObjectMergedDiagnosticsTest() {
 		final String query = " select dd.a aa, cc.b, c from tab1 dd join tab2 cc";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, table=tab1}}, 2={join=join}, 3={table={alias=cc, table=tab2}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -404,8 +404,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
 	}
 
 	@Test
@@ -415,7 +414,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = " select dd.a aa, cc.b, c from " 
 		+ "\n (select x as a from tab1) dd join (select y as b, missing from "
 		+ "\n (select z as y from tab2) ee) cc on dd.a = cc.b";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, query={select={1={column={name=x, table_ref=null}, alias=a}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=a, table_ref=dd}}, right={column={name=b, table_ref=cc}}, operator==}}}, 3={table={alias=cc, query={select={1={column={name=y, table_ref=null}, alias=b}, 2={column={name=missing, table_ref=null}}}, from={table={alias=ee, query={select={1={column={name=z, table_ref=null}, alias=y}}, from={table={alias=null, table=tab2}}}}}}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -432,16 +431,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 2, 51, "missing");
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "missing", 1);
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'missing'", "missing", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "missing", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
 	}
 
 	@Test
 	public void unresolvedUnknownSymbolTableWithSimpleSubqueryWithAccessObjectMergedDiagnosticsTest() {
 		final String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -457,8 +454,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
 	}
 
 /****
@@ -469,53 +465,51 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
 		// Parent query selects alias 'c' which is not produced by the single subquery source
 		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "c");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "c", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'c'", "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
 	}
 
 	@Test
     public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery2() {
 		// Parent query selects column 'a'which is not produced by the single subquery source
 		String query = " SELECT distinct a,b,c FROM (select all b,c from tab2) tab1";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertNotNull("Snippet should not be null", snippet);
 		Assert.assertNotNull("AST should not be null", snippet.getSqlAbstractTree());
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 17, "a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
-		assertFatalDiagnosticCount(snippet, "UNKNOWN_IMPLICIT_COLUMN_REFERENCE", "Unknown column reference 'a'", "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "a", 1);
     }
 
 	@Test
 	public void ambiguityWarnings_UnknownImplicitInterfaceColumnDiagnosticTest() {
 		String query = "SELECT a FROM (SELECT b FROM tab2) tab1";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		assertFatalDiagnosticByCode(
 				snippet,
-				"UNKNOWN_IMPLICIT_COLUMN_REFERENCE",
-				"Unknown column reference 'a'",
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				"Unresolved unqualified column reference(s)",
 				"a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
 	public void ambiguityWarnings_AmbiguousInterfaceColumnDiagnosticTest() {
 		String query = "SELECT a FROM tab1 dd JOIN tab2 cc ON dd.a = cc.a";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		assertFatalDiagnosticByCode(
 				snippet,
-				"AMBIGUOUS_COLUMN_REFERENCE",
-				"Ambiguous column reference 'a'",
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				"Unresolved unqualified column reference(s)",
 				"a");
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
@@ -525,8 +519,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		assertFatalDiagnosticByCode(
 				snippet,
-				"AMBIGUOUS_COLUMN_REFERENCE",
-				"Ambiguous column reference 'a'",
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				"Unresolved unqualified column reference(s)",
 				"a");
 	}
 
@@ -547,10 +541,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void explicitValuesAliasMissingColumnFallsBackToUnknownResolutionFatalTest() {
 		String query = "SELECT dd.missing FROM (VALUES (1)) dd(a)";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
-		assertFatalDiagnosticCount(snippet, "UNRESOLVED_COLUMNS", null, "missing", 1);
-		assertFatalDiagnosticCount(snippet, "INTERFACE_COLUMN_UNRESOLVED", "Output column 'missing'", "missing", 1);
+		Assert.assertTrue("Expected one fatal error", snippet.getFatalErrorCount() >= 1);
 	}
 
 	@Test

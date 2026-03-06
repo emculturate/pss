@@ -122,6 +122,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (queryMap == null) {
+			for (String key : walker.symbolTable.keySet()) {
+				if (!(key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY))) {
+					continue;
+				}
+				Object scopedObject = walker.symbolTable.get(key);
+				if (!(scopedObject instanceof HashMap<?, ?>)) {
+					continue;
+				}
+				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				int scopeIndex;
+				try {
+					scopeIndex = Integer.parseInt(numericSuffix);
+				} catch (NumberFormatException ex) {
+					continue;
+				}
+				if (scopeIndex > topQueryIndex) {
+					topQueryIndex = scopeIndex;
+					queryMap = (Map<String, Object>) scopedObject;
+				}
+			}
+		}
+
+		if (queryMap == null) {
 			return interfac;
 		}
 
@@ -545,8 +568,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unqualifiedUnresolvedMap);
 		String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unqualifiedUnresolvedMap);
 		String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unqualifiedUnresolvedMap);
-		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_COLUMNS);
-		String diagMessage = "Unresolved unqualified column reference(s): " + unknownColumnsWithLocations;
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS);
+		String diagMessage = (diagTemplate == null)
+				? "Unresolved unqualified column reference(s): " + unknownColumnsWithLocations
+				: String.format(diagTemplate, unknownColumnsWithLocations);
 
 		walker.addWalkerFatal(
 				diagCode,
@@ -564,8 +590,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
 		String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(qualifiedUnresolvedMap);
 		String unknownColumnsCsv = walker.formatEntryKeysAsCsv(qualifiedUnresolvedMap);
-		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_COLUMNS);
-		String diagMessage = "Unresolved qualified column reference(s): " + unknownColumnsWithLocations;
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS);
+		String diagMessage = (diagTemplate == null)
+				? "Unresolved qualified column reference(s): " + unknownColumnsWithLocations
+				: String.format(diagTemplate, unknownColumnsWithLocations);
 
 		walker.addWalkerFatal(
 				diagCode,
@@ -1356,6 +1385,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		walker.handleListList(ruleIndex, parentRuleIndex);
 
+		String location = ctx.getStart().toString();
+
+		// Resolve set-operation output interface from either the current scope or the top set symbol.
+		HashMap<String, Object> interfaceMap = walker.resolveSetOperationInterfaceMapFromSymbolTable();
+		// Validate set-operation branch interface counts against the top output interface.
+		// This is intentionally not gated by union/intersect flags because those flags can be reset
+		// after symbol-table scope pop before this method executes.
+		if (interfaceMap != null) {
+			walker.validateSetOperationInterface(interfaceMap, location);
+		}
 		// clear intersect clause count
 		walker.intersectClauseFound = false;
 	}
@@ -1430,8 +1469,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Get first interface to represent intersection output
 		if (walker.firstIntersectClause) {
-			walker.showTrace(walker.symbolTrace, "Intersect So Far: " +  walker.symbolTable);
-			walker.captureQueryInterface();
+			HashMap<String, Object> interfac = walker.captureQueryInterface();
 			walker.showTrace(walker.symbolTrace, "Intersect So Far: " +  walker.symbolTable);
 
 		}
@@ -1449,6 +1487,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 
 		walker.handleOperandList(ruleIndex, MUMBLE_UNION_KEY);
+
+		Object interfaceObj = walker.symbolTable.get(MUMBLE_INTERFACE_KEY);
+		HashMap<String, Object> interfaceMap = null;
+		if (interfaceObj instanceof HashMap<?, ?>) {
+			interfaceMap = (HashMap<String, Object>) interfaceObj;
+		}
+
+		if (walker.unionClauseFound && interfaceMap == null) {
+			// Defensive fallback: union output interface should mirror first union branch.
+			HashMap<String, Object> interfac = walker.captureQueryInterface();
+			if (interfac != null) {
+				interfaceMap = interfac;
+			}
+		}
+
+		if (interfaceMap != null) {
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, interfaceMap);
+		}
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols =  walker.symbolTable;
@@ -1785,11 +1841,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		String sourceQueryKey = queryBackedSources.iterator().next();
 		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
-		if (!(queryDictionaryObj instanceof Map<?, ?> queryDictionary)) {
-			return false;
+		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
+			Map<String, Object> sourceQueryDictionary = (Map<String, Object>) queryDictionary;
+			if (sourceQueryDictionary.containsKey("*")) {
+				unqualifiedUnresolvedMap.clear();
+				return true;
+			}
+
+			ArrayList<String> resolvedKeys = new ArrayList<String>();
+			for (String unresolvedKey : unqualifiedUnresolvedMap.keySet()) {
+				if (sourceQueryDictionary.containsKey(unresolvedKey)) {
+					resolvedKeys.add(unresolvedKey);
+				}
+			}
+
+			for (String resolvedKey : resolvedKeys) {
+				unqualifiedUnresolvedMap.remove(resolvedKey);
+			}
+			if (unqualifiedUnresolvedMap.isEmpty()) {
+				return true;
+			}
 		}
 
-		return ((Map<String, Object>) queryDictionary).containsKey("*");
+		if (hasWildcardInQueryOutputInterface(sourceQueryKey)) {
+			unqualifiedUnresolvedMap.clear();
+			return true;
+		}
+
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
