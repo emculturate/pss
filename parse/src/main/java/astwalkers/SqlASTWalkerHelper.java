@@ -169,7 +169,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(
 				 DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH,
 				 "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				 "%s has different column counts. Expected %s but there were %s at (l:%s).");
+				 "%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -916,13 +916,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		String setOperationType = topSetEntry.getKey().startsWith(MUMBLE_INTERSECT_KEY) ? "INTERSECTION" : "UNION";
 		HashMap<String, Object> setOperationMap = topSetEntry.getValue();
 		int expectedCount = interfaceMap.size();
-
-		Integer[] location = getLineAndCharacterFromEntry(locationTokenString);
-		Integer line = location[0];
-		Integer charPosition = location[1];
-		String locationText = (line == null || charPosition == null)
-				? "? c:?"
-				: line + " c:" + charPosition;
+		ColumnListSummary expectedSummary = buildExpectedSetOperationColumnSummary(
+				setOperationMap,
+				interfaceMap,
+				expectedCount,
+				null);
 
 		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
 		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
@@ -950,27 +948,195 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				continue;
 			}
 
+			Map<String, Object> queryDictionary = extractQueryDictionary((Map<String, Object>) queryMap);
+			ColumnListSummary actualSummary = buildColumnListSummary(
+					(Map<String, Object>) queryInterfaceMap,
+					queryDictionary);
+			ColumnListSummary effectiveExpectedSummary = buildExpectedSetOperationColumnSummary(
+					setOperationMap,
+					interfaceMap,
+					expectedCount,
+					setEntryKey);
+			if (effectiveExpectedSummary.columnNamesCsv().isBlank()) {
+				effectiveExpectedSummary = expectedSummary;
+			}
+
+			Integer expectedLine = effectiveExpectedSummary.anchorLine();
+			Integer expectedChar = effectiveExpectedSummary.anchorChar();
+			Integer actualLine = actualSummary.anchorLine();
+			Integer actualChar = actualSummary.anchorChar();
+			String expectedLineText = expectedLine == null ? "?" : String.valueOf(expectedLine);
+			String expectedCharText = expectedChar == null ? "?" : String.valueOf(expectedChar);
+			String actualLineText = actualLine == null ? "?" : String.valueOf(actualLine);
+			String actualCharText = actualChar == null ? "?" : String.valueOf(actualChar);
+
 			String diagMessage = (diagTemplate == null)
 					? String.format(
-							"%s has different column counts. Expected %s but there were %s at (l:%s).",
+							"%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
 							setOperationType,
 							expectedCount,
+							effectiveExpectedSummary.columnNamesCsv(),
+							expectedLineText,
+							expectedCharText,
 							actualCount,
-							locationText)
+							actualSummary.columnNamesCsv(),
+							actualLineText,
+							actualCharText)
 					: String.format(
 							diagTemplate,
 							setOperationType,
 							expectedCount,
+							effectiveExpectedSummary.columnNamesCsv(),
+							expectedLineText,
+							expectedCharText,
 							actualCount,
-							locationText);
+							actualSummary.columnNamesCsv(),
+							actualLineText,
+							actualCharText);
 
 			addWalkerFatal(
 					diagCode,
 					diagMessage,
-					line,
-					charPosition,
+					actualLine,
+					actualChar,
 					setEntryKey);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractQueryDictionary(Map<String, Object> queryMap) {
+		if (queryMap == null || queryMap.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object queryDictionaryObj = queryMap.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
+			return (Map<String, Object>) queryDictionary;
+		}
+
+		return new HashMap<String, Object>();
+	}
+
+	private ColumnListSummary buildExpectedSetOperationColumnSummary(
+			Map<String, Object> setOperationMap,
+			Map<String, Object> interfaceMap,
+			int expectedCount,
+			String excludedSetEntryKey) {
+		if (setOperationMap == null || setOperationMap.isEmpty()) {
+			return buildColumnListSummary(interfaceMap, new HashMap<String, Object>());
+		}
+
+		ColumnListSummary bestSummary = null;
+		for (Map.Entry<String, Object> setEntry : setOperationMap.entrySet()) {
+			String setEntryKey = setEntry.getKey();
+			if (setEntryKey == null || (excludedSetEntryKey != null && excludedSetEntryKey.equals(setEntryKey))) {
+				continue;
+			}
+			if (!(setEntry.getValue() instanceof Map<?, ?> queryMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> queryMap = (Map<String, Object>) queryMapObj;
+			Object queryInterfaceObj = queryMap.get(MUMBLE_INTERFACE_KEY);
+			if (!(queryInterfaceObj instanceof Map<?, ?> queryInterfaceMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> queryInterfaceMap = (Map<String, Object>) queryInterfaceMapObj;
+			if (queryInterfaceMap.size() != expectedCount) {
+				continue;
+			}
+
+			Map<String, Object> queryDictionary = extractQueryDictionary(queryMap);
+			ColumnListSummary candidateSummary = buildColumnListSummary(interfaceMap, queryDictionary);
+			if (bestSummary == null || compareSummaryLocation(candidateSummary, bestSummary) < 0) {
+				bestSummary = candidateSummary;
+			}
+		}
+
+		if (bestSummary != null) {
+			return bestSummary;
+		}
+
+		return buildColumnListSummary(interfaceMap, new HashMap<String, Object>());
+	}
+
+	private ColumnListSummary buildColumnListSummary(Map<String, Object> columnsMap, Map<String, Object> queryDictionary) {
+		ArrayList<ColumnLocation> sortedColumns = new ArrayList<ColumnLocation>();
+		if (columnsMap != null && !columnsMap.isEmpty()) {
+			for (String columnName : columnsMap.keySet()) {
+				Object columnEntry = queryDictionary == null ? null : queryDictionary.get(columnName);
+				Integer[] location = getLineAndCharacterFromEntry(columnEntry);
+				sortedColumns.add(new ColumnLocation(columnName, location[0], location[1]));
+			}
+		}
+
+		sortedColumns.sort((left, right) -> {
+			int lineCompare = compareNullableLocation(left.line(), right.line());
+			if (lineCompare != 0) {
+				return lineCompare;
+			}
+
+			int charCompare = compareNullableLocation(left.charPosition(), right.charPosition());
+			if (charCompare != 0) {
+				return charCompare;
+			}
+
+			String leftName = left.name() == null ? "" : left.name();
+			String rightName = right.name() == null ? "" : right.name();
+			return leftName.compareTo(rightName);
+		});
+
+		ArrayList<String> names = new ArrayList<String>();
+		for (ColumnLocation column : sortedColumns) {
+			names.add(column.name());
+		}
+
+		Integer anchorLine = null;
+		Integer anchorChar = null;
+		for (ColumnLocation column : sortedColumns) {
+			if (column.line() != null && column.charPosition() != null) {
+				anchorLine = column.line();
+				anchorChar = column.charPosition();
+				break;
+			}
+		}
+
+		if ((anchorLine == null || anchorChar == null) && queryDictionary != null && !queryDictionary.isEmpty()) {
+			Integer[] firstEntryLocation = getFirstEntryLineAndCharacter((HashMap<String, Object>) queryDictionary);
+			anchorLine = firstEntryLocation[0];
+			anchorChar = firstEntryLocation[1];
+		}
+
+		return new ColumnListSummary(String.join(", ", names), anchorLine, anchorChar);
+	}
+
+	private int compareSummaryLocation(ColumnListSummary left, ColumnListSummary right) {
+		int lineCompare = compareNullableLocation(left.anchorLine(), right.anchorLine());
+		if (lineCompare != 0) {
+			return lineCompare;
+		}
+
+		return compareNullableLocation(left.anchorChar(), right.anchorChar());
+	}
+
+	private int compareNullableLocation(Integer left, Integer right) {
+		if (left == null && right == null) {
+			return 0;
+		}
+		if (left == null) {
+			return 1;
+		}
+		if (right == null) {
+			return -1;
+		}
+		return Integer.compare(left, right);
+	}
+
+	private record ColumnLocation(String name, Integer line, Integer charPosition) {
+	}
+
+	private record ColumnListSummary(String columnNamesCsv, Integer anchorLine, Integer anchorChar) {
 	}
 
 	private int extractTrailingNumericSuffix(String key) {

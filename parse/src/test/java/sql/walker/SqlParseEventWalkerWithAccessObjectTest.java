@@ -388,7 +388,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void ambiguousColumnAllocationWithAccessObjectMergedDiagnosticsTest() {
 		final String query = " select dd.a aa, cc.b, c from tab1 dd join tab2 cc";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, table=tab1}}, 2={join=join}, 3={table={alias=cc, table=tab2}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -400,11 +400,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getTableDictionary().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}}",
 				snippet.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={dd=tab1, cc=tab2, tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}, table_dictionary={tab1={a=[[@1,8:9='dd',<328>,1:8]]}, tab2={b=[[@6,17:18='cc',<328>,1:17]]}}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=tab1, cc=tab2}}}",
 				snippet.getSymbolTable().toString());
 
+		assertFatalDiagnosticByCode(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				"Ambiguous column reference 'c'",
+				"c");
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
 		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "AMBIGUOUS_COLUMN_REFERENCE", null, "c", 1);
 	}
 
 	@Test
@@ -414,7 +420,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = " select dd.a aa, cc.b, c from " 
 		+ "\n (select x as a from tab1) dd join (select y as b, missing from "
 		+ "\n (select z as y from tab2) ee) cc on dd.a = cc.b";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 3);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, query={select={1={column={name=x, table_ref=null}, alias=a}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=a, table_ref=dd}}, right={column={name=b, table_ref=cc}}, operator==}}}, 3={table={alias=cc, query={select={1={column={name=y, table_ref=null}, alias=b}, 2={column={name=missing, table_ref=null}}}, from={table={alias=ee, query={select={1={column={name=z, table_ref=null}, alias=y}}, from={table={alias=null, table=tab2}}}}}}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -426,13 +432,19 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getTableDictionary().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@16,45:45='a',<328>,2:14]]}, query1={y=[[@34,110:110='y',<328>,3:14]]}, query2={b=[[@26,79:79='b',<328>,2:48]], missing=[[@28,82:88='missing',<328>,2:51]]}, query3={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}}",
 				snippet.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query3={dd=query0, cc=query2, def_query0={tab1={x=[[@14,40:40='x',<328>,2:9]]}, interface={a=[{name=x, table_ref=null}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], query0={a=[[@1,8:9='dd',<328>,1:8], [@42,133:134='dd',<328>,3:37]]}, interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, query2={b=[[@6,17:18='cc',<328>,1:17], [@46,140:141='cc',<328>,3:44]]}, unknown={c=[[@10,23:23='c',<328>,1:23]]}, def_query2={ee=query1, def_query1={tab2={z=[[@32,105:105='z',<328>,3:9]]}, interface={y=[{name=z, table_ref=null}]}}, interface={b=[{name=y, table_ref=null}], missing=[{name=missing, table_ref=null}]}, query1={y=[[@24,74:74='y',<328>,2:43]]}, unknown={missing=[[@28,82:88='missing',<328>,2:51]]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={aa=[[@4,13:14='aa',<328>,1:13]], b=[[@8,20:20='b',<328>,1:20]], c=[[@10,23:23='c',<328>,1:23]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@16,45:45='a',<328>,2:14]]}, table_dictionary={tab1={x=[[@14,40:40='x',<328>,2:9]]}}, interface={a=[{name=x, table_ref=null}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0, cc=query2}, def_query2={query_dictionary={b=[[@26,79:79='b',<328>,2:48]], missing=[[@28,82:88='missing',<328>,2:51]]}, table_dictionary={}, def_query1={query_dictionary={y=[[@34,110:110='y',<328>,3:14]]}, table_dictionary={tab2={z=[[@32,105:105='z',<328>,3:9]]}}, interface={y=[{name=z, table_ref=null}]}}, interface={b=[{name=y, table_ref=null}], missing=[{name=missing, table_ref=null}]}, table_alias={ee=query1}}}}",
 				snippet.getSymbolTable().toString());
 
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 2, 51, "missing");
 		assertUnresolvedUnknownColumnsFatalDiagnostic(snippet, 1, 23, "c");
+		assertFatalDiagnosticByCode(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				"Ambiguous column reference 'c'",
+				"c");
 		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "missing", 1);
 		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "AMBIGUOUS_COLUMN_REFERENCE", null, "c", 1);
 	}
 
 	@Test
@@ -502,26 +514,41 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void ambiguityWarnings_AmbiguousInterfaceColumnDiagnosticTest() {
 		String query = "SELECT a FROM tab1 dd JOIN tab2 cc ON dd.a = cc.a";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		assertFatalDiagnosticByCode(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				"Ambiguous column reference 'a'",
+				"a");
 
 		assertFatalDiagnosticByCode(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
 				"Unresolved unqualified column reference(s)",
 				"a");
+		assertFatalDiagnosticCount(snippet, "AMBIGUOUS_COLUMN_REFERENCE", null, "a", 1);
 		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
 	public void ambiguityWarnings_AmbiguousInterfaceColumnFromCompetingSubqueryAliasesDiagnosticTest() {
 		String query = "SELECT a FROM (SELECT x AS a FROM tab1) dd JOIN (SELECT z AS a FROM tab2) cc ON dd.a = cc.a";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		assertFatalDiagnosticByCode(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				"Ambiguous column reference 'a'",
+				"a");
 
 		assertFatalDiagnosticByCode(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
 				"Unresolved unqualified column reference(s)",
 				"a");
+		assertFatalDiagnosticCount(snippet, "AMBIGUOUS_COLUMN_REFERENCE", null, "a", 1);
+		assertFatalDiagnosticCount(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", null, "a", 1);
 	}
 
 	@Test
