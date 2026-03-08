@@ -6,11 +6,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 
 import static mumble.MumbleConstants.*;
 
 import static mumble.ASTWalkerHelperConstants.*;
+
+import sql.SQLSelectParserParser;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
@@ -59,6 +62,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * Collect Substitution Variable List
 	 */
 	public HashMap<String, Object> substitutionsMap;
+
+	/**
+	 * Accumulates qualified unresolved entries (with locations) across nested scopes
+	 * so final diagnostics can render merged source positions.
+	 */
+	public HashMap<String, Object> globalQualifiedUnresolvedLocations;
 
 /**
  * Substitution Map to allow Grammars to define their own AST Tree Labels for certain common situations
@@ -139,6 +148,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 queryColumnDictionaryMap = new HashMap<String, Object>();
          symbolTable = new HashMap<String, Object>();
          substitutionsMap = new HashMap<String, Object>();
+		 globalQualifiedUnresolvedLocations = new HashMap<String, Object>();
          initializeAstKeyCrosswalkMap();
 		 initializeSqlDiagnosticCatalog();
 
@@ -196,6 +206,43 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			tableDictionaryMap = new HashMap<String, Object>();
 		}
 		return tableDictionaryMap;
+	}
+
+	public Integer findNearestSubqueryParentRuleIndex(ParserRuleContext ctx) {
+		if (ctx == null) {
+			return null;
+		}
+
+		ParserRuleContext ancestor = ctx;
+		while (ancestor != null) {
+			if (ancestor instanceof SQLSelectParserParser.SubqueryContext) {
+				ParserRuleContext parent = ancestor.getParent();
+				return parent == null ? null : parent.getRuleIndex();
+			}
+			ancestor = ancestor.getParent();
+		}
+
+		return null;
+	}
+
+	public boolean shouldPassUpQualifiedUnresolvedForSubqueryParent(Integer subqueryParentRuleIndex) {
+		if (subqueryParentRuleIndex == null) {
+			return false;
+		}
+
+		return subqueryParentRuleIndex == SQLSelectParserParser.RULE_nonparenthesized_value_expression_primary
+				|| subqueryParentRuleIndex == SQLSelectParserParser.RULE_predicand_subquery
+				|| subqueryParentRuleIndex == SQLSelectParserParser.RULE_in_predicate_value
+				|| subqueryParentRuleIndex == SQLSelectParserParser.RULE_exists_predicate_value;
+	}
+
+	public boolean shouldEmitQualifiedUnresolvedForSubqueryParent(Integer subqueryParentRuleIndex) {
+		if (subqueryParentRuleIndex == null) {
+			return false;
+		}
+
+		return subqueryParentRuleIndex == SQLSelectParserParser.RULE_query_primary
+				|| subqueryParentRuleIndex == SQLSelectParserParser.RULE_tuple_primary;
 	}
 
 	/**
@@ -442,6 +489,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			Object ref = symbolTable.get(tableRef);
 			if (!(ref instanceof Map<?, ?>)) {
 				if (!(tableRef.startsWith(MUMBLE_QUERY_KEY)
+						|| tableRef.startsWith(MUMBLE_VALUES_KEY)
 						|| tableRef.startsWith(MUMBLE_INSERT_KEY)
 						|| tableRef.startsWith(MUMBLE_UPDATE_KEY)
 						|| tableRef.startsWith(MUMBLE_UNION_KEY)
@@ -495,6 +543,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		String unresolvedKey = buildUnresolvedColumnKey(tableReference, unresolvedColumnEntry);
 		if (unresolvedKey == null) {
 			return;
+		}
+
+		if (unresolvedKey.contains(".")) {
+			HashMap<String, Object> single = new HashMap<String, Object>();
+			single.put(unresolvedKey, unresolvedColumnEntry);
+			mergeUnknownEntries(globalQualifiedUnresolvedLocations, single);
 		}
 
 		Object existingEntry = qryTableDict.get(unresolvedKey);
@@ -1306,11 +1360,22 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		HashMap<String, Object> targetTableSymbols = (HashMap<String, Object>) tableSymbols;
+		ArrayList<String> movedKeys = new ArrayList<String>();
 		for (Map.Entry<String, Object> entry : columnEntries.entrySet()) {
-			mergeColumnEntry(targetTableSymbols, entry.getKey(), entry.getValue());
+			String columnKey = entry.getKey();
+			if (columnKey == null || columnKey.contains(".")) {
+				// Keep explicitly qualified entries unresolved; they require source validation.
+				continue;
+			}
+			mergeColumnEntry(targetTableSymbols, columnKey, entry.getValue());
+			movedKeys.add(columnKey);
 		}
-		columnEntries.clear();
-		return true;
+
+		for (String movedKey : movedKeys) {
+			columnEntries.remove(movedKey);
+		}
+
+		return !movedKeys.isEmpty();
 	}
 
 	/**
@@ -1622,6 +1687,105 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	/**
+	 * Build a compact location list for one entry value, preserving token order.
+	 * Example: [(l:1 c:74), (l:1 c:238)].
+	 */
+	@SuppressWarnings("unchecked")
+	public String formatAllLocationsForEntry(Object entryValue) {
+		ArrayList<Integer[]> parsedLocations = new ArrayList<Integer[]>();
+
+		if (entryValue instanceof Map<?, ?> entryMap) {
+			Object locationsObj = ((Map<String, Object>) entryMap).get("locations");
+			if (locationsObj instanceof List<?> locationList) {
+				for (Object locationObj : locationList) {
+					if (locationObj == null) {
+						continue;
+					}
+					Integer[] parsed = parseLineAndCharacterFromToken(locationObj.toString());
+					if (parsed[0] == null || parsed[1] == null) {
+						continue;
+					}
+					parsedLocations.add(parsed);
+				}
+			}
+		} else if (entryValue instanceof List<?> tokenList) {
+			for (Object tokenObj : tokenList) {
+				if (tokenObj == null) {
+					continue;
+				}
+				Integer[] parsed = parseLineAndCharacterFromToken(tokenObj.toString());
+				if (parsed[0] == null || parsed[1] == null) {
+					continue;
+				}
+				parsedLocations.add(parsed);
+			}
+		} else if (entryValue instanceof String tokenString) {
+			Integer[] parsed = parseLineAndCharacterFromToken(tokenString);
+			if (parsed[0] != null && parsed[1] != null) {
+				parsedLocations.add(parsed);
+			}
+		}
+
+		if (parsedLocations.isEmpty()) {
+			return "[]";
+		}
+
+		parsedLocations.sort((a, b) -> {
+			int lineCompare = Integer.compare(a[0], b[0]);
+			if (lineCompare != 0) {
+				return lineCompare;
+			}
+			return Integer.compare(a[1], b[1]);
+		});
+
+		ArrayList<String> formattedLocations = new ArrayList<String>();
+		for (Integer[] parsed : parsedLocations) {
+			String formatted = "(l:" + parsed[0] + " c:" + parsed[1] + ")";
+			if (!formattedLocations.contains(formatted)) {
+				formattedLocations.add(formatted);
+			}
+		}
+
+		return formattedLocations.toString();
+	}
+
+	/**
+	 * Same locations as formatAllLocationsForEntry, but rendered without brackets
+	 * for embedding in sentence-based diagnostics.
+	 */
+	public String formatAllLocationsForEntryInline(Object entryValue) {
+		String bracketed = formatAllLocationsForEntry(entryValue);
+		if (bracketed == null || bracketed.length() < 2 || "[]".equals(bracketed)) {
+			return "";
+		}
+		return bracketed.substring(1, bracketed.length() - 1);
+	}
+
+	public void captureQualifiedUnresolvedLocations(HashMap<String, Object> unresolvedColumnMap) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> unresolvedEntry : unresolvedColumnMap.entrySet()) {
+			String unresolvedKey = unresolvedEntry.getKey();
+			if (unresolvedKey == null || !unresolvedKey.contains(".")) {
+				continue;
+			}
+
+			HashMap<String, Object> single = new HashMap<String, Object>();
+			single.put(unresolvedKey, unresolvedEntry.getValue());
+			mergeUnknownEntries(globalQualifiedUnresolvedLocations, single);
+		}
+	}
+
+	public Object getCapturedQualifiedUnresolvedLocationEntry(String unresolvedQualifiedKey) {
+		if (unresolvedQualifiedKey == null || globalQualifiedUnresolvedLocations == null) {
+			return null;
+		}
+		return globalQualifiedUnresolvedLocations.get(unresolvedQualifiedKey);
+	}
+
+	/**
 	 * Build a compact column list with per-entry location annotations.
 	 * Example: [c (l:1 c:43), doll (l:3 c:22)].
 	 */
@@ -1632,9 +1796,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		ArrayList<String> formattedEntries = new ArrayList<String>();
 		for (String columnName : columnEntries.keySet()) {
-			Integer[] location = getLineAndCharacterFromEntry(columnEntries.get(columnName));
-			if (location[0] != null && location[1] != null) {
-				formattedEntries.add(columnName + " (l:" + location[0] + " c:" + location[1] + ")");
+			String locationList = formatAllLocationsForEntry(columnEntries.get(columnName));
+			if (!"[]".equals(locationList)) {
+				formattedEntries.add(columnName + " " + locationList);
 			} else {
 				formattedEntries.add(columnName);
 			}
@@ -1745,6 +1909,62 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return tableRef;
 	}
 
+	public boolean canResolveQualifiedUnknownInScope(
+			String unresolvedQualifiedKey,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> queryCollection) {
+		if (unresolvedQualifiedKey == null || unresolvedQualifiedKey.isBlank()) {
+			return false;
+		}
+
+		int dotIndex = unresolvedQualifiedKey.indexOf('.');
+		if (dotIndex <= 0 || dotIndex + 1 >= unresolvedQualifiedKey.length()) {
+			return false;
+		}
+
+		String sourceRef = unresolvedQualifiedKey.substring(0, dotIndex);
+
+		boolean sourceIsQueryRef = sourceRef.startsWith(MUMBLE_QUERY_KEY)
+				|| sourceRef.startsWith(MUMBLE_UNION_KEY)
+				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
+				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| MUMBLE_VALUES_KEY.equals(sourceRef);
+		if (sourceIsQueryRef) {
+			return true;
+		}
+
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			Object aliasMappedObj = tableAliasCollection.get(sourceRef);
+			if (!(aliasMappedObj instanceof String)) {
+				for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+					if (aliasEntry.getKey() != null
+							&& aliasEntry.getKey().equalsIgnoreCase(sourceRef)
+							&& aliasEntry.getValue() instanceof String) {
+						aliasMappedObj = aliasEntry.getValue();
+						break;
+					}
+				}
+			}
+			if (aliasMappedObj instanceof String aliasMappedSource) {
+				boolean aliasTargetsQueryRef = aliasMappedSource.startsWith(MUMBLE_QUERY_KEY)
+						|| aliasMappedSource.startsWith(MUMBLE_UNION_KEY)
+						|| aliasMappedSource.startsWith(MUMBLE_INTERSECT_KEY)
+						|| aliasMappedSource.startsWith(MUMBLE_VALUES_KEY)
+						|| MUMBLE_VALUES_KEY.equals(aliasMappedSource);
+				if (aliasTargetsQueryRef) {
+					return true;
+				}
+			}
+		}
+
+		String resolvedTableRef = resolveAliasToTableName(sourceRef, tableAliasCollection);
+		HashMap<String, Object> indicatedTableDictionary = getTableDictionaryForReference(
+				resolvedTableRef,
+				tableCollection);
+		return indicatedTableDictionary != null;
+	}
+
 	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> getTableDictionaryForReference(String tableRef,
 			HashMap<String, Object> tableCollection) {
@@ -1793,7 +2013,73 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			} else if (targetValue instanceof ArrayList<?> targetList && sourceValue instanceof ArrayList<?> sourceList) {
 				((ArrayList<Object>) targetList).addAll((ArrayList<Object>) sourceList);
 			} else {
-				target.put(key, sourceValue);
+				Object mergedEntry = mergeUnknownEntryValues(targetValue, sourceValue);
+				if (mergedEntry != null) {
+					target.put(key, mergedEntry);
+				} else {
+					target.put(key, sourceValue);
+				}
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object mergeUnknownEntryValues(Object existingValue, Object incomingValue) {
+		ArrayList<Object> mergedLocations = new ArrayList<Object>();
+		collectUnknownEntryLocations(existingValue, mergedLocations);
+		collectUnknownEntryLocations(incomingValue, mergedLocations);
+
+		if (mergedLocations.isEmpty()) {
+			return null;
+		}
+
+		HashMap<String, Object> merged = new HashMap<String, Object>();
+		if (existingValue instanceof Map<?, ?> existingMap) {
+			Object existingColumn = ((Map<String, Object>) existingMap).get(MUMBLE_COLUMN_KEY);
+			if (existingColumn != null) {
+				merged.put(MUMBLE_COLUMN_KEY, existingColumn);
+			}
+		}
+		if (!merged.containsKey(MUMBLE_COLUMN_KEY) && incomingValue instanceof Map<?, ?> incomingMap) {
+			Object incomingColumn = ((Map<String, Object>) incomingMap).get(MUMBLE_COLUMN_KEY);
+			if (incomingColumn != null) {
+				merged.put(MUMBLE_COLUMN_KEY, incomingColumn);
+			}
+		}
+		merged.put("locations", mergedLocations);
+		return merged;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectUnknownEntryLocations(Object entryValue, ArrayList<Object> mergedLocations) {
+		if (entryValue == null || mergedLocations == null) {
+			return;
+		}
+
+		if (entryValue instanceof Map<?, ?> entryMap) {
+			Object locationsObj = ((Map<String, Object>) entryMap).get("locations");
+			if (locationsObj instanceof List<?> locations) {
+				for (Object location : locations) {
+					if (location != null && !mergedLocations.contains(location)) {
+						mergedLocations.add(location);
+					}
+				}
+			}
+			return;
+		}
+
+		if (entryValue instanceof List<?> tokenList) {
+			for (Object location : tokenList) {
+				if (location != null && !mergedLocations.contains(location)) {
+					mergedLocations.add(location);
+				}
+			}
+			return;
+		}
+
+		if (entryValue instanceof String tokenString) {
+			if (!mergedLocations.contains(tokenString)) {
+				mergedLocations.add(tokenString);
 			}
 		}
 	}
@@ -2025,42 +2311,68 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public String resolveAliasToNonTableSourceQueryKey(String aliasRef, HashMap<String, Object> queryCollection) {
-		if (aliasRef == null || queryCollection == null || queryCollection.isEmpty()) {
+		if (aliasRef == null) {
 			return null;
 		}
 
-		for (String queryKey : queryCollection.keySet()) {
-			Object queryEntryObj = queryCollection.get(queryKey);
-			if (!(queryEntryObj instanceof Map<?, ?> queryEntry)) {
-				continue;
-			}
+		if (queryCollection != null && !queryCollection.isEmpty()) {
+			for (String queryKey : queryCollection.keySet()) {
+				Object queryEntryObj = queryCollection.get(queryKey);
+				if (!(queryEntryObj instanceof Map<?, ?> queryEntry)) {
+					continue;
+				}
 
-			Object mappedObj = queryEntry.get(aliasRef);
-			if (!(mappedObj instanceof String)) {
-				for (Map.Entry<?, ?> querySubEntry : queryEntry.entrySet()) {
-					if (querySubEntry.getKey() instanceof String key
-							&& key.equalsIgnoreCase(aliasRef)
-							&& querySubEntry.getValue() instanceof String) {
-						mappedObj = querySubEntry.getValue();
+				Object mappedObj = queryEntry.get(aliasRef);
+				if (!(mappedObj instanceof String)) {
+					for (Map.Entry<?, ?> querySubEntry : queryEntry.entrySet()) {
+						if (querySubEntry.getKey() instanceof String key
+								&& key.equalsIgnoreCase(aliasRef)
+								&& querySubEntry.getValue() instanceof String) {
+							mappedObj = querySubEntry.getValue();
+							break;
+						}
+					}
+				}
+				if (!(mappedObj instanceof String mappedSource)) {
+					continue;
+				}
+
+				boolean queryOrSetBackedAlias = mappedSource.startsWith("query")
+						|| mappedSource.startsWith(MUMBLE_UNION_KEY)
+						|| mappedSource.startsWith(MUMBLE_INTERSECT_KEY)
+						|| mappedSource.startsWith(MUMBLE_VALUES_KEY)
+						|| MUMBLE_VALUES_KEY.equals(mappedSource);
+
+				if (!queryOrSetBackedAlias) {
+					continue;
+				}
+
+				return MUMBLE_VALUES_KEY.equals(mappedSource) ? queryKey : mappedSource;
+			}
+		}
+
+		if (symbolTable != null && !symbolTable.isEmpty()) {
+			Object directAliasObj = symbolTable.get(aliasRef);
+			if (!(directAliasObj instanceof String)) {
+				for (Map.Entry<String, Object> entry : symbolTable.entrySet()) {
+					if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(aliasRef)
+							&& entry.getValue() instanceof String) {
+						directAliasObj = entry.getValue();
 						break;
 					}
 				}
 			}
-			if (!(mappedObj instanceof String mappedSource)) {
-				continue;
+
+			if (directAliasObj instanceof String directAliasTarget) {
+				boolean queryOrSetBackedAlias = directAliasTarget.startsWith("query")
+						|| directAliasTarget.startsWith(MUMBLE_UNION_KEY)
+						|| directAliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
+						|| directAliasTarget.startsWith(MUMBLE_VALUES_KEY)
+						|| MUMBLE_VALUES_KEY.equals(directAliasTarget);
+				if (queryOrSetBackedAlias) {
+					return directAliasTarget;
+				}
 			}
-
-			boolean queryOrSetBackedAlias = mappedSource.startsWith("query")
-					|| mappedSource.startsWith(MUMBLE_UNION_KEY)
-					|| mappedSource.startsWith(MUMBLE_INTERSECT_KEY)
-					|| mappedSource.startsWith(MUMBLE_VALUES_KEY)
-					|| MUMBLE_VALUES_KEY.equals(mappedSource);
-
-			if (!queryOrSetBackedAlias) {
-				continue;
-			}
-
-			return MUMBLE_VALUES_KEY.equals(mappedSource) ? queryKey : mappedSource;
 		}
 
 		return null;
@@ -2267,6 +2579,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 				nonTableAliasAvailableColumns.put(alias, availableColumns);
 				nonTableAliasSourceQueryKeys.put(alias, sourceQueryKey);
+				if (sourceQueryKey != null) {
+					nonTableAliasAvailableColumns.put(sourceQueryKey, availableColumns);
+					nonTableAliasSourceQueryKeys.put(sourceQueryKey, sourceQueryKey);
+				}
 			}
 		}
 
