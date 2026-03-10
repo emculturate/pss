@@ -102,6 +102,7 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 	public static final String DIAG_ANTLR_REPORT_ERROR = "ANTLR_REPORT_ERROR";
 	public static final String DIAG_MANUAL_ERROR = "MANUAL_ERROR";
 	public static final String DIAG_MANUAL_FATAL = "MANUAL_FATAL";
+	public static final String DIAG_MANUAL_SEVERE_WARNING = "MANUAL_SEVERE_WARNING";
 	public static final String DIAG_MANUAL_WARNING = "MANUAL_WARNING";
 
 
@@ -131,6 +132,7 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 		registerDiagnostic(DIAG_ANTLR_REPORT_ERROR, "REPORT_ERROR", "ANTLR reported parser error");
 		registerDiagnostic(DIAG_MANUAL_ERROR, "MANUAL_ERROR", "Manual parser error");
 		registerDiagnostic(DIAG_MANUAL_FATAL, "MANUAL_FATAL", "Manual fatal parser error");
+		registerDiagnostic(DIAG_MANUAL_SEVERE_WARNING, "MANUAL_SEVERE_WARNING", "Manual parser severe warning");
 		registerDiagnostic(DIAG_MANUAL_WARNING, "MANUAL_WARNING", "Manual parser warning");
 	}
 

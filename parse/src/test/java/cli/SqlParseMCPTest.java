@@ -113,7 +113,7 @@ public class SqlParseMCPTest {
         assertTrue(parse.has("symbolTable"));
     	System.out.println("Symbol Table: " + parse.get("symbolTable").toString());
 	    assertEquals(
-                "{\"query0\":{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]},\"interface\":{\"*\":[{\"name\":\"*\",\"table_ref\":\"*\"}]}}}",
+                "{\"query0\":{\"query_dictionary\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]},\"table_dictionary\":{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}},\"interface\":{\"*\":[{\"name\":\"*\",\"table_ref\":\"*\"}]}}}",
                 parse.get("symbolTable").toString()
         );
         assertTrue(parse.has("tableDictionary"));

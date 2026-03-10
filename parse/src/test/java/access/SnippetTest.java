@@ -36,7 +36,7 @@ public class SnippetTest {
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}, filters=[], interface={*=[{name=*, table_ref=a}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 		
 		Snippet hold = extractor.getSnippet();
@@ -49,7 +49,7 @@ public class SnippetTest {
 				hold.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}",
 				hold.getTableDictionary().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={a=third, b=fourth, third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}, filters=[], interface={*=[{name=*, table_ref=a}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				hold.getSymbolTable().toString());
 	}
 

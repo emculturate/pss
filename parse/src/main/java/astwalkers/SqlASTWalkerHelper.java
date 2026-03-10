@@ -1463,11 +1463,50 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (sourceRef == null) {
 			return false;
 		}
-		return sourceRef.startsWith("query")
-				|| sourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| MUMBLE_VALUES_KEY.equals(sourceRef);
+		String normalizedSourceRef = sourceRef;
+		if (normalizedSourceRef.startsWith("def_")) {
+			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
+		}
+		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+	}
+
+	public boolean isNonTableQuerySourceReference(String sourceRef) {
+		return isNonTableQuerySource(sourceRef);
+	}
+
+	private String resolveDefinitionBackedNonTableSourceRef(String sourceRef) {
+		if (!isNonTableQuerySource(sourceRef)) {
+			return sourceRef;
+		}
+
+		if (symbolTable != null) {
+			Object direct = symbolTable.get(sourceRef);
+			if (direct instanceof Map<?, ?> || direct instanceof String) {
+				return sourceRef;
+			}
+
+			String defSourceRef = sourceRef.startsWith("def_") ? sourceRef : "def_" + sourceRef;
+			Object prefixed = symbolTable.get(defSourceRef);
+			if (prefixed instanceof Map<?, ?> || prefixed instanceof String) {
+				return defSourceRef;
+			}
+		}
+
+		if (queryColumnDictionaryMap != null) {
+			if (queryColumnDictionaryMap.containsKey(sourceRef)) {
+				return sourceRef;
+			}
+			String defSourceRef = sourceRef.startsWith("def_") ? sourceRef : "def_" + sourceRef;
+			if (queryColumnDictionaryMap.containsKey(defSourceRef)) {
+				return defSourceRef;
+			}
+		}
+
+		return sourceRef;
 	}
 
 	/**
@@ -1895,18 +1934,18 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return null;
 		}
 		if (tableAliasCollection == null) {
-			return tableRef;
+			return resolveDefinitionBackedNonTableSourceRef(tableRef);
 		}
 		Object mapped = tableAliasCollection.get(tableRef);
 		if (mapped instanceof String) {
-			return (String) mapped;
+			return resolveDefinitionBackedNonTableSourceRef((String) mapped);
 		}
 		for (Map.Entry<String, Object> entry : tableAliasCollection.entrySet()) {
 			if (entry.getKey().equalsIgnoreCase(tableRef) && entry.getValue() instanceof String) {
-				return (String) entry.getValue();
+				return resolveDefinitionBackedNonTableSourceRef((String) entry.getValue());
 			}
 		}
-		return tableRef;
+		return resolveDefinitionBackedNonTableSourceRef(tableRef);
 	}
 
 	public boolean canResolveQualifiedUnknownInScope(
@@ -1925,11 +1964,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		String sourceRef = unresolvedQualifiedKey.substring(0, dotIndex);
 
-		boolean sourceIsQueryRef = sourceRef.startsWith(MUMBLE_QUERY_KEY)
-				|| sourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| MUMBLE_VALUES_KEY.equals(sourceRef);
+		boolean sourceIsQueryRef = isNonTableQuerySource(sourceRef);
 		if (sourceIsQueryRef) {
 			return true;
 		}
@@ -1947,11 +1982,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				}
 			}
 			if (aliasMappedObj instanceof String aliasMappedSource) {
-				boolean aliasTargetsQueryRef = aliasMappedSource.startsWith(MUMBLE_QUERY_KEY)
-						|| aliasMappedSource.startsWith(MUMBLE_UNION_KEY)
-						|| aliasMappedSource.startsWith(MUMBLE_INTERSECT_KEY)
-						|| aliasMappedSource.startsWith(MUMBLE_VALUES_KEY)
-						|| MUMBLE_VALUES_KEY.equals(aliasMappedSource);
+				boolean aliasTargetsQueryRef = isNonTableQuerySource(aliasMappedSource);
 				if (aliasTargetsQueryRef) {
 					return true;
 				}
@@ -1974,6 +2005,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		Object direct = tableCollection.get(tableRef);
 		if (direct instanceof HashMap<?, ?>) {
 			return (HashMap<String, Object>) direct;
+		}
+		if (isNonTableQuerySource(tableRef) && !tableRef.startsWith("def_")) {
+			Object prefixed = tableCollection.get("def_" + tableRef);
+			if (prefixed instanceof HashMap<?, ?>) {
+				return (HashMap<String, Object>) prefixed;
+			}
 		}
 		Object lower = tableCollection.get(tableRef.toLowerCase());
 		if (lower instanceof HashMap<?, ?>) {
@@ -2337,17 +2374,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					continue;
 				}
 
-				boolean queryOrSetBackedAlias = mappedSource.startsWith("query")
-						|| mappedSource.startsWith(MUMBLE_UNION_KEY)
-						|| mappedSource.startsWith(MUMBLE_INTERSECT_KEY)
-						|| mappedSource.startsWith(MUMBLE_VALUES_KEY)
-						|| MUMBLE_VALUES_KEY.equals(mappedSource);
+				boolean queryOrSetBackedAlias = isNonTableQuerySource(mappedSource);
 
 				if (!queryOrSetBackedAlias) {
 					continue;
 				}
 
-				return MUMBLE_VALUES_KEY.equals(mappedSource) ? queryKey : mappedSource;
+				String sourceQueryKey = MUMBLE_VALUES_KEY.equals(mappedSource) ? queryKey : mappedSource;
+				return resolveDefinitionBackedNonTableSourceRef(sourceQueryKey);
 			}
 		}
 
@@ -2364,13 +2398,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			}
 
 			if (directAliasObj instanceof String directAliasTarget) {
-				boolean queryOrSetBackedAlias = directAliasTarget.startsWith("query")
-						|| directAliasTarget.startsWith(MUMBLE_UNION_KEY)
-						|| directAliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
-						|| directAliasTarget.startsWith(MUMBLE_VALUES_KEY)
-						|| MUMBLE_VALUES_KEY.equals(directAliasTarget);
+				boolean queryOrSetBackedAlias = isNonTableQuerySource(directAliasTarget);
 				if (queryOrSetBackedAlias) {
-					return directAliasTarget;
+					return resolveDefinitionBackedNonTableSourceRef(directAliasTarget);
 				}
 			}
 		}

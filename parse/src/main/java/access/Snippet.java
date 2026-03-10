@@ -139,11 +139,19 @@ public class Snippet {
 	} 
 	
 	public List<String> getFatalErrorStringList() {
-		if (parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
+		return getDiagnosticMessagesBySeverity(ParseDiagnostic.Severity.FATAL);
+	}
+
+	public List<String> getErrorStringList(ParseDiagnostic.Severity severity) {
+		return getDiagnosticMessagesBySeverity(severity);
+	}
+
+	public List<String> getDiagnosticMessagesBySeverity(ParseDiagnostic.Severity severity) {
+		if (severity == null || parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
 			return List.of();
 		}
 		return parserDiagnosticList.stream()
-				.filter(diagnostic -> diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL)
+				.filter(diagnostic -> diagnostic != null && diagnostic.severity() == severity)
 				.map(ParseDiagnostic::message)
 				.filter(message -> message != null)
 				.distinct()
@@ -153,6 +161,45 @@ public class Snippet {
 	public int getFatalErrorCount() {
 		return getFatalErrorStringList().size();
 	}	
+
+	public int getDiagnosticCountBySeverity(ParseDiagnostic.Severity severity) {
+		if (severity == null || parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
+			return 0;
+		}
+		int count = 0;
+		for (ParseDiagnostic diagnostic : parserDiagnosticList) {
+			if (diagnostic != null && diagnostic.severity() == severity) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public int getDiagnosticCountByCode(String code) {
+		if (code == null || parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
+			return 0;
+		}
+		int count = 0;
+		for (ParseDiagnostic diagnostic : parserDiagnosticList) {
+			if (diagnostic != null && code.equals(diagnostic.code())) {
+				count++;
+			}
+		}
+		return count;
+	}
+
+	public int getDiagnosticCountByCodeAndSeverity(String code, ParseDiagnostic.Severity severity) {
+		if (code == null || severity == null || parserDiagnosticList == null || parserDiagnosticList.isEmpty()) {
+			return 0;
+		}
+		int count = 0;
+		for (ParseDiagnostic diagnostic : parserDiagnosticList) {
+			if (diagnostic != null && code.equals(diagnostic.code()) && severity == diagnostic.severity()) {
+				count++;
+			}
+		}
+		return count;
+	}
 
 	public void setFatalErrorStringList(List<String> fatalErrorStringList) {
 		if (fatalErrorStringList == null || fatalErrorStringList.isEmpty()) {

@@ -38,6 +38,7 @@ options {
 sql
   : (with_query
   | create_table_as_expression
+  | query
   ) (SEMI_COLON)? EOF
   ;
   
@@ -146,7 +147,7 @@ insert_end_point
 */
 
 with_query
-  : with_clause? query
+  : with_clause query
   ;
 
 with_clause
@@ -155,6 +156,7 @@ with_clause
   
 with_list_item
   : query_alias (LEFT_PAREN query RIGHT_PAREN)
+  | query_alias variable_identifier
   ;
   
 query_alias
@@ -165,6 +167,7 @@ query
   : query_expression 
   | insert_expression 
   | update_expression
+  | values_statement_primary
   ;
 
 /*

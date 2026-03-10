@@ -22,5 +22,5 @@ public record ParseDiagnostic(
         String exceptionType,
         Map<String, String> details
 ) {
-    public enum Severity { FATAL, ERROR, WARNING, INFO }
+    public enum Severity { FATAL, ERROR, SEVERE_WARNING, WARNING, INFO }
 }
