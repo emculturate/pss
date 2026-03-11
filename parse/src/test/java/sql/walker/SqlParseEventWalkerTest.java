@@ -1664,14 +1664,6 @@ public class SqlParseEventWalkerTest {
 				"Unresolved unqualified column reference(s)",
 				"col1",
 				1);
-		// assertFatalDiagnosticAtPosition(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
-		// 		"Source Table not found for Column 'col1' at (l:1 c:14). No alias or table called 'T3'.",
-		// 		"col1", 1, 14);
-		// assertFatalDiagnosticCount(snippet,
-		// 		"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
-		// 		"Source Table not found for Column 'col1'",
-		// 		"col1",
-		// 		1);
 	}
 
 	@Test

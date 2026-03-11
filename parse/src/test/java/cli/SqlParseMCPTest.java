@@ -4,6 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
@@ -13,8 +17,12 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
+import access.Snippet;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
+import errorhandling.ParseDiagnostic;
 
 public class SqlParseMCPTest {
 
@@ -121,10 +129,10 @@ public class SqlParseMCPTest {
                 "{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
                 parse.get("tableDictionary").toString()
         );
-        assertTrue(parse.has("queryColumnDictionary"));
+        assertTrue(parse.has("queryDictionary"));
         assertEquals(
-                "{\"query0\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
-                parse.get("queryColumnDictionary").toString()
+            "{\"query0\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
+            parse.get("queryDictionary").toString()
         );
         assertTrue(parse.has("substitutionsMap"));
         assertEquals(
@@ -195,15 +203,256 @@ public class SqlParseMCPTest {
         JsonObject result = responseObj.getAsJsonObject("result");
         assertFalse(result.get("ok").getAsBoolean());
         assertTrue(result.get("hasFatalErrors").getAsBoolean());
-        assertNotNull(result.getAsJsonObject("errors"));
-        JsonObject errors = result.getAsJsonObject("errors");
-        assertTrue(errors.get("fatalErrorCount").getAsInt() > 0);
-        assertTrue(errors.get("errors").isJsonArray());
-        System.out.println("Captured errors: " + errors.get("errors").toString());
-        assertEquals(
-            "[\"Line 1:11 - null - unexpected input: 'join'\",\"Exception when walking the parse tree: Cannot invoke \\\"java.util.Map.remove(Object)\\\" because \\\"subMap\\\" is null\"]",
-            errors.get("errors").toString());
+        assertTrue(result.has("fatalErrorCount"));
+        assertTrue(result.get("fatalErrorCount").getAsInt() > 0);
+        assertTrue(result.has("errors"));
+        assertTrue(result.get("errors").isJsonArray());
+        assertTrue(result.has("messages"));
+        assertTrue(result.get("messages").isJsonArray());
+        assertFalse("Parser/listener fatal should not return parse payload", result.has("parse"));
+        assertFalse("Parser/listener fatal should not be marked partial", result.has("parsePartial"));
+
+        JsonObject firstFatalDiagnostic = result.getAsJsonArray("errors").get(0).getAsJsonObject();
+        assertTrue(firstFatalDiagnostic.has("severity"));
+        assertEquals("FATAL", firstFatalDiagnostic.get("severity").getAsString());
+        assertTrue(firstFatalDiagnostic.has("code"));
+        assertTrue(firstFatalDiagnostic.has("message"));
+        assertTrue(firstFatalDiagnostic.has("line"));
+        assertTrue(firstFatalDiagnostic.has("charPositionInLine"));
+        assertTrue(firstFatalDiagnostic.has("source"));
+        assertTrue(firstFatalDiagnostic.has("ruleName"));
+        assertTrue(firstFatalDiagnostic.has("tokenText"));
+        assertTrue(firstFatalDiagnostic.has("recoverable"));
+        assertTrue(firstFatalDiagnostic.has("phase"));
+        assertTrue(firstFatalDiagnostic.has("exceptionType"));
+        assertTrue(firstFatalDiagnostic.has("details"));
+
+        JsonObject firstMessageDiagnostic = result.getAsJsonArray("messages").get(0).getAsJsonObject();
+        assertTrue(firstMessageDiagnostic.has("severity"));
+        assertTrue(firstMessageDiagnostic.has("code"));
+        assertTrue(firstMessageDiagnostic.has("message"));
     }
+
+    @Test
+    public void testRoundTripParseSqlFatalQueryReportsMessagesAndErrors() throws Exception {
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select x.missing from cte where campaign_id is not null\"}";
+        String request = createJsonRpcRequest("5", "tool/parseSql", params);
+
+        runServiceWithInput(request);
+
+        String output = outContent.toString();
+        JsonObject responseObj = findFirstResultObject(output);
+
+        assertEquals("2.0", responseObj.get("jsonrpc").getAsString());
+        assertEquals("5", responseObj.get("id").getAsString());
+        assertNotNull("Response should have a result", responseObj.get("result"));
+
+        JsonObject result = responseObj.getAsJsonObject("result");
+        assertFalse(result.get("ok").getAsBoolean());
+        assertTrue(result.get("hasFatalErrors").getAsBoolean());
+        assertTrue(result.has("fatalErrorCount"));
+        assertTrue(result.get("fatalErrorCount").getAsInt() > 0);
+
+        assertTrue(result.has("errors"));
+        assertTrue(result.get("errors").isJsonArray());
+        JsonArray errors = result.getAsJsonArray("errors");
+        assertTrue(errors.size() > 0);
+        for (int i = 0; i < errors.size(); i++) {
+            JsonObject diag = errors.get(i).getAsJsonObject();
+            assertEquals("FATAL", diag.get("severity").getAsString());
+        }
+
+        assertTrue(result.has("messages"));
+        assertTrue(result.get("messages").isJsonArray());
+        JsonArray messages = result.getAsJsonArray("messages");
+        for (int i = 0; i < messages.size(); i++) {
+            JsonObject diag = messages.get(i).getAsJsonObject();
+            assertTrue(!"FATAL".equals(diag.get("severity").getAsString()));
+        }
+
+        assertTrue("SQL AST walker fatal should include partial parse payload", result.has("parse"));
+        assertTrue("SQL AST walker fatal should flag parsePartial", result.has("parsePartial"));
+        assertTrue(result.get("parsePartial").getAsBoolean());
+        JsonObject parse = result.getAsJsonObject("parse");
+        assertTrue(parse.has("symbolTable"));
+        assertTrue(parse.has("tableDictionary"));
+        assertTrue(parse.has("queryDictionary"));
+
+        // Report returned diagnostics in test output for quick triage in consuming projects.
+        System.out.println("Roundtrip fatal query errors: " + errors);
+        System.out.println("Roundtrip fatal query messages: " + messages);
+    }
+
+    @Test
+    public void testRoundTripParseSqlQualifiedMissingSourceReturnsFatal() throws Exception {
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select x.missing, cte.missed from cte\"}";
+        String request = createJsonRpcRequest("6", "tool/parseSql", params);
+
+        runServiceWithInput(request);
+
+        String output = outContent.toString();
+        JsonObject responseObj = findFirstResultObject(output);
+
+        assertEquals("2.0", responseObj.get("jsonrpc").getAsString());
+        assertEquals("6", responseObj.get("id").getAsString());
+        assertNotNull("Response should have a result", responseObj.get("result"));
+
+        JsonObject result = responseObj.getAsJsonObject("result");
+        assertFalse(result.get("ok").getAsBoolean());
+        assertTrue(result.get("hasFatalErrors").getAsBoolean());
+        assertTrue(result.has("fatalErrorCount"));
+        assertTrue(result.get("fatalErrorCount").getAsInt() > 0);
+
+        assertTrue(result.has("errors"));
+        JsonArray errors = result.getAsJsonArray("errors");
+        assertTrue(errors.size() > 0);
+
+        boolean foundMissingSourceFatal = false;
+        for (int i = 0; i < errors.size(); i++) {
+            JsonObject diag = errors.get(i).getAsJsonObject();
+            if ("FATAL".equals(diag.get("severity").getAsString())
+                    && "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE".equals(diag.get("code").getAsString())) {
+                foundMissingSourceFatal = true;
+                break;
+            }
+        }
+        assertTrue("Expected QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE fatal diagnostic", foundMissingSourceFatal);
+    }
+
+    @Test
+    public void testFormatParseResultCountsFatalDiagnosticsFromMessagesList() throws Exception {
+        SqlParseMCP mcp = new SqlParseMCP();
+        Snippet snippet = new Snippet(
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashSet<>());
+
+        ParseDiagnostic fatalMessageOnly = new ParseDiagnostic(
+            ParseDiagnostic.Severity.FATAL,
+            "ANY_FATAL_CODE",
+            "Any fatal in messages should drive fatal output",
+            9,
+            1,
+            "SomeSource",
+            null,
+            "token",
+            false,
+            "ast-walk",
+            null,
+            null);
+
+        snippet.setParserDiagnosticList(List.of());
+        snippet.setParserMessageList(List.of(fatalMessageOnly));
+
+        Method formatMethod = SqlParseMCP.class.getDeclaredMethod("formatParseResult", Snippet.class);
+        formatMethod.setAccessible(true);
+        JsonObject result = (JsonObject) formatMethod.invoke(mcp, snippet);
+
+        assertFalse(result.get("ok").getAsBoolean());
+        assertTrue(result.get("hasFatalErrors").getAsBoolean());
+        assertEquals(1, result.get("fatalErrorCount").getAsInt());
+
+        JsonArray errors = result.getAsJsonArray("errors");
+        assertEquals(1, errors.size());
+        assertEquals("FATAL", errors.get(0).getAsJsonObject().get("severity").getAsString());
+        assertEquals("ANY_FATAL_CODE", errors.get(0).getAsJsonObject().get("code").getAsString());
+
+        JsonArray messages = result.getAsJsonArray("messages");
+        assertEquals(0, messages.size());
+    }
+
+        @Test
+        public void testFormatParseResultNormalizesSyntheticDiagnostics() throws Exception {
+        SqlParseMCP mcp = new SqlParseMCP();
+        Snippet snippet = new Snippet(
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            new HashSet<>());
+
+        ParseDiagnostic parserError = new ParseDiagnostic(
+            ParseDiagnostic.Severity.ERROR,
+            "PARSER_ERR",
+            "Parser error should be warning",
+            1,
+            2,
+            "ParseErrorCollector",
+            null,
+            "tok",
+            true,
+            "parse.strategy",
+            null,
+            null);
+
+        ParseDiagnostic walkerError = new ParseDiagnostic(
+            ParseDiagnostic.Severity.ERROR,
+            "WALKER_ERR",
+            "Walker probable error",
+            2,
+            3,
+            "SqlASTWalkerHelper",
+            null,
+            "col",
+            true,
+            "ast-walk",
+            null,
+            null);
+
+        ParseDiagnostic walkerSevereWarning = new ParseDiagnostic(
+            ParseDiagnostic.Severity.SEVERE_WARNING,
+            "WALKER_SEVERE",
+            "Walker severe warning should stay a severe warning but be handled as a warning downstream",
+            3,
+            4,
+            "SqlASTWalkerHelper",
+            null,
+            "col2",
+            true,
+            "ast-walk",
+            null,
+            null);
+
+        ParseDiagnostic walkerFatal = new ParseDiagnostic(
+            ParseDiagnostic.Severity.FATAL,
+            "WALKER_FATAL",
+            "Walker fatal should remain fatal",
+            4,
+            5,
+            "SqlASTWalkerHelper",
+            null,
+            "bad",
+            false,
+            "ast-walk",
+            null,
+            null);
+
+        snippet.setParserDiagnosticList(List.of(parserError, walkerError, walkerSevereWarning, walkerFatal));
+        snippet.setParserMessageList(List.of(parserError, walkerError, walkerSevereWarning, walkerFatal));
+
+        Method formatMethod = SqlParseMCP.class.getDeclaredMethod("formatParseResult", Snippet.class);
+        formatMethod.setAccessible(true);
+        JsonObject result = (JsonObject) formatMethod.invoke(mcp, snippet);
+
+        assertFalse(result.get("ok").getAsBoolean());
+        assertTrue(result.get("hasFatalErrors").getAsBoolean());
+        assertEquals(1, result.get("fatalErrorCount").getAsInt());
+
+        JsonArray errors = result.getAsJsonArray("errors");
+        assertEquals(1, errors.size());
+        assertEquals("FATAL", errors.get(0).getAsJsonObject().get("severity").getAsString());
+        assertEquals("WALKER_FATAL", errors.get(0).getAsJsonObject().get("code").getAsString());
+
+        JsonArray messages = result.getAsJsonArray("messages");
+        assertEquals(3, messages.size());
+        assertEquals("WARNING", messages.get(0).getAsJsonObject().get("severity").getAsString());
+        assertEquals("WARNING", messages.get(1).getAsJsonObject().get("severity").getAsString());
+        assertEquals("SEVERE_WARNING", messages.get(2).getAsJsonObject().get("severity").getAsString());
+        }
 
    
 }
