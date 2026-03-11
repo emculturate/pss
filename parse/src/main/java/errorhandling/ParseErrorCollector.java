@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr.v4.runtime.ANTLRErrorStrategy;
+import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.IntervalSet;
 
 import sql.SQLSelectParserParser;
@@ -32,6 +34,17 @@ import sql.SQLSelectParserParser;
 	stopping at the first error.
  */
 public class ParseErrorCollector implements ANTLRErrorStrategy {
+	// -------------------------------------------------------------------------
+	// EXPERIMENTAL RECOVERY BLOCK START (VARIABLE_IDENTIFIER_HEURISTIC_V2)
+	// Toggle this flag to disable/enable the heuristic as a single switch.
+	// Remove this entire block after validation if no longer desired.
+	// -------------------------------------------------------------------------
+	private static final boolean EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2 = true;
+	private static final String EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2_TAG =
+			"[EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2]";
+	// -------------------------------------------------------------------------
+	// EXPERIMENTAL RECOVERY BLOCK END (VARIABLE_IDENTIFIER_HEURISTIC_V2)
+	// -------------------------------------------------------------------------
 
 	private final List<String> errorList = new ArrayList<>();
 	private final List<ParseDiagnostic> diagnostics = new ArrayList<>();
@@ -130,6 +143,63 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 
 		return expectsVariableIdentifierToken(recognizer) && nextTokenLooksLikeVariableBody(recognizer);
 	}
+
+	private int computeMalformedVariableBoundaryExclusive(Token currentToken) {
+		if (currentToken == null) {
+			return -1;
+		}
+
+		int startIndex = currentToken.getStartIndex();
+		CharStream input = currentToken.getInputStream();
+		if (input == null || startIndex < 0) {
+			return -1;
+		}
+
+		String remainder = input.getText(Interval.of(startIndex, input.size() - 1));
+		if (remainder == null || remainder.isBlank()) {
+			return -1;
+		}
+
+		for (int i = 0; i < remainder.length(); i++) {
+			char ch = remainder.charAt(i);
+			if (ch == '>') {
+				return startIndex + i + 1;
+			}
+			if (Character.isWhitespace(ch) || ch == ',' || ch == ';' || ch == ')' || ch == '(') {
+				return startIndex + i;
+			}
+		}
+
+		return -1;
+	}
+
+	private int tryExperimentalMalformedVariableSkip(Parser recognizer, Token currentToken) {
+		if (!EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2 || recognizer == null || currentToken == null) {
+			return 0;
+		}
+
+		int boundaryExclusive = computeMalformedVariableBoundaryExclusive(currentToken);
+		if (boundaryExclusive < 0) {
+			return 0;
+		}
+
+		int consumed = 0;
+		Token cursor = recognizer.getCurrentToken();
+		while (cursor != null && cursor.getType() != Token.EOF) {
+			int tokenStart = cursor.getStartIndex();
+			if (tokenStart < 0 || tokenStart >= boundaryExclusive) {
+				break;
+			}
+			recognizer.consume();
+			consumed++;
+			cursor = recognizer.getCurrentToken();
+			if (consumed > 128) {
+				break;
+			}
+		}
+
+		return consumed;
+	}
 	
 	@Override
 	public void reset(Parser recognizer) {
@@ -143,6 +213,26 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 		Token currentToken = recognizer.getCurrentToken();
 
 		if (shouldRecoverMalformedVariableStart(recognizer, currentToken)) {
+			int heuristicConsumed = tryExperimentalMalformedVariableSkip(recognizer, currentToken);
+			if (heuristicConsumed > 0) {
+				String recoveryMessage = String.format(
+						"Line %d:%d - %s skipped %d token(s) for malformed variable identifier beginning at '%s'",
+						currentToken.getLine(),
+						currentToken.getCharPositionInLine(),
+						EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2_TAG,
+						heuristicConsumed,
+						currentToken.getText());
+				errorList.add(recoveryMessage);
+				addDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_MALFORMED_VARIABLE_HEURISTIC",
+						recoveryMessage,
+						currentToken,
+						true,
+						null);
+
+				return recognizer.getCurrentToken();
+			}
+
 			String recoveryMessage = String.format(
 					"Line %d:%d - Recovering malformed variable identifier start '%s' by skipping one token",
 					currentToken.getLine(),
@@ -176,6 +266,25 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	public void recover(Parser recognizer, RecognitionException e) throws RecognitionException {
 		Token currentToken = recognizer.getCurrentToken();
 		if (shouldRecoverMalformedVariableStart(recognizer, currentToken)) {
+			int heuristicConsumed = tryExperimentalMalformedVariableSkip(recognizer, currentToken);
+			if (heuristicConsumed > 0) {
+				String recoveryMessage = String.format(
+						"Line %d:%d - %s skipped %d token(s) for malformed variable identifier beginning at '%s'",
+						currentToken.getLine(),
+						currentToken.getCharPositionInLine(),
+						EXPERIMENTAL_VARIABLE_IDENTIFIER_HEURISTIC_V2_TAG,
+						heuristicConsumed,
+						currentToken.getText());
+				errorList.add(recoveryMessage);
+				addDiagnostic(ParseDiagnostic.Severity.WARNING,
+						"RECOVER_MALFORMED_VARIABLE_HEURISTIC",
+						recoveryMessage,
+						currentToken,
+						true,
+						e == null ? null : e.getClass().getSimpleName());
+				return;
+			}
+
 			String recoveryMessage = String.format(
 					"Line %d:%d - Recovering malformed variable identifier start '%s' by skipping one token",
 					currentToken.getLine(),
