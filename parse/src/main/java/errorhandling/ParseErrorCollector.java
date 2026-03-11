@@ -7,6 +7,10 @@ import org.antlr.v4.runtime.ANTLRErrorStrategy;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.misc.IntervalSet;
+
+import sql.SQLSelectParserParser;
 
 
 /*
@@ -78,6 +82,54 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	public void addWarning(String warningMessage) {
 		addDiagnostic(ParseDiagnostic.Severity.WARNING, "MANUAL_WARNING", warningMessage, null, true, null);
 	}
+
+	private boolean expectsVariableIdentifierToken(Parser recognizer) {
+		if (!(recognizer instanceof SQLSelectParserParser)) {
+			return false;
+		}
+
+		IntervalSet expectedTokens = recognizer.getExpectedTokens();
+		if (expectedTokens == null) {
+			return false;
+		}
+
+		return expectedTokens.contains(SQLSelectParserParser.Variable_Identifier)
+				|| expectedTokens.contains(SQLSelectParserParser.Extended_Variable_Identifier)
+				|| expectedTokens.contains(SQLSelectParserParser.Mixed_Variable_Identifier);
+	}
+
+	private boolean nextTokenLooksLikeVariableBody(Parser recognizer) {
+		TokenStream input = recognizer.getInputStream();
+		if (input == null) {
+			return false;
+		}
+
+		Token next = input.LT(2);
+		if (next == null) {
+			return false;
+		}
+
+		String nextText = next.getText();
+		if (nextText == null || nextText.isBlank()) {
+			return false;
+		}
+
+		char first = nextText.charAt(0);
+		return first == '[' || first == '_' || Character.isLetter(first);
+	}
+
+	private boolean shouldRecoverMalformedVariableStart(Parser recognizer, Token currentToken) {
+		if (recognizer == null || currentToken == null) {
+			return false;
+		}
+
+		String currentText = currentToken.getText();
+		if (!"<".equals(currentText)) {
+			return false;
+		}
+
+		return expectsVariableIdentifierToken(recognizer) && nextTokenLooksLikeVariableBody(recognizer);
+	}
 	
 	@Override
 	public void reset(Parser recognizer) {
@@ -89,6 +141,24 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	public Token recoverInline(Parser recognizer) throws RecognitionException {
 	    // Get the current token
 		Token currentToken = recognizer.getCurrentToken();
+
+		if (shouldRecoverMalformedVariableStart(recognizer, currentToken)) {
+			String recoveryMessage = String.format(
+					"Line %d:%d - Recovering malformed variable identifier start '%s' by skipping one token",
+					currentToken.getLine(),
+					currentToken.getCharPositionInLine(),
+					currentToken.getText());
+			errorList.add(recoveryMessage);
+			addDiagnostic(ParseDiagnostic.Severity.WARNING,
+					"RECOVER_MALFORMED_VARIABLE_START",
+					recoveryMessage,
+					currentToken,
+					true,
+					null);
+
+			recognizer.consume();
+			return recognizer.getCurrentToken();
+		}
     
 		// Create an error message
 		String errorMessage = String.format("Line %d:%d - Invalid syntax near '%s'", 
@@ -104,6 +174,25 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 
 	@Override
 	public void recover(Parser recognizer, RecognitionException e) throws RecognitionException {
+		Token currentToken = recognizer.getCurrentToken();
+		if (shouldRecoverMalformedVariableStart(recognizer, currentToken)) {
+			String recoveryMessage = String.format(
+					"Line %d:%d - Recovering malformed variable identifier start '%s' by skipping one token",
+					currentToken.getLine(),
+					currentToken.getCharPositionInLine(),
+					currentToken.getText());
+			errorList.add(recoveryMessage);
+			addDiagnostic(ParseDiagnostic.Severity.WARNING,
+					"RECOVER_MALFORMED_VARIABLE_START",
+					recoveryMessage,
+					currentToken,
+					true,
+					e == null ? null : e.getClass().getSimpleName());
+
+			recognizer.consume();
+			return;
+		}
+
 	    // Add the error to our list
 		Token offendingToken = e == null ? null : e.getOffendingToken();
 		String errorMessage = String.format("Line %d:%d - Syntax error, attempting recovery", 

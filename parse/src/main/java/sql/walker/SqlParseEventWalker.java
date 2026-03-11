@@ -30,8 +30,10 @@ import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.CharStream;
 
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
@@ -63,6 +65,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * AST Walker Helper for this instance of the SQL Parse Event Walker
 	 */
 	private final SqlASTWalkerHelper walker;
+	private final Set<String> invalidVariableDiagnosticKeys;
 
 
 	// Constructors
@@ -71,8 +74,123 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Initialize the walker with the SqlASTWalkerHelper
 		this.walker = new SqlASTWalkerHelper();
+		this.invalidVariableDiagnosticKeys = new HashSet<String>();
 
 
+	}
+
+	private void emitInvalidVariableDiagnostic(Token startToken, String tokenText) {
+		Integer line = startToken == null ? null : startToken.getLine();
+		Integer charPos = startToken == null ? null : startToken.getCharPositionInLine();
+
+		String key = String.valueOf(line)
+				+ ":"
+				+ String.valueOf(charPos)
+				+ ":"
+				+ String.valueOf(tokenText);
+		if (invalidVariableDiagnosticKeys.contains(key)) {
+			return;
+		}
+		invalidVariableDiagnosticKeys.add(key);
+
+		String variableName = tokenText == null ? "<unknown>" : tokenText;
+		String message = String.format(
+				"Format of Variable Name is unrecognized %s as one of the supported variable identifier forms at (l:%s c:%s).",
+				variableName,
+				String.valueOf(line),
+				String.valueOf(charPos));
+
+		walker.addWalkerFatal("INVALID VARIABLE NAME", message, line, charPos, tokenText);
+	}
+
+	private String recoverVariableNameFromToken(Token startToken) {
+		if (startToken == null) {
+			return null;
+		}
+
+		String tokenText = startToken.getText();
+		if (tokenText == null || !tokenText.startsWith("<")) {
+			return tokenText;
+		}
+
+		CharStream input = startToken.getInputStream();
+		if (input == null) {
+			return tokenText;
+		}
+
+		int startIndex = startToken.getStartIndex();
+		if (startIndex < 0) {
+			return tokenText;
+		}
+
+		String fromStart = input.getText(Interval.of(startIndex, input.size() - 1));
+		if (fromStart == null || fromStart.isBlank() || fromStart.charAt(0) != '<') {
+			return tokenText;
+		}
+
+		StringBuilder recovered = new StringBuilder();
+		int nesting = 0;
+		for (int i = 0; i < fromStart.length(); i++) {
+			char ch = fromStart.charAt(i);
+			recovered.append(ch);
+			if (ch == '<') {
+				nesting++;
+			} else if (ch == '>') {
+				nesting--;
+				if (nesting <= 0) {
+					break;
+				}
+			}
+		}
+
+		String recoveredName = recovered.toString();
+		return recoveredName.isBlank() ? tokenText : recoveredName;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> emitInvalidVariableDiagnosticAndSynthesizeIfNeeded(
+			SQLSelectParserParser.Variable_identifierContext ctx,
+			Map<String, Object> subMap) {
+		if (ctx == null) {
+			return subMap;
+		}
+
+		Token startToken = ctx.getStart();
+		Integer line = startToken == null ? null : startToken.getLine();
+		Integer charPos = startToken == null ? null : startToken.getCharPositionInLine();
+		String tokenText = recoverVariableNameFromToken(startToken);
+
+		Object candidate = null;
+		if (subMap != null) {
+			candidate = subMap.get("1");
+		}
+
+		boolean malformedVariableIdentifier = subMap == null
+				|| subMap.isEmpty()
+				|| (subMap.size() == 1 && subMap.containsKey(ASTWALKER_RULE_TYPE_KEY))
+				|| candidate == null;
+
+		if (!malformedVariableIdentifier) {
+			return subMap;
+		}
+
+		if (subMap == null) {
+			Integer stackLevel = walker.currentStackLevel(ctx.getRuleIndex());
+			subMap = walker.makeRuleMap(ctx.getRuleIndex());
+			walker.collect(ctx.getRuleIndex(), stackLevel, subMap);
+		}
+
+		if (!subMap.containsKey("1")) {
+			Map<String, Object> substitution = new HashMap<String, Object>();
+			substitution.put(MUMBLE_NAME_KEY, tokenText == null ? ctx.getText() : tokenText);
+
+			Map<String, Object> syntheticVariable = new HashMap<String, Object>();
+			syntheticVariable.put(MUMBLE_SUBSTITUTION_KEY, substitution);
+			subMap.put("1", syntheticVariable);
+		}
+
+		emitInvalidVariableDiagnostic(startToken, tokenText);
+		return subMap;
 	}
 
 	// Getters and Setters
@@ -835,6 +953,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			walker.showTrace(walker.parseTrace, "TABLE PRIMARY missing recovery map: " + ctx.getText());
+			walker.addToParent(parentRuleIndex, parentStackLevel, new HashMap<String, Object>());
+			return;
+		}
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		String alias = null;
@@ -3700,6 +3823,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			String sourceText = recoverVariableNameFromToken(ctx.getStart());
+			String aliasText = ctx.getChildCount() >= 2 ? ctx.getChild(1).getText() : null;
+			if (sourceText != null && sourceText.startsWith("<") && sourceText.endsWith(">")) {
+				subMap = walker.makeRuleMap(ruleIndex);
+
+				Map<String, Object> substitution = new HashMap<String, Object>();
+				substitution.put(MUMBLE_NAME_KEY, sourceText);
+
+				Map<String, Object> syntheticReference = new HashMap<String, Object>();
+				syntheticReference.put(MUMBLE_SUBSTITUTION_KEY, substitution);
+				subMap.put("1", syntheticReference);
+
+				Map<String, Object> aliasMap = new HashMap<String, Object>();
+				aliasMap.put(MUMBLE_ALIAS_KEY, aliasText);
+				subMap.put("2", aliasMap);
+
+				emitInvalidVariableDiagnostic(ctx.getStart(), sourceText);
+			}
+		}
+		if (subMap == null) {
+			throw new IllegalStateException("Missing AST node map for table_primary at: " + ctx.getText());
+		}
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> item;
 		String alias = null;
@@ -3733,6 +3879,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 					if (!done)
 						done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
+				}
+			} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
+				item = walker.checkForSubstitutionVariable(item, "tuple");
+				item.put(MUMBLE_ALIAS_KEY, null);
+				subMap.put(MUMBLE_TABLE_KEY, item);
+				Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
+				String tableName = substitution == null ? null : (String) substitution.get(MUMBLE_NAME_KEY);
+				if (tableName != null) {
+					walker.ensureTableDictionaryEntry(tableName);
 				}
 			} else { // VALUES STATEMENT can only happen in this instance
 				subMap.putAll(item);
@@ -6693,6 +6848,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitVariable_identifier(@NotNull SQLSelectParserParser.Variable_identifierContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap = emitInvalidVariableDiagnosticAndSynthesizeIfNeeded(ctx, subMap);
+		if (subMap == null || !subMap.containsKey("1")) {
+			return;
+		}
 		walker.handleOneChild(ruleIndex);
 	}
 

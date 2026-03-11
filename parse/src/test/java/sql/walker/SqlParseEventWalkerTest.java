@@ -2021,7 +2021,7 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={*=[[@1,8:8='*',<289>,1:8]]}, table_dictionary={fourth={*=[[@1,8:8='*',<289>,1:8]]}}, def_query0={query_dictionary={*=[[@5,23:23='*',<289>,1:23]]}, table_dictionary={third={*=[[@5,23:23='*',<289>,1:23]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={F4=fourth, T3=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
-	
+	  
 	@Test
 	public void getComplexPredicandVariablesTest() {
 		// Predicand Variable Test
@@ -2051,7 +2051,100 @@ public class SqlParseEventWalkerTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,12:12='*',<289>,1:12]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={*=[[@1,8:10='cec',<328>,1:8]]}}, filters=[{name=<Permanent Country>, type=predicand}, {name=<College Attendance Status>, type=predicand}, {name=<Graduation Year>, type=predicand}, {name=<Application Admissions Status>, type=predicand}, {name=<Term Of Interest>, type=predicand}, {name=<Date Submitted>, type=predicand}], interface={*=[{name=*, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	/*****************
+	 * TUPLE SUBSTITUTION VARIABLE TESTS
+	 * 
+	 */
+
+	@Test
+	public void tupleSubstitutionVariableTestV1() {
+		// Special Tuple Variable Test with synthetic tuple constructed even when tuple variable name is malformed
+		// This test validates that the parser recovers from the malformed tuple variable by synthesizing a tuple variable entry in the substitution map 
+		// and retaining it for downstream processing, and surfaces appropriate diagnostics for the malformed tuple variable name
+		String query = " select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts";
+		final SQLSelectParserParser parser = parse(query);
+		SqlContext tree = parser.sql();
+		ParseErrorCollector parseErrorCollector = (ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertNotEquals(
+				"Expected parser recovery diagnostics for malformed tuple variable in query: " + query,
+				0,
+				parseErrorCollector.getErrorCount());
+
+		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, null, null, true);
+		Snippet snippet = extractor.getSnippet();
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={literal=1}}, from={2={alias=null}, table={substitution={name=<[Acquia_ALR].[no__contacts].last_delivered>, type=tuple}, alias=null}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Acquia_ALR].[no__contacts].last_delivered>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[Acquia_ALR].[no__contacts].last_delivered>={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@1,8:8='1',<298>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@1,8:8='1',<298>,1:8]]}, table_dictionary={<[Acquia_ALR].[no__contacts].last_delivered>={}}, interface={unnamed_0=[]}}}",
+				extractor.getSymbolTable().toString());
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"INVALID VARIABLE NAME",
+				ParseDiagnostic.Severity.FATAL,
+				"Format of Variable Name is unrecognized",
+				"<[Acquia_ALR].[no__contacts].last_delivered>",
+				1);
+
+		Assert.assertTrue(
+				"Expected synthesized substitution variable entry to be retained after recovery",
+				extractor.getSubstitutionsMap().containsKey("<[Acquia_ALR].[no__contacts].last_delivered>"));
+	}
+	@Test
+	public void tupleSubstitutionVariableTestV2() {
+		// Special Tuple Variable Test with synthetic tuple constructed even when tuple variable name is malformed
+		// This test validates that the parser recovers from the malformed tuple variable by synthesizing a tuple variable entry in the substitution map 
+		// and retaining it for downstream processing, and surfaces appropriate diagnostics for the malformed tuple variable name
+		String query = " select 1 from <[Acquia_ALR].[no__contacts].hmmm> no_contacts"
+			+ " join <[another].[malformed].tuple> t on 1=1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlContext tree = parser.sql();
+		ParseErrorCollector parseErrorCollector = (ParseErrorCollector) parser.getErrorHandler();
+		Assert.assertNotEquals(
+				"Expected parser recovery diagnostics for malformed tuple variable in query: " + query,
+				0,
+				parseErrorCollector.getErrorCount());
+
+		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, null, null, true);
+		Snippet snippet = extractor.getSnippet();
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={literal=1}}, from={2={alias=null}, table={substitution={name=<[Acquia_ALR].[no__contacts].last_delivered>, type=tuple}, alias=null}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Acquia_ALR].[no__contacts].last_delivered>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<[Acquia_ALR].[no__contacts].last_delivered>={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@1,8:8='1',<298>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@1,8:8='1',<298>,1:8]]}, table_dictionary={<[Acquia_ALR].[no__contacts].last_delivered>={}}, interface={unnamed_0=[]}}}",
+				extractor.getSymbolTable().toString());
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"INVALID VARIABLE NAME",
+				ParseDiagnostic.Severity.FATAL,
+				"Format of Variable Name is unrecognized",
+				"<[Acquia_ALR].[no__contacts].last_delivered>",
+				1);
+
+		Assert.assertTrue(
+				"Expected synthesized substitution variable entry to be retained after recovery",
+				extractor.getSubstitutionsMap().containsKey("<[Acquia_ALR].[no__contacts].last_delivered>"));
+	}
 	
+	// end of malformed tuple variable tests
+
 	@Test
 	public void getComplexColumnVariablesTest() {
 		// Column Variable Test
