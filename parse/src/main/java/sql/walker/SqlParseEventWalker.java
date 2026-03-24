@@ -378,17 +378,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return null;
 		}
 
-		Object schemaObj = tableNode.get(MUMBLE_SCHEMA_KEY);
-		if (!(schemaObj instanceof String schemaName) || schemaName.isBlank()) {
-			return tableName;
-		}
-
 		// Keep tuple substitutions and already-qualified names unchanged.
 		if (tableName.startsWith("<") || tableName.contains(".")) {
 			return tableName;
 		}
 
-		return schemaName + "." + tableName;
+		Object dbNameObj = tableNode.get(MUMBLE_DATABASE_NAME_KEY);
+		String dbName = (dbNameObj instanceof String db && !db.isBlank()) ? db : null;
+
+		Object schemaObj = tableNode.get(MUMBLE_SCHEMA_KEY);
+		String schemaName = (schemaObj instanceof String schema && !schema.isBlank()) ? schema : null;
+
+		if (dbName != null && schemaName != null) {
+			return dbName + "." + schemaName + "." + tableName;
+		}
+		if (schemaName != null) {
+			return schemaName + "." + tableName;
+		}
+		if (dbName != null) {
+			return dbName + "." + tableName;
+		}
+
+		return tableName;
 	}
 
 	public HashMap<String, Object> getSubstitutionsMap() {
