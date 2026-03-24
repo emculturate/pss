@@ -36,6 +36,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_FROM_KEY = "from";
     public static final String MUMBLE_FUNCTION_KEY = "function";
     public static final String MUMBLE_FUNCTION_NAME_KEY = "function_name";
+    public static final String MUMBLE_GROUPED_BY_KEY = "grouped_by";
     public static final String MUMBLE_GROUPBY_KEY = "groupby";
     public static final String MUMBLE_HAVING_KEY = "having";
     public static final String MUMBLE_ILIKE_ANY_KEY = "ilike_any";
@@ -70,6 +71,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_OPERAND_KEY = "operand";
     public static final String MUMBLE_OPERATOR_KEY = "operator";
     public static final String MUMBLE_OR_KEY = "or";
+    public static final String MUMBLE_ORDERED_BY_KEY = "ordered_by";
     public static final String MUMBLE_ORDERBY_KEY = "orderby";
     public static final String MUMBLE_OVER_KEY = "over";
     public static final String MUMBLE_PARAMETERS_KEY = "parameters";
