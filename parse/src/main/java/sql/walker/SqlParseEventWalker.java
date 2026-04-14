@@ -193,6 +193,64 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return subMap;
 	}
 
+	private String normalizeJinjaReferenceKey(String jinjaReference) {
+		if (jinjaReference == null) {
+			return null;
+		}
+		// Normalize whitespace so equivalent templates map to one dictionary key,
+		// but preserve single spaces so the key reads as the original template text.
+		return jinjaReference.trim().replaceAll("\\s+", " ");
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveSubstitutionTableReference(Map<String, Object> substitution) {
+		if (substitution == null) {
+			return null;
+		}
+
+		Object nameObj = substitution.get(MUMBLE_NAME_KEY);
+		String substitutionName = nameObj == null ? null : nameObj.toString();
+
+		Object partsObj = substitution.get(MUMBLE_PARTS_KEY);
+		if (partsObj instanceof Map<?, ?>) {
+			Map<String, Object> parts = (Map<String, Object>) partsObj;
+			if (parts.containsKey(MUMBLE_JINJA_TABLE_KEY)
+					|| parts.containsKey(MUMBLE_JINJA_VARIABLE_KEY)) {
+				return normalizeJinjaReferenceKey(substitutionName);
+			}
+		}
+
+		return substitutionName;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> asLiteralMap(Object valueObj) {
+		if (valueObj instanceof Map<?, ?>) {
+			Map<String, Object> mapValue = (Map<String, Object>) valueObj;
+			if (mapValue.containsKey(MUMBLE_LITERAL_KEY)) {
+				return mapValue;
+			}
+			if (mapValue.size() == 1 && mapValue.containsKey("1")) {
+				Object nested = mapValue.get("1");
+				HashMap<String, Object> literal = new HashMap<String, Object>();
+				literal.put(MUMBLE_LITERAL_KEY, nested);
+				return literal;
+			}
+		}
+
+		HashMap<String, Object> literal = new HashMap<String, Object>();
+		literal.put(MUMBLE_LITERAL_KEY, valueObj);
+		return literal;
+	}
+
+	private Map<String, Object> getOrCreateRuleMap(int ruleIndex, Integer stackLevel) {
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			subMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		}
+		return subMap;
+	}
+
 	// Getters and Setters
 
 	public HashMap<String, Object> getAsTree() {
@@ -4030,7 +4088,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.put(MUMBLE_ALIAS_KEY, null);
 				subMap.put(MUMBLE_TABLE_KEY, item);
 				Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
-				String tableName = substitution == null ? null : (String) substitution.get(MUMBLE_NAME_KEY);
+				String tableName = resolveSubstitutionTableReference(substitution);
 				if (tableName != null) {
 					walker.ensureTableDictionaryEntry(tableName);
 				}
@@ -4085,7 +4143,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.putAll(reference);
 				// Collect Symbol Table Reference
 				Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
-				String tableName = (String) substitution.get("name");
+				String tableName = resolveSubstitutionTableReference(substitution);
 				walker.collectTableAlias(alias, tableName);
 				walker.ensureTableDictionaryEntry(tableName);
 
@@ -4260,7 +4318,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Check for Substitution Variable
 			Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
-			String name = (String) substitution.get("name");
+			String name = resolveSubstitutionTableReference(substitution);
 			walker.ensureTableDictionaryEntry(name);
 			subMap.putAll(reference);
 
@@ -4312,7 +4370,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Substitution Variable
 			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
-			String name = (String) substitution.get("name");
+			String name = resolveSubstitutionTableReference(substitution);
 			walker.ensureTableDictionaryEntry(name);
 			// Substitution Variable is ready for use
 			subMap.putAll(item);
@@ -5582,6 +5640,207 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Add item to parent map
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "Substitution Variable: " + subMap);
+	}
+
+	@Override
+	public void exitJinja_name(@NotNull SQLSelectParserParser.Jinja_nameContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+
+		String nameText = null;
+		if (ctx.identifier() != null) {
+			nameText = ctx.identifier().getText();
+		} else {
+			nameText = ctx.getText();
+		}
+
+		if (subMap == null) {
+			subMap = walker.makeRuleMap(ruleIndex);
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_NAME_KEY, nameText);
+		walker.collect(ruleIndex, stackLevel, subMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitJinja_arg(@NotNull SQLSelectParserParser.Jinja_argContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			subMap = walker.makeRuleMap(ruleIndex);
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (ctx.getChildCount() == 1) {
+			Object rawValue = ctx.getText();
+			subMap.clear();
+			subMap.put(MUMBLE_ARGUMENT_KEY, rawValue);
+		} else if (ctx.getChildCount() == 3) {
+			Object kwNameObj = subMap.containsKey("1") ? subMap.get("1") : (ctx.kw_name == null ? null : ctx.kw_name.getText());
+			Object rawValue = ctx.getChild(2).getText();
+			String kwName = kwNameObj == null ? null : kwNameObj.toString();
+			Map<String, Object> literal = asLiteralMap(rawValue);
+
+			subMap.clear();
+			if (kwName != null) {
+				HashMap<String, Object> kwArg = new HashMap<String, Object>();
+				kwArg.put(kwName, literal);
+				subMap.put(MUMBLE_ARGUMENT_KEY, kwArg);
+			}
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	@Override
+	public void exitJinja_arg_list(@NotNull SQLSelectParserParser.Jinja_arg_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getOrCreateRuleMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		HashMap<String, Object> orderedArgs = new HashMap<String, Object>();
+		int outputIndex = 1;
+		for (int inputIndex = 1; subMap.containsKey(String.valueOf(inputIndex)); inputIndex++) {
+			Object value = subMap.get(String.valueOf(inputIndex));
+			if (",".equals(value)) {
+				continue;
+			}
+
+			Object argValue = value;
+			if (value instanceof Map<?, ?>) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> argMap = (Map<String, Object>) value;
+				if (argMap.containsKey(MUMBLE_ARGUMENT_KEY)) {
+					argValue = argMap.get(MUMBLE_ARGUMENT_KEY);
+				}
+			}
+
+			orderedArgs.put(String.valueOf(outputIndex++), argValue);
+		}
+
+		subMap.clear();
+		subMap.putAll(orderedArgs);
+	}
+
+	@Override
+	public void exitJinja_variable_access(@NotNull SQLSelectParserParser.Jinja_variable_accessContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getOrCreateRuleMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		HashMap<String, Object> orderedParts = new HashMap<String, Object>();
+		int outputIndex = 1;
+		for (int inputIndex = 1; subMap.containsKey(String.valueOf(inputIndex)); inputIndex++) {
+			Object value = subMap.get(String.valueOf(inputIndex));
+			if (".".equals(value)) {
+				continue;
+			}
+
+			Object nameValue = value;
+			if (value instanceof Map<?, ?>) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> nameMap = (Map<String, Object>) value;
+				if (nameMap.containsKey(MUMBLE_NAME_KEY)) {
+					nameValue = nameMap.get(MUMBLE_NAME_KEY);
+				}
+			}
+
+			orderedParts.put(String.valueOf(outputIndex++), nameValue);
+		}
+
+		subMap.clear();
+		subMap.putAll(orderedParts);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitJinja_function_call(@NotNull SQLSelectParserParser.Jinja_function_callContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getOrCreateRuleMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		String functionName;
+		if (ctx.func_name != null) {
+			functionName = ctx.func_name.getText();
+		} else {
+			functionName = ctx.object_name.getText() + "." + ctx.method_name.getText();
+		}
+
+		Map<String, Object> argList = null;
+		for (int inputIndex = 1; subMap.containsKey(String.valueOf(inputIndex)); inputIndex++) {
+			Object value = subMap.get(String.valueOf(inputIndex));
+			if (value instanceof Map<?, ?>) {
+				argList = (Map<String, Object>) value;
+			}
+		}
+
+		HashMap<String, Object> args = new HashMap<String, Object>();
+		HashMap<String, Object> kwargs = new HashMap<String, Object>();
+		int argIndex = 1;
+		if (argList != null) {
+			for (int i = 1; argList.containsKey(String.valueOf(i)); i++) {
+				Object argObj = argList.get(String.valueOf(i));
+				if (argObj instanceof Map<?, ?>) {
+					Map<String, Object> argMap = (Map<String, Object>) argObj;
+					if (argMap.containsKey(MUMBLE_LITERAL_KEY)) {
+						args.put(String.valueOf(argIndex++), argMap);
+					} else if (argMap.size() == 1) {
+						Map.Entry<String, Object> kwEntry = argMap.entrySet().iterator().next();
+						kwargs.put(kwEntry.getKey(), kwEntry.getValue());
+					} else {
+						args.put(String.valueOf(argIndex++), argMap);
+					}
+				} else {
+					args.put(String.valueOf(argIndex++), asLiteralMap(argObj));
+				}
+			}
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_FUNCTION_NAME_KEY, functionName);
+		subMap.put(MUMBLE_PARAMETERS_KEY, args);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitJinja_identifier(@NotNull SQLSelectParserParser.Jinja_identifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getOrCreateRuleMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> jinjaNode = new HashMap<String, Object>();
+		for (int inputIndex = 1; subMap.containsKey(String.valueOf(inputIndex)); inputIndex++) {
+			Object value = subMap.get(String.valueOf(inputIndex));
+			if (value instanceof Map<?, ?>) {
+				jinjaNode = (Map<String, Object>) value;
+				break;
+			}
+		}
+
+		HashMap<String, Object> parts = new HashMap<String, Object>();
+		if (ctx.jinja_variable_access() != null) {
+			parts.put(MUMBLE_JINJA_VARIABLE_KEY, jinjaNode);
+		} else {
+			parts.put(MUMBLE_JINJA_TABLE_KEY, jinjaNode);
+		}
+
+		HashMap<String, Object> substitution = new HashMap<String, Object>();
+		substitution.put(MUMBLE_NAME_KEY, ctx.start.getInputStream().getText(new Interval(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
+		substitution.put(MUMBLE_PARTS_KEY, parts);
+
+		subMap.clear();
+		subMap.put(MUMBLE_SUBSTITUTION_KEY, substitution);
 	}
 
 	@Override

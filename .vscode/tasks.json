@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Prime Parse Build Model",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-f",
+        "parse/pom.xml",
+        "-DskipTests",
+        "generate-sources",
+        "test-compile"
+      ],
+      "problemMatcher": [
+        "$javac"
+      ],
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Recover Java Model Now",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "tools/recover-java-model.sh"
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": [
+        "$javac"
+      ],
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "task.allowAutomaticTasks": "on",
+  "java.project.importOnFirstTimeStartup": "automatic",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.autobuild.enabled": true,
+  "java.import.maven.enabled": true,
+  "java.import.maven.offline.enabled": false,
+  "java.import.gradle.enabled": false
+}

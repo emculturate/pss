@@ -28,6 +28,24 @@ options {
 }
 
 @members {
+  private boolean isJinjaPrimaryFunction(String name) {
+    if (name == null) {
+      return false;
+    }
+    String lowered = name.toLowerCase();
+    return "ref".equals(lowered)
+        || "source".equals(lowered)
+        || "stream".equals(lowered)
+        || "var".equals(lowered)
+        || "env_var".equals(lowered);
+  }
+
+  private boolean isJinjaObjectMethod(String objectName, String methodName) {
+    if (objectName == null || methodName == null) {
+      return false;
+    }
+    return "config".equalsIgnoreCase(objectName) && "get".equalsIgnoreCase(methodName);
+  }
 }
 
 /*
@@ -394,6 +412,7 @@ join_extension_primary
 table_primary
   : table_or_query_name as_clause?
   | variable_identifier as_clause
+  | jinja_identifier as_clause?
   | values_statement_primary
   | subquery as_clause? 
   ;
@@ -402,6 +421,7 @@ table_primary
 tuple_primary
   : table_or_query_name
   | variable_identifier
+  | jinja_identifier
   | values_statement_primary
   | subquery
  ;
@@ -1353,6 +1373,52 @@ extended_variable_identifier
 	:  Extended_Variable_Identifier
 	|  Mixed_Variable_Identifier
 	;
+
+/*
+===============================================================================
+  Jinja / DBT-style table reference identifiers
+  Covers: {{ ref(...) }}, {{ source(...) }}, {{ stream(...) }},
+          {{ var(...) }}, {{ env_var(...) }}, {{ config(...) }},
+          {{ this }}, {{ this.identifier }}, {{ target.schema }}, etc.
+===============================================================================
+*/
+
+jinja_identifier
+  : JINJA_OPEN jinja_function_call JINJA_CLOSE
+  | JINJA_OPEN jinja_variable_access JINJA_CLOSE
+  ;
+
+// Any zero-or-more-argument call: ref(...), source(...), stream(...), var(...), env_var(...), config.get(...)
+jinja_function_call
+  : func_name=identifier
+    {isJinjaPrimaryFunction($func_name.text)}?
+    LEFT_PAREN jinja_arg_list? RIGHT_PAREN
+  | object_name=identifier DOT method_name=identifier
+    {isJinjaObjectMethod($object_name.text, $method_name.text)}?
+    LEFT_PAREN jinja_arg_list? RIGHT_PAREN
+  ;
+
+jinja_arg_list
+  : jinja_arg (COMMA jinja_arg)*
+  ;
+
+// Positional string arg, numeric arg, or keyword arg (e.g. v=2 for dbt ref versioning)
+jinja_arg
+  : Character_String_Literal
+  | NUMBER
+  | kw_name=identifier EQUAL Character_String_Literal
+  | kw_name=identifier EQUAL NUMBER
+  ;
+
+// Property-chain variable: this, this.identifier, target.schema, target.database, etc.
+jinja_variable_access
+  : jinja_name (DOT jinja_name)*
+  ;
+
+jinja_name
+  : identifier
+  | NUMBER
+  ;
  
 simple_numeric_identifier
    :	Numeric_Identifier
@@ -2453,6 +2519,20 @@ Space
 
 White_Space
   :	( Control_Characters  | Extended_Control_Characters )+ -> skip
+  ;
+
+/*
+===============================================================================
+  Jinja delimiters
+  Keep these near the end to avoid renumbering legacy token IDs used in tests.
+===============================================================================
+*/
+JINJA_OPEN
+  : '{{'
+  ;
+
+JINJA_CLOSE
+  : '}}'
   ;
 
 

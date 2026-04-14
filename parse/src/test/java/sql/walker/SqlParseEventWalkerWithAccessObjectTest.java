@@ -901,6 +901,240 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 	}
 
+	/**** START OF JINJA TABLE REFERENCE TESTS */
+	/**
+	 * Placeholder tests for newly supported JINJA table references.
+	 * Expected values are intentionally failing placeholders for now.
+	 */
+	@Test
+	public void basicJinjaTableReferenceRefSingleParameterTest() {
+		final String query = "select * from {{ ref('my_model') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ ref('my_model') }}, parts={jinja_table={function_name=ref, parameters={1={literal='my_model'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ ref('my_model') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ ref('my_model') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ ref('my_model') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceSourceFunctionTest() {
+		final String query = "select * from {{ source('raw', 'orders') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ source('raw', 'orders') }}, parts={jinja_table={function_name=source, parameters={1={literal='raw'}, 2={literal='orders'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ source('raw', 'orders') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('raw', 'orders') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('raw', 'orders') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceStreamFunctionTest() {
+		final String query = "select * from {{ stream('event_stream') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ stream('event_stream') }}, parts={jinja_table={function_name=stream, parameters={1={literal='event_stream'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ stream('event_stream') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ stream('event_stream') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ stream('event_stream') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceVarFunctionTest() {
+		final String query = "select * from {{ var('active_table') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ var('active_table') }}, parts={jinja_table={function_name=var, parameters={1={literal='active_table'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ var('active_table') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ var('active_table') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ var('active_table') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceEnvVarFunctionTest() {
+		final String query = "select * from {{ env_var('DBT_TABLE_NAME') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ env_var('DBT_TABLE_NAME') }}, parts={jinja_table={function_name=env_var, parameters={1={literal='DBT_TABLE_NAME'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ env_var('dbt_table_name') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ env_var('dbt_table_name') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ env_var('DBT_TABLE_NAME') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceConfigDotMethodTest() {
+		final String query = "select * from {{ config.get('materialized') }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ config.get('materialized') }}, parts={jinja_table={function_name=config.get, parameters={1={literal='materialized'}}}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ config.get('materialized') }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ config.get('materialized') }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ config.get('materialized') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceVariableDotAccessTest() {
+		final String query = "select * from {{ target.schema }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ target.schema }}, parts={jinja_variable={1=target, 2=schema}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ target.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ target.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ target.schema }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceThisVariableTest() {
+		final String query = "select * from {{ this }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ this }}, parts={jinja_variable={1=this}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ this }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ this }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ this }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceThisSchemaTest() {
+		final String query = "select * from {{ this.schema }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ this.schema }}, parts={jinja_variable={1=this, 2=schema}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ this.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ this.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ this.schema }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceThisDatabaseTest() {
+		final String query = "select * from {{ this.database }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ this.database }}, parts={jinja_variable={1=this, 2=database}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ this.database }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ this.database }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ this.database }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceThisDatabaseSchemaTest() {
+		final String query = "select * from {{ this.database.schema }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ this.database.schema }}, parts={jinja_variable={1=this, 2=database, 3=schema}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ this.database.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ this.database.schema }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ this.database.schema }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void basicJinjaTableReferenceThisDatabaseSchemaTableTest() {
+		final String query = "select * from {{ this.database.schema.tab }}";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={substitution={name={{ this.database.schema.tab }}, parts={jinja_variable={1=this, 2=database, 3=schema, 4=tab}}, type=tuple}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={{{ this.database.schema.tab }}={*=[[@1,7:7='*',<289>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ this.database.schema.tab }}={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ this.database.schema.tab }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+	/**** END OF JINJA TABLE REFERENCE TESTS */
+
 	/**
 	 * Run the SQL parser test with the given query.
 	 * This method uses the SqlParserAccess class to parse the SQL query

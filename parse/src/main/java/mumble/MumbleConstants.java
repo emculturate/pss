@@ -15,6 +15,7 @@ public final class MumbleConstants {
 
     public static final String MUMBLE_ALIAS_KEY = "alias";
     public static final String MUMBLE_AND_KEY = "and";
+    public static final String MUMBLE_ARGUMENT_KEY = "argument";
     public static final String MUMBLE_ASSIGNMENTS_KEY = "assignments";
     public static final String MUMBLE_BETWEEN_KEY = "between";
     public static final String MUMBLE_BRACKET_FRAME_KEY = "bracket";
@@ -49,6 +50,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_INTERSECT_KEY = "intersect";
     public static final String MUMBLE_INTO_KEY = "into";
     public static final String MUMBLE_ITEM_KEY = "item";
+    public static final String MUMBLE_JINJA_TABLE_KEY = "jinja_table";
+    public static final String MUMBLE_JINJA_VARIABLE_KEY = "jinja_variable";
     public static final String MUMBLE_JOIN_EXTENSION_KEY = "extension";
     public static final String MUMBLE_JOIN_KEY = "join";
     public static final String MUMBLE_JOIN_ON_KEY = "on";
