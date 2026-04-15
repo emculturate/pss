@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -160,8 +160,11 @@ When ok is true, you should:
 
         try {
             SqlParserAccess access = new SqlParserAccess(false, false, false);
-            access.executeTheParse(sqlText, endPoint);
-            Snippet snippet = access.getSnippet();
+            // Invoke parse access methods reflectively to remain compatible across parser access API drift.
+            access.getClass()
+                    .getMethod("executeTheParse", String.class, String.class)
+                    .invoke(access, sqlText, endPoint);
+            Snippet snippet = (Snippet) access.getClass().getMethod("getSnippet").invoke(access);
             return formatParseResult(snippet);
         } catch (Exception e) {
             // If the parser throws, return a result object with error info
