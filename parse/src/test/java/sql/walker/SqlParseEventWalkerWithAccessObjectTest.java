@@ -1133,8 +1133,221 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<289>,1:7]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
-	/**** END OF JINJA TABLE REFERENCE TESTS */
 
+		/**** END OF JINJA TABLE REFERENCE TESTS */
+
+	/***
+	 * Broken UNION validation diagnostic
+	 */
+	@Test
+	public void subqueryUnionJinjaSourceUnionInterfaceValidationV1Test() {
+		final String query = "select *\n"
+				+ "from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    union\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=paper_data, query={union={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={def_union2={query0={query_dictionary={audience=[[@11,73:80='audience',<329>,4:19]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@15,101:110='stream_key',<329>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<329>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<329>,6:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<329>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<329>,6:10]], stream_key=[[@13,87:99='mail_contacts',<329>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<329>,3:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}, query1={query_dictionary={audience=[[@46,328:335='audience',<329>,10:22]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@50,359:368='stream_key',<329>,11:22]], eab_contact_id=[[@42,291:304='eab_contact_id',<329>,9:29]], valid_from_dt=[[@61,422:434='valid_from_dt',<329>,12:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,311:326='offset_marketing',<329>,10:5]], sent_dt=[[@54,380:395='offset_marketing',<329>,12:10]], stream_key=[[@48,342:357='offset_marketing',<329>,11:5]], eab_contact_id=[[@40,274:289='offset_marketing',<329>,9:12]]}}, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}}, query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={}, interface={*=[{name=*, table_ref=*}]}, table_alias={paper_data=union2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,311:326='offset_marketing',<329>,10:5]], sent_dt=[[@54,380:395='offset_marketing',<329>,12:10]], stream_key=[[@48,342:357='offset_marketing',<329>,11:5]], eab_contact_id=[[@40,274:289='offset_marketing',<329>,9:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<329>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<329>,6:10]], stream_key=[[@13,87:99='mail_contacts',<329>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<329>,3:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={audience=[[@11,73:80='audience',<329>,4:19]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@15,101:110='stream_key',<329>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<329>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<329>,6:51]]}, query1={audience=[[@46,328:335='audience',<329>,10:22]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@50,359:368='stream_key',<329>,11:22]], eab_contact_id=[[@42,291:304='eab_contact_id',<329>,9:29]], valid_from_dt=[[@61,422:434='valid_from_dt',<329>,12:52]]}, query3={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void subqueryUnionJinjaSourceUnionInterfaceValidationV2Test() {
+		final String query = "select paper_data.eab_contact_id\n" 
+				+ "       ,paper_data.audience\n" 
+				+ "       ,paper_data.stream_key\n" 
+				+ "       ,paper_data.valid_from_dt\n" 
+				+ "       ,row_number() over (partition by paper_data.eab_contact_id,paper_data.stream_key order by paper_data.valid_from_dt desc) as rno"
+				+ " from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    union\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=audience, table_ref=paper_data}}, 3={column={name=stream_key, table_ref=paper_data}}, 4={column={name=valid_from_dt, table_ref=paper_data}}, 5={alias=rno, window_function={over={partition_by={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=stream_key, table_ref=paper_data}}}, orderby={1={null_order=null, predicand={column={name=valid_from_dt, table_ref=paper_data}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=paper_data, query={union={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[audience, rno, stream_key, eab_contact_id, valid_from_dt]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={def_union2={query0={query_dictionary={audience=[[@49,323:330='audience',<329>,7:19]], stream_key=[[@53,351:360='stream_key',<329>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<329>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<329>,9:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<329>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<329>,9:10]], stream_key=[[@51,337:349='mail_contacts',<329>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<329>,6:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}, query1={query_dictionary={audience=[[@84,578:585='audience',<329>,13:22]], stream_key=[[@88,609:618='stream_key',<329>,14:22]], eab_contact_id=[[@80,541:554='eab_contact_id',<329>,12:29]], valid_from_dt=[[@99,672:684='valid_from_dt',<329>,15:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,561:576='offset_marketing',<329>,13:5]], sent_dt=[[@92,630:645='offset_marketing',<329>,15:10]], stream_key=[[@86,592:607='offset_marketing',<329>,14:5]], eab_contact_id=[[@78,524:539='offset_marketing',<329>,12:12]]}}, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}}, query_dictionary={audience=[[@7,52:59='audience',<329>,2:19]], rno=[[@39,255:257='rno',<329>,5:131]], stream_key=[[@11,80:89='stream_key',<329>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<329>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<329>,4:19]]}, table_dictionary={}, interface={audience=[{name=audience, table_ref=paper_data}], rno=[{name=eab_contact_id, table_ref=paper_data}, {name=stream_key, table_ref=paper_data}, {name=valid_from_dt, table_ref=paper_data}], stream_key=[{name=stream_key, table_ref=paper_data}], eab_contact_id=[{name=eab_contact_id, table_ref=paper_data}], valid_from_dt=[{name=valid_from_dt, table_ref=paper_data}]}, table_alias={paper_data=union2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,561:576='offset_marketing',<329>,13:5]], sent_dt=[[@92,630:645='offset_marketing',<329>,15:10]], stream_key=[[@86,592:607='offset_marketing',<329>,14:5]], eab_contact_id=[[@78,524:539='offset_marketing',<329>,12:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<329>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<329>,9:10]], stream_key=[[@51,337:349='mail_contacts',<329>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<329>,6:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={audience=[[@49,323:330='audience',<329>,7:19]], stream_key=[[@53,351:360='stream_key',<329>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<329>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<329>,9:51]]}, query1={audience=[[@84,578:585='audience',<329>,13:22]], stream_key=[[@88,609:618='stream_key',<329>,14:22]], eab_contact_id=[[@80,541:554='eab_contact_id',<329>,12:29]], valid_from_dt=[[@99,672:684='valid_from_dt',<329>,15:52]]}, query3={audience=[[@7,52:59='audience',<329>,2:19]], rno=[[@39,255:257='rno',<329>,5:131]], stream_key=[[@11,80:89='stream_key',<329>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<329>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<329>,4:19]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void subqueryIntersectJinjaSourceUnionInterfaceValidationV1Test() {
+		final String query = "select *\n"
+				+ "from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    intersect\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=paper_data, query={intersect={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={audience=[[@11,73:80='audience',<329>,4:19]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@15,101:110='stream_key',<329>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<329>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<329>,6:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<329>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<329>,6:10]], stream_key=[[@13,87:99='mail_contacts',<329>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<329>,3:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}, query1={query_dictionary={audience=[[@46,332:339='audience',<329>,10:22]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@50,363:372='stream_key',<329>,11:22]], eab_contact_id=[[@42,295:308='eab_contact_id',<329>,9:29]], valid_from_dt=[[@61,426:438='valid_from_dt',<329>,12:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,315:330='offset_marketing',<329>,10:5]], sent_dt=[[@54,384:399='offset_marketing',<329>,12:10]], stream_key=[[@48,346:361='offset_marketing',<329>,11:5]], eab_contact_id=[[@40,278:293='offset_marketing',<329>,9:12]]}}, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}}, interface={*=[{name=*, table_ref=*}]}, table_alias={paper_data=intersect2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,315:330='offset_marketing',<329>,10:5]], sent_dt=[[@54,384:399='offset_marketing',<329>,12:10]], stream_key=[[@48,346:361='offset_marketing',<329>,11:5]], eab_contact_id=[[@40,278:293='offset_marketing',<329>,9:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<329>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<329>,6:10]], stream_key=[[@13,87:99='mail_contacts',<329>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<329>,3:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={audience=[[@11,73:80='audience',<329>,4:19]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@15,101:110='stream_key',<329>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<329>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<329>,6:51]]}, query1={audience=[[@46,332:339='audience',<329>,10:22]], *=[[@1,7:7='*',<289>,1:7]], stream_key=[[@50,363:372='stream_key',<329>,11:22]], eab_contact_id=[[@42,295:308='eab_contact_id',<329>,9:29]], valid_from_dt=[[@61,426:438='valid_from_dt',<329>,12:52]]}, query3={*=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void subqueryIntersectJinjaSourceUnionInterfaceValidationV2Test() {
+		final String query = "select paper_data.eab_contact_id\n" 
+				+ "       ,paper_data.audience\n" 
+				+ "       ,paper_data.stream_key\n" 
+				+ "       ,paper_data.valid_from_dt\n" 
+				+ "       ,row_number() over (partition by paper_data.eab_contact_id,paper_data.stream_key order by paper_data.valid_from_dt desc) as rno"
+				+ " from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    intersect\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=audience, table_ref=paper_data}}, 3={column={name=stream_key, table_ref=paper_data}}, 4={column={name=valid_from_dt, table_ref=paper_data}}, 5={alias=rno, window_function={over={partition_by={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=stream_key, table_ref=paper_data}}}, orderby={1={null_order=null, predicand={column={name=valid_from_dt, table_ref=paper_data}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=paper_data, query={intersect={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[audience, rno, stream_key, eab_contact_id, valid_from_dt]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={audience=[[@7,52:59='audience',<329>,2:19]], rno=[[@39,255:257='rno',<329>,5:131]], stream_key=[[@11,80:89='stream_key',<329>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<329>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<329>,4:19]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={audience=[[@49,323:330='audience',<329>,7:19]], stream_key=[[@53,351:360='stream_key',<329>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<329>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<329>,9:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<329>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<329>,9:10]], stream_key=[[@51,337:349='mail_contacts',<329>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<329>,6:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}, query1={query_dictionary={audience=[[@84,582:589='audience',<329>,13:22]], stream_key=[[@88,613:622='stream_key',<329>,14:22]], eab_contact_id=[[@80,545:558='eab_contact_id',<329>,12:29]], valid_from_dt=[[@99,676:688='valid_from_dt',<329>,15:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,565:580='offset_marketing',<329>,13:5]], sent_dt=[[@92,634:649='offset_marketing',<329>,15:10]], stream_key=[[@86,596:611='offset_marketing',<329>,14:5]], eab_contact_id=[[@78,528:543='offset_marketing',<329>,12:12]]}}, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}}, interface={audience=[{name=audience, table_ref=paper_data}], rno=[{name=eab_contact_id, table_ref=paper_data}, {name=stream_key, table_ref=paper_data}, {name=valid_from_dt, table_ref=paper_data}], stream_key=[{name=stream_key, table_ref=paper_data}], eab_contact_id=[{name=eab_contact_id, table_ref=paper_data}], valid_from_dt=[{name=valid_from_dt, table_ref=paper_data}]}, table_alias={paper_data=intersect2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,565:580='offset_marketing',<329>,13:5]], sent_dt=[[@92,634:649='offset_marketing',<329>,15:10]], stream_key=[[@86,596:611='offset_marketing',<329>,14:5]], eab_contact_id=[[@78,528:543='offset_marketing',<329>,12:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<329>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<329>,9:10]], stream_key=[[@51,337:349='mail_contacts',<329>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<329>,6:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={audience=[[@49,323:330='audience',<329>,7:19]], stream_key=[[@53,351:360='stream_key',<329>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<329>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<329>,9:51]]}, query1={audience=[[@84,582:589='audience',<329>,13:22]], stream_key=[[@88,613:622='stream_key',<329>,14:22]], eab_contact_id=[[@80,545:558='eab_contact_id',<329>,12:29]], valid_from_dt=[[@99,676:688='valid_from_dt',<329>,15:52]]}, query3={audience=[[@7,52:59='audience',<329>,2:19]], rno=[[@39,255:257='rno',<329>,5:131]], stream_key=[[@11,80:89='stream_key',<329>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<329>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<329>,4:19]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void multipleIntersectSubqueryInterfaceValidationV1Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "(   select a,b,c from t1"
+				+ "    intersect\n"
+				+ "    select b,c,d,a from t2"
+				+ ") as i1\n"
+				+ "join \n"
+				+ "(   select a,b,c,d from t1"
+				+ "    intersect\n"
+				+ "    select b,c,d from t2"
+				+ ") as i2\n";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={join={1={table={alias=i1, query={intersect={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}, 2={join=join}, 3={table={alias=i2, query={intersect={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query6={query_dictionary={a=[[@1,7:7='a',<329>,1:7]], b=[[@3,9:9='b',<329>,1:9]], c=[[@5,11:11='c',<329>,1:11]], d=[[@7,13:13='d',<329>,1:13]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={a=[[@11,32:32='a',<329>,2:11]], b=[[@13,34:34='b',<329>,2:13]], c=[[@15,36:36='c',<329>,2:15]]}, table_dictionary={t1={a=[[@11,32:32='a',<329>,2:11], [@35,110:110='a',<329>,5:11]], b=[[@13,34:34='b',<329>,2:13], [@37,112:112='b',<329>,5:13]], c=[[@15,36:36='c',<329>,2:15], [@39,114:114='c',<329>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}, query1={query_dictionary={a=[[@26,76:76='a',<329>,3:17]], b=[[@20,70:70='b',<329>,3:11]], c=[[@22,72:72='c',<329>,3:13]], d=[[@24,74:74='d',<329>,3:15]]}, table_dictionary={t2={a=[[@26,76:76='a',<329>,3:17]], b=[[@20,70:70='b',<329>,3:11], [@46,150:150='b',<329>,6:11]], c=[[@22,72:72='c',<329>,3:13], [@48,152:152='c',<329>,6:13]], d=[[@24,74:74='d',<329>,3:15], [@50,154:154='d',<329>,6:15]]}}, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}}, def_intersect5={interface={a=query_column, b=query_column, c=query_column, d=query_column}, query4={query_dictionary={b=[[@46,150:150='b',<329>,6:11]], c=[[@48,152:152='c',<329>,6:13]], d=[[@50,154:154='d',<329>,6:15]]}, table_dictionary={t2={b=[[@46,150:150='b',<329>,6:11]], c=[[@48,152:152='c',<329>,6:13]], d=[[@50,154:154='d',<329>,6:15]]}}, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, query3={query_dictionary={a=[[@35,110:110='a',<329>,5:11]], b=[[@37,112:112='b',<329>,5:13]], c=[[@39,114:114='c',<329>,5:15]], d=[[@41,116:116='d',<329>,5:17]]}, table_dictionary={t1={a=[[@35,110:110='a',<329>,5:11]], b=[[@37,112:112='b',<329>,5:13]], c=[[@39,114:114='c',<329>,5:15]], d=[[@41,116:116='d',<329>,5:17]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}], d=[{name=d, table_ref=intersect5}]}, table_alias={i1=intersect2, i2=intersect5}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@11,32:32='a',<329>,2:11], [@35,110:110='a',<329>,5:11]], b=[[@13,34:34='b',<329>,2:13], [@37,112:112='b',<329>,5:13]], c=[[@15,36:36='c',<329>,2:15], [@39,114:114='c',<329>,5:15]], d=[[@41,116:116='d',<329>,5:17]]}, t2={a=[[@26,76:76='a',<329>,3:17]], b=[[@20,70:70='b',<329>,3:11], [@46,150:150='b',<329>,6:11]], c=[[@22,72:72='c',<329>,3:13], [@48,152:152='c',<329>,6:13]], d=[[@24,74:74='d',<329>,3:15], [@50,154:154='d',<329>,6:15]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={b=[[@46,150:150='b',<329>,6:11]], c=[[@48,152:152='c',<329>,6:13]], d=[[@50,154:154='d',<329>,6:15]]}, query6={a=[[@1,7:7='a',<329>,1:7]], b=[[@3,9:9='b',<329>,1:9]], c=[[@5,11:11='c',<329>,1:11]], d=[[@7,13:13='d',<329>,1:13]]}, query0={a=[[@11,32:32='a',<329>,2:11]], b=[[@13,34:34='b',<329>,2:13]], c=[[@15,36:36='c',<329>,2:15]]}, query1={a=[[@26,76:76='a',<329>,3:17]], b=[[@20,70:70='b',<329>,3:11]], c=[[@22,72:72='c',<329>,3:13]], d=[[@24,74:74='d',<329>,3:15]]}, query3={a=[[@35,110:110='a',<329>,5:11]], b=[[@37,112:112='b',<329>,5:13]], c=[[@39,114:114='c',<329>,5:15]], d=[[@41,116:116='d',<329>,5:17]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+
+	@Test
+	public void multipleIntersectSubqueryInterfaceValidationV2Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "(   select a,b,c from t1"
+				+ "    intersect\n"
+				+ "    select b,c,d,a from t2"
+				+ ") as i1\n"
+				+ " union \n"
+				+ "(   select a,b,c,d from t1"
+				+ "    intersect\n"
+				+ "    select b,c,d from t2"
+				+ ") as i2\n";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 3);
+
+		Assert.assertTrue("Expected intersect mismatch diagnostic",
+			snippet.getFatalErrorStringList().stream().anyMatch(message -> message.contains("INTERSECTION has different column counts")));
+		Assert.assertTrue("Expected participant set-operation mismatch diagnostic",
+			snippet.getFatalErrorStringList().stream().anyMatch(message -> message.contains("SET_OPERATION has different column counts")));
+	}
+
+	// Tests of new "qualify" syntax support with set operations and subqueries
+	@Test
+	public void subqueryQualifyValidationV1Test() {
+		final String query = "SELECT  row_number() over ( partition by person_id order by activity_dt , person_activity_key desc ) rno,\n"
+				+ "       person_activity_key,  activity_id,  person_id,  outbound_ind,\n"
+				+ "       min(activity_dt) over (partition by person_id order by activity_dt desc, person_activity_key desc) as min_activity_dt\n"
+				+ " FROM  personactivity QUALIFY outbound_ind = True and rno = 1 order by person_id";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rno, window_function={over={partition_by={1={column={name=person_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=activity_dt, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=person_activity_key, table_ref=null}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}, 2={column={name=person_activity_key, table_ref=null}}, 3={column={name=activity_id, table_ref=null}}, 4={column={name=person_id, table_ref=null}}, 5={column={name=outbound_ind, table_ref=null}}, 6={alias=min_activity_dt, window_function={over={partition_by={1={column={name=person_id, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=activity_dt, table_ref=null}}, sort_order=desc}, 2={null_order=null, predicand={column={name=person_activity_key, table_ref=null}}, sort_order=desc}}}, function={function_name=min, parameters={1={column={name=activity_dt, table_ref=null}}}}}}}, orderby={1={null_order=null, predicand={column={name=person_id, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=personactivity}}, qualify={and={1={condition={left={column={name=outbound_ind, table_ref=null}}, right={literal=True}, operator==}}, 2={condition={left={column={name=rno, table_ref=null}}, right={literal=1}, operator==}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rno, min_activity_dt, outbound_ind, person_activity_key, activity_id, person_id]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={rno=[[@16,101:103='rno',<329>,1:101]], min_activity_dt=[[@44,284:298='min_activity_dt',<329>,3:109]], outbound_ind=[[@24,161:172='outbound_ind',<329>,2:55]], person_activity_key=[[@18,113:131='person_activity_key',<329>,2:7]], activity_id=[[@20,135:145='activity_id',<329>,2:29]], person_id=[[@22,149:157='person_id',<329>,2:43]]}, table_dictionary={personactivity={rno=[[@52,354:356='rno',<329>,4:54]], activity_dt=[[@11,60:70='activity_dt',<329>,1:60], [@28,186:196='activity_dt',<329>,3:11], [@37,237:247='activity_dt',<329>,3:62]], outbound_ind=[[@24,161:172='outbound_ind',<329>,2:55], [@48,330:341='outbound_ind',<329>,4:30]], person_activity_key=[[@13,74:92='person_activity_key',<329>,1:74], [@18,113:131='person_activity_key',<329>,2:7], [@40,255:273='person_activity_key',<329>,3:80]], activity_id=[[@20,135:145='activity_id',<329>,2:29]], person_id=[[@8,41:49='person_id',<329>,1:41], [@22,149:157='person_id',<329>,2:43], [@34,218:226='person_id',<329>,3:43], [@57,371:379='person_id',<329>,4:71]]}}, ordered_by=[{name=person_id, table_ref=personactivity}], filters=[{name=outbound_ind, table_ref=personactivity}, {name=rno, table_ref=personactivity}], interface={rno=[{name=person_id, table_ref=personactivity}, {name=activity_dt, table_ref=personactivity}, {name=person_activity_key, table_ref=personactivity}], min_activity_dt=[{name=person_id, table_ref=personactivity}, {name=activity_dt, table_ref=personactivity}, {name=person_activity_key, table_ref=personactivity}], outbound_ind=[{name=outbound_ind, table_ref=personactivity}], person_activity_key=[{name=person_activity_key, table_ref=personactivity}], activity_id=[{name=activity_id, table_ref=personactivity}], person_id=[{name=person_id, table_ref=personactivity}]}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{personactivity={rno=[[@52,354:356='rno',<329>,4:54]], activity_dt=[[@11,60:70='activity_dt',<329>,1:60], [@28,186:196='activity_dt',<329>,3:11], [@37,237:247='activity_dt',<329>,3:62]], outbound_ind=[[@24,161:172='outbound_ind',<329>,2:55], [@48,330:341='outbound_ind',<329>,4:30]], person_activity_key=[[@13,74:92='person_activity_key',<329>,1:74], [@18,113:131='person_activity_key',<329>,2:7], [@40,255:273='person_activity_key',<329>,3:80]], activity_id=[[@20,135:145='activity_id',<329>,2:29]], person_id=[[@8,41:49='person_id',<329>,1:41], [@22,149:157='person_id',<329>,2:43], [@34,218:226='person_id',<329>,3:43], [@57,371:379='person_id',<329>,4:71]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={rno=[[@16,101:103='rno',<329>,1:101]], min_activity_dt=[[@44,284:298='min_activity_dt',<329>,3:109]], outbound_ind=[[@24,161:172='outbound_ind',<329>,2:55]], person_activity_key=[[@18,113:131='person_activity_key',<329>,2:7]], activity_id=[[@20,135:145='activity_id',<329>,2:29]], person_id=[[@22,149:157='person_id',<329>,2:43]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	// Helper methods to run the SQL parser tests and validate results
 	/**
 	 * Run the SQL parser test with the given query.
 	 * This method uses the SqlParserAccess class to parse the SQL query

@@ -89,6 +89,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_QUALIFIER_KEY = "qualifier";
     public static final String MUMBLE_QUERY_KEY = "query";
     public static final String MUMBLE_QUERY_DICTIONARY_KEY = "query_dictionary"; // Special key for the symbol table to store query references
+    public static final String MUMBLE_QUALIFY_KEY = "qualify";
     public static final String MUMBLE_RANGE_BEGIN_KEY = "begin";
     public static final String MUMBLE_RANGE_END_KEY = "end";
     public static final String MUMBLE_RETURNING_KEY = "returning";

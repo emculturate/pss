@@ -344,6 +344,7 @@ query_specification
     where_clause?
     groupby_clause?
     having_clause?
+    qualify_clause?
     orderby_clause?
     limit_clause?)?
   ;
@@ -1050,6 +1051,17 @@ empty_grouping_set
 
 having_clause
   : HAVING boolean_value_expression
+  ;
+
+/*
+===============================================================================
+  QUALIFY <qualify clause>
+  Snowflake post-window filtering (evaluated after HAVING, before ORDER BY)
+===============================================================================
+*/
+
+qualify_clause
+  : QUALIFY search_condition
   ;
 
 row_value_predicand_list
@@ -2391,9 +2403,9 @@ PUML_CONSTANT_TRANSACTION_NAME : '#' T R A N S A C T I O N '_' N A M E;
 PUML_CONSTANT_POPULATION : '#' P O P U L A T I O N '_' N A M E;
 PUML_CONSTANT_TARGET_MODEL_NAME : '#' T A R G E T '_' M O D E L '_' N A M E;
   
- PUML_CONSTANT_TENANT_SALT : '#' T E N A N T '_' S A L T;
- PUML_CONSTANT_PIT_START_TIME : '#' P I T '_' S T A R T '_' T I M E;
- PUML_CONSTANT_PIT_END_TIME : '#' P I T '_' E N D '_' T I M E;
+PUML_CONSTANT_TENANT_SALT : '#' T E N A N T '_' S A L T;
+PUML_CONSTANT_PIT_START_TIME : '#' P I T '_' S T A R T '_' T I M E;
+PUML_CONSTANT_PIT_END_TIME : '#' P I T '_' E N D '_' T I M E;
   
 /*
 ===============================================================================
@@ -2429,6 +2441,15 @@ fragment
 Population_Identifier	
 	:	'{'('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'-'|'.')*'}'
 	;
+
+/*
+===============================================================================
+  Late-added reserved keywords
+  Keep near Identifier to minimize token-number shifts in legacy tests.
+===============================================================================
+*/
+
+QUALIFY : Q U A L I F Y;
 
 
 Identifier

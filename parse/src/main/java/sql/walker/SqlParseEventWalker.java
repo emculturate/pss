@@ -623,6 +623,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
+		HashMap<String, Object> interfaceMap = walker.resolveSetOperationInterfaceMapFromSymbolTable();
+		if (interfaceMap != null) {
+			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
+		}
 		finalizeTopLevelUnresolvedColumns();
 		// walker.showTrace(resultTrace, collector);
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
@@ -2108,6 +2112,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					HashMap<String, Object> item = (HashMap<String, Object>) segment;
 					item = (HashMap<String, Object>) item.remove("1");
 					subMap.put(MUMBLE_HAVING_KEY, item);
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_qualify_clause)) {
+					HashMap<String, Object> item = (HashMap<String, Object>) segment;
+					item = (HashMap<String, Object>) item.remove("1");
+					subMap.put(MUMBLE_QUALIFY_KEY, item);
 				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_orderby_clause)) {
 					subMap.put(MUMBLE_ORDERBY_KEY, segment);
 				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_limit_clause)) {
@@ -5845,6 +5853,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitWhere_clause(@NotNull SQLSelectParserParser.Where_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handlePushDown(ruleIndex);
+	}
+
+	@Override
+	public void exitQualify_clause(@NotNull SQLSelectParserParser.Qualify_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		walker.handlePushDown(ruleIndex);
 	}
