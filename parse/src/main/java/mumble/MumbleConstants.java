@@ -49,6 +49,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_INTERFACE_KEY = "interface"; // Special key for the symbol table to store interface references
     public static final String MUMBLE_INTERSECT_KEY = "intersect";
     public static final String MUMBLE_INTO_KEY = "into";
+    public static final String MUMBLE_CTE_KEY = "cte";
     public static final String MUMBLE_ITEM_KEY = "item";
     public static final String MUMBLE_JINJA_TABLE_KEY = "jinja_table";
     public static final String MUMBLE_JINJA_VARIABLE_KEY = "jinja_variable";
@@ -107,6 +108,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_SYMMETRY_KEY = "symmetry";
     public static final String MUMBLE_TABLE_ALIAS_KEY = "table_alias";
     public static final String MUMBLE_TABLE_DICTIONARY_KEY = "table_dictionary"; // Special key for the symbol table to store table references
+    public static final String MUMBLE_TARGET_TABLE_KEY = "target_table"; // Special key for update statement target table references
     public static final String MUMBLE_TABLE_KEY = "table";
     public static final String MUMBLE_TABLE_REF_KEY = "table_ref";
     public static final String MUMBLE_THEN_KEY = "then";
@@ -116,7 +118,9 @@ public final class MumbleConstants {
     public static final String MUMBLE_UNKNOWN_KEY = "unknown";
     public static final String MUMBLE_UNION_KEY = "union";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
+    public static final String MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY = "lhs_unresolved_columns"; // Special key for LHS assignment column references in update statements
     public static final String MUMBLE_UPDATE_KEY = "update";
+    public static final String MUMBLE_UPDATE_DICTIONARY_KEY = "update_dictionary"; // Special key for update statement assignment token references
     public static final String MUMBLE_VALUES_KEY = "values";
     public static final String MUMBLE_VALUE_KEY = "value";
     public static final String MUMBLE_WHEN_KEY = "when";

@@ -19,7 +19,6 @@ import sql.walker.SqlParseEventWalker;
 
 public class SnippetTest {
 
-	//@Ignore
 	@Test
 	public void basicJoinWithOnOnConditionVariableTest() {
 		// This test takes a query from the basic test set and confirms that the Snippet object is correctly constructed
@@ -34,9 +33,9 @@ public class SnippetTest {
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<329>,1:8]]}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<329>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 		
 		Snippet hold = extractor.getSnippet();
@@ -47,9 +46,9 @@ public class SnippetTest {
 				hold.getQueryInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
 				hold.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<329>,1:8]]}, fourth={}}",
 				hold.getTableDictionary().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<328>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<289>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<329>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				hold.getSymbolTable().toString());
 	}
 

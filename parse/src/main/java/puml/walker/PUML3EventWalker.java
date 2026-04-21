@@ -8,8 +8,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import static mumble.PUML3Constants.*;
-
+import mumble.PUML3Constants;
 
 import puml3.PUML3BaseListener;
 import puml3.PUML3Parser;
@@ -330,7 +329,7 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PUML3_EQUATION_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(PUML3Constants.PUML3_EQUATION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);
@@ -349,7 +348,7 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove("Type");
-		sqlTree.put(PUML3_CONDITION_TREE_KEY, subMap.remove("1"));
+		sqlTree.put(PUML3Constants.PUML3_CONDITION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
 		showTrace(symbolTrace, symbolTable);
 		showTrace(symbolTrace, tableDictionaryMap);

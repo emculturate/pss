@@ -8,13 +8,12 @@
       "args": [
         "-f",
         "parse/pom.xml",
+        "-Dmaven.compiler.showWarnings=false",
         "-DskipTests",
         "generate-sources",
         "test-compile"
       ],
-      "problemMatcher": [
-        "$javac"
-      ],
+      "problemMatcher": [],
       "presentation": {
         "reveal": "never",
         "panel": "shared"
@@ -30,9 +29,7 @@
       "runOptions": {
         "runOn": "folderOpen"
       },
-      "problemMatcher": [
-        "$javac"
-      ],
+      "problemMatcher": [],
       "presentation": {
         "reveal": "never",
         "panel": "shared",

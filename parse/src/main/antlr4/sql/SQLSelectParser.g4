@@ -173,8 +173,16 @@ with_clause
   ;
   
 with_list_item
-  : query_alias (LEFT_PAREN query RIGHT_PAREN)
+  : query_alias (LEFT_PAREN cte_body RIGHT_PAREN)
   | query_alias variable_identifier
+  ;
+
+// Snowflake: a CTE body may itself open a new WITH clause (nested WITH).
+// Intentionally NOT reachable from subquery, insert_source_primary, or from_clause,
+// so WITH is confined to CTE bodies only.
+cte_body
+  : with_query   // Snowflake nested WITH inside a CTE
+  | query
   ;
   
 query_alias
@@ -1776,6 +1784,9 @@ precision_data_type_name
   | FLOAT
   | DOUBLE
   | DOUBLE PRECISION
+  | TIMESTAMP_LTZ     // SNOWFLAKE
+  | TIMESTAMP_NTZ     // SNOWFLAKE
+  | TIMESTAMP_TZ     // SNOWFLAKE
   ;  
 
 precision_param
