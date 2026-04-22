@@ -235,6 +235,31 @@ When ok is true, you should:
         return source != null && source.contains("SqlASTWalker");
     }
 
+    private boolean isRecoverableParserPredictionWarning(ParseDiagnostic diagnostic) {
+        if (diagnostic == null) {
+            return false;
+        }
+
+        if (!"ParseErrorListener".equals(diagnostic.source()) || !diagnostic.recoverable()) {
+            return false;
+        }
+
+        String code = diagnostic.code();
+        return "AMBIGUITY".equals(code)
+                || "FULL_CONTEXT".equals(code)
+                || "CONTEXT_SENSITIVITY".equals(code);
+    }
+
+    private List<ParseDiagnostic> filterExternalMessagesForNoFatal(List<ParseDiagnostic> diagnostics) {
+        if (diagnostics == null || diagnostics.isEmpty()) {
+            return List.of();
+        }
+
+        return diagnostics.stream()
+                .filter(diagnostic -> !isRecoverableParserPredictionWarning(diagnostic))
+                .collect(Collectors.toList());
+    }
+
     private JsonObject buildParsePayload(Snippet snippet) {
         JsonObject parseResult = new JsonObject();
 
@@ -349,6 +374,9 @@ When ok is true, you should:
         List<ParseDiagnostic> nonFatalDiagnostics = normalizedDiagnostics.stream()
                 .filter(diagnostic -> diagnostic != null && diagnostic.severity() != ParseDiagnostic.Severity.FATAL)
             .collect(Collectors.toList());
+        List<ParseDiagnostic> externalNonFatalDiagnostics = fatalDiagnostics.isEmpty()
+            ? filterExternalMessagesForNoFatal(nonFatalDiagnostics)
+            : nonFatalDiagnostics;
 
         if (!fatalDiagnostics.isEmpty()) { // There are Fatal Errors
             boolean hasParserFatal = fatalDiagnostics.stream()
@@ -365,7 +393,7 @@ When ok is true, you should:
             result.addProperty("fatalErrorCount", fatalDiagnostics.size());
             JsonElement jstr = diagnosticsToJsonArray(fatalDiagnostics);
             result.add("errors", jstr);
-            result.add("messages", diagnosticsToJsonArray(nonFatalDiagnostics));
+            result.add("messages", diagnosticsToJsonArray(externalNonFatalDiagnostics));
 
             // If fatal diagnostics are from SQL AST walking only, include partial parse artifacts.
             if (hasSqlAstWalkerFatal && !hasParserFatal && !hasUnknownFatal) {
@@ -378,7 +406,7 @@ When ok is true, you should:
 
             result.add("parse", buildParsePayload(snippet));
 
-            JsonElement jstr = diagnosticsToJsonArray(nonFatalDiagnostics);
+            JsonElement jstr = diagnosticsToJsonArray(externalNonFatalDiagnostics);
             result.add("messages",jstr);
  
         }

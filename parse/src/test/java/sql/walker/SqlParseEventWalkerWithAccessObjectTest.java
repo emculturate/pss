@@ -2,7 +2,6 @@ package sql.walker;
 
 import org.antlr.v4.runtime.RecognitionException;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import access.Snippet;
@@ -755,132 +754,164 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query,SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}, tab1={}, query0={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}, table_dictionary={tab1={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}}, def_query0={query_dictionary={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}, table_dictionary={tab2={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}}, interface={a=[{name=a, table_ref=tab2}], b=[{name=b, table_ref=tab2}]}}, interface={a=[{name=a, table_ref=query0}], b=[{name=b, table_ref=query0}]}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}, tab2={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@4,24:24='a',<328>,1:24]], b=[[@6,26:26='b',<328>,1:26]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}, insert1={a=[[@4,24:24='a',<329>,1:24]], b=[[@6,26:26='b',<329>,1:26]]}}",
        	snippet.getQueryColumnDictionaryMap().toString());
 	}
    
-	@Ignore
 	@Test
 	public void basicInsertFromVariableTest() {
-		final String query = "insert into tab1 <tuple variable>";
+		final String query = "insert into tab1 <query variable>";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, substitution={name=<tuple variable>, type=query}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"preamble\":\"insert_into\",\"substitution\":{\"name\":\"\\u003ctuple variable\\u003e\",\"type\":\"query\"},\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-        	snippet.getSqlAbstractTreeJson());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{<tuple variable>={}, tab1={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert0={table_dictionary={tab1={}}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
         	snippet.getTableDictionary().toString());
-		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=query}", 
+		Assert.assertEquals("Substitution List is wrong", "{<query variable>=query}", 
         	snippet.getSubstitutionsMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
     
-	@Ignore
 	@Test
 	public void basicInsertFromValuesTest() {
 		final String query = "insert into tab1 values (1,2,3), (2,3,4)";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("AST JSON is wrong", "{\"INSERT\":{\"preamble\":\"insert_into\",\"values\":{\"matrix\":{\"1\":{\"row\":{\"1\":{\"literal\":\"1\"},\"2\":{\"literal\":\"2\"},\"3\":{\"literal\":\"3\"}}},\"2\":{\"row\":{\"1\":{\"literal\":\"2\"},\"2\":{\"literal\":\"3\"},\"3\":{\"literal\":\"4\"}}}}},\"table\":{\"table\":{\"table\":\"tab1\"}}}}",
-        	snippet.getSqlAbstractTreeJson());
-		Assert.assertEquals("Interface is wrong", "[]", 
+		Assert.assertEquals("Interface is wrong", "[$1, $2, $3]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}, tab1={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}, table_dictionary={tab1={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}}, def_values0={query_dictionary={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={$1=[{name=$1, table_ref=values0}], $2=[{name=$2, table_ref=values0}], $3=[{name=$3, table_ref=values0}]}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}, insert1={$1=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $2=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]], $3=[[@4,24:24='(',<285>,1:24], [@12,33:33='(',<285>,1:33]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 
-	@Ignore
 	@Test
 	public void basicInsertWithColumnsFromQueryTest() {
 		final String query = "insert into tab1 (c ,d) select a,b from tab2";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab2}}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("Interface is wrong", "[a, b]", 
+		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={tab2={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}]}}, tab1={}, query0={}, unknown={c=[[@4,18:18='c',<328>,1:18]], d=[[@6,21:21='d',<328>,1:21]]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}}, def_query0={query_dictionary={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}, table_dictionary={tab2={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}}, interface={a=[{name=a, table_ref=tab2}], b=[{name=b, table_ref=tab2}]}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{tab2={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}, tab2={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<328>,1:31]], b=[[@11,33:33='b',<328>,1:33]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}, insert1={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
    
-	@Ignore
+
+	@Test
+	public void insertWithColumnsFromUnionQueryTest() {
+		final String query = "insert into tab1 (c ,d) select a,b from tab2 union select c,d from tab3";
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, table={table={alias=null, table=tab1}}}}",
+        	snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[c, d]", 
+        	snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert3={query_dictionary={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}, def_union2={query0={query_dictionary={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}, table_dictionary={tab2={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}}, _tmp_insert_source_select_sequence=[a, b], interface={a=[{name=a, table_ref=tab2}], b=[{name=b, table_ref=tab2}]}}, interface={a=query_column, b=query_column}, query1={query_dictionary={c=[[@16,58:58='c',<329>,1:58]], d=[[@18,60:60='d',<329>,1:60]]}, table_dictionary={tab3={c=[[@16,58:58='c',<329>,1:58]], d=[[@18,60:60='d',<329>,1:60]]}}, _tmp_insert_source_select_sequence=[c, d], interface={c=[{name=c, table_ref=tab3}], d=[{name=d, table_ref=tab3}]}}}, table_dictionary={tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}}, interface={c=[{name=a, table_ref=union2}], d=[{name=b, table_ref=union2}]}}}",
+        	snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={c=[[@16,58:58='c',<329>,1:58]], d=[[@18,60:60='d',<329>,1:60]]}, tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}, tab2={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}}",
+        	snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+        	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<329>,1:31]], b=[[@11,33:33='b',<329>,1:33]]}, query1={c=[[@16,58:58='c',<329>,1:58]], d=[[@18,60:60='d',<329>,1:60]]}, insert3={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}}",
+        	snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+
+	@Test
+	public void insertWithColumnsFromJoinQueryTest() {
+		final String query = "insert into tab1 (c ,d) select ff.a, gg.b from tab2 ff join tab3 gg on ff.id = gg.id";
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={from={join={1={table={alias=ff, table=tab2}}, 2={join=join, on={condition={left={column={name=id, table_ref=ff}}, right={column={name=id, table_ref=gg}}, operator==}}}, 3={table={alias=gg, table=tab3}}}}, select={1={column={name=a, table_ref=ff}}, 2={column={name=b, table_ref=gg}}}}, table={table={alias=null, table=tab1}}}}",
+        	snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[c, d]", 
+        	snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}}, def_query0={query_dictionary={a=[[@11,34:34='a',<329>,1:34]], b=[[@15,40:40='b',<329>,1:40]]}, table_dictionary={tab3={b=[[@13,37:38='gg',<329>,1:37]], id=[[@27,79:80='gg',<329>,1:79]]}, tab2={a=[[@9,31:32='ff',<329>,1:31]], id=[[@23,71:72='ff',<329>,1:71]]}}, filters=[{name=id, table_ref=ff}, {name=id, table_ref=gg}], interface={a=[{name=a, table_ref=ff}], b=[{name=b, table_ref=gg}]}, table_alias={ff=tab2, gg=tab3}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
+        	snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={b=[[@13,37:38='gg',<329>,1:37]], id=[[@27,79:80='gg',<329>,1:79]]}, tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]]}, tab2={a=[[@9,31:32='ff',<329>,1:31]], id=[[@23,71:72='ff',<329>,1:71]]}}",
+        	snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+        	snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@11,34:34='a',<329>,1:34]], b=[[@15,40:40='b',<329>,1:40]]}, insert1={d=[[@6,21:21='d',<329>,1:21]], c=[[@4,18:18='c',<329>,1:18]]}}",
+        	snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 	@Test
 	public void basicInsertWithColumnsFromVariableTest() {
-		final String query = "insert into tab1 (c ,d, e)  <tuple variable>";
+		final String query = "insert into tab1 (c ,d, e)  <query variable>";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, substitution={name=<tuple variable>, type=query}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}, 3={column={name=e, table_ref=null}}}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}, 3={column={name=e, table_ref=null}}}, from={substitution={name=<query variable>, type=query}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]", 
+		Assert.assertEquals("Interface is wrong", "[c, d, e]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{<tuple variable>={}, tab1={}, unknown={c=[[@4,18:18='c',<328>,1:18]], d=[[@6,21:21='d',<328>,1:21]], e=[[@8,24:24='e',<328>,1:24]]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert0={query_dictionary={d=[[@6,21:21='d',<329>,1:21]], e=[[@8,24:24='e',<329>,1:24]], c=[[@4,18:18='c',<329>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]], e=[[@8,24:24='e',<329>,1:24]]}}, interface={c=[], d=[], e=[]}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,18:18='c',<329>,1:18]], d=[[@6,21:21='d',<329>,1:21]], e=[[@8,24:24='e',<329>,1:24]]}}",
         	snippet.getTableDictionary().toString());
-		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=query}", 
+		Assert.assertEquals("Substitution List is wrong", "{<query variable>=query}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{insert0={d=[[@6,21:21='d',<329>,1:21]], e=[[@8,24:24='e',<329>,1:24]], c=[[@4,18:18='c',<329>,1:18]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
     
-	 
-	@Ignore
+
 	@Test
 	public void basicInsertWithColumnsFromValuesTest() {
 		final String query = "insert into tab1  (c ,d)  values (1,2,3), (2,3,4)";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}, table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, table={table={alias=null, table=tab1}}}}",
         	snippet.getSqlAbstractTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]", 
+		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{values={$1=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $2=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $3=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]]}, tab1={}, unknown={c=[[@4,19:19='c',<328>,1:19]], d=[[@6,22:22='d',<328>,1:22]]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,22:22='d',<329>,1:22]], c=[[@4,19:19='c',<329>,1:19]]}, table_dictionary={tab1={c=[[@4,19:19='c',<329>,1:19]], d=[[@6,22:22='d',<329>,1:22]]}}, def_values0={query_dictionary={$1=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $2=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $3=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={c=[{name=$1, table_ref=values0}], d=[{name=$2, table_ref=values0}]}}}",
         	snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,19:19='c',<329>,1:19]], d=[[@6,22:22='d',<329>,1:22]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $2=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]], $3=[[@9,33:33='(',<285>,1:33], [@17,42:42='(',<285>,1:42]]}, insert1={d=[[@6,22:22='d',<329>,1:22]], c=[[@4,19:19='c',<329>,1:19]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
-	@Ignore
+
+
 	@Test
 	public void simpleFailingInsertFromQueryTest() {
 

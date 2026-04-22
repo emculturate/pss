@@ -247,6 +247,12 @@ insert_preamble
   : INSERT (OVERWRITE)? INTO 
   ;
 
+insert_source_primary
+  : query_expression
+  | variable_identifier
+  | insert_values_statement
+  ;
+
 
 /*
 ===============================================================================
@@ -436,12 +442,6 @@ tuple_primary
  ;
 
 
-// Used ONLY in the TUPLE Variable Substitution end point
-insert_source_primary
-  : query_expression
-  | variable_identifier
-  | insert_values_statement
-  ;
 
 table_or_query_name
   : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
