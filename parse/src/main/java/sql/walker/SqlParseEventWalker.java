@@ -4244,7 +4244,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
 					localUnresolvedColumnMap,
 					localInterface,
-					filtersList);
+					filtersList,
+					groupedByList,
+					orderedByList);
 			if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
 				explicitQualifiedUnknownEntries = retainOnlyLocallyResolvableExplicitQualifiedUnknowns(
 						explicitQualifiedUnknownEntries,
@@ -5689,7 +5691,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private HashMap<String, Object> extractExplicitQualifiedUnknownEntries(
 			HashMap<String, Object> unresolvedColumnMap,
 			HashMap<String, Object> localInterface,
-			Object filtersList) {
+			Object filtersList,
+			Object groupedByList,
+			Object orderedByList) {
 		HashMap<String, Object> explicitQualified = new HashMap<String, Object>();
 		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
 			return explicitQualified;
@@ -5717,25 +5721,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		if (filtersList instanceof ArrayList<?> filters) {
-			for (Object filterObj : filters) {
-				if (!(filterObj instanceof Map<?, ?> filterMap)) {
-					continue;
-				}
-				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
-				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
-				if (filterNameObj instanceof String filterName
-						&& filterTableRefObj instanceof String filterTableRef
-						&& !"*".equals(filterTableRef)) {
-					String qualifiedKey = filterTableRef + "." + filterName;
-					if (unresolvedColumnMap.containsKey(qualifiedKey)) {
-						explicitQualifiedKeys.add(qualifiedKey);
-					} else if (unresolvedColumnMap.containsKey(filterName)) {
-						explicitQualifiedKeys.add(filterName);
-					}
-				}
-			}
-		}
+		collectExplicitQualifiedUnknownKeysFromRefList(explicitQualifiedKeys, unresolvedColumnMap, filtersList);
+		collectExplicitQualifiedUnknownKeysFromRefList(explicitQualifiedKeys, unresolvedColumnMap, groupedByList);
+		collectExplicitQualifiedUnknownKeysFromRefList(explicitQualifiedKeys, unresolvedColumnMap, orderedByList);
 
 		for (String qualifiedKey : explicitQualifiedKeys) {
 			Object removed = unresolvedColumnMap.remove(qualifiedKey);
@@ -5745,6 +5733,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		return explicitQualified;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectExplicitQualifiedUnknownKeysFromRefList(
+			HashSet<String> explicitQualifiedKeys,
+			HashMap<String, Object> unresolvedColumnMap,
+			Object refListObj) {
+		if (!(refListObj instanceof ArrayList<?> refs)) {
+			return;
+		}
+
+		for (Object refObj : refs) {
+			if (!(refObj instanceof Map<?, ?> refMap)) {
+				continue;
+			}
+			Object refNameObj = refMap.get(MUMBLE_NAME_KEY);
+			Object refTableRefObj = refMap.get(MUMBLE_TABLE_REF_KEY);
+			if (refNameObj instanceof String refName
+					&& refTableRefObj instanceof String refTableRef
+					&& !"*".equals(refTableRef)) {
+				String qualifiedKey = refTableRef + "." + refName;
+				if (unresolvedColumnMap.containsKey(qualifiedKey)) {
+					explicitQualifiedKeys.add(qualifiedKey);
+				} else if (unresolvedColumnMap.containsKey(refName)) {
+					explicitQualifiedKeys.add(refName);
+				}
+			}
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -7921,6 +7937,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int stackLevel = walker.currentStackLevel(ruleIndex);
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
 //		walker.handleOneChild(ruleIndex);
 	}
