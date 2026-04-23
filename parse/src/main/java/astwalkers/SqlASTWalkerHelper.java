@@ -23,6 +23,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS = "SQL_UNRESOLVED_QUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
+		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 
 		
     /*************************************
@@ -180,6 +181,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH,
 				 "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
 				 "%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).");
+		 registerDiagnostic(
+				 DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER,
+				 "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
+				 "%s member %s contains INTO. INTO is allowed only in the first SELECT of a set operation.");
 	 }
 
 	@SuppressWarnings("unchecked")
@@ -1845,15 +1850,60 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		HashMap<String, Object> targetQueryMap = (HashMap<String, Object>) targetQueryObj;
-		if (!isWildcardBackedQuerySource(targetQueryKey, targetQueryMap)) {
+		boolean wildcardBacked = isWildcardBackedQuerySource(targetQueryKey, targetQueryMap);
+		ArrayList<String> resolvedUnknownKeys = new ArrayList<String>();
+		for (Map.Entry<String, Object> unknownEntry : unknownCollection.entrySet()) {
+			String unknownKey = unknownEntry.getKey();
+			if (unknownKey == null || unknownKey.contains(".")) {
+				continue;
+			}
+
+			boolean sourceProvidesColumn = wildcardBacked || querySourceProvidesColumn(targetQueryKey, targetQueryMap, unknownKey);
+			if (!sourceProvidesColumn) {
+				continue;
+			}
+
+			mergeColumnEntry(targetQueryMap, unknownKey, unknownEntry.getValue());
+			resolvedUnknownKeys.add(unknownKey);
+		}
+
+		for (String resolvedUnknownKey : resolvedUnknownKeys) {
+			unknownCollection.remove(resolvedUnknownKey);
+		}
+
+		return !resolvedUnknownKeys.isEmpty();
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean querySourceProvidesColumn(
+			String queryKey,
+			HashMap<String, Object> queryEntry,
+			String columnName) {
+		if (columnName == null || columnName.isBlank()) {
 			return false;
 		}
 
-		for (Map.Entry<String, Object> unknownEntry : unknownCollection.entrySet()) {
-			mergeColumnEntry(targetQueryMap, unknownEntry.getKey(), unknownEntry.getValue());
+		if (queryEntry != null && mapContainsKeyIgnoreCase(queryEntry, columnName)) {
+			return true;
 		}
-		unknownCollection.clear();
-		return true;
+
+		if (queryEntry != null) {
+			Object queryInterfaceObj = queryEntry.get(MUMBLE_INTERFACE_KEY);
+			if (queryInterfaceObj instanceof Map<?, ?> queryInterface
+					&& mapContainsKeyIgnoreCase((Map<String, Object>) queryInterface, columnName)) {
+				return true;
+			}
+		}
+
+		if (queryKey != null && queryColumnDictionaryMap != null) {
+			Object queryDictionaryObj = queryColumnDictionaryMap.get(queryKey);
+			if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
+					&& mapContainsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")

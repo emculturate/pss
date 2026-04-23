@@ -61,6 +61,18 @@ import sql.SQLSelectParserParser;
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 
+	private static final class IntoSetPlacementViolation {
+		private final String setOperationType;
+		private final int memberPosition;
+		private final Token token;
+
+		private IntoSetPlacementViolation(String setOperationType, int memberPosition, Token token) {
+			this.setOperationType = setOperationType;
+			this.memberPosition = memberPosition;
+			this.token = token;
+		}
+	}
+
 
 
 	/**
@@ -103,6 +115,59 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				String.valueOf(charPos));
 
 		walker.addWalkerFatal("INVALID VARIABLE NAME", message, line, charPos, tokenText);
+	}
+
+	private IntoSetPlacementViolation findIntoSetPlacementViolation(
+			SQLSelectParserParser.Query_specificationContext ctx) {
+		ParserRuleContext child = ctx;
+		ParserRuleContext parent = ctx.getParent();
+
+		while (parent != null) {
+			if (parent instanceof SQLSelectParserParser.Unionized_queryContext unionizedCtx
+					&& child instanceof SQLSelectParserParser.Query_primaryContext queryPrimaryCtx) {
+				int memberPosition = unionizedCtx.query_primary().indexOf(queryPrimaryCtx) + 1;
+				if (memberPosition > 1) {
+					return new IntoSetPlacementViolation("UNION", memberPosition, ctx.getStart());
+				}
+			}
+
+			if (parent instanceof SQLSelectParserParser.Intersected_queryContext intersectedCtx
+					&& child instanceof SQLSelectParserParser.Unionized_queryContext unionizedChildCtx) {
+				int memberPosition = intersectedCtx.unionized_query().indexOf(unionizedChildCtx) + 1;
+				if (memberPosition > 1) {
+					return new IntoSetPlacementViolation("INTERSECTION", memberPosition, ctx.getStart());
+				}
+			}
+
+			child = parent;
+			parent = parent.getParent();
+		}
+
+		return null;
+	}
+
+	private boolean shouldProjectSelectIntoForQuerySpecification(SQLSelectParserParser.Query_specificationContext ctx) {
+		if (ctx.into_list() == null) {
+			return true;
+		}
+
+		IntoSetPlacementViolation violation = findIntoSetPlacementViolation(ctx);
+		if (violation == null) {
+			return true;
+		}
+
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER);
+		String diagMessageTemplate = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER);
+		String diagMessage = String.format(
+				diagMessageTemplate,
+				violation.setOperationType,
+				String.valueOf(violation.memberPosition));
+
+		Integer line = violation.token == null ? null : violation.token.getLine();
+		Integer charPos = violation.token == null ? null : violation.token.getCharPositionInLine();
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, "INTO");
+		return false;
 	}
 
 	private String recoverVariableNameFromToken(Token startToken) {
@@ -329,34 +394,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	public HashMap<String, Object> getQueryColumnDictionaryMap() {
-		if (walker.queryColumnDictionaryMap != null && !walker.queryColumnDictionaryMap.isEmpty()) {
-			return walker.queryColumnDictionaryMap;
-		}
-
-		if (walker.symbolTable == null || walker.symbolTable.isEmpty()) {
-			return walker.queryColumnDictionaryMap;
-		}
-
-		for (Map.Entry<String, Object> scopeEntry : walker.symbolTable.entrySet()) {
-			String scopeKey = scopeEntry.getKey();
-			if (scopeKey == null || !scopeKey.startsWith(MUMBLE_UPDATE_KEY)) {
-				continue;
-			}
-			if (!(scopeEntry.getValue() instanceof Map<?, ?> scopeMapObj)) {
-				continue;
-			}
-			Map<String, Object> scopeMap = (Map<String, Object>) scopeMapObj;
-			Object updateDictionaryObj = scopeMap.get(MUMBLE_UPDATE_DICTIONARY_KEY);
-			if (!(updateDictionaryObj instanceof Map<?, ?> updateDictionaryMapObj)) {
-				continue;
-			}
-
-			HashMap<String, Object> fallback = new HashMap<String, Object>();
-			fallback.put(scopeKey, new HashMap<String, Object>((Map<String, Object>) updateDictionaryMapObj));
-			walker.queryColumnDictionaryMap = fallback;
-			return walker.queryColumnDictionaryMap;
-		}
-
 		return walker.queryColumnDictionaryMap;
 	}
 
@@ -963,6 +1000,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String fromTableRef = getSingleUpdateFromTableReference(updateAst);
+		if (fromTableRef == null || fromTableRef.isBlank()) {
+			Map<String, Object> updateNode = getUpdateNode(updateAst);
+			fromTableRef = getUpdateTargetTableReference(updateNode);
+		}
 		if (fromTableRef == null || fromTableRef.isBlank()) {
 			return;
 		}
@@ -1664,6 +1705,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
+	private void publishUpdateScopeQueryDictionary(String updateScopeKey) {
+		if (updateScopeKey == null || updateScopeKey.isBlank()) {
+			return;
+		}
+		Object updateScopeObj = walker.symbolTable.get(updateScopeKey);
+		if (!(updateScopeObj instanceof Map<?, ?> updateScopeMapObj)) {
+			return;
+		}
+		Map<String, Object> updateScopeMap = (Map<String, Object>) updateScopeMapObj;
+		Object updateDictionaryObj = updateScopeMap.get(MUMBLE_UPDATE_DICTIONARY_KEY);
+		if (!(updateDictionaryObj instanceof Map<?, ?> updateDictionaryMapObj)) {
+			return;
+		}
+		HashMap<String, Object> queryDictionary = new HashMap<String, Object>((Map<String, Object>) updateDictionaryMapObj);
+		sanitizeQueryDictionaryForGlobalExport(queryDictionary);
+		if (queryDictionary.isEmpty()) {
+			return;
+		}
+		walker.queryColumnDictionaryMap.put(updateScopeKey, queryDictionary);
+	}
+
+	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> buildInsertScopeQueryDictionaryFromTableDictionary(Map<String, Object> insertScopeMap) {
 		HashMap<String, Object> inferred = new HashMap<String, Object>();
 		if (insertScopeMap == null || insertScopeMap.isEmpty()) {
@@ -2164,6 +2227,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Keep update scope numbering in the symbol table for parity with query-like scopes.
 		String updateScopeKey = MUMBLE_UPDATE_KEY + walker.queryCount;
 		walker.popSymbolTable(updateScopeKey, walker.symbolTable);
+		publishUpdateScopeQueryDictionary(updateScopeKey);
 		walker.queryCount++;
 	}
 
@@ -3103,42 +3167,52 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Then we construct the final AST map from the availble parts of the query.
 		for (String key : keys) {
 			Object obj = subMap.remove(key);
-			if (obj instanceof String) {
+			if (!(obj instanceof Map<?, ?> valueObj)) {
+				walker.showTrace(walker.parseTrace,
+						"Unexpected query_specification child type for key " + key + ": " + obj);
+				continue;
+			}
 
+			HashMap<String, Object> value = (HashMap<String, Object>) valueObj;
+			Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
+			if (childKey == null) {
+				walker.showTrace(walker.parseTrace,
+						"Missing child rule type for query_specification clause key " + key + ": " + value);
+				continue;
+			}
+
+			Object segment = value.remove(childKey.toString());
+			if (childKey.equals((Integer) SQLSelectParserParser.RULE_select_list)) {
+				subMap.put(MUMBLE_SELECT_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier)) {
+				subMap.putAll(value);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_into_list)) {
+				subMap.put(MUMBLE_INTO_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_from_clause)) {
+				if (((HashMap<String, Object>) segment).size() == 1) {
+					subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
+				} else
+					subMap.put(MUMBLE_FROM_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
+				HashMap<String, Object> item = (HashMap<String, Object>) segment;
+				item = (HashMap<String, Object>) item.remove("1");
+				subMap.put(MUMBLE_WHERE_KEY, item);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_groupby_clause)) {
+				subMap.put(MUMBLE_GROUPBY_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_having_clause)) {
+				HashMap<String, Object> item = (HashMap<String, Object>) segment;
+				item = (HashMap<String, Object>) item.remove("1");
+				subMap.put(MUMBLE_HAVING_KEY, item);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_qualify_clause)) {
+				HashMap<String, Object> item = (HashMap<String, Object>) segment;
+				item = (HashMap<String, Object>) item.remove("1");
+				subMap.put(MUMBLE_QUALIFY_KEY, item);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_orderby_clause)) {
+				subMap.put(MUMBLE_ORDERBY_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_limit_clause)) {
+				subMap.put(MUMBLE_LIMIT_KEY, segment);
 			} else {
-				HashMap<String, Object> value = (HashMap<String, Object>) obj;
-				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
-				Object segment = value.remove(childKey.toString());
-				if (childKey.equals((Integer) SQLSelectParserParser.RULE_select_list)) {
-					subMap.put(MUMBLE_SELECT_KEY, segment);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_set_qualifier)) {
-					subMap.putAll(value);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_from_clause)) {
-					if (((HashMap<String, Object>) segment).size() == 1) {
-						subMap.put(MUMBLE_FROM_KEY, ((HashMap<String, Object>) segment).remove("1"));
-					} else
-						subMap.put(MUMBLE_FROM_KEY, segment);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
-					HashMap<String, Object> item = (HashMap<String, Object>) segment;
-					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put(MUMBLE_WHERE_KEY, item);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_groupby_clause)) {
-					subMap.put(MUMBLE_GROUPBY_KEY, segment);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_having_clause)) {
-					HashMap<String, Object> item = (HashMap<String, Object>) segment;
-					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put(MUMBLE_HAVING_KEY, item);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_qualify_clause)) {
-					HashMap<String, Object> item = (HashMap<String, Object>) segment;
-					item = (HashMap<String, Object>) item.remove("1");
-					subMap.put(MUMBLE_QUALIFY_KEY, item);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_orderby_clause)) {
-					subMap.put(MUMBLE_ORDERBY_KEY, segment);
-				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_limit_clause)) {
-					subMap.put(MUMBLE_LIMIT_KEY, segment);
-				} else {
-					walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
-				}
+				walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
 			}
 		}
 		walker.showTrace(walker.parseTrace, subMap);
@@ -3170,6 +3244,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
 		walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
 		symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		if (shouldProjectSelectIntoForQuerySpecification(ctx)) {
+			projectSelectIntoTargetFromInterface(subMap, symbols, localCurrentQueryDictionary);
+		}
 		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 
 		// Get the remaining unresolved column references from this query and push them up one level with the query key as a prefix
@@ -3223,6 +3300,75 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			emitQualifiedSourceNotFoundFatals(qualifiedUnresolvedForParent);
 		}
 
+	}
+
+	@SuppressWarnings("unchecked")
+	private void projectSelectIntoTargetFromInterface(
+			Map<String, Object> queryAst,
+			Map<String, Object> querySymbols,
+			Map<String, Object> localCurrentQueryDictionary) {
+		if (queryAst == null || querySymbols == null) {
+			return;
+		}
+
+		Object intoObj = queryAst.get(MUMBLE_INTO_KEY);
+		if (!(intoObj instanceof Map<?, ?> intoMapObj)) {
+			return;
+		}
+		Map<String, Object> intoMap = (Map<String, Object>) intoMapObj;
+		Map<String, Object> targetTableMap = intoMap;
+		Object firstIntoEntry = intoMap.get("1");
+		if (firstIntoEntry instanceof Map<?, ?> firstIntoEntryMapObj) {
+			targetTableMap = (Map<String, Object>) firstIntoEntryMapObj;
+		}
+
+		String targetTableRef = getQualifiedTableReference(targetTableMap);
+		if (targetTableRef == null || targetTableRef.isBlank()) {
+			return;
+		}
+		String normalizedTargetRef = targetTableRef.startsWith("<")
+				? targetTableRef
+				: targetTableRef.toLowerCase();
+
+		Object interfaceObj = querySymbols.get(MUMBLE_INTERFACE_KEY);
+		if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
+			return;
+		}
+		Map<String, Object> interfaceMap = (Map<String, Object>) interfaceMapObj;
+
+		Object tableDictionaryObj = querySymbols.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		HashMap<String, Object> tableDictionary = (tableDictionaryObj instanceof HashMap<?, ?> tableDictionaryMapObj)
+				? (HashMap<String, Object>) tableDictionaryMapObj
+				: new HashMap<String, Object>();
+		querySymbols.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionary);
+
+		HashMap<String, Object> targetColumns = ensureTableDictionaryEntry(tableDictionary, normalizedTargetRef);
+		for (Map.Entry<String, Object> interfaceEntry : interfaceMap.entrySet()) {
+			String targetColumn = interfaceEntry.getKey();
+			if (targetColumn == null || targetColumn.isBlank()) {
+				continue;
+			}
+
+			Object refsObj = localCurrentQueryDictionary == null ? null : localCurrentQueryDictionary.get(targetColumn);
+			Object refs = (refsObj instanceof ArrayList<?> refsListObj)
+					? new ArrayList<Object>((ArrayList<Object>) refsListObj)
+					: new ArrayList<Object>();
+			targetColumns.put(targetColumn, refs);
+		}
+
+		HashMap<String, Object> targetTableCollection;
+		Object targetTableObj = querySymbols.get(MUMBLE_TARGET_TABLE_KEY);
+		if (targetTableObj instanceof HashMap<?, ?> targetTableMapObj) {
+			targetTableCollection = (HashMap<String, Object>) targetTableMapObj;
+		} else {
+			targetTableCollection = new HashMap<String, Object>();
+			querySymbols.put(MUMBLE_TARGET_TABLE_KEY, targetTableCollection);
+		}
+		targetTableCollection.put(normalizedTargetRef, targetColumns);
+
+		HashMap<String, Object> globalTableDictionary = walker.getWalkerTableDictionary();
+		HashMap<String, Object> globalTargetColumns = ensureTableDictionaryEntry(globalTableDictionary, normalizedTargetRef);
+		globalTargetColumns.putAll(targetColumns);
 	}
 
 	private HashMap<String, Object> partitionParentResolvableQualifiedUnknownsAndEmit(
@@ -3606,6 +3752,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.parseTrace, "Qualifier: " + subMap);
 	
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	@Override
+	public void exitInto_list(@NotNull SQLSelectParserParser.Into_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handlePushDown(ruleIndex);
 	}
 
 	@Override
@@ -4048,6 +4200,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					localUnresolvedColumnMap,
 					localTableAliasMap,
 					localTableCollection);
+			resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
+					localUnresolvedColumnMap,
+					localTableCollection,
+					localTargetTableCollection,
+					localTableAliasMap,
+					updateTargetTableRef);
 		}
 
 		// // Add scalar subquery aliases into the alias collection for downstream source resolution, which allows scalar subqueries to be resolved as sources for columns in the query interface.
@@ -4103,7 +4261,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					filtersList,
 					localTableAliasMap,
 					localTableCollection,
-					localCurrentQueryDictionary,
+					visibleQuerySourceCollection,
 					localCurrentQueryDictionary,
 					localUnresolvedColumnMap);
 
@@ -4197,7 +4355,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 					if (tableRef != null) {
 						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
-						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, localCurrentQueryDictionary);
+						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
 						boolean explicitQueryReference = resolvedNonTableSourceRef != null
 								|| walker.isNonTableQuerySourceReference(resolvedTableRef);
 						boolean resolvedInSource = false;
@@ -4208,13 +4366,36 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 									: resolvedTableRef;
 							Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
 							if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
-								resolvedInSource = queryDictionary.containsKey(columnName)
-										|| queryDictionary.containsKey("*");
+								resolvedInSource = containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)
+										|| ((Map<String, Object>) queryDictionary).containsKey("*");
 							}
-							if (!resolvedInSource && queryDictionaryKey != null
-									&& walker.isNonTableQuerySourceReference(queryDictionaryKey)) {
-								// Query-backed source dictionary may be finalized after this validation step.
-								resolvedInSource = true;
+							if (!resolvedInSource) {
+								resolvedInSource = hasColumnInQueryOutputInterface(queryDictionaryKey, columnName);
+							}
+							if (!resolvedInSource) {
+								resolvedInSource = hasWildcardInQueryOutputInterface(queryDictionaryKey);
+							}
+							if (resolvedInSource) {
+								Object qualifiedUnknownEntry = consumeQualifiedUnknownEntry(
+										localUnresolvedColumnMap,
+										tableRef,
+										columnName,
+										false);
+								if (qualifiedUnknownEntry == null) {
+									qualifiedUnknownEntry = consumeUnqualifiedUnknownEntry(
+											localUnresolvedColumnMap,
+											columnName);
+								}
+								if (qualifiedUnknownEntry != null) {
+									mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+											queryDictionaryKey,
+											columnName,
+											qualifiedUnknownEntry);
+								}
+							} else {
+								// Fatal for query-alias references is already emitted by emitExplicitQualifiedUnknownDiagnostics.
+								hasSpecificResolutionFatalForOutputColumn = true;
+								continue;
 							}
 						} else {
 							HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
@@ -4319,6 +4500,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		}
+
+		mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				localTableAliasMap,
+				visibleQuerySourceCollection);
 
 		assignTableRefsForColumnReferenceList(
 				filtersList,
@@ -4462,6 +4650,100 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
+	private void mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> visibleQuerySourceCollection) {
+		if (localInterface == null || localInterface.isEmpty()) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+			String outputCol = interfaceEntry.getKey();
+			Object refsObj = interfaceEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs)) {
+				continue;
+			}
+
+			for (Object refObj : refs) {
+				String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+				if (columnName == null || columnName.isBlank() || "*".equals(columnName)
+						|| tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
+					continue;
+				}
+
+				String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
+				String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+				String querySourceRef = (resolvedNonTableSourceRef != null)
+						? resolvedNonTableSourceRef
+						: resolvedTableRef;
+				if (querySourceRef == null || !walker.isNonTableQuerySourceReference(querySourceRef)) {
+					continue;
+				}
+				if (!aliasMapsToQuerySource(tableRef, querySourceRef, localTableAliasMap)) {
+					continue;
+				}
+
+				Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(querySourceRef);
+				if (!(sourceDictionaryObj instanceof Map<?, ?> sourceDictionaryMapObj)) {
+					continue;
+				}
+				Map<String, Object> sourceDictionary = (Map<String, Object>) sourceDictionaryMapObj;
+				boolean sourceProvidesColumn = containsKeyIgnoreCase(sourceDictionary, columnName)
+						|| containsKeyIgnoreCase(sourceDictionary, "*")
+						|| hasColumnInQueryOutputInterface(querySourceRef, columnName)
+						|| hasWildcardInQueryOutputInterface(querySourceRef);
+				if (!sourceProvidesColumn) {
+					continue;
+				}
+
+				Object sourceRefTokens = consumeQualifiedUnknownEntry(localUnresolvedColumnMap, tableRef, columnName, false);
+				if (sourceRefTokens != null) {
+					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(querySourceRef, columnName, sourceRefTokens);
+				}
+			}
+		}
+	}
+
+	private boolean aliasMapsToQuerySource(
+			String aliasRef,
+			String querySourceRef,
+			HashMap<String, Object> tableAliasMap) {
+		if (aliasRef == null || aliasRef.isBlank() || querySourceRef == null || querySourceRef.isBlank()) {
+			return false;
+		}
+		if (tableAliasMap == null || tableAliasMap.isEmpty()) {
+			return false;
+		}
+
+		String mappedSource = null;
+		Object mappedObj = tableAliasMap.get(aliasRef);
+		if (mappedObj instanceof String s && !s.isBlank()) {
+			mappedSource = s;
+		} else {
+			for (Map.Entry<String, Object> entry : tableAliasMap.entrySet()) {
+				if (entry.getKey() != null
+						&& entry.getKey().equalsIgnoreCase(aliasRef)
+						&& entry.getValue() instanceof String mappedValue
+						&& !mappedValue.isBlank()) {
+					mappedSource = mappedValue;
+					break;
+				}
+			}
+		}
+		if (mappedSource == null || mappedSource.isBlank()) {
+			return false;
+		}
+
+		String normalizedMapped = mappedSource.startsWith("def_") ? mappedSource.substring("def_".length()) : mappedSource;
+		String normalizedQuerySource = querySourceRef.startsWith("def_") ? querySourceRef.substring("def_".length()) : querySourceRef;
+		return normalizedMapped.equalsIgnoreCase(normalizedQuerySource);
+	}
+
+	@SuppressWarnings("unchecked")
 	private void resolveUpdateQualifiedUnresolvedColumnsToInputTables(
 			HashMap<String, Object> unresolvedColumnMap,
 			HashMap<String, Object> tableAliasMap,
@@ -4512,6 +4794,65 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 
 			tableEntry.put(columnName, normalizedRefs);
+			resolvedKeys.add(unresolvedKey);
+		}
+
+		for (String resolvedKey : resolvedKeys) {
+			unresolvedColumnMap.remove(resolvedKey);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> targetTableCollection,
+			HashMap<String, Object> tableAliasMap,
+			String updateTargetTableRef) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()
+				|| targetTableCollection == null
+				|| updateTargetTableRef == null || updateTargetTableRef.isBlank()) {
+			return;
+		}
+
+		if (tableCollection != null && !tableCollection.isEmpty()) {
+			return;
+		}
+
+		String resolvedTarget = walker.resolveAliasToTableName(updateTargetTableRef, tableAliasMap);
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			resolvedTarget = updateTargetTableRef;
+		}
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			return;
+		}
+
+		String normalizedTarget = resolvedTarget.startsWith("<")
+				? resolvedTarget
+				: resolvedTarget.toLowerCase();
+
+		Object targetTableObj = targetTableCollection.get(normalizedTarget);
+		HashMap<String, Object> targetColumns;
+		if (targetTableObj instanceof HashMap<?, ?> existingMap) {
+			targetColumns = (HashMap<String, Object>) existingMap;
+		} else {
+			targetColumns = new HashMap<String, Object>();
+			targetTableCollection.put(normalizedTarget, targetColumns);
+		}
+
+		ArrayList<String> resolvedKeys = new ArrayList<String>();
+		for (Map.Entry<String, Object> unresolvedEntry : unresolvedColumnMap.entrySet()) {
+			String unresolvedKey = unresolvedEntry.getKey();
+			if (unresolvedKey == null || unresolvedKey.contains(".")) {
+				continue;
+			}
+
+			Object normalizedRefs = normalizeUpdateColumnRefs(unresolvedEntry.getValue());
+			if (normalizedRefs == null) {
+				continue;
+			}
+
+			targetColumns.put(unresolvedKey, normalizedRefs);
 			resolvedKeys.add(unresolvedKey);
 		}
 
@@ -4838,6 +5179,87 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						&& !"*".equals(filterTableRef)) {
 					return filterTableRef;
 				}
+			}
+		}
+
+		return null;
+	}
+
+	private Object consumeUnqualifiedUnknownEntry(
+			HashMap<String, Object> unresolvedColumnMap,
+			String columnName) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()
+				|| columnName == null || columnName.isBlank()) {
+			return null;
+		}
+
+		Object direct = unresolvedColumnMap.remove(columnName);
+		if (direct != null) {
+			return direct;
+		}
+
+		for (String key : new ArrayList<String>(unresolvedColumnMap.keySet())) {
+			if (key == null || key.contains(".")) {
+				continue;
+			}
+			if (key.equalsIgnoreCase(columnName)) {
+				return unresolvedColumnMap.remove(key);
+			}
+		}
+
+		return null;
+	}
+
+	private Object consumeQualifiedUnknownEntry(
+			HashMap<String, Object> unresolvedColumnMap,
+			String tableRef,
+			String columnName,
+			boolean includeCapturedFallback) {
+		if (tableRef == null || tableRef.isBlank()
+				|| columnName == null || columnName.isBlank()) {
+			return null;
+		}
+
+		String directKey = tableRef + "." + columnName;
+		if (unresolvedColumnMap != null && !unresolvedColumnMap.isEmpty()) {
+			Object removedDirect = unresolvedColumnMap.remove(directKey);
+			if (removedDirect != null) {
+				return removedDirect;
+			}
+
+			for (String key : new ArrayList<String>(unresolvedColumnMap.keySet())) {
+				if (key == null || !key.contains(".")) {
+					continue;
+				}
+				int separatorIndex = key.lastIndexOf('.');
+				if (separatorIndex <= 0 || separatorIndex + 1 >= key.length()) {
+					continue;
+				}
+				String keyTableRef = key.substring(0, separatorIndex);
+				String keyColumnName = key.substring(separatorIndex + 1);
+				if (keyTableRef.equalsIgnoreCase(tableRef)
+						&& keyColumnName.equalsIgnoreCase(columnName)) {
+					return unresolvedColumnMap.remove(key);
+				}
+			}
+		}
+
+		if (includeCapturedFallback) {
+			Object capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(directKey);
+			if (capturedEntry != null) {
+				return capturedEntry;
+			}
+			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef.toLowerCase() + "." + columnName);
+			if (capturedEntry != null) {
+				return capturedEntry;
+			}
+			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef + "." + columnName.toLowerCase());
+			if (capturedEntry != null) {
+				return capturedEntry;
+			}
+			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef.toLowerCase() + "." + columnName.toLowerCase());
+			if (capturedEntry != null) {
+				return capturedEntry;
 			}
 		}
 
@@ -5408,6 +5830,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (!foundInQueryInterface && hasWildcardInQueryOutputInterface(querySourceRef)) {
 					foundInQueryInterface = true;
 				}
+				if (foundInQueryInterface) {
+					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+							querySourceRef,
+							columnName,
+							unknownEntry.getValue());
+					continue;
+				}
 				if (!foundInQueryInterface) {
 					Integer[] refLocation = walker.getLineAndCharacterFromEntry(unknownEntry.getValue());
 					if (refLocation[0] == null || refLocation[1] == null) {
@@ -5475,6 +5904,63 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				singleEntry.put(qualifiedStorageKey, unknownEntry.getValue());
 				walker.mergeUnknownEntries(unresolvedCollector, singleEntry);
 			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+			String querySourceRef,
+			String columnName,
+			Object unknownEntryValue) {
+		if (querySourceRef == null || querySourceRef.isBlank()
+				|| columnName == null || columnName.isBlank()) {
+			return;
+		}
+
+		String sourceQueryKey = querySourceRef;
+		Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
+		if (sourceDictionaryObj == null && sourceQueryKey.startsWith("def_")) {
+			sourceQueryKey = sourceQueryKey.substring("def_".length());
+			sourceDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
+		}
+		if (sourceDictionaryObj == null) {
+			String defSourceKey = sourceQueryKey.startsWith("def_") ? sourceQueryKey : "def_" + sourceQueryKey;
+			sourceDictionaryObj = walker.queryColumnDictionaryMap.get(defSourceKey);
+		}
+		if (!(sourceDictionaryObj instanceof Map<?, ?> sourceDictionaryMapObj)) {
+			return;
+		}
+		Map<String, Object> sourceQueryDictionary = (Map<String, Object>) sourceDictionaryMapObj;
+
+		Object promotedRefs = unknownEntryValue;
+		if (unknownEntryValue instanceof Map<?, ?> unknownEntryMapObj) {
+			Object locations = ((Map<String, Object>) unknownEntryMapObj).get("locations");
+			if (locations != null) {
+				promotedRefs = locations;
+			}
+		}
+
+		if (promotedRefs == null) {
+			return;
+		}
+
+		if (promotedRefs instanceof ArrayList<?> promotedListObj) {
+			promotedRefs = new ArrayList<Object>((ArrayList<Object>) promotedListObj);
+		}
+
+		String existingColumnKey = null;
+		for (String existingKey : sourceQueryDictionary.keySet()) {
+			if (existingKey != null && existingKey.equalsIgnoreCase(columnName)) {
+				existingColumnKey = existingKey;
+				break;
+			}
+		}
+
+		if (existingColumnKey != null) {
+			Object existingRefs = sourceQueryDictionary.get(existingColumnKey);
+			sourceQueryDictionary.put(existingColumnKey, mergeReferenceCollections(existingRefs, promotedRefs));
+		} else {
+			sourceQueryDictionary.put(columnName, promotedRefs);
 		}
 	}
 
@@ -5549,19 +6035,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 					// And add the table header to the local Table_Dictionary
 					walker.ensureTableDictionaryEntry(qualifiedTableReference);
-				} else {
-					// TODO: not sure this can get called. 
-					alias = "unnamed";
-					
-					Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
-					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
-					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
-					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
-					if (!done)
-						done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 				}
 			} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
 				item = walker.checkForSubstitutionVariable(item, "tuple");
@@ -5575,28 +6048,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else { // VALUES STATEMENT can only happen in this instance
 				subMap.putAll(item);
 
+				// exitValues_statement always stores a Map under MUMBLE_VALUES_KEY
 				Object valuesObject = item.get(MUMBLE_VALUES_KEY);
-				if (valuesObject instanceof String valuesSourceRef) {
-					if (!(valuesSourceRef.startsWith(MUMBLE_QUERY_KEY)
-							|| valuesSourceRef.startsWith(MUMBLE_UNION_KEY)
-							|| valuesSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-							|| valuesSourceRef.startsWith(MUMBLE_VALUES_KEY)
-							|| valuesSourceRef.startsWith(MUMBLE_INSERT_KEY)
-							|| valuesSourceRef.startsWith(MUMBLE_UPDATE_KEY))) {
-						walker.ensureTableDictionaryEntry(valuesSourceRef);
-					}
-				} else if (valuesObject instanceof Map<?, ?> valuesMapObj) {
+				if (valuesObject instanceof Map<?, ?> valuesMapObj) {
 					Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
 					String valuesScopeKey = findTopLevelValuesScopeKey();
-					if (valuesScopeKey != null) {
-						wrapValuesScopeAsDefinition(valuesScopeKey);
-					}
+					wrapValuesScopeAsDefinition(valuesScopeKey);
 					Object aliasObj = valuesMap.get(MUMBLE_ALIAS_KEY);
 					if (aliasObj instanceof String valuesAlias) {
-						if (valuesScopeKey != null) {
-							addCurrentScopeValuesAliasMapping(valuesAlias, valuesScopeKey);
-							walker.collectTableAlias(valuesAlias, valuesScopeKey);
-						}
+						addCurrentScopeValuesAliasMapping(valuesAlias, valuesScopeKey);
+						walker.collectTableAlias(valuesAlias, valuesScopeKey);
 					}
 				}
 
@@ -5889,7 +6350,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String queryName = hdr + (walker.queryCount - 1);
 		Map<String, Object> query = (Map<String, Object>)  walker.symbolTable.remove(queryName);
 		if (query != null) {
-			query.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+				pruneInsertSourceSequenceFromNestedDefinitions(query);
+			} else {
+				query.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+			}
 			// add alias to query
 			if (alias != null) {
 				walker.collectTableAlias(alias, queryName);
@@ -5922,6 +6387,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return true;
 		} else
 			return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void pruneInsertSourceSequenceFromNestedDefinitions(Map<String, Object> scopeMap) {
+		if (scopeMap == null || scopeMap.isEmpty()) {
+			return;
+		}
+
+		Object currentSequence = scopeMap.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		pruneInsertSourceSequenceRecursive(scopeMap);
+		if (currentSequence != null) {
+			scopeMap.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, currentSequence);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void pruneInsertSourceSequenceRecursive(Map<String, Object> map) {
+		if (map == null || map.isEmpty()) {
+			return;
+		}
+
+		map.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+
+		for (Object value : map.values()) {
+			if (value instanceof Map<?, ?> valueMapObj) {
+				pruneInsertSourceSequenceRecursive((Map<String, Object>) valueMapObj);
+			}
+		}
 	}
 	
 	@Override

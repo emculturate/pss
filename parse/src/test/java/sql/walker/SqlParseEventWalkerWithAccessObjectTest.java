@@ -544,9 +544,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={x=[[@14,40:40='x',<329>,2:9]]}, tab2={z=[[@32,105:105='z',<329>,3:9]]}}",
 				snippet.getTableDictionary().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@16,45:45='a',<329>,2:14]]}, query1={y=[[@34,110:110='y',<329>,3:14]]}, query2={b=[[@26,79:79='b',<329>,2:48]], missing=[[@28,82:88='missing',<329>,2:51]]}, query3={aa=[[@4,13:14='aa',<329>,1:13]], b=[[@8,20:20='b',<329>,1:20]], c=[[@10,23:23='c',<329>,1:23]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@16,45:45='a',<329>,2:14], [@1,8:9='dd',<329>,1:8], [@42,133:134='dd',<329>,3:37]]}, query1={y=[[@34,110:110='y',<329>,3:14]]}, query2={b=[[@26,79:79='b',<329>,2:48], [@6,17:18='cc',<329>,1:17], [@46,140:141='cc',<329>,3:44]], missing=[[@28,82:88='missing',<329>,2:51]]}, query3={aa=[[@4,13:14='aa',<329>,1:13]], b=[[@8,20:20='b',<329>,1:20]], c=[[@10,23:23='c',<329>,1:23]]}}",
 				snippet.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={aa=[[@4,13:14='aa',<329>,1:13]], b=[[@8,20:20='b',<329>,1:20]], c=[[@10,23:23='c',<329>,1:23]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@16,45:45='a',<329>,2:14]]}, table_dictionary={tab1={x=[[@14,40:40='x',<329>,2:9]]}}, interface={a=[{name=x, table_ref=tab1}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0, cc=query2}, def_query2={query_dictionary={b=[[@26,79:79='b',<329>,2:48]], missing=[[@28,82:88='missing',<329>,2:51]]}, table_dictionary={}, def_query1={query_dictionary={y=[[@34,110:110='y',<329>,3:14]]}, table_dictionary={tab2={z=[[@32,105:105='z',<329>,3:9]]}}, interface={y=[{name=z, table_ref=tab2}]}}, interface={b=[{name=y, table_ref=query1}], missing=[{name=missing, table_ref=null}]}, table_alias={ee=query1}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={aa=[[@4,13:14='aa',<329>,1:13]], b=[[@8,20:20='b',<329>,1:20]], c=[[@10,23:23='c',<329>,1:23]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@16,45:45='a',<329>,2:14], [@1,8:9='dd',<329>,1:8], [@42,133:134='dd',<329>,3:37]]}, table_dictionary={tab1={x=[[@14,40:40='x',<329>,2:9]]}}, interface={a=[{name=x, table_ref=tab1}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0, cc=query2}, def_query2={query_dictionary={b=[[@26,79:79='b',<329>,2:48], [@6,17:18='cc',<329>,1:17], [@46,140:141='cc',<329>,3:44]], missing=[[@28,82:88='missing',<329>,2:51]]}, table_dictionary={}, def_query1={query_dictionary={y=[[@34,110:110='y',<329>,3:14]]}, table_dictionary={tab2={z=[[@32,105:105='z',<329>,3:9]]}}, interface={y=[{name=z, table_ref=tab2}]}}, interface={b=[{name=y, table_ref=query1}], missing=[{name=missing, table_ref=null}]}, table_alias={ee=query1}}}}",
 				snippet.getSymbolTable().toString());
 
 		assertDiagnosticCountBySeverity(
@@ -714,9 +714,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				snippet.getTableDictionary().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={a=[[@13,33:33='a',<329>,1:33]]}, query1={a=[[@3,10:10='a',<329>,1:10]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={a=[[@13,33:33='a',<329>,1:33], [@1,7:8='dd',<329>,1:7]]}, query1={a=[[@3,10:10='a',<329>,1:10]]}}",
 				snippet.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={a=[[@3,10:10='a',<329>,1:10]]}, table_dictionary={}, def_values0={query_dictionary={a=[[@13,33:33='a',<329>,1:33]]}, table_dictionary={}, interface={a=[]}}, interface={a=[{name=a, table_ref=dd}]}, table_alias={dd=values0}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={a=[[@3,10:10='a',<329>,1:10]]}, table_dictionary={}, def_values0={query_dictionary={a=[[@13,33:33='a',<329>,1:33], [@1,7:8='dd',<329>,1:7]]}, table_dictionary={}, interface={a=[]}}, interface={a=[{name=a, table_ref=dd}]}, table_alias={dd=values0}}}",
 				snippet.getSymbolTable().toString());
 	}
 
@@ -1375,6 +1375,862 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={rno=[[@16,101:103='rno',<329>,1:101]], min_activity_dt=[[@44,284:298='min_activity_dt',<329>,3:109]], outbound_ind=[[@24,161:172='outbound_ind',<329>,2:55]], person_activity_key=[[@18,113:131='person_activity_key',<329>,2:7]], activity_id=[[@20,135:145='activity_id',<329>,2:29]], person_id=[[@22,149:157='person_id',<329>,2:43]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	// Coverage-driven additions from sql.walker/astwalkers gap analysis.
+	@Test
+	public void coverageDrivenUpdateSingleFromTableRehomesUnqualifiedUnknownsTest() {
+		final String query = "UPDATE t SET a = b FROM t2 WHERE c = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=null, table=t2}}, where={condition={left={column={name=c, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=a, table_ref=null}}, to={column={name=b, table_ref=null}}}}, table={alias=null, table=t}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<329>,1:13]]}, t2={b=[[@5,17:17='b',<329>,1:17]], c=[[@9,33:33='c',<329>,1:33]]}}, update_dictionary={a=[[@3,13:13='a',<329>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<329>,1:13]]}, t2={b=[[@5,17:17='b',<329>,1:17]], c=[[@9,33:33='c',<329>,1:33]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@3,13:13='a',<329>,1:13]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"AMBIGUOUS_COLUMN_REFERENCE",
+			ParseDiagnostic.Severity.SEVERE_WARNING,
+			"Ambiguous column reference 'c'",
+			"c");
+	}
+
+	@Test
+	public void coverageDrivenUpdateNoFromDefaultsUnqualifiedUnknownsToTargetTableTest() {
+		final String query = "UPDATE t SET a = b WHERE c = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=t}, where={condition={left={column={name=c, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=a, table_ref=null}}, to={column={name=b, table_ref=null}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<329>,1:13]], b=[[@5,17:17='b',<329>,1:17]], c=[[@7,25:25='c',<329>,1:25]]}}, update_dictionary={a=[[@3,13:13='a',<329>,1:13]]}, filters=[{name=c, table_ref=t}]}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t={a=[[@3,13:13='a',<329>,1:13]], b=[[@5,17:17='b',<329>,1:17]], c=[[@7,25:25='c',<329>,1:25]]}}",
+				snippet.getTableDictionary().toString());
+
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@3,13:13='a',<329>,1:13]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectAliasBackedByQueryMissingColumnFatalTest() {
+		final String query = "SELECT q.missing FROM (SELECT a FROM tab1) q";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=missing, table_ref=q}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[missing]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={missing=[[@3,9:15='missing',<329>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@7,30:30='a',<329>,1:30]]}, table_dictionary={tab1={a=[[@7,30:30='a',<329>,1:30]]}}, interface={a=[{name=a, table_ref=tab1}]}}, interface={missing=[{name=missing, table_ref=q}]}, table_alias={q=query0}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@7,30:30='a',<329>,1:30]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@7,30:30='a',<329>,1:30]]}, query1={missing=[[@3,9:15='missing',<329>,1:9]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+			ParseDiagnostic.Severity.FATAL,
+			"output interface of query alias 'q'",
+			"q.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenSelectAliasBackedByQueryWildcardAllowsQualifiedReferenceTest() {
+		final String query = "SELECT q.anycol FROM (SELECT * FROM tab1) q";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=anycol, table_ref=q}}}, from={table={alias=q, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[anycol]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={anycol=[[@3,9:14='anycol',<329>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={anycol=[[@1,7:7='q',<329>,1:7]], *=[[@7,29:29='*',<289>,1:29]]}, table_dictionary={tab1={*=[[@7,29:29='*',<289>,1:29]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={anycol=[{name=anycol, table_ref=q}]}, table_alias={q=query0}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[[@7,29:29='*',<289>,1:29]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={anycol=[[@1,7:7='q',<329>,1:7]], *=[[@7,29:29='*',<289>,1:29]]}, query1={anycol=[[@3,9:14='anycol',<329>,1:9]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void coverageDrivenSelectAliasBackedByValuesMissingColumnFatalTest() {
+		final String query = "SELECT v.missing FROM (VALUES (1)) v(a)";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=missing, table_ref=v}}}, from={values={columns={1={column={name=a, table_ref=null}}}, alias=v, matrix={1={row={1={literal=1}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[missing]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={missing=[[@3,9:15='missing',<329>,1:9]]}, table_dictionary={}, def_values0={query_dictionary={a=[[@13,37:37='a',<329>,1:37]]}, table_dictionary={}, interface={a=[]}}, interface={missing=[{name=missing, table_ref=v}]}, table_alias={v=values0}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={a=[[@13,37:37='a',<329>,1:37]]}, query1={missing=[[@3,9:15='missing',<329>,1:9]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+			ParseDiagnostic.Severity.FATAL,
+			"output interface of query alias 'v'",
+			"v.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenSetOperationInterfaceMismatchTopLevelSiblingTest() {
+		final String query = "(SELECT a FROM t1 UNION SELECT b FROM t2) INTERSECT (SELECT a,b FROM t3)";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=t3}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{intersect4={interface={a=union_column}, union2={query0={query_dictionary={a=[[@2,8:8='a',<329>,1:8]]}, table_dictionary={t1={a=[[@2,8:8='a',<329>,1:8]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={a=query_column}, query1={query_dictionary={b=[[@7,31:31='b',<329>,1:31]]}, table_dictionary={t2={b=[[@7,31:31='b',<329>,1:31]]}}, interface={b=[{name=b, table_ref=t2}]}}}, query3={query_dictionary={a=[[@14,60:60='a',<329>,1:60]], b=[[@16,62:62='b',<329>,1:62]]}, table_dictionary={t3={a=[[@14,60:60='a',<329>,1:60]], b=[[@16,62:62='b',<329>,1:62]]}}, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}]}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@2,8:8='a',<329>,1:8]]}, t2={b=[[@7,31:31='b',<329>,1:31]]}, t3={a=[[@14,60:60='a',<329>,1:60]], b=[[@16,62:62='b',<329>,1:62]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@2,8:8='a',<329>,1:8]]}, query1={b=[[@7,31:31='b',<329>,1:31]]}, query3={a=[[@14,60:60='a',<329>,1:60]], b=[[@16,62:62='b',<329>,1:62]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+			ParseDiagnostic.Severity.FATAL,
+			"INTERSECTION has different column counts",
+			"query3");
+		assertFatalDiagnosticCount(snippet, "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenSetOperationInterfaceMismatchNestedSubqueryTest() {
+		final String query = "SELECT * FROM ((SELECT a FROM t1 UNION SELECT b FROM t2) INTERSECT (SELECT a,b FROM t3)) x";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=x, query={intersect={1={union={1={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=t3}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query5={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, def_intersect4={interface={a=union_column}, union2={query0={query_dictionary={a=[[@6,23:23='a',<329>,1:23]], *=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t1={a=[[@6,23:23='a',<329>,1:23]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={a=query_column}, query1={query_dictionary={b=[[@11,46:46='b',<329>,1:46]], *=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t2={b=[[@11,46:46='b',<329>,1:46]]}}, interface={b=[{name=b, table_ref=t2}]}}}, query3={query_dictionary={a=[[@18,75:75='a',<329>,1:75]], b=[[@20,77:77='b',<329>,1:77]], *=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t3={a=[[@18,75:75='a',<329>,1:75]], b=[[@20,77:77='b',<329>,1:77]]}}, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}]}}}, table_dictionary={}, interface={*=[{name=*, table_ref=*}]}, table_alias={x=intersect4}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@6,23:23='a',<329>,1:23]]}, t2={b=[[@11,46:46='b',<329>,1:46]]}, t3={a=[[@18,75:75='a',<329>,1:75]], b=[[@20,77:77='b',<329>,1:77]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={*=[[@1,7:7='*',<289>,1:7]]}, query0={a=[[@6,23:23='a',<329>,1:23]], *=[[@1,7:7='*',<289>,1:7]]}, query1={b=[[@11,46:46='b',<329>,1:46]], *=[[@1,7:7='*',<289>,1:7]]}, query3={a=[[@18,75:75='a',<329>,1:75]], b=[[@20,77:77='b',<329>,1:77]], *=[[@1,7:7='*',<289>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+			ParseDiagnostic.Severity.FATAL,
+			"INTERSECTION has different column counts",
+			"query3");
+		assertFatalDiagnosticCount(snippet, "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenInsertDerivedSourceColumnSequenceFromUnionNoFallbackTest() {
+		final String query = "INSERT INTO tab1(c,d) SELECT x,y FROM (SELECT a AS x, b AS y FROM t2 UNION SELECT c AS x, d AS y FROM t3) s";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={from={table={alias=s, query={union={1={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}}, from={table={alias=null, table=t2}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=c, table_ref=null}, alias=x}, 2={column={name=d, table_ref=null}, alias=y}}, from={table={alias=null, table=t3}}}}}}}, select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}, table={table={alias=null, table=tab1}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert4={query_dictionary={d=[[@6,19:19='d',<329>,1:19]], c=[[@4,17:17='c',<329>,1:17]]}, table_dictionary={tab1={c=[[@4,17:17='c',<329>,1:17]], d=[[@6,19:19='d',<329>,1:19]]}}, interface={c=[{name=x, table_ref=query3}], d=[{name=y, table_ref=query3}]}, def_query3={def_union2={query0={query_dictionary={x=[[@17,51:51='x',<329>,1:51]], y=[[@21,59:59='y',<329>,1:59]]}, table_dictionary={t2={a=[[@15,46:46='a',<329>,1:46]], b=[[@19,54:54='b',<329>,1:54]]}}, interface={x=[{name=a, table_ref=t2}], y=[{name=b, table_ref=t2}]}}, interface={x=query_column, y=query_column}, query1={query_dictionary={x=[[@28,87:87='x',<329>,1:87]], y=[[@32,95:95='y',<329>,1:95]]}, table_dictionary={t3={c=[[@26,82:82='c',<329>,1:82]], d=[[@30,90:90='d',<329>,1:90]]}}, interface={x=[{name=c, table_ref=t3}], y=[{name=d, table_ref=t3}]}}}, query_dictionary={x=[[@9,29:29='x',<329>,1:29]], y=[[@11,31:31='y',<329>,1:31]]}, table_dictionary={}, interface={x=[{name=x, table_ref=union2}], y=[{name=y, table_ref=union2}]}, table_alias={s=union2}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,17:17='c',<329>,1:17]], d=[[@6,19:19='d',<329>,1:19]]}, t2={a=[[@15,46:46='a',<329>,1:46]], b=[[@19,54:54='b',<329>,1:54]]}, t3={c=[[@26,82:82='c',<329>,1:82]], d=[[@30,90:90='d',<329>,1:90]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={x=[[@17,51:51='x',<329>,1:51]], y=[[@21,59:59='y',<329>,1:59]]}, insert4={d=[[@6,19:19='d',<329>,1:19]], c=[[@4,17:17='c',<329>,1:17]]}, query1={x=[[@28,87:87='x',<329>,1:87]], y=[[@32,95:95='y',<329>,1:95]]}, query3={x=[[@9,29:29='x',<329>,1:29]], y=[[@11,31:31='y',<329>,1:31]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void coverageDrivenTablePrimarySourceClassificationMatrixTest() {
+		final Snippet baseTable = runSuccessfulSQLParserTest(
+				"SELECT a FROM tab1",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertTrue("Base-table routing should keep physical table in table dictionary",
+				baseTable.getTableDictionary().toString().contains("tab1={"));
+		Assert.assertTrue("Base-table symbol tree should include query0 scope",
+				baseTable.getSymbolTable().toString().contains("query0={"));
+
+		final Snippet derivedAlias = runSuccessfulSQLParserTest(
+				"SELECT d.a FROM (SELECT a FROM tab1) d",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertTrue("Derived-subquery source should register alias mapping",
+				derivedAlias.getSymbolTable().toString().contains("table_alias={d=query0}"));
+		Assert.assertTrue("Derived-subquery source should preserve nested query definition",
+				derivedAlias.getSymbolTable().toString().contains("def_query0={"));
+
+		final Snippet valuesAlias = runSuccessfulSQLParserTest(
+				"SELECT v.a FROM (VALUES (1)) v(a)",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertTrue("VALUES alias source should map alias to values scope",
+				valuesAlias.getSymbolTable().toString().contains("table_alias={v=values0}"));
+		Assert.assertTrue("VALUES alias source should retain values definition",
+				valuesAlias.getSymbolTable().toString().contains("def_values0={"));
+
+		final Snippet substitutionTuple = runSuccessfulSQLParserTest(
+				"SELECT * FROM {{ target.schema }}",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertEquals("Substitution tuple should be preserved",
+				"{{{ target.schema }}=tuple}",
+				substitutionTuple.getSubstitutionsMap().toString());
+		Assert.assertTrue("Tuple source should route into table dictionary key",
+				substitutionTuple.getTableDictionary().toString().contains("{{ target.schema }}"));
+	}
+
+	@Test
+	public void coverageDrivenQuerySpecMixedAliasWildcardResolutionTest() {
+		final String query = "SELECT q.a, t2.* FROM (SELECT a FROM t1) q JOIN t2 ON q.a = t2.a";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertTrue("Interface should include explicit and wildcard projections",
+				snippet.getQueryInterface().toString().contains("a")
+					&& snippet.getQueryInterface().toString().contains("*"));
+		Assert.assertTrue("Symbol tree should contain query alias routing for q",
+				snippet.getSymbolTable().toString().contains("table_alias={q=query0}"));
+		Assert.assertTrue("Table dictionary should include joined base table",
+				snippet.getTableDictionary().toString().contains("t2={"));
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenJinjaArgumentVariantsTest() {
+		final Snippet tupleLikeSource = runSuccessfulSQLParserTest(
+				"SELECT * FROM {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertTrue("Tuple-like source call should be captured as substitution tuple",
+				tupleLikeSource.getSubstitutionsMap().toString().contains("source('PDP_AMS', 'pdp_ams_mail_contacts')"));
+		Assert.assertTrue("AST should retain jinja source call",
+				tupleLikeSource.getSqlAbstractTree().toString().contains("source"));
+
+		final Snippet variableAccess = runSuccessfulSQLParserTest(
+				"SELECT * FROM {{ target.schema }}",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertEquals("Variable-access substitution should be captured as tuple",
+				"{{{ target.schema }}=tuple}",
+				variableAccess.getSubstitutionsMap().toString());
+		Assert.assertTrue("AST should retain jinja variable access text",
+				variableAccess.getSqlAbstractTree().toString().contains("{{ target.schema }}"));
+
+		final Snippet nestedFunctionArgs = runFailedSyntaxSQLParserTest(
+				"SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}",
+				SQLPARSER_SQL_TREE_KEY,
+				1);
+		assertFatalDiagnosticByCode(
+				nestedFunctionArgs,
+				"REPORT_ERROR",
+				"unexpected input",
+				"(");
+	}
+
+	@Test
+	public void coverageDrivenInPredicateValueFormsTest() {
+		final Snippet literalInList = runSuccessfulSQLParserTest(
+				"SELECT a FROM t1 WHERE a IN (1, 2, 3)",
+				SQLPARSER_SQL_TREE_KEY);
+		Assert.assertTrue("Literal IN-list AST shape should include IN clause with literal values",
+				literalInList.getSqlAbstractTree().toString().contains("in={")
+					&& literalInList.getSqlAbstractTree().toString().contains("literal=1")
+					&& literalInList.getSqlAbstractTree().toString().contains("literal=2")
+					&& literalInList.getSqlAbstractTree().toString().contains("literal=3"));
+
+		final Snippet tupleInList = runFailedSyntaxSQLParserTest(
+				"SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
+				SQLPARSER_SQL_TREE_KEY,
+				2);
+		assertFatalDiagnosticByCode(
+				tupleInList,
+				"REPORT_ERROR",
+				"unexpected input",
+				",");
+
+		final String invalidQualifiedQuery = "SELECT q.a FROM (SELECT a FROM t1) q WHERE q.missing IN (SELECT a FROM t2)";
+		final Snippet invalidQualified = runFailedSyntaxSQLParserTest(invalidQualifiedQuery, SQLPARSER_SQL_TREE_KEY, 1);
+		assertDiagnosticByCode(
+				invalidQualified,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				"output interface of query alias 'q'",
+				"q.missing");
+	}
+
+	@Test
+	public void coverageDrivenWithClauseAliasChainingTest() {
+		final String chainedCtes = "WITH c1 AS (SELECT a FROM t1), c2 AS (SELECT c1.a FROM c1) SELECT c2.a FROM c2";
+		final Snippet validChain = runSuccessfulSQLParserTest(chainedCtes, SQLPARSER_SQL_TREE_KEY);
+		Assert.assertEquals("CTE chain should expose projected column in interface",
+				"[a]",
+				validChain.getQueryInterface().toString());
+		Assert.assertTrue("CTE chain should preserve alias mappings",
+				validChain.getSymbolTable().toString().contains("table_alias={")
+					&& validChain.getSymbolTable().toString().contains("c2="));
+
+		final String missingQualified = "WITH c1 AS (SELECT a FROM t1), c2 AS (SELECT a FROM c1) SELECT q.missing FROM (SELECT c2.a FROM c2) q";
+		final Snippet invalidChain = runFailedSyntaxSQLParserTest(missingQualified, SQLPARSER_SQL_TREE_KEY, 1);
+		Assert.assertTrue("Expected at least one fatal qualified-column diagnostic for invalid CTE chain",
+				countFatalDiagnostics(
+						invalidChain,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+						"output interface of query alias 'q'",
+						null) >= 1);
+	}
+
+	/*
+	===============================================================================
+	  QUERY SPECIFICATION AND SELECT INTO COVERAGE REGRESSION TESTS
+	===============================================================================
+	*/
+
+	@Test
+	public void coverageDrivenQuerySpecificationAliasUnresolvedSnapshotTest() {
+		final String query = "SELECT q.missing FROM (SELECT a FROM t1) q";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=missing, table_ref=q}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[missing]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query1={query_dictionary={missing=[[@3,9:15='missing',<329>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@7,30:30='a',<329>,1:30]]}, table_dictionary={t1={a=[[@7,30:30='a',<329>,1:30]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={missing=[{name=missing, table_ref=q}]}, table_alias={q=query0}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t1={a=[[@7,30:30='a',<329>,1:30]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,30:30='a',<329>,1:30]]}, query1={missing=[[@3,9:15='missing',<329>,1:9]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				"output interface of query alias 'q'",
+				"q.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenQuerySpecificationCorrelatedPassUpSnapshotTest() {
+		final String query = "SELECT * FROM t1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.a = t1.a)";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=t1}}, where={exists={select={1={literal=1}}, from={table={alias=null, table=t2}}, where={condition={left={column={name=a, table_ref=t2}}, right={column={name=a, table_ref=t1}}, operator==}}, operator=EXISTS}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[*]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query2={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t1={*=[[@1,7:7='*',<289>,1:7]]}}, def_query0={query_dictionary={unnamed_0=[[@8,38:38='1',<298>,1:38]]}, table_dictionary={t2={a=[[@12,54:55='t2',<329>,1:54]]}}, filters=[{name=a, table_ref=t2}, {name=a, table_ref=t1}], interface={unnamed_0=[]}}, filters=[], interface={*=[{name=*, table_ref=*}]}, exists1=query0}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t1={a=[[@16,61:62='t1',<329>,1:61]], *=[[@1,7:7='*',<289>,1:7]]}, t2={a=[[@12,54:55='t2',<329>,1:54]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={unnamed_0=[[@8,38:38='1',<298>,1:38]]}, query2={*=[[@1,7:7='*',<289>,1:7]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenQuerySpecificationTopLevelSourceNotFoundSnapshotTest() {
+		final String query = "SELECT z.a FROM t1";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=z}}}, from={table={alias=null, table=t1}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[a]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={a=[[@3,9:9='a',<329>,1:9]]}, table_dictionary={t1={}}, interface={a=[{name=a, table_ref=z}]}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t1={}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@3,9:9='a',<329>,1:9]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				ParseDiagnostic.Severity.FATAL,
+				"No alias or table called 'z'",
+				"a");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenQuerySpecificationEmitFromSubquerySnapshotTest() {
+		final String query = "SELECT * FROM (SELECT bad_alias.a FROM t2) q";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=bad_alias}}}, from={table={alias=null, table=t2}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[*]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query1={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@7,32:32='a',<329>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t2={}}, interface={a=[{name=a, table_ref=bad_alias}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={q=query0}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t2={}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,32:32='a',<329>,1:32]], *=[[@1,7:7='*',<289>,1:7]]}, query1={*=[[@1,7:7='*',<289>,1:7]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				ParseDiagnostic.Severity.FATAL,
+				"No alias or table called 'bad_alias'",
+				"a");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoSimpleTargetProjectionSnapshotTest() {
+		final String query = "SELECT INTO outtab a FROM t1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={into={1={table=outtab}}, select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[a]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={a=[[@3,19:19='a',<329>,1:19]]}, table_dictionary={outtab={a=[[@3,19:19='a',<329>,1:19]]}, t1={a=[[@3,19:19='a',<329>,1:19]]}}, target_table={outtab={a=[[@3,19:19='a',<329>,1:19]]}}, interface={a=[{name=a, table_ref=t1}]}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{outtab={a=[[@3,19:19='a',<329>,1:19]]}, t1={a=[[@3,19:19='a',<329>,1:19]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@3,19:19='a',<329>,1:19]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoQualifiedAndAliasedProjectionSnapshotTest() {
+		final String query = "SELECT INTO db1.sc1.outtab a, b AS b1 FROM t1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={into={1={schema=sc1, dbname=db1, table=outtab}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}, alias=b1}}, from={table={alias=null, table=t1}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[a, b1]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={a=[[@7,27:27='a',<329>,1:27]], b1=[[@11,35:36='b1',<329>,1:35]]}, table_dictionary={t1={a=[[@7,27:27='a',<329>,1:27]], b=[[@9,30:30='b',<329>,1:30]]}, db1.sc1.outtab={a=[[@7,27:27='a',<329>,1:27]], b1=[[@11,35:36='b1',<329>,1:35]]}}, target_table={db1.sc1.outtab={a=[[@7,27:27='a',<329>,1:27]], b1=[[@11,35:36='b1',<329>,1:35]]}}, interface={a=[{name=a, table_ref=t1}], b1=[{name=b, table_ref=t1}]}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{t1={a=[[@7,27:27='a',<329>,1:27]], b=[[@9,30:30='b',<329>,1:30]]}, db1.sc1.outtab={a=[[@7,27:27='a',<329>,1:27]], b1=[[@11,35:36='b1',<329>,1:35]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,27:27='a',<329>,1:27]], b1=[[@11,35:36='b1',<329>,1:35]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoWildcardProjectionSnapshotTest() {
+		final String query = "SELECT INTO outtab * FROM t1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={into={1={table=outtab}}, select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=t1}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[*]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={*=[[@3,19:19='*',<289>,1:19]]}, table_dictionary={outtab={*=[[@3,19:19='*',<289>,1:19]]}, t1={*=[[@3,19:19='*',<289>,1:19]]}}, target_table={outtab={*=[[@3,19:19='*',<289>,1:19]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{outtab={*=[[@3,19:19='*',<289>,1:19]]}, t1={*=[[@3,19:19='*',<289>,1:19]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={*=[[@3,19:19='*',<289>,1:19]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoUnionBothSidesSnapshotTest() {
+		final String query = "SELECT INTO out1 a FROM t1 UNION SELECT INTO out2 b FROM t2";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={union={1={into={1={table=out1}}, select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={into={1={table=out2}}, select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		assertDiagnosticByCode(
+				snippet,
+				"INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION member 2 contains INTO",
+				"INTO");
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 1);
+		Assert.assertTrue("First INTO target projection should be preserved",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		Assert.assertFalse("Second INTO target projection should be skipped after fatal placement diagnostic",
+				snippet.getSymbolTable().toString().contains("target_table={out2="));
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoUnionMixedSidesSnapshotTest() {
+		final String query = "SELECT INTO out1 a FROM t1 UNION SELECT b FROM t2";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={union={1={into={1={table=out1}}, select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong",
+				"[a]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{union2={query0={query_dictionary={a=[[@3,17:17='a',<329>,1:17]]}, table_dictionary={out1={a=[[@3,17:17='a',<329>,1:17]]}, t1={a=[[@3,17:17='a',<329>,1:17]]}}, target_table={out1={a=[[@3,17:17='a',<329>,1:17]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={a=query_column}, query1={query_dictionary={b=[[@8,40:40='b',<329>,1:40]]}, table_dictionary={t2={b=[[@8,40:40='b',<329>,1:40]]}}, interface={b=[{name=b, table_ref=t2}]}}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{out1={a=[[@3,17:17='a',<329>,1:17]]}, t1={a=[[@3,17:17='a',<329>,1:17]]}, t2={b=[[@8,40:40='b',<329>,1:40]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong",
+				"{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@3,17:17='a',<329>,1:17]]}, query1={b=[[@8,40:40='b',<329>,1:40]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoUnionNestedSubquerySnapshotTest() {
+		final String query = "SELECT * FROM (SELECT INTO out1 a FROM t1 UNION SELECT INTO out2 b FROM t2) u";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=u, query={union={1={into={1={table=out1}}, select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={into={1={table=out2}}, select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		assertDiagnosticByCode(
+				snippet,
+				"INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION member 2 contains INTO",
+				"INTO");
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 1);
+		Assert.assertTrue("Nested first INTO target projection should be preserved",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		Assert.assertFalse("Nested second INTO target projection should be skipped",
+				snippet.getSymbolTable().toString().contains("target_table={out2="));
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoIntersectSecondMemberFatalTest() {
+		final String query = "SELECT INTO out1 a FROM t1 INTERSECT SELECT INTO out2 a FROM t2";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		assertDiagnosticByCode(
+				snippet,
+				"INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION member 2 contains INTO",
+				"INTO");
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 1);
+		Assert.assertTrue("First INTO target projection should be preserved for INTERSECT",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		Assert.assertFalse("Second INTO target projection should be skipped for INTERSECT",
+				snippet.getSymbolTable().toString().contains("target_table={out2="));
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoIntersectFirstMemberAllowedTest() {
+		final String query = "SELECT INTO out1 a FROM t1 INTERSECT SELECT a FROM t2";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertTrue("AST should preserve INTO in the first set member",
+				snippet.getSqlAbstractTree().toString().contains("into={1={table=out1}}"));
+		Assert.assertTrue("First-member INTO should still project target table columns",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSelectAliasBackedByQueryMixedValidAndMissingColumnsTest() {
+		final String query = "SELECT q.a, q.missing FROM (SELECT a FROM tab1) q";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertTrue("AST should preserve both qualified references",
+				snippet.getSqlAbstractTree().toString().contains("name=a, table_ref=q")
+					&& snippet.getSqlAbstractTree().toString().contains("name=missing, table_ref=q"));
+		Assert.assertTrue("Symbol table should retain query alias routing",
+				snippet.getSymbolTable().toString().contains("table_alias={q=query0}"));
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				"output interface of query alias 'q'",
+				"q.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenSelectAliasBackedByValuesMixedValidAndMissingColumnsTest() {
+		final String query = "SELECT v.a, v.missing FROM (VALUES (1)) v(a)";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertTrue("AST should preserve both VALUES-alias references",
+				snippet.getSqlAbstractTree().toString().contains("name=a, table_ref=v")
+					&& snippet.getSqlAbstractTree().toString().contains("name=missing, table_ref=v"));
+		Assert.assertTrue("Symbol table should retain values alias routing",
+				snippet.getSymbolTable().toString().contains("table_alias={v=values0}"));
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				"output interface of query alias 'v'",
+				"v.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenUpdateMultiSourceAmbiguousUnknownsTest() {
+		final String query = "UPDATE t SET a = b FROM t2, t3 WHERE c = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertTrue("Table dictionary should include both update input tables",
+				snippet.getTableDictionary().toString().contains("t2={")
+					&& snippet.getTableDictionary().toString().contains("t3={"));
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@3,13:13='a',<329>,1:13]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		Assert.assertTrue("Expected ambiguous unqualified reference warning for c",
+				countDiagnosticsBySeverity(
+						snippet,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						"Ambiguous column reference 'c'",
+						"c") >= 1);
+	}
+
+	@Test
+	public void coverageDrivenJoinExtensionQualifiedMissingColumnFatalTest() {
+		final String query = "SELECT a.id FROM t1 a JOIN t2 b ON a.id = b.id AND a.missing = b.id";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertNotNull("SQL AST should be available for join-extension traversal", snippet.getSqlAbstractTree());
+		Assert.assertNotNull("Diagnostics list should be present", snippet.getParserDiagnosticList());
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenUnionAliasMixedValidAndMissingColumnsTest() {
+		final String query = "SELECT u.a, u.missing FROM (SELECT a FROM t1 UNION SELECT a FROM t2) u";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertTrue("Union alias should be registered in table alias map",
+				snippet.getSymbolTable().toString().contains("table_alias={u=union2}"));
+		assertDiagnosticByCode(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				"output interface of query alias 'u'",
+				"u.missing");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS", null, null, 1);
+	}
+
+	@Test
+	public void coverageDrivenUpdateAliasQualifiedTargetAndSourceRefsTest() {
+		final String query = "UPDATE t AS tgt SET a = src.b FROM s AS src WHERE tgt.id = src.id AND tgt.flag = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={from={table={alias=src, table=s}}, where={and={1={condition={left={column={name=id, table_ref=tgt}}, right={column={name=id, table_ref=src}}, operator==}}, 2={condition={left={column={name=flag, table_ref=tgt}}, right={literal=1}, operator==}}}}, assignments={1={set={column={name=a, table_ref=null}}, to={column={name=b, table_ref=src}}}}, table={alias=tgt, table=t}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{update0={assignments={a=[{name=b, table_ref=src}]}, table_dictionary={s={b=[[@7,24:26='src',<329>,1:24]], id=[[@19,59:61='src',<329>,1:59]]}, t={a=[[@5,20:20='a',<329>,1:20]], flag=[[@23,70:72='tgt',<329>,1:70]], id=[[@15,50:52='tgt',<329>,1:50]]}}, update_dictionary={a=[[@5,20:20='a',<329>,1:20]]}, filters=[{name=id, table_ref=tgt}, {name=id, table_ref=src}, {name=flag, table_ref=tgt}], table_alias={tgt=t, src=s}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{s={b=[[@7,24:26='src',<329>,1:24]], id=[[@19,59:61='src',<329>,1:59]]}, t={a=[[@5,20:20='a',<329>,1:20]], flag=[[@23,70:72='tgt',<329>,1:70]], id=[[@15,50:52='tgt',<329>,1:50]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@5,20:20='a',<329>,1:20]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenQualifiedSourceNotFoundPluralMissingColumnsTest() {
+		final String query = "SELECT z.missing1, z.missing2 FROM t1";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=missing1, table_ref=z}}, 2={column={name=missing2, table_ref=z}}}, from={table={alias=null, table=t1}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[missing1, missing2]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={missing1=[[@3,9:16='missing1',<329>,1:9]], missing2=[[@7,21:28='missing2',<329>,1:21]]}, table_dictionary={t1={}}, interface={missing1=[{name=missing1, table_ref=z}], missing2=[{name=missing2, table_ref=z}]}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={missing1=[[@3,9:16='missing1',<329>,1:9]], missing2=[[@7,21:28='missing2',<329>,1:21]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertDiagnosticByCode(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.FATAL,
+				"No alias or table called 'z'", "missing1");
+		Assert.assertTrue("Expected two z-qualifier fatals",
+				countFatalDiagnostics(
+						snippet,
+						"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+						"No alias or table called 'z'",
+						null) >= 2);
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", null, null, 2);
+	}
+
+	@Test
+	public void coverageDrivenQueryAliasCaseInsensitiveResolutionTest() {
+		final String query = "SELECT q.A FROM (SELECT a FROM t1) q";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=A, table_ref=q}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[A]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query1={query_dictionary={A=[[@3,9:9='A',<329>,1:9]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@7,24:24='a',<329>,1:24], [@1,7:7='q',<329>,1:7]]}, table_dictionary={t1={a=[[@7,24:24='a',<329>,1:24]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={A=[{name=A, table_ref=q}]}, table_alias={q=query0}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@7,24:24='a',<329>,1:24]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,24:24='a',<329>,1:24], [@1,7:7='q',<329>,1:7]]}, query1={A=[[@3,9:9='A',<329>,1:9]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenWildcardQueryAliasPermissiveMultipleRefsTest() {
+		final String query = "SELECT q.any1, q.any2 FROM (SELECT * FROM t1) q WHERE q.any3 = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=any1, table_ref=q}}, 2={column={name=any2, table_ref=q}}}, from={table={alias=q, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=t1}}}}}, where={condition={left={column={name=any3, table_ref=q}}, right={literal=1}, operator==}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[any1, any2]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query1={query_dictionary={any1=[[@3,9:12='any1',<329>,1:9]], any2=[[@7,17:20='any2',<329>,1:17]]}, table_dictionary={}, def_query0={query_dictionary={any1=[[@1,7:7='q',<329>,1:7]], *=[[@11,35:35='*',<289>,1:35]], any3=[[@17,54:54='q',<329>,1:54]], any2=[[@5,15:15='q',<329>,1:15]]}, table_dictionary={t1={*=[[@11,35:35='*',<289>,1:35]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=any3, table_ref=q}], interface={any1=[{name=any1, table_ref=q}], any2=[{name=any2, table_ref=q}]}, table_alias={q=query0}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={*=[[@11,35:35='*',<289>,1:35]]}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={any1=[[@1,7:7='q',<329>,1:7]], *=[[@11,35:35='*',<289>,1:35]], any3=[[@17,54:54='q',<329>,1:54]], any2=[[@5,15:15='q',<329>,1:15]]}, query1={any1=[[@3,9:12='any1',<329>,1:9]], any2=[[@7,17:20='any2',<329>,1:17]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+	}
+
+	@Test
+	public void coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest() {
+		final String query = "SELECT * FROM (SELECT x.a FROM t1) q";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=x}}}, from={table={alias=null, table=t1}}}}}}}",
+				snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+				snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query1={query_dictionary={*=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@7,24:24='a',<329>,1:24]], *=[[@1,7:7='*',<289>,1:7]]}, table_dictionary={t1={}}, interface={a=[{name=a, table_ref=x}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={q=query0}}}",
+				snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={}}",
+				snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,24:24='a',<329>,1:24]], *=[[@1,7:7='*',<289>,1:7]]}, query1={*=[[@1,7:7='*',<289>,1:7]]}}",
+				snippet.getQueryColumnDictionaryMap().toString());
+		assertDiagnosticByCode(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", ParseDiagnostic.Severity.FATAL,
+				"No alias or table called 'x'", "a");
+		assertFatalDiagnosticCount(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE", null, null, 1);
+	}
+
+	/*
+	===============================================================================
+	  END QUERY SPECIFICATION AND SELECT INTO COVERAGE REGRESSION TESTS
+	===============================================================================
+	*/
 
 	// Helper methods to run the SQL parser tests and validate results
 	/**

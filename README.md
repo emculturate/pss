@@ -53,3 +53,31 @@ The `<parser_end_point>` argument specifies the parsing rule to start with. Here
 | `COLUMN`         | Parses a column definition or reference.                                                                |
 | `VALUES`         | Parses the `VALUES` clause of an `INSERT` statement (e.g., `VALUES (1, 'a'), (2, 'b')`).                |
 | `TUPLE`          | Parses a tuple of values, like `(1, 'a', 'b')`.                                                         |
+
+## JaCoCo Before/After Helper
+
+Use `tools/run-jacoco-with-previous.sh` when you want a before/after coverage comparison without losing the prior report.
+
+What it does:
+
+- Moves existing coverage artifacts from `parse/target/site/jacoco` (and `parse/target/jacoco.exec`) into a timestamped folder named `previous_jacoco_<timestamp>`.
+- Runs Maven (default is `verify`) to generate a fresh JaCoCo report.
+- Prints the paths to both previous and new `jacoco.xml` files.
+- Copies timestamped previous/new `jacoco.xml` snapshots into git-visible history files under `parse/documents/coverage/history/`.
+- Updates rolling files `jacoco_previous_latest.xml` and `jacoco_new_latest.xml` in that same folder.
+- Appends run metadata to `parse/documents/coverage/history/manifest.log` so each run has an audit trail.
+
+Why this matters:
+
+- `parse/target/**` is ignored by git, so snapshots only kept there do not show up in your changed-file list.
+- The `parse/documents/coverage/history/` snapshots are visible to git and survive across sessions, which makes before/after coverage comparisons easier to track in CI and later reviews.
+
+Examples:
+
+```bash
+bash tools/run-jacoco-with-previous.sh
+```
+
+```bash
+bash tools/run-jacoco-with-previous.sh verify -Dtest=sql.walker.SqlParseEventWalkerWithAccessObjectTest
+```
