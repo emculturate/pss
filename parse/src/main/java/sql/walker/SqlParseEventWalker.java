@@ -26,6 +26,7 @@ import static mumble.SQLParserEndPoints.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -4239,6 +4240,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				localTableCollection);
 		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
 
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
+			resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable(
+					localUnresolvedColumnMap,
+					localTableCollection,
+					localTargetTableCollection,
+					localTableAliasMap,
+					visibleQuerySourceCollection,
+					updateTargetTableRef);
+		}
+
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			// Check for explicitly qualified columns whose table qualifiers do not exist
 			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
@@ -4860,6 +4871,99 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		for (String resolvedKey : resolvedKeys) {
 			unresolvedColumnMap.remove(resolvedKey);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> targetTableCollection,
+			HashMap<String, Object> tableAliasMap,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			String updateTargetTableRef) {
+		if (targetTableCollection == null
+				|| updateTargetTableRef == null
+				|| updateTargetTableRef.isBlank()) {
+			return;
+		}
+
+		Object assignmentsObj = walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY);
+		if (!(assignmentsObj instanceof Map<?, ?> assignmentsMapObj) || assignmentsMapObj.isEmpty()) {
+			return;
+		}
+
+		String resolvedTarget = walker.resolveAliasToTableName(updateTargetTableRef, tableAliasMap);
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			resolvedTarget = updateTargetTableRef;
+		}
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			return;
+		}
+
+		String normalizedTarget = resolvedTarget.startsWith("<")
+				? resolvedTarget
+				: resolvedTarget.toLowerCase();
+
+		Object targetTableObj = targetTableCollection.get(normalizedTarget);
+		HashMap<String, Object> targetColumns;
+		if (targetTableObj instanceof HashMap<?, ?> existingMapObj) {
+			targetColumns = (HashMap<String, Object>) existingMapObj;
+		} else {
+			targetColumns = new HashMap<String, Object>();
+			targetTableCollection.put(normalizedTarget, targetColumns);
+		}
+
+		for (Map.Entry<?, ?> assignmentEntry : ((Map<?, ?>) assignmentsMapObj).entrySet()) {
+			Object rhsRefsObj = assignmentEntry.getValue();
+			if (!(rhsRefsObj instanceof List<?> rhsRefs) || rhsRefs.isEmpty()) {
+				continue;
+			}
+
+			for (Object rhsRefObj : rhsRefs) {
+				if (!(rhsRefObj instanceof Map<?, ?>)) {
+					continue;
+				}
+
+				String columnName = walker.extractReferenceNameFromInterfaceEntry(rhsRefObj);
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(rhsRefObj);
+				if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+					continue;
+				}
+				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
+					continue;
+				}
+
+				if (containsKeyIgnoreCase(targetColumns, columnName)) {
+					continue;
+				}
+
+				ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
+						columnName,
+						tableCollection,
+						visibleQuerySourceCollection,
+						tableAliasMap);
+				if (sourceRefs != null && !sourceRefs.isEmpty()) {
+					continue;
+				}
+
+				Object unresolvedValue = null;
+				if (unresolvedColumnMap != null) {
+					unresolvedValue = unresolvedColumnMap.remove(columnName);
+				}
+				Object normalizedRefs = normalizeUpdateColumnRefs(
+						(unresolvedValue != null) ? unresolvedValue : rhsRefObj);
+				if (normalizedRefs == null && rhsRefObj instanceof Map<?, ?> rhsRefMapObj) {
+					ArrayList<Object> syntheticRefs = new ArrayList<Object>();
+					syntheticRefs.add(new HashMap<String, Object>((Map<String, Object>) rhsRefMapObj));
+					normalizedRefs = syntheticRefs;
+				}
+				if (normalizedRefs == null) {
+					continue;
+				}
+
+				targetColumns.put(columnName, normalizedRefs);
+			}
 		}
 	}
 

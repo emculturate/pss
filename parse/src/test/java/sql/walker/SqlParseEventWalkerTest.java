@@ -2585,6 +2585,803 @@ public class SqlParseEventWalkerTest {
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void subqueryDictionaryExtensionJoinClauseMissingQualifiedV21() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, col4 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5 and F4.col99 = t.col2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col4=[[@23,76:79='col4',<329>,2:21], [@40,136:137='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@32,115:116='F4',<329>,3:19]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col5=[[@44,146:146='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@36,125:125='t',<329>,3:29], [@52,168:168='t',<329>,3:72]], col3=[[@13,42:42='t',<329>,1:42]]}}, def_query0={query_dictionary={col4=[[@23,76:79='col4',<329>,2:21], [@40,136:137='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@32,115:116='F4',<329>,3:19]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], col4=[[@23,76:79='col4',<329>,2:21]]}}, interface={col4=[{name=col4, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col99, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWhereClauseMissingQualifiedV22() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0 and F4.col99 > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@70,219:220='F4',<329>,4:49]], col6=[[@27,87:90='col6',<329>,2:32], [@54,177:178='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@46,153:154='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,132:133='F4',<329>,3:19], [@62,198:199='F4',<329>,4:28]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col7=[[@58,187:187='t',<329>,4:17]], col5=[[@50,163:163='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@42,142:142='t',<329>,3:29], [@66,208:208='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@70,219:220='F4',<329>,4:49]], col6=[[@27,87:90='col6',<329>,2:32], [@54,177:178='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@46,153:154='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,132:133='F4',<329>,3:19], [@62,198:199='F4',<329>,4:28]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}, {name=col99, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionHavingClauseMissingQualifiedV23() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n having F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0 and F4.col99 > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@70,220:221='F4',<329>,4:50]], col6=[[@27,87:90='col6',<329>,2:32], [@54,178:179='F4',<329>,4:8]], col4=[[@25,81:84='col4',<329>,2:26], [@46,153:154='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,132:133='F4',<329>,3:19], [@62,199:200='F4',<329>,4:29]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col7=[[@58,188:188='t',<329>,4:18]], col5=[[@50,163:163='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@42,142:142='t',<329>,3:29], [@66,209:209='t',<329>,4:39]], col3=[[@13,42:42='t',<329>,1:42]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@70,220:221='F4',<329>,4:50]], col6=[[@27,87:90='col6',<329>,2:32], [@54,178:179='F4',<329>,4:8]], col4=[[@25,81:84='col4',<329>,2:26], [@46,153:154='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,132:133='F4',<329>,3:19], [@62,199:200='F4',<329>,4:29]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}, {name=col99, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionQualifyClauseMissingQualifiedV24() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col9 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n qualify F4.col9 = t.col10 and F4.col8 > 1 and F4.col99 > 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@72,225:226='F4',<329>,4:49], [@86,268:269='F4',<329>,5:31]], col9=[[@31,99:102='col9',<329>,2:44], [@78,246:247='F4',<329>,5:9]], col6=[[@27,87:90='col6',<329>,2:32], [@56,183:184='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,159:160='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,138:139='F4',<329>,3:19], [@64,204:205='F4',<329>,4:28]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col10=[[@82,256:256='t',<329>,5:19]], col7=[[@60,193:193='t',<329>,4:17]], col5=[[@52,169:169='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,148:148='t',<329>,3:29], [@68,214:214='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@72,225:226='F4',<329>,4:49], [@86,268:269='F4',<329>,5:31]], col9=[[@31,99:102='col9',<329>,2:44], [@78,246:247='F4',<329>,5:9]], col6=[[@27,87:90='col6',<329>,2:32], [@56,183:184='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,159:160='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,138:139='F4',<329>,3:19], [@64,204:205='F4',<329>,4:28]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col9=[[@31,99:102='col9',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col9=[{name=col9, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}, {name=col9, table_ref=F4}, {name=col10, table_ref=t}, {name=col99, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByMissingQualifiedV25() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3, sum(F4.col11) as total_col11 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col11 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n group by F4.col1, t.col2, t.col3, F4.col99";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@38,123:126='col8',<329>,2:38], [@81,256:257='F4',<329>,4:49]], col11=[[@40,129:133='col11',<329>,2:44], [@19,54:55='F4',<329>,1:54]], col6=[[@36,117:120='col6',<329>,2:32], [@65,214:215='F4',<329>,4:7]], col4=[[@34,111:114='col4',<329>,2:26], [@57,190:191='F4',<329>,3:40]], col1=[[@30,100:103='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@49,169:170='F4',<329>,3:19], [@73,235:236='F4',<329>,4:28], [@88,278:279='F4',<329>,5:10]]}, query1={last=[[@5,19:22='last',<101>,1:19]], total_col11=[[@24,67:77='total_col11',<329>,1:67]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], total_col11=[[@24,67:77='total_col11',<329>,1:67]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col7=[[@69,224:224='t',<329>,4:17]], col5=[[@61,200:200='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@53,179:179='t',<329>,3:29], [@77,245:245='t',<329>,4:38], [@92,287:287='t',<329>,5:19]], col3=[[@13,42:42='t',<329>,1:42], [@96,295:295='t',<329>,5:27]]}}, grouped_by=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col3, table_ref=t}, {name=col99, table_ref=F4}], def_query0={query_dictionary={col8=[[@38,123:126='col8',<329>,2:38], [@81,256:257='F4',<329>,4:49]], col11=[[@40,129:133='col11',<329>,2:44], [@19,54:55='F4',<329>,1:54]], col6=[[@36,117:120='col6',<329>,2:32], [@65,214:215='F4',<329>,4:7]], col4=[[@34,111:114='col4',<329>,2:26], [@57,190:191='F4',<329>,3:40]], col1=[[@30,100:103='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@49,169:170='F4',<329>,3:19], [@73,235:236='F4',<329>,4:28], [@88,278:279='F4',<329>,5:10]]}, table_dictionary={third={a=[[@28,95:95='a',<329>,2:10]], b=[[@32,106:106='b',<329>,2:21]], col8=[[@38,123:126='col8',<329>,2:38]], col11=[[@40,129:133='col11',<329>,2:44]], col6=[[@36,117:120='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col11=[{name=col11, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], total_col11=[{name=col11, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByMissingQualifiedV26() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col12 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n order by t.col3 desc, F4.col1 asc, F4.col12 desc, F4.col99 desc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@72,226:227='F4',<329>,4:49]], col12=[[@31,99:103='col12',<329>,2:44], [@89,274:275='F4',<329>,5:36]], col6=[[@27,87:90='col6',<329>,2:32], [@56,184:185='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,160:161='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,139:140='F4',<329>,3:19], [@64,205:206='F4',<329>,4:28], [@84,261:262='F4',<329>,5:23]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col7=[[@60,194:194='t',<329>,4:17]], col5=[[@52,170:170='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,149:149='t',<329>,3:29], [@68,215:215='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42], [@79,248:248='t',<329>,5:10]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@72,226:227='F4',<329>,4:49]], col12=[[@31,99:103='col12',<329>,2:44], [@89,274:275='F4',<329>,5:36]], col6=[[@27,87:90='col6',<329>,2:32], [@56,184:185='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,160:161='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,139:140='F4',<329>,3:19], [@64,205:206='F4',<329>,4:28], [@84,261:262='F4',<329>,5:23]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col12=[[@31,99:103='col12',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col12=[{name=col12, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, ordered_by=[{name=col3, table_ref=t}, {name=col1, table_ref=F4}, {name=col12, table_ref=F4}, {name=col99, table_ref=F4}], filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Assert.assertFalse("Query0 dictionary should not include missing F4.col99",
+				extractor.getQueryColumnDictionaryMap().toString().contains("col99"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col99'",
+				null,
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWindowOverPartitionBySubqueryJoinV27() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, "
+			+ "row_number() over (partition by F4.col12 order by t.col3 desc) as rn FROM "
+			+ "\n  (select * from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={alias=rn, window_function={over={partition_by={1={column={name=col12, table_ref=F4}}}, orderby={1={null_order=null, predicand={column={name=col3, table_ref=t}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={join={1={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@35,127:127='*',<289>,2:10]]}, fourth={*=[[@43,159:159='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col12=[[@20,74:75='F4',<329>,1:74]], *=[[@35,127:127='*',<289>,2:10]], col4=[[@58,203:204='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@50,182:183='F4',<329>,3:38]]}, query1={*=[[@43,159:159='*',<289>,3:15]], col5=[[@62,213:213='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@54,192:192='t',<329>,3:48]], col3=[[@25,92:92='t',<329>,1:92]]}, query2={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@31,108:109='rn',<329>,1:108]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@31,108:109='rn',<329>,1:108]]}, table_dictionary={}, def_query1={query_dictionary={*=[[@43,159:159='*',<289>,3:15]], col5=[[@62,213:213='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@54,192:192='t',<329>,3:48]], col3=[[@25,92:92='t',<329>,1:92]]}, table_dictionary={fourth={*=[[@43,159:159='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={col12=[[@20,74:75='F4',<329>,1:74]], *=[[@35,127:127='*',<289>,2:10]], col4=[[@58,203:204='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@50,182:183='F4',<329>,3:38]]}, table_dictionary={third={*=[[@35,127:127='*',<289>,2:10]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], rn=[{name=col12, table_ref=F4}, {name=col3, table_ref=t}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWindowOverOrderBySubqueryJoinV28() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, "
+			+ "row_number() over (partition by F4.col1 order by F4.col12 desc, F4.col1 asc) as rn FROM "
+			+ "\n  (select * from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={alias=rn, window_function={over={partition_by={1={column={name=col1, table_ref=F4}}}, orderby={1={null_order=null, predicand={column={name=col12, table_ref=F4}}, sort_order=desc}, 2={null_order=null, predicand={column={name=col1, table_ref=F4}}, sort_order=asc}}}, function={function_name=row_number, parameters=null}}}}, from={join={1={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@40,141:141='*',<289>,2:10]]}, fourth={*=[[@48,173:173='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col12=[[@25,91:92='F4',<329>,1:91]], *=[[@40,141:141='*',<289>,2:10]], col4=[[@63,217:218='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@20,74:75='F4',<329>,1:74], [@30,106:107='F4',<329>,1:106], [@55,196:197='F4',<329>,3:38]]}, query1={*=[[@48,173:173='*',<289>,3:15]], col5=[[@67,227:227='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@59,206:206='t',<329>,3:48]]}, query2={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@36,122:123='rn',<329>,1:122]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@36,122:123='rn',<329>,1:122]]}, table_dictionary={}, def_query1={query_dictionary={*=[[@48,173:173='*',<289>,3:15]], col5=[[@67,227:227='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@59,206:206='t',<329>,3:48]]}, table_dictionary={fourth={*=[[@48,173:173='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={col12=[[@25,91:92='F4',<329>,1:91]], *=[[@40,141:141='*',<289>,2:10]], col4=[[@63,217:218='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@20,74:75='F4',<329>,1:74], [@30,106:107='F4',<329>,1:106], [@55,196:197='F4',<329>,3:38]]}, table_dictionary={third={*=[[@40,141:141='*',<289>,2:10]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], rn=[{name=col1, table_ref=F4}, {name=col12, table_ref=F4}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWindowOverTableAliasSubqueryJoinV29() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, "
+			+ "row_number() over (partition by t.col9 order by t.col3 desc, t.col9 asc) as rn FROM "
+			+ "\n  (select * from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={alias=rn, window_function={over={partition_by={1={column={name=col9, table_ref=t}}}, orderby={1={null_order=null, predicand={column={name=col3, table_ref=t}}, sort_order=desc}, 2={null_order=null, predicand={column={name=col9, table_ref=t}}, sort_order=asc}}}, function={function_name=row_number, parameters=null}}}}, from={join={1={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@40,137:137='*',<289>,2:10]]}, fourth={*=[[@48,169:169='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@40,137:137='*',<289>,2:10]], col4=[[@63,213:214='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@55,192:193='F4',<329>,3:38]]}, query1={col9=[[@20,74:74='t',<329>,1:74], [@30,103:103='t',<329>,1:103]], *=[[@48,169:169='*',<289>,3:15]], col5=[[@67,223:223='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@59,202:202='t',<329>,3:48]], col3=[[@25,90:90='t',<329>,1:90]]}, query2={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@36,118:119='rn',<329>,1:118]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn=[[@36,118:119='rn',<329>,1:118]]}, table_dictionary={}, def_query1={query_dictionary={col9=[[@20,74:74='t',<329>,1:74], [@30,103:103='t',<329>,1:103]], *=[[@48,169:169='*',<289>,3:15]], col5=[[@67,223:223='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@59,202:202='t',<329>,3:48]], col3=[[@25,90:90='t',<329>,1:90]]}, table_dictionary={fourth={*=[[@48,169:169='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={*=[[@40,137:137='*',<289>,2:10]], col4=[[@63,213:214='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@55,192:193='F4',<329>,3:38]]}, table_dictionary={third={*=[[@40,137:137='*',<289>,2:10]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], rn=[{name=col9, table_ref=t}, {name=col3, table_ref=t}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWindowOverMixedSubqueryJoinV30() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, "
+			+ "row_number() over (partition by F4.col1 order by F4.col12 desc) as rn1, "
+			+ "sum(t.col9) over (partition by t.col2 order by F4.col1 asc) as rn2 FROM "
+			+ "\n  (select * from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={alias=rn1, window_function={over={partition_by={1={column={name=col1, table_ref=F4}}}, orderby={1={null_order=null, predicand={column={name=col12, table_ref=F4}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}, 4={alias=rn2, window_function={over={partition_by={1={column={name=col2, table_ref=t}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=F4}}, sort_order=asc}}}, function={function_name=sum, parameters={1={column={name=col9, table_ref=t}}}}}}}, from={join={1={table={alias=F4, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, rn1, tcol2, rn2]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@58,197:197='*',<289>,2:10]]}, fourth={*=[[@66,229:229='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col12=[[@25,91:92='F4',<329>,1:91]], *=[[@58,197:197='*',<289>,2:10]], col4=[[@81,273:274='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@20,74:75='F4',<329>,1:74], [@48,161:162='F4',<329>,1:161], [@73,252:253='F4',<329>,3:38]]}, query1={col9=[[@35,118:118='t',<329>,1:118]], *=[[@66,229:229='*',<289>,3:15]], col5=[[@85,283:283='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@43,145:145='t',<329>,1:145], [@77,262:262='t',<329>,3:48]]}, query2={last=[[@5,19:22='last',<101>,1:19]], rn1=[[@31,109:111='rn1',<329>,1:109]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn2=[[@54,177:179='rn2',<329>,1:177]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], rn1=[[@31,109:111='rn1',<329>,1:109]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], rn2=[[@54,177:179='rn2',<329>,1:177]]}, table_dictionary={}, def_query1={query_dictionary={col9=[[@35,118:118='t',<329>,1:118]], *=[[@66,229:229='*',<289>,3:15]], col5=[[@85,283:283='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@43,145:145='t',<329>,1:145], [@77,262:262='t',<329>,3:48]]}, table_dictionary={fourth={*=[[@66,229:229='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={col12=[[@25,91:92='F4',<329>,1:91]], *=[[@58,197:197='*',<289>,2:10]], col4=[[@81,273:274='F4',<329>,3:59]], col1=[[@1,8:9='F4',<329>,1:8], [@20,74:75='F4',<329>,1:74], [@48,161:162='F4',<329>,1:161], [@73,252:253='F4',<329>,3:38]]}, table_dictionary={third={*=[[@58,197:197='*',<289>,2:10]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}], interface={last=[{name=col1, table_ref=F4}], rn1=[{name=col1, table_ref=F4}, {name=col12, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], rn2=[{name=col2, table_ref=t}, {name=col1, table_ref=F4}, {name=col9, table_ref=t}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionJoinClauseSubqueryJoinV31() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, col4 from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={column={name=col3, table_ref=t}}}, from={join={1={table={alias=F4, query={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=col4, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[[@19,65:65='a',<329>,2:10]], col4=[[@23,76:79='col4',<329>,2:21]]}, fourth={*=[[@31,111:111='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col4=[[@23,76:79='col4',<329>,2:21], [@46,155:156='F4',<329>,3:59]], *=[[@31,111:111='*',<289>,3:15]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,134:135='F4',<329>,3:38]]}, query1={*=[[@31,111:111='*',<289>,3:15]], col5=[[@50,165:165='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@42,144:144='t',<329>,3:48]], col3=[[@13,42:42='t',<329>,1:42]]}, query2={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={}, def_query1={query_dictionary={*=[[@31,111:111='*',<289>,3:15]], col5=[[@50,165:165='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@42,144:144='t',<329>,3:48]], col3=[[@13,42:42='t',<329>,1:42]]}, table_dictionary={fourth={*=[[@31,111:111='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={col4=[[@23,76:79='col4',<329>,2:21], [@46,155:156='F4',<329>,3:59]], *=[[@31,111:111='*',<289>,3:15]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@38,134:135='F4',<329>,3:38]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], col4=[[@23,76:79='col4',<329>,2:21]]}}, interface={col4=[{name=col4, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWhereClauseSubqueryJoinV32() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8 from third) F4"
+			+ "\n  join (select * from fourth) as t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={column={name=col3, table_ref=t}}}, from={join={1={table={alias=F4, query={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=b, table_ref=null}, alias=col4}, 3={column={name=col6, table_ref=null}}, 4={column={name=col8, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=fourth}}}}}}}, where={and={1={condition={left={column={name=col6, table_ref=F4}}, right={column={name=col7, table_ref=t}}, operator==}}, 2={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 3={condition={left={column={name=col8, table_ref=F4}}, right={literal=0}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col6=[[@27,87:90='col6',<329>,2:32]]}, fourth={*=[[@37,128:128='*',<289>,3:15]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@76,238:239='F4',<329>,4:49]], col6=[[@27,87:90='col6',<329>,2:32], [@60,196:197='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@52,172:173='F4',<329>,3:59]], *=[[@37,128:128='*',<289>,3:15]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@44,151:152='F4',<329>,3:38], [@68,217:218='F4',<329>,4:28]]}, query1={col7=[[@64,206:206='t',<329>,4:17]], *=[[@37,128:128='*',<289>,3:15]], col5=[[@56,182:182='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@48,161:161='t',<329>,3:48], [@72,227:227='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}, query2={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={}, def_query1={query_dictionary={col7=[[@64,206:206='t',<329>,4:17]], *=[[@37,128:128='*',<289>,3:15]], col5=[[@56,182:182='t',<329>,3:69]], col2=[[@7,25:25='t',<329>,1:25], [@48,161:161='t',<329>,3:48], [@72,227:227='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}, table_dictionary={fourth={*=[[@37,128:128='*',<289>,3:15]]}}, interface={*=[{name=*, table_ref=*}]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@76,238:239='F4',<329>,4:49]], col6=[[@27,87:90='col6',<329>,2:32], [@60,196:197='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@52,172:173='F4',<329>,3:59]], *=[[@37,128:128='*',<289>,3:15]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@44,151:152='F4',<329>,3:38], [@68,217:218='F4',<329>,4:28]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=query1, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionQualifyClauseMissingUnqualifiedV33() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col9 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n qualify F4.col9 = t.col10 and F4.col8 > 1 and missing > 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={column={name=col3, table_ref=t}}}, from={join={1={table={alias=F4, query={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=b, table_ref=null}, alias=col4}, 3={column={name=col6, table_ref=null}}, 4={column={name=col8, table_ref=null}}, 5={column={name=col9, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, table=fourth}}}}, where={and={1={condition={left={column={name=col6, table_ref=F4}}, right={column={name=col7, table_ref=t}}, operator==}}, 2={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 3={condition={left={column={name=col8, table_ref=F4}}, right={literal=0}, operator=>}}}}, qualify={and={1={condition={left={column={name=col9, table_ref=F4}}, right={column={name=col10, table_ref=t}}, operator==}}, 2={condition={left={column={name=col8, table_ref=F4}}, right={literal=1}, operator=>}}, 3={condition={left={column={name=missing, table_ref=null}}, right={literal=1}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col9=[[@31,99:102='col9',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}, fourth={col10=[[@82,256:256='t',<329>,5:19]], missing=[[@92,284:290='missing',<329>,5:47]], col7=[[@60,193:193='t',<329>,4:17]], col5=[[@52,169:169='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,148:148='t',<329>,3:29], [@68,214:214='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@72,225:226='F4',<329>,4:49], [@86,268:269='F4',<329>,5:31]], col9=[[@31,99:102='col9',<329>,2:44], [@78,246:247='F4',<329>,5:9]], col6=[[@27,87:90='col6',<329>,2:32], [@56,183:184='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,159:160='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,138:139='F4',<329>,3:19], [@64,204:205='F4',<329>,4:28]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={col10=[[@82,256:256='t',<329>,5:19]], missing=[[@92,284:290='missing',<329>,5:47]], col7=[[@60,193:193='t',<329>,4:17]], col5=[[@52,169:169='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,148:148='t',<329>,3:29], [@68,214:214='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@72,225:226='F4',<329>,4:49], [@86,268:269='F4',<329>,5:31]], col9=[[@31,99:102='col9',<329>,2:44], [@78,246:247='F4',<329>,5:9]], col6=[[@27,87:90='col6',<329>,2:32], [@56,183:184='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,159:160='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,138:139='F4',<329>,3:19], [@64,204:205='F4',<329>,4:28]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col9=[[@31,99:102='col9',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col9=[{name=col9, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}, {name=col9, table_ref=F4}, {name=col10, table_ref=t}, {name=missing, table_ref=fourth}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByMissingUnqualifiedV34() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3, sum(F4.col11) as total_col11 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col11 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n group by F4.col1, t.col2, t.col3, missing";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={column={name=col3, table_ref=t}}, 4={function={function_name=sum, qualifier=null, parameters={column={name=col11, table_ref=F4}}}, alias=total_col11}}, from={join={1={table={alias=F4, query={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=b, table_ref=null}, alias=col4}, 3={column={name=col6, table_ref=null}}, 4={column={name=col8, table_ref=null}}, 5={column={name=col11, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, table=fourth}}}}, where={and={1={condition={left={column={name=col6, table_ref=F4}}, right={column={name=col7, table_ref=t}}, operator==}}, 2={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 3={condition={left={column={name=col8, table_ref=F4}}, right={literal=0}, operator=>}}}}, groupby={1={column={name=col1, table_ref=F4}}, 2={column={name=col2, table_ref=t}}, 3={column={name=col3, table_ref=t}}, 4={column={name=missing, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, total_col11, tcol2, col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[[@28,95:95='a',<329>,2:10]], b=[[@32,106:106='b',<329>,2:21]], col8=[[@38,123:126='col8',<329>,2:38]], col11=[[@40,129:133='col11',<329>,2:44]], col6=[[@36,117:120='col6',<329>,2:32]]}, fourth={missing=[[@100,303:309='missing',<329>,5:35]], col7=[[@69,224:224='t',<329>,4:17]], col5=[[@61,200:200='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@53,179:179='t',<329>,3:29], [@77,245:245='t',<329>,4:38], [@92,287:287='t',<329>,5:19]], col3=[[@13,42:42='t',<329>,1:42], [@96,295:295='t',<329>,5:27]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@38,123:126='col8',<329>,2:38], [@81,256:257='F4',<329>,4:49]], col11=[[@40,129:133='col11',<329>,2:44], [@19,54:55='F4',<329>,1:54]], col6=[[@36,117:120='col6',<329>,2:32], [@65,214:215='F4',<329>,4:7]], col4=[[@34,111:114='col4',<329>,2:26], [@57,190:191='F4',<329>,3:40]], col1=[[@30,100:103='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@49,169:170='F4',<329>,3:19], [@73,235:236='F4',<329>,4:28], [@88,278:279='F4',<329>,5:10]]}, query1={last=[[@5,19:22='last',<101>,1:19]], total_col11=[[@24,67:77='total_col11',<329>,1:67]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], total_col11=[[@24,67:77='total_col11',<329>,1:67]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={missing=[[@100,303:309='missing',<329>,5:35]], col7=[[@69,224:224='t',<329>,4:17]], col5=[[@61,200:200='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@53,179:179='t',<329>,3:29], [@77,245:245='t',<329>,4:38], [@92,287:287='t',<329>,5:19]], col3=[[@13,42:42='t',<329>,1:42], [@96,295:295='t',<329>,5:27]]}}, grouped_by=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col3, table_ref=t}, {name=missing, table_ref=fourth}], def_query0={query_dictionary={col8=[[@38,123:126='col8',<329>,2:38], [@81,256:257='F4',<329>,4:49]], col11=[[@40,129:133='col11',<329>,2:44], [@19,54:55='F4',<329>,1:54]], col6=[[@36,117:120='col6',<329>,2:32], [@65,214:215='F4',<329>,4:7]], col4=[[@34,111:114='col4',<329>,2:26], [@57,190:191='F4',<329>,3:40]], col1=[[@30,100:103='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@49,169:170='F4',<329>,3:19], [@73,235:236='F4',<329>,4:28], [@88,278:279='F4',<329>,5:10]]}, table_dictionary={third={a=[[@28,95:95='a',<329>,2:10]], b=[[@32,106:106='b',<329>,2:21]], col8=[[@38,123:126='col8',<329>,2:38]], col11=[[@40,129:133='col11',<329>,2:44]], col6=[[@36,117:120='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col11=[{name=col11, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], total_col11=[{name=col11, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByMissingUnqualifiedV35() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col12 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n order by t.col3 desc, F4.col1 asc, F4.col12 desc, missing desc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=F4}, alias=last}, 2={column={name=col2, table_ref=t}, alias=tcol2}, 3={column={name=col3, table_ref=t}}}, orderby={1={null_order=null, predicand={column={name=col3, table_ref=t}}, sort_order=desc}, 2={null_order=null, predicand={column={name=col1, table_ref=F4}}, sort_order=asc}, 3={null_order=null, predicand={column={name=col12, table_ref=F4}}, sort_order=desc}, 4={null_order=null, predicand={column={name=missing, table_ref=null}}, sort_order=desc}}, from={join={1={table={alias=F4, query={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=b, table_ref=null}, alias=col4}, 3={column={name=col6, table_ref=null}}, 4={column={name=col8, table_ref=null}}, 5={column={name=col12, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={join=join, on={and={1={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 2={condition={left={column={name=col4, table_ref=F4}}, right={column={name=col5, table_ref=t}}, operator==}}}}}, 3={table={alias=t, table=fourth}}}}, where={and={1={condition={left={column={name=col6, table_ref=F4}}, right={column={name=col7, table_ref=t}}, operator==}}, 2={condition={left={column={name=col1, table_ref=F4}}, right={column={name=col2, table_ref=t}}, operator==}}, 3={condition={left={column={name=col8, table_ref=F4}}, right={literal=0}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[last, tcol2, col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col12=[[@31,99:103='col12',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}, fourth={missing=[[@94,289:295='missing',<329>,5:51]], col7=[[@60,194:194='t',<329>,4:17]], col5=[[@52,170:170='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,149:149='t',<329>,3:29], [@68,215:215='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42], [@79,248:248='t',<329>,5:10]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col8=[[@29,93:96='col8',<329>,2:38], [@72,226:227='F4',<329>,4:49]], col12=[[@31,99:103='col12',<329>,2:44], [@89,274:275='F4',<329>,5:36]], col6=[[@27,87:90='col6',<329>,2:32], [@56,184:185='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,160:161='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,139:140='F4',<329>,3:19], [@64,205:206='F4',<329>,4:28], [@84,261:262='F4',<329>,5:23]]}, query1={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={last=[[@5,19:22='last',<101>,1:19]], tcol2=[[@11,35:39='tcol2',<329>,1:35]], col3=[[@15,44:47='col3',<329>,1:44]]}, table_dictionary={fourth={missing=[[@94,289:295='missing',<329>,5:51]], col7=[[@60,194:194='t',<329>,4:17]], col5=[[@52,170:170='t',<329>,3:50]], col2=[[@7,25:25='t',<329>,1:25], [@44,149:149='t',<329>,3:29], [@68,215:215='t',<329>,4:38]], col3=[[@13,42:42='t',<329>,1:42], [@79,248:248='t',<329>,5:10]]}}, def_query0={query_dictionary={col8=[[@29,93:96='col8',<329>,2:38], [@72,226:227='F4',<329>,4:49]], col12=[[@31,99:103='col12',<329>,2:44], [@89,274:275='F4',<329>,5:36]], col6=[[@27,87:90='col6',<329>,2:32], [@56,184:185='F4',<329>,4:7]], col4=[[@25,81:84='col4',<329>,2:26], [@48,160:161='F4',<329>,3:40]], col1=[[@21,70:73='col1',<329>,2:15], [@1,8:9='F4',<329>,1:8], [@40,139:140='F4',<329>,3:19], [@64,205:206='F4',<329>,4:28], [@84,261:262='F4',<329>,5:23]]}, table_dictionary={third={a=[[@19,65:65='a',<329>,2:10]], b=[[@23,76:76='b',<329>,2:21]], col8=[[@29,93:96='col8',<329>,2:38]], col12=[[@31,99:103='col12',<329>,2:44]], col6=[[@27,87:90='col6',<329>,2:32]]}}, interface={col8=[{name=col8, table_ref=third}], col12=[{name=col12, table_ref=third}], col6=[{name=col6, table_ref=third}], col4=[{name=b, table_ref=third}], col1=[{name=a, table_ref=third}]}}, ordered_by=[{name=col3, table_ref=t}, {name=col1, table_ref=F4}, {name=col12, table_ref=F4}, {name=missing, table_ref=fourth}], filters=[{name=col1, table_ref=F4}, {name=col2, table_ref=t}, {name=col4, table_ref=F4}, {name=col5, table_ref=t}, {name=col6, table_ref=F4}, {name=col7, table_ref=t}, {name=col8, table_ref=F4}], interface={last=[{name=col1, table_ref=F4}], tcol2=[{name=col2, table_ref=t}], col3=[{name=col3, table_ref=t}]}, table_alias={t=fourth, F4=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionQualifyClauseMissingUnqualifiedAmbiguousV36() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col9 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n  join fifth f on F4.col1 = f.col2"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n qualify F4.col9 = t.col10 and F4.col8 > 1 and missing > 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				null,
+				null,
+				0);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"missing",
+				1);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				"missing",
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByMissingUnqualifiedAmbiguousV37() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3, sum(F4.col11) as total_col11 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col11 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n  join fifth f on F4.col1 = f.col2"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n group by F4.col1, t.col2, t.col3, missing";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				null,
+				null,
+				0);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"missing",
+				1);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				"missing",
+				1);
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByMissingUnqualifiedAmbiguousV38() {
+		final String query = " SELECT F4.col1 as last, t.col2 as tcol2, t.col3 FROM "
+			+ "\n  (select a as col1, b as col4, col6, col8, col12 from third) F4"
+			+ "\n  join fourth t on F4.col1 = t.col2 and F4.col4 = t.col5"
+			+ "\n  join fifth f on F4.col1 = f.col2"
+			+ "\n where F4.col6 = t.col7 and F4.col1 = t.col2 and F4.col8 > 0"
+			+ "\n order by t.col3 desc, F4.col1 asc, F4.col12 desc, missing desc";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				null,
+				null,
+				0);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"missing",
+				1);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				"missing",
+				1);
+	}
+
+	// Begin updateDictionaryHandling tests (post-V38 extension)
+
+	@Test
+	public void updateDictionaryHandlingQualifiedColumnsFromWindowedSubqueryV1() {
+		final String query = " update employees e set score = src.acct_sales_count, rank_bucket = src.rn"
+				+ "\n from (select a.emp_id, a.acct_sales_count,"
+				+ "\n              row_number() over (partition by a.emp_id order by a.last_update desc) as rn"
+				+ "\n         from accounts a"
+				+ "\n        where a.acct_sales_count > 0) src"
+				+ "\n where e.emp_id = src.emp_id and src.rn = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String queryDictionary = extractor.getQueryColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("Expected score in update dictionary", queryDictionary.contains("score=["));
+		Assert.assertTrue("Expected rank_bucket in update dictionary", queryDictionary.contains("rank_bucket=["));
+		Assert.assertTrue("Expected subquery dictionary to be represented in update symbol table", symbolTable.contains("def_query0="));
+		Assert.assertTrue("Expected window alias rn from subquery to be tracked", symbolTable.contains("rn=["));
+		Assert.assertTrue("Expected subquery order-by dependency last_update to be tracked", symbolTable.contains("last_update"));
+	}
+
+	@Test
+	public void updateDictionaryHandlingQualifiedColumnsAcrossWhereSubclausesV2() {
+		final String query = " update employees e set quota = src.new_quota"
+				+ "\n from (select emp_id, dept_id, new_quota from quota_feed) src"
+				+ "\n where e.emp_id = src.emp_id and e.dept_id = src.dept_id and e.active_flag = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String queryDictionary = extractor.getQueryColumnDictionaryMap().toString();
+		String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("Expected quota in update dictionary", queryDictionary.contains("quota=["));
+		Assert.assertTrue("Expected target-side WHERE columns to be tracked", tableDictionary.contains("active_flag=["));
+		Assert.assertTrue("Expected target-side key column to be tracked", tableDictionary.contains("dept_id=["));
+		Assert.assertTrue("Expected source subquery columns to be tracked", symbolTable.contains("new_quota"));
+	}
+
+	@Test
+	public void updateDictionaryHandlingUnqualifiedFallsBackToTargetTableV3() {
+		final String query = " update employees e set review_flag = missing_flag"
+				+ "\n from (select emp_id, score from perf_feed) src"
+				+ "\n where e.emp_id = src.emp_id and src.score > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertTrue("Expected unqualified missing_flag to be assigned to target table dictionary",
+				tableDictionary.contains("employees={") && tableDictionary.contains("missing_flag=["));
+		Assert.assertTrue("Expected assignment dependency to include missing_flag", symbolTable.contains("missing_flag"));
+	}
+
+	@Test
+	public void updateDictionaryHandlingUnqualifiedWithAdditionalPhysicalTableStillResolvesV4() {
+		final String query = " update employees e set review_flag = src.score"
+				+ "\n from (select emp_id, score from perf_feed) src"
+				+ "\n join audit_flags af on src.emp_id = af.emp_id"
+				+ "\n where e.emp_id = src.emp_id and e.missing_flag = af.missing_flag and missing_flag > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				"missing_flag",
+				1);
+
+		String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		String symbolTable = extractor.getSymbolTable().toString();
+		Assert.assertTrue("Expected unqualified missing_flag to be tracked in the outer update scope",
+				symbolTable.contains("missing_flag"));
+		Assert.assertTrue("Expected missing_flag to resolve against a concrete table in table dictionary",
+				tableDictionary.contains("missing_flag=["));
+	}
+
+	@Test
+	public void updateDictionaryHandlingGroupByHavingSubqueryAndUnqualifiedRhsV5() {
+		final String query = " update employees e set agg_score = src.total_score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, sum(a.score) as total_score"
+				+ "\n         from accounts a"
+				+ "\n        group by a.emp_id"
+				+ "\n       having sum(a.score) > e.score) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={function={function_name=sum, qualifier=null, parameters={column={name=score, table_ref=a}}}, alias=total_score}}, having={condition={left={function={function_name=sum, qualifier=null, parameters={column={name=score, table_ref=a}}}}, right={column={name=score, table_ref=e}}, operator=>}}, from={table={alias=a, table=accounts}}, groupby={1={column={name=emp_id, table_ref=a}}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=agg_score, table_ref=null}}, to={column={name=total_score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@22,108:108='a',<329>,2:28], [@39,201:201='a',<329>,5:18]], emp_id=[[@16,94:94='a',<329>,2:14], [@33,174:174='a',<329>,4:17]]}, employees={score=[[@44,212:212='e',<329>,5:29]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], emp_id=[[@50,232:232='e',<329>,6:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@27,120:130='total_score',<329>,2:40]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@54,243:245='src',<329>,6:18]]}, update1={agg_score=[[@4,24:32='agg_score',<329>,1:24]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={stale_flag=[{name=orphan_marker, table_ref=null}], agg_score=[{name=total_score, table_ref=src}]}, table_dictionary={employees={score=[[@44,212:212='e',<329>,5:29]], orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], emp_id=[[@50,232:232='e',<329>,6:7]]}}, update_dictionary={stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], agg_score=[[@4,24:32='agg_score',<329>,1:24]]}, def_query0={query_dictionary={total_score=[[@27,120:130='total_score',<329>,2:40]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@54,243:245='src',<329>,6:18]]}, table_dictionary={accounts={score=[[@22,108:108='a',<329>,2:28], [@39,201:201='a',<329>,5:18]], emp_id=[[@16,94:94='a',<329>,2:14], [@33,174:174='a',<329>,4:17]]}}, grouped_by=[{name=emp_id, table_ref=a}], filters=[{name=score, table_ref=a}, {name=score, table_ref=e}], interface={total_score=[{name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingOrderBySubqueryAndUnqualifiedRhsV6() {
+		final String query = " update employees e set most_recent_update = src.last_update, unknown_rhs = shadow_col"
+				+ "\n from (select a.emp_id, a.last_update"
+				+ "\n         from accounts a"
+				+ "\n        order by a.last_update desc) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=last_update, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=last_update, table_ref=a}}, sort_order=desc}}, from={table={alias=a, table=accounts}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=most_recent_update, table_ref=null}}, to={column={name=last_update, table_ref=src}}}, 2={set={column={name=unknown_rhs, table_ref=null}}, to={column={name=shadow_col, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unknown_rhs, most_recent_update]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={last_update=[[@20,111:111='a',<329>,2:24], [@28,167:167='a',<329>,4:17]], emp_id=[[@16,101:101='a',<329>,2:14]]}, employees={unknown_rhs=[[@10,62:72='unknown_rhs',<329>,1:62]], most_recent_update=[[@4,24:41='most_recent_update',<329>,1:24]], shadow_col=[[@12,76:85='shadow_col',<329>,1:76]], emp_id=[[@35,198:198='e',<329>,5:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={last_update=[[@22,113:123='last_update',<329>,2:26]], emp_id=[[@18,103:108='emp_id',<329>,2:16], [@39,209:211='src',<329>,5:18]]}, update1={most_recent_update=[[@4,24:41='most_recent_update',<329>,1:24]], unknown_rhs=[[@10,62:72='unknown_rhs',<329>,1:62]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={unknown_rhs=[{name=shadow_col, table_ref=null}], most_recent_update=[{name=last_update, table_ref=src}]}, table_dictionary={employees={most_recent_update=[[@4,24:41='most_recent_update',<329>,1:24]], shadow_col=[[@12,76:85='shadow_col',<329>,1:76]], unknown_rhs=[[@10,62:72='unknown_rhs',<329>,1:62]], emp_id=[[@35,198:198='e',<329>,5:7]]}}, unresolved_column={src.last_update={column={name=last_update, table_ref=src}, locations=[[@6,45:47='src',<329>,1:45]]}}, update_dictionary={unknown_rhs=[[@10,62:72='unknown_rhs',<329>,1:62]], most_recent_update=[[@4,24:41='most_recent_update',<329>,1:24]]}, def_query0={query_dictionary={last_update=[[@22,113:123='last_update',<329>,2:26]], emp_id=[[@18,103:108='emp_id',<329>,2:16], [@39,209:211='src',<329>,5:18]]}, table_dictionary={accounts={last_update=[[@20,111:111='a',<329>,2:24], [@28,167:167='a',<329>,4:17]], emp_id=[[@16,101:101='a',<329>,2:14]]}}, ordered_by=[{name=last_update, table_ref=a}], interface={last_update=[{name=last_update, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingQualifySubqueryAndUnqualifiedRhsV7() {
+		final String query = " update employees e set top_score = src.score, fallback_note = unqualified_note"
+				+ "\n from (select a.emp_id, a.score,"
+				+ "\n              row_number() over (partition by a.emp_id order by a.last_update desc) as rn"
+				+ "\n         from accounts a"
+				+ "\n      qualify rn = 1) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=score, table_ref=a}}, 3={alias=rn, window_function={over={partition_by={1={column={name=emp_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=last_update, table_ref=a}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=accounts}}, qualify={condition={left={column={name=rn, table_ref=null}}, right={literal=1}, operator==}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=top_score, table_ref=null}}, to={column={name=score, table_ref=src}}}, 2={set={column={name=fallback_note, table_ref=null}}, to={column={name=unqualified_note, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[fallback_note, top_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,104:104='a',<329>,2:24]], last_update=[[@36,177:177='a',<329>,3:64]], rn=[[@47,242:243='rn',<329>,5:14]], emp_id=[[@16,94:94='a',<329>,2:14], [@31,159:159='a',<329>,3:46]]}, employees={fallback_note=[[@10,47:59='fallback_note',<329>,1:47]], unqualified_note=[[@12,63:78='unqualified_note',<329>,1:63]], top_score=[[@4,24:32='top_score',<329>,1:24]], emp_id=[[@53,261:261='e',<329>,6:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,106:110='score',<329>,2:26]], rn=[[@42,200:201='rn',<329>,3:87]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@57,272:274='src',<329>,6:18]]}, update1={fallback_note=[[@10,47:59='fallback_note',<329>,1:47]], top_score=[[@4,24:32='top_score',<329>,1:24]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={fallback_note=[{name=unqualified_note, table_ref=null}], top_score=[{name=score, table_ref=src}]}, table_dictionary={employees={fallback_note=[[@10,47:59='fallback_note',<329>,1:47]], unqualified_note=[[@12,63:78='unqualified_note',<329>,1:63]], top_score=[[@4,24:32='top_score',<329>,1:24]], emp_id=[[@53,261:261='e',<329>,6:7]]}}, unresolved_column={src.score={column={name=score, table_ref=src}, locations=[[@6,36:38='src',<329>,1:36]]}}, update_dictionary={fallback_note=[[@10,47:59='fallback_note',<329>,1:47]], top_score=[[@4,24:32='top_score',<329>,1:24]]}, def_query0={query_dictionary={score=[[@22,106:110='score',<329>,2:26]], rn=[[@42,200:201='rn',<329>,3:87]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@57,272:274='src',<329>,6:18]]}, table_dictionary={accounts={score=[[@20,104:104='a',<329>,2:24]], last_update=[[@36,177:177='a',<329>,3:64]], rn=[[@47,242:243='rn',<329>,5:14]], emp_id=[[@16,94:94='a',<329>,2:14], [@31,159:159='a',<329>,3:46]]}}, filters=[{name=rn, table_ref=accounts}], interface={score=[{name=score, table_ref=a}], rn=[{name=emp_id, table_ref=a}, {name=last_update, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void updateDictionaryHandlingWhereInSubqueryWithTargetTableRefAndOrphanRhsV8() {
+		final String query = " update employees e set agg_score = src.total_score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, sum(a.score) as total_score"
+				+ "\n         from accounts a"
+				+ "\n        where a.score > e.min_score"
+				+ "\n        group by a.emp_id) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={function={function_name=sum, qualifier=null, parameters={column={name=score, table_ref=a}}}, alias=total_score}}, from={table={alias=a, table=accounts}}, where={condition={left={column={name=score, table_ref=a}}, right={column={name=min_score, table_ref=e}}, operator=>}}, groupby={1={column={name=emp_id, table_ref=a}}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=agg_score, table_ref=null}}, to={column={name=total_score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@22,108:108='a',<329>,2:28], [@32,171:171='a',<329>,4:14]], emp_id=[[@16,94:94='a',<329>,2:14], [@41,210:210='a',<329>,5:17]]}, employees={stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], min_score=[[@36,181:181='e',<329>,4:24]], emp_id=[[@47,231:231='e',<329>,6:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@27,120:130='total_score',<329>,2:40]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@51,242:244='src',<329>,6:18]]}, update1={agg_score=[[@4,24:32='agg_score',<329>,1:24]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={stale_flag=[{name=orphan_marker, table_ref=null}], agg_score=[{name=total_score, table_ref=src}]}, table_dictionary={employees={orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], min_score=[[@36,181:181='e',<329>,4:24]], emp_id=[[@47,231:231='e',<329>,6:7]]}}, update_dictionary={stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], agg_score=[[@4,24:32='agg_score',<329>,1:24]]}, def_query0={query_dictionary={total_score=[[@27,120:130='total_score',<329>,2:40]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@51,242:244='src',<329>,6:18]]}, table_dictionary={accounts={score=[[@22,108:108='a',<329>,2:28], [@32,171:171='a',<329>,4:14]], emp_id=[[@16,94:94='a',<329>,2:14], [@41,210:210='a',<329>,5:17]]}}, grouped_by=[{name=emp_id, table_ref=a}], filters=[{name=score, table_ref=a}, {name=min_score, table_ref=e}], interface={total_score=[{name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingJoinOnInSubqueryWithTargetTableRefAndOrphanRhsV9() {
+		final String query = " update employees e set agg_score = src.total_score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, a.score as total_score"
+				+ "\n         from accounts a"
+				+ "\n         join departments d on a.dept_id = d.dept_id and d.region = e.region) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=score, table_ref=a}, alias=total_score}}, from={join={1={table={alias=a, table=accounts}}, 2={join=join, on={and={1={condition={left={column={name=dept_id, table_ref=a}}, right={column={name=dept_id, table_ref=d}}, operator==}}, 2={condition={left={column={name=region, table_ref=d}}, right={column={name=region, table_ref=e}}, operator==}}}}}, 3={table={alias=d, table=departments}}}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=agg_score, table_ref=null}}, to={column={name=total_score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,104:104='a',<329>,2:24]], dept_id=[[@32,183:183='a',<329>,4:31]], emp_id=[[@16,94:94='a',<329>,2:14]]}, departments={dept_id=[[@36,195:195='d',<329>,4:43]], region=[[@40,209:209='d',<329>,4:57]]}, employees={stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], region=[[@44,220:220='e',<329>,4:68]], emp_id=[[@50,241:241='e',<329>,5:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@24,115:125='total_score',<329>,2:35]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@54,252:254='src',<329>,5:18]]}, update1={agg_score=[[@4,24:32='agg_score',<329>,1:24]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={stale_flag=[{name=orphan_marker, table_ref=null}], agg_score=[{name=total_score, table_ref=src}]}, table_dictionary={employees={orphan_marker=[{name=orphan_marker, table_ref=null}], agg_score=[[@4,24:32='agg_score',<329>,1:24]], region=[[@44,220:220='e',<329>,4:68]], stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], emp_id=[[@50,241:241='e',<329>,5:7]]}}, update_dictionary={stale_flag=[[@10,53:62='stale_flag',<329>,1:53]], agg_score=[[@4,24:32='agg_score',<329>,1:24]]}, def_query0={query_dictionary={total_score=[[@24,115:125='total_score',<329>,2:35]], emp_id=[[@18,96:101='emp_id',<329>,2:16], [@54,252:254='src',<329>,5:18]]}, table_dictionary={accounts={score=[[@20,104:104='a',<329>,2:24]], dept_id=[[@32,183:183='a',<329>,4:31]], emp_id=[[@16,94:94='a',<329>,2:14]]}, departments={dept_id=[[@36,195:195='d',<329>,4:43]], region=[[@40,209:209='d',<329>,4:57]]}}, filters=[{name=dept_id, table_ref=a}, {name=dept_id, table_ref=d}, {name=region, table_ref=d}, {name=region, table_ref=e}], interface={total_score=[{name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts, d=departments}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingQualifyInSubqueryWithTargetTableRefAndOrphanRhsV10() {
+		final String query = " update employees e set top_score = src.score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, a.score,"
+				+ "\n              row_number() over (partition by a.emp_id order by a.score desc) as rn"
+				+ "\n         from accounts a"
+				+ "\n        qualify rn <= e.max_rank) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=score, table_ref=a}}, 3={alias=rn, window_function={over={partition_by={1={column={name=emp_id, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=score, table_ref=a}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=a, table=accounts}}, qualify={condition={left={column={name=rn, table_ref=null}}, right={column={name=max_rank, table_ref=e}}, operator=<=}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=top_score, table_ref=null}}, to={column={name=score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[stale_flag, top_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,98:98='a',<329>,2:24], [@36,171:171='a',<329>,3:64]], rn=[[@47,232:233='rn',<329>,5:16]], emp_id=[[@16,88:88='a',<329>,2:14], [@31,153:153='a',<329>,3:46]]}, employees={stale_flag=[[@10,47:56='stale_flag',<329>,1:47]], max_rank=[[@49,238:238='e',<329>,5:22]], top_score=[[@4,24:32='top_score',<329>,1:24]], orphan_marker=[{name=orphan_marker, table_ref=null}], emp_id=[[@55,261:261='e',<329>,6:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,100:104='score',<329>,2:26]], rn=[[@42,188:189='rn',<329>,3:81]], emp_id=[[@18,90:95='emp_id',<329>,2:16], [@59,272:274='src',<329>,6:18]]}, update1={stale_flag=[[@10,47:56='stale_flag',<329>,1:47]], top_score=[[@4,24:32='top_score',<329>,1:24]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={stale_flag=[{name=orphan_marker, table_ref=null}], top_score=[{name=score, table_ref=src}]}, table_dictionary={employees={orphan_marker=[{name=orphan_marker, table_ref=null}], stale_flag=[[@10,47:56='stale_flag',<329>,1:47]], max_rank=[[@49,238:238='e',<329>,5:22]], top_score=[[@4,24:32='top_score',<329>,1:24]], emp_id=[[@55,261:261='e',<329>,6:7]]}}, update_dictionary={stale_flag=[[@10,47:56='stale_flag',<329>,1:47]], top_score=[[@4,24:32='top_score',<329>,1:24]]}, def_query0={query_dictionary={score=[[@22,100:104='score',<329>,2:26]], rn=[[@42,188:189='rn',<329>,3:81]], emp_id=[[@18,90:95='emp_id',<329>,2:16], [@59,272:274='src',<329>,6:18]]}, table_dictionary={accounts={score=[[@20,98:98='a',<329>,2:24], [@36,171:171='a',<329>,3:64]], rn=[[@47,232:233='rn',<329>,5:16]], emp_id=[[@16,88:88='a',<329>,2:14], [@31,153:153='a',<329>,3:46]]}}, filters=[{name=rn, table_ref=accounts}, {name=max_rank, table_ref=e}], interface={score=[{name=score, table_ref=a}], rn=[{name=emp_id, table_ref=a}, {name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingOrderByInSubqueryWithTargetTableRefAndOrphanRhsV11() {
+		final String query = " update employees e set most_recent_score = src.score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, a.score"
+				+ "\n         from accounts a"
+				+ "\n        order by e.sort_priority asc, a.score desc) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=score, table_ref=a}}}, orderby={1={null_order=null, predicand={column={name=sort_priority, table_ref=e}}, sort_order=asc}, 2={null_order=null, predicand={column={name=score, table_ref=a}}, sort_order=desc}}, from={table={alias=a, table=accounts}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=most_recent_score, table_ref=null}}, to={column={name=score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[stale_flag, most_recent_score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,106:106='a',<329>,2:24], [@33,177:177='a',<329>,4:38]], emp_id=[[@16,96:96='a',<329>,2:14]]}, employees={stale_flag=[[@10,55:64='stale_flag',<329>,1:55]], most_recent_score=[[@4,24:40='most_recent_score',<329>,1:24]], orphan_marker=[{name=orphan_marker, table_ref=null}], sort_priority=[[@28,156:156='e',<329>,4:17]], emp_id=[[@40,202:202='e',<329>,5:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,108:112='score',<329>,2:26]], emp_id=[[@18,98:103='emp_id',<329>,2:16], [@44,213:215='src',<329>,5:18]]}, update1={most_recent_score=[[@4,24:40='most_recent_score',<329>,1:24]], stale_flag=[[@10,55:64='stale_flag',<329>,1:55]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={stale_flag=[{name=orphan_marker, table_ref=null}], most_recent_score=[{name=score, table_ref=src}]}, table_dictionary={employees={most_recent_score=[[@4,24:40='most_recent_score',<329>,1:24]], orphan_marker=[{name=orphan_marker, table_ref=null}], sort_priority=[[@28,156:156='e',<329>,4:17]], stale_flag=[[@10,55:64='stale_flag',<329>,1:55]], emp_id=[[@40,202:202='e',<329>,5:7]]}}, update_dictionary={stale_flag=[[@10,55:64='stale_flag',<329>,1:55]], most_recent_score=[[@4,24:40='most_recent_score',<329>,1:24]]}, def_query0={query_dictionary={score=[[@22,108:112='score',<329>,2:26]], emp_id=[[@18,98:103='emp_id',<329>,2:16], [@44,213:215='src',<329>,5:18]]}, table_dictionary={accounts={score=[[@20,106:106='a',<329>,2:24], [@33,177:177='a',<329>,4:38]], emp_id=[[@16,96:96='a',<329>,2:14]]}}, ordered_by=[{name=sort_priority, table_ref=e}, {name=score, table_ref=a}], interface={score=[{name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateDictionaryHandlingNoQualifiedSubqueryBodyWithQualifiedAssignmentAndOrphanRhsV12() {
+		final String query = " update employees e set latest_score = src.score, stale_flag = orphan_marker"
+				+ "\n from (select a.emp_id, a.score"
+				+ "\n         from accounts a) src"
+				+ "\n where e.emp_id = src.emp_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=a}}, 2={column={name=score, table_ref=a}}}, from={table={alias=a, table=accounts}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=latest_score, table_ref=null}}, to={column={name=score, table_ref=src}}}, 2={set={column={name=stale_flag, table_ref=null}}, to={column={name=orphan_marker, table_ref=null}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[latest_score, stale_flag]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,101:101='a',<329>,2:24]], emp_id=[[@16,91:91='a',<329>,2:14]]}, employees={latest_score=[[@4,24:35='latest_score',<329>,1:24]], stale_flag=[[@10,50:59='stale_flag',<329>,1:50]], orphan_marker=[[@12,63:75='orphan_marker',<329>,1:63]], emp_id=[[@29,146:146='e',<329>,4:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,103:107='score',<329>,2:26]], emp_id=[[@18,93:98='emp_id',<329>,2:16], [@33,157:159='src',<329>,4:18]]}, update1={latest_score=[[@4,24:35='latest_score',<329>,1:24]], stale_flag=[[@10,50:59='stale_flag',<329>,1:50]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update1={assignments={latest_score=[{name=score, table_ref=src}], stale_flag=[{name=orphan_marker, table_ref=null}]}, table_dictionary={employees={latest_score=[[@4,24:35='latest_score',<329>,1:24]], orphan_marker=[[@12,63:75='orphan_marker',<329>,1:63]], stale_flag=[[@10,50:59='stale_flag',<329>,1:50]], emp_id=[[@29,146:146='e',<329>,4:7]]}}, unresolved_column={src.score={column={name=score, table_ref=src}, locations=[[@6,39:41='src',<329>,1:39]]}}, update_dictionary={latest_score=[[@4,24:35='latest_score',<329>,1:24]], stale_flag=[[@10,50:59='stale_flag',<329>,1:50]]}, def_query0={query_dictionary={score=[[@22,103:107='score',<329>,2:26]], emp_id=[[@18,93:98='emp_id',<329>,2:16], [@33,157:159='src',<329>,4:18]]}, table_dictionary={accounts={score=[[@20,101:101='a',<329>,2:24]], emp_id=[[@16,91:91='a',<329>,2:14]]}}, interface={score=[{name=score, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
 
 	// End subqueryDictionaryExtension tests
 
