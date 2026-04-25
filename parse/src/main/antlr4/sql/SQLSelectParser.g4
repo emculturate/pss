@@ -46,6 +46,37 @@ options {
     }
     return "config".equalsIgnoreCase(objectName) && "get".equalsIgnoreCase(methodName);
   }
+
+  private boolean isDisallowedSetOperatorAlias(String name) {
+    if (name == null) {
+      return false;
+    }
+
+    String lowered = name.toLowerCase();
+    return "union".equals(lowered)
+        || "intersect".equals(lowered)
+        || "except".equals(lowered)
+        || "intersection".equals(lowered);
+  }
+
+  private boolean isDisallowedJoinKeywordAlias(String name) {
+    if (name == null) {
+      return false;
+    }
+
+    String lowered = name.toLowerCase();
+    return "join".equals(lowered)
+        || "cross".equals(lowered)
+        || "natural".equals(lowered)
+        || "inner".equals(lowered)
+        || "left".equals(lowered)
+        || "right".equals(lowered)
+        || "full".equals(lowered);
+  }
+
+  private boolean isAllowedImplicitAlias(String name) {
+    return !isDisallowedSetOperatorAlias(name) && !isDisallowedJoinKeywordAlias(name);
+  }
 }
 
 /*
@@ -393,6 +424,10 @@ as_clause
   ;
 
 select_all_columns
+  : wildcard_reference
+  ;
+
+wildcard_reference
   : (tb_name=Identifier DOT)? MULTIPLY
   ;
 
@@ -425,11 +460,16 @@ join_extension_primary
 
 // Used anywhere a table name is expected
 table_primary
-  : table_or_query_name as_clause?
+  : table_or_query_name relation_as_clause?
   | variable_identifier as_clause
-  | jinja_identifier as_clause?
+  | jinja_identifier relation_as_clause?
   | values_statement_primary
-  | subquery as_clause? 
+  | subquery relation_as_clause?
+  ;
+
+relation_as_clause
+  : AS alias_identifier
+  | {isAllowedImplicitAlias(_input.LT(1).getText())}? alias_identifier
   ;
 
 // Used ONLY in the TUPLE Variable Substitution end point
@@ -507,7 +547,9 @@ column_primary
 */
    
 predicand_primary
-  : value_expression_primary (CAST_OPERATOR data_type)?
+  : value_expression_primary
+  | string_value_expression
+  | sign numeric_primary
   | trim_function
   | null_literal
   | variable_identifier
@@ -515,8 +557,8 @@ predicand_primary
   ;
 
 value_expression_primary
-  : parenthesized_value_expression
-  | nonparenthesized_value_expression_primary
+  : parenthesized_value_expression (CAST_OPERATOR data_type)?
+  | nonparenthesized_value_expression_primary (CAST_OPERATOR data_type)?
   ;
 
 parenthesized_value_expression
@@ -545,7 +587,7 @@ predicand_subquery
 ===============================================================================
 */
 aggregate_function
-  : COUNT LEFT_PAREN MULTIPLY RIGHT_PAREN	# count_all_aggregate
+  : COUNT LEFT_PAREN wildcard_reference RIGHT_PAREN	# count_all_aggregate
   | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN   # general_set_function
   // Next variation not supported, limited SQL dialects only
   // | (set_function_type|set_qualifier_type) LEFT_PAREN set_qualifier? value_expression RIGHT_PAREN filter_clause?
@@ -1684,6 +1726,7 @@ real_number_def
     :   NUMBER DOT NUMBER? exponent?
     |   DOT NUMBER exponent?
     |   NUMBER exponent
+    |   Scientific_Numeric_Literal
     ;
 
 exponent : EXPONEN   NUMBER ;
@@ -2470,6 +2513,12 @@ Identifier
 
 EXPONEN : E ('+' | '-')?;
   
+Scientific_Numeric_Literal
+  : Digit+ Period Digit* [eE] ('+' | '-')? Digit+
+  | Period Digit+ [eE] ('+' | '-')? Digit+
+  | Digit+ [eE] ('+' | '-')? Digit+
+  ;
+
 Numeric_Identifier
   :  Digit+ ('a'..'z'|'A'..'Z'|Digit|'_')*
   ;
@@ -2513,7 +2562,12 @@ fragment
 Extended_Control_Characters         :   '\u0080' .. '\u009F';
 
 Character_String_Literal
-  : QUOTE ( ESC_SEQ | ~('\\'|'\'') )* QUOTE
+  : QUOTE ( ESC_SEQ | DOUBLE_QUOTE_ESCAPE | ~('\\'|'\'') )* QUOTE
+  ;
+
+fragment
+DOUBLE_QUOTE_ESCAPE
+  : QUOTE QUOTE
   ;
 
 fragment

@@ -352,7 +352,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			String normalizedTableRef = tableRef.startsWith("<") ? tableRef : tableRef.toLowerCase();
+			String normalizedTableRef = normalizeTableRef(tableRef);
 			Object existingColumnsObj = walkerTableDictionary.get(normalizedTableRef);
 			HashMap<String, Object> mergedColumns;
 			if (existingColumnsObj instanceof HashMap<?, ?> existingColumnsMapObj) {
@@ -650,6 +650,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return tableName;
 	}
 
+	/**
+	 * Normalizes a table reference string for use as a dictionary key.
+	 * Substitution variables (starting with '<') are returned unchanged.
+	 * For dotted qualified names, each dot-separated segment is lowercased only if
+	 * it is NOT a double-quoted identifier — preserving case sensitivity for
+	 * Snowflake-style quoted names like "PROD-uuid".schema."667_table".
+	 */
+	static String normalizeTableRef(String tableRef) {
+		return SqlASTWalkerHelper.normalizeTableReference(tableRef);
+	}
+
 	public HashMap<String, Object> getSubstitutionsMap() {
 		return walker.substitutionsMap;
 	}
@@ -805,7 +816,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  SQL Tree Start Symbol
 	===============================================================================
 	*/
-
 	@Override
 	public void exitSql(@NotNull SQLSelectParserParser.SqlContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -1008,7 +1018,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (fromTableRef == null || fromTableRef.isBlank()) {
 			return;
 		}
-		String normalizedFromTableRef = fromTableRef.startsWith("<") ? fromTableRef : fromTableRef.toLowerCase();
+		String normalizedFromTableRef = normalizeTableRef(fromTableRef);
 
 		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		HashMap<String, Object> fromTableDictionary = ensureTableDictionaryEntry(currentTableDictionary, normalizedFromTableRef);
@@ -1267,11 +1277,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		// Add query to parent symbol table. Use the alias and current query number and put that in the table_alias submap.
-		// Then take the current query's symbol table and put that in the parent symbol table with a "def_" prefix. 
-		String queryName = "query" + (walker.queryCount - 1);
-			
+		// Then take the current query's symbol table and put that in the parent symbol table with a "def_" prefix.
+		// The body of a WITH query may be a SELECT (query), UPDATE, INSERT, UNION, INTERSECT, or VALUES statement,
+		// each of which registers in the symbol table under a different prefix. Search all known prefixes.
+		int scopeIndex = walker.queryCount - 1;
+		String[] knownPrefixes = new String[] {
+				MUMBLE_VALUES_KEY, MUMBLE_INTERSECT_KEY, MUMBLE_UNION_KEY,
+				MUMBLE_INSERT_KEY, MUMBLE_UPDATE_KEY, MUMBLE_QUERY_KEY
+		};
+		String queryName = MUMBLE_QUERY_KEY + scopeIndex;
+		for (String prefix : knownPrefixes) {
+			String candidate = prefix + scopeIndex;
+			if (walker.symbolTable.containsKey(candidate)) {
+				queryName = candidate;
+				break;
+			}
+		}
+
 		// get current query symbol table and put it in parent symbol table with "def_" prefix
 		HashMap<String, Object> currentQuerySymbolTable = (HashMap<String, Object>) walker.symbolTable.remove(queryName);
+		if (currentQuerySymbolTable == null) {
+			currentQuerySymbolTable = new HashMap<String, Object>();
+		}
 		HashMap<String, Object> symbols = walker.symbolTable;
 		walker.symbolTable = new HashMap<String, Object>();
 		walker.symbolTable.put(queryName, currentQuerySymbolTable);
@@ -1755,7 +1782,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			String normalizedTableRef = tableRef.startsWith("<") ? tableRef : tableRef.toLowerCase();
+			String normalizedTableRef = normalizeTableRef(tableRef);
 			HashMap<String, Object> targetColumns = ensureTableDictionaryEntry(globalTableDictionary, normalizedTableRef);
 			Map<String, Object> sourceColumns = (Map<String, Object>) sourceColumnsMapObj;
 			for (Map.Entry<String, Object> columnEntry : sourceColumns.entrySet()) {
@@ -2396,9 +2423,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.symbolTable.put(MUMBLE_TARGET_TABLE_KEY, targetTableMap);
 		}
 
-		String normalizedTargetRef = updateTargetTableRef.startsWith("<")
-				? updateTargetTableRef
-				: updateTargetTableRef.toLowerCase();
+		String normalizedTargetRef = normalizeTableRef(updateTargetTableRef);
 		targetTableMap.putIfAbsent(normalizedTargetRef, new HashMap<String, Object>());
 	}
 
@@ -3512,9 +3537,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (targetTableRef == null || targetTableRef.isBlank()) {
 			return;
 		}
-		String normalizedTargetRef = targetTableRef.startsWith("<")
-				? targetTableRef
-				: targetTableRef.toLowerCase();
+		String normalizedTargetRef = normalizeTableRef(targetTableRef);
 
 		Object interfaceObj = querySymbols.get(MUMBLE_INTERFACE_KEY);
 		if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
@@ -4033,7 +4056,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
-		flattenSubTreeForInterfaceColumns(interfaceReference, columnList);
+		ArrayList<Object> queryReferenceList = new ArrayList<Object>();
+		flattenSubTreeForInterfaceQueryReferences(interfaceReference, queryReferenceList);
+		boolean hasQueryReferences = !queryReferenceList.isEmpty();
+		if (hasQueryReferences) {
+			columnList.addAll(queryReferenceList);
+		} else {
+			flattenSubTreeForInterfaceColumns(interfaceReference, columnList);
+		}
 
 		Object existingInterfaceEntry = selectInterface.get(interfaceAlias);
 		if (existingInterfaceEntry != null) {
@@ -4042,13 +4072,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		selectInterface.put(interfaceAlias, columnList);
 		recordInsertSourceSelectItemSequence(interfaceAlias);
-		if (interfaceReference.containsKey(MUMBLE_SELECT_KEY) || interfaceReference.containsKey(MUMBLE_LOOKUP_KEY)) {
+		if (hasQueryReferences || isQueryBackedSelectItemReference(interfaceReference)) {
 			addCurrentQueryScalarSubqueryAlias(interfaceAlias);
 		}
 
 		// Add item alias into the Current Query Column Dictionary
 		addAliasTokensObject(interfaceAlias, aliasToken);
 		
+	}
+
+	private boolean isQueryBackedSelectItemReference(Map<String, Object> interfaceReference) {
+		if (interfaceReference == null || interfaceReference.isEmpty()) {
+			return false;
+		}
+
+		return interfaceReference.containsKey(MUMBLE_SELECT_KEY)
+				|| interfaceReference.containsKey(MUMBLE_LOOKUP_KEY)
+				|| interfaceReference.containsKey(MUMBLE_UNION_KEY)
+				|| interfaceReference.containsKey(MUMBLE_INTERSECT_KEY)
+				|| interfaceReference.containsKey(MUMBLE_VALUES_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4175,11 +4217,86 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		scalarAliases.add(interfaceAlias);
 	}
 
+	@SuppressWarnings("unchecked")
+	private void flattenSubTreeForInterfaceQueryReferences(HashMap<String, Object> subTree, ArrayList<Object> references) {
+		if (subTree == null) {
+			return;
+		}
+
+		if (isQueryBackedSelectItemReference(subTree)) {
+			String queryReference = resolveQueryReferenceFromSubTree(subTree);
+			if (isQuerySourceReference(queryReference)) {
+				HashMap<String, Object> queryEntry = new HashMap<String, Object>();
+				queryEntry.put(MUMBLE_QUERY_KEY, queryReference);
+				if (!references.contains(queryEntry)) {
+					references.add(queryEntry);
+				}
+			}
+			subTree.remove(MUMBLE_QUERY_KEY);
+			return;
+		}
+
+		for (Object value : subTree.values()) {
+			if (value instanceof HashMap<?, ?> valueMapObj) {
+				flattenSubTreeForInterfaceQueryReferences((HashMap<String, Object>) valueMapObj, references);
+			} else if (value instanceof ArrayList<?> valueListObj) {
+				for (Object listItem : (ArrayList<Object>) valueListObj) {
+					if (listItem instanceof HashMap<?, ?> listMapObj) {
+						flattenSubTreeForInterfaceQueryReferences((HashMap<String, Object>) listMapObj, references);
+					}
+				}
+			}
+		}
+	}
+
+	private void annotateSubqueryReference(Map<String, Object> subTree, String queryReference) {
+		if (subTree == null || subTree.isEmpty() || !isQuerySourceReference(queryReference)) {
+			return;
+		}
+		subTree.put(MUMBLE_QUERY_KEY, queryReference);
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveQueryReferenceFromSubTree(Map<String, Object> subTree) {
+		if (subTree == null || subTree.isEmpty()) {
+			return null;
+		}
+
+		Object queryObject = subTree.get(MUMBLE_QUERY_KEY);
+		if (queryObject instanceof String queryReference && isQuerySourceReference(queryReference)) {
+			return queryReference;
+		}
+
+		for (Object value : subTree.values()) {
+			if (value instanceof Map<?, ?> valueMapObj) {
+				String nestedReference = resolveQueryReferenceFromSubTree((Map<String, Object>) valueMapObj);
+				if (isQuerySourceReference(nestedReference)) {
+					return nestedReference;
+				}
+			} else if (value instanceof ArrayList<?> valueListObj) {
+				for (Object listItem : (ArrayList<Object>) valueListObj) {
+					if (listItem instanceof Map<?, ?> listMapObj) {
+						String nestedReference = resolveQueryReferenceFromSubTree((Map<String, Object>) listMapObj);
+						if (isQuerySourceReference(nestedReference)) {
+							return nestedReference;
+						}
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
 	// Standardize the interface reference map into a flat map of column references and not the entire AST subtree
 	// This is a recursive function that traverses the item subtree until it finds column references or substitution variables, 
 	// which it adds to the column list with the alias as the key
 
 	private void flattenSubTreeForInterfaceColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		if (subTree == null) {
+			return;
+		}
+
 		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
 			Object col = subTree.get(MUMBLE_COLUMN_KEY);
 			if (!columnList.contains(col)) {
@@ -4197,10 +4314,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		} else {
-			for (Object key : subTree.keySet()) {
-				Object value = subTree.get(key);
-				if (value instanceof HashMap) {
-					flattenSubTreeForInterfaceColumns((HashMap<String, Object>) value, columnList);
+			for (Object value : subTree.values()) {
+				if (value instanceof HashMap<?, ?> valueMapObj) {
+					flattenSubTreeForInterfaceColumns((HashMap<String, Object>) valueMapObj, columnList);
+				} else if (value instanceof ArrayList<?> valueListObj) {
+					for (Object listItem : (ArrayList<Object>) valueListObj) {
+						if (listItem instanceof HashMap<?, ?> listMapObj) {
+							flattenSubTreeForInterfaceColumns((HashMap<String, Object>) listMapObj, columnList);
+						}
+					}
 				}
 			}
 		}
@@ -4225,7 +4347,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitRelation_as_clause(@NotNull SQLSelectParserParser.Relation_as_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() == 1) {
+			walker.showTrace(walker.parseTrace, "Just One Identifier: " + subMap);
+			String alias = (String) subMap.remove("1");
+			subMap.put(MUMBLE_ALIAS_KEY, alias);
+			walker.showTrace(walker.parseTrace, "Alias: " + alias + " Map: " + subMap);
+		} else {
+			walker.showTrace(walker.parseTrace, "Too many entries: " + subMap);
+		}
+
+	}
+
+	@Override
 	public void exitSelect_all_columns(@NotNull SQLSelectParserParser.Select_all_columnsContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitWildcard_reference(@NotNull SQLSelectParserParser.Wildcard_referenceContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -4233,34 +4379,36 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-
-		Map<String, Object> item = new HashMap<String, Object>();
-
 		if (subMap == null) {
-			// unqualified select all has no map
+			// unqualified wildcard can have no map
 			subMap = walker.makeRuleMap(ruleIndex);
 		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		if (ctx.getChildCount() == 1) {
-			walker.showTrace(walker.parseTrace, "Just One Identifier: " + ctx.getText());
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		String wildcardSource = null;
+
+		if (ctx.tb_name != null) {
+			wildcardSource = ctx.tb_name.getText();
+			item.put(MUMBLE_TABLE_REF_KEY, wildcardSource);
+		} else {
 			item.put(MUMBLE_TABLE_REF_KEY, "*");
-			item.put(MUMBLE_NAME_KEY, "*");
-
-			walker.collectUnresolvedColumnReference(MUMBLE_UNKNOWN_KEY, item, ctx.getStart());
-
-			subMap.put(MUMBLE_COLUMN_KEY, item);
-		} else if (ctx.getChildCount() == 3) {
-			walker.showTrace(walker.parseTrace, "Three entries: " + ctx.getText());
-			item.put(MUMBLE_TABLE_REF_KEY, ctx.getChild(0).getText());
-			item.put(MUMBLE_NAME_KEY, "*");
-
-			walker.collectUnresolvedColumnReference(item.get(MUMBLE_TABLE_REF_KEY), item, ctx.getStart());
-
-			subMap.put(MUMBLE_COLUMN_KEY, item);
 		}
-		// Add item to parent map
+		item.put(MUMBLE_NAME_KEY, "*");
+
+		if (ctx.getParent() instanceof SQLSelectParserParser.Count_all_aggregateContext) {
+			item.put("origin", "count_all_aggregate");
+		}
+
+		if (wildcardSource == null) {
+			walker.collectUnresolvedColumnReference(MUMBLE_UNKNOWN_KEY, item, ctx.getStart());
+		} else {
+			walker.collectUnresolvedColumnReference(wildcardSource, item, ctx.getStart());
+		}
+
+		subMap.put(MUMBLE_COLUMN_KEY, item);
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		walker.showTrace(walker.parseTrace, "Table Alias . Column Name: " + subMap);
+		walker.showTrace(walker.parseTrace, "Wildcard Reference: " + subMap);
 	}
 
 /*
@@ -4506,12 +4654,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		//   This allows all table references to be resolved against the same dictionary regardless of where they are defined in the query.
 		if (localTableCollection != null && localTableCollection.size() > 0) {
 			for (String tab_ref : localTableCollection.keySet()) {
-				String reference;
-				if (tab_ref.startsWith("<"))
-					// Tuple Substitution Variable, do NOT alter case
-					reference = tab_ref;
-				else
-					reference = tab_ref.toLowerCase();
+				String reference = normalizeTableRef(tab_ref);
 				HashMap<String, Object> currDict = (HashMap<String, Object>)  currentTableDictionary.get(reference);
 				if (currDict != null)
 					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
@@ -4786,7 +4929,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String normalizedTarget = resolvedTarget.startsWith("<") ? resolvedTarget : resolvedTarget.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
 		tableCollection.remove(normalizedTarget);
 	}
 
@@ -4812,9 +4955,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String normalizedTarget = resolvedTarget.startsWith("<")
-				? resolvedTarget
-				: resolvedTarget.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
 
 		Object targetTableObj = targetTableCollection.get(normalizedTarget);
 		HashMap<String, Object> targetTableColumns;
@@ -4977,9 +5118,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			String normalizedTableRef = resolvedTableRef.startsWith("<")
-					? resolvedTableRef
-					: resolvedTableRef.toLowerCase();
+			String normalizedTableRef = normalizeTableRef(resolvedTableRef);
 			Object tableEntryObj = tableCollection.get(normalizedTableRef);
 			if (!(tableEntryObj instanceof Map<?, ?> tableEntryMapObj)) {
 				continue;
@@ -5025,9 +5164,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String normalizedTarget = resolvedTarget.startsWith("<")
-				? resolvedTarget
-				: resolvedTarget.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
 
 		Object targetTableObj = targetTableCollection.get(normalizedTarget);
 		HashMap<String, Object> targetColumns;
@@ -5086,9 +5223,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String normalizedTarget = resolvedTarget.startsWith("<")
-				? resolvedTarget
-				: resolvedTarget.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
 
 		Object targetTableObj = targetTableCollection.get(normalizedTarget);
 		HashMap<String, Object> targetColumns;
@@ -5203,12 +5338,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (resolvedTarget == null || resolvedTarget.isBlank()) {
 			resolvedTarget = updateTargetTableRef;
 		}
-		String normalizedTarget = resolvedTarget.startsWith("<")
-				? resolvedTarget
-				: resolvedTarget.toLowerCase();
-		String normalizedAlias = updateTargetTableRef.startsWith("<")
-				? updateTargetTableRef
-				: updateTargetTableRef.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
+		String normalizedAlias = normalizeTableRef(updateTargetTableRef);
 
 		Object targetTableObj = targetTableCollection.get(normalizedTarget);
 		HashMap<String, Object> targetColumns;
@@ -5237,16 +5368,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			String normalizedQualifier = qualifier.startsWith("<")
-					? qualifier
-					: qualifier.toLowerCase();
+			String normalizedQualifier = normalizeTableRef(qualifier);
 			String resolvedQualifier = walker.resolveAliasToTableName(normalizedQualifier, tableAliasMap);
 			if (resolvedQualifier == null || resolvedQualifier.isBlank()) {
 				resolvedQualifier = normalizedQualifier;
 			}
-			String normalizedResolvedQualifier = resolvedQualifier.startsWith("<")
-					? resolvedQualifier
-					: resolvedQualifier.toLowerCase();
+			String normalizedResolvedQualifier = normalizeTableRef(resolvedQualifier);
 
 			// Accept if qualifier equals the canonical target name or the alias
 			if (!normalizedResolvedQualifier.equals(normalizedTarget)
@@ -5288,9 +5415,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String normalizedTarget = resolvedTarget.startsWith("<")
-				? resolvedTarget
-				: resolvedTarget.toLowerCase();
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
 
 		Object existingTargetObj = tableCollection.get(normalizedTarget);
 		HashMap<String, Object> targetColumns;
@@ -6216,8 +6341,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			if (localCurrentQueryDictionary != null && localCurrentQueryDictionary.containsKey(columnName)) {
-				// Keep unresolved diagnostics aligned with interface-validation location behavior.
+			boolean isSubstitutionQualifiedReference = false;
+			if (unknownEntry.getValue() instanceof Map<?, ?> unknownEntryMapObj) {
+				Map<String, Object> unknownEntryMap = (Map<String, Object>) unknownEntryMapObj;
+				Object columnObj = unknownEntryMap.get(MUMBLE_COLUMN_KEY);
+				if (columnObj != null) {
+					String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(columnObj);
+					isSubstitutionQualifiedReference = substitutionType != null
+							&& (MUMBLE_COLUMN_KEY.equals(substitutionType)
+									|| MUMBLE_PREDICAND_KEY.equals(substitutionType));
+				}
+			}
+
+			if (!isSubstitutionQualifiedReference
+					&& localCurrentQueryDictionary != null
+					&& localCurrentQueryDictionary.containsKey(columnName)) {
+				// Regular qualified columns selected into the interface are validated in the
+				// downstream interface-resolution pass; avoid duplicate fatals here.
 				continue;
 			}
 
@@ -7108,6 +7248,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+
+		// Handle sign numeric_primary alternative (e.g. -(expr) or -column)
+		if (subMap.size() >= 3 && subMap.get("1") instanceof String) {
+			String sign = (String) subMap.remove("1");
+			if ("-".equals(sign)) {
+				Map<String, Object> left = new HashMap<String, Object>();
+				left.put(MUMBLE_LITERAL_KEY, "-1");
+				Map<String, Object> calcItem = new HashMap<String, Object>();
+				calcItem.put(MUMBLE_LEFT_FACTOR_KEY, left);
+				calcItem.put(MUMBLE_OPERATOR_KEY, "*");
+				calcItem.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("2"));
+				Map<String, Object> calc = new HashMap<String, Object>();
+				calc.put(MUMBLE_CALCULATION_KEY, calcItem);
+				subMap.put("1", calc);
+			} else {
+				subMap.put("1", subMap.remove("2"));
+			}
+		}
+
 		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
 
 
@@ -7128,7 +7287,35 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitValue_expression_primary(@NotNull SQLSelectParserParser.Value_expression_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		walker.handleOneChild(ruleIndex);
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() == 1) {
+			walker.handleOneChild(ruleIndex);
+			return;
+		}
+
+		if (subMap.size() >= 2) {
+			Object value = subMap.remove("1");
+			Object maybeType = subMap.remove("3");
+			if (maybeType == null) {
+				maybeType = subMap.remove("2");
+			}
+
+			Map<String, Object> item = new HashMap<String, Object>();
+			item.put(MUMBLE_FUNCTION_NAME_KEY, "cast");
+			item.put(MUMBLE_TYPE_KEY, "CAST");
+			item.put(MUMBLE_VALUE_KEY, value);
+			item.put(MUMBLE_DATATYPE_KEY, maybeType);
+
+			subMap.clear();
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+			walker.showTrace(walker.parseTrace, "Inline CAST Function: " + subMap);
+			return;
+		}
+
+		walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
 	}
 
 	@Override
@@ -7171,7 +7358,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> item = new HashMap<String, Object>();
 
-		if (subMap.size() == 0) {
+		if (subMap.size() >= 1) {
+			for (Object key : new HashMap<String, Object>(subMap).keySet()) {
+				if (subMap.get(key) instanceof Map<?, ?>) {
+					subMap.remove(key);
+				}
+			}
 			item.put(MUMBLE_FUNCTION_NAME_KEY, "COUNT");
 			item.put(MUMBLE_QUALIFIER_KEY, null);
 			item.put(MUMBLE_PARAMETERS_KEY, "*");
@@ -8227,12 +8419,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitWhere_clause(@NotNull SQLSelectParserParser.Where_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
 	}
 
 	@Override
 	public void exitQualify_clause(@NotNull SQLSelectParserParser.Qualify_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
 	}
 
@@ -8379,6 +8577,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	// which it adds to the column list with the alias as the key
 
 	private void flattenSubTreeForClauseColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		if (subTree == null) {
+			return;
+		}
+
 		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
 			Object col = subTree.get(MUMBLE_COLUMN_KEY);
 			if (!columnList.contains(col)) {
@@ -8395,12 +8597,26 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					}
 				}
 			}
-		} else if (subTree.containsKey(MUMBLE_SELECT_KEY)) {
+		} else if (isQueryBackedSelectItemReference(subTree)) {
+			String queryReference = resolveQueryReferenceFromSubTree(subTree);
+			if (isQuerySourceReference(queryReference)) {
+				HashMap<String, Object> queryEntry = new HashMap<String, Object>();
+				queryEntry.put(MUMBLE_QUERY_KEY, queryReference);
+				if (!columnList.contains(queryEntry)) {
+					columnList.add(queryEntry);
+				}
+			}
+			subTree.remove(MUMBLE_QUERY_KEY);
 		} else {
-			for (Object key : subTree.keySet()) {
-				Object value = subTree.get(key);
-				if (value instanceof HashMap) {
-					flattenSubTreeForClauseColumns((HashMap<String, Object>) value, columnList);
+			for (Object value : subTree.values()) {
+				if (value instanceof HashMap<?, ?> valueMapObj) {
+					flattenSubTreeForClauseColumns((HashMap<String, Object>) valueMapObj, columnList);
+				} else if (value instanceof ArrayList<?> valueListObj) {
+					for (Object listItem : (ArrayList<Object>) valueListObj) {
+						if (listItem instanceof HashMap<?, ?> listMapObj) {
+							flattenSubTreeForClauseColumns((HashMap<String, Object>) listMapObj, columnList);
+						}
+					}
 				}
 			}
 		}
@@ -8849,15 +9065,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
 		
 		if (isSubquery) {
-			// Subquery case: inject the subquery's local symbol table under IN_LIST<N>
-			String key = MUMBLE_IN_LIST_KEY + walker.queryCount;
+			// Subquery case: inject the subquery's local symbol table under IN predicate.
 			// Extract the singular query reference key from the local symbol table (e.g., "query0")
 			String queryRefKey = getSubqueryReferenceKey(symbols);
 			if (queryRefKey == null && symbols != null && !symbols.isEmpty()) {
 				queryRefKey = symbols.keySet().iterator().next();
 			}
-			// Store only the query reference key under the IN_LIST<N> entry
-			symbols.put(key, queryRefKey);
+			annotateSubqueryReference(reference, queryRefKey);
 
 			// Capture Query Column Dictionary for this level
 // ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
@@ -9020,8 +9234,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		
 		if (isSubquery) {
 			// Subquery case: inject the subquery's local symbol table under predicand<N>
-			String key = MUMBLE_PREDICAND_KEY + walker.queryCount;
-
 			// Capture Query Column Dictionary for this level
 // ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
 
@@ -9030,8 +9242,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (symbols != null && !symbols.isEmpty()) {
 				queryRefKey = symbols.keySet().iterator().next();
 			}
-			// Store only the query reference key under the PREDICAND<N> entry
-			symbols.put(key, queryRefKey);
+			annotateSubqueryReference(reference, queryRefKey);
 			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
 			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
 			// Merge local symbol table back into parent

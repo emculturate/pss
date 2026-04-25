@@ -70,6 +70,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	public HashMap<String, Object> globalQualifiedUnresolvedLocations;
 
+
 /**
  * Substitution Map to allow Grammars to define their own AST Tree Labels for certain common situations
  */
@@ -274,7 +275,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				continue;
 			}
 
-			String normalizedTableRef = tableRef.startsWith("<") ? tableRef : tableRef.toLowerCase();
+			String normalizedTableRef = normalizeTableReference(tableRef);
 			Object existingColumnsObject = globalTableDictionary.get(normalizedTableRef);
 
 			if (!(existingColumnsObject instanceof HashMap<?, ?>)) {
@@ -310,16 +311,35 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 	}
 
+	public static String normalizeTableReference(String tableRef) {
+		if (tableRef == null || tableRef.isBlank()) {
+			return tableRef;
+		}
+		if (tableRef.startsWith("<")) {
+			return tableRef;
+		}
+		if (!tableRef.contains("\"")) {
+			return tableRef.toLowerCase();
+		}
+
+		String[] parts = tableRef.split("\\.");
+		StringBuilder normalized = new StringBuilder();
+		for (int i = 0; i < parts.length; i++) {
+			if (i > 0) {
+				normalized.append('.');
+			}
+			String part = parts[i];
+			normalized.append(part.startsWith("\"") ? part : part.toLowerCase());
+		}
+		return normalized.toString();
+	}
+
 	public void ensureTableDictionaryEntry(String tableRef) {
 		if (tableRef == null) {
 			return;
 		}
 		String reference;
-		if (tableRef.startsWith("<")) {
-			reference = tableRef;
-		} else {
-			reference = tableRef.toLowerCase();
-		}
+		reference = normalizeTableReference(tableRef);
 		HashMap<String, Object> tableDictionary = getCurrentTableDictionary();
 		Object existing = tableDictionary.get(reference);
 		if (!(existing instanceof Map<?, ?>)) {
@@ -558,7 +578,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			mergeUnknownEntries(globalQualifiedUnresolvedLocations, single);
 		}
 
-		Object existingEntry = qryTableDict.get(unresolvedKey);
+		String existingKey = findMatchingColumnKey(qryTableDict, unresolvedKey);
+		Object existingEntry = existingKey == null ? null : qryTableDict.get(existingKey);
 		if (existingEntry instanceof Map<?, ?> existingMap) {
 			Object existingLocationsObj = ((Map<String, Object>) existingMap).get("locations");
 			Object incomingLocationsObj = unresolvedColumnEntry.get("locations");
@@ -619,6 +640,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (columnObj instanceof Map<?, ?>) {
 				HashMap<String, Object> columnMap = new HashMap<String, Object>();
 				columnMap.putAll((Map<String, Object>) columnObj);
+				if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)
+						&& !isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
+					return null;
+				}
 				if (!columnMap.containsKey(MUMBLE_TABLE_REF_KEY)) {
 					columnMap.put(MUMBLE_TABLE_REF_KEY, normalizeUnresolvedTableRef(tableReference));
 				}
@@ -627,6 +652,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		if (itemMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			if (!isColumnTypeSubstitution(itemMap.get(MUMBLE_SUBSTITUTION_KEY))) {
+				return null;
+			}
 			HashMap<String, Object> substitutionContainer = new HashMap<String, Object>();
 			substitutionContainer.putAll((Map<String, Object>) itemMap);
 			String normalizedTableRef = normalizeUnresolvedTableRef(tableReference);
@@ -639,6 +667,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (itemMap.containsKey(MUMBLE_NAME_KEY)) {
 			HashMap<String, Object> columnMap = new HashMap<String, Object>();
 			columnMap.putAll((Map<String, Object>) itemMap);
+			if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)
+					&& !isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
+				return null;
+			}
 			if (!columnMap.containsKey(MUMBLE_TABLE_REF_KEY)) {
 				columnMap.put(MUMBLE_TABLE_REF_KEY, normalizeUnresolvedTableRef(tableReference));
 			}
@@ -667,13 +699,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (tableRefObj != null) {
 			tableRef = normalizeUnresolvedTableRef(tableRefObj);
 		}
-		if (tableRef == null) {
-			tableRef = normalizeUnresolvedTableRef(tableReference);
-		}
 
+		// Preserve table-ref/alias case here so unresolved qualified keys (e.g. T3.col1)
+		// continue to match interface and filter references captured from the parse tree.
+		// Keep column key text as captured; case-insensitive merging for unquoted
+		// identifiers happens during dictionary merge operations.
 		Object nameObj = columnMetadata.get(MUMBLE_NAME_KEY);
-		if (nameObj instanceof String) {
-			columnName = (String) nameObj;
+		if (nameObj instanceof String name) {
+			columnName = name;
 		}
 
 		if (columnName == null && columnMetadata.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
@@ -714,6 +747,46 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return tableRef;
 	}
 
+	/**
+	 * Returns true if the identifier is a double-quoted SQL identifier (e.g. {@code "MyCol"}).
+	 * Quoted identifiers are case-sensitive; unquoted identifiers are case-insensitive.
+	 */
+	private boolean isQuotedIdentifier(String name) {
+		return name != null && name.length() >= 2 && name.charAt(0) == '"' && name.charAt(name.length() - 1) == '"';
+	}
+
+	private boolean areEquivalentColumnKeys(String existingKey, String incomingKey) {
+		if (existingKey == null || incomingKey == null) {
+			return false;
+		}
+
+		boolean existingQuoted = isQuotedIdentifier(existingKey);
+		boolean incomingQuoted = isQuotedIdentifier(incomingKey);
+		if (existingQuoted || incomingQuoted) {
+			return existingKey.equals(incomingKey);
+		}
+
+		return existingKey.equalsIgnoreCase(incomingKey);
+	}
+
+	private String findMatchingColumnKey(Map<String, Object> dictionary, String columnName) {
+		if (dictionary == null || columnName == null) {
+			return null;
+		}
+
+		if (dictionary.containsKey(columnName)) {
+			return columnName;
+		}
+
+		for (String existingKey : dictionary.keySet()) {
+			if (areEquivalentColumnKeys(existingKey, columnName)) {
+				return existingKey;
+			}
+		}
+
+		return null;
+	}
+
 	@SuppressWarnings("unchecked")
 	private Object normalizeUnresolvedColumnItem(Object item) {
 		if (item == null) {
@@ -729,12 +802,18 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		if (itemMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			if (!isColumnTypeSubstitution(itemMap.get(MUMBLE_SUBSTITUTION_KEY))) {
+				return null;
+			}
 			return item;
 		}
 
 		Object columnObj = itemMap.get(MUMBLE_COLUMN_KEY);
 		if (columnObj instanceof Map<?, ?> columnMap) {
 			if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+				if (!isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
+					return null;
+				}
 				return columnMap;
 			}
 			Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
@@ -744,6 +823,16 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isColumnTypeSubstitution(Object substitutionObj) {
+		if (!(substitutionObj instanceof Map<?, ?> substitutionMapObj)) {
+			return false;
+		}
+		Map<String, Object> substitutionMap = (Map<String, Object>) substitutionMapObj;
+		Object typeObj = substitutionMap.get(MUMBLE_TYPE_KEY);
+		return typeObj instanceof String && MUMBLE_COLUMN_KEY.equals(typeObj);
 	}
 
 	/* Find table name for table alias, ignore case */
@@ -794,14 +883,17 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public void addColumnTokenToColumnDict(Object tableDictObject, Object item, Token token) {
 		if (item instanceof String) {
 			HashMap<String, Object> tableDictMap = (HashMap<String, Object>) tableDictObject;
+			String itemKey = (String) item;
+			String existingKey = findMatchingColumnKey(tableDictMap, itemKey);
+			String targetKey = existingKey == null ? itemKey : existingKey;
 			// Item is a column reference, add it if we haven't captured it yet
-			if (!tableDictMap.containsKey(item)) {
+			if (existingKey == null) {
 				ArrayList<String> tokenList = new ArrayList<String>();
 				tokenList.add(token.toString());
-				tableDictMap.put((String) item, tokenList);
+				tableDictMap.put(targetKey, tokenList);
 			} else {
 				String tokenStr = token.toString();
-                Object  entry = tableDictMap.get((String) item);
+	                Object  entry = tableDictMap.get(targetKey);
 				ArrayList<String> tokenList = (ArrayList<String>) entry;
 				if (!tokenList.contains(tokenStr))
 					tokenList.add(tokenStr);
@@ -1736,11 +1828,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	private void mergeDictionary(HashMap<String, Object> dictMap, String tab_ref, HashMap<String, Object> hold) {
-		String reference;
-		if (tab_ref.startsWith("<"))
-			reference = tab_ref;
-		else
-			reference = tab_ref.toLowerCase();
+		String reference = normalizeTableReference(tab_ref);
 		HashMap<String, Object> currDict = (HashMap<String, Object>) dictMap.get(reference);
 		Object value =  hold.get(tab_ref);
 		if (!(value instanceof Map<?, ?>)) {
@@ -2484,7 +2572,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				return (HashMap<String, Object>) prefixed;
 			}
 		}
-		Object lower = tableCollection.get(tableRef.toLowerCase());
+		Object lower = tableCollection.get(normalizeTableReference(tableRef));
 		if (lower instanceof HashMap<?, ?>) {
 			return (HashMap<String, Object>) lower;
 		}
@@ -2761,6 +2849,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
+		boolean countAggregateWildcard = isCountAggregateWildcard(wildcardRefs);
+
 		HashSet<String> explicitWildcardSources = new HashSet<String>();
 		if (localInterface != null) {
 			for (Object refsObj : localInterface.values()) {
@@ -2807,12 +2897,27 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		} else {
 			mergedTargets += mergeWildcardIntoAllDictionaryEntries(tableCollection, wildcardRefs);
 			mergedTargets += mergeWildcardIntoAllDictionaryEntries(tableDictionary, wildcardRefs);
-			mergedTargets += mergeWildcardIntoAllQueryDictionaryEntries(queryColumnDictionaryMap, wildcardRefs);
+			if (!countAggregateWildcard) {
+				mergedTargets += mergeWildcardIntoAllQueryDictionaryEntries(queryColumnDictionaryMap, wildcardRefs);
+			}
 		}
 
 		if (mergedTargets <= 0) {
 			unknownCollection.put("*", wildcardRefs);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isCountAggregateWildcard(Object wildcardRefs) {
+		if (!(wildcardRefs instanceof Map<?, ?> wildcardEntry)) {
+			return false;
+		}
+		Object columnObj = wildcardEntry.get(MUMBLE_COLUMN_KEY);
+		if (!(columnObj instanceof Map<?, ?> columnMap)) {
+			return false;
+		}
+		Object origin = ((Map<String, Object>) columnMap).get("origin");
+		return "count_all_aggregate".equals(origin);
 	}
 
 	/**
@@ -3237,7 +3342,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return true;
 		}
 
-		Object lower = dictionaryCollection.get(tableRef.toLowerCase());
+		Object lower = dictionaryCollection.get(normalizeTableReference(tableRef));
 		if (lower instanceof HashMap<?, ?>) {
 			mergeColumnEntry((HashMap<String, Object>) lower, columnName, columnRefs);
 			return true;
@@ -3257,15 +3362,17 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		Object normalizedColumnRefs = normalizeColumnRefsForDictionary(columnRefs);
 
-		Object existingRefs = dictionary.get(columnName);
+		String matchedColumnKey = findMatchingColumnKey(dictionary, columnName);
+		String targetColumnKey = matchedColumnKey == null ? columnName : matchedColumnKey;
+		Object existingRefs = dictionary.get(targetColumnKey);
 		if (existingRefs == null) {
-			dictionary.put(columnName, normalizedColumnRefs);
-		} else if ("*".equals(columnName)) {
+			dictionary.put(targetColumnKey, normalizedColumnRefs);
+		} else if ("*".equals(targetColumnKey)) {
 			return;
 		} else if (existingRefs instanceof ArrayList<?> existingList && normalizedColumnRefs instanceof ArrayList<?> incomingList) {
 			((ArrayList<Object>) existingList).addAll((ArrayList<Object>) incomingList);
 		} else {
-			dictionary.put(columnName, normalizedColumnRefs);
+			dictionary.put(targetColumnKey, normalizedColumnRefs);
 		}
 	}
 
