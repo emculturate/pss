@@ -8,5 +8,8 @@
   "java.import.maven.enabled": true,
   "java.import.maven.offline.enabled": false,
   "java.import.maven.downloadSources": true,
-  "java.import.gradle.enabled": false
+  "java.import.gradle.enabled": false,
+  "java.test.config": {
+    "vmArgs": ["-Xmx2g", "-Xms256m"]
+  }
 }
