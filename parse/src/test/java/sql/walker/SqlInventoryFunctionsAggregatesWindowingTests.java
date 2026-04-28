@@ -2070,4 +2070,196 @@ public class SqlInventoryFunctionsAggregatesWindowingTests extends AbstractSqlPa
 				extractor.getSymbolTable().toString());
 	}
 
+	// ===== POSITION / CHARINDEX / INSTR tests (V1 naming) =====
+
+	@Test
+	public void positionV1TestWith2ParametersAndInStmtSelectlistTest() {
+		final String query = "SELECT position('a' IN col1) AS p FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}, alias=p}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,23:26='col1',<332>,1:23]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@8,32:32='p',<332>,1:32]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@8,32:32='p',<332>,1:32]]}, table_dictionary={tab1={col1=[[@5,23:26='col1',<332>,1:23]]}}, interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV2TestWith2ParametersNoInStmtSelectlistTest() {
+		final String query = "SELECT position('a', col1) AS p FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}, alias=p}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,21:24='col1',<332>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@8,30:30='p',<332>,1:30]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@8,30:30='p',<332>,1:30]]}, table_dictionary={tab1={col1=[[@5,21:24='col1',<332>,1:21]]}}, interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV3TestWith2ParametersAndInStmtJoinOnConditionTest() {
+		final String query = "SELECT t1.col1 FROM tab1 t1 JOIN tab2 t2 ON position('a' IN t1.col1) = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=t1}}}, from={join={1={table={alias=t1, table=tab1}}, 2={join=JOIN, on={condition={left={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=t1}}}, operator=IN}}, right={literal=1}, operator==}}}, 3={table={alias=t2, table=tab2}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@1,7:8='t1',<332>,1:7], [@15,60:61='t1',<332>,1:60]]}, tab2={}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@3,10:13='col1',<332>,1:10]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={col1=[[@3,10:13='col1',<332>,1:10]]}, table_dictionary={tab1={col1=[[@1,7:8='t1',<332>,1:7], [@15,60:61='t1',<332>,1:60]]}, tab2={}}, filters=[{name=col1, table_ref=t1}], interface={col1=[{name=col1, table_ref=t1}]}, table_alias={t1=tab1, t2=tab2}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV4TestWith2ParametersAndInStmtWhereConditionTest() {
+		final String query = "SELECT col1 FROM tab1 WHERE position('a' IN col1) = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@1,7:10='col1',<332>,1:7], [@9,44:47='col1',<332>,1:44]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@1,7:10='col1',<332>,1:7]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={col1=[[@1,7:10='col1',<332>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<332>,1:7], [@9,44:47='col1',<332>,1:44]]}}, filters=[{name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV5TestWith2ParametersAndInStmtHavingConditionTest() {
+		final String query = "SELECT col1 FROM tab1 GROUP BY col1 HAVING position('a' IN col1) > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}}, having={condition={left={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}}, right={literal=0}, operator=>}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=col1, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@1,7:10='col1',<332>,1:7], [@6,31:34='col1',<332>,1:31], [@12,59:62='col1',<332>,1:59]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@1,7:10='col1',<332>,1:7]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={col1=[[@1,7:10='col1',<332>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<332>,1:7], [@6,31:34='col1',<332>,1:31], [@12,59:62='col1',<332>,1:59]]}}, grouped_by=[{name=col1, table_ref=tab1}], filters=[{name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV6TestWith2ParametersAndInStmtQualifyConditionTest() {
+		final String query = "SELECT row_number() over (partition by col1 order by col1) as rn FROM tab1 QUALIFY position('a' IN col1) > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rn, window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=null, table=tab1}}, qualify={condition={left={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rn]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@8,39:42='col1',<332>,1:39], [@11,53:56='col1',<332>,1:53], [@22,99:102='col1',<332>,1:99]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={rn=[[@14,62:63='rn',<332>,1:62]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={rn=[[@14,62:63='rn',<332>,1:62]]}, table_dictionary={tab1={col1=[[@8,39:42='col1',<332>,1:39], [@11,53:56='col1',<332>,1:53], [@22,99:102='col1',<332>,1:99]]}}, filters=[{name=col1, table_ref=tab1}], interface={rn=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV7TestWith2ParametersAndInStmtGroupByClauseTest() {
+		final String query = "SELECT position('a' IN col1) AS p FROM tab1 GROUP BY position('a' IN col1)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}, alias=p}}, from={table={alias=null, table=tab1}}, groupby={1={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,23:26='col1',<332>,1:23], [@17,69:72='col1',<332>,1:69]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@8,32:32='p',<332>,1:32]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@8,32:32='p',<332>,1:32]]}, table_dictionary={tab1={col1=[[@5,23:26='col1',<332>,1:23], [@17,69:72='col1',<332>,1:69]]}}, grouped_by=[{name=col1, table_ref=tab1}], interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV8TestWith2ParametersAndInStmtOrderByClauseTest() {
+		final String query = "SELECT col1 FROM tab1 ORDER BY position('a' IN col1)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={function={function_name=position, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}}, operator=IN}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@1,7:10='col1',<332>,1:7], [@10,47:50='col1',<332>,1:47]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@1,7:10='col1',<332>,1:7]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={col1=[[@1,7:10='col1',<332>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<332>,1:7], [@10,47:50='col1',<332>,1:47]]}}, ordered_by=[{name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV9TestWith3ParametersSelectListTest() {
+		final String query = "SELECT position('b', col1, 3) AS p FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=position, parameters={1={literal='b'}, 2={column={name=col1, table_ref=null}}, 3={literal=3}}}, alias=p}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,21:24='col1',<332>,1:21]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@10,33:33='p',<332>,1:33]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@10,33:33='p',<332>,1:33]]}, table_dictionary={tab1={col1=[[@5,21:24='col1',<332>,1:21]]}}, interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV10CharindexSelectListTest() {
+		final String query = "SELECT charindex('a', col1, 1) AS p FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=charindex, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}, 3={literal=1}}}, alias=p}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,22:25='col1',<332>,1:22]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@10,34:34='p',<332>,1:34]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@10,34:34='p',<332>,1:34]]}, table_dictionary={tab1={col1=[[@5,22:25='col1',<332>,1:22]]}}, interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void positionV11InstrSelectListTest() {
+		final String query = "SELECT instr('a', col1, 1) AS p FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=instr, parameters={1={literal='a'}, 2={column={name=col1, table_ref=null}}, 3={literal=1}}}, alias=p}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[p]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@5,18:21='col1',<332>,1:18]]}}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p=[[@10,30:30='p',<332>,1:30]]}}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={p=[[@10,30:30='p',<332>,1:30]]}, table_dictionary={tab1={col1=[[@5,18:21='col1',<332>,1:18]]}}, interface={p=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	// ===== end POSITION / CHARINDEX / INSTR tests =====
+
 }
+

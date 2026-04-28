@@ -9520,6 +9520,41 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.addToParent(parentRuleIndex, parentStackLevel, item);
 	}
 
+
+	@Override
+	public void exitPosition_function(@NotNull SQLSelectParserParser.Position_functionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		Map<String, Object> params = new HashMap<String, Object>();
+
+		if (subMap.size() == 3) {
+			// Two-argument IN-keyword variant:
+			//   position_function_name ( search IN source )
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			params.put("1", subMap.remove("2"));
+			params.put("2", subMap.remove("3"));
+			item.put(MUMBLE_OPERATOR_KEY, "IN");
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else if (subMap.size() == 4) {
+			// Three-argument comma variant:
+			//   position_function_name ( search , source , start )
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			params.put("1", subMap.remove("2"));
+			params.put("2", subMap.remove("3"));
+			params.put("3", subMap.remove("4"));
+			item.put(MUMBLE_PARAMETERS_KEY, params);
+			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else {
+			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
+		}
+		walker.showTrace(walker.parseTrace, "Position Function: " + subMap);
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void exitRoutine_invocation(@NotNull SQLSelectParserParser.Routine_invocationContext ctx) {

@@ -554,6 +554,7 @@ predicand_primary
   | null_literal
   | variable_identifier
   | puml_constant_identifier
+  | position_function
   ;
 
 value_expression_primary
@@ -572,6 +573,7 @@ nonparenthesized_value_expression_primary
   | case_expression
   | cast_function_expression
   | routine_invocation
+  | position_function
   | window_over_partition_expression
   | predicand_subquery
   ;
@@ -932,6 +934,31 @@ trim_specification
   : LEADING | TRAILING | BOTH
   ;
 
+/*
+===============================================================================
+  xxx <position function>
+===============================================================================
+*/
+
+position_function
+  : position_function_name LEFT_PAREN search_string=string_value_expression IN source_string=string_value_expression RIGHT_PAREN
+  | (position_function_name | instr_function_name | charindex_name)
+      LEFT_PAREN search_string=string_value_expression 
+      COMMA source_string=string_value_expression
+      (COMMA start_position=numeric_primary)? RIGHT_PAREN
+  ;
+
+position_function_name
+  : POSITION
+  ;
+
+instr_function_name
+  : INSTR
+  ;
+
+charindex_name
+  : CHARINDEX
+  ;
 /*
 ===============================================================================
   6.34 <boolean value expression>
@@ -2504,6 +2531,9 @@ Population_Identifier
 */
 
 QUALIFY : Q U A L I F Y;
+POSITION : P O S I T I O N;
+CHARINDEX : C H A R I N D E X;
+INSTR : I N S T R;
 
 
 Identifier
