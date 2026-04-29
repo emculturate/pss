@@ -1410,6 +1410,9 @@ function_names_for_reserved_words
   : LEFT
   | RIGHT
   | IN
+  | IFF
+  | MD5
+  | REVERSE
   ;
 
 sql_argument_list
@@ -1586,6 +1589,7 @@ nonreserved_keywords
   | 	JSON     // POSTGRES
   | 	JSONB    // POSTGRES
   | 	LAST
+  |   LEAD
   | 	LESS
   | 	LIST
   | 	LOCATION
@@ -1625,6 +1629,7 @@ nonreserved_keywords
   | 	RETURNING
   | 	RLIKE
   | 	ROLLUP
+  | 	ROW_NUMBER
   | 	ROWS
   | 	SECOND
   | 	SERIAL
@@ -2534,6 +2539,9 @@ QUALIFY : Q U A L I F Y;
 POSITION : P O S I T I O N;
 CHARINDEX : C H A R I N D E X;
 INSTR : I N S T R;
+IFF : I F F;
+MD5 : M D '5';
+REVERSE : R E V E R S E;
 
 
 Identifier
