@@ -17,11 +17,11 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
-import access.Snippet;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import access.Snippet;
 import errorhandling.ParseDiagnostic;
 
 public class SqlParseMCPTest {
@@ -121,17 +121,17 @@ public class SqlParseMCPTest {
         assertTrue(parse.has("symbolTable"));
     	System.out.println("Symbol Table: " + parse.get("symbolTable").toString());
 	    assertEquals(
-                "{\"query0\":{\"query_dictionary\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]},\"table_dictionary\":{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}},\"interface\":{\"*\":[{\"name\":\"*\",\"table_ref\":\"*\"}]}}}",
+                "{\"query0\":{\"query_dictionary\":{\"*\":[\"[@1,7:7='*',<290>,1:7]\"]},\"table_dictionary\":{\"mytable\":{\"*\":[\"[@1,7:7='*',<290>,1:7]\"]}},\"interface\":{\"*\":[{\"name\":\"*\",\"table_ref\":\"*\"}]}}}",
                 parse.get("symbolTable").toString()
         );
         assertTrue(parse.has("tableDictionary"));
         assertEquals(
-                "{\"mytable\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
+                "{\"mytable\":{\"*\":[\"[@1,7:7='*',<290>,1:7]\"]}}",
                 parse.get("tableDictionary").toString()
         );
         assertTrue(parse.has("queryDictionary"));
         assertEquals(
-            "{\"query0\":{\"*\":[\"[@1,7:7='*',<289>,1:7]\"]}}",
+            "{\"query0\":{\"*\":[\"[@1,7:7='*',<290>,1:7]\"]}}",
             parse.get("queryDictionary").toString()
         );
         assertTrue(parse.has("substitutionsMap"));

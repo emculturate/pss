@@ -77,6 +77,56 @@ options {
   private boolean isAllowedImplicitAlias(String name) {
     return !isDisallowedSetOperatorAlias(name) && !isDisallowedJoinKeywordAlias(name);
   }
+
+  private boolean isSnowflakeTableFunctionModeLiteral(String functionName, String tokenText) {
+    if (functionName == null || tokenText == null || tokenText.length() < 2) {
+      return false;
+    }
+
+    if (tokenText.charAt(0) != '\'' || tokenText.charAt(tokenText.length() - 1) != '\'') {
+      return false;
+    }
+
+    String inner = tokenText.substring(1, tokenText.length() - 1).replace("''", "'");
+    String fn = functionName.toUpperCase();
+
+    switch (fn) {
+      case "FLATTEN":
+      case "LATERAL_FLATTEN":
+        return "OBJECT".equalsIgnoreCase(inner)
+            || "ARRAY".equalsIgnoreCase(inner)
+            || "BOTH".equalsIgnoreCase(inner);
+      default:
+        return false;
+    }
+  }
+
+  private boolean containsInferSchemaLocationArgument(String text) {
+    if (text == null) {
+      return false;
+    }
+
+    String normalized = text.replaceAll("\\s+", "").toUpperCase();
+    return normalized.contains("LOCATION=>");
+  }
+
+  private boolean containsFlattenInputArgument(String text) {
+    if (text == null) {
+      return false;
+    }
+
+    String normalized = text.replaceAll("\\s+", "").toUpperCase();
+    return normalized.contains("INPUT=>");
+  }
+
+  private boolean containsGeneratorRowcountArgument(String text) {
+    if (text == null) {
+      return false;
+    }
+
+    String normalized = text.replaceAll("\\s+", "").toUpperCase();
+    return normalized.contains("ROWCOUNT=>");
+  }
 }
 
 /*
@@ -266,8 +316,14 @@ insert_expression
 ;
 
 snowflake_insert
-  : insert_preamble  table_primary insert_source_primary
-  | insert_preamble  table_primary LEFT_PAREN column_reference_list RIGHT_PAREN insert_source_primary
+  : insert_preamble  insert_target_table_primary insert_source_primary
+  ;
+
+// Dedicated target table rule for INSERT statements.
+// Intentionally excludes table_function_primary so patterns like
+// `INSERT INTO tab1 (c, d) ...` cannot be consumed as a table function call.
+insert_target_table_primary
+  : (table_or_query_name | variable_identifier | jinja_identifier) (LEFT_PAREN column_reference_list RIGHT_PAREN)? relation_as_clause?
   ;
   
 postgres_insert // this syntax is not complete for POSTGRES
@@ -446,16 +502,20 @@ join_extension
   ;
   
 table_reference_list
-  : table_primary ((COMMA table_primary)
-     | (unqualified_join right=table_primary)
-     | (qualified_join right=table_primary s=join_specification?))*
+  : table_primary ((COMMA lateral_modifier? table_primary)
+    | (unqualified_join lateral_modifier? right=table_primary)
+    | (qualified_join lateral_modifier? right=table_primary s=join_specification?))*
   ;
   
   // Used for inserting optional Join Clauses to a query with a Join Extension variable
 join_extension_primary
-  : ((COMMA table_primary)
-     | (unqualified_join right=table_primary)
-     | (qualified_join right=table_primary s=join_specification?))*  join_extension?
+  : ((COMMA lateral_modifier? table_primary)
+     | (unqualified_join lateral_modifier? right=table_primary)
+     | (qualified_join lateral_modifier? right=table_primary s=join_specification?))*  join_extension?
+  ;
+
+lateral_modifier
+  : LATERAL
   ;
 
 // Used anywhere a table name is expected
@@ -463,6 +523,7 @@ table_primary
   : table_or_query_name relation_as_clause?
   | variable_identifier as_clause
   | jinja_identifier relation_as_clause?
+  | table_function_primary relation_as_clause?
   | values_statement_primary
   | subquery relation_as_clause?
   ;
@@ -477,6 +538,7 @@ tuple_primary
   : table_or_query_name
   | variable_identifier
   | jinja_identifier
+  | table_function_primary
   | values_statement_primary
   | subquery
  ;
@@ -518,7 +580,171 @@ named_columns_join
 using_term
   : USING
   ;
-  
+
+/*
+   TABLE FUNCTIONS
+ */
+
+table_function_primary
+  : TABLE LEFT_PAREN table_function RIGHT_PAREN
+  | table_function
+  ;
+
+table_function
+  : flatten_table_function
+  | generator_table_function
+  | result_scan_table_function
+  | infer_schema_table_function
+  | validate_table_function
+  | generic_table_function
+  ;
+
+flatten_table_function
+  : flatten_function_name LEFT_PAREN
+      flatten_argument_list
+    RIGHT_PAREN
+  ;
+
+flatten_argument_list
+  : flatten_argument (COMMA flatten_argument)*
+    {containsFlattenInputArgument($ctx.getText())}?
+  ;
+
+flatten_argument
+  : INPUT IMPLIES flatten_argument_value
+  | PATH IMPLIES flatten_argument_value
+  | OUTER IMPLIES flatten_argument_value
+  | RECURSIVE IMPLIES flatten_argument_value
+  | MODE IMPLIES m=table_argument_literal {isSnowflakeTableFunctionModeLiteral("FLATTEN", $m.text)}?
+  ;
+
+flatten_argument_value
+  : value_expression
+  | table_argument_literal
+  | table_argument_boolean
+  ;
+
+flatten_function_name
+  : FLATTEN
+  ;
+
+table_argument_literal
+  : Character_String_Literal
+  | signed_numeric_literal
+  ;
+
+table_argument_boolean
+  : TRUE
+  | FALSE
+  ;
+
+// GENERATOR( ROWCOUNT => <count> [ , TIMELIMIT => <sec> ] )
+generator_table_function
+  : generator_function_name LEFT_PAREN
+      generator_argument_list
+    RIGHT_PAREN
+  ;
+
+generator_argument_list
+  : generator_argument (COMMA generator_argument)*
+    {containsGeneratorRowcountArgument($ctx.getText())}?
+  ;
+
+generator_argument
+  : ROWCOUNT IMPLIES generator_argument_value
+  | TIMELIMIT IMPLIES generator_argument_value
+  ;
+
+generator_argument_value
+  : additive_expression
+  ;
+
+generator_function_name
+  : GENERATOR
+  ;
+
+// RESULT_SCAN( [ { '<query_id>' | <query_index> | LAST_QUERY_ID() } ] )
+result_scan_table_function
+  : result_scan_function_name LEFT_PAREN
+      value_expression?
+    RIGHT_PAREN
+  ;
+
+result_scan_function_name
+  : RESULT_SCAN
+  ;
+
+// INFER_SCHEMA(
+//   LOCATION  => '...'
+//   [, FILE_FORMAT => '<name>']
+//   [, FILES => ( '<file>' [, '<file>' ...] )]
+//   [, IGNORE_CASE => TRUE | FALSE]
+//   [, MAX_FILE_COUNT => <num>]
+//   [, MAX_RECORDS_PER_FILE => <num>]
+//   [, KIND => '<name>']
+// )
+infer_schema_table_function
+  : infer_schema_function_name LEFT_PAREN
+      infer_schema_argument_list
+    RIGHT_PAREN
+  ;
+
+infer_schema_argument_list
+  : infer_schema_argument (COMMA infer_schema_argument)*
+    {containsInferSchemaLocationArgument($ctx.getText())}?
+  ;
+
+infer_schema_argument
+  : LOCATION IMPLIES infer_schema_argument_value
+  | FILE_FORMAT IMPLIES infer_schema_argument_value
+  | FILES IMPLIES infer_schema_argument_value
+  | IGNORE_CASE IMPLIES infer_schema_argument_value
+  | MAX_FILE_COUNT IMPLIES infer_schema_argument_value
+  | MAX_RECORDS_PER_FILE IMPLIES infer_schema_argument_value
+  | KIND IMPLIES infer_schema_argument_value
+  ;
+
+infer_schema_argument_value
+  : table_argument_literal
+  | infer_schema_files_argument
+  | additive_expression
+  | table_argument_boolean
+  ;
+
+infer_schema_function_name
+  : INFER_SCHEMA
+  ;
+
+infer_schema_files_argument
+  : LEFT_PAREN Character_String_Literal (COMMA Character_String_Literal)* RIGHT_PAREN
+  ;
+
+// VALIDATE( [<namespace>.]<table_name> , JOB_ID => { '<query_id>' | '_last' } )
+validate_table_function
+  : validate_function_name LEFT_PAREN
+      table_or_query_name
+      COMMA JOB_ID IMPLIES table_argument_literal
+    RIGHT_PAREN
+  ;
+
+validate_function_name
+  : VALIDATE
+  ;
+
+generic_table_function
+  : table_function_name LEFT_PAREN table_function_argument_list? RIGHT_PAREN
+  ;
+
+table_function_name
+  : SPLIT_TO_TABLE
+  | STRTOK_SPLIT_TO_TABLE
+  | QUERY_HISTORY
+  | identifier
+  ;
+
+table_function_argument_list
+  : value_expression (COMMA value_expression)*
+  ;
 /*
 ===============================================================================
   Column List clauses
@@ -530,12 +756,12 @@ column_reference_list
   ;
 
 column_reference
-  : (tb_name=identifier DOT)? name=identifier
+  : (tb_name=identifier DOT)? name=identifier (COLON path_name+=identifier)*
   | tb_name=identifier DOT substitution=variable_identifier
   ;
 
 column_primary
-  : (tb_name=identifier DOT)? name=identifier
+  : (tb_name=identifier DOT)? name=identifier (COLON path_name+=identifier)*
   | tb_name=identifier DOT substitution=variable_identifier
   | substitution=variable_identifier
   ;
@@ -2442,6 +2668,7 @@ LTH : '<' ;
 LEQ : '<=';
 GTH   : '>';
 GEQ   : '>=';
+IMPLIES : '=>';
 LEFT_PAREN :  '(';
 RIGHT_PAREN : ')';
 PLUS  : '+';
@@ -2542,6 +2769,29 @@ INSTR : I N S T R;
 IFF : I F F;
 MD5 : M D '5';
 REVERSE : R E V E R S E;
+FLATTEN : F L A T T E N;
+SPLIT_TO_TABLE : S P L I T UNDERLINE T O UNDERLINE T A B L E;
+STRTOK_SPLIT_TO_TABLE : S T R T O K UNDERLINE S P L I T UNDERLINE T O UNDERLINE T A B L E;
+GENERATOR : G E N E R A T O R;
+INFER_SCHEMA : I N F E R UNDERLINE S C H E M A;
+VALIDATE : V A L I D A T E;
+RESULT_SCAN : R E S U L T UNDERLINE S C A N;
+QUERY_HISTORY : Q U E R Y UNDERLINE H I S T O R Y;
+QUERY_HSTORY : Q U E R Y UNDERLINE H S T O R Y;
+INPUT : I N P U T;
+PATH : P A T H;
+RECURSIVE : R E C U R S I V E;
+MODE : M O D E;
+LATERAL : L A T E R A L;
+ROWCOUNT : R O W C O U N T;
+TIMELIMIT : T I M E L I M I T;
+FILES : F I L E S;
+FILE_FORMAT : F I L E UNDERLINE F O R M A T;
+IGNORE_CASE : I G N O R E UNDERLINE C A S E;
+MAX_FILE_COUNT : M A X UNDERLINE F I L E UNDERLINE C O U N T;
+MAX_RECORDS_PER_FILE : M A X UNDERLINE R E C O R D S UNDERLINE P E R UNDERLINE F I L E;
+KIND : K I N D;
+JOB_ID : J O B UNDERLINE I D;
 
 
 Identifier
