@@ -275,6 +275,11 @@ When ok is true, you should:
         parseResult.add("substitutionsMap", jstr);
         jstr = pruneNulls(gson.toJsonTree(snippet.getQueryInterface()));
         parseResult.add("queryInterface", jstr);
+        if (snippet.getArrayOutputCollectorsMap() != null
+                && !snippet.getArrayOutputCollectorsMap().isEmpty()) {
+            jstr = pruneNulls(gson.toJsonTree(snippet.getArrayOutputCollectorsMap()));
+            parseResult.add("arrayOutputCollectors", jstr);
+        }
 
         return parseResult;
     }

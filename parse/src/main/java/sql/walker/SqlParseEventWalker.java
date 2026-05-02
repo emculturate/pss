@@ -17,8 +17,10 @@ package sql.walker;
  */
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 
 import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
@@ -61,7 +63,25 @@ import sql.SQLSelectParserParser;
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
+	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private int tableFunctionSourceCount = 0;
+	private int scriptStatementSequence = 0;
+	private final ArrayDeque<Integer> scriptStatementSequenceStack = new ArrayDeque<Integer>();
+	private final LinkedHashMap<String, Object> scriptStatementTableDictionaries = new LinkedHashMap<String, Object>();
+	private final LinkedHashMap<String, Object> scriptStatementQueryDictionaries = new LinkedHashMap<String, Object>();
+	private final LinkedHashMap<String, Object> scriptStatementSubstitutions = new LinkedHashMap<String, Object>();
+	private final LinkedHashMap<String, Object> scriptStatementArrayOutputs = new LinkedHashMap<String, Object>();
+	private final LinkedHashMap<String, StatementLineRange> scriptStatementLineRanges = new LinkedHashMap<String, StatementLineRange>();
+
+	private static final class StatementLineRange {
+		private final int startLine;
+		private final int endLine;
+
+		private StatementLineRange(int startLine, int endLine) {
+			this.startLine = startLine;
+			this.endLine = endLine;
+		}
+	}
 
 	private static final class IntoSetPlacementViolation {
 		private final String setOperationType;
@@ -320,6 +340,147 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return subMap;
 	}
 
+	private List<Object> extractOrderedRuleChildren(Map<String, Object> subMap) {
+		List<Object> children = new ArrayList<Object>();
+		for (int index = 1; subMap.containsKey(String.valueOf(index)); index++) {
+			Object child = subMap.remove(String.valueOf(index));
+			if (child instanceof Map<?, ?>) {
+				children.add(child);
+			}
+		}
+		return children;
+	}
+
+	private String extractCreateTypeText(ParserRuleContext ctx, String fallback, int... childIndexes) {
+		if (ctx == null || childIndexes == null || childIndexes.length == 0) {
+			return fallback;
+		}
+
+		StringBuilder builder = new StringBuilder();
+		for (int childIndex : childIndexes) {
+			if (childIndex < 0 || childIndex >= ctx.getChildCount()) {
+				continue;
+			}
+
+			String tokenText = ctx.getChild(childIndex).getText();
+			if (tokenText == null || tokenText.isBlank()) {
+				continue;
+			}
+
+			if (builder.length() > 0) {
+				builder.append(' ');
+			}
+			builder.append(tokenText);
+		}
+
+		return builder.length() == 0 ? fallback : builder.toString();
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> normalizeNamedObjectNode(Object nodeObj) {
+		Map<String, Object> normalized = new LinkedHashMap<String, Object>();
+		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
+			if (nodeObj != null) {
+				normalized.put(MUMBLE_NAME_KEY, nodeObj.toString());
+			}
+			return normalized;
+		}
+
+		Map<String, Object> node = (Map<String, Object>) mapObj;
+		if (node.containsKey(MUMBLE_NAME_KEY)
+				|| node.containsKey(MUMBLE_FUNCTION_NAME_KEY)
+				|| node.containsKey(MUMBLE_TABLE_KEY)) {
+			normalized.putAll(node);
+			if (!normalized.containsKey(MUMBLE_NAME_KEY)) {
+				Object functionNameObj = normalized.get(MUMBLE_FUNCTION_NAME_KEY);
+				Object tableNameObj = normalized.get(MUMBLE_TABLE_KEY);
+				if (functionNameObj != null) {
+					normalized.put(MUMBLE_NAME_KEY, functionNameObj);
+				} else if (tableNameObj != null) {
+					normalized.put(MUMBLE_NAME_KEY, tableNameObj);
+				}
+			}
+			return normalized;
+		}
+
+		List<Object> parts = new ArrayList<Object>();
+		for (int index = 1; node.containsKey(String.valueOf(index)); index++) {
+			parts.add(node.get(String.valueOf(index)));
+		}
+
+		if (parts.size() == 1) {
+			normalized.put(MUMBLE_NAME_KEY, parts.get(0));
+		} else if (parts.size() == 2) {
+			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(0));
+			normalized.put(MUMBLE_NAME_KEY, parts.get(1));
+		} else if (parts.size() >= 3) {
+			normalized.put(MUMBLE_DATABASE_NAME_KEY, parts.get(0));
+			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(1));
+			normalized.put(MUMBLE_NAME_KEY, parts.get(2));
+		}
+
+		return normalized;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> normalizeTableNode(Object nodeObj) {
+		Map<String, Object> normalized = new LinkedHashMap<String, Object>();
+		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
+			if (nodeObj != null) {
+				normalized.put(MUMBLE_TABLE_KEY, nodeObj.toString());
+			}
+			return normalized;
+		}
+
+		Map<String, Object> node = (Map<String, Object>) mapObj;
+		if (node.containsKey(MUMBLE_TABLE_KEY)) {
+			normalized.putAll(node);
+			return normalized;
+		}
+
+		if (node.containsKey(MUMBLE_NAME_KEY)) {
+			normalized.putAll(node);
+			normalized.put(MUMBLE_TABLE_KEY, node.get(MUMBLE_NAME_KEY));
+			return normalized;
+		}
+
+		List<Object> parts = new ArrayList<Object>();
+		for (int index = 1; node.containsKey(String.valueOf(index)); index++) {
+			parts.add(node.get(String.valueOf(index)));
+		}
+
+		if (parts.size() == 1) {
+			normalized.put(MUMBLE_TABLE_KEY, parts.get(0));
+		} else if (parts.size() == 2) {
+			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(0));
+			normalized.put(MUMBLE_TABLE_KEY, parts.get(1));
+		} else if (parts.size() >= 3) {
+			normalized.put(MUMBLE_DATABASE_NAME_KEY, parts.get(0));
+			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(1));
+			normalized.put(MUMBLE_TABLE_KEY, parts.get(2));
+		}
+
+		return normalized;
+	}
+
+	private Object extractPreferredName(Map<String, Object> objectNode) {
+		if (objectNode == null || objectNode.isEmpty()) {
+			return null;
+		}
+
+		Object name = objectNode.get(MUMBLE_NAME_KEY);
+		if (name != null) {
+			return name;
+		}
+
+		Object functionName = objectNode.get(MUMBLE_FUNCTION_NAME_KEY);
+		if (functionName != null) {
+			return functionName;
+		}
+
+		return objectNode.get(MUMBLE_TABLE_KEY);
+	}
+
 	// Getters and Setters
 
 	public HashMap<String, Object> getAsTree() {
@@ -575,9 +736,80 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public Snippet getSnippet() {
 		Snippet snippet = new Snippet(walker.asTree, walker.getWalkerTableDictionary(), walker.queryColumnDictionaryMap,
 				walker.symbolTable, walker.substitutionsMap, getInterface());
+		if (!scriptStatementArrayOutputs.isEmpty()) {
+			snippet.setArrayOutputCollectorsMap(getArrayOutputCollectorsMap());
+		}
 		// Handoff: copy walker-generated (non-parser) diagnostics into the snippet.
-		snippet.setParserDiagnosticList(new ArrayList<>(walker.getWalkerDiagnostics()));
+		snippet.setParserDiagnosticList(prefixScriptWalkerDiagnostics(new ArrayList<>(walker.getWalkerDiagnostics())));
 		return snippet;
+	}
+
+	private List<ParseDiagnostic> prefixScriptWalkerDiagnostics(List<ParseDiagnostic> diagnostics) {
+		if (diagnostics == null || diagnostics.isEmpty() || scriptStatementLineRanges.isEmpty()) {
+			return diagnostics;
+		}
+
+		List<ParseDiagnostic> updated = new ArrayList<ParseDiagnostic>(diagnostics.size());
+		for (ParseDiagnostic diagnostic : diagnostics) {
+			if (diagnostic == null
+					|| !isPrefixedWalkerSeverity(diagnostic.severity())
+					|| diagnostic.source() == null
+					|| !diagnostic.source().contains("SqlASTWalker")) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			Integer line = diagnostic.line();
+			if (line == null || line.intValue() <= 0) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			String statementKey = findStatementKeyForLine(line);
+			if (statementKey == null) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			String prefix = "Statement " + statementKey + " (l:" + line + "): ";
+			String message = diagnostic.message();
+			if (message == null || message.isBlank() || message.startsWith(prefix)) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			updated.add(new ParseDiagnostic(
+					diagnostic.severity(),
+					diagnostic.code(),
+					prefix + message,
+					diagnostic.line(),
+					diagnostic.charPositionInLine(),
+					diagnostic.source(),
+					diagnostic.ruleName(),
+					diagnostic.tokenText(),
+					diagnostic.recoverable(),
+					diagnostic.phase(),
+					diagnostic.exceptionType(),
+					diagnostic.details()));
+		}
+
+		return updated;
+	}
+
+	private boolean isPrefixedWalkerSeverity(ParseDiagnostic.Severity severity) {
+		return severity == ParseDiagnostic.Severity.FATAL
+				|| severity == ParseDiagnostic.Severity.ERROR
+				|| severity == ParseDiagnostic.Severity.SEVERE_WARNING;
+	}
+
+	private String findStatementKeyForLine(int line) {
+		for (Map.Entry<String, StatementLineRange> entry : scriptStatementLineRanges.entrySet()) {
+			StatementLineRange range = entry.getValue();
+			if (range != null && line >= range.startLine && line <= range.endLine) {
+				return entry.getKey();
+			}
+		}
+		return null;
 	}
 
 	/* ==================================================================================
@@ -664,6 +896,62 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	public HashMap<String, Object> getSubstitutionsMap() {
 		return walker.substitutionsMap;
+	}
+
+	public HashMap<String, Object> getArrayOutputCollectorsMap() {
+		HashMap<String, Object> arrayOutputMap = new LinkedHashMap<String, Object>();
+		if (!scriptStatementArrayOutputs.isEmpty()) {
+			arrayOutputMap.put(SQLPARSER_SCRIPT_TREE_KEY, new LinkedHashMap<String, Object>(scriptStatementArrayOutputs));
+			return arrayOutputMap;
+		}
+
+		HashMap<String, Object> nonScriptArrays = new LinkedHashMap<String, Object>();
+		nonScriptArrays.put("queryInterface", new ArrayList<String>(getInterface()));
+		arrayOutputMap.put(SQLPARSER_SQL_TREE_KEY, nonScriptArrays);
+		return arrayOutputMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> copyMapObject(Object source) {
+		if (!(source instanceof Map<?, ?> sourceMapObj)) {
+			return new LinkedHashMap<String, Object>();
+		}
+
+		HashMap<String, Object> copy = new LinkedHashMap<String, Object>();
+		Map<String, Object> sourceMap = (Map<String, Object>) sourceMapObj;
+		for (Map.Entry<String, Object> entry : sourceMap.entrySet()) {
+			Object value = entry.getValue();
+			if (value instanceof Map<?, ?>) {
+				copy.put(entry.getKey(), copyMapObject(value));
+			} else if (value instanceof List<?> valueListObj) {
+				copy.put(entry.getKey(), new ArrayList<Object>((List<Object>) valueListObj));
+			} else if (value instanceof Set<?> valueSetObj) {
+				copy.put(entry.getKey(), new LinkedHashSet<Object>((Set<Object>) valueSetObj));
+			} else {
+				copy.put(entry.getKey(), value);
+			}
+		}
+		return copy;
+	}
+
+	private void resetStatementScopedCollectors() {
+		walker.queryCount = 0;
+		walker.predicandCount = 0;
+		walker.getWalkerTableDictionary().clear();
+		walker.queryColumnDictionaryMap.clear();
+		walker.substitutionsMap.clear();
+		walker.globalQualifiedUnresolvedLocations.clear();
+	}
+
+	private void snapshotScriptStatementCollectors(int statementSequence) {
+		String statementKey = Integer.toString(statementSequence);
+		scriptStatementTableDictionaries.put(statementKey, copyMapObject(walker.getWalkerTableDictionary()));
+		scriptStatementQueryDictionaries.put(statementKey, copyMapObject(walker.queryColumnDictionaryMap));
+		scriptStatementSubstitutions.put(statementKey, copyMapObject(walker.substitutionsMap));
+
+		HashMap<String, Object> arrayOutputMap = new LinkedHashMap<String, Object>();
+		arrayOutputMap.put("queryInterface", new ArrayList<String>(getInterface()));
+		scriptStatementArrayOutputs.put(statementKey, arrayOutputMap);
 	}
 
 	/**
@@ -811,6 +1099,150 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  of objects for each call. 
 	===============================================================================
 	*/
+
+	/*
+	===============================================================================
+	  Script Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void enterScript(@NotNull SQLSelectParserParser.ScriptContext ctx) {
+		walker.pushSymbolTable();
+		scriptStatementSequence = 0;
+		scriptStatementSequenceStack.clear();
+		scriptStatementTableDictionaries.clear();
+		scriptStatementQueryDictionaries.clear();
+		scriptStatementSubstitutions.clear();
+		scriptStatementArrayOutputs.clear();
+		scriptStatementLineRanges.clear();
+		resetStatementScopedCollectors();
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitScript(@NotNull SQLSelectParserParser.ScriptContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		HashMap<String, Object> scriptStatements = new LinkedHashMap<String, Object>();
+		for (int i = 0; i < ctx.sql_statement().size(); i++) {
+			Object statementAst = subMap.remove(Integer.toString(i + 1));
+			if (statementAst instanceof Map<?, ?> statementMapObj) {
+				Map<String, Object> statementMap = (Map<String, Object>) statementMapObj;
+				statementMap.remove(ASTWALKER_RULE_TYPE_KEY);
+				if (statementMap.size() == 1 && statementMap.containsKey("1")) {
+					statementAst = statementMap.get("1");
+				}
+			}
+			if (statementAst != null) {
+				scriptStatements.put(Integer.toString(i + 1), statementAst);
+			}
+		}
+		walker.asTree.put(SQLPARSER_SCRIPT_TREE_KEY, scriptStatements);
+		walker.tableDictionaryMap = new LinkedHashMap<String, Object>();
+		walker.tableDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY,
+				new LinkedHashMap<String, Object>(scriptStatementTableDictionaries));
+		walker.queryColumnDictionaryMap = new LinkedHashMap<String, Object>();
+		walker.queryColumnDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY,
+				new LinkedHashMap<String, Object>(scriptStatementQueryDictionaries));
+		walker.substitutionsMap = new LinkedHashMap<String, Object>();
+		walker.substitutionsMap.put(SQLPARSER_SCRIPT_TREE_KEY,
+				new LinkedHashMap<String, Object>(scriptStatementSubstitutions));
+
+		HashMap<String, Object> scriptSymbolTables = new LinkedHashMap<String, Object>();
+		for (int i = 0; i < ctx.sql_statement().size(); i++) {
+			Object statementSymbols = walker.symbolTable.remove(TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX + Integer.toString(i + 1));
+			if (statementSymbols != null) {
+				scriptSymbolTables.put(Integer.toString(i + 1), statementSymbols);
+			}
+		}
+		walker.popSymbolTable(SQLPARSER_SCRIPT_TREE_KEY, scriptSymbolTables);
+
+		walker.showTrace(walker.symbolTrace, walker.symbolTable);
+		walker.showTrace(walker.symbolTrace, walker.peekCurrentTableDictionary());
+	}
+
+	@Override
+	public void enterSql_statement(@NotNull SQLSelectParserParser.Sql_statementContext ctx) {
+		// Each SCRIPT statement gets a fresh scope so counters, dictionaries, and diagnostics do not bleed across statements.
+		scriptStatementSequence += 1;
+		scriptStatementSequenceStack.push(scriptStatementSequence);
+		walker.pushSymbolTable();
+		resetStatementScopedCollectors();
+	}
+
+	@Override
+	public void exitSql_statement(@NotNull SQLSelectParserParser.Sql_statementContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object item = subMap.remove("1");
+		if (item != null && subMap.isEmpty()) {
+			walker.collect(ruleIndex, stackLevel, item);
+		} else {
+			if (item != null) {
+				subMap.put("1", item);
+			}
+			walker.collect(ruleIndex, stackLevel, subMap);
+		}
+
+		// Isolation boundary between SCRIPT statements.
+		// It gives each statement its own line range, which is later used to attach statement prefixes to global diagnostics.
+		// It prevents cross-statement carryover in dictionaries and collector outputs.
+		if (!scriptStatementSequenceStack.isEmpty()) {
+			int statementSequence = scriptStatementSequenceStack.pop();
+			int startLine = (ctx.getStart() == null) ? -1 : ctx.getStart().getLine();
+			int endLine = (ctx.getStop() == null || ctx.getStop().getLine() <= 0) ? startLine : ctx.getStop().getLine();
+			if (startLine > 0) {
+				scriptStatementLineRanges.put(Integer.toString(statementSequence), new StatementLineRange(startLine, endLine));
+			}
+			snapshotScriptStatementCollectors(statementSequence);
+			HashMap<String, Object> statementSymbols = walker.symbolTable;
+			walker.popSymbolTable(TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX + Integer.toString(statementSequence), statementSymbols);
+			resetStatementScopedCollectors();
+		}
+	}
+
+	/*
+	===============================================================================
+	  DDL Start Symbol
+	===============================================================================
+	*/
+	@Override
+	public void enterDdl(@NotNull SQLSelectParserParser.DdlContext ctx) {
+	}
+
+	@Override
+	public void exitDdl_primary(@NotNull SQLSelectParserParser.Ddl_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitDdl(@NotNull SQLSelectParserParser.DdlContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object ddlAst = subMap.remove("1");
+		if (!subMap.isEmpty()) {
+			ddlAst = subMap;
+		}
+		walker.asTree.put(SQLPARSER_DDL_TREE_KEY, ddlAst);
+
+		HashMap<String, Object> interfaceMap = walker.resolveSetOperationInterfaceMapFromSymbolTable();
+		if (interfaceMap != null) {
+			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
+		}
+		finalizeTopLevelUnresolvedColumns();
+		walker.showTrace(walker.symbolTrace, walker.symbolTable);
+		walker.showTrace(walker.symbolTrace, walker.peekCurrentTableDictionary());
+	}
 
 	/*
 	===============================================================================
@@ -3138,17 +3570,413 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/*
 	===============================================================================
-	  CREATE TABLE
+	  CREATE Objects Statement Sources (TABLE, VIEW, MATERIALIZED VIEW) with AS (subquery or expression list)
 	===============================================================================
 	*/
 
-	// TODO: Complete Logic
-	// @Override
-	// public void exitCreate_table_as_expression_list(@NotNull
-	// SQLSelectParserParser.Create_table_as_expression_listContext ctx) {
-	// int ruleIndex = ctx.getRuleIndex();
-	// walker.handleOneChild(ruleIndex);
-	// }
+	@Override
+	public void enterCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
+	public void exitCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+
+		String createScopeKey = MUMBLE_CREATE_KEY + walker.queryCount;
+		walker.popSymbolTable(createScopeKey, walker.symbolTable);
+		walker.queryCount++;
+	}
+
+	@Override
+	public void exitCreate_table_expression(@NotNull SQLSelectParserParser.Create_table_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "table", 1));
+
+		if (!children.isEmpty()) {
+			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(0)));
+		}
+
+		if (ctx.query_expression() != null) {
+			if (children.size() >= 2) {
+				createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+			}
+		} else {
+			if (children.size() >= 2) {
+				createNode.put(MUMBLE_COLUMNS_KEY, children.get(1));
+			}
+			if (children.size() >= 3) {
+				createNode.put(MUMBLE_PARAMETERS_KEY, children.get(2));
+			}
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_index_expression(@NotNull SQLSelectParserParser.Create_index_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "index", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> indexNameNode = normalizeNamedObjectNode(children.get(0));
+			Object indexName = extractPreferredName(indexNameNode);
+			if (indexName != null) {
+				createNode.put(MUMBLE_NAME_KEY, indexName);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(1)));
+		}
+		if (children.size() >= 3) {
+			createNode.put(MUMBLE_COLUMNS_KEY, children.get(2));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_view_expression(@NotNull SQLSelectParserParser.Create_view_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "view", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_materialized_view_expression(@NotNull SQLSelectParserParser.Create_materialized_view_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "materialized view", 1, 2));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_function_expression(@NotNull SQLSelectParserParser.Create_function_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "function", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 4) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_DATATYPE_KEY, children.get(2));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(3));
+		} else if (children.size() >= 3) {
+			createNode.put(MUMBLE_DATATYPE_KEY, children.get(1));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_procedure_expression(@NotNull SQLSelectParserParser.Create_procedure_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "procedure", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 3) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
+		} else if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_macro_expression(@NotNull SQLSelectParserParser.Create_macro_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 3) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_QUERY_KEY, children.get(2));
+		} else if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_sequence_expression(@NotNull SQLSelectParserParser.Create_sequence_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "sequence", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_schema_expression(@NotNull SQLSelectParserParser.Create_schema_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "schema", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_database_expression(@NotNull SQLSelectParserParser.Create_database_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "database", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_role_expression(@NotNull SQLSelectParserParser.Create_role_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "role", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_user_expression(@NotNull SQLSelectParserParser.Create_user_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "user", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_stage_expression(@NotNull SQLSelectParserParser.Create_stage_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "stage", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_file_format_expression(@NotNull SQLSelectParserParser.Create_file_format_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "file format", 1, 2));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	
 
 	/*
 	===============================================================================

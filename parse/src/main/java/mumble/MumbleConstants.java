@@ -27,6 +27,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_COLUMN_KEY = "column";
     public static final String MUMBLE_CONCATENATE_KEY = "concatenate";
     public static final String MUMBLE_CONDITION_KEY = "condition";
+    public static final String MUMBLE_CREATE_KEY = "create";
     public static final String MUMBLE_CTE_KEY = "cte";
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";

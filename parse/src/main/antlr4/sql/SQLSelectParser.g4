@@ -129,14 +129,41 @@ options {
   }
 }
 
+
 /*
+===============================================================================
+  SQL Script End Point: Any sequence of SQL statements, including DDL, DML, and queries
+===============================================================================
+*/
+script
+  : (sql_statement)* sql_statement? EOF
+  ;
+
+sql_statement
+  : (ddl_primary | with_query | query) SEMI_COLON?
+  ;
+/*
+===============================================================================
+  DDL Statements End Point: Create objects, delete objects, alter objects
+===============================================================================
+*/
+ddl
+  : ddl_primary  EOF
+  ;
+
+ddl_primary
+  : (create_statement_primary | drop_statement_primary | alter_statement_primary)
+   SEMI_COLON? 
+   ;
+
+
+ /*
 ===============================================================================
   Start Statements: SQL, Condition, Predicand and Literal
 ===============================================================================
 */
 sql
   : (with_query
-  | create_table_as_expression
   | query
   ) (SEMI_COLON)? EOF
   ;
@@ -239,6 +266,391 @@ insert_end_point
   Dependent Grammar Rules
 ===============================================================================
 */
+/*
+===============================================================================
+  DDL Statements: Create objects, delete objects, alter objects
+===============================================================================
+*/
+create_statement_primary
+  : create_table_expression
+  | create_index_expression
+  | create_view_expression
+  | create_materialized_view_expression
+  | create_function_expression
+  | create_procedure_expression
+  | create_macro_expression
+  | create_sequence_expression
+  | create_schema_expression
+  | create_database_expression
+  | create_role_expression
+  | create_user_expression
+  | create_stage_expression
+  | create_file_format_expression
+  ;
+
+drop_statement_primary
+  : drop_table_expression
+  | drop_index_expression
+  | drop_view_expression
+  | drop_materialized_view_expression
+  | drop_function_expression
+  | drop_procedure_expression
+  | drop_macro_expression
+  | drop_sequence_expression
+  | drop_schema_expression
+  | drop_database_expression
+  | drop_role_expression
+  | drop_user_expression
+  | drop_stage_expression
+  | drop_file_format_expression
+  ;
+
+alter_statement_primary
+  : alter_table_expression
+  | alter_view_expression
+  | alter_materialized_view_expression
+  | alter_function_expression
+  | alter_procedure_expression
+  | alter_macro_expression
+  | alter_sequence_expression
+  | alter_schema_expression
+  | alter_database_expression
+  | alter_role_expression
+  | alter_user_expression
+  | alter_stage_expression
+  | alter_file_format_expression
+  ;
+
+/*
+  Create rules
+ */
+
+create_table_expression
+  : CREATE TABLE table_or_query_name AS query_expression
+  | CREATE TABLE table_or_query_name (LEFT_PAREN column_definition_list RIGHT_PAREN)? table_options?
+  ;
+
+create_index_expression
+  : CREATE INDEX index_name ON table_or_query_name LEFT_PAREN column_reference_list RIGHT_PAREN
+  ;
+
+create_view_expression
+  : CREATE VIEW view_name AS query_expression
+  ;
+
+create_materialized_view_expression
+  : CREATE MATERIALIZED VIEW view_name AS query_expression
+  ;
+
+create_function_expression
+  : CREATE FUNCTION function_name LEFT_PAREN function_parameter_list? RIGHT_PAREN RETURNS data_type function_body
+  ;
+
+create_procedure_expression
+  : CREATE PROCEDURE procedure_name LEFT_PAREN procedure_parameter_list? RIGHT_PAREN procedure_body
+  ;
+
+create_macro_expression
+  : CREATE MACRO macro_name LEFT_PAREN macro_parameter_list? RIGHT_PAREN AS query_expression
+  ;
+
+create_sequence_expression
+  : CREATE SEQUENCE sequence_name sequence_options
+  ;
+
+create_schema_expression
+  : CREATE SCHEMA schema_name schema_options?
+  ;
+
+create_database_expression
+  : CREATE DATABASE database_name database_options?
+  ;
+
+create_role_expression
+  : CREATE ROLE role_name role_options?
+  ;
+
+create_user_expression
+  : CREATE USER user_name user_options?
+  ;
+
+create_stage_expression
+  : CREATE STAGE stage_name stage_options?
+  ;
+
+create_file_format_expression
+  : CREATE FILE FORMAT file_format_name file_format_options?
+  ;
+
+// Unifies CREATE-object names so each missing *_name rule accepts either
+// a table-like reference or a function-like reference.
+db_object_name
+  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
+  ;
+
+index_name
+  : db_object_name
+  ;
+
+view_name
+  : db_object_name
+  ;
+
+procedure_name
+  : db_object_name
+  ;
+
+macro_name
+  : db_object_name
+  ;
+
+sequence_name
+  : db_object_name
+  ;
+
+schema_name
+  : db_object_name
+  ;
+
+database_name
+  : db_object_name
+  ;
+
+role_name
+  : db_object_name
+  ;
+
+user_name
+  : db_object_name
+  ;
+
+stage_name
+  : db_object_name
+  ;
+
+file_format_name
+  : db_object_name
+  ;
+
+
+// Paren-bounded placeholders
+column_definition_list
+  : generic_ddl_paren_content
+  ;
+
+function_parameter_list
+  : generic_ddl_paren_content
+  ;
+
+procedure_parameter_list
+  : generic_ddl_paren_content
+  ;
+
+macro_parameter_list
+  : generic_ddl_paren_content
+  ;
+
+// Statement-bounded placeholders
+table_options
+  : generic_ddl_options
+  ;
+
+sequence_options
+  : generic_ddl_options
+  ;
+
+schema_options
+  : generic_ddl_options
+  ;
+
+database_options
+  : generic_ddl_options
+  ;
+
+role_options
+  : generic_ddl_options
+  ;
+
+user_options
+  : generic_ddl_options
+  ;
+
+stage_options
+  : generic_ddl_options
+  ;
+
+file_format_options
+  : generic_ddl_options
+  ;
+
+function_body
+  : generic_ddl_options
+  ;
+
+procedure_body
+  : generic_ddl_options
+  ;
+
+/*
+  Delete rules
+ */
+
+drop_table_expression
+  : drop_named_object_expression
+  ;
+
+drop_index_expression
+  : drop_named_object_expression
+  ;
+
+drop_view_expression
+  : drop_named_object_expression
+  ;
+
+drop_materialized_view_expression
+  : DROP MATERIALIZED VIEW view_name drop_options?
+  ;
+
+drop_function_expression
+  : drop_named_object_expression
+  ;
+
+drop_procedure_expression
+  : drop_named_object_expression
+  ;
+
+drop_macro_expression
+  : drop_named_object_expression
+  ;
+
+drop_sequence_expression
+  : drop_named_object_expression
+  ;
+
+drop_schema_expression
+  : drop_named_object_expression
+  ;
+
+drop_database_expression
+  : drop_named_object_expression
+  ;
+
+drop_role_expression
+  : drop_named_object_expression
+  ;
+
+drop_user_expression
+  : drop_named_object_expression
+  ;
+
+drop_stage_expression
+  : drop_named_object_expression
+  ;
+
+drop_file_format_expression
+  : DROP FILE FORMAT file_format_name drop_options?
+  ;
+
+drop_named_object_expression
+  : DROP drop_object_type db_object_name drop_options?
+  ;
+
+drop_object_type
+  : TABLE
+  | INDEX
+  | VIEW
+  | FUNCTION
+  | PROCEDURE
+  | MACRO
+  | SEQUENCE
+  | SCHEMA
+  | DATABASE
+  | ROLE
+  | USER
+  | STAGE
+  ;
+
+drop_options
+  : generic_ddl_options
+  ;
+
+ /* 
+ Alter rules
+ */
+
+alter_table_expression
+  : ALTER TABLE table_or_query_name alter_options?
+  ;
+
+alter_view_expression
+  : ALTER VIEW view_name alter_options?
+  ;
+
+alter_materialized_view_expression
+  : ALTER MATERIALIZED VIEW view_name alter_options?
+  ;
+
+alter_function_expression
+  : ALTER FUNCTION function_name alter_options?
+  ;
+
+alter_procedure_expression
+  : ALTER PROCEDURE procedure_name alter_options?
+  ;
+
+alter_macro_expression
+  : ALTER MACRO macro_name alter_options?
+  ;
+
+alter_sequence_expression
+  : ALTER SEQUENCE sequence_name alter_options?
+  ;
+
+alter_schema_expression
+  : ALTER SCHEMA schema_name alter_options?
+  ;
+
+alter_database_expression
+  : ALTER DATABASE database_name alter_options?
+  ;
+
+alter_role_expression
+  : ALTER ROLE role_name alter_options?
+  ;
+
+alter_user_expression
+  : ALTER USER user_name alter_options?
+  ;
+
+alter_stage_expression
+  : ALTER STAGE stage_name alter_options?
+  ;
+
+alter_file_format_expression
+  : ALTER FILE FORMAT file_format_name alter_options?
+  ;
+
+alter_options
+  : generic_ddl_options
+  ;
+
+/*
+  Generic DDL rules to capture content of DDL statements without fully parsing them, since DDL syntax is highly variable across dialects and not the primary focus of this parser.  These rules also allow for future extension to support more detailed parsing of DDL statements if desired.
+ */
+/*
+   DDL options and sub-statements as default placeholder objects.
+   Two flavors based on natural syntactic boundary:
+     generic_ddl_paren_content - consumes tokens up to (but not including) the closing RIGHT_PAREN
+     generic_ddl_options       - consumes tokens up to (but not including) the statement terminator
+ */
+generic_ddl_paren_content
+  : (~RIGHT_PAREN)+
+  ;
+
+generic_ddl_options
+  : (~SEMI_COLON)+
+  ;
+
 /*
 ===============================================================================
   WITH Statement <with query>
@@ -378,15 +790,6 @@ assignment_expression
   : column_reference EQUAL row_value_predicand
   ;
    
-/*
-===============================================================================
-  CREATE TABLE
-===============================================================================
-*/
-    
-create_table_as_expression
-  : CREATE TABLE AS query_expression
-  ;
   
 /*
 ===============================================================================
@@ -2792,6 +3195,20 @@ MAX_FILE_COUNT : M A X UNDERLINE F I L E UNDERLINE C O U N T;
 MAX_RECORDS_PER_FILE : M A X UNDERLINE R E C O R D S UNDERLINE P E R UNDERLINE F I L E;
 KIND : K I N D;
 JOB_ID : J O B UNDERLINE I D;
+ALTER : A L T E R;
+DATABASE : D A T A B A S E;
+FILE : F I L E;
+FUNCTION : F U N C T I O N;
+MACRO : M A C R O;
+MATERIALIZED : M A T E R I A L I Z E D;
+PROCEDURE : P R O C E D U R E;
+RETURNS : R E T U R N S;
+ROLE : R O L E;
+SCHEMA : S C H E M A;
+SEQUENCE : S E Q U E N C E;
+STAGE : S T A G E;
+USER : U S E R;
+VIEW : V I E W;
 
 
 Identifier

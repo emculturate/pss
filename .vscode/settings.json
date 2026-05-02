@@ -6,6 +6,9 @@
   "java.compile.nullAnalysis.mode": "disabled",
   "java.errors.incompleteClasspath.severity": "warning",
   "java.import.maven.enabled": true,
+  "java.import.exclusions": [
+    "**/src/main/antlr4/**/.antlr/**"
+  ],
   "java.import.maven.offline.enabled": false,
   "java.import.maven.downloadSources": true,
   "java.import.gradle.enabled": false,

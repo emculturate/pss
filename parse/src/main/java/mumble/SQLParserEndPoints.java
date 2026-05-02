@@ -15,6 +15,8 @@ public class SQLParserEndPoints {
     public static final String SQLPARSER_COLUMN_TREE_KEY = "COLUMN";
     public static final String SQLPARSER_VALUES_TREE_KEY = "VALUES";
     public static final String SQLPARSER_TUPLE_TREE_KEY = "TUPLE";
+    public static final String SQLPARSER_DDL_TREE_KEY = "DDL";
+    public static final String SQLPARSER_SCRIPT_TREE_KEY = "SCRIPT";
     public static final String SQLPARSER_SQL_TREE_KEY = "SQL";
     public static final String SQLPARSER_QUERY_TREE_KEY = "QUERY";
     

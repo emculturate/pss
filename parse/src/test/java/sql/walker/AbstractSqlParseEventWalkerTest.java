@@ -1,11 +1,14 @@
 package sql.walker;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 
@@ -16,11 +19,14 @@ import errorhandling.ParseErrorListener;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.Column_valueContext;
 import sql.SQLSelectParserParser.Condition_valueContext;
+import sql.SQLSelectParserParser.DdlContext;
 import sql.SQLSelectParserParser.In_list_predicate_valueContext;
 import sql.SQLSelectParserParser.Join_extension_valueContext;
 import sql.SQLSelectParserParser.Predicand_valueContext;
 import sql.SQLSelectParserParser.Query_valueContext;
+import sql.SQLSelectParserParser.ScriptContext;
 import sql.SQLSelectParserParser.SqlContext;
+import sql.SQLSelectParserParser.Sql_statementContext;
 import sql.SQLSelectParserParser.Tuple_valueContext;
 import sql.SQLSelectParserParser.Values_statement_endContext;
 import sql.factory.SQLSelectParserFactory;
@@ -617,6 +623,50 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		}
 		return null;
 	}
+
+	protected SqlParseEventWalker runScriptParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			ScriptContext tree = parser.script();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
+					0, numErrors);
+
+			return runAnyParsertest(query, parser, tree, null, null, true);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
+
+	protected SqlParseEventWalker runDdlParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			DdlContext tree = parser.ddl();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
+					0, numErrors);
+
+			return runAnyParsertest(query, parser, tree, null, null, true);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
 	
 
 	protected SqlParseEventWalker runAnyParsertest(final String query, final SQLSelectParserParser parser, 
@@ -647,6 +697,9 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			System.out.println("Parser Errors: " + v.getErrorList());
 
 			Snippet snippet = extractor.getSnippet();
+			HashMap<String, Object> enrichedArrayCollectors = enrichArrayCollectorsForTest(
+					extractor.getArrayOutputCollectorsMap(), parser, snippet, tree);
+			System.out.println("Array Output Collectors: " + enrichedArrayCollectors);
 			System.out.println("Walker Fatal Errors: " + snippet.getFatalErrorStringList());
 			System.out.println("Walker Non Fatal Errors: " + snippet.getErrorStringList(ParseDiagnostic.Severity.ERROR));
 			System.out.println("Walker Severe Warnings: " + snippet.getErrorStringList(ParseDiagnostic.Severity.SEVERE_WARNING));
@@ -679,6 +732,284 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			
 			return null;
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> enrichArrayCollectorsForTest(
+			HashMap<String, Object> baseCollectors,
+			SQLSelectParserParser parser,
+			Snippet snippet,
+			ParserRuleContext tree) {
+		if (baseCollectors == null || baseCollectors.isEmpty()) {
+			return baseCollectors;
+		}
+
+		Map<String, StatementLineRange> statementLineRanges = getScriptStatementLineRanges(tree);
+
+		HashMap<String, Object> enriched = new LinkedHashMap<>();
+		for (Map.Entry<String, Object> topEntry : baseCollectors.entrySet()) {
+			Object topValue = topEntry.getValue();
+			if (!(topValue instanceof Map<?, ?> topMapObj)) {
+				enriched.put(topEntry.getKey(), topValue);
+				continue;
+			}
+
+			Map<String, Object> topMap = (Map<String, Object>) topMapObj;
+			boolean hasNumberedChildren = false;
+			for (Map.Entry<String, Object> childEntry : topMap.entrySet()) {
+				if (childEntry.getKey() != null
+						&& childEntry.getKey().matches("\\d+")
+						&& childEntry.getValue() instanceof Map<?, ?>) {
+					hasNumberedChildren = true;
+					break;
+				}
+			}
+
+			if (hasNumberedChildren) {
+				HashMap<String, Object> enrichedTopMap = new LinkedHashMap<>();
+				for (Map.Entry<String, Object> childEntry : topMap.entrySet()) {
+					String childKey = childEntry.getKey();
+					Object childValue = childEntry.getValue();
+					if (childKey != null
+							&& childKey.matches("\\d+")
+							&& childValue instanceof Map<?, ?> childMapObj) {
+						StatementLineRange range = statementLineRanges.get(childKey);
+						HashMap<String, Object> diagnosticsPayload = buildDiagnosticsPayloadForRange(parser, snippet, range);
+						HashMap<String, Object> queryEntry = new LinkedHashMap<>((Map<String, Object>) childMapObj);
+						if (isEmptyValue(queryEntry.get("queryInterface"))) {
+							queryEntry.remove("queryInterface");
+						}
+						for (Map.Entry<String, Object> payloadEntry : diagnosticsPayload.entrySet()) {
+							if (!queryEntry.containsKey(payloadEntry.getKey())
+									&& !isEmptyValue(payloadEntry.getValue())) {
+								queryEntry.put(payloadEntry.getKey(), payloadEntry.getValue());
+							}
+						}
+						queryEntry.entrySet().removeIf(entry -> isEmptyValue(entry.getValue()));
+						if (!queryEntry.isEmpty()) {
+							enrichedTopMap.put(childKey, queryEntry);
+						}
+					} else {
+						enrichedTopMap.put(childKey, childValue);
+					}
+				}
+				enriched.put(topEntry.getKey(), enrichedTopMap);
+			} else {
+				HashMap<String, Object> diagnosticsPayload = buildDiagnosticsPayloadForRange(parser, snippet, null);
+				HashMap<String, Object> singleEntry = new LinkedHashMap<>(topMap);
+				if (isEmptyValue(singleEntry.get("queryInterface"))) {
+					singleEntry.remove("queryInterface");
+				}
+				for (Map.Entry<String, Object> payloadEntry : diagnosticsPayload.entrySet()) {
+					if (!singleEntry.containsKey(payloadEntry.getKey())
+							&& !isEmptyValue(payloadEntry.getValue())) {
+						singleEntry.put(payloadEntry.getKey(), payloadEntry.getValue());
+					}
+				}
+				singleEntry.entrySet().removeIf(entry -> isEmptyValue(entry.getValue()));
+				enriched.put(topEntry.getKey(), singleEntry);
+			}
+		}
+
+		return enriched;
+	}
+
+	private HashMap<String, Object> buildDiagnosticsPayloadForRange(
+			SQLSelectParserParser parser,
+			Snippet snippet,
+			StatementLineRange range) {
+		HashMap<String, Object> payload = new LinkedHashMap<>();
+
+		List<ParseDiagnostic> mergedDiagnostics = (snippet == null) ? null : snippet.getParserDiagnosticList();
+		List<String> parserErrors = collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.FATAL, ParseDiagnostic.Severity.ERROR, ParseDiagnostic.Severity.SEVERE_WARNING),
+				range,
+				true,
+				false);
+		putIfNotEmpty(payload, "ParserErrors", parserErrors);
+
+		putIfNotEmpty(payload, "Walker Fatal Errors", collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.FATAL),
+				range,
+				false,
+				true));
+		putIfNotEmpty(payload, "Walker Non Fatal Errors", collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.ERROR),
+				range,
+				false,
+				true));
+		putIfNotEmpty(payload, "Walker Severe Warnings", collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.SEVERE_WARNING),
+				range,
+				false,
+				true));
+		putIfNotEmpty(payload, "Walker Warnings", collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.WARNING),
+				range,
+				false,
+				true));
+		putIfNotEmpty(payload, "Walker Info", collectDiagnosticMessages(
+				mergedDiagnostics,
+				Set.of(ParseDiagnostic.Severity.INFO),
+				range,
+				false,
+				true));
+
+		List<ParseDiagnostic> listenerDiagnostics = new ArrayList<>();
+		if (parser != null) {
+			List<?> listeners = parser.getErrorListeners();
+			for (Object listener : listeners) {
+				if (listener instanceof ParseErrorListener parseErrorListener
+						&& parseErrorListener.getDiagnostics() != null
+						&& !parseErrorListener.getDiagnostics().isEmpty()) {
+					listenerDiagnostics.addAll(parseErrorListener.getDiagnostics());
+				}
+			}
+		}
+		putIfNotEmpty(payload, "errorhandling.ParseErrorListener found Diagnostics",
+				filterDiagnosticsByRange(listenerDiagnostics, range));
+
+		return payload;
+	}
+
+	private List<String> collectDiagnosticMessages(
+			List<ParseDiagnostic> diagnostics,
+			Set<ParseDiagnostic.Severity> severities,
+			StatementLineRange range,
+			boolean parserOnly,
+			boolean walkerOnly) {
+		List<String> messages = new ArrayList<>();
+		if (diagnostics == null || diagnostics.isEmpty()) {
+			return messages;
+		}
+		for (ParseDiagnostic diagnostic : diagnostics) {
+			if (diagnostic == null) {
+				continue;
+			}
+			if (severities != null && !severities.contains(diagnostic.severity())) {
+				continue;
+			}
+			if (parserOnly && !isParserDiagnostic(diagnostic)) {
+				continue;
+			}
+			if (walkerOnly && !isWalkerDiagnostic(diagnostic)) {
+				continue;
+			}
+			if (!matchesRange(diagnostic, range)) {
+				continue;
+			}
+			String message = diagnostic.message();
+			if (message != null && !message.isBlank() && !messages.contains(message)) {
+				messages.add(message);
+			}
+		}
+		return messages;
+	}
+
+	private List<ParseDiagnostic> filterDiagnosticsByRange(
+			List<ParseDiagnostic> diagnostics,
+			StatementLineRange range) {
+		List<ParseDiagnostic> filtered = new ArrayList<>();
+		if (diagnostics == null || diagnostics.isEmpty()) {
+			return filtered;
+		}
+		for (ParseDiagnostic diagnostic : diagnostics) {
+			if (diagnostic != null && matchesRange(diagnostic, range)) {
+				filtered.add(diagnostic);
+			}
+		}
+		return filtered;
+	}
+
+	private boolean matchesRange(ParseDiagnostic diagnostic, StatementLineRange range) {
+		if (diagnostic == null || range == null) {
+			return true;
+		}
+		Integer line = diagnostic.line();
+		if (line == null || line <= 0) {
+			return false;
+		}
+		return line >= range.startLine && line <= range.endLine;
+	}
+
+	private boolean isParserDiagnostic(ParseDiagnostic diagnostic) {
+		if (diagnostic == null) {
+			return false;
+		}
+		String source = diagnostic.source();
+		return "ParseErrorCollector".equals(source)
+				|| "ParseErrorListener".equals(source)
+				|| "SqlParserAccess".equals(source)
+				|| "SqlParseMCP".equals(source);
+	}
+
+	private boolean isWalkerDiagnostic(ParseDiagnostic diagnostic) {
+		if (diagnostic == null) {
+			return false;
+		}
+		String source = diagnostic.source();
+		return source != null && source.contains("SqlASTWalker");
+	}
+
+	private Map<String, StatementLineRange> getScriptStatementLineRanges(ParserRuleContext tree) {
+		if (!(tree instanceof ScriptContext scriptCtx)) {
+			return Map.of();
+		}
+		Map<String, StatementLineRange> ranges = new LinkedHashMap<>();
+		List<Sql_statementContext> statements = scriptCtx.sql_statement();
+		for (int i = 0; i < statements.size(); i++) {
+			Sql_statementContext statement = statements.get(i);
+			if (statement == null) {
+				continue;
+			}
+			Token start = statement.getStart();
+			Token stop = statement.getStop();
+			if (start == null) {
+				continue;
+			}
+			int startLine = start.getLine();
+			int endLine = (stop == null || stop.getLine() <= 0) ? startLine : stop.getLine();
+			ranges.put(Integer.toString(i + 1), new StatementLineRange(startLine, endLine));
+		}
+		return ranges;
+	}
+
+	private static final class StatementLineRange {
+		private final int startLine;
+		private final int endLine;
+
+		private StatementLineRange(int startLine, int endLine) {
+			this.startLine = startLine;
+			this.endLine = endLine;
+		}
+	}
+
+	private void putIfNotEmpty(HashMap<String, Object> target, String key, Object value) {
+		if (target == null || key == null || isEmptyValue(value)) {
+			return;
+		}
+		target.put(key, value);
+	}
+
+	private boolean isEmptyValue(Object value) {
+		if (value == null) {
+			return true;
+		}
+		if (value instanceof String stringValue) {
+			return stringValue.isBlank();
+		}
+		if (value instanceof List<?> listValue) {
+			return listValue.isEmpty();
+		}
+		if (value instanceof Map<?, ?> mapValue) {
+			return mapValue.isEmpty();
+		}
+		return false;
 	}
 
 	protected List<String> runExpectSQLParserFailuretest(final String query, final SQLSelectParserParser parser) {

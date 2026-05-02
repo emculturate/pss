@@ -10,7 +10,6 @@
         "parse/pom.xml",
         "-Dmaven.compiler.showWarnings=false",
         "-DskipTests",
-        "generate-sources",
         "test-compile"
       ],
       "problemMatcher": [],

@@ -54,6 +54,11 @@ public class Snippet {
 	private  HashSet<String> queryInterface;
 
 	/**
+	 * Optional collector for array-oriented extractor outputs (for example, SCRIPT statement snapshots).
+	 */
+	private HashMap<String, Object> arrayOutputCollectorsMap;
+
+	/**
 	 * Parser Message Lists
 	 * This holds the all of the messages generated during parsing, including errors, Ambiguities,
 	 * and information messages.
@@ -137,6 +142,14 @@ public class Snippet {
 	public void setQueryInterface(HashSet<String> queryInterface) {
 		this.queryInterface = queryInterface;
 	} 
+
+	public HashMap<String, Object> getArrayOutputCollectorsMap() {
+		return arrayOutputCollectorsMap;
+	}
+
+	public void setArrayOutputCollectorsMap(HashMap<String, Object> arrayOutputCollectorsMap) {
+		this.arrayOutputCollectorsMap = arrayOutputCollectorsMap;
+	}
 	
 	public List<String> getFatalErrorStringList() {
 		return getDiagnosticMessagesBySeverity(ParseDiagnostic.Severity.FATAL);
@@ -339,6 +352,11 @@ public class Snippet {
 		Gson gson = new Gson();
 		return gson.toJson(queryInterface);
 	}
+	// Returns the optional Array Output Collectors as a JSON String
+	public String getArrayOutputCollectorsMapJson() {
+		Gson gson = new Gson();
+		return gson.toJson(arrayOutputCollectorsMap);
+	}
 	// Returns the Fatal Error String List as a JSON String
 	public String getFatalErrorStringListJson() {
 		Gson gson = new Gson();
@@ -375,7 +393,8 @@ public class Snippet {
 		return "Snippet [sqlAbstractTree=" + sqlAbstractTree + ", tableDictionary=" + tableDictionary
 				+ ", queryColumnDictionaryMap=" + queryColumnDictionaryMap + ", symbolTable=" + symbolTable 
 				+ ", substitutionsMap=" + substitutionsMap + ", queryInterface="
-				+ queryInterface + ", parserMessageList=" + parserDiagnosticList + ", parserDiagnosticList=" + parserDiagnosticList + ", parserMessageStringList="
+				+ queryInterface + ", arrayOutputCollectorsMap=" + arrayOutputCollectorsMap
+				+ ", parserMessageList=" + parserDiagnosticList + ", parserDiagnosticList=" + parserDiagnosticList + ", parserMessageStringList="
 				+ parserMessageStringList + ", fatalErrorCount=" + getFatalErrorCount() + ", fatalErrorStringList="
 				+ getFatalErrorStringList() + "]";
 	}	
