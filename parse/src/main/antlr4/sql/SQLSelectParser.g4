@@ -331,105 +331,61 @@ create_table_expression
   ;
 
 create_index_expression
-  : CREATE INDEX index_name ON table_or_query_name LEFT_PAREN column_reference_list RIGHT_PAREN
+  : CREATE INDEX db_object_name ON table_or_query_name LEFT_PAREN column_reference_list RIGHT_PAREN
   ;
 
 create_view_expression
-  : CREATE VIEW view_name AS query_expression
+  : CREATE VIEW db_object_name AS query_expression
   ;
 
 create_materialized_view_expression
-  : CREATE MATERIALIZED VIEW view_name AS query_expression
+  : CREATE MATERIALIZED VIEW db_object_name AS query_expression
   ;
 
 create_function_expression
-  : CREATE FUNCTION function_name LEFT_PAREN function_parameter_list? RIGHT_PAREN RETURNS data_type function_body
+  : CREATE FUNCTION db_object_name LEFT_PAREN function_parameter_list? RIGHT_PAREN RETURNS data_type function_body
   ;
 
 create_procedure_expression
-  : CREATE PROCEDURE procedure_name LEFT_PAREN procedure_parameter_list? RIGHT_PAREN procedure_body
+  : CREATE PROCEDURE db_object_name LEFT_PAREN procedure_parameter_list? RIGHT_PAREN procedure_body
   ;
 
 create_macro_expression
-  : CREATE MACRO macro_name LEFT_PAREN macro_parameter_list? RIGHT_PAREN AS query_expression
+  : CREATE MACRO db_object_name LEFT_PAREN macro_parameter_list? RIGHT_PAREN AS query_expression
   ;
 
 create_sequence_expression
-  : CREATE SEQUENCE sequence_name sequence_options
+  : CREATE SEQUENCE db_object_name sequence_options
   ;
 
 create_schema_expression
-  : CREATE SCHEMA schema_name schema_options?
+  : CREATE SCHEMA db_object_name schema_options?
   ;
 
 create_database_expression
-  : CREATE DATABASE database_name database_options?
+  : CREATE DATABASE db_object_name database_options?
   ;
 
 create_role_expression
-  : CREATE ROLE role_name role_options?
+  : CREATE ROLE db_object_name role_options?
   ;
 
 create_user_expression
-  : CREATE USER user_name user_options?
+  : CREATE USER db_object_name user_options?
   ;
 
 create_stage_expression
-  : CREATE STAGE stage_name stage_options?
+  : CREATE STAGE db_object_name stage_options?
   ;
 
 create_file_format_expression
-  : CREATE FILE FORMAT file_format_name file_format_options?
+  : CREATE FILE FORMAT db_object_name file_format_options?
   ;
 
 // Unifies CREATE-object names so each missing *_name rule accepts either
 // a table-like reference or a function-like reference.
 db_object_name
   : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
-  ;
-
-index_name
-  : db_object_name
-  ;
-
-view_name
-  : db_object_name
-  ;
-
-procedure_name
-  : db_object_name
-  ;
-
-macro_name
-  : db_object_name
-  ;
-
-sequence_name
-  : db_object_name
-  ;
-
-schema_name
-  : db_object_name
-  ;
-
-database_name
-  : db_object_name
-  ;
-
-role_name
-  : db_object_name
-  ;
-
-user_name
-  : db_object_name
-  ;
-
-stage_name
-  : db_object_name
-  ;
-
-file_format_name
-  : db_object_name
   ;
 
 
@@ -508,7 +464,7 @@ drop_view_expression
   ;
 
 drop_materialized_view_expression
-  : DROP MATERIALIZED VIEW view_name drop_options?
+  : DROP MATERIALIZED VIEW db_object_name drop_options?
   ;
 
 drop_function_expression
@@ -548,7 +504,7 @@ drop_stage_expression
   ;
 
 drop_file_format_expression
-  : DROP FILE FORMAT file_format_name drop_options?
+  : DROP FILE FORMAT db_object_name drop_options?
   ;
 
 drop_named_object_expression
@@ -583,51 +539,51 @@ alter_table_expression
   ;
 
 alter_view_expression
-  : ALTER VIEW view_name alter_options?
+  : ALTER VIEW db_object_name alter_options?
   ;
 
 alter_materialized_view_expression
-  : ALTER MATERIALIZED VIEW view_name alter_options?
+  : ALTER MATERIALIZED VIEW db_object_name alter_options?
   ;
 
 alter_function_expression
-  : ALTER FUNCTION function_name alter_options?
+  : ALTER FUNCTION db_object_name alter_options?
   ;
 
 alter_procedure_expression
-  : ALTER PROCEDURE procedure_name alter_options?
+  : ALTER PROCEDURE db_object_name alter_options?
   ;
 
 alter_macro_expression
-  : ALTER MACRO macro_name alter_options?
+  : ALTER MACRO db_object_name alter_options?
   ;
 
 alter_sequence_expression
-  : ALTER SEQUENCE sequence_name alter_options?
+  : ALTER SEQUENCE db_object_name alter_options?
   ;
 
 alter_schema_expression
-  : ALTER SCHEMA schema_name alter_options?
+  : ALTER SCHEMA db_object_name alter_options?
   ;
 
 alter_database_expression
-  : ALTER DATABASE database_name alter_options?
+  : ALTER DATABASE db_object_name alter_options?
   ;
 
 alter_role_expression
-  : ALTER ROLE role_name alter_options?
+  : ALTER ROLE db_object_name alter_options?
   ;
 
 alter_user_expression
-  : ALTER USER user_name alter_options?
+  : ALTER USER db_object_name alter_options?
   ;
 
 alter_stage_expression
-  : ALTER STAGE stage_name alter_options?
+  : ALTER STAGE db_object_name alter_options?
   ;
 
 alter_file_format_expression
-  : ALTER FILE FORMAT file_format_name alter_options?
+  : ALTER FILE FORMAT db_object_name alter_options?
   ;
 
 alter_options
@@ -2360,6 +2316,21 @@ nonreserved_keywords
   |		NULLS
   // 2025 Additions
   | ESCAPE
+  // DDL keywords usable as SQL identifiers (schema-qualified names, aliases, etc.)
+  | ALTER
+  | DATABASE
+  | FILE
+  | FUNCTION
+  | MACRO
+  | MATERIALIZED
+  | PROCEDURE
+  | RETURNS
+  | ROLE
+  | SCHEMA
+  | SEQUENCE
+  | STAGE
+  | USER
+  | VIEW
   ;
 
 /*

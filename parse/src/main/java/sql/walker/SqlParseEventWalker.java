@@ -481,6 +481,56 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return objectNode.get(MUMBLE_TABLE_KEY);
 	}
 
+	private boolean hasTableIdentity(Map<String, Object> tableNode) {
+		if (tableNode == null || tableNode.isEmpty()) {
+			return false;
+		}
+
+		return tableNode.containsKey(MUMBLE_TABLE_KEY)
+				|| tableNode.containsKey(MUMBLE_NAME_KEY)
+				|| tableNode.containsKey(MUMBLE_SCHEMA_KEY)
+				|| tableNode.containsKey(MUMBLE_DATABASE_NAME_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean looksLikeQueryNode(Object nodeObj) {
+		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
+			return false;
+		}
+
+		Map<String, Object> node = (Map<String, Object>) mapObj;
+		return node.containsKey(MUMBLE_SELECT_KEY)
+				|| node.containsKey(MUMBLE_WITH_KEY)
+				|| node.containsKey(MUMBLE_UNION_KEY)
+				|| node.containsKey(MUMBLE_INTERSECT_KEY)
+				|| node.containsKey(MUMBLE_QUERY_KEY);
+	}
+
+	private Map<String, Object> buildFallbackTableNodeFromText(String tableText) {
+		Map<String, Object> fallback = new LinkedHashMap<String, Object>();
+		if (tableText == null || tableText.isBlank()) {
+			return fallback;
+		}
+
+		String[] parts = tableText.split("\\.");
+		if (parts.length == 1) {
+			fallback.put(MUMBLE_TABLE_KEY, parts[0]);
+		} else if (parts.length == 2) {
+			fallback.put(MUMBLE_SCHEMA_KEY, parts[0]);
+			fallback.put(MUMBLE_TABLE_KEY, parts[1]);
+		} else {
+			fallback.put(MUMBLE_DATABASE_NAME_KEY, parts[0]);
+			fallback.put(MUMBLE_SCHEMA_KEY, parts[1]);
+			StringBuilder tableBuilder = new StringBuilder(parts[2]);
+			for (int i = 3; i < parts.length; i++) {
+				tableBuilder.append('.').append(parts[i]);
+			}
+			fallback.put(MUMBLE_TABLE_KEY, tableBuilder.toString());
+		}
+
+		return fallback;
+	}
+
 	// Getters and Setters
 
 	public HashMap<String, Object> getAsTree() {
@@ -1656,11 +1706,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 	/*
 
-	// TODO: Add to AST
-//	@Override
-//	public void exitLiteral_value(@NotNull SQLSelectParserParser.Literal_valueContext ctx) {
-//	}
-	
 	
 	// End of Grammar End Points
 	 
@@ -1675,6 +1720,497 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  transform the raw parse tree into a structured AST representation.
 	===============================================================================
 	*/
+	/*
+	===============================================================================
+		  DDL Statements: Create objects, delete objects, alter objects
+	===============================================================================
+	*/
+
+	/*
+	===============================================================================
+	  CREATE Objects Statement Sources (TABLE, VIEW, MATERIALIZED VIEW) with AS (subquery or expression list)
+	===============================================================================
+	*/
+
+	@Override
+	public void enterCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
+	public void exitCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+
+		String createScopeKey = MUMBLE_CREATE_KEY + walker.queryCount;
+		walker.popSymbolTable(createScopeKey, walker.symbolTable);
+		walker.queryCount++;
+	}
+
+	@Override
+	public void exitCreate_table_expression(@NotNull SQLSelectParserParser.Create_table_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "table", 1));
+
+		Map<String, Object> tableNode = null;
+		Object queryNode = null;
+
+		if (ctx.query_expression() != null) {
+			if (children.size() >= 2) {
+				tableNode = normalizeTableNode(children.get(0));
+				queryNode = children.get(1);
+			} else if (children.size() == 1) {
+				Object loneChild = children.get(0);
+				Map<String, Object> normalizedLoneTable = normalizeTableNode(loneChild);
+				if (hasTableIdentity(normalizedLoneTable) && !looksLikeQueryNode(loneChild)) {
+					tableNode = normalizedLoneTable;
+				} else {
+					queryNode = loneChild;
+				}
+			}
+
+			if ((tableNode == null || !hasTableIdentity(tableNode)) && ctx.table_or_query_name() != null) {
+				tableNode = buildFallbackTableNodeFromText(ctx.table_or_query_name().getText());
+			}
+
+			if (tableNode != null && hasTableIdentity(tableNode)) {
+				createNode.put(MUMBLE_TABLE_KEY, tableNode);
+			}
+			if (queryNode != null) {
+				createNode.put(MUMBLE_QUERY_KEY, queryNode);
+			}
+		} else {
+			if (!children.isEmpty()) {
+				createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(0)));
+			}
+			if (children.size() >= 2) {
+				createNode.put(MUMBLE_COLUMNS_KEY, children.get(1));
+			}
+			if (children.size() >= 3) {
+				createNode.put(MUMBLE_PARAMETERS_KEY, children.get(2));
+			}
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_index_expression(@NotNull SQLSelectParserParser.Create_index_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "index", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> indexNameNode = normalizeNamedObjectNode(children.get(0));
+			Object indexName = extractPreferredName(indexNameNode);
+			if (indexName != null) {
+				createNode.put(MUMBLE_NAME_KEY, indexName);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(1)));
+		}
+		if (children.size() >= 3) {
+			createNode.put(MUMBLE_COLUMNS_KEY, children.get(2));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_view_expression(@NotNull SQLSelectParserParser.Create_view_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "view", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_materialized_view_expression(@NotNull SQLSelectParserParser.Create_materialized_view_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "materialized view", 1, 2));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_function_expression(@NotNull SQLSelectParserParser.Create_function_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "function", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 4) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_DATATYPE_KEY, children.get(2));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(3));
+		} else if (children.size() >= 3) {
+			createNode.put(MUMBLE_DATATYPE_KEY, children.get(1));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_procedure_expression(@NotNull SQLSelectParserParser.Create_procedure_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "procedure", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 3) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
+		} else if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_macro_expression(@NotNull SQLSelectParserParser.Create_macro_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+
+		if (children.size() == 3) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_QUERY_KEY, children.get(2));
+		} else if (children.size() >= 2) {
+			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_sequence_expression(@NotNull SQLSelectParserParser.Create_sequence_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "sequence", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_schema_expression(@NotNull SQLSelectParserParser.Create_schema_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "schema", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_database_expression(@NotNull SQLSelectParserParser.Create_database_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "database", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_role_expression(@NotNull SQLSelectParserParser.Create_role_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "role", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_user_expression(@NotNull SQLSelectParserParser.Create_user_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "user", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_stage_expression(@NotNull SQLSelectParserParser.Create_stage_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "stage", 1));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	@Override
+	public void exitCreate_file_format_expression(@NotNull SQLSelectParserParser.Create_file_format_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
+		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "file format", 1, 2));
+
+		if (children.size() >= 1) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
+			Object name = extractPreferredName(nameNode);
+			if (name != null) {
+				createNode.put(MUMBLE_NAME_KEY, name);
+			}
+		}
+		if (children.size() >= 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_CREATE_KEY, createNode);
+	}
+
+	/*
+	===============================================================================
+	  DROP Objects Statement Sources (TABLE, VIEW, MATERIALIZED VIEW) with AS (subquery or expression list)
+	===============================================================================
+	*/
+
+	@Override
+	public void exitDrop_options(@NotNull SQLSelectParserParser.Drop_optionsContext ctx) {
+		passThroughDdlRuleValueToParent(ctx);
+	}
+
+	/*
+	===============================================================================
+	  ALTER Objects Statement Sources (TABLE, VIEW, MATERIALIZED VIEW) with AS (subquery or expression list)
+	===============================================================================
+	*/
+
+	@Override
+	public void exitAlter_options(@NotNull SQLSelectParserParser.Alter_optionsContext ctx) {
+		passThroughDdlRuleValueToParent(ctx);
+	}
+
+	@Override
+	public void exitGeneric_ddl_options(@NotNull SQLSelectParserParser.Generic_ddl_optionsContext ctx) {
+		passThroughDdlRuleValueToParent(ctx);
+	}
+
+	@Override
+	public void exitGeneric_ddl_paren_content(@NotNull SQLSelectParserParser.Generic_ddl_paren_contentContext ctx) {
+		passThroughDdlRuleValueToParent(ctx);
+	}
+
+	private void passThroughDdlRuleValueToParent(ParserRuleContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			walker.showTrace(walker.parseTrace, "Missing DDL pass-through map: " + ctx.getText());
+			return;
+		}
+
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object value = subMap;
+		if (subMap.size() == 1 && subMap.containsKey("1")) {
+			value = subMap.remove("1");
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, value);
+		walker.showTrace(walker.parseTrace, "DDL pass-through: " + value);
+	}
+
 	/*
 	===============================================================================
 	  WITH Statement <with query>
@@ -3568,415 +4104,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	// End Values Statement	
 
-	/*
-	===============================================================================
-	  CREATE Objects Statement Sources (TABLE, VIEW, MATERIALIZED VIEW) with AS (subquery or expression list)
-	===============================================================================
-	*/
-
-	@Override
-	public void enterCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
-		walker.pushSymbolTable();
-	}
-
-	@Override
-	public void exitCreate_statement_primary(@NotNull SQLSelectParserParser.Create_statement_primaryContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		walker.handleOneChild(ruleIndex);
-
-		String createScopeKey = MUMBLE_CREATE_KEY + walker.queryCount;
-		walker.popSymbolTable(createScopeKey, walker.symbolTable);
-		walker.queryCount++;
-	}
-
-	@Override
-	public void exitCreate_table_expression(@NotNull SQLSelectParserParser.Create_table_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "table", 1));
-
-		if (!children.isEmpty()) {
-			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(0)));
-		}
-
-		if (ctx.query_expression() != null) {
-			if (children.size() >= 2) {
-				createNode.put(MUMBLE_QUERY_KEY, children.get(1));
-			}
-		} else {
-			if (children.size() >= 2) {
-				createNode.put(MUMBLE_COLUMNS_KEY, children.get(1));
-			}
-			if (children.size() >= 3) {
-				createNode.put(MUMBLE_PARAMETERS_KEY, children.get(2));
-			}
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_index_expression(@NotNull SQLSelectParserParser.Create_index_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "index", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> indexNameNode = normalizeNamedObjectNode(children.get(0));
-			Object indexName = extractPreferredName(indexNameNode);
-			if (indexName != null) {
-				createNode.put(MUMBLE_NAME_KEY, indexName);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(1)));
-		}
-		if (children.size() >= 3) {
-			createNode.put(MUMBLE_COLUMNS_KEY, children.get(2));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_view_expression(@NotNull SQLSelectParserParser.Create_view_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "view", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_materialized_view_expression(@NotNull SQLSelectParserParser.Create_materialized_view_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "materialized view", 1, 2));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_function_expression(@NotNull SQLSelectParserParser.Create_function_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "function", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-
-		if (children.size() == 4) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
-			createNode.put(MUMBLE_DATATYPE_KEY, children.get(2));
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(3));
-		} else if (children.size() >= 3) {
-			createNode.put(MUMBLE_DATATYPE_KEY, children.get(1));
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_procedure_expression(@NotNull SQLSelectParserParser.Create_procedure_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "procedure", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-
-		if (children.size() == 3) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
-		} else if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_macro_expression(@NotNull SQLSelectParserParser.Create_macro_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-
-		if (children.size() == 3) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
-			createNode.put(MUMBLE_QUERY_KEY, children.get(2));
-		} else if (children.size() >= 2) {
-			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_sequence_expression(@NotNull SQLSelectParserParser.Create_sequence_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "sequence", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_schema_expression(@NotNull SQLSelectParserParser.Create_schema_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "schema", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_database_expression(@NotNull SQLSelectParserParser.Create_database_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "database", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_role_expression(@NotNull SQLSelectParserParser.Create_role_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "role", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_user_expression(@NotNull SQLSelectParserParser.Create_user_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "user", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_stage_expression(@NotNull SQLSelectParserParser.Create_stage_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "stage", 1));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	@Override
-	public void exitCreate_file_format_expression(@NotNull SQLSelectParserParser.Create_file_format_expressionContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		List<Object> children = extractOrderedRuleChildren(subMap);
-		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "file format", 1, 2));
-
-		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
-		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
-		}
-
-		subMap.clear();
-		subMap.put(MUMBLE_CREATE_KEY, createNode);
-	}
-
-	
 
 	/*
 	===============================================================================
