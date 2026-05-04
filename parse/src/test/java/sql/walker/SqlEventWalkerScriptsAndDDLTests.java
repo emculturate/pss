@@ -22,7 +22,6 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runScriptParsertest(query, parser);
 
 		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain table_function", ast.contains("table_function="));
 		Assert.assertFalse("SCRIPT AST should not leak rule Type keys", ast.contains("Type="));
 
 		Map<String, Object> scriptMap = (Map<String, Object>) extractor.getAsTree().get("SCRIPT");
@@ -32,49 +31,61 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Map<String, Object> secondStatement = (Map<String, Object>) scriptMap.get("2");
 		Assert.assertNotNull("SCRIPT statement 1 should be present", firstStatement);
 		Assert.assertNotNull("SCRIPT statement 2 should be present", secondStatement);
-		Assert.assertTrue("SCRIPT statement 1 should be promoted to select AST", firstStatement.containsKey("select"));
-		Assert.assertTrue("SCRIPT statement 2 should be promoted to select AST", secondStatement.containsKey("select"));
-		Assert.assertFalse("SCRIPT statement 1 should not have wrapper key 1", firstStatement.containsKey("1"));
-		Assert.assertFalse("SCRIPT statement 2 should not have wrapper key 1", secondStatement.containsKey("1"));
+		Assert.assertEquals("SCRIPT statement 1 tree is wrong",
+				"{select={1={column={name=col1, table_ref=p}}, 2={column={name=*, table_ref=*}}}, from={table={alias=f, table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[1,2]'}}, function_name=parse_json}}}}}}}",
+				firstStatement.toString());
+		Assert.assertEquals("SCRIPT statement 2 tree is wrong",
+				"{select={1={column={name=*, table_ref=*}}}, from={table={alias=f2, table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[3,4]'}}, function_name=parse_json}}}}}}}",
+				secondStatement.toString());
 
 		Map<String, Object> scriptSymbolTable = (Map<String, Object>) extractor.getSymbolTable().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT symbol table should be present", scriptSymbolTable);
 		Map<String, Object> firstStatementSymbols = (Map<String, Object>) scriptSymbolTable.get("1");
 		Map<String, Object> secondStatementSymbols = (Map<String, Object>) scriptSymbolTable.get("2");
-		Assert.assertNotNull("Statement 1 symbol subtree should be present", firstStatementSymbols);
-		Assert.assertNotNull("Statement 2 symbol subtree should be present", secondStatementSymbols);
-		Assert.assertTrue("Statement 1 should contain query0 scope", firstStatementSymbols.containsKey("query0"));
-		Assert.assertTrue("Statement 2 should contain query0 scope", secondStatementSymbols.containsKey("query0"));
-		Assert.assertFalse("Statement 2 should not leak query1 from previous statement", secondStatementSymbols.containsKey("query1"));
+		Assert.assertEquals("Statement 1 symbol subtree is wrong",
+				"{query0={query_dictionary={*=[[@5,15:15='*',<290>,1:15]], col1=[[@3,9:12='col1',<373>,1:9]]}, table_dictionary={flatten0={*=[[@5,15:15='*',<290>,1:15]]}}, interface={*=[{name=*, table_ref=*}], col1=[{name=col1, table_ref=p}]}, table_alias={f=flatten0}}}",
+				firstStatementSymbols.toString());
+		Assert.assertEquals("Statement 2 symbol subtree is wrong",
+				"{query0={query_dictionary={*=[[@22,77:77='*',<290>,2:8]]}, table_dictionary={flatten1={*=[[@22,77:77='*',<290>,2:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f2=flatten1}}}",
+				secondStatementSymbols.toString());
 
 		Map<String, Object> scriptTableDictionary = (Map<String, Object>) extractor.getTableColumnDictionaryMap().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT table dictionary collector should be present", scriptTableDictionary);
-		Assert.assertNotNull("Statement 1 table dictionary snapshot should be present", scriptTableDictionary.get("1"));
-		Assert.assertNotNull("Statement 2 table dictionary snapshot should be present", scriptTableDictionary.get("2"));
+		Assert.assertEquals("Statement 1 table dictionary snapshot is wrong",
+				"{flatten0={*=[[@5,15:15='*',<290>,1:15]]}}",
+				scriptTableDictionary.get("1").toString());
+		Assert.assertEquals("Statement 2 table dictionary snapshot is wrong",
+				"{flatten1={*=[[@22,77:77='*',<290>,2:8]]}}",
+				scriptTableDictionary.get("2").toString());
 
 		Map<String, Object> scriptQueryDictionary = (Map<String, Object>) extractor.getQueryColumnDictionaryMap().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT query dictionary collector should be present", scriptQueryDictionary);
 		Map<String, Object> firstStatementQueryDictionary = (Map<String, Object>) scriptQueryDictionary.get("1");
 		Map<String, Object> secondStatementQueryDictionary = (Map<String, Object>) scriptQueryDictionary.get("2");
-		Assert.assertNotNull("Statement 1 query dictionary snapshot should be present", firstStatementQueryDictionary);
-		Assert.assertNotNull("Statement 2 query dictionary snapshot should be present", secondStatementQueryDictionary);
-		Assert.assertTrue("Statement 1 query dictionary should contain query0", firstStatementQueryDictionary.containsKey("query0"));
-		Assert.assertTrue("Statement 2 query dictionary should contain query0", secondStatementQueryDictionary.containsKey("query0"));
-		Assert.assertFalse("Statement 2 query dictionary should not contain query1", secondStatementQueryDictionary.containsKey("query1"));
+		Assert.assertEquals("Statement 1 query dictionary snapshot is wrong",
+				"{query0={*=[[@5,15:15='*',<290>,1:15]], col1=[[@3,9:12='col1',<373>,1:9]]}}",
+				firstStatementQueryDictionary.toString());
+		Assert.assertEquals("Statement 2 query dictionary snapshot is wrong",
+				"{query0={*=[[@22,77:77='*',<290>,2:8]]}}",
+				secondStatementQueryDictionary.toString());
 
 		Map<String, Object> scriptSubstitutions = (Map<String, Object>) extractor.getSubstitutionsMap().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT substitutions collector should be present", scriptSubstitutions);
-		Assert.assertNotNull("Statement 1 substitutions snapshot should be present", scriptSubstitutions.get("1"));
-		Assert.assertNotNull("Statement 2 substitutions snapshot should be present", scriptSubstitutions.get("2"));
+		Assert.assertEquals("Statement 1 substitutions snapshot is wrong", "{}",
+				scriptSubstitutions.get("1").toString());
+		Assert.assertEquals("Statement 2 substitutions snapshot is wrong", "{}",
+				scriptSubstitutions.get("2").toString());
 
 		Map<String, Object> scriptArrayCollectors = (Map<String, Object>) extractor.getArrayOutputCollectorsMap().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT array-output collector should be present", scriptArrayCollectors);
 		Map<String, Object> firstStatementArrays = (Map<String, Object>) scriptArrayCollectors.get("1");
 		Map<String, Object> secondStatementArrays = (Map<String, Object>) scriptArrayCollectors.get("2");
-		Assert.assertNotNull("Statement 1 array-output snapshot should be present", firstStatementArrays);
-		Assert.assertNotNull("Statement 2 array-output snapshot should be present", secondStatementArrays);
-		Assert.assertTrue("Array-output snapshots should include queryInterface key", firstStatementArrays.containsKey("queryInterface"));
-		Assert.assertTrue("Array-output snapshots should include queryInterface key", secondStatementArrays.containsKey("queryInterface"));
+		Assert.assertEquals("Statement 1 array-output snapshot is wrong",
+				"{queryInterface=[*, col1]}",
+				firstStatementArrays.toString());
+		Assert.assertEquals("Statement 2 array-output snapshot is wrong",
+				"{queryInterface=[*]}",
+				secondStatementArrays.toString());
 
 		Map<String, Object> snippetArrayCollectors = extractor.getSnippet().getArrayOutputCollectorsMap();
 		Assert.assertNotNull("Snippet should carry optional array-output collector for scripts", snippetArrayCollectors);
@@ -154,7 +165,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=index, name={1=mydb, Type=32, 2=myschema, 3=idx1}, table={schema=myschema, dbname=mydb, table=source_tab}, columns={1={column={name=col1, table_ref=null}}}}}}",
+				"{DDL={create={type=index, name=idx1, table={dbname=mydb, schema=myschema, table=source_tab}, columns={1={column={name=col1, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -231,7 +242,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=function, name=fn1, parameters={1={}, Type=45}, data_type={type=INT}, clauses={1={}, Type=56}}}}",
+				"{DDL={create={type=function, name=fn1, parameters=arg1 int, data_type={type=INT}, clauses=language sql}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -255,7 +266,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=procedure, name={1=mydb, Type=32, 2=myschema, 3=pr1}, parameters={1={}, Type=46}, clauses={1={}, Type=57}}}}",
+				"{DDL={create={type=procedure, name=pr1, parameters=arg1 int, clauses=language sql}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -279,7 +290,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=macro, query={1={}, Type=47}}}}",
+				"{DDL={create={type=macro, parameters=arg1 int}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -306,7 +317,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=sequence, name={1=mydb, Type=32, 2=myschema, 3=seq1}, clauses={1={}, Type=49}}}}",
+				"{DDL={create={type=sequence, name=seq1, clauses=start 1}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -330,7 +341,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=schema, name={1=mydb, Type=32, 2=myschema}}}}",
+				"{DDL={create={type=schema, name=myschema}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -354,7 +365,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=database, name={1=mydb, Type=32}}}}",
+				"{DDL={create={type=database, name=mydb}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -378,7 +389,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=role, name={1=myrole, Type=32}}}}",
+				"{DDL={create={type=role, name=myrole}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -402,7 +413,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=user, name={1=myuser, Type=32}}}}",
+				"{DDL={create={type=user, name=myuser}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -426,7 +437,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=stage, name={1=mydb, Type=32, 2=myschema, 3=stg1}}}}",
+				"{DDL={create={type=stage, name=stg1}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -450,11 +461,59 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=file format, name={1=mydb, Type=32, 2=myschema, 3=ff1}}}}",
+				"{DDL={create={type=file format, name=ff1}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{create0={}}",
+				extractor.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
+				extractor.getSnippet().getArrayOutputCollectorsMap());
+	}
+
+	@Test
+	public void simpleDdlDropTableExpressionV1Test() {
+		final String query = "drop table mydb.myschema.tab1 if exists";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong",
+				"{DDL={drop={type=table, name={dbname=mydb, schema=myschema, table=tab1}, options=if exists}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{drop0={}}",
+				extractor.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
+				extractor.getSnippet().getArrayOutputCollectorsMap());
+	}
+
+	@Test
+	public void simpleDdlAlterTableExpressionV1Test() {
+		final String query = "alter table mydb.myschema.tab1 rename to tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong",
+				"{DDL={alter={type=table, name={dbname=mydb, schema=myschema, table=tab1}, options=rename to tab2}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{alter0={}}",
 				extractor.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());

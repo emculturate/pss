@@ -15,6 +15,7 @@ public final class MumbleConstants {
 
     public static final String MUMBLE_ALIAS_KEY = "alias";
     public static final String MUMBLE_AND_KEY = "and";
+    public static final String MUMBLE_ALTER_KEY = "alter";
     public static final String MUMBLE_ARGUMENT_KEY = "argument";
     public static final String MUMBLE_ASSIGNMENTS_KEY = "assignments";
     public static final String MUMBLE_BETWEEN_KEY = "between";
@@ -31,6 +32,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_CTE_KEY = "cte";
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
+    public static final String MUMBLE_DROP_KEY = "drop";
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";
     public static final String MUMBLE_EXISTS_KEY = "exists";
@@ -90,6 +92,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_OFFSET_KEY = "offset";
     public static final String MUMBLE_OPERAND_KEY = "operand";
     public static final String MUMBLE_OPERATOR_KEY = "operator";
+    public static final String MUMBLE_OPTIONS_KEY = "options";
     public static final String MUMBLE_ORDERBY_KEY = "orderby";
     public static final String MUMBLE_ORDERED_BY_KEY = "ordered_by";
     public static final String MUMBLE_OR_KEY = "or";

@@ -289,49 +289,23 @@ create_statement_primary
   ;
 
 drop_statement_primary
-  : drop_table_expression
-  | drop_index_expression
-  | drop_view_expression
-  | drop_materialized_view_expression
-  | drop_function_expression
-  | drop_procedure_expression
-  | drop_macro_expression
-  | drop_sequence_expression
-  | drop_schema_expression
-  | drop_database_expression
-  | drop_role_expression
-  | drop_user_expression
-  | drop_stage_expression
-  | drop_file_format_expression
+   : DROP ddl_object_type db_object_name drop_options?
   ;
 
 alter_statement_primary
-  : alter_table_expression
-  | alter_view_expression
-  | alter_materialized_view_expression
-  | alter_function_expression
-  | alter_procedure_expression
-  | alter_macro_expression
-  | alter_sequence_expression
-  | alter_schema_expression
-  | alter_database_expression
-  | alter_role_expression
-  | alter_user_expression
-  | alter_stage_expression
-  | alter_file_format_expression
+  : ALTER ddl_object_type db_object_name alter_options?
   ;
-
 /*
   Create rules
  */
 
 create_table_expression
-  : CREATE TABLE table_or_query_name AS query_expression
-  | CREATE TABLE table_or_query_name (LEFT_PAREN column_definition_list RIGHT_PAREN)? table_options?
+  : CREATE TABLE db_object_name AS query_expression
+  | CREATE TABLE db_object_name (LEFT_PAREN generic_ddl_paren_content RIGHT_PAREN)? generic_ddl_options?
   ;
 
 create_index_expression
-  : CREATE INDEX db_object_name ON table_or_query_name LEFT_PAREN column_reference_list RIGHT_PAREN
+  : CREATE INDEX db_object_name ON db_object_name LEFT_PAREN column_reference_list RIGHT_PAREN
   ;
 
 create_view_expression
@@ -343,175 +317,50 @@ create_materialized_view_expression
   ;
 
 create_function_expression
-  : CREATE FUNCTION db_object_name LEFT_PAREN function_parameter_list? RIGHT_PAREN RETURNS data_type function_body
+  : CREATE FUNCTION db_object_name LEFT_PAREN generic_ddl_paren_content? RIGHT_PAREN RETURNS data_type generic_ddl_options
   ;
 
 create_procedure_expression
-  : CREATE PROCEDURE db_object_name LEFT_PAREN procedure_parameter_list? RIGHT_PAREN procedure_body
+  : CREATE PROCEDURE db_object_name LEFT_PAREN generic_ddl_paren_content? RIGHT_PAREN generic_ddl_options
   ;
 
 create_macro_expression
-  : CREATE MACRO db_object_name LEFT_PAREN macro_parameter_list? RIGHT_PAREN AS query_expression
+  : CREATE MACRO db_object_name LEFT_PAREN generic_ddl_paren_content? RIGHT_PAREN AS query_expression
   ;
 
 create_sequence_expression
-  : CREATE SEQUENCE db_object_name sequence_options
+  : CREATE SEQUENCE db_object_name generic_ddl_options
   ;
 
 create_schema_expression
-  : CREATE SCHEMA db_object_name schema_options?
+  : CREATE SCHEMA db_object_name generic_ddl_options?
   ;
 
 create_database_expression
-  : CREATE DATABASE db_object_name database_options?
+  : CREATE DATABASE db_object_name generic_ddl_options?
   ;
 
 create_role_expression
-  : CREATE ROLE db_object_name role_options?
+  : CREATE ROLE db_object_name generic_ddl_options?
   ;
 
 create_user_expression
-  : CREATE USER db_object_name user_options?
+  : CREATE USER db_object_name generic_ddl_options?
   ;
 
 create_stage_expression
-  : CREATE STAGE db_object_name stage_options?
+  : CREATE STAGE db_object_name generic_ddl_options?
   ;
 
 create_file_format_expression
-  : CREATE FILE FORMAT db_object_name file_format_options?
-  ;
-
-// Unifies CREATE-object names so each missing *_name rule accepts either
-// a table-like reference or a function-like reference.
-db_object_name
-  : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
-  ;
-
-
-// Paren-bounded placeholders
-column_definition_list
-  : generic_ddl_paren_content
-  ;
-
-function_parameter_list
-  : generic_ddl_paren_content
-  ;
-
-procedure_parameter_list
-  : generic_ddl_paren_content
-  ;
-
-macro_parameter_list
-  : generic_ddl_paren_content
-  ;
-
-// Statement-bounded placeholders
-table_options
-  : generic_ddl_options
-  ;
-
-sequence_options
-  : generic_ddl_options
-  ;
-
-schema_options
-  : generic_ddl_options
-  ;
-
-database_options
-  : generic_ddl_options
-  ;
-
-role_options
-  : generic_ddl_options
-  ;
-
-user_options
-  : generic_ddl_options
-  ;
-
-stage_options
-  : generic_ddl_options
-  ;
-
-file_format_options
-  : generic_ddl_options
-  ;
-
-function_body
-  : generic_ddl_options
-  ;
-
-procedure_body
-  : generic_ddl_options
+  : CREATE FILE FORMAT db_object_name generic_ddl_options?
   ;
 
 /*
   Delete rules
  */
 
-drop_table_expression
-  : drop_named_object_expression
-  ;
-
-drop_index_expression
-  : drop_named_object_expression
-  ;
-
-drop_view_expression
-  : drop_named_object_expression
-  ;
-
-drop_materialized_view_expression
-  : DROP MATERIALIZED VIEW db_object_name drop_options?
-  ;
-
-drop_function_expression
-  : drop_named_object_expression
-  ;
-
-drop_procedure_expression
-  : drop_named_object_expression
-  ;
-
-drop_macro_expression
-  : drop_named_object_expression
-  ;
-
-drop_sequence_expression
-  : drop_named_object_expression
-  ;
-
-drop_schema_expression
-  : drop_named_object_expression
-  ;
-
-drop_database_expression
-  : drop_named_object_expression
-  ;
-
-drop_role_expression
-  : drop_named_object_expression
-  ;
-
-drop_user_expression
-  : drop_named_object_expression
-  ;
-
-drop_stage_expression
-  : drop_named_object_expression
-  ;
-
-drop_file_format_expression
-  : DROP FILE FORMAT db_object_name drop_options?
-  ;
-
-drop_named_object_expression
-  : DROP drop_object_type db_object_name drop_options?
-  ;
-
-drop_object_type
+ddl_object_type
   : TABLE
   | INDEX
   | VIEW
@@ -524,6 +373,8 @@ drop_object_type
   | ROLE
   | USER
   | STAGE
+  | FILE FORMAT
+  | MATERIALIZED VIEW
   ;
 
 drop_options
@@ -533,58 +384,6 @@ drop_options
  /* 
  Alter rules
  */
-
-alter_table_expression
-  : ALTER TABLE table_or_query_name alter_options?
-  ;
-
-alter_view_expression
-  : ALTER VIEW db_object_name alter_options?
-  ;
-
-alter_materialized_view_expression
-  : ALTER MATERIALIZED VIEW db_object_name alter_options?
-  ;
-
-alter_function_expression
-  : ALTER FUNCTION db_object_name alter_options?
-  ;
-
-alter_procedure_expression
-  : ALTER PROCEDURE db_object_name alter_options?
-  ;
-
-alter_macro_expression
-  : ALTER MACRO db_object_name alter_options?
-  ;
-
-alter_sequence_expression
-  : ALTER SEQUENCE db_object_name alter_options?
-  ;
-
-alter_schema_expression
-  : ALTER SCHEMA db_object_name alter_options?
-  ;
-
-alter_database_expression
-  : ALTER DATABASE db_object_name alter_options?
-  ;
-
-alter_role_expression
-  : ALTER ROLE db_object_name alter_options?
-  ;
-
-alter_user_expression
-  : ALTER USER db_object_name alter_options?
-  ;
-
-alter_stage_expression
-  : ALTER STAGE db_object_name alter_options?
-  ;
-
-alter_file_format_expression
-  : ALTER FILE FORMAT db_object_name alter_options?
-  ;
 
 alter_options
   : generic_ddl_options
@@ -691,7 +490,7 @@ snowflake_insert
 // Intentionally excludes table_function_primary so patterns like
 // `INSERT INTO tab1 (c, d) ...` cannot be consumed as a table function call.
 insert_target_table_primary
-  : (table_or_query_name | variable_identifier | jinja_identifier) (LEFT_PAREN column_reference_list RIGHT_PAREN)? relation_as_clause?
+  : (db_object_name | variable_identifier | jinja_identifier) (LEFT_PAREN column_reference_list RIGHT_PAREN)? relation_as_clause?
   ;
   
 postgres_insert // this syntax is not complete for POSTGRES
@@ -817,7 +616,7 @@ query_specification
 
 
 into_list
-  : INTO table_or_query_name
+  : INTO db_object_name
   ;
 
 set_qualifier
@@ -879,7 +678,7 @@ lateral_modifier
 
 // Used anywhere a table name is expected
 table_primary
-  : table_or_query_name relation_as_clause?
+  : db_object_name relation_as_clause?
   | variable_identifier as_clause
   | jinja_identifier relation_as_clause?
   | table_function_primary relation_as_clause?
@@ -894,7 +693,7 @@ relation_as_clause
 
 // Used ONLY in the TUPLE Variable Substitution end point
 tuple_primary
-  : table_or_query_name
+  : db_object_name
   | variable_identifier
   | jinja_identifier
   | table_function_primary
@@ -904,7 +703,7 @@ tuple_primary
 
 
 
-table_or_query_name
+db_object_name
   : identifier   (DOT  (simple_numeric_identifier|identifier))?  (DOT  (simple_numeric_identifier|identifier))?
   ;
 
@@ -1081,7 +880,7 @@ infer_schema_files_argument
 // VALIDATE( [<namespace>.]<table_name> , JOB_ID => { '<query_id>' | '_last' } )
 validate_table_function
   : validate_function_name LEFT_PAREN
-      table_or_query_name
+      db_object_name
       COMMA JOB_ID IMPLIES table_argument_literal
     RIGHT_PAREN
   ;
