@@ -1,4 +1,6 @@
 package sql.walker;
+import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -952,4 +954,155 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 				extractor.getSymbolTable().toString());
 	}
 
+
+
+	@Test
+	public void complexJINJAQueryWithWoldcardTest() {
+		// From PDP DBT: 
+		String sql = " with recent_sourcecontacts as\n"
+				+ "(\n"
+				+ "select sourcecontact_id, contact_key from\n"
+				+ "(select sc_current.sourcecontact_id, sc_current.contact_key,\n"
+				+ "row_number() over (partition by sc_current.contact_key order by sc_current.contact_priority asc,\n"
+				+ "                    sc_current.first_sourced_dt) as rank_rc\n"
+				+ "from {{ ref ( 'prc__contacts_by_sourcecontacts_current') }} as sc_current) rc\n"
+				+ "where rc.rank_rc =1),\n"
+				+ "cte_recent_gift_data as (select pcdx.contact_key, gifts_data.*, row_number() over\n"
+				+ "    (partition by rc.contact_key,gifts_data.source_partnercontact_id\n"
+				+ "                      order by gifts_data.gift_dt desc,\n"
+				+ "                      CASE\n"
+				+ "                       WHEN fund_desc = 'Unallocated Fund' THEN 1 ELSE 0\n"
+				+ "                      END,\n"
+				+ "                      gifts_data.fund_amount desc, gifts_data.fund_desc desc) as rn\n"
+				+ "                      from recent_sourcecontacts rc\n"
+				+ "                      inner join {{ ref ( 'prc_contact_donor_xwalk') }} pcdx\n"
+				+ "                      on rc.contact_key = pcdx.contact_key\n"
+				+ "                      inner join (select g.gift_id, g.source_partnercontact_id, gf.fund_amount, g.gift_dt, gf.fund_desc\n"
+				+ "                                    from {{ source('PDP_AMS', 'gifts')}} g\n"
+				+ "                                    inner join {{ source('PDP_AMS','gifts_funds')}} gf\n"
+				+ "                                    on g.gift_id = gf.gift_id\n"
+				+ "                                    where g.eab_marketing_inclusion_ind = 1 and g.gift_amount > 0\n"
+				+ "                                    union\n"
+				+ "                                    select ga.gift_id, ga.soft_credit_id as source_partnercontact_id, gf.fund_amount, ga.gift_dt, gf.fund_desc\n"
+				+ "                                    from {{ source('PDP_AMS', 'gifts_allocation')}} ga\n"
+				+ "                                    inner join {{ source('PDP_AMS', 'gifts')}} g\n"
+				+ "                                    on ga.gift_id = g.gift_id\n"
+				+ "                                    inner join {{ source('PDP_AMS','gifts_funds')}} gf\n"
+				+ "                                    on ga.gift_id = gf.gift_id\n"
+				+ "                                    where g.eab_marketing_inclusion_ind = 1 and ga.soft_credit_amount > 0) gifts_data\n"
+				+ "                      on gifts_data.source_partnercontact_id = pcdx.source_partnercontact_id)\n"
+				+ "select crgd.contact_key,\n"
+				+ "       crgd.gift_id,\n"
+				+ "       crgd.fund_desc as fund_name_mr_calc,\n"
+				+ "       crgd.gift_dt as fund_date_mr_calc,\n"
+				+ "       cast(ceil(crgd.fund_amount)as integer) as fund_amt_mr_calc\n"
+				+ "from cte_recent_gift_data crgd\n"
+				+ "where crgd.rn = 1 ";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				null,
+				1);
+
+		Assert.assertEquals("Global Table Dictionary is wrong",
+				"{cte_recent_gift_data={fund_desc=[[@304,2271:2274='crgd',<373>,35:7]], contact_key=[[@296,2225:2228='crgd',<373>,33:7]], fund_amount=[[@320,2367:2370='crgd',<373>,37:17]], gift_id=[[@300,2250:2253='crgd',<373>,34:7]], rn=[[@333,2453:2456='crgd',<373>,39:6]], gift_dt=[[@310,2315:2318='crgd',<373>,36:7]]}, {{ ref ( 'prc__contacts_by_sourcecontacts_current') }}={contact_key=[[@15,112:121='sc_current',<373>,4:37], [@26,168:177='sc_current',<373>,5:32]], first_sourced_dt=[[@36,253:262='sc_current',<373>,6:20]], sourcecontact_id=[[@11,83:92='sc_current',<373>,4:8]], contact_priority=[[@31,200:209='sc_current',<373>,5:64]]}, recent_sourcecontacts={contact_key=[[@80,493:494='rc',<373>,10:18], [@130,965:966='rc',<373>,18:25]]}, {{ source('pdp_ams', 'gifts')}}={source_partnercontact_id=[[@145,1051:1051='g',<373>,19:52]], gift_id=[[@141,1040:1040='g',<373>,19:41], [@182,1320:1320='g',<373>,22:39], [@250,1846:1846='g',<373>,28:52]], gift_dt=[[@153,1095:1095='g',<373>,19:96]], gift_amount=[[@196,1423:1423='g',<373>,23:80]], eab_marketing_inclusion_ind=[[@190,1385:1385='g',<373>,23:42], [@273,2048:2048='g',<373>,31:42]]}, {{ source('pdp_ams', 'gifts_allocation')}}={soft_credit_id=[[@207,1538:1539='ga',<373>,25:55]], soft_credit_amount=[[@279,2086:2087='ga',<373>,31:80]], gift_id=[[@203,1526:1527='ga',<373>,25:43], [@246,1833:1834='ga',<373>,28:39], [@265,1982:1983='ga',<373>,30:39]], gift_dt=[[@217,1601:1602='ga',<373>,25:118]]}, {{ source('pdp_ams','gifts_funds')}}={fund_desc=[[@157,1106:1107='gf',<373>,19:107], [@221,1613:1614='gf',<373>,25:130]], fund_amount=[[@149,1079:1080='gf',<373>,19:80], [@213,1585:1586='gf',<373>,25:102]], gift_id=[[@186,1332:1333='gf',<373>,22:51], [@269,1995:1996='gf',<373>,30:52]]}, {{ ref ( 'prc_contact_donor_xwalk') }}={source_partnercontact_id=[[@291,2187:2190='pcdx',<373>,32:63]], contact_key=[[@65,425:428='pcdx',<373>,9:32], [@134,982:985='pcdx',<373>,18:42]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Global Query Dictionary is wrong",
+				"{query5={contact_key=[[@67,430:440='contact_key',<373>,9:37]], *=[[@71,454:454='*',<290>,9:61]], rn=[[@116,808:809='rn',<373>,15:81]]}, query6={contact_key=[[@298,2230:2240='contact_key',<373>,33:12]], fund_date_mr_calc=[[@314,2331:2347='fund_date_mr_calc',<373>,36:23]], gift_id=[[@302,2255:2261='gift_id',<373>,34:12]], fund_name_mr_calc=[[@308,2289:2305='fund_name_mr_calc',<373>,35:25]], fund_amt_mr_calc=[[@328,2399:2414='fund_amt_mr_calc',<373>,37:49]]}, query0={contact_key=[[@17,123:133='contact_key',<373>,4:48]], sourcecontact_id=[[@13,94:109='sourcecontact_id',<373>,4:19]], rank_rc=[[@41,285:291='rank_rc',<373>,6:52], [@54,377:378='rc',<373>,8:6]]}, query1={contact_key=[[@7,58:68='contact_key',<373>,3:25]], sourcecontact_id=[[@5,40:55='sourcecontact_id',<373>,3:7]]}, query2={fund_desc=[[@159,1109:1117='fund_desc',<373>,19:110]], source_partnercontact_id=[[@147,1053:1076='source_partnercontact_id',<373>,19:54]], fund_amount=[[@151,1082:1092='fund_amount',<373>,19:83]], gift_id=[[@143,1042:1048='gift_id',<373>,19:43]], gift_dt=[[@155,1097:1103='gift_dt',<373>,19:98]]}, query3={fund_desc=[[@223,1616:1624='fund_desc',<373>,25:133]], source_partnercontact_id=[[@211,1559:1582='source_partnercontact_id',<373>,25:76]], fund_amount=[[@215,1588:1598='fund_amount',<373>,25:105]], gift_id=[[@205,1529:1535='gift_id',<373>,25:46]], gift_dt=[[@219,1604:1610='gift_dt',<373>,25:121]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> symbolTable = extractor.getSymbolTable();
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> query6Scope = (Map<String, Object>) symbolTable.get("query6");
+		Assert.assertEquals("query6 local query_dictionary is wrong",
+				"{contact_key=[[@298,2230:2240='contact_key',<373>,33:12]], fund_date_mr_calc=[[@314,2331:2347='fund_date_mr_calc',<373>,36:23]], gift_id=[[@302,2255:2261='gift_id',<373>,34:12]], fund_name_mr_calc=[[@308,2289:2305='fund_name_mr_calc',<373>,35:25]], fund_amt_mr_calc=[[@328,2399:2414='fund_amt_mr_calc',<373>,37:49]]}",
+				query6Scope.get("query_dictionary").toString());
+		Assert.assertEquals("query6 local table_dictionary is wrong",
+				"{cte_recent_gift_data={fund_desc=[[@304,2271:2274='crgd',<373>,35:7]], contact_key=[[@296,2225:2228='crgd',<373>,33:7]], fund_amount=[[@320,2367:2370='crgd',<373>,37:17]], gift_id=[[@300,2250:2253='crgd',<373>,34:7]], rn=[[@333,2453:2456='crgd',<373>,39:6]], gift_dt=[[@310,2315:2318='crgd',<373>,36:7]]}}",
+				query6Scope.get("table_dictionary").toString());
+		Assert.assertEquals("query6 local interface is wrong",
+				"{contact_key=[{name=contact_key, table_ref=crgd}], fund_date_mr_calc=[{name=gift_dt, table_ref=crgd}], gift_id=[{name=gift_id, table_ref=crgd}], fund_name_mr_calc=[{name=fund_desc, table_ref=crgd}], fund_amt_mr_calc=[{name=fund_amount, table_ref=crgd}]}",
+				query6Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> defQuery1Scope = (Map<String, Object>) query6Scope.get("def_query1");
+		Assert.assertEquals("def_query1 local query_dictionary is wrong",
+				"{contact_key=[[@7,58:68='contact_key',<373>,3:25]], sourcecontact_id=[[@5,40:55='sourcecontact_id',<373>,3:7]]}",
+				defQuery1Scope.get("query_dictionary").toString());
+		Assert.assertEquals("def_query1 local table_dictionary is wrong",
+				"{}",
+				defQuery1Scope.get("table_dictionary").toString());
+		Assert.assertEquals("def_query1 local interface is wrong",
+				"{contact_key=[{name=contact_key, table_ref=query0}], sourcecontact_id=[{name=sourcecontact_id, table_ref=query0}]}",
+				defQuery1Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> defQuery0Scope = (Map<String, Object>) defQuery1Scope.get("def_query0");
+		Assert.assertEquals("def_query0 local query_dictionary is wrong",
+				"{contact_key=[[@17,123:133='contact_key',<373>,4:48]], sourcecontact_id=[[@13,94:109='sourcecontact_id',<373>,4:19]], rank_rc=[[@41,285:291='rank_rc',<373>,6:52], [@54,377:378='rc',<373>,8:6]]}",
+				defQuery0Scope.get("query_dictionary").toString());
+		Assert.assertEquals("def_query0 local table_dictionary is wrong",
+				"{{{ ref ( 'prc__contacts_by_sourcecontacts_current') }}={contact_key=[[@15,112:121='sc_current',<373>,4:37], [@26,168:177='sc_current',<373>,5:32]], first_sourced_dt=[[@36,253:262='sc_current',<373>,6:20]], sourcecontact_id=[[@11,83:92='sc_current',<373>,4:8]], contact_priority=[[@31,200:209='sc_current',<373>,5:64]]}}",
+				defQuery0Scope.get("table_dictionary").toString());
+		Assert.assertEquals("def_query0 local interface is wrong",
+				"{contact_key=[{name=contact_key, table_ref=sc_current}], sourcecontact_id=[{name=sourcecontact_id, table_ref=sc_current}], rank_rc=[{name=contact_key, table_ref=sc_current}, {name=contact_priority, table_ref=sc_current}, {name=first_sourced_dt, table_ref=sc_current}]}",
+				defQuery0Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> defQuery5Scope = (Map<String, Object>) query6Scope.get("def_query5");
+		Assert.assertEquals("def_query5 local query_dictionary is wrong",
+				"{contact_key=[[@67,430:440='contact_key',<373>,9:37]], *=[[@71,454:454='*',<290>,9:61]], rn=[[@116,808:809='rn',<373>,15:81]]}",
+				defQuery5Scope.get("query_dictionary").toString());
+		Assert.assertEquals("def_query5 local table_dictionary is wrong",
+				"{recent_sourcecontacts={contact_key=[[@80,493:494='rc',<373>,10:18], [@130,965:966='rc',<373>,18:25]]}, {{ ref ( 'prc_contact_donor_xwalk') }}={source_partnercontact_id=[[@291,2187:2190='pcdx',<373>,32:63]], contact_key=[[@65,425:428='pcdx',<373>,9:32], [@134,982:985='pcdx',<373>,18:42]]}}",
+				defQuery5Scope.get("table_dictionary").toString());
+		Assert.assertEquals("def_query5 local interface is wrong",
+				"{contact_key=[{name=contact_key, table_ref=pcdx}], *=[{name=*, table_ref=gifts_data}], rn=[{name=contact_key, table_ref=rc}, {name=source_partnercontact_id, table_ref=gifts_data}, {name=gift_dt, table_ref=gifts_data}, {name=fund_desc, table_ref=null}, {name=fund_amount, table_ref=gifts_data}, {name=fund_desc, table_ref=gifts_data}]}",
+				defQuery5Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> defUnion4Scope = (Map<String, Object>) defQuery5Scope.get("def_union4");
+		Assert.assertEquals("def_union4 local query_dictionary is wrong",
+				null,
+				defUnion4Scope.get("query_dictionary"));
+		Assert.assertEquals("def_union4 local table_dictionary is wrong",
+				null,
+				defUnion4Scope.get("table_dictionary"));
+		Assert.assertEquals("def_union4 local interface is wrong",
+				"{fund_desc=query_column, source_partnercontact_id=query_column, fund_amount=query_column, gift_id=query_column, *=wildcard, gift_dt=query_column}",
+				defUnion4Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> query2Scope = (Map<String, Object>) defUnion4Scope.get("query2");
+		Assert.assertEquals("query2 local query_dictionary is wrong",
+				"{fund_desc=[[@159,1109:1117='fund_desc',<373>,19:110]], source_partnercontact_id=[[@147,1053:1076='source_partnercontact_id',<373>,19:54]], fund_amount=[[@151,1082:1092='fund_amount',<373>,19:83]], gift_id=[[@143,1042:1048='gift_id',<373>,19:43]], gift_dt=[[@155,1097:1103='gift_dt',<373>,19:98]]}",
+				query2Scope.get("query_dictionary").toString());
+		Assert.assertEquals("query2 local table_dictionary is wrong",
+				"{{{ source('pdp_ams', 'gifts')}}={source_partnercontact_id=[[@145,1051:1051='g',<373>,19:52]], gift_id=[[@141,1040:1040='g',<373>,19:41], [@182,1320:1320='g',<373>,22:39], [@250,1846:1846='g',<373>,28:52]], gift_dt=[[@153,1095:1095='g',<373>,19:96]], gift_amount=[[@196,1423:1423='g',<373>,23:80]], eab_marketing_inclusion_ind=[[@190,1385:1385='g',<373>,23:42], [@273,2048:2048='g',<373>,31:42]]}, {{ source('pdp_ams','gifts_funds')}}={fund_desc=[[@157,1106:1107='gf',<373>,19:107], [@221,1613:1614='gf',<373>,25:130]], fund_amount=[[@149,1079:1080='gf',<373>,19:80], [@213,1585:1586='gf',<373>,25:102]], gift_id=[[@186,1332:1333='gf',<373>,22:51], [@269,1995:1996='gf',<373>,30:52]]}}",
+				query2Scope.get("table_dictionary").toString());
+		Assert.assertEquals("query2 local interface is wrong",
+				"{fund_desc=[{name=fund_desc, table_ref=gf}], source_partnercontact_id=[{name=source_partnercontact_id, table_ref=g}], fund_amount=[{name=fund_amount, table_ref=gf}], gift_id=[{name=gift_id, table_ref=g}], gift_dt=[{name=gift_dt, table_ref=g}]}",
+				query2Scope.get("interface").toString());
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> query3Scope = (Map<String, Object>) defUnion4Scope.get("query3");
+		Assert.assertEquals("query3 local query_dictionary is wrong",
+				"{fund_desc=[[@223,1616:1624='fund_desc',<373>,25:133]], source_partnercontact_id=[[@211,1559:1582='source_partnercontact_id',<373>,25:76]], fund_amount=[[@215,1588:1598='fund_amount',<373>,25:105]], gift_id=[[@205,1529:1535='gift_id',<373>,25:46]], gift_dt=[[@219,1604:1610='gift_dt',<373>,25:121]]}",
+				query3Scope.get("query_dictionary").toString());
+		Assert.assertEquals("query3 local table_dictionary is wrong",
+				"{{{ source('pdp_ams', 'gifts_allocation')}}={soft_credit_id=[[@207,1538:1539='ga',<373>,25:55]], soft_credit_amount=[[@279,2086:2087='ga',<373>,31:80]], gift_id=[[@203,1526:1527='ga',<373>,25:43], [@246,1833:1834='ga',<373>,28:39], [@265,1982:1983='ga',<373>,30:39]], gift_dt=[[@217,1601:1602='ga',<373>,25:118]]}, {{ source('pdp_ams', 'gifts')}}={gift_id=[[@250,1846:1846='g',<373>,28:52]], eab_marketing_inclusion_ind=[[@273,2048:2048='g',<373>,31:42]]}, {{ source('pdp_ams','gifts_funds')}}={fund_desc=[[@221,1613:1614='gf',<373>,25:130]], fund_amount=[[@213,1585:1586='gf',<373>,25:102]], gift_id=[[@269,1995:1996='gf',<373>,30:52]]}}",
+				query3Scope.get("table_dictionary").toString());
+		Assert.assertEquals("query3 local interface is wrong",
+				"{fund_desc=[{name=fund_desc, table_ref=gf}], source_partnercontact_id=[{name=soft_credit_id, table_ref=ga}], fund_amount=[{name=fund_amount, table_ref=gf}], gift_id=[{name=gift_id, table_ref=ga}], gift_dt=[{name=gift_dt, table_ref=ga}]}",
+				query3Scope.get("interface").toString());
+	}
 }

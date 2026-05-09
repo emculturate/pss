@@ -5001,6 +5001,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
+			if ("*".equals(columnName)) {
+				promoteQualifiedWildcardIntoQuerySource(aliasTarget, unresolvedEntry.getValue());
+				continue;
+			}
+
 			Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(aliasTarget);
 			boolean foundInQueryInterface = queryDictionaryObj instanceof Map<?, ?> queryDictionary
 					&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName);
@@ -7535,6 +7540,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				String querySourceRef = (resolvedNonTableSourceRef != null)
 						? resolvedNonTableSourceRef
 						: resolvedTableRef;
+				if ("*".equals(columnName)) {
+					promoteQualifiedWildcardIntoQuerySource(querySourceRef, unknownEntry.getValue());
+					continue;
+				}
 				Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(querySourceRef);
 				boolean foundInQueryInterface = queryDictionaryObj instanceof Map<?, ?>
 						&& containsKeyIgnoreCase((Map<String, Object>) queryDictionaryObj, columnName);
@@ -7690,6 +7699,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			sourceQueryDictionary.put(existingColumnKey, mergeReferenceCollections(existingRefs, promotedRefs));
 		} else {
 			sourceQueryDictionary.put(columnName, promotedRefs);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void promoteQualifiedWildcardIntoQuerySource(String querySourceRef, Object unknownEntryValue) {
+		if (querySourceRef == null || querySourceRef.isBlank()) {
+			return;
+		}
+
+		mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(querySourceRef, "*", unknownEntryValue);
+
+		Object queryDefObj = getQueryDefinitionSymbol(querySourceRef);
+		if (!(queryDefObj instanceof Map<?, ?> queryDefMapObj)) {
+			return;
+		}
+
+		Map<String, Object> queryDefMap = (Map<String, Object>) queryDefMapObj;
+		Object interfaceObj = queryDefMap.get(MUMBLE_INTERFACE_KEY);
+		if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
+			return;
+		}
+
+		Map<String, Object> interfaceMap = (Map<String, Object>) interfaceMapObj;
+		if (!containsKeyIgnoreCase(interfaceMap, "*")) {
+			interfaceMap.put("*", "wildcard");
 		}
 	}
 

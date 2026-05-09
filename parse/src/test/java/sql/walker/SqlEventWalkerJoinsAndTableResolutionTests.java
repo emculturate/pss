@@ -1308,4 +1308,101 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertNoWalkerDiagnostics(extractor);
 	}
 
+	@Test
+	public void simplifiedQualifiedWildcardOverUnionInMiddleLayerTest() {
+		final String query = "select mid.id, mid.c1 "
+				+ "from (select u.* from ("
+				+ "select t1.id, t1.c1, t1.c2 from tab1 t1 "
+				+ "union "
+				+ "select t2.id, t2.c1, t2.c2 from tab2 t2"
+				+ ") u) mid "
+				+ "where mid.id > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=mid}}, 2={column={name=c1, table_ref=mid}}}, from={table={alias=mid, query={select={1={column={name=*, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=id, table_ref=t1}}, 2={column={name=c1, table_ref=t1}}, 3={column={name=c2, table_ref=t1}}}, from={table={alias=t1, table=tab1}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=id, table_ref=t2}}, 2={column={name=c1, table_ref=t2}}, 3={column={name=c2, table_ref=t2}}}, from={table={alias=t2, table=tab2}}}}}}}}}}, where={condition={left={column={name=id, table_ref=mid}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, c1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={id=[[@17,52:53='t1',<373>,1:52]], c1=[[@21,59:60='t1',<373>,1:59]], c2=[[@25,66:67='t1',<373>,1:66]]}, tab2={id=[[@33,98:99='t2',<373>,1:98]], c1=[[@37,105:106='t2',<373>,1:105]], c2=[[@41,112:113='t2',<373>,1:112]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}, query0={id=[[@19,55:56='id',<373>,1:55]], c1=[[@23,62:63='c1',<373>,1:62]], c2=[[@27,69:70='c2',<373>,1:69]]}, query1={id=[[@35,101:102='id',<373>,1:101]], c1=[[@39,108:109='c1',<373>,1:108]], c2=[[@43,115:116='c2',<373>,1:115]]}, query3={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@52,145:147='mid',<373>,1:145]], c1=[[@5,15:17='mid',<373>,1:15]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}, table_dictionary={}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, def_query3={def_union2={query0={query_dictionary={id=[[@19,55:56='id',<373>,1:55]], c1=[[@23,62:63='c1',<373>,1:62]], c2=[[@27,69:70='c2',<373>,1:69]]}, table_dictionary={tab1={id=[[@17,52:53='t1',<373>,1:52]], c1=[[@21,59:60='t1',<373>,1:59]], c2=[[@25,66:67='t1',<373>,1:66]]}}, interface={id=[{name=id, table_ref=t1}], c1=[{name=c1, table_ref=t1}], c2=[{name=c2, table_ref=t1}]}, table_alias={t1=tab1}}, interface={*=wildcard, id=query_column, c1=query_column, c2=query_column}, query1={query_dictionary={id=[[@35,101:102='id',<373>,1:101]], c1=[[@39,108:109='c1',<373>,1:108]], c2=[[@43,115:116='c2',<373>,1:115]]}, table_dictionary={tab2={id=[[@33,98:99='t2',<373>,1:98]], c1=[[@37,105:106='t2',<373>,1:105]], c2=[[@41,112:113='t2',<373>,1:112]]}}, interface={id=[{name=id, table_ref=t2}], c1=[{name=c1, table_ref=t2}], c2=[{name=c2, table_ref=t2}]}, table_alias={t2=tab2}}}, query_dictionary={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@52,145:147='mid',<373>,1:145]], c1=[[@5,15:17='mid',<373>,1:15]]}, table_dictionary={}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=union2}}, table_alias={mid=query3}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void simplifiedQualifiedWildcardOverIntersectionInMiddleLayerTest() {
+		final String query = "select mid.id, mid.c1 "
+				+ "from (select u.* from ("
+				+ "select t1.id, t1.c1, t1.c2 from tab1 t1 "
+				+ "intersect "
+				+ "select t2.id, t2.c1, t2.c2 from tab2 t2"
+				+ ") u) mid "
+				+ "where mid.id > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=mid}}, 2={column={name=c1, table_ref=mid}}}, from={table={alias=mid, query={select={1={column={name=*, table_ref=u}}}, from={table={alias=u, query={intersect={1={select={1={column={name=id, table_ref=t1}}, 2={column={name=c1, table_ref=t1}}, 3={column={name=c2, table_ref=t1}}}, from={table={alias=t1, table=tab1}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=id, table_ref=t2}}, 2={column={name=c1, table_ref=t2}}, 3={column={name=c2, table_ref=t2}}}, from={table={alias=t2, table=tab2}}}}}}}}}}, where={condition={left={column={name=id, table_ref=mid}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, c1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={id=[[@17,52:53='t1',<373>,1:52]], c1=[[@21,59:60='t1',<373>,1:59]], c2=[[@25,66:67='t1',<373>,1:66]]}, tab2={id=[[@33,102:103='t2',<373>,1:102]], c1=[[@37,109:110='t2',<373>,1:109]], c2=[[@41,116:117='t2',<373>,1:116]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}, query0={id=[[@19,55:56='id',<373>,1:55]], c1=[[@23,62:63='c1',<373>,1:62]], c2=[[@27,69:70='c2',<373>,1:69]]}, query1={id=[[@35,105:106='id',<373>,1:105]], c1=[[@39,112:113='c1',<373>,1:112]], c2=[[@43,119:120='c2',<373>,1:119]]}, query3={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@52,149:151='mid',<373>,1:149]], c1=[[@5,15:17='mid',<373>,1:15]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}, table_dictionary={}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, def_query3={query_dictionary={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@52,149:151='mid',<373>,1:149]], c1=[[@5,15:17='mid',<373>,1:15]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={id=[[@19,55:56='id',<373>,1:55]], c1=[[@23,62:63='c1',<373>,1:62]], c2=[[@27,69:70='c2',<373>,1:69]]}, table_dictionary={tab1={id=[[@17,52:53='t1',<373>,1:52]], c1=[[@21,59:60='t1',<373>,1:59]], c2=[[@25,66:67='t1',<373>,1:66]]}}, interface={id=[{name=id, table_ref=t1}], c1=[{name=c1, table_ref=t1}], c2=[{name=c2, table_ref=t1}]}, table_alias={t1=tab1}}, interface={*=wildcard, id=query_column, c1=query_column, c2=query_column}, query1={query_dictionary={id=[[@35,105:106='id',<373>,1:105]], c1=[[@39,112:113='c1',<373>,1:112]], c2=[[@43,119:120='c2',<373>,1:119]]}, table_dictionary={tab2={id=[[@33,102:103='t2',<373>,1:102]], c1=[[@37,109:110='t2',<373>,1:109]], c2=[[@41,116:117='t2',<373>,1:116]]}}, interface={id=[{name=id, table_ref=t2}], c1=[{name=c1, table_ref=t2}], c2=[{name=c2, table_ref=t2}]}, table_alias={t2=tab2}}}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=intersect2}}, table_alias={mid=query3}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void simplifiedQualifiedWildcardOverJoinInMiddleLayerTest() {
+		final String query = "select mid.id, mid.c1 "
+				+ "from (select u.* from ("
+				+ "select t1.id, t1.d1, t1.d2 from tab1 t1 "
+				+ "join tab2 t2 on t1.d3 = t2.c3"
+				+ ") u) mid "
+				+ "where mid.id > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=mid}}, 2={column={name=c1, table_ref=mid}}}, from={table={alias=mid, query={select={1={column={name=*, table_ref=u}}}, from={table={alias=u, query={select={1={column={name=id, table_ref=t1}}, 2={column={name=d1, table_ref=t1}}, 3={column={name=d2, table_ref=t1}}}, from={join={1={table={alias=t1, table=tab1}}, 2={join=join, on={condition={left={column={name=d3, table_ref=t1}}, right={column={name=c3, table_ref=t2}}, operator==}}}, 3={table={alias=t2, table=tab2}}}}}}}}}}, where={condition={left={column={name=id, table_ref=mid}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, c1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={id=[[@17,52:53='t1',<373>,1:52]], d1=[[@21,59:60='t1',<373>,1:59]], d2=[[@25,66:67='t1',<373>,1:66]], d3=[[@35,101:102='t1',<373>,1:101]]}, tab2={c3=[[@39,109:110='t2',<373>,1:109]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@11,35:35='u',<373>,1:35]], id=[[@19,55:56='id',<373>,1:55]], d1=[[@23,62:63='d1',<373>,1:62]], d2=[[@27,69:70='d2',<373>,1:69]]}, query1={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@47,129:131='mid',<373>,1:129]], c1=[[@5,15:17='mid',<373>,1:15]]}, query2={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={id=[[@3,11:12='id',<373>,1:11]], c1=[[@7,19:20='c1',<373>,1:19]]}, table_dictionary={}, def_query1={query_dictionary={*=[[@13,37:37='*',<290>,1:37]], id=[[@1,7:9='mid',<373>,1:7], [@47,129:131='mid',<373>,1:129]], c1=[[@5,15:17='mid',<373>,1:15]]}, table_dictionary={}, def_query0={query_dictionary={*=[[@11,35:35='u',<373>,1:35]], id=[[@19,55:56='id',<373>,1:55]], d1=[[@23,62:63='d1',<373>,1:62]], d2=[[@27,69:70='d2',<373>,1:69]]}, table_dictionary={tab1={id=[[@17,52:53='t1',<373>,1:52]], d1=[[@21,59:60='t1',<373>,1:59]], d2=[[@25,66:67='t1',<373>,1:66]], d3=[[@35,101:102='t1',<373>,1:101]]}, tab2={c3=[[@39,109:110='t2',<373>,1:109]]}}, filters=[{name=d3, table_ref=t1}, {name=c3, table_ref=t2}], interface={*=wildcard, id=[{name=id, table_ref=t1}], d1=[{name=d1, table_ref=t1}], d2=[{name=d2, table_ref=t1}]}, table_alias={t1=tab1, t2=tab2}}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=query0}}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, table_alias={mid=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+
+	@Test
+	public void simplifiedqualifiedNestedColumnResolutionOverUnionsTest() {
+		final String query = "with contact_streams_product_subproduct as (\n"
+				+ "  select cs.contact_key, str.product, cs.first_marketing_activity_segment_id,\n"
+				+ "         cs.latest_marketing_activity_segment_id, cs.first_marketing_activity_dt as first_contact_dt\n"
+				+ "  from {{ ref('contact_streams') }} as cs join {{ ref('streams') }} as str on cs.stream_key = str.stream_key\n"
+				+ "), unioned_first_latest_audience as (\n"
+				+ "  select csps.contact_key, csps.product, csps.first_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
+				+ "  union\n"
+				+ "  select csps.contact_key, csps.product, csps.latest_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
+				+ ")\n"
+				+ "select ufla.contact_key, ufla.segment_id, ufla.product from unioned_first_latest_audience as ufla";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+	}
 }
