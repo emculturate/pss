@@ -2913,6 +2913,39 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 					extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void updateStatementEndpointMatchesSqlEndpointTest() {
+		final String query = "UPDATE t SET a = b FROM t2 WHERE c = 1";
+
+		final SQLSelectParserParser sqlParser = parse(query);
+		SqlParseEventWalker sqlExtractor = runSQLParsertest(query, sqlParser, null, null);
+
+		final SQLSelectParserParser updateParser = parse(query);
+		SqlParseEventWalker updateExtractor = runUpdateEndPointParsertest(query, updateParser);
+
+		Assert.assertEquals("Update endpoint AST is wrong",
+				"{UPDATE={update={from={table={alias=null, table=t2}}, where={condition={left={column={name=c, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=a, table_ref=null}}, to={column={name=b, table_ref=null}}}}, table={alias=null, table=t}}}}",
+				updateExtractor.getAsTree().toString());
+		Assert.assertEquals("UPDATE endpoint subtree should match SQL endpoint subtree",
+				sqlExtractor.getAsTree().get(SQLPARSER_SQL_TREE_KEY).toString(),
+				updateExtractor.getAsTree().get(SQLPARSER_UPDATE_TREE_KEY).toString());
+		Assert.assertEquals("Interface is wrong",
+				sqlExtractor.getInterface().toString(),
+				updateExtractor.getInterface().toString());
+		Assert.assertEquals("Substitution list is wrong",
+				sqlExtractor.getSubstitutionsMap().toString(),
+				updateExtractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table dictionary is wrong",
+				sqlExtractor.getTableColumnDictionaryMap().toString(),
+				updateExtractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query column dictionary is wrong",
+				sqlExtractor.getQueryColumnDictionaryMap().toString(),
+				updateExtractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol table is wrong",
+				sqlExtractor.getSymbolTable().toString(),
+				updateExtractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void valuesStatementAsClauseInTupleVariableTest() {

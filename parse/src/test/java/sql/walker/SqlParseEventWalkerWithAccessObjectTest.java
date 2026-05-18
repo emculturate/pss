@@ -17,6 +17,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_UPDATE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
 
 /**
@@ -1455,6 +1456,25 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			ParseDiagnostic.Severity.SEVERE_WARNING,
 			"Ambiguous column reference 'c'",
 			"c");
+	}
+
+	@Test
+	public void updateEndpointAccessObjectTest() {
+		final String query = "UPDATE t SET a = b FROM t2 WHERE c = 1";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_UPDATE_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{UPDATE={update={from={table={alias=null, table=t2}}, where={condition={left={column={name=c, table_ref=null}}, right={literal=1}, operator==}}, assignments={1={set={column={name=a, table_ref=null}}, to={column={name=b, table_ref=null}}}}, table={alias=null, table=t}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<373>,1:13]]}, t2={b=[[@5,17:17='b',<373>,1:17]], c=[[@9,33:33='c',<373>,1:33]]}}, update_dictionary={a=[[@3,13:13='a',<373>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<373>,1:13]]}, t2={b=[[@5,17:17='b',<373>,1:17]], c=[[@9,33:33='c',<373>,1:33]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@3,13:13='a',<373>,1:13]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
 	}
 
 	@Test

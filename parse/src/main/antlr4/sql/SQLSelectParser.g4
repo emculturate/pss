@@ -259,6 +259,15 @@ values_statement_end
 // Used only for Insert end points
 insert_end_point
   : insert_expression EOF;
+
+/*
+===============================================================================
+  Update Statement Start Symbol
+===============================================================================
+*/
+// Used only for Update end points
+update_end_point
+  : update_expression EOF;
  
 
 /*

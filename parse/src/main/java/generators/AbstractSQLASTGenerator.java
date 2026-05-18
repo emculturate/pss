@@ -153,6 +153,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
             case mumble.SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY -> onSQLParserPredicand(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_JOIN_EXTENSION_TREE_KEY -> onSQLParserJoinExtension(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY -> onSQLParserInsert(node, sql);
+            case mumble.SQLParserEndPoints.SQLPARSER_UPDATE_TREE_KEY -> onSQLParserUpdate(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_IN_LIST_TREE_KEY -> onSQLParserInList(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY -> onSQLParserCondition(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY -> onSQLParserColumn(node, sql);
@@ -339,6 +340,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
     protected void onSQLParserPredicand(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserJoinExtension(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserInsert(Object node, StringBuilder sql) { handleStructured(node, sql); }
+    protected void onSQLParserUpdate(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserInList(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserCondition(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserColumn(Object node, StringBuilder sql) { handleStructured(node, sql); }

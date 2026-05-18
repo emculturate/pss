@@ -61,6 +61,9 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
     protected void onSQLParserInsert(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
 
     @Override
+    protected void onSQLParserUpdate(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
+
+    @Override
     protected void onSQLParserInList(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
 
     @Override

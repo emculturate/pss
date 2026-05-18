@@ -26,6 +26,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SCRIPT_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_UPDATE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
@@ -169,6 +170,8 @@ public class SqlParserAccess extends AbstractParserAccess {
             this.parserEmitPoint = parser.join_extension_value();
         } else if (type.equals(SQLPARSER_INSERT_TREE_KEY)) {
             this.parserEmitPoint = parser.insert_end_point();
+        } else if (type.equals(SQLPARSER_UPDATE_TREE_KEY)) {
+            this.parserEmitPoint = parser.update_end_point();
          } else {
             throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }

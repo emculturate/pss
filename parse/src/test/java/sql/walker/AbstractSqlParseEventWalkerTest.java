@@ -29,6 +29,7 @@ import sql.SQLSelectParserParser.ScriptContext;
 import sql.SQLSelectParserParser.SqlContext;
 import sql.SQLSelectParserParser.Sql_statementContext;
 import sql.SQLSelectParserParser.Tuple_valueContext;
+import sql.SQLSelectParserParser.Update_end_pointContext;
 import sql.SQLSelectParserParser.Values_statement_endContext;
 import sql.factory.SQLSelectParserFactory;
 
@@ -618,6 +619,28 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		}
 		return null;
 	}	
+
+	protected SqlParseEventWalker runUpdateEndPointParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Update_end_pointContext tree = parser.update_end_point();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
+				0, numErrors);
+
+			return runAnyParsertest(query, parser, tree, null, null, true);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
 	
 		
 	protected SqlParseEventWalker runQueryParsertest(final String query, final SQLSelectParserParser parser) {

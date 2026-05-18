@@ -1712,6 +1712,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
+
+	@Override
+	public void exitUpdate_end_point(SQLSelectParserParser.Update_end_pointContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		 walker.asTree.put(SQLPARSER_UPDATE_TREE_KEY, subMap.remove("1"));
+		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
+	}
 	/*
 
 	
