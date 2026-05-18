@@ -141,6 +141,52 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		}
 	}
 
+	private void assertDiagnosticAtPosition(
+			Snippet snippet,
+			String code,
+			ParseDiagnostic.Severity severity,
+			String expectedMessageFragment,
+			String expectedTokenFragment,
+			int expectedLine,
+			int expectedCharPositionInLine) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		ParseDiagnostic matched = null;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic == null || !severity.equals(diagnostic.severity()) || !code.equals(diagnostic.code())) {
+				continue;
+			}
+			if (!Integer.valueOf(expectedLine).equals(diagnostic.line())
+					|| !Integer.valueOf(expectedCharPositionInLine).equals(diagnostic.charPositionInLine())) {
+				continue;
+			}
+			matched = diagnostic;
+			break;
+		}
+
+		Assert.assertNotNull("Expected diagnostic with code " + code + " and severity " + severity, matched);
+		Assert.assertNotNull("Expected diagnostic line", matched.line());
+		Assert.assertNotNull("Expected diagnostic character position", matched.charPositionInLine());
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), matched.line());
+		Assert.assertEquals(
+				"Unexpected diagnostic character position",
+				Integer.valueOf(expectedCharPositionInLine),
+				matched.charPositionInLine());
+
+		if (expectedMessageFragment != null) {
+			Assert.assertTrue(
+					"Diagnostic message should contain '" + expectedMessageFragment + "'",
+					matched.message() != null && matched.message().contains(expectedMessageFragment));
+		}
+
+		if (expectedTokenFragment != null) {
+			Assert.assertTrue(
+					"Diagnostic token text should contain '" + expectedTokenFragment + "'",
+					matched.tokenText() != null && matched.tokenText().contains(expectedTokenFragment));
+		}
+	}
+
 	private int countFatalDiagnostics(
 			Snippet snippet,
 			String expectedCode,
@@ -534,7 +580,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = " select dd.a aa, cc.b, c from " 
 		+ "\n (select x as a from tab1) dd join (select y as b, missing from "
 		+ "\n (select z as y from tab2) ee) cc on dd.a = cc.b";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 0);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, query={select={1={column={name=x, table_ref=null}, alias=a}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=a, table_ref=dd}}, right={column={name=b, table_ref=cc}}, operator==}}}, 3={table={alias=cc, query={select={1={column={name=y, table_ref=null}, alias=b}, 2={column={name=missing, table_ref=null}}}, from={table={alias=ee, query={select={1={column={name=z, table_ref=null}, alias=y}}, from={table={alias=null, table=tab2}}}}}}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -549,20 +595,22 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={aa=[[@4,13:14='aa',<373>,1:13]], b=[[@8,20:20='b',<373>,1:20]], c=[[@10,23:23='c',<373>,1:23]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@16,45:45='a',<373>,2:14], [@1,8:9='dd',<373>,1:8], [@42,133:134='dd',<373>,3:37]]}, table_dictionary={tab1={x=[[@14,40:40='x',<373>,2:9]]}}, interface={a=[{name=x, table_ref=tab1}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0, cc=query2}, def_query2={query_dictionary={b=[[@26,79:79='b',<373>,2:48], [@6,17:18='cc',<373>,1:17], [@46,140:141='cc',<373>,3:44]], missing=[[@28,82:88='missing',<373>,2:51]]}, table_dictionary={}, def_query1={query_dictionary={y=[[@34,110:110='y',<373>,3:14]]}, table_dictionary={tab2={z=[[@32,105:105='z',<373>,3:9]]}}, interface={y=[{name=z, table_ref=tab2}]}}, interface={b=[{name=y, table_ref=query1}], missing=[{name=missing, table_ref=null}]}, table_alias={ee=query1}}}}",
 				snippet.getSymbolTable().toString());
 
-		assertDiagnosticCountBySeverity(
+		assertDiagnosticAtPosition(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
 				ParseDiagnostic.Severity.ERROR,
 				null,
 				null,
-				2);
-		assertDiagnosticCountBySeverity(
+				1,
+				23);
+		assertDiagnosticAtPosition(
 				snippet,
-				"AMBIGUOUS_COLUMN_REFERENCE",
-				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
 				null,
 				null,
-				0);
+				2,
+				51);
 	}
 
 	@Test
@@ -879,13 +927,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d, e]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert0={query_dictionary={d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]], c=[[@4,18:18='c',<373>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<373>,1:18]], d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]]}}, interface={c=[], d=[], e=[]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert0={query_dictionary={c=[[@4,18:18='c',<373>,1:18]], d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]]}, table_dictionary={tab1={c=[[@4,18:18='c',<373>,1:18]], d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]]}}, interface={c=[], d=[], e=[]}}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,18:18='c',<373>,1:18]], d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<query variable>=query}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{insert0={d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]], c=[[@4,18:18='c',<373>,1:18]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{insert0={c=[[@4,18:18='c',<373>,1:18]], d=[[@6,21:21='d',<373>,1:21]], e=[[@8,24:24='e',<373>,1:24]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
     

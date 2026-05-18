@@ -102,6 +102,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	private final SqlASTWalkerHelper walker;
 	private final Set<String> invalidVariableDiagnosticKeys;
+	private final Set<String> suppressedAmbiguousUnqualifiedKeys;
+	private final Set<String> tableFunctionSourceRefs;
 
 
 	// Constructors
@@ -111,6 +113,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Initialize the walker with the SqlASTWalkerHelper
 		this.walker = new SqlASTWalkerHelper();
 		this.invalidVariableDiagnosticKeys = new HashSet<String>();
+		this.suppressedAmbiguousUnqualifiedKeys = new HashSet<String>();
+		this.tableFunctionSourceRefs = new HashSet<String>();
 
 
 	}
@@ -1581,6 +1585,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		for (Map.Entry<String, Object> unresolvedEntry : unresolvedMap.entrySet()) {
 			String key = unresolvedEntry.getKey();
 			Object value = unresolvedEntry.getValue();
+			if (key == null || key.isBlank()) {
+				continue;
+			}
 			boolean isQualified = key != null && key.contains(".");
 			if (isQualified) {
 				if (qualified != null) {
@@ -2450,12 +2457,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			currentQuerySymbolTable = new HashMap<String, Object>();
 		}
 		HashMap<String, Object> symbols = walker.symbolTable;
+		mergeCteListIntoQueryScope(currentQuerySymbolTable, symbols);
 		walker.symbolTable = new HashMap<String, Object>();
 		walker.symbolTable.put(queryName, currentQuerySymbolTable);
 		currentQuerySymbolTable.putAll(symbols);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "WITH QUERY: " + subMap);
+	}
+
+	private void mergeCteListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
+		Map<String, Object> withCteList = getCteListSymbolMap(withSymbols);
+		if (withCteList == null || withCteList.isEmpty()) {
+			return;
+		}
+
+		Map<String, Object> queryCteList = getCteListSymbolMap(querySymbols);
+		if (queryCteList == null) {
+			querySymbols.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>(withCteList));
+		} else {
+			for (Map.Entry<String, Object> entry : withCteList.entrySet()) {
+				queryCteList.putIfAbsent(entry.getKey(), entry.getValue());
+			}
+		}
+
+		withSymbols.remove(MUMBLE_CTE_LIST_KEY);
+	}
+
+	@Override
+	public void enterWith_clause(@NotNull SQLSelectParserParser.With_clauseContext ctx) {
+		// Each WITH clause owns its own cte_list scope (important for nested WITHs).
+		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>());
 	}
 
 	@Override
@@ -2535,20 +2567,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// HashMap<String, Object> currentQuerySymbolTable = (HashMap<String, Object>) walker.symbolTable.remove(currentQueryName);
 			// Pop the symbol table for this level and add it to the parent level with a unique key.
+			Map<String, Object> cteListSymbols = ensureCteListSymbolMap();
+			emitShadowedParentCteNameWarningIfNeeded(alias, cteListSymbols, ctx);
 			walker.collectTableAlias(alias, currentQueryName);
 
 					
-			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
+			Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias, cteListSymbols);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
+					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias, cteListSymbols);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
+					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias, cteListSymbols);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
+					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias, cteListSymbols);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
+					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias, cteListSymbols);
 			if (!done)
-					done = collectQuerySymbolTable(MUMBLE_VALUES_KEY, alias);
+					done = collectQuerySymbolTable(MUMBLE_VALUES_KEY, alias, cteListSymbols);
 
 		} else {
 			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
@@ -2645,6 +2679,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> ensureCteListSymbolMap() {
+		Object cteListObject = walker.symbolTable.get(MUMBLE_CTE_LIST_KEY);
+		if (cteListObject instanceof Map<?, ?> cteListMapObject) {
+			return (Map<String, Object>) cteListMapObject;
+		}
+
+		Map<String, Object> cteListMap = new LinkedHashMap<String, Object>();
+		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, cteListMap);
+		return cteListMap;
 	}
 
 	@Override
@@ -4315,7 +4361,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterIntersected_query(@NotNull SQLSelectParserParser.Intersected_queryContext ctx) {
-		walker.pushSymbolTable();
+		pushSymbolTableWithParentCteList();
 	}
 
 	@Override
@@ -4393,7 +4439,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	
 	@Override
 	public void enterUnionized_query(@NotNull SQLSelectParserParser.Unionized_queryContext ctx) {
-		walker.pushSymbolTable();
+		pushSymbolTableWithParentCteList();
 	}
 
 	@Override
@@ -4530,7 +4576,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterQuery_specification(@NotNull SQLSelectParserParser.Query_specificationContext ctx) {
-		walker.pushSymbolTable();
+		pushSymbolTableWithParentCteList();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4600,6 +4646,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		walker.showTrace(walker.parseTrace, subMap);
+		normalizeFromClauseCteAliasMappings(subMap);
 
 		Integer symbolScopeLevel = walker.stackSymbols.get("symbolTable");
 		boolean hasParentQueryScope = symbolScopeLevel != null && symbolScopeLevel > 2;
@@ -4696,6 +4743,112 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			emitQualifiedSourceNotFoundFatals(qualifiedUnresolvedForParent);
 		}
 
+	}
+
+	@SuppressWarnings("unchecked")
+	private void normalizeFromClauseCteAliasMappings(Map<String, Object> queryMap) {
+		if (queryMap == null || queryMap.isEmpty()) {
+			return;
+		}
+
+		Object fromObj = queryMap.get(MUMBLE_FROM_KEY);
+		collectFromClauseCteAliasMappingsRecursive(fromObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectFromClauseCteAliasMappingsRecursive(Object nodeObj) {
+		if (nodeObj == null) {
+			return;
+		}
+
+		if (nodeObj instanceof Map<?, ?> nodeMapObj) {
+			Map<String, Object> nodeMap = (Map<String, Object>) nodeMapObj;
+
+			Object tableObj = nodeMap.get(MUMBLE_TABLE_KEY);
+			if (tableObj instanceof String) {
+				String tableRef = getQualifiedTableReference(nodeMap);
+				registerCteBackedSourceAliasMappings(tableRef, nodeMap.get(MUMBLE_ALIAS_KEY));
+			} else if (tableObj instanceof Map<?, ?> tableMapObj) {
+				collectFromClauseCteAliasMappingsRecursive(tableMapObj);
+			}
+
+			for (Object valueObj : nodeMap.values()) {
+				if (valueObj instanceof Map<?, ?> || valueObj instanceof List<?>) {
+					collectFromClauseCteAliasMappingsRecursive(valueObj);
+				}
+			}
+			return;
+		}
+
+		if (nodeObj instanceof List<?> nodeListObj) {
+			for (Object listItemObj : nodeListObj) {
+				collectFromClauseCteAliasMappingsRecursive(listItemObj);
+			}
+		}
+	}
+
+	private void registerCteBackedSourceAliasMappings(String tableRef, Object aliasObj) {
+		if (tableRef == null || tableRef.isBlank()) {
+			return;
+		}
+
+		String cteScopeRef = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
+		if (cteScopeRef == null || cteScopeRef.isBlank()) {
+			return;
+		}
+
+		upsertCurrentTableAliasMapping(tableRef, cteScopeRef);
+		if (aliasObj instanceof String alias && !alias.isBlank()) {
+			upsertCurrentTableAliasMapping(alias, cteScopeRef);
+			upsertVisibleCteAliasMapping(alias, tableRef, cteScopeRef);
+		}
+	}
+
+	private void upsertVisibleCteAliasMapping(String alias, String sourceRef, String cteScopeRef) {
+		if (alias == null || alias.isBlank() || cteScopeRef == null || cteScopeRef.isBlank()) {
+			return;
+		}
+
+		Map<String, Object> visibleCteList = getCteListSymbolMap(walker.symbolTable);
+		if (visibleCteList == null || visibleCteList.isEmpty()) {
+			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
+				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
+					visibleCteList = ancestorCteList;
+					break;
+				}
+			}
+		}
+
+		if (visibleCteList == null || visibleCteList.isEmpty()) {
+			return;
+		}
+
+		Object sourceScope = visibleCteList.get(sourceRef);
+		if (!(sourceScope instanceof String sourceScopeRef) || !cteScopeRef.equals(sourceScopeRef)) {
+			return;
+		}
+
+		Map<String, Object> activeCteList = ensureCteListSymbolMap();
+		activeCteList.put(alias, cteScopeRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void upsertCurrentTableAliasMapping(String alias, String targetRef) {
+		if (alias == null || alias.isBlank() || targetRef == null || targetRef.isBlank()) {
+			return;
+		}
+
+		Object aliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		Map<String, Object> aliasMap;
+		if (aliasObj instanceof Map<?, ?> aliasMapObj) {
+			aliasMap = (Map<String, Object>) aliasMapObj;
+		} else {
+			aliasMap = new LinkedHashMap<String, Object>();
+			walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, aliasMap);
+		}
+
+		aliasMap.put(alias, targetRef);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4855,6 +5008,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
 		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+		boolean hasCteList = hasCteListSymbolMap();
 
 		for (Map.Entry<String, Object> unresolvedEntry : qualifiedUnresolvedMap.entrySet()) {
 			String unresolvedKey = unresolvedEntry.getKey();
@@ -4869,6 +5023,67 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			String sourceRef = unresolvedKey.substring(0, dotIndex);
 			String columnName = unresolvedKey.substring(dotIndex + 1);
+			String cteScopeRef = resolveCteScopeReference(sourceRef, currentTableAliasMap);
+
+			// If WITH/CTE context is active and sourceRef maps to a CTE entry, CTE interface resolution is authoritative.
+			if (hasCteList && cteScopeRef != null && !cteScopeRef.isBlank()) {
+				boolean resolvedInCte = "*".equals(columnName)
+						|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
+						|| hasWildcardInQueryOutputInterface(cteScopeRef);
+				if (resolvedInCte) {
+					String resolvedSourceRef = walker.resolveAliasToTableName(sourceRef, currentTableAliasMap);
+					if (resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
+						resolvedSourceRef = sourceRef;
+					}
+
+					HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
+							resolvedSourceRef,
+							currentTableCollection);
+					if (indicatedTableDictionary == null && !sourceRef.equals(resolvedSourceRef)) {
+						indicatedTableDictionary = walker.getTableDictionaryForReference(sourceRef, currentTableCollection);
+					}
+					if (indicatedTableDictionary != null) {
+						walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry.getValue());
+					}
+					continue;
+				}
+
+				Object unresolvedValue = unresolvedEntry.getValue();
+				Object capturedValue = walker.getCapturedQualifiedUnresolvedLocationEntry(unresolvedKey);
+				Object diagnosticValue = (capturedValue != null) ? capturedValue : unresolvedValue;
+
+				Integer[] refLocation = walker.getLineAndCharacterFromEntry(diagnosticValue);
+				if (refLocation[0] == null || refLocation[1] == null) {
+					refLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
+				}
+
+				String allLocationsInline = walker.formatAllLocationsForEntryInline(diagnosticValue);
+				boolean hasMergedLocations = allLocationsInline != null && allLocationsInline.contains(",");
+
+				String diagMessage;
+				if (hasMergedLocations) {
+					diagMessage = String.format(
+							"Source Table not found for Column '%s' at %s. No alias or table called '%s'.",
+							columnName,
+							allLocationsInline,
+							sourceRef);
+				} else {
+					diagMessage = String.format(
+							diagTemplate,
+							columnName,
+							refLocation[0],
+							refLocation[1],
+							sourceRef);
+				}
+
+				walker.addWalkerFatal(
+						diagCode,
+						diagMessage,
+						refLocation[0],
+						refLocation[1],
+						columnName);
+				continue;
+			}
 
 			if (walker.canResolveQualifiedUnknownInScope(
 					unresolvedKey,
@@ -4920,6 +5135,240 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					refLocation[1],
 					columnName);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean hasCteListSymbolMap() {
+		Map<String, Object> currentCteList = getCteListSymbolMap(walker.symbolTable);
+		if (currentCteList != null && !currentCteList.isEmpty()) {
+			return true;
+		}
+
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
+			if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveCteScopeReference(String sourceRef, HashMap<String, Object> tableAliasMap) {
+		String localScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, walker.symbolTable);
+		if (localScope != null) {
+			return localScope;
+		}
+
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
+			if (tableAliasMap != null && !tableAliasMap.isEmpty()) {
+				String inheritedScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, ancestorSymbols);
+				if (inheritedScope != null) {
+					return inheritedScope;
+				}
+			}
+
+			String inheritedScope = resolveCteScopeReferenceInSymbols(sourceRef, ancestorAliasMap, ancestorSymbols);
+			if (inheritedScope != null) {
+				return inheritedScope;
+			}
+		}
+
+		return null;
+	}
+
+	private void emitShadowedParentCteNameWarningIfNeeded(
+			String alias,
+			Map<String, Object> localCteList,
+			ParserRuleContext ctx) {
+		if (alias == null || alias.isBlank()) {
+			return;
+		}
+
+		// Same-scope duplicates are handled separately and should not be treated as parent shadowing.
+		if (localCteList != null && localCteList.containsKey(alias)) {
+			return;
+		}
+
+		HashMap<String, Object> tableAliasMap = getTableAliasMap(walker.symbolTable);
+		String inheritedScopeRef = null;
+		if (tableAliasMap != null) {
+			Object existingAliasTargetObj = tableAliasMap.get(alias);
+			if (existingAliasTargetObj instanceof String existingAliasTarget
+					&& !existingAliasTarget.isBlank()
+					&& (existingAliasTarget.startsWith(MUMBLE_QUERY_KEY)
+							|| existingAliasTarget.startsWith(MUMBLE_UNION_KEY)
+							|| existingAliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
+							|| existingAliasTarget.startsWith(MUMBLE_VALUES_KEY)
+							|| MUMBLE_VALUES_KEY.equals(existingAliasTarget))) {
+				inheritedScopeRef = existingAliasTarget;
+			}
+		}
+
+		if (inheritedScopeRef == null) {
+			inheritedScopeRef = resolveCteScopeReference(alias, tableAliasMap);
+		}
+		if (inheritedScopeRef == null || inheritedScopeRef.isBlank()) {
+			return;
+		}
+
+		Integer line = null;
+		Integer charPosition = null;
+		if (ctx != null && ctx.getStart() != null) {
+			line = ctx.getStart().getLine();
+			charPosition = ctx.getStart().getCharPositionInLine();
+		}
+
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_SHADOWED_PARENT_CTE_NAME);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_SHADOWED_PARENT_CTE_NAME);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"CTE '%s' at (l:%s c:%s) shadows inherited CTE '%s' (%s).",
+						alias,
+						line,
+						charPosition,
+						alias,
+						inheritedScopeRef)
+				: String.format(diagTemplate,
+						alias,
+						line,
+						charPosition,
+						alias,
+						inheritedScopeRef);
+
+		walker.addWalkerDiagnostic(
+				ParseDiagnostic.Severity.WARNING,
+				diagCode,
+				diagMessage,
+				line,
+				charPosition,
+				walker.getClass().getSimpleName(),
+				null,
+				alias,
+				true,
+				"ast-walk",
+				null,
+				null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void pushSymbolTableWithParentCteList() {
+		Map<String, Object> inheritedCteList = getCteListSymbolMap(walker.symbolTable);
+		if (inheritedCteList == null || inheritedCteList.isEmpty()) {
+			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
+				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
+					inheritedCteList = ancestorCteList;
+					break;
+				}
+			}
+		}
+		walker.pushSymbolTable();
+		if (inheritedCteList != null && !inheritedCteList.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>(inheritedCteList));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<Map<String, Object>> getAncestorSymbolTables() {
+		ArrayList<Map<String, Object>> ancestors = new ArrayList<Map<String, Object>>();
+		Integer parentLevel = walker.currentStackLevel("symbolTable");
+		if (parentLevel == null || walker.asTree == null) {
+			return ancestors;
+		}
+
+		for (int level = parentLevel; level >= 1; level--) {
+			Object ancestorObj = walker.asTree.get("symbolTable_" + level);
+			if (ancestorObj instanceof Map<?, ?> ancestorMapObj) {
+				ancestors.add((Map<String, Object>) ancestorMapObj);
+			}
+		}
+
+		return ancestors;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getParentSymbolTable() {
+		Integer parentLevel = walker.currentStackLevel("symbolTable");
+		if (parentLevel == null || walker.asTree == null) {
+			return null;
+		}
+
+		Object parentSymbolsObj = walker.asTree.get("symbolTable_" + parentLevel);
+		if (parentSymbolsObj instanceof Map<?, ?> parentSymbolsMapObj) {
+			return (Map<String, Object>) parentSymbolsMapObj;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getCteListSymbolMap(Map<String, Object> symbols) {
+		if (symbols == null) {
+			return null;
+		}
+
+		Object cteListObj = symbols.get(MUMBLE_CTE_LIST_KEY);
+		if (cteListObj instanceof Map<?, ?> cteListMapObj) {
+			return (Map<String, Object>) cteListMapObj;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getTableAliasMap(Map<String, Object> symbols) {
+		if (symbols == null) {
+			return null;
+		}
+
+		Object tableAliasObj = symbols.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof HashMap<?, ?> aliasMapObj) {
+			return (HashMap<String, Object>) aliasMapObj;
+		}
+		if (tableAliasObj instanceof Map<?, ?> aliasMapObj) {
+			return new HashMap<String, Object>((Map<String, Object>) aliasMapObj);
+		}
+		return null;
+	}
+
+	private String resolveCteScopeReferenceInSymbols(
+			String sourceRef,
+			HashMap<String, Object> tableAliasMap,
+			Map<String, Object> symbols) {
+		Map<String, Object> cteListMap = getCteListSymbolMap(symbols);
+		if (cteListMap == null || cteListMap.isEmpty() || sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+
+		Object directScope = cteListMap.get(sourceRef);
+		if (directScope instanceof String directScopeRef && !directScopeRef.isBlank()) {
+			return directScopeRef;
+		}
+
+		if (tableAliasMap != null) {
+			Object mappedSourceObject = tableAliasMap.get(sourceRef);
+			if (mappedSourceObject instanceof String mappedSource && !mappedSource.isBlank()) {
+				Object mappedScope = cteListMap.get(mappedSource);
+				if (mappedScope instanceof String mappedScopeRef && !mappedScopeRef.isBlank()) {
+					return mappedScopeRef;
+				}
+
+				for (Object cteScopeValue : cteListMap.values()) {
+					if (cteScopeValue instanceof String cteScopeRef && cteScopeRef.equals(mappedSource)) {
+						return cteScopeRef;
+					}
+				}
+			}
+		}
+
+		for (Object cteScopeValue : cteListMap.values()) {
+			if (cteScopeValue instanceof String cteScopeRef && cteScopeRef.equals(sourceRef)) {
+				return cteScopeRef;
+			}
+		}
+
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -5961,6 +6410,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					if (tableRef != null) {
 						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
 						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
+						if (resolvedNonTableSourceRef == null) {
+							resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, localTableAliasMap);
+						}
 						boolean explicitQueryReference = resolvedNonTableSourceRef != null
 								|| walker.isNonTableQuerySourceReference(resolvedTableRef);
 						boolean resolvedInSource = false;
@@ -6059,8 +6511,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 						if (sourceRefs.isEmpty()) {
 							// Scenario: implicit reference has no candidate source.
+							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+								emitUnqualifiedNotFoundInQueryAliasFatal(
+										columnName,
+										refLocation,
+										localTableAliasMap);
+								hasSpecificResolutionFatalForOutputColumn = true;
+							}
 							continue;
 						} else if (sourceRefs.size() > 1) {
+								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
+									continue;
+								}
 							// Scenario: implicit reference matches multiple candidate sources.
 							String possibleSources = sourceRefs.toString();
 							String diagCode = walker.getDiagnosticCode(
@@ -6099,6 +6561,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 							// the interface entry copy (do not mutate shared AST map objects).
 							String resolvedSourceRef = sourceRefs.get(0);
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							consumeUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
 						}
 					}
 				}
@@ -7100,8 +7563,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					localTableAliasMap);
 
 			if (sourceRefs.isEmpty()) {
+				if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+					emitUnqualifiedNotFoundInQueryAliasFatal(
+							columnName,
+							refLocation,
+							localTableAliasMap);
+				}
 				continue;
 			} else if (sourceRefs.size() > 1) {
+				if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
+					continue;
+				}
 				String possibleSources = sourceRefs.toString();
 				String diagCode = walker.getDiagnosticCode(
 						SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
@@ -7136,6 +7608,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else {
 				String resolvedSourceRef = sourceRefs.get(0);
 				columnRefs.set(index, cloneReferenceWithResolvedTableRef(columnRefObj, resolvedSourceRef));
+				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
 			}
 		}
 	}
@@ -7145,84 +7618,270 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection,
 			HashMap<String, Object> tableAliasCollection) {
-		LinkedHashSet<String> sourceCandidates = new LinkedHashSet<String>();
+		LinkedHashSet<String> visibleTableSources = new LinkedHashSet<String>();
+		LinkedHashSet<String> visibleQuerySources = new LinkedHashSet<String>();
+		LinkedHashSet<String> queryExactSources = new LinkedHashSet<String>();
+		LinkedHashSet<String> queryWildcardOnlySources = new LinkedHashSet<String>();
+
+		if (tableCollection != null) {
+			for (String tableRef : tableCollection.keySet()) {
+				addIgnoringCase(visibleTableSources, tableRef);
+			}
+		}
+
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			for (Object mappedSourceObj : tableAliasCollection.values()) {
+				if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
+					continue;
+				}
+
+				if (isQuerySourceReference(mappedSource) || isTableFunctionSourceReference(mappedSource)) {
+					addIgnoringCase(visibleQuerySources, mappedSource);
+					continue;
+				}
+
+				String resolvedTableRef = walker.resolveAliasToTableName(mappedSource, tableAliasCollection);
+				if (resolvedTableRef != null && !resolvedTableRef.isBlank()) {
+					addIgnoringCase(visibleTableSources, resolvedTableRef);
+				} else {
+					addIgnoringCase(visibleTableSources, mappedSource);
+				}
+			}
+		}
 
 		ArrayList<String> dictionaryMatches = walker.collectSourceReferencesForColumn(
 				columnName,
 				tableCollection,
 				queryCollection);
-		sourceCandidates.addAll(dictionaryMatches);
-
-		if (tableCollection != null && tableCollection.size() > 1) {
-			for (String tableRef : tableCollection.keySet()) {
-				sourceCandidates.add(tableRef);
-			}
-		}
-
-		if (tableAliasCollection != null && tableAliasCollection.size() > 1) {
-			for (Object mappedSourceObj : tableAliasCollection.values()) {
-				if (!(mappedSourceObj instanceof String mappedSource)) {
-					continue;
-				}
-
-				if (isQuerySourceReference(mappedSource)
-						&& !querySourceCanProvideColumn(mappedSource, columnName, queryCollection)) {
-					continue;
-				}
-
-				String sourceCandidate = mappedSource;
-				if (!isQuerySourceReference(mappedSource)) {
-					String resolvedTableRef = walker.resolveAliasToTableName(mappedSource, tableAliasCollection);
-					if (resolvedTableRef != null && !resolvedTableRef.isBlank()) {
-						sourceCandidate = resolvedTableRef;
+		LinkedHashSet<String> matchedTableSources = new LinkedHashSet<String>();
+		for (String sourceRef : dictionaryMatches) {
+			if (isQuerySourceReference(sourceRef) || isTableFunctionSourceReference(sourceRef)) {
+				boolean allowDirectQuerySource = isValuesSourceReference(sourceRef)
+						|| isTableFunctionSourceReference(sourceRef);
+				if (allowDirectQuerySource) {
+					addIgnoringCase(visibleQuerySources, sourceRef);
+				} else {
+					boolean queryIsVisibleAliasSource = false;
+					for (String visibleQueryRef : visibleQuerySources) {
+						if (visibleQueryRef != null && visibleQueryRef.equalsIgnoreCase(sourceRef)) {
+							queryIsVisibleAliasSource = true;
+							break;
+						}
 					}
-
-					// Restrict non-query contenders to the current scope's local table dictionary.
-					if (walker.getTableDictionaryForReference(sourceCandidate, tableCollection) == null) {
-						continue;
-					}
-
-					HashMap<String, Object> localTableDictionary = walker.getTableDictionaryForReference(
-							sourceCandidate,
-							tableCollection);
-					if (localTableDictionary == null) {
-						// Keep non-query sources constrained to the current query's table dictionary.
-						continue;
+					if (queryIsVisibleAliasSource) {
+						addIgnoringCase(visibleQuerySources, sourceRef);
 					}
 				}
-
-				boolean duplicateIgnoringCase = false;
-				for (String existingCandidate : sourceCandidates) {
-					if (existingCandidate != null && existingCandidate.equalsIgnoreCase(sourceCandidate)) {
-						duplicateIgnoringCase = true;
-						break;
-					}
-				}
-				if (!duplicateIgnoringCase) {
-					sourceCandidates.add(sourceCandidate);
-				}
-			}
-		}
-
-		ArrayList<String> tableCandidates = new ArrayList<String>();
-		ArrayList<String> queryCandidates = new ArrayList<String>();
-		for (String sourceRef : sourceCandidates) {
-			if (isQuerySourceReference(sourceRef)) {
-				queryCandidates.add(sourceRef);
 			} else {
-				tableCandidates.add(sourceRef);
+				addIgnoringCase(visibleTableSources, sourceRef);
+				addIgnoringCase(matchedTableSources, sourceRef);
 			}
 		}
 
-		if (queryCandidates.size() > 1) {
-			if (tableCandidates.size() == 1) {
-				ArrayList<String> resolved = new ArrayList<String>();
-				resolved.add(tableCandidates.get(0));
-				return resolved;
+		for (String querySourceRef : visibleQuerySources) {
+			if (isTableFunctionSourceReference(querySourceRef)) {
+				// Table functions are runtime-shaped sources; treat as query wildcard providers.
+				addIgnoringCase(queryWildcardOnlySources, querySourceRef);
+				continue;
+			}
+
+			if (querySourceHasExactColumn(querySourceRef, columnName, queryCollection)) {
+				addIgnoringCase(queryExactSources, querySourceRef);
+				continue;
+			}
+
+			if (isWildcardBackedQueryCandidate(querySourceRef, queryCollection)) {
+				addIgnoringCase(queryWildcardOnlySources, querySourceRef);
 			}
 		}
 
-		return new ArrayList<String>(sourceCandidates);
+		// Table-function sources are query-like for unqualified handling; keep them out of table bucket.
+		visibleTableSources.removeIf(this::isTableFunctionSourceReference);
+
+		if (queryExactSources.size() >= 2) {
+			return new ArrayList<String>(queryExactSources);
+		}
+
+		if (queryExactSources.size() == 1) {
+			if (!matchedTableSources.isEmpty()) {
+				ArrayList<String> mixed = new ArrayList<String>();
+				mixed.addAll(matchedTableSources);
+				mixed.addAll(queryExactSources);
+				return mixed;
+			}
+			return new ArrayList<String>(queryExactSources);
+		}
+
+		if (queryWildcardOnlySources.size() >= 2) {
+			return new ArrayList<String>(queryWildcardOnlySources);
+		}
+
+		if (queryWildcardOnlySources.size() == 1) {
+			if (!visibleTableSources.isEmpty()) {
+				ArrayList<String> mixed = new ArrayList<String>();
+				mixed.addAll(queryWildcardOnlySources);
+				mixed.addAll(visibleTableSources);
+				return mixed;
+			}
+
+			return new ArrayList<String>(queryWildcardOnlySources);
+		}
+
+		if (visibleTableSources.size() >= 2) {
+			LinkedHashSet<String> orderedTableSources = new LinkedHashSet<String>();
+			for (String sourceRef : dictionaryMatches) {
+				if (isQuerySourceReference(sourceRef)) {
+					continue;
+				}
+				addIgnoringCase(orderedTableSources, sourceRef);
+			}
+			for (String tableRef : visibleTableSources) {
+				addIgnoringCase(orderedTableSources, tableRef);
+			}
+			return new ArrayList<String>(orderedTableSources);
+		}
+
+		if (visibleTableSources.size() == 1) {
+			return new ArrayList<String>(visibleTableSources);
+		}
+
+		return new ArrayList<String>();
+	}
+
+	private void addIgnoringCase(Set<String> bucket, String candidate) {
+		if (bucket == null || candidate == null || candidate.isBlank()) {
+			return;
+		}
+
+		for (String existing : bucket) {
+			if (existing != null && existing.equalsIgnoreCase(candidate)) {
+				return;
+			}
+		}
+
+		bucket.add(candidate);
+	}
+
+	private String resolveAliasToQuerySourceFromAliasMap(
+			String aliasRef,
+			HashMap<String, Object> tableAliasCollection) {
+		if (aliasRef == null || aliasRef.isBlank() || tableAliasCollection == null || tableAliasCollection.isEmpty()) {
+			return null;
+		}
+
+		for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+			String aliasKey = aliasEntry.getKey();
+			if (aliasKey == null || !aliasKey.equalsIgnoreCase(aliasRef)) {
+				continue;
+			}
+
+			Object mappedSourceObj = aliasEntry.getValue();
+			if (!(mappedSourceObj instanceof String mappedSource) || !isQuerySourceReference(mappedSource)) {
+				return null;
+			}
+
+			if (mappedSource.startsWith("def_")) {
+				return mappedSource.substring("def_".length());
+			}
+			return mappedSource;
+		}
+
+		if (isQuerySourceReference(aliasRef)) {
+			return aliasRef.startsWith("def_") ? aliasRef.substring("def_".length()) : aliasRef;
+		}
+
+		return null;
+	}
+
+	private boolean hasOnlyQueryBackedAliasSources(HashMap<String, Object> tableAliasCollection) {
+		if (tableAliasCollection == null || tableAliasCollection.isEmpty()) {
+			return false;
+		}
+
+		int queryAliasCount = 0;
+		for (Object mappedSourceObj : tableAliasCollection.values()) {
+			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
+				continue;
+			}
+			queryAliasCount++;
+			if (!isQuerySourceReference(mappedSource)) {
+				return false;
+			}
+		}
+
+		return queryAliasCount > 1;
+	}
+
+	private void emitUnqualifiedNotFoundInQueryAliasFatal(
+			String columnName,
+			Integer[] refLocation,
+			HashMap<String, Object> tableAliasCollection) {
+		if (columnName == null || columnName.isBlank()) {
+			return;
+		}
+
+		Integer line = (refLocation != null) ? refLocation[0] : null;
+		Integer character = (refLocation != null) ? refLocation[1] : null;
+		if (line == null || character == null) {
+			line = 1;
+			character = 1;
+		}
+
+		// Prevent duplicate/semi-contradictory signaling for the same unresolved reference.
+		suppressedAmbiguousUnqualifiedKeys.add(buildUnqualifiedSuppressionKey(columnName, line, character));
+
+		ArrayList<String> queryAliases = new ArrayList<String>();
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+				String aliasKey = aliasEntry.getKey();
+				Object mappedSourceObj = aliasEntry.getValue();
+				if (aliasKey == null || !(mappedSourceObj instanceof String mappedSource)) {
+					continue;
+				}
+				if (!isQuerySourceReference(mappedSource)) {
+					continue;
+				}
+				queryAliases.add(aliasKey);
+			}
+		}
+
+		String queryAliasList = queryAliases.isEmpty() ? "[]" : queryAliases.toString();
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Unqualified column '%s' at (l:%s c:%s) was not found in output interface of any visible query alias %s.",
+						columnName,
+						line,
+						character,
+						queryAliasList)
+				: String.format(diagTemplate,
+						columnName,
+						line,
+						character,
+						queryAliasList);
+
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				line,
+				character,
+				columnName);
+	}
+
+	private String buildUnqualifiedSuppressionKey(String columnName, Integer line, Integer character) {
+		String normalizedColumn = (columnName == null) ? "" : columnName.trim().toLowerCase();
+		String normalizedLine = String.valueOf(line == null ? -1 : line);
+		String normalizedCharacter = String.valueOf(character == null ? -1 : character);
+		return normalizedColumn + ":" + normalizedLine + ":" + normalizedCharacter;
+	}
+
+	private boolean shouldSuppressAmbiguousUnqualifiedDiagnostic(String columnName, Integer[] refLocation) {
+		if (refLocation == null || refLocation.length < 2) {
+			return false;
+		}
+		String suppressionKey = buildUnqualifiedSuppressionKey(columnName, refLocation[0], refLocation[1]);
+		return suppressedAmbiguousUnqualifiedKeys.contains(suppressionKey);
 	}
 
 	private boolean hasUnqualifiedUnknownWithMultipleViableSources(
@@ -7270,7 +7929,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 
-			Object queryDefinitionObj = walker.symbolTable.get("def_" + mappedSource);
+			Object queryDefinitionObj = findInCurrentOrAncestorSymbolTables("def_" + mappedSource);
 			if (queryDefinitionObj instanceof HashMap<?, ?>) {
 				visibleQuerySources.put(mappedSource, queryDefinitionObj);
 				continue;
@@ -7338,6 +7997,36 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return hasColumnInQueryOutputInterface(queryRef, columnName);
 	}
 
+	@SuppressWarnings("unchecked")
+	private boolean querySourceHasExactColumn(
+			String queryRef,
+			String columnName,
+			HashMap<String, Object> queryCollection) {
+		if (queryRef == null || !isQuerySourceReference(queryRef) || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+
+		if (isTableFunctionSourceReference(queryRef)) {
+			return false;
+		}
+
+		if (queryCollection != null) {
+			Object queryObj = queryCollection.get(queryRef);
+			if (queryObj instanceof Map<?, ?> queryMap
+					&& containsKeyIgnoreCase((Map<String, Object>) queryMap, columnName)) {
+				return true;
+			}
+		}
+
+		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
+				&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)) {
+			return true;
+		}
+
+		return hasColumnInQueryOutputInterface(queryRef, columnName);
+	}
+
 	private boolean isQuerySourceReference(String sourceRef) {
 		if (sourceRef == null || sourceRef.isBlank()) {
 			return false;
@@ -7351,6 +8040,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
 				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+	}
+
+	private boolean isValuesSourceReference(String sourceRef) {
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return false;
+		}
+
+		String normalizedSourceRef = sourceRef;
+		if (normalizedSourceRef.startsWith("def_")) {
+			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
+		}
+
+		return normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+	}
+
+	private boolean isTableFunctionSourceReference(String sourceRef) {
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return false;
+		}
+
+		String normalizedSourceRef = sourceRef;
+		if (normalizedSourceRef.startsWith("def_")) {
+			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
+		}
+
+		return tableFunctionSourceRefs.contains(normalizedSourceRef.toLowerCase());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -7528,6 +8244,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			String resolvedTableRef = walker.resolveAliasToTableName(tableRef, tableAliasCollection);
 			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, scopedQueryCollection);
+			if (resolvedNonTableSourceRef == null) {
+				resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, tableAliasCollection);
+			}
 			boolean explicitQueryReference = resolvedNonTableSourceRef != null
 					|| walker.isNonTableQuerySourceReference(resolvedTableRef);
 			String allLocationsForEntry = walker.formatAllLocationsForEntry(unknownEntry.getValue());
@@ -7742,7 +8461,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return directObj;
 		}
 
-		return walker.symbolTable.get("def_" + queryKey);
+		String cteScopeRef = resolveCteScopeReference(queryKey, null);
+		if (cteScopeRef != null && !cteScopeRef.isBlank()) {
+			Object cteScopeObj = findInCurrentOrAncestorSymbolTables(cteScopeRef);
+			if (cteScopeObj instanceof Map<?, ?> cteScopeMap
+					&& ((Map<?, ?>) cteScopeMap).containsKey(MUMBLE_INTERFACE_KEY)) {
+				return cteScopeObj;
+			}
+
+			Object cteDefScopeObj = findInCurrentOrAncestorSymbolTables("def_" + cteScopeRef);
+			if (cteDefScopeObj != null) {
+				return cteDefScopeObj;
+			}
+		}
+
+		return findInCurrentOrAncestorSymbolTables("def_" + queryKey);
+	}
+
+	/**
+	 * Searches the current symbol table and all ancestor symbol tables (in order from
+	 * closest to farthest) for the given key. Returns the first non-null value found,
+	 * or null if not found anywhere in the visible scope chain.
+	 */
+	@SuppressWarnings("unchecked")
+	private Object findInCurrentOrAncestorSymbolTables(String key) {
+		if (key == null || key.isBlank()) {
+			return null;
+		}
+		Object found = walker.symbolTable.get(key);
+		if (found != null) {
+			return found;
+		}
+		for (Map<String, Object> ancestor : getAncestorSymbolTables()) {
+			found = ancestor.get(key);
+			if (found != null) {
+				return found;
+			}
+		}
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -7790,14 +8546,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Object table = item.get(MUMBLE_TABLE_KEY);
 				if (table != null) {
 					String qualifiedTableReference = getQualifiedTableReference(item);
+					String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(qualifiedTableReference);
 					// Table doesn't have an Alias, so it doesn't need to be collected in the Table ALias map
 					// walker.collectTableAlias(alias, table);
 
 					// However, we still need to collect the table reference in the AST 
 					subMap.put(MUMBLE_TABLE_KEY, item);
 
-					// And add the table header to the local Table_Dictionary
-					walker.ensureTableDictionaryEntry(qualifiedTableReference);
+					// Only physical tables are registered in table_dictionary. CTE references are query-backed.
+					if (cteScopeReference == null) {
+						walker.ensureTableDictionaryEntry(qualifiedTableReference);
+					} else {
+						upsertCurrentTableAliasMapping(qualifiedTableReference, cteScopeReference);
+					}
 				}
 			} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
 				item = walker.checkForSubstitutionVariable(item, "tuple");
@@ -7842,9 +8603,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Try various alternatives
 			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
 				String tableRef = getQualifiedTableReference(reference);
+				String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
 				item.putAll(reference);
-				walker.collectTableAlias(alias, tableRef);
-				walker.ensureTableDictionaryEntry(tableRef);
+				if (cteScopeReference != null) {
+					upsertCurrentTableAliasMapping(alias, cteScopeReference);
+					upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
+				} else {
+					walker.collectTableAlias(alias, tableRef);
+					walker.ensureTableDictionaryEntry(tableRef);
+				}
 				
 			} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 				// Check for Substitution Variable
@@ -7883,6 +8650,95 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getCurrentTableAliasMap() {
+		Object tableAliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof HashMap<?, ?> tableAliasMapObj) {
+			return (HashMap<String, Object>) tableAliasMapObj;
+		}
+		return null;
+	}
+
+	private String resolveCteOrQueryScopeReference(String sourceRef, HashMap<String, Object> tableAliasMap) {
+		String cteScopeReference = resolveCteScopeReference(sourceRef, tableAliasMap);
+		if (cteScopeReference != null && !cteScopeReference.isBlank()) {
+			return cteScopeReference;
+		}
+
+		if (tableAliasMap == null || sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+
+		Object mappedSourceObj = tableAliasMap.get(sourceRef);
+		if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
+			return null;
+		}
+
+		if (isQuerySourceReference(mappedSource)) {
+			return mappedSource;
+		}
+
+		return null;
+	}
+
+	private String resolveCteOrQueryScopeReferenceInVisibleScopes(String sourceRef) {
+		HashMap<String, Object> currentAliasMap = getCurrentTableAliasMap();
+		String localScope = resolveCteOrQueryScopeReference(sourceRef, currentAliasMap);
+		if (localScope != null && !localScope.isBlank()) {
+			return localScope;
+		}
+
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
+			String inheritedScope = resolveCteOrQueryScopeReference(sourceRef, ancestorAliasMap);
+			if (inheritedScope != null && !inheritedScope.isBlank()) {
+				return inheritedScope;
+			}
+		}
+
+		return null;
+	}
+
+	private String resolveCteOrExistingQueryScopeInVisibleScopes(String sourceRef) {
+		String resolvedScope = resolveCteOrQueryScopeReferenceInVisibleScopes(sourceRef);
+		if (resolvedScope != null && !resolvedScope.isBlank()) {
+			return resolvedScope;
+		}
+
+		HashMap<String, Object> currentAliasMap = getCurrentTableAliasMap();
+		resolvedScope = resolveExistingQueryScopeFromAliasMap(sourceRef, currentAliasMap);
+		if (resolvedScope != null) {
+			return resolvedScope;
+		}
+
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
+			resolvedScope = resolveExistingQueryScopeFromAliasMap(sourceRef, ancestorAliasMap);
+			if (resolvedScope != null) {
+				return resolvedScope;
+			}
+		}
+
+		return null;
+	}
+
+	private String resolveExistingQueryScopeFromAliasMap(String sourceRef, HashMap<String, Object> aliasMap) {
+		if (sourceRef == null || sourceRef.isBlank() || aliasMap == null || aliasMap.isEmpty()) {
+			return null;
+		}
+
+		Object mappedObj = aliasMap.get(sourceRef);
+		if (!(mappedObj instanceof String mappedRef) || mappedRef.isBlank()) {
+			return null;
+		}
+
+		if (isQuerySourceReference(mappedRef)) {
+			return mappedRef;
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
 	private void registerTableFunctionSourceReference(Map<String, Object> reference, String alias) {
 		if (reference == null || !reference.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
 			return;
@@ -7894,6 +8750,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.ensureTableDictionaryEntry(functionRef);
+		tableFunctionSourceRefs.add(functionRef.toLowerCase());
 		if (alias != null && !alias.isBlank()) {
 			walker.collectTableAlias(alias, functionRef);
 		}
@@ -8115,7 +8972,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (item.containsKey(MUMBLE_TABLE_KEY)) {
 			// Table Reference
 			String tableRef = getQualifiedTableReference(item);
-			walker.ensureTableDictionaryEntry(tableRef);
+			String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
+			Object aliasObj = item.get(MUMBLE_ALIAS_KEY);
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
+				upsertCurrentTableAliasMapping(alias, aliasTarget);
+			} else if (cteScopeReference != null && tableRef != null && !tableRef.isBlank()) {
+				upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
+			}
+			if (cteScopeReference == null) {
+				walker.ensureTableDictionaryEntry(tableRef);
+			}
 			// Table reference needs an AST Key added to it
 			subMap.put(MUMBLE_TABLE_KEY, item);
 
@@ -8161,6 +9028,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	
 
 	private Boolean collectQuerySymbolTable(String hdr, String alias) {
+		return collectQuerySymbolTable(hdr, alias, null);
+	}
+
+	private Boolean collectQuerySymbolTable(String hdr, String alias, Map<String, Object> definitionTarget) {
 		String queryName = hdr + (walker.queryCount - 1);
 		Map<String, Object> query = (Map<String, Object>)  walker.symbolTable.remove(queryName);
 		if (query != null) {
@@ -8196,8 +9067,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (unk.size() > 0)
 					 walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unk);
 			}
-			// Add query definition back into symbol table
-			 walker.symbolTable.put("def_" + queryName, query);
+
+			// Always publish query definition in the parent symbol table.
+			walker.symbolTable.put("def_" + queryName, query);
+
+			// WITH-specific cte_list tracks alias -> query scope reference (without def_ prefix).
+			if (definitionTarget != null && alias != null) {
+				definitionTarget.put(alias, queryName);
+			}
 			return true;
 		} else
 			return false;
@@ -10953,7 +11830,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterExists_predicate_value(@NotNull SQLSelectParserParser.Exists_predicate_valueContext ctx) {
-		walker.pushSymbolTable();
+		pushSymbolTableWithParentCteList();
 	}
 
 	@Override
@@ -10976,16 +11853,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Subquery case: inject the subquery's local symbol table under EXISTS<N>
 			String key = MUMBLE_EXISTS_KEY + walker.queryCount;
 			// Extract the singular query reference key from the local symbol table (e.g., "query0")
-			String queryRefKey = null;
-			if (symbols != null && !symbols.isEmpty()) {
-				queryRefKey = symbols.keySet().iterator().next();
-			}
+			String queryRefKey = getSubqueryReferenceKey(symbols);
 			// Store only the query reference key under the EXISTS<N> entry
 			symbols.put(key, queryRefKey);
 			// Capture Query Column Dictionary for this level
 // ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
 			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
-			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			if (queryRefKey != null && !queryRefKey.startsWith("def_")) {
+				symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			}
 			// Merge local symbol table back into parent
 			walker.popSymbolTablePutAll(symbols);
 			// Advance query counter after recording the injection

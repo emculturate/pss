@@ -475,7 +475,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={update={from={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=json_col, table_ref=t}}}}}}, where={condition={left={column={name=id, table_ref=t}}, right={literal=1}, operator==}}, assignments={1={set={column={name=col, table_ref=null}}, to={column={name=value, table_ref=f}}}}, table={alias=null, table=t}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{update0={assignments={col=[{name=value, table_ref=f}]}, table_dictionary={t={json_col=[[@15,55:55='t',<373>,1:55]], col=[[@3,13:15='col',<373>,1:13]], id=[[@22,76:76='t',<373>,1:76]]}, flatten0={value=[[@5,19:19='f',<373>,1:19]]}}, update_dictionary={col=[[@3,13:15='col',<373>,1:13]]}, filters=[{name=id, table_ref=t}], table_alias={f=flatten0}}}",
+				"{update0={assignments={col=[{name=value, table_ref=f}]}, table_dictionary={t={col=[[@3,13:15='col',<373>,1:13]], id=[[@22,76:76='t',<373>,1:76]], json_col=[[@15,55:55='t',<373>,1:55]]}, flatten0={value=[[@5,19:19='f',<373>,1:19]]}}, update_dictionary={col=[[@3,13:15='col',<373>,1:13]]}, filters=[{name=id, table_ref=t}], table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 

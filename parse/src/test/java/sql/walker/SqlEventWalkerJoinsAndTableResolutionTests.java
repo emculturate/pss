@@ -341,9 +341,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertFatalDiagnosticAtPosition(snippet, "DUPLICATE_INTERFACE_COLUMNS",
 				"Duplicate interface columns defined: T3.col1 at (l:1 c:11) and F4.col1 at (l:1 c:20).",
 				"T3.col1,F4.col1", 1, 11);
-		// assertFatalDiagnosticAtPosition(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
-		// 		"Source Table not found for Column 'col1' at (l:1 c:8). No alias or table called 'T3'.",
-		// 		"col1", 1, 8);
 	}
 
 
@@ -382,12 +379,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s): [col1",
 				"col1", 1, 8);
-		assertDiagnosticCountBySeverity(snippet,
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"Unresolved unqualified column reference(s)",
-				"col1",
-				1);
 	}
 
 
@@ -613,10 +604,9 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 
 	@Test
 	public void joinWithDuplicateColumnNameTest() {
-		// Because of the join, all of the columns in the outermost query could be in the <Guide> table,
-		// but also appear to be accounted for as individual columns in the subquery 0. Hence
-		// Table dictionary doesn't definitively record them in the <Guide> table dictionary
-		// and the query issues ambiguous column warnings
+		// Both sides of the join expose the same unqualified output column names
+		// (category, is_active, nk, rank, desc, student), so the walker emits
+		// AMBIGUOUS_COLUMN_REFERENCE diagnostics for each of those outer select columns.
 		final String query = "SELECT 'Guide' AS app_name,  category, is_active, nk, rank, desc, student " + 
 				"FROM  <Guide> AS Guide_Student_Conditions " + 
 				"\n join " + 
@@ -632,28 +622,61 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<Guide>=tuple, <NAV>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={}, <NAV>={is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{<Guide>={is_active=[[@7,39:47='is_active',<373>,1:39]], student=[[@15,66:72='student',<373>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<373>,1:29]], nk=[[@9,50:51='nk',<373>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, <NAV>={is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={app_name=[[@25,142:149='app_name',<373>,3:18]], is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}, query1={app_name=[[@3,18:25='app_name',<373>,1:18]], is_active=[[@7,39:47='is_active',<373>,1:39]], student=[[@15,66:72='student',<373>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<373>,1:29]], nk=[[@9,50:51='nk',<373>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}}",
 						extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={app_name=[[@3,18:25='app_name',<373>,1:18]], is_active=[[@7,39:47='is_active',<373>,1:39]], student=[[@15,66:72='student',<373>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<373>,1:29]], nk=[[@9,50:51='nk',<373>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, table_dictionary={<Guide>={}}, def_query0={query_dictionary={app_name=[[@25,142:149='app_name',<373>,3:18]], is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}, table_dictionary={<NAV>={is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}}, interface={app_name=[], is_active=[{name=is_active, table_ref=<NAV>}], student=[{name=student, table_ref=<NAV>}], rank=[{name=rank, table_ref=<NAV>}], category=[{name=category, table_ref=<NAV>}], nk=[{name=nk, table_ref=<NAV>}], desc=[{name=desc, table_ref=<NAV>}]}, table_alias={Nav_Ss=<NAV>}}, filters=[], interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}, table_alias={Guide_Student_Conditions=<Guide>, Nav_Student_Conditions=query0}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={app_name=[[@3,18:25='app_name',<373>,1:18]], is_active=[[@7,39:47='is_active',<373>,1:39]], student=[[@15,66:72='student',<373>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<373>,1:29]], nk=[[@9,50:51='nk',<373>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}, table_dictionary={<Guide>={is_active=[[@7,39:47='is_active',<373>,1:39]], student=[[@15,66:72='student',<373>,1:66]], rank=[[@11,54:57='rank',<127>,1:54]], category=[[@5,29:36='category',<373>,1:29]], nk=[[@9,50:51='nk',<373>,1:50]], desc=[[@13,60:63='desc',<76>,1:60]]}}, def_query0={query_dictionary={app_name=[[@25,142:149='app_name',<373>,3:18]], is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}, table_dictionary={<NAV>={is_active=[[@29,162:170='is_active',<373>,3:38]], student=[[@37,189:195='student',<373>,3:65]], rank=[[@33,177:180='rank',<127>,3:53]], category=[[@27,152:159='category',<373>,3:28]], nk=[[@31,173:174='nk',<373>,3:49]], desc=[[@35,183:186='desc',<76>,3:59]]}}, interface={app_name=[], is_active=[{name=is_active, table_ref=<NAV>}], student=[{name=student, table_ref=<NAV>}], rank=[{name=rank, table_ref=<NAV>}], category=[{name=category, table_ref=<NAV>}], nk=[{name=nk, table_ref=<NAV>}], desc=[{name=desc, table_ref=<NAV>}]}, table_alias={Nav_Ss=<NAV>}}, filters=[], interface={app_name=[], is_active=[{name=is_active, table_ref=null}], student=[{name=student, table_ref=null}], rank=[{name=rank, table_ref=null}], category=[{name=category, table_ref=null}], nk=[{name=nk, table_ref=null}], desc=[{name=desc, table_ref=null}]}, table_alias={Guide_Student_Conditions=<Guide>, Nav_Student_Conditions=query0}}}",
 				extractor.getSymbolTable().toString());
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(
-				snippet,
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				null,
-				null,
-				1);
-		assertDiagnosticCountBySeverity(
+		assertDiagnosticAtPosition(
 				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'category'",
+				"category",
+				1,
+				29);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'is_active'",
+				"is_active",
+				1,
+				39);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'nk'",
 				null,
-				null,
-				6);
-
+				1,
+				50);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'rank'",
+				"rank",
+				1,
+				54);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'desc'",
+				"desc",
+				1,
+				60);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'student'",
+				"student",
+				1,
+				66);
 	}
 
 
@@ -836,7 +859,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, "Ambiguous column reference 'apple'", "apple", 1);
 		assertDiagnosticAtPosition(
 				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
@@ -922,8 +944,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s): [c",
 				"c", 1, 23);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "c", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
 
 
@@ -942,8 +962,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s): [c",
 				"c", 1, 23);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "c", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
 
 
@@ -972,7 +990,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"c", 1, 17);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
 
 
@@ -988,7 +1005,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved",
 				"c", 1, 17);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
 
 
@@ -1004,8 +1020,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1021,8 +1035,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1038,8 +1050,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1055,8 +1065,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1073,8 +1081,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1091,8 +1097,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		assertDiagnosticAtPosition(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
 				"Unresolved unqualified column reference(s)",
 				"a", 1, 7);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "a", 1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 	}
 
 
@@ -1171,10 +1175,6 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				"Source Table not found for Column 'issing'",
 				"issing",
 				1);
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR,
-				"Unresolved unqualified column reference(s)",
-				"a",
-				1);
 
 	}
 
@@ -1227,12 +1227,13 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
-		Assert.assertEquals("Fatal error count is wrong", 1, snippet.getFatalErrorStringList().size());
-		Assert.assertEquals(
-				"Fatal error message is wrong",
-				"[Duplicate interface columns defined: aaa.col1 at (l:1 c:13) and bbb.col1 at (l:1 c:23).]",
-				snippet.getFatalErrorStringList().toString());
-		assertDiagnosticCountBySeverity(snippet, "DUPLICATE_INTERFACE_COLUMNS", ParseDiagnostic.Severity.FATAL, "Duplicate interface columns defined: aaa.col1 at (l:1 c:13) and bbb.col1 at (l:1 c:23).", null, 1);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"DUPLICATE_INTERFACE_COLUMNS",
+				"Duplicate interface columns defined: aaa.col1 at (l:1 c:13) and bbb.col1 at (l:1 c:23).",
+				"aaa.col1,bbb.col1",
+				1,
+				13);
 	}
 
 

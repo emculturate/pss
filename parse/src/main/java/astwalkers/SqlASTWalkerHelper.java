@@ -19,7 +19,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
+		public static final String DIAG_SQL_SHADOWED_PARENT_CTE_NAME = "SQL_SHADOWED_PARENT_CTE_NAME";
 		public static final String DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS = "SQL_UNRESOLVED_UNQUALIFIED_COLUMNS";
+		public static final String DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES = "SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES";
 		public static final String DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS = "SQL_UNRESOLVED_QUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
@@ -161,6 +163,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS,
 				 "UNRESOLVED_UNQUALIFIED_COLUMNS",
 				 "Unresolved unqualified column reference(s): %s");
+		 registerDiagnostic(DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES,
+				 "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				 "Unqualified column '%s' at (l:%s c:%s) was not found in output interface of any visible query alias %s.");
 		 registerDiagnostic(DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS,
 				 "UNRESOLVED_QUALIFIED_COLUMNS",
 				 "Unresolved qualified column reference(s): %s");
@@ -174,6 +179,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE,
 				 "AMBIGUOUS_COLUMN_REFERENCE",
 				 "Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s");
+		 registerDiagnostic(
+				 DIAG_SQL_SHADOWED_PARENT_CTE_NAME,
+				 "SHADOWED_PARENT_CTE_NAME",
+				 "CTE '%s' at (l:%s c:%s) shadows inherited CTE '%s' (%s).");
 		 registerDiagnostic(
 				 DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS,
 				 "DUPLICATE_INTERFACE_COLUMNS",
@@ -719,7 +728,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			}
 		}
 
-		if (columnName == null) {
+		if (columnName == null || columnName.isBlank()) {
 			return null;
 		}
 
@@ -2589,6 +2598,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		for (String key : source.keySet()) {
+			if (key == null || key.isBlank()) {
+				continue;
+			}
 			Object sourceValue = source.get(key);
 			Object targetValue = target.get(key);
 

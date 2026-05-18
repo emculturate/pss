@@ -30,6 +30,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_CONDITION_KEY = "condition";
     public static final String MUMBLE_CREATE_KEY = "create";
     public static final String MUMBLE_CTE_KEY = "cte";
+    public static final String MUMBLE_CTE_LIST_KEY = "cte_list"; // Special key for symbol table CTE definition list in WITH scopes
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DROP_KEY = "drop";
@@ -102,6 +103,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_PARENTHESES_KEY = "parentheses";
     public static final String MUMBLE_PARTITION_BY_KEY = "partition_by";
     public static final String MUMBLE_PARTS_KEY = "parts";
+    public static final String MUMBLE_PARENT_CTE_KEY = "parent_cte"; // Optional key for inherited CTE chain metadata
     public static final String MUMBLE_PATH_KEY = "path";
     public static final String MUMBLE_PRECEDING_KEY = "PRECEDING";
     public static final String MUMBLE_PRECISION_KEY = "precision";

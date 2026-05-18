@@ -1,4 +1,7 @@
 package sql.walker;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -1849,7 +1852,7 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={aa=[[@2,10:11='aa',<373>,1:10]], dd=[[@21,58:59='dd',<373>,1:58]]}, query0={unnamed_0=[[@9,27:27=')',<287>,1:27]]}, query2={c=[[@29,90:90='c',<373>,1:90]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={aa=[[@2,10:11='aa',<373>,1:10]], dd=[[@21,58:59='dd',<373>,1:58]]}, table_dictionary={tab1={}}, def_query0={query_dictionary={unnamed_0=[[@9,27:27=')',<287>,1:27]]}, table_dictionary={ee={D=[[@8,26:26='D',<373>,1:26]], x=[[@13,43:44='ee',<373>,1:43]]}}, filters=[{name=x, table_ref=ee}, {name=x, table_ref=tab1}], interface={unnamed_0=[{name=D, table_ref=ee}]}}, filters=[{name=a, table_ref=null}, {query=query2}], interface={aa=[{name=a, table_ref=null}], dd=[{query=query0}]}, def_query2={query_dictionary={c=[[@29,90:90='c',<373>,1:90]]}, table_dictionary={ff={c=[[@29,90:90='c',<373>,1:90]], y=[[@33,106:107='ff',<373>,1:106]]}}, filters=[{name=y, table_ref=ff}, {name=y, table_ref=tab1}], interface={c=[{name=c, table_ref=ff}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={aa=[[@2,10:11='aa',<373>,1:10]], dd=[[@21,58:59='dd',<373>,1:58]]}, table_dictionary={tab1={}}, def_query0={query_dictionary={unnamed_0=[[@9,27:27=')',<287>,1:27]]}, table_dictionary={ee={D=[[@8,26:26='D',<373>,1:26]], x=[[@13,43:44='ee',<373>,1:43]]}}, filters=[{name=x, table_ref=ee}, {name=x, table_ref=tab1}], interface={unnamed_0=[{name=D, table_ref=ee}]}}, filters=[{name=a, table_ref=tab1}, {query=query2}], interface={aa=[{name=a, table_ref=tab1}], dd=[{query=query0}]}, def_query2={query_dictionary={c=[[@29,90:90='c',<373>,1:90]]}, table_dictionary={ff={c=[[@29,90:90='c',<373>,1:90]], y=[[@33,106:107='ff',<373>,1:106]]}}, filters=[{name=y, table_ref=ff}, {name=y, table_ref=tab1}], interface={c=[{name=c, table_ref=ff}]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2136,11 +2139,11 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{lawn={b=[[@14,57:57='b',<373>,2:19]]}, first={a=[[@25,106:110='first',<87>,3:35]], *=[[@19,79:79='*',<290>,3:8]]}, mulch={a=[[@5,22:22='a',<373>,1:22]]}, second={b=[[@29,116:121='second',<134>,3:45]], *=[[@19,79:79='*',<290>,3:8]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{lawn={b=[[@14,57:57='b',<373>,2:19]]}, mulch={a=[[@5,22:22='a',<373>,1:22]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@5,22:22='a',<373>,1:22]], *=[[@19,79:79='*',<290>,3:8]]}, query1={b=[[@14,57:57='b',<373>,2:19]], *=[[@19,79:79='*',<290>,3:8]]}, query2={*=[[@19,79:79='*',<290>,3:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@5,22:22='a',<373>,1:22], [@25,106:110='first',<87>,3:35]], *=[[@19,79:79='*',<290>,3:8]]}, query1={b=[[@14,57:57='b',<373>,2:19], [@29,116:121='second',<134>,3:45]], *=[[@19,79:79='*',<290>,3:8]]}, query2={*=[[@19,79:79='*',<290>,3:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={*=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={first={a=[[@25,106:110='first',<87>,3:35]], *=[[@19,79:79='*',<290>,3:8]]}, second={b=[[@29,116:121='second',<134>,3:45]], *=[[@19,79:79='*',<290>,3:8]]}}, def_query1={query_dictionary={b=[[@14,57:57='b',<373>,2:19]], *=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={lawn={b=[[@14,57:57='b',<373>,2:19]]}}, interface={b=[{name=b, table_ref=lawn}]}}, def_query0={query_dictionary={a=[[@5,22:22='a',<373>,1:22]], *=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={mulch={a=[[@5,22:22='a',<373>,1:22]]}}, interface={a=[{name=a, table_ref=mulch}]}}, filters=[{name=a, table_ref=first}, {name=b, table_ref=second}], interface={*=[{name=*, table_ref=*}]}, table_alias={first=query0, second=query1}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={*=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={}, cte_list={first=query0, second=query1}, def_query1={query_dictionary={b=[[@14,57:57='b',<373>,2:19], [@29,116:121='second',<134>,3:45]], *=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={lawn={b=[[@14,57:57='b',<373>,2:19]]}}, cte_list={first=query0}, interface={b=[{name=b, table_ref=lawn}]}}, def_query0={query_dictionary={a=[[@5,22:22='a',<373>,1:22], [@25,106:110='first',<87>,3:35]], *=[[@19,79:79='*',<290>,3:8]]}, table_dictionary={mulch={a=[[@5,22:22='a',<373>,1:22]]}}, interface={a=[{name=a, table_ref=mulch}]}}, filters=[{name=a, table_ref=first}, {name=b, table_ref=second}], interface={*=[{name=*, table_ref=*}]}, table_alias={first=query0, second=query1}}}",
 				extractor.getSymbolTable().toString());
 }
 
@@ -2161,11 +2164,11 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{lawn={b=[[@19,82:82='b',<373>,2:19]]}, first={a=[[@30,131:135='first',<87>,3:35]], *=[[@24,104:104='*',<290>,3:8]]}, mulch={a=[[@5,22:22='a',<373>,1:22]]}, clay={b=[[@10,48:48='b',<373>,1:48]]}, second={b=[[@34,141:146='second',<134>,3:45]], *=[[@24,104:104='*',<290>,3:8]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{lawn={b=[[@19,82:82='b',<373>,2:19]]}, mulch={a=[[@5,22:22='a',<373>,1:22]]}, clay={b=[[@10,48:48='b',<373>,1:48]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={*=[[@24,104:104='*',<290>,3:8]]}, query0={a=[[@5,22:22='a',<373>,1:22]], *=[[@24,104:104='*',<290>,3:8]]}, query1={b=[[@10,48:48='b',<373>,1:48]], *=[[@24,104:104='*',<290>,3:8]]}, query3={b=[[@19,82:82='b',<373>,2:19]], *=[[@24,104:104='*',<290>,3:8]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={*=[[@24,104:104='*',<290>,3:8]]}, query0={a=[[@5,22:22='a',<373>,1:22]], *=[[@24,104:104='*',<290>,3:8]]}, query1={b=[[@10,48:48='b',<373>,1:48]], *=[[@24,104:104='*',<290>,3:8]]}, query3={b=[[@19,82:82='b',<373>,2:19], [@34,141:146='second',<134>,3:45]], *=[[@24,104:104='*',<290>,3:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={*=[[@24,104:104='*',<290>,3:8]]}, def_union2={query0={query_dictionary={a=[[@5,22:22='a',<373>,1:22]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={mulch={a=[[@5,22:22='a',<373>,1:22]]}}, interface={a=[{name=a, table_ref=mulch}]}}, interface={a=query_column}, query1={query_dictionary={b=[[@10,48:48='b',<373>,1:48]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={clay={b=[[@10,48:48='b',<373>,1:48]]}}, interface={b=[{name=b, table_ref=clay}]}}}, table_dictionary={first={a=[[@30,131:135='first',<87>,3:35]], *=[[@24,104:104='*',<290>,3:8]]}, second={b=[[@34,141:146='second',<134>,3:45]], *=[[@24,104:104='*',<290>,3:8]]}}, filters=[{name=a, table_ref=first}, {name=b, table_ref=second}], interface={*=[{name=*, table_ref=*}]}, table_alias={first=union2, second=query3}, def_query3={query_dictionary={b=[[@19,82:82='b',<373>,2:19]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={lawn={b=[[@19,82:82='b',<373>,2:19]]}}, interface={b=[{name=b, table_ref=lawn}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={*=[[@24,104:104='*',<290>,3:8]]}, def_union2={query0={query_dictionary={a=[[@5,22:22='a',<373>,1:22]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={mulch={a=[[@5,22:22='a',<373>,1:22]]}}, interface={a=[{name=a, table_ref=mulch}]}}, interface={a=query_column}, query1={query_dictionary={b=[[@10,48:48='b',<373>,1:48]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={clay={b=[[@10,48:48='b',<373>,1:48]]}}, interface={b=[{name=b, table_ref=clay}]}}}, table_dictionary={}, cte_list={first=union2, second=query3}, filters=[{name=a, table_ref=first}, {name=b, table_ref=second}], interface={*=[{name=*, table_ref=*}]}, table_alias={first=union2, second=query3}, def_query3={query_dictionary={b=[[@19,82:82='b',<373>,2:19], [@34,141:146='second',<134>,3:45]], *=[[@24,104:104='*',<290>,3:8]]}, table_dictionary={lawn={b=[[@19,82:82='b',<373>,2:19]]}}, cte_list={first=union2}, interface={b=[{name=b, table_ref=lawn}]}}}}",
 				extractor.getSymbolTable().toString());
 }
 
@@ -2194,6 +2197,69 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 
 
 	@Test
+	public void queryOverQueriesMissingUnqualifiedColumnEmitsSpecificFatalAndUnresolved() {
+		String sql = "select col3 from (select col1 from tab1) aaa join (select col2 from tab2) bbb on aaa.col1 = bbb.col2";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col3'",
+				"col3",
+				1);
+		assertDiagnosticCountBySeverity(snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"col3",
+				null,
+				1);
+	}
+
+	@Test
+	public void queryOverQueriesSingleWildcardResolvesUnqualifiedColumn() {
+		String sql = "select col3 from (select * from tab1) aaa join (select col2 from tab2) bbb on aaa.col2 = bbb.col2";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col3, table_ref=null}}}, from={join={1={table={alias=aaa, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=col2, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=bbb, query={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[[@5,25:25='*',<290>,1:25]]}, tab2={col2=[[@13,55:58='col2',<373>,1:55]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@5,25:25='*',<290>,1:25]], col2=[[@19,78:80='aaa',<373>,1:78]]}, query1={col2=[[@13,55:58='col2',<373>,1:55], [@23,89:91='bbb',<373>,1:89]]}, query2={col3=[[@1,7:10='col3',<373>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col3=[[@1,7:10='col3',<373>,1:7]]}, table_dictionary={}, def_query1={query_dictionary={col2=[[@13,55:58='col2',<373>,1:55], [@23,89:91='bbb',<373>,1:89]]}, table_dictionary={tab2={col2=[[@13,55:58='col2',<373>,1:55]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={*=[[@5,25:25='*',<290>,1:25]], col2=[[@19,78:80='aaa',<373>,1:78]]}, table_dictionary={tab1={*=[[@5,25:25='*',<290>,1:25]]}}, interface={*=[{name=*, table_ref=*}]}}, filters=[{name=col2, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col3=[{name=col3, table_ref=query0}]}, table_alias={aaa=query0, bbb=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void queryOverQueriesMultipleWildcardsRemainAmbiguous() {
+		String sql = "select col3 from (select * from tab1) aaa join (select * from tab2) bbb on aaa.col1 = bbb.col1";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet, null, null, null, 0);
+		assertDiagnosticCountBySeverity(snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				null,
+				1);
+		assertDiagnosticCountBySeverity(snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				null,
+				"col3",
+				1);
+	}
+
+
+	@Test
 	public void selectWithMultipleSimpleUnqualifiedReferencesCTEV1() {
 		String sql = "WITH " 
 			+ "\n upsert AS  (select stvmajr_code AS major_code, stvmajr_desc AS major_desc, 'T' AS active_ind"
@@ -2204,26 +2270,24 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 4);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, "(l:3 c:49)", "active_ind", 1);
 	}
 
 
 	@Test
 	public void selectWithMultipleSimpleUnqualifiedReferencesCTEV2() {
 		String sql = "WITH " 
-			+ "\n aaa AS  (select col1 from tab1), "
-			+ "\n bbb AS (select col2 from tab2)"
-			+ "\n Select  col1, col2 FROM aaa join bbb on aaa.col1 = bbb.col2";
+			+ "\n aaa AS  (select col1, col3 from tab1), "
+			+ "\n bbb AS (select col2, col3 from tab2)"
+			+ "\n Select  col1, col2, col3 FROM aaa join bbb on aaa.col1 = bbb.col2";
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, "col3", null, 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col3", 1);
 	}
 
 
@@ -2236,24 +2300,25 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
-
-		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=tab1}}}, alias=aaa}, 2={cte={union={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=problem}}}}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
-				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[col2, col1]", 
-				extractor.getInterface().toString());
-		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@32,148:150='aaa',<373>,4:41]]}, problem={col2=[[@19,88:91='col2',<373>,3:47]]}, bbb={col2=[[@36,159:161='bbb',<373>,4:52]]}, answer={col1=[[@14,57:60='col1',<373>,3:16]]}, tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}",
-				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col1=[[@14,57:60='col1',<373>,3:16]]}, query2={col2=[[@19,88:91='col2',<373>,3:47]]}}",
-				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={def_union3={interface={col1=query_column}, query1={query_dictionary={col1=[[@14,57:60='col1',<373>,3:16]]}, table_dictionary={answer={col1=[[@14,57:60='col1',<373>,3:16]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, query2={query_dictionary={col2=[[@19,88:91='col2',<373>,3:47]]}, table_dictionary={problem={col2=[[@19,88:91='col2',<373>,3:47]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, query_dictionary={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@32,148:150='aaa',<373>,4:41]]}, bbb={col2=[[@36,159:161='bbb',<373>,4:52]]}}, def_query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=tab1}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=union3}}}",
-				extractor.getSymbolTable().toString());
-
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, "col2", null, 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2266,7 +2331,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={union={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=problem}}}}}, alias=aaa}, 2={cte={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=tab2}}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2274,16 +2338,15 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@32,148:150='aaa',<373>,4:41]]}, problem={col2=[[@10,54:57='col2',<373>,2:48]]}, bbb={col2=[[@36,159:161='bbb',<373>,4:52]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}, tab2={col2=[[@19,91:94='col2',<373>,3:16]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={col2=[[@10,54:57='col2',<373>,2:48]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}, tab2={col2=[[@19,91:94='col2',<373>,3:16]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,54:57='col2',<373>,2:48]]}, query3={col2=[[@19,91:94='col2',<373>,3:16]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,54:57='col2',<373>,2:48]]}, query3={col2=[[@19,91:94='col2',<373>,3:16], [@36,159:161='bbb',<373>,4:52]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, def_union2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,54:57='col2',<373>,2:48]]}, table_dictionary={problem={col2=[[@10,54:57='col2',<373>,2:48]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, table_dictionary={aaa={col1=[[@32,148:150='aaa',<373>,4:41]]}, bbb={col2=[[@36,159:161='bbb',<373>,4:52]]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=union2, bbb=query3}, def_query3={query_dictionary={col2=[[@19,91:94='col2',<373>,3:16]]}, table_dictionary={tab2={col2=[[@19,91:94='col2',<373>,3:16]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@26,122:125='col2',<373>,4:15]], col1=[[@24,116:119='col1',<373>,4:9]]}, def_union2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,54:57='col2',<373>,2:48]]}, table_dictionary={problem={col2=[[@10,54:57='col2',<373>,2:48]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, table_dictionary={}, cte_list={aaa=union2, bbb=query3}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=query3}], col1=[{name=col1, table_ref=union2}]}, table_alias={aaa=union2, bbb=query3}, def_query3={query_dictionary={col2=[[@19,91:94='col2',<373>,3:16], [@36,159:161='bbb',<373>,4:52]]}, table_dictionary={tab2={col2=[[@19,91:94='col2',<373>,3:16]]}}, cte_list={aaa=union2}, interface={col2=[{name=col2, table_ref=tab2}]}}}}",
 				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 0);
 	}
 
 
@@ -2296,7 +2359,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=tab1}}}, alias=aaa}, 2={cte={intersect={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=problem}}}}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2304,16 +2366,24 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@32,152:154='aaa',<373>,4:41]]}, problem={col2=[[@19,92:95='col2',<373>,3:51]]}, bbb={col2=[[@36,163:165='bbb',<373>,4:52]]}, answer={col1=[[@14,57:60='col1',<373>,3:16]]}, tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}",
-				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col1=[[@14,57:60='col1',<373>,3:16]]}, query2={col2=[[@19,92:95='col2',<373>,3:51]]}}",
-				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@32,152:154='aaa',<373>,4:41]]}, bbb={col2=[[@36,163:165='bbb',<373>,4:52]]}}, def_intersect3={interface={col1=query_column}, query1={query_dictionary={col1=[[@14,57:60='col1',<373>,3:16]]}, table_dictionary={answer={col1=[[@14,57:60='col1',<373>,3:16]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, query2={query_dictionary={col2=[[@19,92:95='col2',<373>,3:51]]}, table_dictionary={problem={col2=[[@19,92:95='col2',<373>,3:51]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, def_query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=tab1}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=intersect3}}}",
-				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
 	}
 
 
@@ -2334,16 +2404,15 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@32,152:154='aaa',<373>,4:41]]}, problem={col2=[[@10,58:61='col2',<373>,2:52]]}, bbb={col2=[[@36,163:165='bbb',<373>,4:52]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}, tab2={col2=[[@19,95:98='col2',<373>,3:16]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={col2=[[@10,58:61='col2',<373>,2:52]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}, tab2={col2=[[@19,95:98='col2',<373>,3:16]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,58:61='col2',<373>,2:52]]}, query3={col2=[[@19,95:98='col2',<373>,3:16]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,58:61='col2',<373>,2:52]]}, query3={col2=[[@19,95:98='col2',<373>,3:16], [@36,163:165='bbb',<373>,4:52]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@32,152:154='aaa',<373>,4:41]]}, bbb={col2=[[@36,163:165='bbb',<373>,4:52]]}}, def_intersect2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,58:61='col2',<373>,2:52]]}, table_dictionary={problem={col2=[[@10,58:61='col2',<373>,2:52]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=intersect2, bbb=query3}, def_query3={query_dictionary={col2=[[@19,95:98='col2',<373>,3:16]]}, table_dictionary={tab2={col2=[[@19,95:98='col2',<373>,3:16]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@26,126:129='col2',<373>,4:15]], col1=[[@24,120:123='col1',<373>,4:9]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,58:61='col2',<373>,2:52]]}, table_dictionary={problem={col2=[[@10,58:61='col2',<373>,2:52]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, cte_list={aaa=intersect2, bbb=query3}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=query3}], col1=[{name=col1, table_ref=intersect2}]}, table_alias={aaa=intersect2, bbb=query3}, def_query3={query_dictionary={col2=[[@19,95:98='col2',<373>,3:16], [@36,163:165='bbb',<373>,4:52]]}, table_dictionary={tab2={col2=[[@19,95:98='col2',<373>,3:16]]}}, cte_list={aaa=intersect2}, interface={col2=[{name=col2, table_ref=tab2}]}}}}",
 				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 0);
 	}
 
 
@@ -2356,7 +2425,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={union={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=problem2}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=xyz, table_ref=null}}}, from={table={alias=null, table=problem3}}}}}, alias=aaa}, 2={cte={intersect={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=problem}}}}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2364,16 +2432,26 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@37,188:190='aaa',<373>,4:41]]}, problem={col2=[[@24,128:131='col2',<373>,3:51]]}, bbb={col2=[[@41,199:201='bbb',<373>,4:52]]}, answer={col1=[[@19,93:96='col1',<373>,3:16]]}, problem2={col1=[[@5,23:26='col1',<373>,2:17]]}, problem3={xyz=[[@10,56:58='xyz',<373>,2:50]]}}",
-				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@24,128:131='col2',<373>,3:51]]}, query6={col2=[[@31,162:165='col2',<373>,4:15]], col1=[[@29,156:159='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={xyz=[[@10,56:58='xyz',<373>,2:50]]}, query3={col1=[[@19,93:96='col1',<373>,3:16]]}}",
-				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query6={query_dictionary={col2=[[@31,162:165='col2',<373>,4:15]], col1=[[@29,156:159='col1',<373>,4:9]]}, def_union2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={problem2={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=problem2}]}}, interface={col1=query_column}, query1={query_dictionary={xyz=[[@10,56:58='xyz',<373>,2:50]]}, table_dictionary={problem3={xyz=[[@10,56:58='xyz',<373>,2:50]]}}, interface={xyz=[{name=xyz, table_ref=problem3}]}}}, table_dictionary={aaa={col1=[[@37,188:190='aaa',<373>,4:41]]}, bbb={col2=[[@41,199:201='bbb',<373>,4:52]]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], def_intersect5={interface={col1=query_column}, query4={query_dictionary={col2=[[@24,128:131='col2',<373>,3:51]]}, table_dictionary={problem={col2=[[@24,128:131='col2',<373>,3:51]]}}, interface={col2=[{name=col2, table_ref=problem}]}}, query3={query_dictionary={col1=[[@19,93:96='col1',<373>,3:16]]}, table_dictionary={answer={col1=[[@19,93:96='col1',<373>,3:16]]}}, interface={col1=[{name=col1, table_ref=answer}]}}}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=union2, bbb=intersect5}}}",
-				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2386,7 +2464,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={intersect={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=problem2}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=xyz, table_ref=null}}}, from={table={alias=null, table=problem3}}}}}, alias=aaa}, 2={cte={union={1={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=answer}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=col2, table_ref=null}}}, from={table={alias=null, table=problem}}}}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2394,16 +2471,28 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@37,188:190='aaa',<373>,4:41]]}, problem={col2=[[@24,128:131='col2',<373>,3:47]]}, bbb={col2=[[@41,199:201='bbb',<373>,4:52]]}, answer={col1=[[@19,97:100='col1',<373>,3:16]]}, problem2={col1=[[@5,23:26='col1',<373>,2:17]]}, problem3={xyz=[[@10,60:62='xyz',<373>,2:54]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={col2=[[@24,128:131='col2',<373>,3:47]]}, answer={col1=[[@19,97:100='col1',<373>,3:16]]}, problem2={col1=[[@5,23:26='col1',<373>,2:17]]}, problem3={xyz=[[@10,60:62='xyz',<373>,2:54]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@24,128:131='col2',<373>,3:47]]}, query6={col2=[[@31,162:165='col2',<373>,4:15]], col1=[[@29,156:159='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={xyz=[[@10,60:62='xyz',<373>,2:54]]}, query3={col1=[[@19,97:100='col1',<373>,3:16]]}}",
-				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query6={query_dictionary={col2=[[@31,162:165='col2',<373>,4:15]], col1=[[@29,156:159='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@37,188:190='aaa',<373>,4:41]]}, bbb={col2=[[@41,199:201='bbb',<373>,4:52]]}}, def_intersect2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={problem2={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=problem2}]}}, interface={col1=query_column}, query1={query_dictionary={xyz=[[@10,60:62='xyz',<373>,2:54]]}, table_dictionary={problem3={xyz=[[@10,60:62='xyz',<373>,2:54]]}}, interface={xyz=[{name=xyz, table_ref=problem3}]}}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=intersect2, bbb=union5}, def_union5={query4={query_dictionary={col2=[[@24,128:131='col2',<373>,3:47]]}, table_dictionary={problem={col2=[[@24,128:131='col2',<373>,3:47]]}}, interface={col2=[{name=col2, table_ref=problem}]}}, interface={col1=query_column}, query3={query_dictionary={col1=[[@19,97:100='col1',<373>,3:16]]}, table_dictionary={answer={col1=[[@19,97:100='col1',<373>,3:16]]}}, interface={col1=[{name=col1, table_ref=answer}]}}}}}",
-				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2424,16 +2513,16 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@55,200:202='aaa',<373>,4:41]]}, problem={col2=[[@10,54:57='col2',<373>,2:48]]}, bbb={col2=[[@59,211:213='bbb',<373>,4:52]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{problem={col2=[[@10,54:57='col2',<373>,2:48]]}, answer={col1=[[@5,23:26='col1',<373>,2:17]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@49,174:177='col2',<373>,4:15]], col1=[[@47,168:171='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,54:57='col2',<373>,2:48]]}, values3={col2=[[@41,146:149='col2',<373>,3:71]], col3=[[@43,152:155='col3',<373>,3:77]], col1=[[@39,140:143='col1',<373>,3:65]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@49,174:177='col2',<373>,4:15]], col1=[[@47,168:171='col1',<373>,4:9]]}, query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@10,54:57='col2',<373>,2:48]]}, values3={col2=[[@41,146:149='col2',<373>,3:71], [@59,211:213='bbb',<373>,4:52]], col3=[[@43,152:155='col3',<373>,3:77]], col1=[[@39,140:143='col1',<373>,3:65]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@49,174:177='col2',<373>,4:15]], col1=[[@47,168:171='col1',<373>,4:9]]}, def_union2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,54:57='col2',<373>,2:48]]}, table_dictionary={problem={col2=[[@10,54:57='col2',<373>,2:48]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, table_dictionary={aaa={col1=[[@55,200:202='aaa',<373>,4:41]]}, bbb={col2=[[@59,211:213='bbb',<373>,4:52]]}}, def_values3={query_dictionary={col2=[[@41,146:149='col2',<373>,3:71]], col3=[[@43,152:155='col3',<373>,3:77]], col1=[[@39,140:143='col1',<373>,3:65]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=union2, bbb=values3}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@49,174:177='col2',<373>,4:15]], col1=[[@47,168:171='col1',<373>,4:9]]}, def_union2={query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={answer={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=answer}]}}, interface={col1=query_column}, query1={query_dictionary={col2=[[@10,54:57='col2',<373>,2:48]]}, table_dictionary={problem={col2=[[@10,54:57='col2',<373>,2:48]]}}, interface={col2=[{name=col2, table_ref=problem}]}}}, table_dictionary={}, def_values3={query_dictionary={col2=[[@41,146:149='col2',<373>,3:71], [@59,211:213='bbb',<373>,4:52]], col3=[[@43,152:155='col3',<373>,3:77]], col1=[[@39,140:143='col1',<373>,3:65]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, cte_list={aaa=union2, bbb=values3}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=values3}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=union2, bbb=values3}}}",
 				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, "(l:4 c:9)", "col1", 1);
 	}
 
 
@@ -2454,16 +2543,16 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@55,206:208='aaa',<373>,4:41]]}, bbb={col2=[[@59,217:219='bbb',<373>,4:52]]}, problem2={col2=[[@37,109:112='col2',<373>,3:16]]}, problem3={xyz=[[@42,146:148='xyz',<373>,3:53]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{problem2={col2=[[@37,109:112='col2',<373>,3:16]]}, problem3={xyz=[[@42,146:148='xyz',<373>,3:53]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66]]}, query4={col2=[[@49,180:183='col2',<373>,4:15]], col1=[[@47,174:177='col1',<373>,4:9]]}, query1={col2=[[@37,109:112='col2',<373>,3:16]]}, query2={xyz=[[@42,146:148='xyz',<373>,3:53]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66], [@55,206:208='aaa',<373>,4:41]]}, query4={col2=[[@49,180:183='col2',<373>,4:15]], col1=[[@47,174:177='col1',<373>,4:9]]}, query1={col2=[[@37,109:112='col2',<373>,3:16]]}, query2={xyz=[[@42,146:148='xyz',<373>,3:53]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@49,180:183='col2',<373>,4:15]], col1=[[@47,174:177='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@55,206:208='aaa',<373>,4:41]]}, bbb={col2=[[@59,217:219='bbb',<373>,4:52]]}}, def_values0={query_dictionary={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, def_intersect3={interface={col2=query_column}, query1={query_dictionary={col2=[[@37,109:112='col2',<373>,3:16]]}, table_dictionary={problem2={col2=[[@37,109:112='col2',<373>,3:16]]}}, interface={col2=[{name=col2, table_ref=problem2}]}}, query2={query_dictionary={xyz=[[@42,146:148='xyz',<373>,3:53]]}, table_dictionary={problem3={xyz=[[@42,146:148='xyz',<373>,3:53]]}}, interface={xyz=[{name=xyz, table_ref=problem3}]}}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=values0, bbb=intersect3}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@49,180:183='col2',<373>,4:15]], col1=[[@47,174:177='col1',<373>,4:9]]}, table_dictionary={}, def_values0={query_dictionary={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66], [@55,206:208='aaa',<373>,4:41]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, def_intersect3={cte_list={aaa=values0}, interface={col2=query_column}, query1={query_dictionary={col2=[[@37,109:112='col2',<373>,3:16]]}, table_dictionary={problem2={col2=[[@37,109:112='col2',<373>,3:16]]}}, cte_list={aaa=values0}, interface={col2=[{name=col2, table_ref=problem2}]}}, query2={query_dictionary={xyz=[[@42,146:148='xyz',<373>,3:53]]}, table_dictionary={problem3={xyz=[[@42,146:148='xyz',<373>,3:53]]}}, cte_list={aaa=values0}, interface={xyz=[{name=xyz, table_ref=problem3}]}}}, cte_list={aaa=values0, bbb=intersect3}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=values0}]}, table_alias={aaa=values0, bbb=intersect3}}}",
 				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, "(l:4 c:15)", "col2", 1);
 	}
 
 
@@ -2484,16 +2573,17 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@73,218:220='aaa',<373>,4:41]]}, bbb={col2=[[@77,229:231='bbb',<373>,4:52]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66]]}, values1={col2=[[@59,164:167='col2',<373>,3:71]], col3=[[@61,170:173='col3',<373>,3:77]], col1=[[@57,158:161='col1',<373>,3:65]]}, query2={col2=[[@67,192:195='col2',<373>,4:15]], col1=[[@65,186:189='col1',<373>,4:9]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66], [@73,218:220='aaa',<373>,4:41]]}, values1={col2=[[@59,164:167='col2',<373>,3:71], [@77,229:231='bbb',<373>,4:52]], col3=[[@61,170:173='col3',<373>,3:77]], col1=[[@57,158:161='col1',<373>,3:65]]}, query2={col2=[[@67,192:195='col2',<373>,4:15]], col1=[[@65,186:189='col1',<373>,4:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@67,192:195='col2',<373>,4:15]], col1=[[@65,186:189='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@73,218:220='aaa',<373>,4:41]]}, bbb={col2=[[@77,229:231='bbb',<373>,4:52]]}}, def_values1={query_dictionary={col2=[[@59,164:167='col2',<373>,3:71]], col3=[[@61,170:173='col3',<373>,3:77]], col1=[[@57,158:161='col1',<373>,3:65]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, def_values0={query_dictionary={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=values0, bbb=values1}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@67,192:195='col2',<373>,4:15]], col1=[[@65,186:189='col1',<373>,4:9]]}, table_dictionary={}, def_values1={query_dictionary={col2=[[@59,164:167='col2',<373>,3:71], [@77,229:231='bbb',<373>,4:52]], col3=[[@61,170:173='col3',<373>,3:77]], col1=[[@57,158:161='col1',<373>,3:65]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, def_values0={query_dictionary={col2=[[@27,78:81='col2',<373>,2:72]], col3=[[@29,84:87='col3',<373>,2:78]], col1=[[@25,72:75='col1',<373>,2:66], [@73,218:220='aaa',<373>,4:41]]}, table_dictionary={}, interface={col2=[], col3=[], col1=[]}}, cte_list={aaa=values0, bbb=values1}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=values0, bbb=values1}}}",
 				extractor.getSymbolTable().toString());
 
 				Snippet snippet = extractor.getSnippet();
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 1);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 1);
 	}
 
 
@@ -2506,7 +2596,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(sql);
 		
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=col1, table_ref=null}}}, from={table={alias=null, table=tab1}}}, alias=aaa}, 2={cte={substitution={name=<substitution_2>, type=tuple}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2514,16 +2603,26 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<substitution_2>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@22,107:109='aaa',<373>,4:41]]}, bbb={col2=[[@26,118:120='bbb',<373>,4:52]]}, tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}",
-				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query2={col2=[[@16,81:84='col2',<373>,4:15]], col1=[[@14,75:78='col1',<373>,4:9]]}}",
-				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@16,81:84='col2',<373>,4:15]], col1=[[@14,75:78='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@22,107:109='aaa',<373>,4:41]]}, bbb={col2=[[@26,118:120='bbb',<373>,4:52]]}}, def_query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=tab1}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
-				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 0);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2542,17 +2641,32 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<substitution_1>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@22,106:108='aaa',<373>,4:41]]}, bbb={col2=[[@26,117:119='bbb',<373>,4:52]]}, tab2={col2=[[@9,49:52='col2',<373>,3:16]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab2={col2=[[@9,49:52='col2',<373>,3:16]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={col2=[[@9,49:52='col2',<373>,3:16]]}, query2={col2=[[@16,80:83='col2',<373>,4:15]], col1=[[@14,74:77='col1',<373>,4:9]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={col2=[[@9,49:52='col2',<373>,3:16], [@26,117:119='bbb',<373>,4:52]]}, query2={col2=[[@16,80:83='col2',<373>,4:15]], col1=[[@14,74:77='col1',<373>,4:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@16,80:83='col2',<373>,4:15]], col1=[[@14,74:77='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@22,106:108='aaa',<373>,4:41]]}, bbb={col2=[[@26,117:119='bbb',<373>,4:52]]}}, def_query1={query_dictionary={col2=[[@9,49:52='col2',<373>,3:16]]}, table_dictionary={tab2={col2=[[@9,49:52='col2',<373>,3:16]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@16,80:83='col2',<373>,4:15]], col1=[[@14,74:77='col1',<373>,4:9]]}, table_dictionary={}, cte_list={bbb=query1}, def_query1={query_dictionary={col2=[[@9,49:52='col2',<373>,3:16], [@26,117:119='bbb',<373>,4:52]]}, table_dictionary={tab2={col2=[[@9,49:52='col2',<373>,3:16]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=query1}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
 				extractor.getSymbolTable().toString());
 
-		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col1'",
+				"aaa.col1",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col1'",
+				"col1",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				2);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 0);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2564,7 +2678,6 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 			+ "\n Select  col1, col2 FROM aaa join bbb on aaa.col1 = bbb.col2";
 		final SQLSelectParserParser parser = parse(sql);	
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
-		assertNoFatalErrors(extractor);
 
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={substitution={name=<substitution_1>, type=tuple}}, alias=aaa}, 2={cte={substitution={name=<substitution_2>, type=tuple}}, alias=bbb}}, query={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
 				extractor.getAsTree().toString());
@@ -2572,16 +2685,42 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<substitution_1>=tuple, <substitution_2>=tuple}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@17,100:102='aaa',<373>,4:41]]}, bbb={col2=[[@21,111:113='bbb',<373>,4:52]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query2={col2=[[@11,74:77='col2',<373>,4:15]], col1=[[@9,68:71='col1',<373>,4:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@11,74:77='col2',<373>,4:15]], col1=[[@9,68:71='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@17,100:102='aaa',<373>,4:41]]}, bbb={col2=[[@21,111:113='bbb',<373>,4:52]]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@11,74:77='col2',<373>,4:15]], col1=[[@9,68:71='col1',<373>,4:9]]}, table_dictionary={}, cte_list={}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
 				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col1'",
+				"aaa.col1",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'col2'",
+				"bbb.col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col1'",
+				"col1",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'col2'",
+				"col2",
+				1);
+		assertFatalDiagnosticCount(snippet,
+				null,
+				null,
+				null,
+				4);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col1", 0);
+		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, "col2", 0);
 	}
 
 
@@ -2596,8 +2735,7 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 0);
 	}
 
 
@@ -2616,20 +2754,2028 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{aaa={col1=[[@37,144:146='aaa',<373>,4:41]]}, sc1.tab1={col1=[[@5,23:26='col1',<373>,2:17]]}, bbb={col2=[[@41,155:157='bbb',<373>,4:52]]}, sc2.tab1={col2=[[@16,61:64='col2',<373>,3:16]], col1=[[@22,86:89='col1',<373>,3:41]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{sc1.tab1={col1=[[@5,23:26='col1',<373>,2:17]]}, sc2.tab1={col2=[[@16,61:64='col2',<373>,3:16]], col1=[[@22,86:89='col1',<373>,3:41]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@5,23:26='col1',<373>,2:17]]}, query1={col2=[[@16,61:64='col2',<373>,3:16]]}, query2={col2=[[@31,118:121='col2',<373>,4:15]], col1=[[@29,112:115='col1',<373>,4:9]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@5,23:26='col1',<373>,2:17], [@37,144:146='aaa',<373>,4:41]]}, query1={col2=[[@16,61:64='col2',<373>,3:16], [@41,155:157='bbb',<373>,4:52]]}, query2={col2=[[@31,118:121='col2',<373>,4:15]], col1=[[@29,112:115='col1',<373>,4:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@31,118:121='col2',<373>,4:15]], col1=[[@29,112:115='col1',<373>,4:9]]}, table_dictionary={aaa={col1=[[@37,144:146='aaa',<373>,4:41]]}, bbb={col2=[[@41,155:157='bbb',<373>,4:52]]}}, unresolved_column={aaa.col1={column={name=col1, table_ref=aaa}, locations=[[@24,93:95='aaa',<373>,3:48], [@37,144:146='aaa',<373>,4:41]]}}, def_query1={query_dictionary={col2=[[@16,61:64='col2',<373>,3:16]]}, table_dictionary={sc2.tab1={col2=[[@16,61:64='col2',<373>,3:16]], col1=[[@22,86:89='col1',<373>,3:41]]}}, filters=[{name=col1, table_ref=sc2.tab1}, {name=col1, table_ref=aaa}], interface={col2=[{name=col2, table_ref=sc2.tab1}]}}, def_query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17]]}, table_dictionary={sc1.tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=sc1.tab1}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={aaa=query0, bbb=query1}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query2={query_dictionary={col2=[[@31,118:121='col2',<373>,4:15]], col1=[[@29,112:115='col1',<373>,4:9]]}, table_dictionary={}, unresolved_column={aaa.col1={column={name=col1, table_ref=aaa}, locations=[[@24,93:95='aaa',<373>,3:48], [@37,144:146='aaa',<373>,4:41]]}}, cte_list={aaa=query0, bbb=query1}, def_query1={query_dictionary={col2=[[@16,61:64='col2',<373>,3:16], [@41,155:157='bbb',<373>,4:52]]}, table_dictionary={sc2.tab1={col2=[[@16,61:64='col2',<373>,3:16]], col1=[[@22,86:89='col1',<373>,3:41]]}}, cte_list={aaa=query0}, filters=[{name=col1, table_ref=sc2.tab1}, {name=col1, table_ref=aaa}], interface={col2=[{name=col2, table_ref=sc2.tab1}]}}, def_query0={query_dictionary={col1=[[@5,23:26='col1',<373>,2:17], [@37,144:146='aaa',<373>,4:41]]}, table_dictionary={sc1.tab1={col1=[[@5,23:26='col1',<373>,2:17]]}}, interface={col1=[{name=col1, table_ref=sc1.tab1}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=query1}], col1=[{name=col1, table_ref=query0}]}, table_alias={aaa=query0, bbb=query1}}}",
 				extractor.getSymbolTable().toString());
 
 		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 1);
-		assertDiagnosticCountBySeverity(snippet, "AMBIGUOUS_COLUMN_REFERENCE", ParseDiagnostic.Severity.SEVERE_WARNING, null, null, 2);
+		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, null, 0);
+	}
+
+	@Test
+	public void sameTableDifferentSchemaQualifiedReferencesCTEV1() {
+		final String sql = "with aaa as (\n"
+				+ "  select cs.key, str.product,\n"
+				+ "         cs.segment_id, str.first_dt\n"
+				+ "  from constr as cs join str on cs.stream_key = str.stream_key\n"
+				+ "), union_bbb_ccc as (\n"
+				+ "  select bbb.key, bbb.product, bbb.segment_id, bbb.first_dt "
+				+ "  from csps as bbb join aaa on bbb.segment_id = aaa.segment_id\n"
+				+ "  union\n"
+				+ "  select ccc.ccckey, ccc.cccproduct, ccc.cccsegment_id, ccc.first_dt "
+				+ "  from csps2 as ccc join aaa on ccc.cccsegment_id = aaa.segment_id\n"
+				+ ")\n"
+				+ "select ufla.key, ufla.segment_id, aaa.first_dt, ufla.prod "
+				+ " from union_bbb_ccc as ufla join aaa "
+				+ " on ufla.segment_id = aaa.segment_id";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=key, table_ref=cs}}, 2={column={name=product, table_ref=str}}, 3={column={name=segment_id, table_ref=cs}}, 4={column={name=first_dt, table_ref=str}}}, from={join={1={table={alias=cs, table=constr}}, 2={join=join, on={condition={left={column={name=stream_key, table_ref=cs}}, right={column={name=stream_key, table_ref=str}}, operator==}}}, 3={table={alias=null, table=str}}}}}, alias=aaa}, 2={cte={union={1={select={1={column={name=key, table_ref=bbb}}, 2={column={name=product, table_ref=bbb}}, 3={column={name=segment_id, table_ref=bbb}}, 4={column={name=first_dt, table_ref=bbb}}}, from={join={1={table={alias=bbb, table=csps}}, 2={join=join, on={condition={left={column={name=segment_id, table_ref=bbb}}, right={column={name=segment_id, table_ref=aaa}}, operator==}}}, 3={table={alias=null, table=aaa}}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=ccckey, table_ref=ccc}}, 2={column={name=cccproduct, table_ref=ccc}}, 3={column={name=cccsegment_id, table_ref=ccc}}, 4={column={name=first_dt, table_ref=ccc}}}, from={join={1={table={alias=ccc, table=csps2}}, 2={join=join, on={condition={left={column={name=cccsegment_id, table_ref=ccc}}, right={column={name=segment_id, table_ref=aaa}}, operator==}}}, 3={table={alias=null, table=aaa}}}}}}}, alias=union_bbb_ccc}}, query={select={1={column={name=key, table_ref=ufla}}, 2={column={name=segment_id, table_ref=ufla}}, 3={column={name=first_dt, table_ref=aaa}}, 4={column={name=prod, table_ref=ufla}}}, from={join={1={table={alias=ufla, table=union_bbb_ccc}}, 2={join=join, on={condition={left={column={name=segment_id, table_ref=ufla}}, right={column={name=segment_id, table_ref=aaa}}, operator==}}}, 3={table={alias=null, table=aaa}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[prod, first_dt, segment_id, key]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{constr={segment_id=[[@13,53:54='cs',<373>,3:9]], stream_key=[[@27,113:114='cs',<373>,4:32]], key=[[@5,23:24='cs',<373>,2:9]]}, str={product=[[@9,31:33='str',<373>,2:17]], first_dt=[[@17,68:70='str',<373>,3:24]], stream_key=[[@31,129:131='str',<373>,4:48]]}, csps2={cccsegment_id=[[@79,334:336='ccc',<373>,8:37], [@93,398:400='ccc',<373>,8:101]], cccproduct=[[@75,318:320='ccc',<373>,8:21]], first_dt=[[@83,353:355='ccc',<373>,8:56]], ccckey=[[@71,306:308='ccc',<373>,8:9]]}, csps={product=[[@44,184:186='bbb',<373>,6:18]], first_dt=[[@52,213:215='bbb',<373>,6:47]], segment_id=[[@48,197:199='bbb',<373>,6:31], [@62,257:259='bbb',<373>,6:91]], key=[[@40,175:177='bbb',<373>,6:9]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={prod=[[@116,488:491='prod',<373>,10:53]], first_dt=[[@112,473:480='first_dt',<373>,10:38]], segment_id=[[@108,457:466='segment_id',<373>,10:22]], key=[[@104,447:449='key',<373>,10:12]]}, query0={product=[[@11,35:41='product',<373>,2:21]], first_dt=[[@19,72:79='first_dt',<373>,3:28], [@110,469:471='aaa',<373>,10:34]], segment_id=[[@15,56:65='segment_id',<373>,3:12], [@66,274:276='aaa',<373>,6:108], [@97,418:420='aaa',<373>,8:121], [@128,552:554='aaa',<373>,10:117]], key=[[@7,26:28='key',<373>,2:12]]}, query1={product=[[@46,188:194='product',<373>,6:22]], first_dt=[[@54,217:224='first_dt',<373>,6:51]], segment_id=[[@50,201:210='segment_id',<373>,6:35]], key=[[@42,179:181='key',<373>,6:13]]}, query2={cccsegment_id=[[@81,338:350='cccsegment_id',<373>,8:41]], cccproduct=[[@77,322:331='cccproduct',<373>,8:25]], first_dt=[[@85,357:364='first_dt',<373>,8:60]], ccckey=[[@73,310:315='ccckey',<373>,8:13]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query4={def_union3={cte_list={aaa=query0}, interface={product=query_column, first_dt=query_column, segment_id=query_column, key=query_column}, query1={query_dictionary={product=[[@46,188:194='product',<373>,6:22]], first_dt=[[@54,217:224='first_dt',<373>,6:51]], segment_id=[[@50,201:210='segment_id',<373>,6:35]], key=[[@42,179:181='key',<373>,6:13]]}, table_dictionary={csps={product=[[@44,184:186='bbb',<373>,6:18]], first_dt=[[@52,213:215='bbb',<373>,6:47]], segment_id=[[@48,197:199='bbb',<373>,6:31], [@62,257:259='bbb',<373>,6:91]], key=[[@40,175:177='bbb',<373>,6:9]]}}, cte_list={aaa=query0}, filters=[{name=segment_id, table_ref=bbb}, {name=segment_id, table_ref=aaa}], interface={product=[{name=product, table_ref=bbb}], first_dt=[{name=first_dt, table_ref=bbb}], segment_id=[{name=segment_id, table_ref=bbb}], key=[{name=key, table_ref=bbb}]}, table_alias={aaa=query0, bbb=csps}}, query2={query_dictionary={cccsegment_id=[[@81,338:350='cccsegment_id',<373>,8:41]], cccproduct=[[@77,322:331='cccproduct',<373>,8:25]], first_dt=[[@85,357:364='first_dt',<373>,8:60]], ccckey=[[@73,310:315='ccckey',<373>,8:13]]}, table_dictionary={csps2={cccsegment_id=[[@79,334:336='ccc',<373>,8:37], [@93,398:400='ccc',<373>,8:101]], cccproduct=[[@75,318:320='ccc',<373>,8:21]], first_dt=[[@83,353:355='ccc',<373>,8:56]], ccckey=[[@71,306:308='ccc',<373>,8:9]]}}, cte_list={aaa=query0}, filters=[{name=cccsegment_id, table_ref=ccc}, {name=segment_id, table_ref=aaa}], interface={cccsegment_id=[{name=cccsegment_id, table_ref=ccc}], cccproduct=[{name=cccproduct, table_ref=ccc}], first_dt=[{name=first_dt, table_ref=ccc}], ccckey=[{name=ccckey, table_ref=ccc}]}, table_alias={aaa=query0, ccc=csps2}}}, query_dictionary={prod=[[@116,488:491='prod',<373>,10:53]], first_dt=[[@112,473:480='first_dt',<373>,10:38]], segment_id=[[@108,457:466='segment_id',<373>,10:22]], key=[[@104,447:449='key',<373>,10:12]]}, table_dictionary={}, cte_list={aaa=query0, union_bbb_ccc=union3, ufla=union3}, def_query0={query_dictionary={product=[[@11,35:41='product',<373>,2:21]], first_dt=[[@19,72:79='first_dt',<373>,3:28], [@110,469:471='aaa',<373>,10:34]], segment_id=[[@15,56:65='segment_id',<373>,3:12], [@66,274:276='aaa',<373>,6:108], [@97,418:420='aaa',<373>,8:121], [@128,552:554='aaa',<373>,10:117]], key=[[@7,26:28='key',<373>,2:12]]}, table_dictionary={constr={segment_id=[[@13,53:54='cs',<373>,3:9]], stream_key=[[@27,113:114='cs',<373>,4:32]], key=[[@5,23:24='cs',<373>,2:9]]}, str={product=[[@9,31:33='str',<373>,2:17]], first_dt=[[@17,68:70='str',<373>,3:24]], stream_key=[[@31,129:131='str',<373>,4:48]]}}, filters=[{name=stream_key, table_ref=cs}, {name=stream_key, table_ref=str}], interface={product=[{name=product, table_ref=str}], first_dt=[{name=first_dt, table_ref=str}], segment_id=[{name=segment_id, table_ref=cs}], key=[{name=key, table_ref=cs}]}, table_alias={cs=constr}}, filters=[{name=segment_id, table_ref=ufla}, {name=segment_id, table_ref=aaa}], interface={prod=[{name=prod, table_ref=ufla}], first_dt=[{name=first_dt, table_ref=aaa}], segment_id=[{name=segment_id, table_ref=ufla}], key=[{name=key, table_ref=ufla}]}, table_alias={aaa=query0, union_bbb_ccc=union3}}}",
+				extractor.getSymbolTable().toString());
+
+		String symbolSnapshot = extractor.getSymbolTable().toString();
+		Assert.assertTrue("Expected query4 scope in symbol table", symbolSnapshot.contains("query4={"));
+		Assert.assertTrue(
+				"Expected query4 cte_list to retain aaa, union_bbb_ccc, and ufla mappings",
+				symbolSnapshot.contains("cte_list={aaa=query0, union_bbb_ccc=union3, ufla=union3}"));
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'prod' at (l:10 c:48) was not found in output interface of query alias 'ufla'.",
+				"ufla.prod",
+				10,
+				48);
 	}
 
 
+	@Test
+	public void intersectAndQueryQualifiedReferencesOutOfSequenceWithAliasesCTEV1() {
+		String sql = "WITH " 
+			+ "\n bbb AS (select tab2.col2 from tab2), "
+			+ "\n aaa AS  (select fff.col1 from  answer as fff intersect select eee.col2 from bbb as eee) "
+			+ "\n Select  aaa.col1, bbb.col2 FROM aaa join bbb on aaa.col1 = bbb.col2";
+		final SQLSelectParserParser parser = parse(sql);
+		
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=col2, table_ref=tab2}}}, from={table={alias=null, table=tab2}}}, alias=bbb}, 2={cte={intersect={1={select={1={column={name=col1, table_ref=fff}}}, from={table={alias=fff, table=answer}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={name=col2, table_ref=eee}}}, from={table={alias=eee, table=bbb}}}}}, alias=aaa}}, query={select={1={column={name=col1, table_ref=aaa}}, 2={column={name=col2, table_ref=bbb}}}, from={join={1={table={alias=null, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=null, table=bbb}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col2, col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{answer={col1=[[@16,62:64='fff',<373>,3:17]]}, tab2={col2=[[@5,22:25='tab2',<373>,2:16]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={col2=[[@40,158:161='col2',<373>,4:23]], col1=[[@36,148:151='col1',<373>,4:13]]}, query0={col2=[[@7,27:30='col2',<373>,2:21], [@25,108:110='eee',<373>,3:63], [@38,154:156='bbb',<373>,4:19], [@50,195:197='bbb',<373>,4:60]]}, query1={col1=[[@18,66:69='col1',<373>,3:21]]}, query2={col2=[[@27,112:115='col2',<373>,3:67]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query4={query_dictionary={col2=[[@40,158:161='col2',<373>,4:23]], col1=[[@36,148:151='col1',<373>,4:13]]}, table_dictionary={}, def_intersect3={cte_list={bbb=query0}, interface={col1=query_column}, query1={query_dictionary={col1=[[@18,66:69='col1',<373>,3:21]]}, table_dictionary={answer={col1=[[@16,62:64='fff',<373>,3:17]]}}, cte_list={bbb=query0}, interface={col1=[{name=col1, table_ref=fff}]}, table_alias={fff=answer}}, query2={query_dictionary={col2=[[@27,112:115='col2',<373>,3:67]]}, table_dictionary={}, cte_list={bbb=query0, eee=query0}, interface={col2=[{name=col2, table_ref=eee}]}, table_alias={eee=query0, bbb=query0}}}, cte_list={bbb=query0, aaa=intersect3}, def_query0={query_dictionary={col2=[[@7,27:30='col2',<373>,2:21], [@25,108:110='eee',<373>,3:63], [@38,154:156='bbb',<373>,4:19], [@50,195:197='bbb',<373>,4:60]]}, table_dictionary={tab2={col2=[[@5,22:25='tab2',<373>,2:16]]}}, interface={col2=[{name=col2, table_ref=tab2}]}}, filters=[{name=col1, table_ref=aaa}, {name=col2, table_ref=bbb}], interface={col2=[{name=col2, table_ref=bbb}], col1=[{name=col1, table_ref=aaa}]}, table_alias={aaa=intersect3, bbb=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	// NESTED WITH TESTS
+	@Test
+	public void nestedWithExistsCarriesCteListAaaBbbThenCccDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3))"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM aaa_bbb WHERE aaa_bbb.b2 = tab3.c2)),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM ccc WHERE ccc.c3 = tab4.d3)),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ddd WHERE ddd.d3 = tab5.e3))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3)),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3))"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM bbb_ccc WHERE bbb_ccc.c2 = tab4.d2)),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ddd WHERE ddd.d3 = tab5.e3))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3)),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3)),"
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM ccc WHERE ccc.c3 = tab4.d3))"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ccc_ddd WHERE ccc_ddd.d2 = tab5.e2))"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3)),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3)),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM ccc WHERE ccc.c3 = tab4.d3)),"
+				+ "\n     eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ddd WHERE ddd.d3 = tab5.e3))"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT bbb_src.b1, bbb_src.b2, bbb_src.b3 FROM tab2 AS bbb_src JOIN aaa ON aaa.a3 = bbb_src.b3)"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT tab3.c1, tab3.c2, tab3.c3 FROM tab3 JOIN aaa_bbb ON aaa_bbb.b2 = tab3.c2),"
+				+ "\n ddd AS (SELECT tab4.d1, tab4.d2, tab4.d3 FROM tab4 JOIN ccc ON ccc.c3 = tab4.d3),"
+				+ "\n eee AS (SELECT tab5.e1, tab5.e2, tab5.e3 FROM tab5 JOIN ddd ON ddd.d3 = tab5.e3)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithInnerJoinAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT bbb_src.b1, bbb_src.b2, bbb_src.b3 FROM tab2 AS bbb_src JOIN aaa ON aaa.a3 = bbb_src.b3),"
+				+ "\n     ccc AS (SELECT tab3.c1, tab3.c2, tab3.c3 FROM tab3 JOIN bbb ON bbb.b3 = tab3.c3)"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT tab4.d1, tab4.d2, tab4.d3 FROM tab4 JOIN bbb_ccc ON bbb_ccc.c2 = tab4.d2),"
+				+ "\n eee AS (SELECT tab5.e1, tab5.e2, tab5.e3 FROM tab5 JOIN ddd ON ddd.d3 = tab5.e3)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT bbb_src.b1, bbb_src.b2, bbb_src.b3 FROM tab2 AS bbb_src JOIN aaa ON aaa.a3 = bbb_src.b3),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT tab3.c1, tab3.c2, tab3.c3 FROM tab3 JOIN bbb ON bbb.b3 = tab3.c3),"
+				+ "\n     ddd AS (SELECT tab4.d1, tab4.d2, tab4.d3 FROM tab4 JOIN ccc ON ccc.c3 = tab4.d3)"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT tab5.e1, tab5.e2, tab5.e3 FROM tab5 JOIN ccc_ddd ON ccc_ddd.d2 = tab5.e2)"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithInnerJoinAaaBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT bbb_src.b1, bbb_src.b2, bbb_src.b3 FROM tab2 AS bbb_src JOIN aaa ON aaa.a3 = bbb_src.b3),"
+				+ "\n ccc AS (SELECT tab3.c1, tab3.c2, tab3.c3 FROM tab3 JOIN bbb ON bbb.b3 = tab3.c3),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT tab4.d1, tab4.d2, tab4.d3 FROM tab4 JOIN ccc ON ccc.c3 = tab4.d3),"
+				+ "\n     eee AS (SELECT tab5.e1, tab5.e2, tab5.e3 FROM tab5 JOIN ddd ON ddd.d3 = tab5.e3)"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, (SELECT max(aaa.a3) FROM aaa) AS b3 FROM tab2)"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, (SELECT max(aaa_bbb.b2) FROM aaa_bbb) AS c3 FROM tab3),"
+				+ "\n ddd AS (SELECT d1, d2, (SELECT max(ccc.c3) FROM ccc) AS d3 FROM tab4),"
+				+ "\n eee AS (SELECT e1, e2, (SELECT max(ddd.d3) FROM ddd) AS e3 FROM tab5)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, (SELECT max(aaa.a3) FROM aaa) AS b3 FROM tab2),"
+				+ "\n     ccc AS (SELECT c1, c2, (SELECT max(bbb.b3) FROM bbb) AS c3 FROM tab3)"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, (SELECT max(bbb_ccc.c2) FROM bbb_ccc) AS d3 FROM tab4),"
+				+ "\n eee AS (SELECT e1, e2, (SELECT max(ddd.d3) FROM ddd) AS e3 FROM tab5)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, (SELECT max(aaa.a3) FROM aaa) AS b3 FROM tab2),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, (SELECT max(bbb.b3) FROM bbb) AS c3 FROM tab3),"
+				+ "\n     ddd AS (SELECT d1, d2, (SELECT max(ccc.c3) FROM ccc) AS d3 FROM tab4)"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, (SELECT max(ccc_ddd.d2) FROM ccc_ddd) AS e3 FROM tab5)"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAaaBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, (SELECT max(aaa.a3) FROM aaa) AS b3 FROM tab2),"
+				+ "\n ccc AS (SELECT c1, c2, (SELECT max(bbb.b3) FROM bbb) AS c3 FROM tab3),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, (SELECT max(ccc.c3) FROM ccc) AS d3 FROM tab4),"
+				+ "\n     eee AS (SELECT e1, e2, (SELECT max(ddd.d3) FROM ddd) AS e3 FROM tab5)"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE b3 = (SELECT max(aaa.a3) FROM aaa))"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE c2 = (SELECT max(aaa_bbb.b2) FROM aaa_bbb)),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE d3 = (SELECT max(ccc.c3) FROM ccc)),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE e3 = (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE b3 = (SELECT max(aaa.a3) FROM aaa where aaa.a2 is not null)),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE c3 = (SELECT max(bbb.b3) FROM bbb where aaa.a1 > bbb.b1))"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE d2 = (SELECT max(bbb_ccc.c2) FROM bbb_ccc)),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE e3 = (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE b3 = (SELECT max(aaa.a3) FROM aaa)),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE c3 = (SELECT max(bbb.b3) FROM bbb)),"
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE d3 = (SELECT max(ccc.c3) FROM ccc))"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE e2 = (SELECT max(ccc_ddd.d2) FROM ccc_ddd))"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAaaBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE b3 = (SELECT max(aaa.a3) FROM aaa)),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE c3 = (SELECT max(bbb.b3) FROM bbb)),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE d3 = (SELECT max(ccc.c3) FROM ccc)),"
+				+ "\n     eee AS (SELECT e1, e2, e3 FROM tab5 WHERE e3 = (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, max(b3) AS b3 FROM tab2 GROUP BY b1, b2 HAVING max(b3) >= (SELECT max(aaa.a3) FROM aaa))"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, max(c3) AS c3 FROM tab3 GROUP BY c1, c2 HAVING max(c2) >= (SELECT max(aaa_bbb.b2) FROM aaa_bbb)),"
+				+ "\n ddd AS (SELECT d1, d2, max(d3) AS d3 FROM tab4 GROUP BY d1, d2 HAVING max(d3) >= (SELECT max(ccc.c3) FROM ccc)),"
+				+ "\n eee AS (SELECT e1, e2, max(e3) AS e3 FROM tab5 GROUP BY e1, e2 HAVING max(e3) >= (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, max(b3) AS b3 FROM tab2 GROUP BY b1, b2 HAVING max(b3) >= (SELECT max(aaa.a3) FROM aaa)),"
+				+ "\n     ccc AS (SELECT c1, c2, max(c3) AS c3 FROM tab3 GROUP BY c1, c2 HAVING max(c3) >= (SELECT max(bbb.b3) FROM bbb))"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, max(d3) AS d3 FROM tab4 GROUP BY d1, d2 HAVING max(d2) >= (SELECT max(bbb_ccc.c2) FROM bbb_ccc)),"
+				+ "\n eee AS (SELECT e1, e2, max(e3) AS e3 FROM tab5 GROUP BY e1, e2 HAVING max(e3) >= (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, max(b3) AS b3 FROM tab2 GROUP BY b1, b2 HAVING max(b3) >= (SELECT max(aaa.a3) FROM aaa)),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, max(c3) AS c3 FROM tab3 GROUP BY c1, c2 HAVING max(c3) >= (SELECT max(bbb.b3) FROM bbb)),"
+				+ "\n     ddd AS (SELECT d1, d2, max(d3) AS d3 FROM tab4 GROUP BY d1, d2 HAVING max(d3) >= (SELECT max(ccc.c3) FROM ccc))"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, max(e3) AS e3 FROM tab5 GROUP BY e1, e2 HAVING max(e2) >= (SELECT max(ccc_ddd.d2) FROM ccc_ddd))"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAaaBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, max(b3) AS b3 FROM tab2 GROUP BY b1, b2 HAVING max(b3) >= (SELECT max(aaa.a3) FROM aaa)),"
+				+ "\n ccc AS (SELECT c1, c2, max(c3) AS c3 FROM tab3 GROUP BY c1, c2 HAVING max(c3) >= (SELECT max(bbb.b3) FROM bbb)),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, max(d3) AS d3 FROM tab4 GROUP BY d1, d2 HAVING max(d3) >= (SELECT max(ccc.c3) FROM ccc)),"
+				+ "\n     eee AS (SELECT e1, e2, max(e3) AS e3 FROM tab5 GROUP BY e1, e2 HAVING max(e3) >= (SELECT max(ddd.d3) FROM ddd))"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionCarriesCteListAaaBbbThenCccDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 UNION SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa)"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 UNION SELECT aaa_bbb.a1 AS c1, aaa_bbb.b2 AS c2, aaa_bbb.b1 AS c3 FROM aaa_bbb),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 UNION SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 UNION SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionCarriesCteListAaaThenBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 UNION SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 UNION SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb)"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 UNION SELECT bbb_ccc.b1 AS d1, bbb_ccc.c2 AS d2, bbb_ccc.c1 AS d3 FROM bbb_ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 UNION SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionCarriesCteListAaaBbbThenCccDddThenEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 UNION SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 UNION SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 UNION SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc)"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 UNION SELECT ccc_ddd.c1 AS e1, ccc_ddd.d2 AS e2, ccc_ddd.d1 AS e3 FROM ccc_ddd)"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionCarriesCteListAaaBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 UNION SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 UNION SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 UNION SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n     eee AS (SELECT e1, e2, e3 FROM tab5 UNION SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectCarriesCteListAaaBbbThenCccDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 INTERSECT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa)"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT SELECT aaa_bbb.a1 AS c1, aaa_bbb.b2 AS c2, aaa_bbb.b1 AS c3 FROM aaa_bbb),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectCarriesCteListAaaThenBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 INTERSECT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb)"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT SELECT bbb_ccc.b1 AS d1, bbb_ccc.c2 AS d2, bbb_ccc.c1 AS d3 FROM bbb_ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectCarriesCteListAaaBbbThenCccDddThenEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 INTERSECT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc)"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT SELECT ccc_ddd.c1 AS e1, ccc_ddd.d2 AS e2, ccc_ddd.d1 AS e3 FROM ccc_ddd)"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectCarriesCteListAaaBbbCccThenDddEee() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 INTERSECT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n     eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3)),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3))"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n nested_outer AS ("
+				+ "\n   WITH "
+				+ "\n     prior_seed AS (SELECT aaa.a1 AS a1, aaa.a2 AS a2, aaa.a3 AS a3 FROM aaa),"
+				+ "\n     following_seed AS (SELECT bbb_ccc.c1 AS c1, bbb_ccc.c2 AS c2, bbb_ccc.b1 AS c3 FROM bbb_ccc"
+				+ "\n       WHERE EXISTS (SELECT 1 FROM prior_seed WHERE prior_seed.a3 = bbb_ccc.c2)"
+				+ "\n         AND EXISTS (SELECT 1 FROM aaa WHERE aaa.a1 = bbb_ccc.c1))"
+				+ "\n   SELECT prior_seed.a1 AS a1, following_seed.c2 AS c2, following_seed.c3 AS c3"
+				+ "\n   FROM prior_seed JOIN following_seed ON prior_seed.a1 = following_seed.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM nested_outer WHERE nested_outer.c2 = tab4.d2)),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ddd WHERE ddd.d3 = tab5.e3))"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM nested_outer AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Map<String, Object> top = topScope(extractor, "query21");
+		Map<String, Object> def20 = scopeAt(top, "def_query20");
+		Map<String, Object> def17 = scopeAt(top, "def_query17");
+		Map<String, Object> def14 = scopeAt(top, "def_query14");
+		Map<String, Object> def13 = scopeAt(top, "def_query14", "def_query13");
+		Map<String, Object> def7_6 = scopeAt(top, "def_query14", "def_query7", "def_query6");
+		Map<String, Object> def7_3 = scopeAt(top, "def_query14", "def_query7", "def_query3");
+
+		assertCteEntry(def20, "nested_outer", "query14");
+		assertCteEntry(def20, "ddd", "query17");
+		assertQueryLink(def20, "exists19", "query18");
+
+		assertCteEntry(def17, "nested_outer", "query14");
+		assertQueryLink(def17, "exists16", "query15");
+
+		assertCteEntry(def14, "prior_seed", "query8");
+		assertCteEntry(def14, "following_seed", "query13");
+
+		assertCteEntry(def13, "prior_seed", "query8");
+		assertQueryLink(def13, "exists10", "query9");
+		assertQueryLink(def13, "exists12", "query11");
+
+		assertCteEntry(def7_6, "bbb", "query3");
+		assertQueryLink(def7_6, "exists5", "query4");
+		assertQueryLink(def7_3, "exists2", "query1");
+
+		assertAliasBoundaryVisibility(extractor.getSymbolTable().toString(), "www", "xxx", "yyy", "zzz");
+	}
+
+	@Test
+	public void nestedNestedWithDepth3CarriesCteListsAndExistsRefs() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n mid_nested AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 WHERE EXISTS (SELECT 1 FROM aaa WHERE aaa.a3 = tab2.b3)),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3)),"
+				+ "\n     deep_nested AS ("
+				+ "\n       WITH "
+				+ "\n         ddd AS (SELECT d1, d2, d3 FROM tab4 WHERE EXISTS (SELECT 1 FROM ccc WHERE ccc.c3 = tab4.d3)"
+				+ "\n           AND EXISTS (SELECT 1 FROM aaa WHERE aaa.a2 = tab4.d2)),"
+				+ "\n         eee AS (SELECT e1, e2, e3 FROM tab5 WHERE EXISTS (SELECT 1 FROM ddd WHERE ddd.d3 = tab5.e3))"
+				+ "\n       SELECT ddd.d1 AS d1, eee.e2 AS e2, eee.e3 AS e3"
+				+ "\n       FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n     )"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c2 AS c2, deep_nested.e2 AS e2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n   JOIN deep_nested ON ccc.c1 = deep_nested.d1"
+				+ "\n ),"
+				+ "\n fff AS (SELECT f1, f2, f3 FROM tab6 WHERE EXISTS (SELECT 1 FROM mid_nested WHERE mid_nested.e2 = tab6.f2))"
+				+ "\n SELECT www.b1, xxx.e2, yyy.f2"
+				+ "\n FROM mid_nested AS www"
+				+ "\n JOIN mid_nested AS xxx ON www.b1 = xxx.b1"
+				+ "\n JOIN fff AS yyy ON xxx.e2 = yyy.f2";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Map<String, Object> top = topScope(extractor, "query20");
+		Map<String, Object> def19 = scopeAt(top, "def_query19");
+		Map<String, Object> def16 = scopeAt(top, "def_query16");
+		Map<String, Object> def11 = scopeAt(top, "def_query16", "def_query15", "def_query11");
+		Map<String, Object> def6 = scopeAt(top, "def_query16", "def_query15", "def_query6");
+		Map<String, Object> def3 = scopeAt(top, "def_query16", "def_query15", "def_query3");
+		Map<String, Object> def14 = scopeAt(top, "def_query16", "def_query15", "def_query14");
+
+		assertCteEntry(def19, "mid_nested", "query16");
+		assertQueryLink(def19, "exists18", "query17");
+		assertCteEntry(def16, "deep_nested", "query15");
+
+		assertQueryLink(def11, "exists10", "query9");
+		assertQueryLink(def11, "exists8", "query7");
+		assertCteEntry(def6, "bbb", "query3");
+		assertQueryLink(def6, "exists5", "query4");
+		assertQueryLink(def3, "exists2", "query1");
+		assertCteEntry(def14, "ddd", "query11");
+		assertQueryLink(def14, "exists13", "query12");
+
+		assertAliasBoundaryVisibility(extractor.getSymbolTable().toString(), "www", "xxx", "yyy");
+	}
+
+	@Test
+	public void nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS ("
+				+ "\n       SELECT b1, b2, (SELECT max(aaa.a3) FROM aaa) AS b3"
+				+ "\n       FROM tab2"
+				+ "\n       WHERE tab2.b2 IN (SELECT a2 FROM aaa)"
+				+ "\n     ),"
+				+ "\n     ccc AS ("
+				+ "\n       SELECT c1, c2, c3"
+				+ "\n       FROM tab3"
+				+ "\n       WHERE EXISTS (SELECT 1 FROM bbb WHERE bbb.b3 = tab3.c3)"
+				+ "\n         AND tab3.c2 IN (SELECT b2 FROM bbb)"
+				+ "\n     )"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2, (SELECT min(ccc.c3) FROM ccc) AS c3_min"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n nested_outer AS ("
+				+ "\n   WITH prior_seed AS (SELECT aaa.a1 AS a1, aaa.a2 AS a2, aaa.a3 AS a3 FROM aaa),"
+				+ "\n        following_seed AS (SELECT bbb_ccc.c1 AS c1, bbb_ccc.c2 AS c2, bbb_ccc.c3_min AS c3_min FROM bbb_ccc"
+				+ "\n          WHERE EXISTS (SELECT 1 FROM prior_seed WHERE prior_seed.a2 = bbb_ccc.c2)"
+				+ "\n            AND EXISTS (SELECT 1 FROM aaa WHERE aaa.a1 = bbb_ccc.c1))"
+				+ "\n   SELECT prior_seed.a1 AS a1, following_seed.c2 AS c2, following_seed.c3_min AS c3_min"
+				+ "\n   FROM prior_seed JOIN following_seed ON prior_seed.a1 = following_seed.c1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.c2, yyy.c3_min"
+				+ "\n FROM nested_outer AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN nested_outer AS yyy ON xxx.c1 = yyy.a1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Map<String, Object> top = topScope(extractor, "query21");
+		Map<String, Object> def20 = scopeAt(top, "def_query20");
+		Map<String, Object> def19 = scopeAt(top, "def_query20", "def_query19");
+		Map<String, Object> def13 = scopeAt(top, "def_query20", "def_query13");
+		Map<String, Object> def10 = scopeAt(top, "def_query20", "def_query13", "def_query10");
+		Map<String, Object> def8 = scopeAt(top, "def_query20", "def_query13", "def_query10", "def_query8");
+		Map<String, Object> def5 = scopeAt(top, "def_query20", "def_query13", "def_query5");
+
+		assertCteEntry(def20, "prior_seed", "query14");
+		assertCteEntry(def20, "following_seed", "query19");
+
+		assertCteEntry(def19, "prior_seed", "query14");
+		assertQueryLink(def19, "exists18", "query17");
+		assertQueryLink(def19, "exists16", "query15");
+
+		assertCteEntry(def13, "bbb", "query5");
+		assertCteEntry(def13, "ccc", "query10");
+		assertCteEntry(def10, "bbb", "query5");
+		assertCteEntry(def8, "bbb", "query5");
+		assertQueryLink(def10, "exists7", "query6");
+
+		assertQueryRefAtFilter(scopeAt(top, "def_query20", "def_query13", "def_query10"), 1, "query8");
+		assertQueryRefAtInterface(scopeAt(top, "def_query20", "def_query13"), "c3_min", 0, "query11");
+		assertQueryRefAtFilter(def5, 1, "query3");
+		assertQueryRefAtInterface(def5, "b3", 0, "query1");
+
+		assertAliasBoundaryVisibility(extractor.getSymbolTable().toString(), "www", "xxx", "yyy");
+	}
+
+	@Test
+	public void nestedWithSetQualifiersAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa_bbb AS ("
+				+ "\n   WITH "
+				+ "\n     aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 UNION ALL SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa)"
+				+ "\n   SELECT aaa.a1 AS a1, bbb.b1 AS b1, bbb.b2 AS b2"
+				+ "\n   FROM aaa JOIN bbb ON aaa.a1 = bbb.b1"
+				+ "\n ),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 UNION DISTINCT SELECT aaa_bbb.a1 AS c1, aaa_bbb.b2 AS c2, aaa_bbb.b1 AS c3 FROM aaa_bbb),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT DISTINCT SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 UNION ALL SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa_bbb AS www"
+				+ "\n JOIN ccc AS xxx ON www.a1 = xxx.c1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithSetQualifiersAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT b1, b2, b3 FROM tab2 UNION DISTINCT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT DISTINCT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb)"
+				+ "\n   SELECT bbb.b1 AS b1, ccc.c1 AS c1, ccc.c2 AS c2"
+				+ "\n   FROM bbb JOIN ccc ON bbb.b1 = ccc.c1"
+				+ "\n ),"
+				+ "\n ddd AS (SELECT d1, d2, d3 FROM tab4 UNION ALL SELECT bbb_ccc.c1 AS d1, bbb_ccc.c2 AS d2, bbb_ccc.b1 AS d3 FROM bbb_ccc),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT DISTINCT SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n SELECT www.a1, xxx.c2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb_ccc AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ddd AS yyy ON xxx.c1 = yyy.d1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithSetQualifiersAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 UNION ALL SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc_ddd AS ("
+				+ "\n   WITH "
+				+ "\n     ccc AS (SELECT c1, c2, c3 FROM tab3 UNION DISTINCT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 INTERSECT DISTINCT SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc)"
+				+ "\n   SELECT ccc.c1 AS c1, ddd.d1 AS d1, ddd.d2 AS d2"
+				+ "\n   FROM ccc JOIN ddd ON ccc.c1 = ddd.d1"
+				+ "\n ),"
+				+ "\n eee AS (SELECT e1, e2, e3 FROM tab5 UNION DISTINCT SELECT ccc_ddd.c1 AS e1, ccc_ddd.d2 AS e2, ccc_ddd.d1 AS e3 FROM ccc_ddd)"
+				+ "\n SELECT www.a1, xxx.b2, yyy.d2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc_ddd AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN eee AS zzz ON yyy.d1 = zzz.e1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithSetQualifiersAaaBbbCccThenDddEeeParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT a1, a2, a3 FROM tab1),"
+				+ "\n bbb AS (SELECT b1, b2, b3 FROM tab2 UNION DISTINCT SELECT aaa.a1 AS b1, aaa.a2 AS b2, aaa.a3 AS b3 FROM aaa),"
+				+ "\n ccc AS (SELECT c1, c2, c3 FROM tab3 INTERSECT DISTINCT SELECT bbb.b1 AS c1, bbb.b2 AS c2, bbb.b3 AS c3 FROM bbb),"
+				+ "\n ddd_eee AS ("
+				+ "\n   WITH "
+				+ "\n     ddd AS (SELECT d1, d2, d3 FROM tab4 UNION ALL SELECT ccc.c1 AS d1, ccc.c2 AS d2, ccc.c3 AS d3 FROM ccc),"
+				+ "\n     eee AS (SELECT e1, e2, e3 FROM tab5 INTERSECT DISTINCT SELECT ddd.d1 AS e1, ddd.d2 AS e2, ddd.d3 AS e3 FROM ddd)"
+				+ "\n   SELECT ddd.d1 AS d1, eee.e1 AS e1, eee.e2 AS e2"
+				+ "\n   FROM ddd JOIN eee ON ddd.d1 = eee.e1"
+				+ "\n )"
+				+ "\n SELECT www.a1, xxx.b2, yyy.c2, zzz.e2"
+				+ "\n FROM aaa AS www"
+				+ "\n JOIN bbb AS xxx ON www.a1 = xxx.b1"
+				+ "\n JOIN ccc AS yyy ON xxx.b1 = yyy.c1"
+				+ "\n JOIN ddd_eee AS zzz ON yyy.c1 = zzz.d1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll WHERE EXISTS (SELECT 1 FROM aaa AS mmm WHERE mmm.a3 = lll.b3)),"
+				+ "\n     ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn WHERE EXISTS (SELECT 1 FROM bbb AS ooo WHERE ooo.b3 = nnn.c3))"
+				+ "\n   SELECT ppp.b1 AS b1, qqq.c1 AS c1, qqq.c2 AS c2"
+				+ "\n   FROM bbb AS ppp JOIN ccc AS qqq ON ppp.b1 = qqq.c1"
+				+ "\n )"
+				+ "\n SELECT rrr.a1, sss.c2"
+				+ "\n FROM aaa AS rrr"
+				+ "\n JOIN bbb_ccc AS sss ON rrr.a1 = sss.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll UNION DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn INTERSECT DISTINCT SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll JOIN aaa AS mmm ON mmm.a3 = lll.b3),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN bbb AS ooo ON ooo.b3 = nnn.c3)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max(mmm.a3) FROM aaa AS mmm)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(ooo.b3) FROM bbb AS ooo))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll"
+				+ "\n        WHERE lll.b3 = (SELECT max(mmm.a3) FROM aaa AS mmm WHERE mmm.a2 IS NOT NULL)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 = (SELECT max(ooo.b3) FROM bbb AS ooo WHERE ooo.b1 = nnn.c1))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavyExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(mmm.a3) FROM aaa AS mmm) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, (SELECT max(ooo.b3) FROM bbb AS ooo) AS c3 FROM tab3 AS nnn)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll WHERE EXISTS (SELECT 1 FROM (VALUES (lll.b3, 902, 903)) AS hhh WHERE lll.b3 IS NOT NULL)),"
+				+ "\n     ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn WHERE EXISTS (SELECT 1 FROM (VALUES (nnn.c3, 904, 905)) AS hhh WHERE nnn.c3 IS NOT NULL))"
+				+ "\n   SELECT ppp.b1 AS b1, qqq.c1 AS c1, qqq.c2 AS c2"
+				+ "\n   FROM bbb AS ppp JOIN ccc AS qqq ON ppp.b1 = qqq.c1"
+				+ "\n )"
+				+ "\n SELECT rrr.a1, sss.c2"
+				+ "\n FROM aaa AS rrr"
+				+ "\n JOIN bbb_ccc AS sss ON rrr.a1 = sss.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll UNION DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL "
+				+ "SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo "
+				+ "WHERE EXISTS (SELECT 1 FROM (VALUES (ooo.b3, 906, 907)) AS hhh WHERE ooo.b3 IS NOT NULL))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn INTERSECT DISTINCT "
+				+ "SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo "
+				+ "WHERE EXISTS (SELECT 1 FROM (VALUES (ooo.b2, 908, 909)) AS hhh WHERE ooo.b2 IS NOT NULL))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll JOIN aaa AS mmm ON mmm.a3 = lll.b3),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN bbb AS ooo "
+				+ "ON ooo.b3 = nnn.c3 AND EXISTS (SELECT 1 FROM (VALUES (nnn.c3, 910, 911)) AS hhh WHERE nnn.c3 IS NOT NULL))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max(1) FROM (VALUES (lll.b3, 912, 913)) AS hhh)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(1) FROM (VALUES (nnn.c3, 914, 915)) AS hhh))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll"
+				+ "\n        WHERE lll.b3 >= (SELECT max(1) FROM (VALUES (lll.b3, 916, 917)) AS hhh)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 >= (SELECT max(1) FROM (VALUES (nnn.c3, 918, 919)) AS hhh))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavyValuesSubqueryExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(1) FROM (VALUES (lll.b3, 920, 921)) AS hhh) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, (SELECT max(1) FROM (VALUES (nnn.c3, 922, 923)) AS hhh) AS c3 FROM tab3 AS nnn)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll"
+				+ "\n        WHERE EXISTS (SELECT 1 FROM (VALUES (lll.b3, lll.b2, lll.b1)) AS hhh WHERE hhh.h1 = lll.b3))"
+				+ "\n SELECT aaa.a1, bbb.b2"
+				+ "\n FROM aaa JOIN bbb ON aaa.a1 = bbb.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				1);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll UNION DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL "
+				+ "SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo "
+				+ "WHERE ooo.b3 = (SELECT max(hhh.h1) FROM (VALUES (ooo.b3, ooo.b2, ooo.b1)) AS hhh))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				1);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn INTERSECT DISTINCT "
+				+ "SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo "
+				+ "WHERE ooo.b2 <= (SELECT max(hhh.h1) FROM (VALUES (ooo.b2, ooo.b1, ooo.b3)) AS hhh))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				1);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll JOIN aaa AS mmm ON mmm.a3 = lll.b3),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN bbb AS ooo "
+				+ "ON ooo.b3 = (SELECT max(hhh.h1) FROM (VALUES (nnn.c3, nnn.c2, nnn.c1)) AS hhh))"
+				+ "\n SELECT qqq.a1, rrr.b2, sss.c2"
+				+ "\n FROM aaa AS qqq"
+				+ "\n JOIN bbb AS rrr ON qqq.a1 = rrr.b1"
+				+ "\n JOIN ccc AS sss ON rrr.b1 = sss.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				1);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max(hhh.h1) FROM (VALUES (lll.b3, lll.b2, lll.b1)) AS hhh)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(hhh.h1) FROM (VALUES (nnn.c3, nnn.c2, nnn.c1)) AS hhh))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				2);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll"
+				+ "\n        WHERE lll.b3 = (SELECT max(hhh.h1) FROM (VALUES (lll.b3, lll.b2, lll.b1)) AS hhh)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 = (SELECT max(hhh.h1) FROM (VALUES (nnn.c3, nnn.c2, nnn.c1)) AS hhh))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				2);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavyUnnamedValuesRejectsNamedColumnReferences() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(hhh.h1) FROM (VALUES (lll.b3, lll.b2, lll.b1)) AS hhh) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, (SELECT max(hhh.h1) FROM (VALUES (nnn.c3, nnn.c2, nnn.c1)) AS hhh) AS c3 FROM tab3 AS nnn)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticCountBySeverity(snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				ParseDiagnostic.Severity.FATAL,
+				null,
+				null,
+				2);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS ((VALUES (11, 21, 31), (12, 22, 32)) AS hhh(a1, a2, a3)),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll WHERE EXISTS (SELECT 1 FROM aaa AS mmm WHERE mmm.a3 = lll.b3)),"
+				+ "\n     ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn WHERE EXISTS (SELECT 1 FROM aaa AS vvv WHERE vvv.a1 = nnn.c1))"
+				+ "\n   SELECT ppp.b1 AS b1, qqq.c1 AS c1, qqq.c2 AS c2"
+				+ "\n   FROM bbb AS ppp JOIN ccc AS qqq ON ppp.b1 = qqq.c1"
+				+ "\n )"
+				+ "\n SELECT sss.b1, sss.c2, ttt.a2"
+				+ "\n FROM bbb_ccc AS sss"
+				+ "\n JOIN aaa AS ttt ON ttt.a1 = sss.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (101, 201, 301), (102, 202, 302)) AS hhh(b1, b2, b3)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL SELECT ooo.b1 AS c1, ooo.b2 AS c2, ooo.b3 AS c3 FROM bbb AS ooo)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS ((VALUES (1001, 2001, 3001), (1002, 2002, 3002)) AS hhh(c1, c2, c3))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (401, 501, 601), (402, 502, 602)) AS hhh(b1, b2, b3)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN bbb AS ooo ON ooo.b3 = nnn.c3)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS ((VALUES (31, 41, 51), (32, 42, 52)) AS hhh(a1, a2, a3)),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max(mmm.a3) FROM aaa AS mmm)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(ooo.b3) FROM bbb AS ooo))"
+				+ "\n SELECT qqq.b1, qqq.b2, rrr.c2, ttt.a2"
+				+ "\n FROM bbb AS qqq"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1"
+				+ "\n JOIN aaa AS ttt ON ttt.a1 = qqq.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (71, 81, 91), (72, 82, 92)) AS hhh(b1, b2, b3)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 = (SELECT max(ooo.b3) FROM bbb AS ooo WHERE ooo.b1 = nnn.c1))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavyValuesCteVirtualColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(mmm.a3) FROM aaa AS mmm) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS ((VALUES (301, 401, 501), (302, 402, 502)) AS hhh(c1, c2, c3))"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('11,12', ',')) tf),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll WHERE EXISTS (SELECT 1 FROM aaa AS mmm WHERE mmm.value = lll.b3)),"
+				+ "\n     ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn WHERE EXISTS (SELECT 1 FROM aaa AS vvv WHERE vvv.seq = nnn.c1))"
+				+ "\n   SELECT ppp.b1 AS b1, qqq.c1 AS c1, qqq.c2 AS c2"
+				+ "\n   FROM bbb AS ppp JOIN ccc AS qqq ON ppp.b1 = qqq.c1"
+				+ "\n )"
+				+ "\n SELECT sss.b1, sss.c2, ttt.index"
+				+ "\n FROM bbb_ccc AS sss"
+				+ "\n JOIN aaa AS ttt ON ttt.seq = sss.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT tf.seq AS seq, tf.index AS index, tf.value AS value FROM TABLE(SPLIT_TO_TABLE('101,102', ',')) tf),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL SELECT ooo.seq AS c1, ooo.index AS c2, ooo.value AS c3 FROM bbb AS ooo)"
+				+ "\n SELECT ppp.a1, qqq.index, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.seq"
+				+ "\n JOIN ccc AS rrr ON qqq.seq = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('1001,1002', ',')) tf)"
+				+ "\n SELECT ppp.a1, qqq.b2, rrr.index"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.seq";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('401,402', ',')) tf),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN bbb AS ooo ON ooo.value = nnn.c3)"
+				+ "\n SELECT ppp.a1, qqq.index, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.seq"
+				+ "\n JOIN ccc AS rrr ON qqq.seq = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('31,32', ',')) tf),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max(mmm.value) FROM aaa AS mmm)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(ooo.b3) FROM bbb AS ooo))"
+				+ "\n SELECT qqq.b1, qqq.b2, rrr.c2, ttt.index"
+				+ "\n FROM bbb AS qqq"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1"
+				+ "\n JOIN aaa AS ttt ON ttt.seq = qqq.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('71,72', ',')) tf),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 = (SELECT max(ooo.value) FROM bbb AS ooo WHERE ooo.seq = nnn.c1))"
+				+ "\n SELECT ppp.a1, qqq.index, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.seq"
+				+ "\n JOIN ccc AS rrr ON qqq.seq = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavySnowflakeTableFunctionColumnsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('301,302', ',')) tf),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(mmm.value) FROM aaa AS mmm) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS (SELECT tf.seq, tf.index, tf.value FROM TABLE(SPLIT_TO_TABLE('401,402', ',')) tf)"
+				+ "\n SELECT ppp.seq, qqq.b2, rrr.index"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.seq = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.seq";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithExistsAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS ((VALUES (11, 21, 31), (12, 22, 32))),"
+				+ "\n bbb_ccc AS ("
+				+ "\n   WITH "
+				+ "\n     bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll WHERE EXISTS (SELECT 1 FROM aaa AS mmm WHERE $3 = lll.b3)),"
+				+ "\n     ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn WHERE EXISTS (SELECT 1 FROM bbb AS ooo WHERE ooo.b3 = nnn.c3))"
+				+ "\n   SELECT ppp.b1 AS b1, qqq.c1 AS c1, qqq.c2 AS c2"
+				+ "\n   FROM bbb AS ppp JOIN ccc AS qqq ON ppp.b1 = qqq.c1"
+				+ "\n )"
+				+ "\n SELECT sss.b1, sss.c2, (SELECT max($2) FROM aaa AS ttt) AS a2_virtual"
+				+ "\n FROM bbb_ccc AS sss";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithUnionAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (101, 201, 301), (102, 202, 302))),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn UNION ALL SELECT $1 AS c1, $2 AS c2, $3 AS c3 FROM bbb AS ooo)"
+				+ "\n SELECT ppp.a1, rrr.c2, (SELECT max($2) FROM bbb AS sss) AS b2_virtual"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN ccc AS rrr ON ppp.a1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithIntersectAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, lll.b3 FROM tab2 AS lll INTERSECT DISTINCT SELECT mmm.a1 AS b1, mmm.a2 AS b2, mmm.a3 AS b3 FROM aaa AS mmm),"
+				+ "\n ccc AS ((VALUES (1001, 2001, 3001), (1002, 2002, 3002)))"
+				+ "\n SELECT ppp.a1, qqq.b2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = $1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithJoinAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (401, 501, 601), (402, 502, 602))),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn JOIN aaa AS ooo ON ooo.a3 = nnn.c3)"
+				+ "\n SELECT ppp.a1, rrr.c2"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN ccc AS rrr ON ppp.a1 = rrr.c1"
+				+ "\n JOIN bbb AS qqq ON $1 = ppp.a1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarHavingAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS ((VALUES (31, 41, 51), (32, 42, 52))),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, max(lll.b3) AS b3 FROM tab2 AS lll GROUP BY lll.b1, lll.b2"
+				+ "\n        HAVING max(lll.b3) >= (SELECT max($3) FROM aaa AS mmm)),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, max(nnn.c3) AS c3 FROM tab3 AS nnn GROUP BY nnn.c1, nnn.c2"
+				+ "\n        HAVING max(nnn.c3) >= (SELECT max(ooo.b3) FROM bbb AS ooo))"
+				+ "\n SELECT qqq.b1, qqq.b2, rrr.c2, (SELECT max($2) FROM aaa AS ttt) AS a2_virtual"
+				+ "\n FROM bbb AS qqq"
+				+ "\n JOIN ccc AS rrr ON qqq.b1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarWhereAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS ((VALUES (71, 81, 91), (72, 82, 92))),"
+				+ "\n ccc AS (SELECT nnn.c1, nnn.c2, nnn.c3 FROM tab3 AS nnn"
+				+ "\n        WHERE nnn.c3 = (SELECT max($3) FROM bbb AS ooo WHERE $1 = nnn.c1))"
+				+ "\n SELECT ppp.a1, rrr.c2, (SELECT max($2) FROM bbb AS sss) AS b2_virtual"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN ccc AS rrr ON ppp.a1 = rrr.c1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAliasHeavyValuesCteVirtualPositionRefsExemplarParsesWithoutErrors() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT kkk.a1, kkk.a2, kkk.a3 FROM tab1 AS kkk),"
+				+ "\n bbb AS (SELECT lll.b1, lll.b2, (SELECT max(mmm.a3) FROM aaa AS mmm) AS b3 FROM tab2 AS lll),"
+				+ "\n ccc AS ((VALUES (301, 401, 501), (302, 402, 502)))"
+				+ "\n SELECT ppp.a1, qqq.b2, (SELECT max($2) FROM ccc AS rrr) AS c2_virtual"
+				+ "\n FROM aaa AS ppp"
+				+ "\n JOIN bbb AS qqq ON ppp.a1 = qqq.b1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tab1.col1 AS keep_col FROM tab1),"
+				+ "\n bbb AS ("
+				+ "\n   WITH aaa AS (SELECT tab2.col2 AS local_col FROM tab2)"
+				+ "\n   SELECT aaa.keep_col, aaa.missing AS should_fail"
+				+ "\n   FROM aaa"
+				+ "\n )"
+				+ "\n SELECT outer_aaa.keep_col"
+				+ "\n FROM aaa AS outer_aaa"
+				+ "\n JOIN bbb ON 1 = 1";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"SHADOWED_PARENT_CTE_NAME",
+				ParseDiagnostic.Severity.WARNING,
+				"shadows inherited CTE",
+				"aaa",
+				1);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SHADOWED_PARENT_CTE_NAME",
+				ParseDiagnostic.Severity.WARNING,
+				"shadows inherited CTE",
+				"aaa",
+				4,
+				8);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'keep_col' at (l:5 c:10) was not found in output interface of query alias 'aaa'.",
+				"aaa.keep_col",
+				5,
+				10);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'aaa'",
+				"aaa.keep_col",
+				1);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'missing' at (l:5 c:24) was not found in output interface of query alias 'aaa'.",
+				"aaa.missing",
+				5,
+				24);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'aaa'",
+				"aaa.missing",
+				1);
+	}
+
+	@Test
+	public void nestedWithDepth3SkipLevelShadowEmitsWarningAndQueryAliasFatals() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tab1.col1 AS inherited_col FROM tab1),"
+				+ "\n outer_mid AS ("
+				+ "\n   WITH middle_only AS (SELECT tab2.col2 AS middle_col FROM tab2),"
+				+ "\n   leaf_q AS ("
+				+ "\n     WITH aaa AS (SELECT tab3.col3 AS local_col FROM tab3)"
+				+ "\n     SELECT aaa.inherited_col AS missing_from_shadow,"
+				+ "\n            derived_alias.inherited_col AS missing_from_derived"
+				+ "\n     FROM aaa"
+				+ "\n     JOIN (SELECT tab4.col4 AS other_col FROM tab4) AS derived_alias ON 1 = 1"
+				+ "\n   )"
+				+ "\n   SELECT *"
+				+ "\n   FROM leaf_q"
+				+ "\n )"
+				+ "\n SELECT *"
+				+ "\n FROM outer_mid";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"SHADOWED_PARENT_CTE_NAME",
+				ParseDiagnostic.Severity.WARNING,
+				"shadows inherited CTE",
+				"aaa",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'aaa'",
+				"aaa.inherited_col",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'derived_alias'",
+				"derived_alias.inherited_col",
+				1);
+	}
+
+	@Test
+	public void nestedWithDepth4SkipLevelShadowWithTableAndSubqueryAliasConflicts() {
+		final String sql = "WITH "
+				+ "\n aaa AS (SELECT tab1.col1 AS inherited_col FROM tab1),"
+				+ "\n lvl2 AS ("
+				+ "\n   WITH lvl2_only AS (SELECT tab2.col2 AS lvl2_col FROM tab2),"
+				+ "\n   lvl3 AS ("
+				+ "\n     WITH lvl3_only AS (SELECT tab3.col3 AS lvl3_col FROM tab3),"
+				+ "\n     lvl4 AS ("
+				+ "\n       WITH aaa AS (SELECT tab4.col4 AS local_col FROM tab4)"
+				+ "\n       SELECT shadow_cte.inherited_col AS missing_from_shadow,"
+				+ "\n              aaa.inherited_col AS missing_from_table_alias,"
+				+ "\n              derived_alias.inherited_col AS missing_from_derived"
+				+ "\n       FROM aaa AS shadow_cte"
+				+ "\n       JOIN tab5 AS aaa ON 1 = 1"
+				+ "\n       JOIN (SELECT tab6.col6 AS sub_only FROM tab6) AS derived_alias ON 1 = 1"
+				+ "\n     )"
+				+ "\n     SELECT *"
+				+ "\n     FROM lvl4"
+				+ "\n   )"
+				+ "\n   SELECT *"
+				+ "\n   FROM lvl3"
+				+ "\n )"
+				+ "\n SELECT *"
+				+ "\n FROM lvl2";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"SHADOWED_PARENT_CTE_NAME",
+				ParseDiagnostic.Severity.WARNING,
+				"shadows inherited CTE",
+				"aaa",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'shadow_cte'",
+				"shadow_cte.inherited_col",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'derived_alias'",
+				"derived_alias.inherited_col",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"query alias 'aaa'",
+				"aaa.inherited_col",
+				1);
+	}
+
+
+	
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> topScope(SqlParseEventWalker extractor, String topKey) {
+		Map<String, Object> symbolTable = extractor.getSymbolTable();
+		Assert.assertTrue("Expected top scope key " + topKey, symbolTable.containsKey(topKey));
+		return (Map<String, Object>) symbolTable.get(topKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> scopeAt(Map<String, Object> start, String... keys) {
+		Map<String, Object> current = start;
+		for (String key : keys) {
+			Assert.assertTrue("Expected nested scope " + key, current.containsKey(key));
+			current = (Map<String, Object>) current.get(key);
+		}
+		return current;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void assertCteEntry(Map<String, Object> scope, String cteName, String expectedQueryRef) {
+		Assert.assertTrue("Expected cte_list map in scope", scope.containsKey("cte_list"));
+		Map<String, Object> cteList = (Map<String, Object>) scope.get("cte_list");
+		Assert.assertNotNull("Expected non-null cte_list", cteList);
+		Assert.assertEquals("Unexpected CTE mapping for " + cteName, expectedQueryRef, cteList.get(cteName));
+	}
+
+	private void assertQueryLink(Map<String, Object> scope, String linkKey, String expectedQueryRef) {
+		Assert.assertEquals("Unexpected query link for " + linkKey, expectedQueryRef, scope.get(linkKey));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void assertQueryRefAtFilter(Map<String, Object> scope, int filterIndex, String expectedQueryRef) {
+		Assert.assertTrue("Expected filters list", scope.containsKey("filters"));
+		List<Object> filters = (List<Object>) scope.get("filters");
+		Assert.assertTrue("Expected filter index " + filterIndex, filters.size() > filterIndex);
+		Map<String, Object> filterEntry = (Map<String, Object>) filters.get(filterIndex);
+		Assert.assertEquals("Unexpected query reference in filter", expectedQueryRef, filterEntry.get("query"));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void assertQueryRefAtInterface(Map<String, Object> scope, String interfaceColumn, int entryIndex,
+			String expectedQueryRef) {
+		Assert.assertTrue("Expected interface map", scope.containsKey("interface"));
+		Map<String, Object> interfaceMap = (Map<String, Object>) scope.get("interface");
+		Assert.assertTrue("Expected interface entry for " + interfaceColumn, interfaceMap.containsKey(interfaceColumn));
+		List<Object> entries = (List<Object>) interfaceMap.get(interfaceColumn);
+		Assert.assertTrue("Expected interface index " + entryIndex + " for " + interfaceColumn,
+				entries.size() > entryIndex);
+		Map<String, Object> entry = (Map<String, Object>) entries.get(entryIndex);
+		Assert.assertEquals("Unexpected query reference in interface for " + interfaceColumn, expectedQueryRef,
+				entry.get("query"));
+	}
+
+	private void assertAliasBoundaryVisibility(String symbolSnapshot, String... aliases) {
+		Assert.assertTrue("Expected top-level interface entries", symbolSnapshot.contains("interface={"));
+		Assert.assertTrue("Expected table alias mapping", symbolSnapshot.contains("table_alias={"));
+		for (String alias : aliases) {
+			Assert.assertTrue(
+					"Expected alias visibility for " + alias,
+					symbolSnapshot.contains(alias + "=") || symbolSnapshot.contains("table_ref=" + alias));
+		}
+	}
+
+
+	// END OF NESTED WITH TESTS
+
+	// OTHER JOIN TYPES AND MULTI-TABLE TESTS
 	@Test
 	public void normalMultiTableTest() {
 			

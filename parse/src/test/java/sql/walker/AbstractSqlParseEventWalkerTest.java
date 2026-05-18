@@ -1,5 +1,6 @@
 package sql.walker;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -262,6 +263,45 @@ public abstract class AbstractSqlParseEventWalkerTest {
 						+ " tokenFragment=" + expectedTokenFragment,
 				expectedCount,
 				actualCount);
+	}
+
+	/**
+	 * Asserts the exact set of diagnostics matching {@code code} and {@code severity},
+	 * formatted as a sorted, newline-delimited list so each diagnostic is visible at a glance:
+	 * <pre>token=&lt;tokenText&gt; line=&lt;L&gt; char=&lt;C&gt; code=&lt;CODE&gt; severity=&lt;SEV&gt;</pre>
+	 * Diagnostics are sorted by line then character position for deterministic comparison.
+	 */
+	protected void assertDiagnosticListByCodeAndSeverity(
+			Snippet snippet,
+			String code,
+			ParseDiagnostic.Severity severity,
+			String expectedSummary) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		List<ParseDiagnostic> matches = new ArrayList<>();
+		for (ParseDiagnostic d : snippet.getParserDiagnosticList()) {
+			if (d != null && code.equals(d.code()) && severity.equals(d.severity())) {
+				matches.add(d);
+			}
+		}
+		matches.sort(Comparator
+				.comparingInt((ParseDiagnostic d) -> d.line() == null ? 0 : d.line())
+				.thenComparingInt(d -> d.charPositionInLine() == null ? 0 : d.charPositionInLine()));
+
+		StringBuilder actual = new StringBuilder();
+		for (ParseDiagnostic d : matches) {
+			if (actual.length() > 0) actual.append("\n");
+			actual.append("token=").append(d.tokenText())
+			      .append(" line=").append(d.line())
+			      .append(" char=").append(d.charPositionInLine())
+			      .append(" code=").append(d.code())
+			      .append(" severity=").append(d.severity());
+		}
+		Assert.assertEquals(
+				"Diagnostic list for code=" + code + " severity=" + severity,
+				expectedSummary,
+				actual.toString());
 	}
 
 	protected void assertParserErrorsContainExactly(
