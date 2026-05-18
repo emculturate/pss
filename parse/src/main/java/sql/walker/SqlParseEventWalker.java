@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Map;
 
 import static mumble.MumbleConstants.*;
@@ -9961,20 +9962,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (subMap.size() >= 2) {
-			Object value = subMap.remove("1");
-			Object maybeType = subMap.remove("3");
-			if (maybeType == null) {
-				maybeType = subMap.remove("2");
+			Object currentValue = subMap.remove("1");
+			// Apply successive casts left to right (supports chained casts like col::text::varchar)
+			int keyIdx = 2;
+			Object nextType = subMap.remove(String.valueOf(keyIdx));
+			Map<String, Object> outerCastItem = null;
+			while (nextType != null) {
+				Map<String, Object> castItem = new HashMap<String, Object>();
+				castItem.put(MUMBLE_FUNCTION_NAME_KEY, MUMBLE_CAST_FUNCTION_NAME);
+				castItem.put(MUMBLE_TYPE_KEY, MUMBLE_CAST_FUNCTION_NAME.toUpperCase(Locale.ROOT));
+				castItem.put(MUMBLE_VALUE_KEY, currentValue);
+				castItem.put(MUMBLE_DATATYPE_KEY, nextType);
+				outerCastItem = castItem;
+				Map<String, Object> wrapped = new HashMap<String, Object>();
+				wrapped.put(MUMBLE_FUNCTION_KEY, castItem);
+				currentValue = wrapped;
+				keyIdx++;
+				nextType = subMap.remove(String.valueOf(keyIdx));
 			}
-
-			Map<String, Object> item = new HashMap<String, Object>();
-			item.put(MUMBLE_FUNCTION_NAME_KEY, "cast");
-			item.put(MUMBLE_TYPE_KEY, "CAST");
-			item.put(MUMBLE_VALUE_KEY, value);
-			item.put(MUMBLE_DATATYPE_KEY, maybeType);
-
-			subMap.clear();
-			subMap.put(MUMBLE_FUNCTION_KEY, item);
+			if (outerCastItem != null) {
+				subMap.clear();
+				subMap.put(MUMBLE_FUNCTION_KEY, outerCastItem);
+			}
 			walker.showTrace(walker.parseTrace, "Inline CAST Function: " + subMap);
 			return;
 		}
@@ -12126,6 +12135,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
 			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
 			subMap.put(MUMBLE_FUNCTION_KEY, item);
+		} else if (subMap.size() == 3) {
+			// TRIM with inline cast suffix: TRIM(... FROM col)::type
+			item.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			item.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+			Object castType = subMap.remove("3");
+			Map<String, Object> trimNode = new HashMap<String, Object>();
+			trimNode.put(MUMBLE_FUNCTION_KEY, item);
+			Map<String, Object> castItem = new HashMap<String, Object>();
+			castItem.put(MUMBLE_FUNCTION_NAME_KEY, MUMBLE_CAST_FUNCTION_NAME);
+			castItem.put(MUMBLE_TYPE_KEY, MUMBLE_CAST_FUNCTION_NAME.toUpperCase(Locale.ROOT));
+			castItem.put(MUMBLE_VALUE_KEY, trimNode);
+			castItem.put(MUMBLE_DATATYPE_KEY, castType);
+			subMap.clear();
+			subMap.put(MUMBLE_FUNCTION_KEY, castItem);
 		} else {
 			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
 		}

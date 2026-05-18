@@ -23,6 +23,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_BRACKET_FRAME_KEY = "bracket";
     public static final String MUMBLE_CALCULATION_KEY = "calc";
     public static final String MUMBLE_CASE_KEY = "case";
+    public static final String MUMBLE_CAST_FUNCTION_NAME = "cast";
     public static final String MUMBLE_CLAUSES_KEY = "clauses";
     public static final String MUMBLE_COLUMNS_KEY = "columns";
     public static final String MUMBLE_COLUMN_KEY = "column";

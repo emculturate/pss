@@ -809,4 +809,158 @@ public class SqlEventWalkerCastingAndTypesTests extends AbstractSqlParseEventWal
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void inlineCastOfNullToIntegerTest() {
+		final String query = "SELECT NULL::integer FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={null_literal=null}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@3,13:19='integer',<234>,1:13]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@3,13:19='integer',<234>,1:13]]}, table_dictionary={tab1={}}, interface={unnamed_0=[]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void inlineCastOfNullToVarcharTest() {
+		final String query = "SELECT NULL::varchar FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={null_literal=null}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@3,13:19='varchar',<248>,1:13]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@3,13:19='varchar',<248>,1:13]]}, table_dictionary={tab1={}}, interface={unnamed_0=[]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void chainedInlineCastTest() {
+		final String query = "SELECT col::text::varchar FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={column={name=col, table_ref=null}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col=[[@1,7:9='col',<373>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@5,18:24='varchar',<248>,1:18]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@5,18:24='varchar',<248>,1:18]]}, table_dictionary={tab1={col=[[@1,7:9='col',<373>,1:7]]}}, interface={unnamed_0=[{name=col, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void trimSpecialSyntaxWithInlineCastTest() {
+		final String query = "SELECT TRIM(LEADING ' ' FROM col)::text FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={function={function_name=TRIM, parameters={qualifier=LEADING, trim_character={literal=' '}, value={column={name=col, table_ref=null}}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col=[[@6,29:31='col',<373>,1:29]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@9,35:38='text',<262>,1:35]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@9,35:38='text',<262>,1:35]]}, table_dictionary={tab1={col=[[@6,29:31='col',<373>,1:29]]}}, interface={unnamed_0=[{name=col, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void tripleChainedInlineCastTest() {
+		final String query = "SELECT col ::text::  varchar :: integer FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={column={name=col, table_ref=null}}}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col=[[@1,7:9='col',<373>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@7,32:38='integer',<234>,1:32]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@7,32:38='integer',<234>,1:32]]}, table_dictionary={tab1={col=[[@1,7:9='col',<373>,1:7]]}}, interface={unnamed_0=[{name=col, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void quadrupleChainedInlineCastTest() {
+		final String query = "SELECT col::text::varchar::integer::bigint FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=BIGINT}, type=CAST, value={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={column={name=col, table_ref=null}}}}}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col=[[@1,7:9='col',<373>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@9,36:41='bigint',<235>,1:36]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@9,36:41='bigint',<235>,1:36]]}, table_dictionary={tab1={col=[[@1,7:9='col',<373>,1:7]]}}, interface={unnamed_0=[{name=col, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void quintupleChainedInlineCastTest() {
+		final String query = "SELECT col::text::varchar::integer::bigint::float FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={function={function_name=cast, data_type={type=FLOAT}, type=CAST, value={function={function_name=cast, data_type={type=BIGINT}, type=CAST, value={function={function_name=cast, data_type={type=INTEGER}, type=CAST, value={function={function_name=cast, data_type={type=VARCHAR}, type=CAST, value={function={function_name=cast, data_type={type=TEXT}, type=CAST, value={column={name=col, table_ref=null}}}}}}}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[unnamed_0]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col=[[@1,7:9='col',<373>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@11,44:48='float',<243>,1:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@11,44:48='float',<243>,1:44]]}, table_dictionary={tab1={col=[[@1,7:9='col',<373>,1:7]]}}, interface={unnamed_0=[{name=col, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

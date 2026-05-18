@@ -942,8 +942,9 @@ predicand_primary
   ;
 
 value_expression_primary
-  : parenthesized_value_expression (CAST_OPERATOR data_type)?
-  | nonparenthesized_value_expression_primary (CAST_OPERATOR data_type)?
+  : parenthesized_value_expression (CAST_OPERATOR data_type)*
+  | nonparenthesized_value_expression_primary (CAST_OPERATOR data_type)*
+  | null_literal CAST_OPERATOR data_type
   ;
 
 parenthesized_value_expression
@@ -1300,7 +1301,7 @@ character_primary
   ;
 
 trim_function
-  : trim_function_name LEFT_PAREN trim_operands RIGHT_PAREN
+  : trim_function_name LEFT_PAREN trim_operands RIGHT_PAREN (CAST_OPERATOR data_type)?
   ;
 
 trim_function_name
