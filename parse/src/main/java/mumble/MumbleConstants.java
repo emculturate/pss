@@ -32,8 +32,11 @@ public final class MumbleConstants {
     public static final String MUMBLE_CREATE_KEY = "create";
     public static final String MUMBLE_CTE_KEY = "cte";
     public static final String MUMBLE_CTE_LIST_KEY = "cte_list"; // Special key for symbol table CTE definition list in WITH scopes
+    public static final String MUMBLE_OUTER_CTE_LIST_KEY = "outer_cte_list_backup"; // Saved outer cte_list before a nested WITH clause overwrites it
+    public static final String MUMBLE_OUTER_DEF_ENTRIES_KEY = "outer_def_entries_backup"; // Saved outer def_* symbol-table entries before a nested WITH clause absorbs them
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
+    public static final String MUMBLE_DELETE_KEY = "delete";
     public static final String MUMBLE_DROP_KEY = "drop";
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";
@@ -140,7 +143,9 @@ public final class MumbleConstants {
     public static final String MUMBLE_TIMELIMIT_KEY = "timelimit";
     public static final String MUMBLE_TO_KEY = "to";
     public static final String MUMBLE_TRIM_CHARACTER_KEY = "trim_character";
+    public static final String MUMBLE_TRUNCATE_KEY = "truncate";
     public static final String MUMBLE_TYPE_KEY = "type";
+    public static final String MUMBLE_USING_KEY = "using";
     public static final String MUMBLE_UNION_KEY = "union";
     public static final String MUMBLE_UNKNOWN_KEY = "unknown";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table

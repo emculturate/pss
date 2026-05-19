@@ -18,6 +18,7 @@ import errorhandling.ParseErrorListener;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_DELETE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_IN_LIST_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_JOIN_EXTENSION_TREE_KEY;
@@ -25,6 +26,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SCRIPT_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_TRUNCATE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_UPDATE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
@@ -172,6 +174,10 @@ public class SqlParserAccess extends AbstractParserAccess {
             this.parserEmitPoint = parser.insert_end_point();
         } else if (type.equals(SQLPARSER_UPDATE_TREE_KEY)) {
             this.parserEmitPoint = parser.update_end_point();
+        } else if (type.equals(SQLPARSER_DELETE_TREE_KEY)) {
+            this.parserEmitPoint = parser.delete_end_point();
+        } else if (type.equals(SQLPARSER_TRUNCATE_TREE_KEY)) {
+            this.parserEmitPoint = parser.truncate_end_point();
          } else {
             throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }

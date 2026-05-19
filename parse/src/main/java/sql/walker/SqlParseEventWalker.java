@@ -65,6 +65,7 @@ import sql.SQLSelectParserParser;
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
+	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	private int tableFunctionSourceCount = 0;
 	private int scriptStatementSequence = 0;
 	private final ArrayDeque<Integer> scriptStatementSequenceStack = new ArrayDeque<Integer>();
@@ -698,6 +699,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (queryMap == null) {
 			for (String key : walker.symbolTable.keySet()) {
 				if (key == null || !key.startsWith(MUMBLE_INSERT_KEY)) {
+					continue;
+				}
+				Object scopedObject = walker.symbolTable.get(key);
+				if (!(scopedObject instanceof HashMap<?, ?>)) {
+					continue;
+				}
+				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				int scopeIndex;
+				try {
+					scopeIndex = Integer.parseInt(numericSuffix);
+				} catch (NumberFormatException ex) {
+					continue;
+				}
+				if (scopeIndex > topQueryIndex) {
+					topQueryIndex = scopeIndex;
+					queryMap = (Map<String, Object>) scopedObject;
+				}
+			}
+		}
+
+		if (queryMap == null) {
+			for (String key : walker.symbolTable.keySet()) {
+				if (key == null || !key.startsWith(MUMBLE_DELETE_KEY)) {
 					continue;
 				}
 				Object scopedObject = walker.symbolTable.get(key);
@@ -1723,6 +1747,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
+
+	@Override
+	public void exitDelete_end_point(SQLSelectParserParser.Delete_end_pointContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		 walker.asTree.put(SQLPARSER_DELETE_TREE_KEY, subMap.remove("1"));
+		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
+	}
+
+	@Override
+	public void exitTruncate_end_point(SQLSelectParserParser.Truncate_end_pointContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		 walker.asTree.put(SQLPARSER_TRUNCATE_TREE_KEY, subMap.remove("1"));
+		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
+		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
+	}
 	/*
 
 	
@@ -2324,6 +2370,48 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void enterTruncate_statement_primary(@NotNull SQLSelectParserParser.Truncate_statement_primaryContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@Override
+	public void exitTruncate_statement_primary(@NotNull SQLSelectParserParser.Truncate_statement_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> truncateNode = new LinkedHashMap<String, Object>();
+		truncateNode.put(MUMBLE_TYPE_KEY, "TABLE");
+
+		ArrayList<SQLSelectParserParser.Db_object_nameContext> nameContexts = new ArrayList<SQLSelectParserParser.Db_object_nameContext>();
+		if (ctx.truncate_snowflake_expression() != null && ctx.truncate_snowflake_expression().db_object_name() != null) {
+			nameContexts.add(ctx.truncate_snowflake_expression().db_object_name());
+		}
+		if (ctx.truncate_postgres_expression() != null && ctx.truncate_postgres_expression().db_object_name() != null) {
+			nameContexts.addAll(ctx.truncate_postgres_expression().db_object_name());
+		}
+
+		if (nameContexts.size() == 1) {
+			truncateNode.put(MUMBLE_NAME_KEY, buildFallbackTableNodeFromText(nameContexts.get(0).getText()));
+		} else {
+			Map<String, Object> names = new LinkedHashMap<String, Object>();
+			int index = 1;
+			for (SQLSelectParserParser.Db_object_nameContext nameCtx : nameContexts) {
+				names.put(Integer.toString(index++), buildFallbackTableNodeFromText(nameCtx.getText()));
+			}
+			truncateNode.put(MUMBLE_LIST_KEY, names);
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_TRUNCATE_KEY, truncateNode);
+
+		String truncateScopeKey = MUMBLE_TRUNCATE_KEY + walker.queryCount;
+		walker.popSymbolTable(truncateScopeKey, walker.symbolTable);
+		walker.queryCount++;
+	}
+
+	@Override
 	public void exitAlter_options(@NotNull SQLSelectParserParser.Alter_optionsContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -2447,12 +2535,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Add query to parent symbol table. Use the alias and current query number and put that in the table_alias submap.
 		// Then take the current query's symbol table and put that in the parent symbol table with a "def_" prefix.
-		// The body of a WITH query may be a SELECT (query), UPDATE, INSERT, UNION, INTERSECT, or VALUES statement,
+		// The body of a WITH query may be a SELECT (query), UPDATE, INSERT, DELETE, UNION, INTERSECT, or VALUES statement,
 		// each of which registers in the symbol table under a different prefix. Search all known prefixes.
 		int scopeIndex = walker.queryCount - 1;
 		String[] knownPrefixes = new String[] {
 				MUMBLE_VALUES_KEY, MUMBLE_INTERSECT_KEY, MUMBLE_UNION_KEY,
-				MUMBLE_INSERT_KEY, MUMBLE_UPDATE_KEY, MUMBLE_QUERY_KEY
+				MUMBLE_INSERT_KEY, MUMBLE_UPDATE_KEY, MUMBLE_DELETE_KEY, MUMBLE_QUERY_KEY
 		};
 		String queryName = MUMBLE_QUERY_KEY + scopeIndex;
 		for (String prefix : knownPrefixes) {
@@ -2473,6 +2561,26 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable = new HashMap<String, Object>();
 		walker.symbolTable.put(queryName, currentQuerySymbolTable);
 		currentQuerySymbolTable.putAll(symbols);
+
+		// If this was a nested WITH, enterWith_clause saved the outer WITH clause's
+		// in-progress cte_list under MUMBLE_OUTER_CTE_LIST_KEY. It was absorbed into
+		// currentQuerySymbolTable by putAll(symbols) above. Restore it to the new outer
+		// symbol table so the outer WITH clause can continue adding its own CTEs.
+		Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CTE_LIST_KEY);
+		if (outerCteListObj instanceof Map<?, ?> outerCteListMapObj) {
+			walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
+		}
+		// Similarly restore any outer def_* entries (e.g. def_delete0) that were saved
+		// in enterWith_clause and absorbed here. Without this, getQueryDefinitionSymbol
+		// cannot find them and CTE interface resolution fails for non-SELECT outer CTEs.
+		Object outerDefEntriesObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
+		if (outerDefEntriesObj instanceof Map<?, ?> outerDefEntriesMap) {
+			for (Map.Entry<?, ?> defEntry : outerDefEntriesMap.entrySet()) {
+				if (defEntry.getKey() instanceof String defKey) {
+					walker.symbolTable.put(defKey, defEntry.getValue());
+				}
+			}
+		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "WITH QUERY: " + subMap);
@@ -2498,8 +2606,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterWith_clause(@NotNull SQLSelectParserParser.With_clauseContext ctx) {
-		// Each WITH clause owns its own cte_list scope (important for nested WITHs).
-		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>());
+		// Each WITH clause owns its own cte_list scope. For nested WITHs the outer
+		// WITH clause's in-progress cte_list sits in the SAME symbol table frame
+		// (no push has occurred yet). We save it under MUMBLE_OUTER_CTE_LIST_KEY so
+		// exitWith_query can restore it once the nested scope collapses back.
+		Map<String, Object> existingCteList = getCteListSymbolMap(walker.symbolTable);
+		if (existingCteList != null && !existingCteList.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_OUTER_CTE_LIST_KEY, new LinkedHashMap<String, Object>(existingCteList));
+		}
+		// Also save all outer def_* entries (e.g. def_delete0, def_values0) so that
+		// exitWith_query can restore them after the nested scope's putAll absorbs them.
+		LinkedHashMap<String, Object> outerDefEntries = new LinkedHashMap<String, Object>();
+		for (Map.Entry<String, Object> entry : walker.symbolTable.entrySet()) {
+			if (entry.getKey() != null && entry.getKey().startsWith("def_")) {
+				outerDefEntries.put(entry.getKey(), entry.getValue());
+			}
+		}
+		if (!outerDefEntries.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_OUTER_DEF_ENTRIES_KEY, outerDefEntries);
+		}
+		// Seed the new cte_list from the outer one so inner CTEs can reference outer
+		// aliases (e.g. aaa=delete0 visible inside the nested WITH bbb/ccc scopes).
+		LinkedHashMap<String, Object> withCteScope = new LinkedHashMap<String, Object>();
+		if (existingCteList != null) {
+			withCteScope.putAll(existingCteList);
+		}
+		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, withCteScope);
 	}
 
 	@Override
@@ -2590,6 +2722,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias, cteListSymbols);
 			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias, cteListSymbols);
+			if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias, cteListSymbols);
 			if (!done)
 					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias, cteListSymbols);
@@ -2626,6 +2760,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				MUMBLE_UNION_KEY,
 				MUMBLE_INSERT_KEY,
 				MUMBLE_UPDATE_KEY,
+				MUMBLE_DELETE_KEY,
 				MUMBLE_QUERY_KEY
 		};
 
@@ -3395,7 +3530,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
 				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
 				|| sourceRef.startsWith(MUMBLE_INSERT_KEY)
-				|| sourceRef.startsWith(MUMBLE_UPDATE_KEY);
+				|| sourceRef.startsWith(MUMBLE_UPDATE_KEY)
+				|| sourceRef.startsWith(MUMBLE_DELETE_KEY);
 	}
 
 	private int getInsertScopePrefixLength(String sourceRef) {
@@ -3416,6 +3552,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		if (sourceRef.startsWith(MUMBLE_UPDATE_KEY)) {
 			return MUMBLE_UPDATE_KEY.length();
+		}
+		if (sourceRef.startsWith(MUMBLE_DELETE_KEY)) {
+			return MUMBLE_DELETE_KEY.length();
 		}
 		return -1;
 	}
@@ -3688,6 +3827,162 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.queryCount++;
 	}
 
+	@Override
+	public void exitDelete_expression(@NotNull SQLSelectParserParser.Delete_expressionContext ctx) {
+		// Pass-through wrapper: promotes the single dialect variant child up to the parent.
+		walker.handleOneChild(ctx.getRuleIndex());
+	}
+
+	@Override
+	public void enterDelete_snowflake_expression(@NotNull SQLSelectParserParser.Delete_snowflake_expressionContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitDelete_snowflake_expression(@NotNull SQLSelectParserParser.Delete_snowflake_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		String[] keys = new String[1];
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> deleteNode = new HashMap<String, Object>();
+
+		keys = subMap.keySet().toArray(keys);
+
+		for (String key : keys) {
+			Object obj = subMap.remove(key);
+			if (obj instanceof String) {
+				// skip keyword literals
+			} else {
+				HashMap<String, Object> value = (HashMap<String, Object>) obj;
+				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
+				if (childKey == null) {
+					deleteNode.putAll(value);
+				} else {
+					Object segment = value.remove(childKey.toString());
+					if (childKey.equals((Integer) SQLSelectParserParser.RULE_delete_using_clause)) {
+						deleteNode.put(MUMBLE_USING_KEY, segment);
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
+						HashMap<String, Object> item = (HashMap<String, Object>) segment;
+						item = (HashMap<String, Object>) item.remove("1");
+						deleteNode.put(MUMBLE_WHERE_KEY, item);
+					} else {
+						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
+					}
+				}
+			}
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
+		walker.showTrace(walker.parseTrace, subMap);
+
+		String deleteTargetTableRef = getDeleteTargetTableReference(deleteNode);
+		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
+			walker.symbolTable.put(TEMP_DELETE_TARGET_TABLE_REF_KEY, deleteTargetTableRef);
+		}
+
+		convertSymbolTableToTableDictionary(false, false, null);
+
+		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
+		walker.popSymbolTable(deleteScopeKey, walker.symbolTable);
+		walker.queryCount++;
+	}
+
+	@Override
+	public void enterDelete_postgres_expression(@NotNull SQLSelectParserParser.Delete_postgres_expressionContext ctx) {
+		walker.pushSymbolTable();
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitDelete_postgres_expression(@NotNull SQLSelectParserParser.Delete_postgres_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		String[] keys = new String[1];
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> deleteNode = new HashMap<String, Object>();
+
+		keys = subMap.keySet().toArray(keys);
+
+		for (String key : keys) {
+			Object obj = subMap.remove(key);
+			if (obj instanceof String) {
+				// skip keyword literals
+			} else {
+				HashMap<String, Object> value = (HashMap<String, Object>) obj;
+				Integer childKey = (Integer) (value).remove(ASTWALKER_RULE_TYPE_KEY);
+				if (childKey == null) {
+					deleteNode.putAll(value);
+				} else {
+					Object segment = value.remove(childKey.toString());
+					if (childKey.equals((Integer) SQLSelectParserParser.RULE_delete_using_clause)) {
+						deleteNode.put(MUMBLE_USING_KEY, segment);
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
+						HashMap<String, Object> item = (HashMap<String, Object>) segment;
+						item = (HashMap<String, Object>) item.remove("1");
+						deleteNode.put(MUMBLE_WHERE_KEY, item);
+					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_delete_returning)) {
+						deleteNode.put(MUMBLE_RETURNING_KEY, segment);
+					} else {
+						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
+					}
+				}
+			}
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
+		walker.showTrace(walker.parseTrace, subMap);
+
+		String deleteTargetTableRef = getDeleteTargetTableReference(deleteNode);
+		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
+			walker.symbolTable.put(TEMP_DELETE_TARGET_TABLE_REF_KEY, deleteTargetTableRef);
+		}
+
+		// RETURNING columns were already registered as query interface entries by exitSelect_item.
+		// convertSymbolTableToTableDictionary resolves all column references against the FROM and USING tables.
+		convertSymbolTableToTableDictionary(false, false, null);
+
+		// Publish RETURNING columns as the query column dictionary for this delete scope.
+		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
+		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (localCurrentQueryDictionary == null)
+			localCurrentQueryDictionary = new HashMap<String, Object>();
+		sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
+		walker.queryColumnDictionaryMap.put(deleteScopeKey, localCurrentQueryDictionary);
+		walker.symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+
+		walker.popSymbolTable(deleteScopeKey, walker.symbolTable);
+		walker.queryCount++;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitDelete_returning(@NotNull SQLSelectParserParser.Delete_returningContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object segment = subMap.get("1");
+		if (segment instanceof Map<?, ?> segmentMap) {
+			Map<String, Object> typedSegment = (Map<String, Object>) segmentMap;
+			Object childType = typedSegment.get(ASTWALKER_RULE_TYPE_KEY);
+			if (childType != null) {
+				Object flattened = typedSegment.get(childType.toString());
+				if (flattened != null) {
+					segment = flattened;
+				}
+			}
+		}
+
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put(type.toString(), segment);
+	}
+
 	@SuppressWarnings("unchecked")
 	private String getUpdateTargetTableReference(Map<String, Object> updateNode) {
 		if (updateNode == null) {
@@ -3695,6 +3990,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Object targetTableObj = updateNode.get(MUMBLE_TABLE_KEY);
+		if (targetTableObj instanceof Map<?, ?> targetTableMapObj) {
+			String tableRef = getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
+			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String getDeleteTargetTableReference(Map<String, Object> deleteNode) {
+		if (deleteNode == null) {
+			return null;
+		}
+
+		Object targetTableObj = deleteNode.get(MUMBLE_TABLE_KEY);
 		if (targetTableObj instanceof Map<?, ?> targetTableMapObj) {
 			String tableRef = getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
 			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
@@ -5168,6 +5478,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	private String resolveCteScopeReference(String sourceRef, HashMap<String, Object> tableAliasMap) {
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+
 		String localScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, walker.symbolTable);
 		if (localScope != null) {
 			return localScope;
@@ -5175,6 +5489,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
 			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
+
 			if (tableAliasMap != null && !tableAliasMap.isEmpty()) {
 				String inheritedScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, ancestorSymbols);
 				if (inheritedScope != null) {
@@ -5199,11 +5514,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		// Same-scope duplicates are handled separately and should not be treated as parent shadowing.
-		if (localCteList != null && localCteList.containsKey(alias)) {
-			return;
-		}
-
 		HashMap<String, Object> tableAliasMap = getTableAliasMap(walker.symbolTable);
 		String inheritedScopeRef = null;
 		if (tableAliasMap != null) {
@@ -5222,6 +5532,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (inheritedScopeRef == null) {
 			inheritedScopeRef = resolveCteScopeReference(alias, tableAliasMap);
 		}
+
 		if (inheritedScopeRef == null || inheritedScopeRef.isBlank()) {
 			return;
 		}
@@ -6121,6 +6432,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		walker.handlePushDown(ruleIndex);
 	}
+
+	@Override
+	public void exitDelete_using_clause(@NotNull SQLSelectParserParser.Delete_using_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handlePushDown(ruleIndex);
+	}
 	
 	// RULE_join_extension
 
@@ -6231,6 +6548,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (localCurrentQueryDictionary == null)
 			localCurrentQueryDictionary = new HashMap<String, Object>();
+		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 
 		// Leave these null if they don't exist
 		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
@@ -6521,6 +6839,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 								visibleQuerySourceCollection,
 								localTableAliasMap);
 
+						String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
+								deleteTargetTableRef,
+								localTableAliasMap,
+								localTableCollection,
+								sourceRefs);
+						if (preferredDeleteTargetRef != null) {
+							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
+							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							materializeResolvedUnqualifiedReference(
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localTableAliasMap,
+									resolvedSourceRef,
+									columnName);
+							continue;
+						}
+
 						if (sourceRefs.isEmpty()) {
 							// Scenario: implicit reference has no candidate source.
 							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
@@ -6571,9 +6906,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						} else {
 							// Resolve an implicit column with a single source by updating only
 							// the interface entry copy (do not mutate shared AST map objects).
-							String resolvedSourceRef = sourceRefs.get(0);
+							String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-							consumeUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
+							materializeResolvedUnqualifiedReference(
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localTableAliasMap,
+									resolvedSourceRef,
+									columnName);
 						}
 					}
 				}
@@ -6594,21 +6934,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				localCurrentQueryDictionary,
 				localTableCollection,
 				visibleQuerySourceCollection,
-				localTableAliasMap);
+				localTableAliasMap,
+				deleteTargetTableRef);
 		assignTableRefsForColumnReferenceList(
 				groupedByList,
 				localUnresolvedColumnMap,
 				localCurrentQueryDictionary,
 				localTableCollection,
 				visibleQuerySourceCollection,
-				localTableAliasMap);
+				localTableAliasMap,
+				deleteTargetTableRef);
 		assignTableRefsForColumnReferenceList(
 				orderedByList,
 				localUnresolvedColumnMap,
 				localCurrentQueryDictionary,
 				localTableCollection,
 				visibleQuerySourceCollection,
-				localTableAliasMap);
+				localTableAliasMap,
+				deleteTargetTableRef);
+
+		// Late unqualified-reference resolution can materialize new entries (for example,
+		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
+		if (localTableCollection != null && localTableCollection.size() > 0) {
+			for (String tab_ref : localTableCollection.keySet()) {
+				String reference = normalizeTableRef(tab_ref);
+				HashMap<String, Object> currDict = (HashMap<String, Object>) currentTableDictionary.get(reference);
+				if (currDict != null) {
+					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+				} else {
+					HashMap<String, Object> newDict = new HashMap<String, Object>();
+					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+					currentTableDictionary.put(reference, newDict);
+				}
+			}
+		}
 
 		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
 		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
@@ -7365,6 +7724,54 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
+	private void materializeResolvedUnqualifiedReference(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> tableAliasCollection,
+			String resolvedSourceRef,
+			String columnName) {
+		if (columnName == null || columnName.isBlank()) {
+			return;
+		}
+
+		Object unresolvedEntry = consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		if (unresolvedEntry == null || resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
+			return;
+		}
+
+		String canonicalSourceRef = normalizeTableRef(resolvedSourceRef);
+		String queryAliasSourceRef = resolveAliasToQuerySourceFromAliasMap(
+				canonicalSourceRef,
+				tableAliasCollection);
+		if (queryAliasSourceRef != null) {
+			return;
+		}
+		if (walker.isNonTableQuerySourceReference(canonicalSourceRef)
+				|| isTableFunctionSourceReference(canonicalSourceRef)) {
+			return;
+		}
+
+		if (tableCollection == null) {
+			return;
+		}
+
+		HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
+				canonicalSourceRef,
+				tableCollection);
+		if (indicatedTableDictionary == null) {
+			Object existing = tableCollection.get(canonicalSourceRef);
+			if (existing instanceof HashMap<?, ?> existingMapObj) {
+				indicatedTableDictionary = (HashMap<String, Object>) existingMapObj;
+			} else {
+				indicatedTableDictionary = new HashMap<String, Object>();
+				tableCollection.put(canonicalSourceRef, indicatedTableDictionary);
+			}
+		}
+
+		walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry);
+	}
+
 	private Object consumeUnqualifiedUnknownEntry(
 			HashMap<String, Object> unresolvedColumnMap,
 			String columnName) {
@@ -7539,7 +7946,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localTableCollection,
 			HashMap<String, Object> visibleQuerySourceCollection,
-			HashMap<String, Object> localTableAliasMap) {
+			HashMap<String, Object> localTableAliasMap,
+			String deleteTargetTableRef) {
 		if (!(columnListObj instanceof ArrayList<?>)) {
 			return;
 		}
@@ -7573,6 +7981,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					localTableCollection,
 					visibleQuerySourceCollection,
 					localTableAliasMap);
+
+			String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
+					deleteTargetTableRef,
+					localTableAliasMap,
+					localTableCollection,
+					sourceRefs);
+			if (preferredDeleteTargetRef != null) {
+				String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
+				columnRefs.set(index, cloneReferenceWithResolvedTableRef(columnRefObj, resolvedSourceRef));
+				materializeResolvedUnqualifiedReference(
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap,
+						resolvedSourceRef,
+						columnName);
+				continue;
+			}
 
 			if (sourceRefs.isEmpty()) {
 				if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
@@ -7618,11 +8043,54 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						null,
 						null);
 			} else {
-				String resolvedSourceRef = sourceRefs.get(0);
+				String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
 				columnRefs.set(index, cloneReferenceWithResolvedTableRef(columnRefObj, resolvedSourceRef));
-				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+				materializeResolvedUnqualifiedReference(
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap,
+						resolvedSourceRef,
+						columnName);
 			}
 		}
+	}
+
+	private String resolvePreferredDeleteTargetForUnqualified(
+			String deleteTargetTableRef,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> tableCollection,
+			ArrayList<String> sourceRefs) {
+		if (deleteTargetTableRef == null || deleteTargetTableRef.isBlank()) {
+			return null;
+		}
+
+		String resolvedTarget = walker.resolveAliasToTableName(deleteTargetTableRef, tableAliasCollection);
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			resolvedTarget = deleteTargetTableRef;
+		}
+		if (resolvedTarget == null || resolvedTarget.isBlank()) {
+			return null;
+		}
+
+		String normalizedTarget = normalizeTableRef(resolvedTarget);
+
+		if (sourceRefs != null) {
+			for (String sourceRef : sourceRefs) {
+				if (sourceRef != null && normalizeTableRef(sourceRef).equals(normalizedTarget)) {
+					return sourceRef;
+				}
+			}
+		}
+
+		if (tableCollection != null) {
+			for (String tableRef : tableCollection.keySet()) {
+				if (tableRef != null && normalizeTableRef(tableRef).equals(normalizedTarget)) {
+					return tableRef;
+				}
+			}
+		}
+
+		return null;
 	}
 
 	private ArrayList<String> collectUnqualifiedSourceReferences(
@@ -8051,6 +8519,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY)
 				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
 	}
 
@@ -8648,6 +9117,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
 				if (!done)
+					done = collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
+				if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 				if (!done)
 					done = collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
@@ -9025,6 +9496,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
 			if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
+			if (!done)
+					done = collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
 			if (!done)
 					done = collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
 			if (!done)

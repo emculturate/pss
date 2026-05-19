@@ -2040,6 +2040,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY)
 				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
 	}
 

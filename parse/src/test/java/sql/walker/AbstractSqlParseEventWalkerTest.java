@@ -21,6 +21,7 @@ import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.Column_valueContext;
 import sql.SQLSelectParserParser.Condition_valueContext;
 import sql.SQLSelectParserParser.DdlContext;
+import sql.SQLSelectParserParser.Delete_end_pointContext;
 import sql.SQLSelectParserParser.In_list_predicate_valueContext;
 import sql.SQLSelectParserParser.Join_extension_valueContext;
 import sql.SQLSelectParserParser.Predicand_valueContext;
@@ -28,6 +29,7 @@ import sql.SQLSelectParserParser.Query_valueContext;
 import sql.SQLSelectParserParser.ScriptContext;
 import sql.SQLSelectParserParser.SqlContext;
 import sql.SQLSelectParserParser.Sql_statementContext;
+import sql.SQLSelectParserParser.Truncate_end_pointContext;
 import sql.SQLSelectParserParser.Tuple_valueContext;
 import sql.SQLSelectParserParser.Update_end_pointContext;
 import sql.SQLSelectParserParser.Values_statement_endContext;
@@ -625,6 +627,50 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			System.out.println();
 			// There should be zero errors
 			Update_end_pointContext tree = parser.update_end_point();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
+				0, numErrors);
+
+			return runAnyParsertest(query, parser, tree, null, null, true);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
+
+	protected SqlParseEventWalker runDeleteEndPointParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Delete_end_pointContext tree = parser.delete_end_point();
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+
+			final int numErrors = v.getErrorCount();
+			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
+				0, numErrors);
+
+			return runAnyParsertest(query, parser, tree, null, null, true);
+
+		} catch (RecognitionException e) {
+			System.err.println("Exception parsing eqn: " + query);
+			System.err.println("Recognition Exception: " + e.getMessage());
+			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
+			System.err.println(v.getErrorList());
+		}
+		return null;
+	}
+
+	protected SqlParseEventWalker runTruncateEndPointParsertest(final String query, final SQLSelectParserParser parser) {
+		try {
+			System.out.println();
+			// There should be zero errors
+			Truncate_end_pointContext tree = parser.truncate_end_point();
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 
 			final int numErrors = v.getErrorCount();

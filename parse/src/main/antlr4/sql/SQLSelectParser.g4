@@ -140,7 +140,7 @@ script
   ;
 
 sql_statement
-  : (ddl_primary | with_query | query) SEMI_COLON?
+  : (ddl_primary | delete_snowflake_expression | with_query | query) SEMI_COLON?
   ;
 /*
 ===============================================================================
@@ -152,7 +152,7 @@ ddl
   ;
 
 ddl_primary
-  : (create_statement_primary | drop_statement_primary | alter_statement_primary)
+  : (create_statement_primary | drop_statement_primary | alter_statement_primary | truncate_statement_primary)
    SEMI_COLON? 
    ;
 
@@ -268,6 +268,24 @@ insert_end_point
 // Used only for Update end points
 update_end_point
   : update_expression EOF;
+
+/*
+===============================================================================
+  Delete Statement Start Symbol
+===============================================================================
+*/
+// Used only for Delete end points
+delete_end_point
+  : delete_expression EOF;
+
+/*
+===============================================================================
+  Truncate Statement Start Symbol
+===============================================================================
+*/
+// Used only for Truncate end points
+truncate_end_point
+  : truncate_statement_primary EOF;
  
 
 /*
@@ -303,6 +321,21 @@ drop_statement_primary
 
 alter_statement_primary
   : ALTER ddl_object_type db_object_name alter_options?
+  ;
+
+truncate_statement_primary
+  : truncate_snowflake_expression
+  | truncate_postgres_expression
+  ;
+
+// Snowflake custom variant: TRUNCATE TABLE <name>
+truncate_snowflake_expression
+  : TRUNCATE TABLE db_object_name
+  ;
+
+// Postgres custom variant: TABLE keyword optional and supports multiple targets
+truncate_postgres_expression
+  : TRUNCATE TABLE? db_object_name (COMMA db_object_name)*
   ;
 /*
   Create rules
@@ -450,6 +483,7 @@ query
   : query_expression 
   | insert_expression 
   | update_expression
+  | delete_expression
   | values_statement_primary
   ;
 
@@ -540,6 +574,51 @@ update_expression
   from_clause? 
   where_clause? 
   returning?
+  ;
+
+/*
+===============================================================================
+  DELETE Statement <delete expression>
+===============================================================================
+*/
+/*
+ * POSTGRES:
+[ WITH [ RECURSIVE ] with_query [, ...] ]
+DELETE FROM [ ONLY ] table [ * ] [ [ AS ] alias ]
+    [ USING using_list ]
+    [ WHERE condition | WHERE CURRENT OF cursor_name ]
+    [ RETURNING * | output_expression [ [ AS ] output_name ] [, ...] ]
+
+ * SNOWFLAKE:
+DELETE FROM <target_table>
+    [USING <table_or_query_source_list>]
+    [WHERE <predicate>]
+ */
+// Wrapper used only by delete_end_point for endpoint parsing of either dialect.
+delete_expression
+  : delete_snowflake_expression
+  | delete_postgres_expression
+  ;
+
+// Snowflake variant: DELETE without RETURNING; does not produce row output; not valid as CTE body.
+delete_snowflake_expression
+  : DELETE FROM table_primary delete_using_clause? where_clause?
+  ;
+
+// Postgres variant: DELETE with RETURNING; produces row output; valid as CTE data source.
+delete_postgres_expression
+  : DELETE FROM table_primary delete_using_clause? where_clause? delete_returning
+  ;
+
+// Postgres RETURNING clause: reuses select_list so exitSelect_item populates the output interface.
+delete_returning
+  : RETURNING select_list
+  ;
+
+// Postgres/Snowflake custom overlap: USING supports joined table/query sources.
+// table_reference_list preserves existing table/query dictionary collection behavior.
+delete_using_clause
+  : USING table_reference_list
   ;
 
 returning
@@ -1025,6 +1104,14 @@ set_function_type
   | NTILE
   | PERCENT_RANK
   | WIDTH_BUCKET
+  | FLATTEN
+  | GENERATOR
+  | INFER_SCHEMA
+  | VALIDATE
+  | RESULT_SCAN
+  | SPLIT_TO_TABLE
+  | STRTOK_SPLIT_TO_TABLE
+  | QUERY_HISTORY
   | BITAND_AGG
   | BITOR_AGG
   | BITXOR_AGG
@@ -1952,6 +2039,7 @@ nonreserved_keywords
   | 	DOUBLE
   | 	DOW
   | 	DOY
+  | 	DELETE
   | 	DROP
   | 	EPOCH
   | 	EVERY
@@ -2140,6 +2228,15 @@ nonreserved_keywords
   | STAGE
   | USER
   | VIEW
+  // Snowflake table-function keywords also usable as regular identifiers
+  | FLATTEN
+  | GENERATOR
+  | INFER_SCHEMA
+  | VALIDATE
+  | RESULT_SCAN
+  | SPLIT_TO_TABLE
+  | STRTOK_SPLIT_TO_TABLE
+  | QUERY_HISTORY
   ;
 
 /*
@@ -2949,6 +3046,8 @@ QUALIFY : Q U A L I F Y;
 POSITION : P O S I T I O N;
 CHARINDEX : C H A R I N D E X;
 INSTR : I N S T R;
+DELETE : D E L E T E;
+TRUNCATE : T R U N C A T E;
 IFF : I F F;
 MD5 : M D '5';
 REVERSE : R E V E R S E;
