@@ -766,6 +766,10 @@ lateral_modifier
 
 // Used anywhere a table name is expected
 table_primary
+  : table_source_primary table_relational_modifier? relation_as_clause?
+  ;
+
+table_source_primary
   : db_object_name relation_as_clause?
   | variable_identifier as_clause
   | jinja_identifier relation_as_clause?
@@ -781,13 +785,17 @@ relation_as_clause
 
 // Used ONLY in the TUPLE Variable Substitution end point
 tuple_primary
+  : tuple_source_primary table_relational_modifier?
+ ;
+
+tuple_source_primary
   : db_object_name
   | variable_identifier
   | jinja_identifier
   | table_function_primary
   | values_statement_primary
   | subquery
- ;
+  ;
 
 
 
@@ -826,6 +834,71 @@ named_columns_join
 using_term
   : USING
   ;
+
+/*
+   UNPIVOT Relational Operator (Snowflake)
+ */
+
+table_relational_modifier
+  : unpivot_clause
+  | pivot_clause
+  ;
+
+// Postfix operator over a single table source that creates a derived relation namespace.
+// Optional alias here allows naming the UNPIVOT result independently from the source alias.
+unpivot_clause
+  : UNPIVOT unpivot_null_policy?
+    LEFT_PAREN relational_modifier_value_column FOR relational_modifier_name_column 
+    IN relational_modifier_list RIGHT_PAREN
+    relation_as_clause?
+  ;
+
+relational_modifier_list
+  : LEFT_PAREN relational_modifier_in_item (COMMA relational_modifier_in_item)* RIGHT_PAREN
+  ;
+
+unpivot_null_policy
+  : INCLUDE NULLS
+  | EXCLUDE NULLS
+  ;
+
+relational_modifier_value_column
+  : alias_identifier
+  ;
+
+relational_modifier_name_column
+  : alias_identifier
+  ;
+
+
+// Shared clause for both UNPIVOT and PIVOT IN lists
+relational_modifier_in_item
+  : column_reference relational_modifier_alias?
+  ;
+
+
+relational_modifier_alias
+  : (AS)? (alias_identifier | Character_String_Literal)
+  ;
+
+/*
+   PIVOT Relational Operator (Snowflake)
+ */
+
+// Postfix operator that rotates rows into columns over a single table source.
+// Optional alias names the PIVOT result independently from the source alias.
+pivot_clause
+  : PIVOT
+    LEFT_PAREN pivot_aggregate FOR relational_modifier_name_column 
+    IN relational_modifier_list RIGHT_PAREN
+    relation_as_clause?
+  ;
+
+// Single aggregate applied to the value column being spread across new columns.
+pivot_aggregate
+  : set_function_type LEFT_PAREN relational_modifier_value_column RIGHT_PAREN
+  ;
+
 
 /*
    TABLE FUNCTIONS
@@ -2237,6 +2310,12 @@ nonreserved_keywords
   | SPLIT_TO_TABLE
   | STRTOK_SPLIT_TO_TABLE
   | QUERY_HISTORY
+  // Snowflake PIVOT / UNPIVOT contextual keywords — usable as identifiers
+  | PIVOT
+  | UNPIVOT
+  | FOR
+  | INCLUDE
+  | EXCLUDE
   ;
 
 /*
@@ -3088,6 +3167,11 @@ SEQUENCE : S E Q U E N C E;
 STAGE : S T A G E;
 USER : U S E R;
 VIEW : V I E W;
+FOR : F O R;
+INCLUDE : I N C L U D E;
+EXCLUDE : E X C L U D E;
+UNPIVOT : U N P I V O T;
+PIVOT : P I V O T;
 
 
 Identifier

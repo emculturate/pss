@@ -16,9 +16,22 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain table_function", ast.contains("table_function="));
-		Assert.assertFalse("table_function should not be nested under query", ast.contains("query={table_function="));
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={1={table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[1,2]'}}, function_name=parse_json}}}}}, Type=87, 2={alias=f}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<290>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<290>,1:7]]}, table_dictionary={}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test

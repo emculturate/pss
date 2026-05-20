@@ -6,7 +6,7 @@ import access.Snippet;
 import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
-public class SqlEventWalkerDmlUpdateInsertTests extends AbstractSqlParseEventWalkerTest {
+public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSqlParseEventWalkerTest {
 
 	@Test
 	public void updateDictionaryHandlingQualifiedColumnsFromWindowedSubqueryV1() {

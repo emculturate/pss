@@ -1629,6 +1629,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
+		if (unqualifiedUnresolvedMap.size() == 1 && unqualifiedUnresolvedMap.containsKey("*")) {
+			return;
+		}
+
 		Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(unqualifiedUnresolvedMap);
 		String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(unqualifiedUnresolvedMap);
 		String unknownColumnsCsv = walker.formatEntryKeysAsCsv(unqualifiedUnresolvedMap);
@@ -8984,7 +8988,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void exitTable_primary(@NotNull SQLSelectParserParser.Table_primaryContext ctx) {
+	public void exitTable_source_primary(@NotNull SQLSelectParserParser.Table_source_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -9130,6 +9134,68 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "TABLE PRIMARY: " + subMap);
+	}
+
+	// exitTable_primary: composes table_source_primary + optional table_relational_modifier + optional relation_as_clause.
+	// Slot "1" is always the processed table source result from exitTable_source_primary.
+	// Optional additional slots are classified by content:
+	//   - Map with MUMBLE_ALIAS_KEY   → outer relation_as_clause alias
+	//   - Map with MUMBLE_UNPIVOT_KEY → unpivot_clause (from table_relational_modifier)
+	//   - Map with MUMBLE_PIVOT_KEY   → pivot_clause (from table_relational_modifier)
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitTable_primary(@NotNull SQLSelectParserParser.Table_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		   Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		   subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		   Map<String, Object> sourceResult = (Map<String, Object>) subMap.remove("1");
+		   Map<String, Object> modifier = null;
+		   String outerAlias = null;
+		   String modifierKey = null;
+
+		   for (int i = 2; subMap.containsKey(String.valueOf(i)); i++) {
+			   Object entry = subMap.remove(String.valueOf(i));
+			   if (entry instanceof Map<?, ?> entryMap) {
+				   if (entryMap.containsKey(MUMBLE_ALIAS_KEY)) {
+					   outerAlias = (String) entryMap.get(MUMBLE_ALIAS_KEY);
+				   } else if (entryMap.containsKey(MUMBLE_UNPIVOT_KEY)) {
+					   modifier = (Map<String, Object>) entryMap.get(MUMBLE_UNPIVOT_KEY);
+					   modifierKey = MUMBLE_UNPIVOT_KEY;
+				   } else if (entryMap.containsKey(MUMBLE_PIVOT_KEY)) {
+					   modifier = (Map<String, Object>) entryMap.get(MUMBLE_PIVOT_KEY);
+					   modifierKey = MUMBLE_PIVOT_KEY;
+				   }
+			   }
+		   }
+
+		   if (modifier != null && modifierKey != null) {
+			   sourceResult.put(modifierKey, modifier);
+		   }
+		   if (outerAlias != null) {
+			   Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
+			   if (tableEntry instanceof Map<?, ?> tableMap) {
+				   ((Map<String, Object>) tableMap).put(MUMBLE_ALIAS_KEY, outerAlias);
+				   if (modifier == null) {
+					   String tableRef = getQualifiedTableReference((Map<String, Object>) tableMap);
+					   String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
+					   String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
+					   upsertCurrentTableAliasMapping(outerAlias, aliasTarget);
+				   } else {
+					   walker.collectTableAlias(outerAlias, modifierKey);
+				   }
+			   } else {
+				   sourceResult.put(MUMBLE_ALIAS_KEY, outerAlias);
+			   }
+		   }
+
+		   walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
+		   walker.showTrace(walker.parseTrace, "TABLE PRIMARY (composed): " + sourceResult);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9436,7 +9502,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void exitTuple_primary(@NotNull SQLSelectParserParser.Tuple_primaryContext ctx) {
+	public void exitTuple_source_primary(@NotNull SQLSelectParserParser.Tuple_source_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -9509,6 +9575,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Put nearly-completed AST back into parent rule and stack level
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		walker.showTrace(walker.parseTrace, "TUPLE PRIMARY: " + subMap);
+	}
+
+	// exitTuple_primary: composes tuple_source_primary + optional table_relational_modifier.
+	// Slot "1" is always the processed tuple source result from exitTuple_source_primary.
+	// Optional slot "2" is the relational modifier (UNPIVOT or PIVOT clause map).
+	@SuppressWarnings("unchecked")
+	@Override
+	public void exitTuple_primary(@NotNull SQLSelectParserParser.Tuple_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> sourceResult = (Map<String, Object>) subMap.remove("1");
+		Map<String, Object> modifier = null;
+
+		for (int i = 2; subMap.containsKey(String.valueOf(i)); i++) {
+			Object entry = subMap.remove(String.valueOf(i));
+			if (entry instanceof Map<?, ?> entryMap) {
+				if (entryMap.containsKey(MUMBLE_UNPIVOT_KEY)
+						|| entryMap.containsKey(MUMBLE_PIVOT_KEY)) {
+					modifier = (Map<String, Object>) entry;
+				}
+			}
+		}
+
+		if (modifier != null) {
+			// Keep relational modifier as a direct sibling of table/query source in tuple endpoint AST.
+			// Example: {TUPLE={table={...}, pivot={...}}} instead of {TUPLE={table={...}, modifier={pivot={...}}}}
+			sourceResult.putAll(modifier);
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
+		walker.showTrace(walker.parseTrace, "TUPLE PRIMARY (composed): " + sourceResult);
 	}
 	
 
@@ -9757,6 +9861,259 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 	
 	// using_term does NOT need its own methods
+
+	/*
+	  ===========================================
+	  PIVOT / UNPIVOT clauses
+	  ===========================================
+	*/
+
+	@Override
+	public void exitTable_relational_modifier(@NotNull SQLSelectParserParser.Table_relational_modifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	// Handles the main UNPIVOT clause, building a subtree rooted at MUMBLE_UNPIVOT_KEY.
+	// Each child type is identified by inspecting its content rather than by slot position,
+	// so optional children do not affect the classification of required ones:
+	//   - unpivot_null_policy  → Map containing MUMBLE_NULLS_POLICY_KEY
+	//   - unpivot_list         → numbered map whose "1" entry is a flattened in-item map
+	//                            (name/table_ref[/alias])
+	//   - relation_as_clause   → Map containing MUMBLE_ALIAS_KEY
+	//   - value / name columns → plain String (alias_identifier collapses via handleOneChild)
+	//                            first String = value column, second = name column
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitUnpivot_clause(@NotNull SQLSelectParserParser.Unpivot_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object nullPolicy = null;
+		Object inList     = null;
+		Object alias      = null;
+		List<Object> nameSlots = new ArrayList<>();   // valueCol then nameCol, in arrival order
+
+		for (int i = 1; subMap.containsKey(String.valueOf(i)); i++) {
+			Object entry = subMap.get(String.valueOf(i));
+			if (entry instanceof Map<?, ?> entryMap) {
+				if (entryMap.containsKey(MUMBLE_NULLS_POLICY_KEY)) {
+					nullPolicy = entry;
+				} else if (entryMap.containsKey(MUMBLE_ALIAS_KEY)) {
+					alias = entryMap.get(MUMBLE_ALIAS_KEY);
+				} else if (entryMap.containsKey("1")
+						&& entryMap.get("1") instanceof Map<?, ?> firstItem
+						&& (((Map<?, ?>) firstItem).containsKey(MUMBLE_NAME_KEY)
+								|| ((Map<?, ?>) firstItem).containsKey(MUMBLE_TABLE_REF_KEY)
+								|| ((Map<?, ?>) firstItem).containsKey(MUMBLE_ALIAS_KEY))) {
+					inList = entry;
+				}
+			} else {
+				nameSlots.add(entry);   // plain String identifier — value_col, then name_col
+			}
+		}
+
+		Object valueCol = nameSlots.size() > 0 ? nameSlots.get(0) : null;
+		Object nameCol  = nameSlots.size() > 1 ? nameSlots.get(1) : null;
+
+		   Map<String, Object> unpivotMap = new LinkedHashMap<>();
+		   if (nullPolicy != null)
+			   unpivotMap.put(MUMBLE_NULLS_POLICY_KEY, nullPolicy);
+		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_VALUE_KEY, valueCol);
+		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_FOR_KEY, nameCol);
+		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_IN_KEY, inList);
+		   if (alias != null)
+			   unpivotMap.put(mumble.MumbleConstants.MUMBLE_ALIAS_KEY, alias);
+		   // Do NOT add ASTWALKER_RULE_TYPE_KEY or MUMBLE_UNPIVOT_KEY=true here
+
+		   // Wrap in a map with MUMBLE_UNPIVOT_KEY as the only key
+		   Map<String, Object> wrapper = new LinkedHashMap<>();
+		   wrapper.put(MUMBLE_UNPIVOT_KEY, unpivotMap);
+		   walker.showTrace(walker.parseTrace, "UNPIVOT CLAUSE: " + wrapper);
+		   walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
+	}
+
+	@Override
+	public void exitPivot_aggregate(@NotNull SQLSelectParserParser.Pivot_aggregateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() >= 2) {
+			Map<String, Object> function = new LinkedHashMap<String, Object>();
+			function.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			function.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+
+			subMap.clear();
+			subMap.put(MUMBLE_FUNCTION_KEY, function);
+		}
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitPivot_clause(@NotNull SQLSelectParserParser.Pivot_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		// Grammar order:
+		//   1) pivot_aggregate
+		//   2) relational_modifier_name_column
+		//   3) relational_modifier_list
+		//   4) relation_as_clause? (optional)
+		Object aggregate = subMap.get("1");
+		Object nameCol = subMap.get("2");
+		Object inList = subMap.get("3");
+
+		Object alias = null;
+		if (subMap.get("4") instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
+			alias = aliasMap.get(MUMBLE_ALIAS_KEY);
+		}
+
+		Map<String, Object> pivotMap = new LinkedHashMap<>();
+		pivotMap.put(MUMBLE_VALUE_KEY, aggregate);
+		pivotMap.put(MUMBLE_FOR_KEY, nameCol);
+		pivotMap.put(MUMBLE_IN_KEY, inList);
+		if (alias != null) {
+			pivotMap.put(MUMBLE_ALIAS_KEY, alias);
+		}
+
+		Map<String, Object> wrapper = new LinkedHashMap<>();
+		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
+
+		walker.showTrace(walker.parseTrace, "PIVOT CLAUSE: " + wrapper);
+		walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
+	}
+
+	@Override
+	public void exitUnpivot_null_policy(@NotNull SQLSelectParserParser.Unpivot_null_policyContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		
+		String item = ctx.getChild(0).getText();
+		
+		Map<String, Object> subMap = new HashMap<String, Object>();
+		subMap.put(MUMBLE_NULLS_POLICY_KEY, item);
+		subMap.put(ASTWALKER_RULE_TYPE_KEY, SQLSelectParserParser.RULE_unpivot_null_policy);
+		
+		walker.showTrace(walker.parseTrace, "Unpivot Null Policy: " + subMap);
+		
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	// relational_modifier_value_column and relational_modifier_name_column each wrap a single alias_identifier — propagate directly.
+	@Override
+	public void exitRelational_modifier_value_column(@NotNull SQLSelectParserParser.Relational_modifier_value_columnContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitRelational_modifier_name_column(@NotNull SQLSelectParserParser.Relational_modifier_name_columnContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	// unpivot_in_alias: (AS)? (alias_identifier | Character_String_Literal)
+	// alias_identifier exits via handleOneChild and is stored as "1" in the subMap.
+	// Character_String_Literal is a terminal token and is not placed into the subMap by visitTerminal;
+	// in that case we read it directly from the parse tree as the last child.
+	// Either way we push just the plain String value up to the parent — AS is discarded.
+	@Override
+	public void exitRelational_modifier_alias(@NotNull SQLSelectParserParser.Relational_modifier_aliasContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		String value;
+		if (subMap.containsKey("1")) {
+			// alias_identifier rule — already resolved to a String by exitAlias_identifier
+			value = (String) subMap.get("1");
+		} else {
+			// Character_String_Literal terminal — last child is always the value regardless of optional AS
+			value = ctx.getChild(ctx.getChildCount() - 1).getText();
+		}
+
+		walker.showTrace(walker.parseTrace, "Relational Modifier In Label: " + value);
+		walker.addToParent(parentRuleIndex, parentStackLevel, value);
+	}
+
+	// relational_modifier_in_item: column_reference relational_modifier_alias?
+	// Flattens the column_reference payload so each in-list item is directly:
+	//   {name: <column_name>, table_ref: <table_or_null>[, label: <label>]}
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitRelational_modifier_in_item(@NotNull SQLSelectParserParser.Relational_modifier_in_itemContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object columnRef = subMap.remove("1");   // column_reference map
+		Object label    = subMap.containsKey("2") ? subMap.remove("2") : null;
+
+		Map<String, Object> item;
+		if (columnRef instanceof Map<?, ?> columnRefMap && columnRefMap.containsKey(MUMBLE_COLUMN_KEY)) {
+			item = (Map<String, Object>) columnRefMap.get(MUMBLE_COLUMN_KEY);
+		} else if (columnRef instanceof Map<?, ?> columnRefMap) {
+			item = (Map<String, Object>) columnRefMap;
+		} else {
+			item = new HashMap<String, Object>();
+			if (columnRef != null) {
+				item.put(MUMBLE_NAME_KEY, columnRef);
+			}
+		}
+
+		if (label != null) {
+			item.put(MUMBLE_LABEL_KEY, label);
+		}
+
+		walker.showTrace(walker.parseTrace, "Relational Modifier In Item: " + item);
+		walker.addToParent(parentRuleIndex, parentStackLevel, item);
+	}
+
+	// relational_modifier_list: LEFT_PAREN relational_modifier_in_item (COMMA relational_modifier_in_item)* RIGHT_PAREN
+	// Builds a numbered map of flattened in-items (keyed "1", "2", ...)
+	@Override
+	@SuppressWarnings("unchecked")
+	public void exitRelational_modifier_list(@NotNull SQLSelectParserParser.Relational_modifier_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> numbered = new LinkedHashMap<String, Object>();
+		int count = ctx.relational_modifier_in_item().size();
+		for (int i = 1; i <= count; i++) {
+			numbered.put(String.valueOf(i), subMap.get(String.valueOf(i)));
+		}
+		walker.showTrace(walker.parseTrace, "RELATIONAL MODIFIER LIST: " + numbered);
+		walker.collect(ruleIndex, stackLevel, numbered);
+	}
 
 	/*
 	  ===========================================

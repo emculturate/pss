@@ -45,6 +45,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_FILE_FORMAT_KEY = "file_format";
     public static final String MUMBLE_FILTERS_KEY = "filters";
     public static final String MUMBLE_FOLLOWING_KEY = "FOLLOWING";
+    public static final String MUMBLE_FOR_KEY = "for";
     public static final String MUMBLE_FROM_KEY = "from";
     public static final String MUMBLE_FUNCTION_KEY = "function";
     public static final String MUMBLE_FUNCTION_NAME_KEY = "function_name";
@@ -72,6 +73,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_JOIN_KEY = "join";
     public static final String MUMBLE_JOIN_ON_KEY = "on";
     public static final String MUMBLE_KIND_KEY = "kind";
+    public static final String MUMBLE_LABEL_KEY = "label";
     public static final String MUMBLE_LEFT_FACTOR_KEY = "left";
     public static final String MUMBLE_LENGTH_KEY = "length";
     public static final String MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY = "lhs_unresolved_columns"; // Special key for LHS assignment column references in update statements
@@ -94,6 +96,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_NULL_HANDLING_KEY = "null_handle";
     public static final String MUMBLE_NULL_LITERAL_KEY = "null_literal";
     public static final String MUMBLE_NULL_ORDER_KEY = "null_order";
+    public static final String MUMBLE_NULLS_POLICY_KEY = "nulls";
     public static final String MUMBLE_OFFSET_KEY = "offset";
     public static final String MUMBLE_OPERAND_KEY = "operand";
     public static final String MUMBLE_OPERATOR_KEY = "operator";
@@ -148,6 +151,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_USING_KEY = "using";
     public static final String MUMBLE_UNION_KEY = "union";
     public static final String MUMBLE_UNKNOWN_KEY = "unknown";
+    public static final String MUMBLE_PIVOT_KEY = "pivot";
+    public static final String MUMBLE_UNPIVOT_KEY = "unpivot";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
     public static final String MUMBLE_UPDATE_DICTIONARY_KEY = "update_dictionary"; // Special key for update statement assignment token references
     public static final String MUMBLE_UPDATE_KEY = "update";
@@ -157,7 +162,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_WHERE_KEY = "where";
     public static final String MUMBLE_WINDOW_FUNCTION_KEY = "window_function";
     public static final String MUMBLE_WITH_KEY = "with";
-
+    
     // Maps to lookup constants by name or value
     private static final Map<String, String> NAME_TO_VALUE_MAP = new HashMap<>();
     private static final Map<String, String> VALUE_TO_NAME_MAP = new HashMap<>();
