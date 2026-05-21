@@ -49,6 +49,7 @@ import errorhandling.ParseDiagnostic;
 
 import sql.SQLSelectParserBaseListener;
 import sql.SQLSelectParserParser;
+import sql.symboltree.SqlParseSymbolTreeHelper;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
  * Base Parser Listener and creates a nested Hashmap Abstract Tree of the SQL.
@@ -66,7 +67,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
-	private int tableFunctionSourceCount = 0;
 	private int scriptStatementSequence = 0;
 	private final ArrayDeque<Integer> scriptStatementSequenceStack = new ArrayDeque<Integer>();
 	private final LinkedHashMap<String, Object> scriptStatementTableDictionaries = new LinkedHashMap<String, Object>();
@@ -97,15 +97,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
-
-
 	/**
 	 * AST Walker Helper for this instance of the SQL Parse Event Walker
 	 */
 	private final SqlASTWalkerHelper walker;
+	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
-	private final Set<String> suppressedAmbiguousUnqualifiedKeys;
-	private final Set<String> tableFunctionSourceRefs;
 
 
 	// Constructors
@@ -114,9 +111,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Initialize the walker with the SqlASTWalkerHelper
 		this.walker = new SqlASTWalkerHelper();
+		this.symbolTreeHelper = new SqlParseSymbolTreeHelper(this.walker);
 		this.invalidVariableDiagnosticKeys = new HashSet<String>();
-		this.suppressedAmbiguousUnqualifiedKeys = new HashSet<String>();
-		this.tableFunctionSourceRefs = new HashSet<String>();
 
 
 	}
@@ -928,40 +924,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return getLookupValue(entityTableNameMap, entityName);
 	}
 
-	private String getQualifiedTableReference(Map<String, Object> tableNode) {
-		if (tableNode == null) {
-			return null;
-		}
-
-		Object tableObj = tableNode.get(MUMBLE_TABLE_KEY);
-		if (!(tableObj instanceof String tableName) || tableName.isBlank()) {
-			return null;
-		}
-
-		// Keep tuple substitutions and already-qualified names unchanged.
-		if (tableName.startsWith("<") || tableName.contains(".")) {
-			return tableName;
-		}
-
-		Object dbNameObj = tableNode.get(MUMBLE_DATABASE_NAME_KEY);
-		String dbName = (dbNameObj instanceof String db && !db.isBlank()) ? db : null;
-
-		Object schemaObj = tableNode.get(MUMBLE_SCHEMA_KEY);
-		String schemaName = (schemaObj instanceof String schema && !schema.isBlank()) ? schema : null;
-
-		if (dbName != null && schemaName != null) {
-			return dbName + "." + schemaName + "." + tableName;
-		}
-		if (schemaName != null) {
-			return schemaName + "." + tableName;
-		}
-		if (dbName != null) {
-			return dbName + "." + tableName;
-		}
-
-		return tableName;
-	}
-
 	/**
 	 * Normalizes a table reference string for use as a dictionary key.
 	 * Substitution variables (starting with '<') are returned unchanged.
@@ -1238,9 +1200,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		walker.popSymbolTable(SQLPARSER_SCRIPT_TREE_KEY, scriptSymbolTables);
-
-		walker.showTrace(walker.symbolTrace, walker.symbolTable);
-		walker.showTrace(walker.symbolTrace, walker.peekCurrentTableDictionary());
 	}
 
 	@Override
@@ -1318,9 +1277,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (interfaceMap != null) {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
-		finalizeTopLevelUnresolvedColumns();
-		walker.showTrace(walker.symbolTrace, walker.symbolTable);
-		walker.showTrace(walker.symbolTrace, walker.peekCurrentTableDictionary());
+		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 	}
 
 	/*
@@ -1339,10 +1296,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (interfaceMap != null) {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
-		finalizeTopLevelUnresolvedColumns();
-		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
+		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
+
 	}
 
 	/*
@@ -1357,12 +1312,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
-		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-
+	
 		walker.addQueryInputColumnsToTableDictionary();
-
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -1378,11 +1329,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		walker.addQueryInputColumnsToTableDictionary();
-
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	
 
@@ -1399,11 +1347,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		walker.addQueryInputColumnsToTableDictionary();
-
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 
@@ -1420,11 +1365,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		walker.addQueryInputColumnsToTableDictionary();
-
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -1442,15 +1384,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (subMap.size() == 1) {
 			// normal TUPLE value
 			item.putAll((HashMap<String, Object>) subMap.remove("1"));
-			
-		} else {	
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + subMap);
+		} else {
+			// Wrong number of entries for tuple context: ctx.getText()
 		}
 
 		 walker.asTree.put(SQLPARSER_TUPLE_TREE_KEY, item);
-		
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	/*
@@ -1465,37 +1403,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_QUERY_TREE_KEY, subMap.remove("1"));
-		finalizeTopLevelUnresolvedColumns();
+		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
 
 		// Add TABLE references to Table Dictionary
 		walker.addQueryInputColumnsToTableDictionary();
-
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
-	}
-
-	@SuppressWarnings("unchecked")
-	private void finalizeTopLevelUnresolvedColumns() {
-		Object unresolvedObject = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		if (!(unresolvedObject instanceof HashMap<?, ?> unresolvedMapObject)) {
-			return;
-		}
-
-		HashMap<String, Object> unresolvedMap = unresolvedObject instanceof HashMap<?, ?> 
-											  ? (HashMap<String, Object>) unresolvedMapObject : null;
-		if (unresolvedMap == null || unresolvedMap.isEmpty()) {
-			return;
-		}
-
-		rehomeUpdateUnqualifiedUnknownsToSingleFromTable(unresolvedMap);
-
-		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
-		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
-		splitUnresolvedEntriesByQualification(unresolvedMap, qualifiedUnresolved, unqualifiedUnresolved);
-
-		emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolved);
-		emitQualifiedSourceNotFoundFatals(qualifiedUnresolved);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1696,9 +1608,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 		walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
-		
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	
 
@@ -1715,8 +1624,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	/*
 	===============================================================================
@@ -1737,8 +1644,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_INSERT_TREE_KEY, subMap.remove("1"));
 		// walker.showTrace(resultTrace, collector);
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	@Override
@@ -1748,8 +1653,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_UPDATE_TREE_KEY, subMap.remove("1"));
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	@Override
@@ -1759,8 +1662,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_DELETE_TREE_KEY, subMap.remove("1"));
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 
 	@Override
@@ -1770,8 +1671,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_TRUNCATE_TREE_KEY, subMap.remove("1"));
-		walker.showTrace(walker.symbolTrace,  walker.symbolTable);
-		walker.showTrace(walker.symbolTrace,  walker.peekCurrentTableDictionary());
 	}
 	/*
 
@@ -2314,7 +2213,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			walker.showTrace(walker.parseTrace, "Missing DROP options map: " + ctx.getText());
+			// Missing DROP options map: ctx.getText()
 			return;
 		}
 
@@ -2330,7 +2229,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, value);
-		walker.showTrace(walker.parseTrace, "DROP options pass-through: " + value);
 	}
 
 	/*
@@ -2425,7 +2323,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			walker.showTrace(walker.parseTrace, "Missing ALTER options map: " + ctx.getText());
+			// Missing ALTER options map: ctx.getText()
 			return;
 		}
 
@@ -2441,7 +2339,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, value);
-		walker.showTrace(walker.parseTrace, "ALTER options pass-through: " + value);
 	}
 
 	@Override
@@ -2489,7 +2386,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			walker.showTrace(walker.parseTrace, "Missing DDL pass-through map: " + ctx.getText());
+			// Missing DDL pass-through map: ctx.getText()
 			return;
 		}
 
@@ -2500,7 +2397,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, value);
-		walker.showTrace(walker.parseTrace, "DDL pass-through: " + value);
 	}
 
 	/*
@@ -2534,7 +2430,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(MUMBLE_WITH_KEY, withList);
 			subMap.put(MUMBLE_QUERY_KEY, query);
 		} else {
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			// Wrong number of entries for WITH query context: ctx.getText()
 		}
 
 		// Add query to parent symbol table. Use the alias and current query number and put that in the table_alias submap.
@@ -2587,7 +2483,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		walker.showTrace(walker.parseTrace, "WITH QUERY: " + subMap);
 	}
 
 	private void mergeCteListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
@@ -2668,7 +2563,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		walker.showTrace(walker.parseTrace, "WITH CLAUSE: " + newMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2682,7 +2576,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			walker.showTrace(walker.parseTrace, "TABLE PRIMARY missing recovery map: " + ctx.getText());
+			// TABLE PRIMARY missing recovery map: ctx.getText()
 			walker.addToParent(parentRuleIndex, parentStackLevel, new HashMap<String, Object>());
 			return;
 		}
@@ -2735,10 +2629,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					done = collectQuerySymbolTable(MUMBLE_VALUES_KEY, alias, cteListSymbols);
 
 		} else {
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			// Wrong number of entries for WITH list item context: ctx.getText()
 		}
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		walker.showTrace(walker.parseTrace, "WITH QUERY: " + subMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2884,7 +2777,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
 
 		walker.handleOneChild(ruleIndex);
-		finalizeTopLevelUnresolvedColumns();
+		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 
 		// Close the insert-local symbol scope and persist it as insertN in the parent scope.
 		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
@@ -2892,8 +2785,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
 		publishInsertScopeQueryDictionary(insertScopeKey);
 		walker.queryCount++;
-
-		walker.showTrace(walker.parseTrace, "INSERT EXPRESSION: " + subMap);
 	}
 
 	@Override
@@ -2951,8 +2842,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String insertTargetTableRef = getInsertTargetTableReference(insertNode);
-
-		walker.showTrace(walker.parseTrace, "Snowflake insert: " + insertNode);
 
 		String insertSourceScopeKey = findLatestInsertSourceScopeKey();
 		Map<String, Object> insertSourceDefinition = normalizeInsertSourceDefinition(insertSourceScopeKey);
@@ -3024,7 +2913,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
 				targetTable.putAll(reference);
 				targetTable.put(MUMBLE_ALIAS_KEY, alias);
-				String qualifiedTableReference = getQualifiedTableReference(reference);
+				String qualifiedTableReference = symbolTreeHelper.getQualifiedTableReference(reference);
 				insertTargetTableRef = qualifiedTableReference;
 				walker.ensureTableDictionaryEntry(qualifiedTableReference);
 				if (alias != null && !alias.isBlank()) {
@@ -3053,7 +2942,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		walker.showTrace(walker.parseTrace, "INSERT TARGET TABLE PRIMARY: " + subMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3470,11 +3358,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> targetTableMap = (Map<String, Object>) targetTableMapObj;
 		Object nestedTableObj = targetTableMap.get(MUMBLE_TABLE_KEY);
 		if (nestedTableObj instanceof Map<?, ?> nestedTableMapObj) {
-			String tableRef = getQualifiedTableReference((Map<String, Object>) nestedTableMapObj);
+			String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) nestedTableMapObj);
 			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
 		}
 
-		String tableRef = getQualifiedTableReference(targetTableMap);
+		String tableRef = symbolTreeHelper.getQualifiedTableReference(targetTableMap);
 		return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
 	}
 
@@ -3756,9 +3644,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Insert with override
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_OVERWRITE_KEY);
-			walker.showTrace(walker.parseTrace, "Insert Preamble: " + subMap);
 		} else {
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			// Wrong number of entries for insert preamble context: ctx.getText()
 		}
 
 		walker.handleOneChild(ruleIndex);
@@ -3811,14 +3698,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_returning)) {
 						updateNode.put(MUMBLE_RETURNING_KEY, segment);
 					} else {
-						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
+						// Too Many Entries for update expression segment
 					}
 				}
 			}
 		}
 		subMap.clear();
 		subMap.put(MUMBLE_UPDATE_KEY, updateNode);
-		walker.showTrace(walker.parseTrace, subMap);
 
 		String updateTargetTableRef = getUpdateTargetTableReference(updateNode);
 		initializeUpdateTargetTableSubtree(updateTargetTableRef);
@@ -3872,7 +3758,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						item = (HashMap<String, Object>) item.remove("1");
 						deleteNode.put(MUMBLE_WHERE_KEY, item);
 					} else {
-						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
+						// Too Many Entries for delete (snowflake) expression segment
 					}
 				}
 			}
@@ -3880,7 +3766,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		subMap.clear();
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
-		walker.showTrace(walker.parseTrace, subMap);
 
 		String deleteTargetTableRef = getDeleteTargetTableReference(deleteNode);
 		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
@@ -3931,7 +3816,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_delete_returning)) {
 						deleteNode.put(MUMBLE_RETURNING_KEY, segment);
 					} else {
-						walker.showTrace(walker.parseTrace, "Too Many Entries" + segment);
+						// Too Many Entries for delete (postgres) expression segment
 					}
 				}
 			}
@@ -3939,7 +3824,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		subMap.clear();
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
-		walker.showTrace(walker.parseTrace, subMap);
 
 		String deleteTargetTableRef = getDeleteTargetTableReference(deleteNode);
 		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
@@ -3995,7 +3879,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Object targetTableObj = updateNode.get(MUMBLE_TABLE_KEY);
 		if (targetTableObj instanceof Map<?, ?> targetTableMapObj) {
-			String tableRef = getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
+			String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
 			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
 		}
 
@@ -4010,7 +3894,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Object targetTableObj = deleteNode.get(MUMBLE_TABLE_KEY);
 		if (targetTableObj instanceof Map<?, ?> targetTableMapObj) {
-			String tableRef = getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
+			String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) targetTableMapObj);
 			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
 		}
 
@@ -4055,7 +3939,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> fromMap = (Map<String, Object>) fromMapObj;
 		Object tableObj = fromMap.get(MUMBLE_TABLE_KEY);
 		if (tableObj instanceof Map<?, ?> tableMapObj) {
-			String tableRef = getQualifiedTableReference((Map<String, Object>) tableMapObj);
+			String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMapObj);
 			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
 		}
 
@@ -4749,14 +4633,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			
 			subMap.put(MUMBLE_INTERSECT_KEY, item);
 		} else {
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			// Trace removed: Wrong number of entries: {ctx.getText()}
 		}
-		walker.showTrace(walker.parseTrace, "Intersect Operator: " + subMap);
+		// Trace removed: Intersect Operator: {subMap}
 
 		// Get first interface to represent intersection output
 		if (walker.firstIntersectClause) {
 			HashMap<String, Object> interfac = walker.captureQueryInterface();
-			walker.showTrace(walker.symbolTrace, "Intersect So Far: " +  walker.symbolTable);
+			// Trace removed: Intersect So Far: {walker.symbolTable}
 
 		}
 	}
@@ -4843,15 +4727,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			
 			subMap.put(MUMBLE_UNION_KEY, item);
 		} else {
-			walker.showTrace(walker.parseTrace, "Wrong number of entries: " + ctx.getText());
+			// Trace removed: Wrong number of entries: {ctx.getText()}
 		}
-		walker.showTrace(walker.parseTrace, "Union Operator: " + subMap);
+		// Trace removed: Union Operator: {subMap}
 
 		// Get first interface to represent union output
 		if (walker.firstUnionClause) {
-			walker.showTrace(walker.symbolTrace, "Union So Far: " +  walker.symbolTable);
 			walker.captureQueryInterface();
-			walker.showTrace(walker.symbolTrace, "Union So Far: " +  walker.symbolTable);
+			// Trace removed: Union So Far: {walker.symbolTable}
 		}
 
 	}
@@ -5092,7 +4975,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Object tableObj = nodeMap.get(MUMBLE_TABLE_KEY);
 			if (tableObj instanceof String) {
-				String tableRef = getQualifiedTableReference(nodeMap);
+				String tableRef = symbolTreeHelper.getQualifiedTableReference(nodeMap);
 				registerCteBackedSourceAliasMappings(tableRef, nodeMap.get(MUMBLE_ALIAS_KEY));
 			} else if (tableObj instanceof Map<?, ?> tableMapObj) {
 				collectFromClauseCteAliasMappingsRecursive(tableMapObj);
@@ -5137,7 +5020,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> visibleCteList = getCteListSymbolMap(walker.symbolTable);
 		if (visibleCteList == null || visibleCteList.isEmpty()) {
-			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
 				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
 					visibleCteList = ancestorCteList;
@@ -5236,7 +5119,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			targetTableMap = (Map<String, Object>) firstIntoEntryMapObj;
 		}
 
-		String targetTableRef = getQualifiedTableReference(targetTableMap);
+		String targetTableRef = symbolTreeHelper.getQualifiedTableReference(targetTableMap);
 		if (targetTableRef == null || targetTableRef.isBlank()) {
 			return;
 		}
@@ -5470,7 +5353,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return true;
 		}
 
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+		for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 			Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
 			if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
 				return true;
@@ -5491,7 +5374,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return localScope;
 		}
 
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+		for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
 
 			if (tableAliasMap != null && !tableAliasMap.isEmpty()) {
@@ -5584,7 +5467,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private void pushSymbolTableWithParentCteList() {
 		Map<String, Object> inheritedCteList = getCteListSymbolMap(walker.symbolTable);
 		if (inheritedCteList == null || inheritedCteList.isEmpty()) {
-			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
 				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
 					inheritedCteList = ancestorCteList;
@@ -5596,24 +5479,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (inheritedCteList != null && !inheritedCteList.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>(inheritedCteList));
 		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private List<Map<String, Object>> getAncestorSymbolTables() {
-		ArrayList<Map<String, Object>> ancestors = new ArrayList<Map<String, Object>>();
-		Integer parentLevel = walker.currentStackLevel("symbolTable");
-		if (parentLevel == null || walker.asTree == null) {
-			return ancestors;
-		}
-
-		for (int level = parentLevel; level >= 1; level--) {
-			Object ancestorObj = walker.asTree.get("symbolTable_" + level);
-			if (ancestorObj instanceof Map<?, ?> ancestorMapObj) {
-				ancestors.add((Map<String, Object>) ancestorMapObj);
-			}
-		}
-
-		return ancestors;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -8312,7 +8177,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		// Prevent duplicate/semi-contradictory signaling for the same unresolved reference.
-		suppressedAmbiguousUnqualifiedKeys.add(buildUnqualifiedSuppressionKey(columnName, line, character));
+		symbolTreeHelper.getSuppressedAmbiguousUnqualifiedKeys()
+				.add(buildUnqualifiedSuppressionKey(columnName, line, character));
 
 		ArrayList<String> queryAliases = new ArrayList<String>();
 		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
@@ -8365,7 +8231,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return false;
 		}
 		String suppressionKey = buildUnqualifiedSuppressionKey(columnName, refLocation[0], refLocation[1]);
-		return suppressedAmbiguousUnqualifiedKeys.contains(suppressionKey);
+		return symbolTreeHelper.getSuppressedAmbiguousUnqualifiedKeys().contains(suppressionKey);
 	}
 
 	private boolean hasUnqualifiedUnknownWithMultipleViableSources(
@@ -8551,7 +8417,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
 
-		return tableFunctionSourceRefs.contains(normalizedSourceRef.toLowerCase());
+		return symbolTreeHelper.getTableFunctionSourceRefs().contains(normalizedSourceRef.toLowerCase());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -8977,7 +8843,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (found != null) {
 			return found;
 		}
-		for (Map<String, Object> ancestor : getAncestorSymbolTables()) {
+		for (Map<String, Object> ancestor : symbolTreeHelper.getAncestorSymbolTables()) {
 			found = ancestor.get(key);
 			if (found != null) {
 				return found;
@@ -9030,7 +8896,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				Object table = item.get(MUMBLE_TABLE_KEY);
 				if (table != null) {
-					String qualifiedTableReference = getQualifiedTableReference(item);
+					String qualifiedTableReference = symbolTreeHelper.getQualifiedTableReference(item);
 					String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(qualifiedTableReference);
 					// Table doesn't have an Alias, so it doesn't need to be collected in the Table ALias map
 					// walker.collectTableAlias(alias, table);
@@ -9087,7 +8953,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Try various alternatives
 			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
-				String tableRef = getQualifiedTableReference(reference);
+				String tableRef = symbolTreeHelper.getQualifiedTableReference(reference);
 				String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
 				item.putAll(reference);
 				if (cteScopeReference != null) {
@@ -9182,7 +9048,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			   if (tableEntry instanceof Map<?, ?> tableMap) {
 				   ((Map<String, Object>) tableMap).put(MUMBLE_ALIAS_KEY, outerAlias);
 				   if (modifier == null) {
-					   String tableRef = getQualifiedTableReference((Map<String, Object>) tableMap);
+					   String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMap);
 					   String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
 					   String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
 					   upsertCurrentTableAliasMapping(outerAlias, aliasTarget);
@@ -9236,7 +9102,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return localScope;
 		}
 
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+		for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
 			String inheritedScope = resolveCteOrQueryScopeReference(sourceRef, ancestorAliasMap);
 			if (inheritedScope != null && !inheritedScope.isBlank()) {
@@ -9259,7 +9125,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return resolvedScope;
 		}
 
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+		for (Map<String, Object> ancestorSymbols : symbolTreeHelper.getAncestorSymbolTables()) {
 			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
 			resolvedScope = resolveExistingQueryScopeFromAliasMap(sourceRef, ancestorAliasMap);
 			if (resolvedScope != null) {
@@ -9299,7 +9165,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.ensureTableDictionaryEntry(functionRef);
-		tableFunctionSourceRefs.add(functionRef.toLowerCase());
+		symbolTreeHelper.getTableFunctionSourceRefs().add(functionRef.toLowerCase());
 		if (alias != null && !alias.isBlank()) {
 			walker.collectTableAlias(alias, functionRef);
 		}
@@ -9323,7 +9189,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			normalizedFunctionName = "table_function";
 		}
 
-		return normalizedFunctionName + tableFunctionSourceCount++;
+		int nextSourceCount = symbolTreeHelper.getTableFunctionSourceCount();
+		symbolTreeHelper.setTableFunctionSourceCount(nextSourceCount + 1);
+		return normalizedFunctionName + nextSourceCount;
 	}
 
 	private String findTopLevelValuesScopeKey() {
@@ -9520,7 +9388,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Figure out what kind of Tuple entry you've got, and construct the next level's subtree
 		if (item.containsKey(MUMBLE_TABLE_KEY)) {
 			// Table Reference
-			String tableRef = getQualifiedTableReference(item);
+			String tableRef = symbolTreeHelper.getQualifiedTableReference(item);
 			String cteScopeReference = resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
 			Object aliasObj = item.get(MUMBLE_ALIAS_KEY);
 			if (aliasObj instanceof String alias && !alias.isBlank()) {
