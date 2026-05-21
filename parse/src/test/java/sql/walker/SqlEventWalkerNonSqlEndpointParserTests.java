@@ -63,7 +63,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				"Line 1:15 - Recovering malformed variable identifier start '<' by skipping one token",
 				"Line 1:28 - Invalid syntax near '.'");
 
-		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, null, null, true);
+		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
 		
 			assertDiagnosticAtPosition(
@@ -102,7 +102,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				"Line 1:15 - Recovering malformed variable identifier start '<' by skipping one token",
 				"Line 1:28 - Invalid syntax near '.'");
 
-		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, null, null, true);
+		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
 		
 		assertDiagnosticAtPosition(
@@ -637,38 +637,6 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{table_dictionary={unresolved_column={k_stfd=[[@8,32:37='k_stfd',<380>,1:32]], column=[[@2,5:10='column',<68>,1:5]], kppi=[[@10,40:43='kppi',<380>,1:40]]}}, unresolved_column={k_stfd={column={name=k_stfd, table_ref=null}, locations=[[@8,32:37='k_stfd',<380>,1:32]]}, column={column={name=column, table_ref=null}, locations=[[@2,5:10='column',<68>,1:5]]}, kppi={column={name=kppi, table_ref=null}, locations=[[@10,40:43='kppi',<380>,1:40]]}}}",
 				extractor.getSymbolTable().toString());
-	}
-
-
-	@Test
-	public void queryOverEntitySwapTest() {
-		final String query = "SELECT aa.[College Name] as [College Code], aa.*, aa.[Attribute Name] FROM [Student Coursework] as aa, [Institutional Course] as courses "
-				+ " WHERE not aa.[Subject Code] = courses.[Subject Code] "
-				+ " AND aa.[Course Number] = courses.[Course Number] ";
-
-		final SQLSelectParserParser parser = parse(query);
-
-		HashMap<String, String> entityMap = new HashMap<String, String>();
-		// load with physical table names
-		entityMap.put("[Institutional Course]", "panto.1234_908");
-		entityMap.put("[Student Coursework]", "panto.5637_453");
-
-		HashMap<String, Map<String, String>> attributeMap = new HashMap<String, Map<String, String>>();
-		// [institutional course]
-		HashMap<String, String> tableMap = new HashMap<String, String>();
-		attributeMap.put("[Institutional Course]", tableMap);
-		tableMap.put("[Subject Code]", "scbcrse_subj_code");
-		tableMap.put("[Course Number]", "crs_no");
-
-		// [student coursework]
-		tableMap = new HashMap<String, String>();
-		attributeMap.put("[Student Coursework]", tableMap);
-		tableMap.put("[Attribute Name]", "oth_name");
-		tableMap.put("[College Name]", "clg_name");
-		tableMap.put("[Subject Code]", "scbcrse_subj_code");
-		tableMap.put("[Course Number]", "crs_no");
-
-		runSQLParsertest(query, parser, entityMap, attributeMap);
 	}
 
 
@@ -2881,7 +2849,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		final String query = "UPDATE t SET a = b FROM t2 WHERE c = 1";
 
 		final SQLSelectParserParser sqlParser = parse(query);
-		SqlParseEventWalker sqlExtractor = runSQLParsertest(query, sqlParser, null, null);
+		SqlParseEventWalker sqlExtractor = runSQLParsertest(query, sqlParser);
 
 		final SQLSelectParserParser updateParser = parse(query);
 		SqlParseEventWalker updateExtractor = runUpdateEndPointParsertest(query, updateParser);

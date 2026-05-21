@@ -418,8 +418,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		return diagnostics;
 	}
 
-	protected ParserRunResult runSQLParsertestAllowErrors(final String query, final SQLSelectParserParser parser,
-			HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
+	protected ParserRunResult runSQLParsertestAllowErrors(final String query, final SQLSelectParserParser parser) {
 		SqlParseEventWalker extractor = null;
 		int parserErrorCount = 0;
 		List<String> parserErrors = new ArrayList<>();
@@ -435,7 +434,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			}
 
 			listenerDiagnostics = collectParserListenerDiagnostics(parser);
-			extractor = runAnyParsertest(query, parser, tree, entityMap, attributeMap, true);
+			extractor = runAnyParsertest(query, parser, tree, true);
 		} catch (Exception ex) {
 			failure = ex;
 			ParseErrorCollector collector = (ParseErrorCollector) parser.getErrorHandler();
@@ -450,11 +449,10 @@ public abstract class AbstractSqlParseEventWalkerTest {
 	}
 
 	protected SqlParseEventWalker runParsertest(final String query, final SQLSelectParserParser parser) {
-		return runSQLParsertest(query, parser, null, null);
+		return runSQLParsertest(query, parser);
 	}
 
-	protected SqlParseEventWalker runSQLParsertest(final String query, final SQLSelectParserParser parser,
-			HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap) {
+	protected SqlParseEventWalker runSQLParsertest(final String query, final SQLSelectParserParser parser) {
 		try {
 			System.out.println();
 			// There should be zero errors
@@ -465,7 +463,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, entityMap, attributeMap, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -495,7 +493,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -518,7 +516,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -542,7 +540,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -565,7 +563,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 					0, numErrors);
 		
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -587,7 +585,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 	
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -611,7 +609,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 		
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -633,7 +631,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -655,7 +653,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -677,7 +675,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
 				0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -700,7 +698,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 		
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -722,7 +720,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(), 
 				0, numErrors);
 		
-			return runAnyParsertest(query, parser, tree, null, null, false);
+			return runAnyParsertest(query, parser, tree, false);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -744,7 +742,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
 					0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -766,7 +764,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			Assert.assertEquals("Expected no failures with " + query + " but got " + v.getErrorList(),
 					0, numErrors);
 
-			return runAnyParsertest(query, parser, tree, null, null, true);
+			return runAnyParsertest(query, parser, tree, true);
 
 		} catch (RecognitionException e) {
 			System.err.println("Exception parsing eqn: " + query);
@@ -780,14 +778,9 @@ public abstract class AbstractSqlParseEventWalkerTest {
 
 	protected SqlParseEventWalker runAnyParsertest(final String query, final SQLSelectParserParser parser, 
 		ParserRuleContext tree,
-		HashMap<String, String> entityMap, HashMap<String, Map<String, String>> attributeMap,
 		boolean getInterface) {
 		try {	
 			SqlParseEventWalker extractor = new SqlParseEventWalker();
-			if (entityMap != null)
-				extractor.setEntityTableNameMap(entityMap);
-			if (attributeMap != null)
-				extractor.setAttributeColumnMap(attributeMap);
 
 			// walk the tree and extract the SQL USING THE CUSTOM Extractor
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);

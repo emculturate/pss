@@ -671,7 +671,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		String sql = "UPDATE employees e SET e.emp_sales_count = a.acct_sales_count + 1, e.redder = greener  FROM accounts as a";
 		final SQLSelectParserParser parser = parse(sql);
 
-		ParserRunResult runResult = runSQLParsertestAllowErrors(sql, parser, null, null);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(sql, parser);
 		Assert.assertNull(
 				"Unexpected parser execution failure: "
 						+ (runResult.getFailure() == null ? "" : runResult.getFailure().getMessage()),
