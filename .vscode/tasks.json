@@ -34,6 +34,24 @@
         "panel": "shared",
         "clear": true
       }
+    },
+    {
+      "label": "Clean Package (Force ANTLR)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-f",
+        "parse/pom.xml",
+        "clean",
+        "package"
+      ],
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
     }
   ]
 }

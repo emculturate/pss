@@ -10,7 +10,6 @@ import java.util.Set;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import errorhandling.ParseDiagnostic;
@@ -32,8 +31,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_UPDATE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_VALUES_TREE_KEY;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
-import sql.SQLSelectParserParser.ScriptContext;
-import sql.SQLSelectParserParser.Sql_statementContext;
+import sql.walker.ScriptParseAccumulator;
 import sql.walker.SqlParseEventWalker;
 
 
@@ -229,11 +227,10 @@ public class SqlParserAccess extends AbstractParserAccess {
             snippet.setArrayOutputCollectorsMap(enrichedArrayCollectors);
         }
 
-        Map<String, StatementLineRange> statementLineRanges = getScriptStatementLineRanges();
-        if (!statementLineRanges.isEmpty()) {
-                List<ParseDiagnostic> prefixedMergedDiagnostics = prefixScriptWalkerDiagnostics(
-                    mergedDiagnostics,
-                    statementLineRanges);
+        ScriptParseAccumulator scriptAccumulator = this.extractor.getScriptParseAccumulator();
+        if (scriptAccumulator.hasLineRanges()) {
+            List<ParseDiagnostic> prefixedMergedDiagnostics = scriptAccumulator.prefixWalkerDiagnostics(
+                    mergedDiagnostics);
             snippet.setParserDiagnosticList(prefixedMergedDiagnostics);
             snippet.setParserMessageList(prefixedMergedDiagnostics);
         }
@@ -241,80 +238,6 @@ public class SqlParserAccess extends AbstractParserAccess {
         } else {
             throw new IllegalStateException("Parser tree is null. Ensure the parser was run successfully.");    
         }
-    }
-
-    private List<ParseDiagnostic> prefixScriptWalkerDiagnostics(
-            List<ParseDiagnostic> diagnostics,
-            Map<String, StatementLineRange> statementLineRanges) {
-        if (diagnostics == null || diagnostics.isEmpty() || statementLineRanges == null || statementLineRanges.isEmpty()) {
-            return diagnostics;
-        }
-
-        List<ParseDiagnostic> updated = new ArrayList<>(diagnostics.size());
-        for (ParseDiagnostic diagnostic : diagnostics) {
-            if (diagnostic == null
-                    || !isPrefixedWalkerSeverity(diagnostic.severity())
-                    || !isWalkerDiagnostic(diagnostic)) {
-                updated.add(diagnostic);
-                continue;
-            }
-
-            Integer line = diagnostic.line();
-            if (line == null || line <= 0) {
-                updated.add(diagnostic);
-                continue;
-            }
-
-            String statementKey = findStatementKeyForLine(line, statementLineRanges);
-            if (statementKey == null) {
-                updated.add(diagnostic);
-                continue;
-            }
-
-            String message = diagnostic.message();
-            if (message == null || message.isBlank()) {
-                updated.add(diagnostic);
-                continue;
-            }
-
-            String prefix = "Statement " + statementKey + " (l:" + line + "): ";
-            if (message.startsWith(prefix)) {
-                updated.add(diagnostic);
-                continue;
-            }
-
-            updated.add(new ParseDiagnostic(
-                    diagnostic.severity(),
-                    diagnostic.code(),
-                    prefix + message,
-                    diagnostic.line(),
-                    diagnostic.charPositionInLine(),
-                    diagnostic.source(),
-                    diagnostic.ruleName(),
-                    diagnostic.tokenText(),
-                    diagnostic.recoverable(),
-                    diagnostic.phase(),
-                    diagnostic.exceptionType(),
-                    diagnostic.details()));
-        }
-
-        return updated;
-    }
-
-    private boolean isPrefixedWalkerSeverity(ParseDiagnostic.Severity severity) {
-        return severity == ParseDiagnostic.Severity.FATAL
-                || severity == ParseDiagnostic.Severity.ERROR
-                || severity == ParseDiagnostic.Severity.SEVERE_WARNING;
-    }
-
-    private String findStatementKeyForLine(int line, Map<String, StatementLineRange> statementLineRanges) {
-        for (Map.Entry<String, StatementLineRange> entry : statementLineRanges.entrySet()) {
-            StatementLineRange range = entry.getValue();
-            if (range != null && line >= range.startLine && line <= range.endLine) {
-                return entry.getKey();
-            }
-        }
-        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -328,7 +251,7 @@ public class SqlParserAccess extends AbstractParserAccess {
             return baseCollectors;
         }
 
-        Map<String, StatementLineRange> statementLineRanges = getScriptStatementLineRanges();
+        Map<String, ScriptParseAccumulator.StatementLineRange> statementLineRanges = getScriptStatementLineRanges();
         HashMap<String, Object> enriched = new LinkedHashMap<>();
 
         for (Map.Entry<String, Object> topEntry : baseCollectors.entrySet()) {
@@ -349,7 +272,7 @@ public class SqlParserAccess extends AbstractParserAccess {
     private HashMap<String, Object> enrichCollectorContainer(
             Map<String, Object> container,
             Snippet snippet,
-            Map<String, StatementLineRange> statementLineRanges) {
+            Map<String, ScriptParseAccumulator.StatementLineRange> statementLineRanges) {
         if (container == null || container.isEmpty()) {
             return new LinkedHashMap<>();
         }
@@ -370,7 +293,7 @@ public class SqlParserAccess extends AbstractParserAccess {
                 String key = entry.getKey();
                 Object value = entry.getValue();
                 if (key != null && key.matches("\\d+") && value instanceof Map<?, ?> valueMapObj) {
-                    StatementLineRange range = (statementLineRanges == null) ? null : statementLineRanges.get(key);
+                    ScriptParseAccumulator.StatementLineRange range = (statementLineRanges == null) ? null : statementLineRanges.get(key);
                     HashMap<String, Object> diagnosticsPayload = buildArrayCollectorDiagnosticsPayload(snippet, range);
                     HashMap<String, Object> queryEntry = new LinkedHashMap<>((Map<String, Object>) valueMapObj);
                     injectDiagnosticsIntoQueryEntry(queryEntry, diagnosticsPayload);
@@ -392,7 +315,7 @@ public class SqlParserAccess extends AbstractParserAccess {
 
             private HashMap<String, Object> buildArrayCollectorDiagnosticsPayload(
                 Snippet snippet,
-                StatementLineRange lineRange) {
+                ScriptParseAccumulator.StatementLineRange lineRange) {
         HashMap<String, Object> payload = new LinkedHashMap<>();
         if (snippet == null) {
             return payload;
@@ -459,7 +382,7 @@ public class SqlParserAccess extends AbstractParserAccess {
     private List<String> collectDiagnosticMessages(
             List<ParseDiagnostic> diagnostics,
             Set<ParseDiagnostic.Severity> severities,
-            StatementLineRange lineRange,
+            ScriptParseAccumulator.StatementLineRange lineRange,
             boolean parserOnly,
             boolean walkerOnly) {
         List<String> messages = new ArrayList<>();
@@ -494,7 +417,7 @@ public class SqlParserAccess extends AbstractParserAccess {
 
     private List<ParseDiagnostic> filterDiagnosticsByLineRange(
             List<ParseDiagnostic> diagnostics,
-            StatementLineRange lineRange) {
+            ScriptParseAccumulator.StatementLineRange lineRange) {
         List<ParseDiagnostic> filtered = new ArrayList<>();
         if (diagnostics == null || diagnostics.isEmpty()) {
             return filtered;
@@ -509,7 +432,7 @@ public class SqlParserAccess extends AbstractParserAccess {
         return filtered;
     }
 
-    private boolean matchesLineRange(ParseDiagnostic diagnostic, StatementLineRange lineRange) {
+    private boolean matchesLineRange(ParseDiagnostic diagnostic, ScriptParseAccumulator.StatementLineRange lineRange) {
         if (diagnostic == null || lineRange == null) {
             return true;
         }
@@ -517,7 +440,7 @@ public class SqlParserAccess extends AbstractParserAccess {
         if (line == null || line <= 0) {
             return false;
         }
-        return line >= lineRange.startLine && line <= lineRange.endLine;
+        return line >= lineRange.startLine() && line <= lineRange.endLine();
     }
 
     private boolean isParserDiagnostic(ParseDiagnostic diagnostic) {
@@ -539,40 +462,15 @@ public class SqlParserAccess extends AbstractParserAccess {
         return source != null && source.contains("SqlASTWalker");
     }
 
-    private Map<String, StatementLineRange> getScriptStatementLineRanges() {
-        if (!(this.parserEmitPoint instanceof ScriptContext scriptCtx)) {
+    private Map<String, ScriptParseAccumulator.StatementLineRange> getScriptStatementLineRanges() {
+        if (this.extractor == null) {
             return Map.of();
         }
-
-        Map<String, StatementLineRange> ranges = new LinkedHashMap<>();
-        List<Sql_statementContext> statements = scriptCtx.sql_statement();
-        for (int i = 0; i < statements.size(); i++) {
-            Sql_statementContext statementCtx = statements.get(i);
-            if (statementCtx == null) {
-                continue;
-            }
-
-            Token start = statementCtx.getStart();
-            Token stop = statementCtx.getStop();
-            if (start == null) {
-                continue;
-            }
-
-            int startLine = start.getLine();
-            int endLine = (stop == null || stop.getLine() <= 0) ? startLine : stop.getLine();
-            ranges.put(Integer.toString(i + 1), new StatementLineRange(startLine, endLine));
+        ScriptParseAccumulator scriptAccumulator = this.extractor.getScriptParseAccumulator();
+        if (!scriptAccumulator.hasLineRanges()) {
+            return Map.of();
         }
-        return ranges;
-    }
-
-    private static final class StatementLineRange {
-        private final int startLine;
-        private final int endLine;
-
-        private StatementLineRange(int startLine, int endLine) {
-            this.startLine = startLine;
-            this.endLine = endLine;
-        }
+        return scriptAccumulator.snapshot().statementLineRanges();
     }
 
     private void injectDiagnosticsIntoQueryEntry(

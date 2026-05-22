@@ -23,7 +23,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{PREDICAND={calc={left={literal=-1}, right={parentheses={calc={left={calc={left={column={name=scbcrse_coll_code, table_ref=aa}}, right={literal=6}, operator=*}}, right={column={name=other, table_ref=null}}, operator=-}}}, operator=*}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -77,7 +77,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 
 		Assert.assertTrue(
 				"Expected synthesized substitution variable entry to be retained after recovery",
-				extractor.getSubstitutionsMap().containsKey("<[Acquia_ALR].[no__contacts].last_delivered>"));
+				extractor.getWalker().substitutionsMap.containsKey("<[Acquia_ALR].[no__contacts].last_delivered>"));
 	}
 
 
@@ -116,7 +116,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 
 		Assert.assertTrue(
 				"Expected synthesized substitution variable entry to be retained after recovery",
-				extractor.getSubstitutionsMap().containsKey("<[Acquia_ALR].[no__contacts].hmmm>"));
+				extractor.getWalker().substitutionsMap.containsKey("<[Acquia_ALR].[no__contacts].hmmm>"));
 	}
 
 
@@ -132,7 +132,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -154,7 +154,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -176,7 +176,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -198,7 +198,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -224,7 +224,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -248,7 +248,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -272,7 +272,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column2>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -295,7 +295,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -318,7 +318,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column5>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -342,7 +342,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -364,7 +364,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -386,7 +386,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column1>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -409,7 +409,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -432,7 +432,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -454,7 +454,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -476,7 +476,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column4>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -497,7 +497,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -519,7 +519,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -541,7 +541,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -563,7 +563,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -586,7 +586,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -609,7 +609,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -630,7 +630,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<row_num>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -654,7 +654,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -677,7 +677,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -700,7 +700,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -724,7 +724,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -745,7 +745,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -766,7 +766,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=column}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -787,7 +787,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<emp_sales_count>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -808,7 +808,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -830,7 +830,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -851,7 +851,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -872,7 +872,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -893,7 +893,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -914,7 +914,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -935,7 +935,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -956,7 +956,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -977,7 +977,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -998,7 +998,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1019,7 +1019,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={scbcrse_coll_code=[[@2,8:9='aa',<380>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<380>,1:11]]}}",
@@ -1040,7 +1040,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1061,7 +1061,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1082,7 +1082,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1103,7 +1103,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1124,7 +1124,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1145,7 +1145,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1166,7 +1166,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1187,7 +1187,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1208,7 +1208,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1229,7 +1229,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1250,7 +1250,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1271,7 +1271,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1292,7 +1292,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1313,7 +1313,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1334,7 +1334,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1355,7 +1355,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1376,7 +1376,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1397,7 +1397,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1418,7 +1418,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1439,7 +1439,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1460,7 +1460,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1481,7 +1481,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1502,7 +1502,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1523,7 +1523,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1544,7 +1544,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1565,7 +1565,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1586,7 +1586,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1607,7 +1607,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1628,7 +1628,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1650,7 +1650,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<in list>=in_list}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1672,7 +1672,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1694,7 +1694,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1716,7 +1716,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<var>=in_list}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1738,7 +1738,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={*=[[@2,8:8='*',<290>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@2,8:8='*',<290>,1:8]]}}",
@@ -1760,7 +1760,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1781,7 +1781,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1802,7 +1802,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1824,7 +1824,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1845,7 +1845,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1866,7 +1866,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1887,7 +1887,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1908,7 +1908,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1929,7 +1929,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1950,7 +1950,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1971,7 +1971,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -1993,7 +1993,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<item>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2015,7 +2015,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<columnName>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2037,7 +2037,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list, <columnName>=predicand}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2059,7 +2059,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<inList>=in_list}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2081,7 +2081,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<column condition>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2101,7 +2101,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={table={schema=schema1, table=emp_sales}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2121,7 +2121,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<simple variable>, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2141,7 +2141,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<[domain].[entity]>, parts={1=[domain], 2=[entity]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[domain].[entity]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2161,7 +2161,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<[domain].[entity].[third]>, parts={1=[domain], 2=[entity], 3=[third]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[domain].[entity].[third]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2181,7 +2181,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<[domain].[entity].[third].[fourth]>, parts={1=[domain], 2=[entity], 3=[third], 4=[fourth]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[domain].[entity].[third].[fourth]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2201,7 +2201,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<[domain].[entity].{population}>, parts={1=[domain], 2=[entity], 3={population}}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[domain].[entity].{population}>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2221,7 +2221,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<[domain].[entity].[third].{population}>, parts={1=[domain], 2=[entity], 3=[third], 4={population}}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<[domain].[entity].[third].{population}>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2241,7 +2241,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain]>, parts={1=fulfill, 2=[domain]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2261,7 +2261,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain].[entity]>, parts={1=fulfill, 2=[domain], 3=[entity]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2281,7 +2281,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain].[entity].[file category]>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2301,7 +2301,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain].[entity].[file category].[whats this]>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category], 5=[whats this]}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category].[whats this]>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2321,7 +2321,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain].[entity].{snapshot}>, parts={1=fulfill, 2=[domain], 3=[entity], 4={snapshot}}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].{snapshot}>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2341,7 +2341,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={substitution={name=<fulfill.[domain].[entity].[file category].{snapshot}>, parts={1=fulfill, 2=[domain], 3=[entity], 4=[file category], 5={snapshot}}, type=tuple}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<fulfill.[domain].[entity].[file category].{snapshot}>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2364,7 +2364,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{schema1.emp_sales={col2=[[@2,8:16='emp_sales',<380>,1:8]], col1=[[@12,65:73='emp_sales',<380>,1:65]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col2=[[@4,18:21='col2',<380>,1:18]]}}",
@@ -2386,7 +2386,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[col2, col3, col1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@23,56:59='col2',<380>,1:56]], col3=[[@25,62:65='col3',<380>,1:62]], col1=[[@21,50:53='col1',<380>,1:50]]}}",
@@ -2407,7 +2407,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{schema1.emp_sales={*=[[@1,7:7='*',<290>,1:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<290>,1:7]]}}",
@@ -2428,7 +2428,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<simple variable>=query}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2447,7 +2447,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={condition={left={column={name=col1, table_ref=dd}}, right={column={name=col1, table_ref=bb}}, operator==}}}, 2={table={schema=schema1, alias=dd, table=emp_sales}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{schema1.emp_sales={col1=[[@8,33:34='dd',<380>,1:33]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2466,7 +2466,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=left, on={condition={left={column={name=a, table_ref=a}}, right={column={name=b, table_ref=b}}, operator==}}}, 2={table={alias=b, table=fourth}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={b=[[@9,29:29='b',<380>,1:29]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2485,7 +2485,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=b, table=fourth}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2504,7 +2504,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=fullouter, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2523,7 +2523,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2543,7 +2543,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<OnJoinCondition>, type=condition}}}, 2={table={alias=b, table=fourth}}, 3={substitution={name=<OtherJoinCondition>, type=join_extension}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OtherJoinCondition>=join_extension, <OnJoinCondition>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2562,7 +2562,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, table=tab1}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2581,7 +2581,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=two, substitution={name=<tuple variable>, type=tuple}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<tuple variable>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<tuple variable>={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2601,7 +2601,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=null, table=third}}, 2={substitution={name=<extension>, type=join_extension}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2621,7 +2621,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={table={alias=T3, table=third}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<extension>=join_extension}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2641,7 +2641,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={substitution={name=<third_fourth_join_condition>, type=condition}}}, 2={table={alias=F4, table=fourth}}, 3={substitution={name=<extension>, type=join_extension}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<third_fourth_join_condition>=condition, <extension>=join_extension}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2660,7 +2660,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=null, table=fourth}}, 3={join=unionjoin}, 4={table={alias=null, table=fifth}}, 5={join=naturaljoin}, 6={table={alias=null, table=sixth}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{sixth={}, fifth={}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2679,7 +2679,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=crossjoin}, 2={table={alias=f, substitution={name=<fourth>, type=tuple}}}, 3={join=unionjoin}, 4={table={alias=fi, substitution={name=<fifth>, type=tuple}}}, 5={join=naturaljoin}, 6={table={alias=si, substitution={name=<sixth>, type=tuple}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<sixth>=tuple, <fifth>=tuple, <fourth>=tuple}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{<sixth>={}, <fifth>={}, <fourth>={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
@@ -2700,7 +2700,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{VALUES={values={matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@2,9:9='(',<286>,1:9], [@8,21:21='(',<286>,1:21]], $2=[[@2,9:9='(',<286>,1:9], [@8,21:21='(',<286>,1:21]]}}",
@@ -2722,7 +2722,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{VALUES={values={alias=source, matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@2,9:9='(',<286>,1:9], [@8,21:21='(',<286>,1:21]], $2=[[@2,9:9='(',<286>,1:9], [@8,21:21='(',<286>,1:21]]}}",
@@ -2744,7 +2744,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{VALUES={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, alias=source, matrix={1={row={1={literal=1}, 2={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@19,51:54='col2',<380>,1:51]], col1=[[@17,45:48='col1',<380>,1:45]]}}",
@@ -2835,7 +2835,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]], $2=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]], $3=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]]}}",
@@ -2943,7 +2943,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={values={alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]], $2=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]], $3=[[@2,9:9='(',<286>,1:9], [@10,24:24='(',<286>,1:24]]}}",
@@ -2965,7 +2965,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		Assert.assertEquals("AST is wrong", "{TUPLE={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, alias=source, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal='aaa'}}}, 2={row={1={literal=92}, 2={literal=3}, 3={literal='aaa'}}}}}}}",
 					extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-					extractor.getSubstitutionsMap().toString());
+					extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 					extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@23,57:60='col2',<380>,1:57]], col3=[[@25,63:66='col3',<380>,1:63]], col1=[[@21,51:54='col1',<380>,1:51]]}}",

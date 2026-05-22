@@ -4,17 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import puml3.PUML3Parser;
 import puml3.PUML3Lexer;
+import puml.walker.PUML3EventWalker;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class PUML3ParserTest {
+
+	private enum ParseRule {
+		CONDITION,
+		EQUATION
+	}
 
 	@Test
 	public void testPassingConditions() {
@@ -56,7 +66,7 @@ public class PUML3ParserTest {
 		conds.add("(concat(name, address) = key)");
 		conds.add("count(keys) >= 5");
 		conds.add("count(keys) != [KEY COUNT]");
-		// conds.add("value in ('1', '2', '3', 4, 5)");
+		conds.add("value in ('1', '2', '3', 4, 5)");
 		conds.add("instr('Informatica', 'Inform') = 1");
 		conds.add("instr('Informatica', 'orm') = 3");
 		conds.add("instr('Informatica', 'rmat', 3) = 5");
@@ -112,24 +122,24 @@ public class PUML3ParserTest {
 		conds.add("(age > 15 or not([ATTR] = 'class')) and not(sqrt(9) >= 3) or field = 'VT'");
 		conds.add("(age > 15 or not([ATTR] = 'class')) and (not(sqrt(9) >= 3)) or field = 'VT'");
 		conds.add("NOT([ATTR] matches 'hello')");
-		//conds.add("key is null");
-		//conds.add("key isnull");
-		//conds.add("value is not null");
+		conds.add("key is null");
+		conds.add("key isnull");
+		conds.add("value is not null");
 		conds.add("[ATTR] matches 'hello'");
 		conds.add("[ATTR] contains 'hello'");
-		// conds.add("[ATTR] starts with 'hello'");
-		// conds.add("[ATTR] ends with 'hello'");
-		// conds.add("[ATTR] not matches 'hello'");
-		// conds.add("[ATTR] not contains 'hello'");
-		// conds.add("[ATTR] not starts with 'hello'");
-		// conds.add("[ATTR] not ends with 'hello'");
+		conds.add("[ATTR] starts with 'hello'");
+		conds.add("[ATTR] ends with 'hello'");
+		conds.add("[ATTR] not matches 'hello'");
+		conds.add("[ATTR] not contains 'hello'");
+		conds.add("[ATTR] not starts with 'hello'");
+		conds.add("[ATTR] not ends with 'hello'");
 		conds.add("key matches 'hello'");
 		conds.add("key conTaiNS 'hello'");
-		// conds.add("key starts with 'hello'");
-		// conds.add("key ENDS With 'hello'");
-		// conds.add("key not contains 'hello'");
-		// conds.add("[ATTR] not sTArts with key");
-		// conds.add("[ATTR] not ends with key");
+		conds.add("key starts with 'hello'");
+		conds.add("key ENDS With 'hello'");
+		conds.add("key not contains 'hello'");
+		conds.add("[ATTR] not sTArts with key");
+		conds.add("[ATTR] not ends with key");
 		conds.add("coALesce(x1, x2, x3) = [ATTR]");
 		conds.add("regexP_extract(f1, f2) = [ATTR]");
 		conds.add("regEXp_replace(f1, f2) = [ATTR]");
@@ -143,18 +153,7 @@ public class PUML3ParserTest {
 		// 		"LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(IS NULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) = ''");
 		conds.add("is_Date(f1)");
 
-		// Iterate over the conditions and check for parsing errors
-		for (String cond : conds) {
-			final PUML3Parser parser = parse(cond);
-			try {
-				// There should be zero errors
-				parser.condition();
-				final int numErrors = parser.getNumberOfSyntaxErrors(); 
-				Assert.assertEquals("Expected no failures with " + cond, numErrors, 0);
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing cond: " + cond);
-			}
-		}
+		runParserSuite(conds, ParseRule.CONDITION, false);
 	}
 
 	@Test
@@ -166,20 +165,7 @@ public class PUML3ParserTest {
 		conds.add("NOT(contains)");
 		conds.add("AND(NOT(OR))");
 
-		// Iterate over the conditions and check for parsing errors
-		for (String cond : conds) {
-			final PUML3Parser parser = parse(cond);
-			try {
-				// There should be errors
-				parser.condition();
-				final int numErrors = parser.getNumberOfSyntaxErrors();
-				Assert.assertTrue("Expected failures with " + cond, numErrors > 0);
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing cond: " + cond);
-			} catch (Exception ex) {
-				System.err.println("Exception - " + ex.getClass().getName());
-			}
-		}
+		runParserSuite(conds, ParseRule.CONDITION, true);
 	}
 
 	@Test
@@ -278,18 +264,7 @@ public class PUML3ParserTest {
 		 * conds.add(
 		 * "LTRIM(RTRIM(ADVISOR_FIRST_NAME))||IF(ISNULL(ADVISOR_LAST_NAME) OR LTRIM(ADVISOR_LAST_NAME)='','',' '||LTRIM(RTRIM(ADVISOR_LAST_NAME))) = ''");
 		 */
-		// Iterate over the equations and check for parsing errors
-		for (String cond : conds) {
-			final PUML3Parser parser = parse(cond);
-			try {
-				// There should be zero errors
-				parser.equation();
-				final int numErrors = parser.getNumberOfSyntaxErrors();
-				Assert.assertEquals("Expected no failures with " + cond, numErrors, 0);
-			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + cond);
-			}
-		}
+		runParserSuite(conds, ParseRule.EQUATION, false);
 	}
 
 	@Ignore
@@ -303,18 +278,80 @@ public class PUML3ParserTest {
 		conds.add("value in ('1', abc, [KEY 3], 4, 5)");
 		
 	
-		// Iterate over the equations and check for parsing errors
-		for (String cond : conds) {
-			final PUML3Parser parser = parse(cond);
+		runParserSuite(conds, ParseRule.EQUATION, true);
+	}
+
+	private void runParserSuite(final List<String> expressions, final ParseRule parseRule,
+			final boolean expectSyntaxErrors) {
+		final List<String> failures = new ArrayList<String>();
+		for (String expression : expressions) {
+			final PUML3Parser parser = parse(expression);
+			final List<String> parseErrors = new ArrayList<String>();
+			parser.removeErrorListeners();
+			parser.addErrorListener(new BaseErrorListener() {
+				@Override
+				public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line,
+						int charPositionInLine, String msg, RecognitionException e) {
+					parseErrors.add("line " + line + ":" + charPositionInLine + " " + msg);
+				}
+			});
+
+			ParserRuleContext tree = null;
+			PUML3EventWalker walker = null;
+			final String parseTypeLabel = parseRule.name().toLowerCase();
+			System.out.println("\n[PUML3] " + parseTypeLabel + ": " + expression);
+
 			try {
-				// There should be errors
-				parser.equation();
-				
-				final int numErrors = parser.getNumberOfSyntaxErrors();
-				Assert.assertTrue("Expected failures with " + cond, numErrors > 0);
+				if (parseRule == ParseRule.CONDITION) {
+					tree = parser.condition();
+					walker = new PUML3EventWalker();
+					if (tree != null) {
+						try {
+							ParseTreeWalker.DEFAULT.walk(walker, tree);
+						} catch (Throwable th) {
+							System.err.println("Exception walking " + parseTypeLabel + " AST: " + expression + " :: "
+									+ th.getClass().getName() + " :: " + th.getMessage());
+							walker = null;
+						}
+					}
+				} else {
+					tree = parser.equation();
+				}
 			} catch (RecognitionException e) {
-				System.err.println("Exception parsing eqn: " + cond);
+				System.err.println("Exception parsing " + parseTypeLabel + ": " + expression + " :: " + e.getMessage());
+			} catch (Exception ex) {
+				System.err.println("Exception parsing " + parseTypeLabel + ": " + expression + " :: "
+						+ ex.getClass().getName() + " :: " + ex.getMessage());
 			}
+
+			final int numErrors = parser.getNumberOfSyntaxErrors();
+			if (!parseErrors.isEmpty()) {
+				System.out.println("[PUML3] Parse errors for " + parseTypeLabel + ":");
+				for (String err : parseErrors) {
+					System.out.println("  - " + err);
+				}
+			} else {
+				System.out.println("[PUML3] Parse errors: none");
+			}
+			System.out.println("[PUML3] Syntax error count: " + numErrors);
+			if (walker != null) {
+				System.out.println("[PUML3] AST: " + walker.getSqlTree());
+			} else if (tree != null) {
+				System.out.println("[PUML3] Parse tree: " + tree.toStringTree(parser));
+			} else {
+				System.out.println("[PUML3] Parse tree: <none>");
+			}
+
+			if (!expectSyntaxErrors && numErrors != 0) {
+				failures.add("Expected no failures with " + expression + " but found " + numErrors + " syntax errors.");
+			}
+			if (expectSyntaxErrors && numErrors == 0) {
+				failures.add("Expected failures with " + expression + " but found " + numErrors + " syntax errors.");
+			}
+		}
+
+		if (!failures.isEmpty()) {
+			Assert.fail(String.join("\n", failures));
 		}
 	}
 

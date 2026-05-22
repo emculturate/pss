@@ -32,7 +32,7 @@ public class SnippetTest {
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<OnJoinCondition>=condition}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='a',<380>,1:8]]}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={*=[[@3,10:10='*',<290>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<380>,1:8]]}, fourth={}}, filters=[], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
@@ -75,7 +75,7 @@ public class SnippetTest {
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnDictionaryMap());
 			System.out.println("Query Column Dictionary: " + extractor.getQueryColumnDictionaryMap());
-			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			System.out.println("Substitution Variables: " + extractor.getWalker().substitutionsMap);
 
 			Object errorHandler = parser.getErrorHandler();
 			if (errorHandler instanceof ParseErrorCollector collector) {

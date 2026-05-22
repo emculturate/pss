@@ -2,11 +2,13 @@ package sql.walker;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import sql.SQLSelectParserParser;
+import static mumble.MumbleConstants.*;
 
 public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalkerTest {
 
@@ -69,14 +71,15 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={*=[[@22,77:77='*',<290>,2:8]]}}",
 				secondStatementQueryDictionary.toString());
 
-		Map<String, Object> scriptSubstitutions = (Map<String, Object>) extractor.getSubstitutionsMap().get("SCRIPT");
+		Map<String, Object> scriptSubstitutions = (Map<String, Object>) extractor.getWalker().substitutionsMap.get("SCRIPT");
 		Assert.assertNotNull("SCRIPT substitutions collector should be present", scriptSubstitutions);
 		Assert.assertEquals("Statement 1 substitutions snapshot is wrong", "{}",
 				scriptSubstitutions.get("1").toString());
 		Assert.assertEquals("Statement 2 substitutions snapshot is wrong", "{}",
 				scriptSubstitutions.get("2").toString());
 
-		Map<String, Object> scriptArrayCollectors = (Map<String, Object>) extractor.getArrayOutputCollectorsMap().get("SCRIPT");
+		Map<String, Object> scriptArrayCollectors = (Map<String, Object>) extractor.getScriptParseAccumulator()
+				.buildScriptArrayOutputCollectorsMap().get("SCRIPT");
 		Assert.assertNotNull("SCRIPT array-output collector should be present", scriptArrayCollectors);
 		Map<String, Object> firstStatementArrays = (Map<String, Object>) scriptArrayCollectors.get("1");
 		Map<String, Object> secondStatementArrays = (Map<String, Object>) scriptArrayCollectors.get("2");
@@ -99,6 +102,181 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 						&& message.startsWith("Statement 1 (l:")
 						&& message.contains(": ")));
 		
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void mixedScriptStatementTypesTest() {
+		final String query = ""
+				+ "CREATE TABLE demo.t (id INT);\n"
+				+ "TRUNCATE TABLE demo.t;\n"
+				+ "DELETE FROM demo.t WHERE id = 1;\n"
+				+ "INSERT INTO demo.t (id) SELECT 1;\n"
+				+ "UPDATE demo.t SET id = 2 WHERE id = 1;\n"
+				+ "SELECT id FROM demo.t;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runScriptParsertest(query, parser);
+
+		Map<String, Object> scriptMap = (Map<String, Object>) extractor.getAsTree().get("SCRIPT");
+		Assert.assertNotNull("SCRIPT map should be present", scriptMap);
+		Assert.assertEquals("SCRIPT should contain six isolated statements", 6, scriptMap.size());
+		Assert.assertEquals(Set.of("1", "2", "3", "4", "5", "6"), scriptMap.keySet());
+
+		Map<String, Object> createStmt = (Map<String, Object>) scriptMap.get("1");
+		Map<String, Object> truncateStmt = (Map<String, Object>) scriptMap.get("2");
+		Map<String, Object> deleteStmt = (Map<String, Object>) scriptMap.get("3");
+		Map<String, Object> insertStmt = (Map<String, Object>) scriptMap.get("4");
+		Map<String, Object> updateStmt = (Map<String, Object>) scriptMap.get("5");
+		Map<String, Object> selectStmt = (Map<String, Object>) scriptMap.get("6");
+
+		Assert.assertTrue("Statement 1 should be CREATE TABLE",
+				createStmt.containsKey(MUMBLE_CREATE_KEY));
+		Assert.assertEquals("TABLE",
+				((Map<String, Object>) createStmt.get(MUMBLE_CREATE_KEY)).get(MUMBLE_TYPE_KEY));
+
+		Assert.assertTrue("Statement 2 should be TRUNCATE",
+				truncateStmt.containsKey(MUMBLE_TRUNCATE_KEY));
+		Assert.assertEquals("TABLE",
+				((Map<String, Object>) truncateStmt.get(MUMBLE_TRUNCATE_KEY)).get(MUMBLE_TYPE_KEY));
+
+		Assert.assertTrue("Statement 3 should be DELETE",
+				deleteStmt.containsKey(MUMBLE_DELETE_KEY));
+
+		Assert.assertTrue("Statement 4 should be INSERT (preamble + target + source)",
+				insertStmt.containsKey(MUMBLE_INSERT_PREAMBLE_KEY)
+						&& insertStmt.containsKey(MUMBLE_TARGET_TABLE_KEY)
+						&& insertStmt.containsKey(MUMBLE_FROM_KEY));
+		Assert.assertEquals("insert_into", insertStmt.get(MUMBLE_INSERT_PREAMBLE_KEY));
+		Map<String, Object> insertTarget = (Map<String, Object>) ((Map<String, Object>) insertStmt.get(MUMBLE_TARGET_TABLE_KEY))
+				.get(MUMBLE_TABLE_KEY);
+		Assert.assertEquals("demo", insertTarget.get("schema"));
+		Assert.assertEquals("t", insertTarget.get("table"));
+
+		Assert.assertTrue("Statement 5 should be UPDATE",
+				updateStmt.containsKey(MUMBLE_UPDATE_KEY));
+		Assert.assertTrue("Statement 5 UPDATE should include SET assignments",
+				((Map<String, Object>) updateStmt.get(MUMBLE_UPDATE_KEY)).containsKey(MUMBLE_ASSIGNMENTS_KEY));
+
+		Assert.assertTrue("Statement 6 should be SELECT",
+				selectStmt.containsKey(MUMBLE_SELECT_KEY));
+
+		Map<String, Object> scriptTableDictionary = (Map<String, Object>) extractor.getTableColumnDictionaryMap().get("SCRIPT");
+		Map<String, Object> scriptQueryDictionary = (Map<String, Object>) extractor.getQueryColumnDictionaryMap().get("SCRIPT");
+		Map<String, Object> scriptSubstitutions = (Map<String, Object>) extractor.getWalker().substitutionsMap.get("SCRIPT");
+		Map<String, Object> scriptArrayCollectors = (Map<String, Object>) extractor.getScriptParseAccumulator()
+				.buildScriptArrayOutputCollectorsMap().get("SCRIPT");
+		Map<String, Object> scriptSymbolTable = (Map<String, Object>) extractor.getSymbolTable().get("SCRIPT");
+
+		Assert.assertEquals("Each SCRIPT statement should have its own table-dictionary snapshot", 6,
+				scriptTableDictionary.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own query-dictionary snapshot", 6,
+				scriptQueryDictionary.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own substitutions snapshot", 6,
+				scriptSubstitutions.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own array-output snapshot", 6,
+				scriptArrayCollectors.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own symbol-table snapshot", 6,
+				scriptSymbolTable.size());
+
+		Assert.assertNotEquals("SELECT query dictionary should not leak into CREATE snapshot",
+				scriptQueryDictionary.get("6"), scriptQueryDictionary.get("1"));
+		Assert.assertNotEquals("INSERT symbol subtree should not be shared with TRUNCATE",
+				scriptSymbolTable.get("4"), scriptSymbolTable.get("2"));
+	}
+
+	/**
+	 * Covers every {@code sql_statement} alternative from {@code SQLSelectParser.g4}:
+	 * {@code ddl_primary} (create, alter, drop, truncate), {@code dml_primary}
+	 * (insert, update, delete, values), {@code with_query}, and {@code query_expression}.
+	 */
+	@Test
+	@SuppressWarnings("unchecked")
+	public void fullScriptPrimaryCoverageTest() {
+		final String query = ""
+				+ "CREATE TABLE demo.stage (id INT);\n"
+				+ "ALTER TABLE demo.stage RENAME TO demo.stg;\n"
+				+ "DROP TABLE demo.old IF EXISTS;\n"
+				+ "TRUNCATE TABLE demo.stg;\n"
+				+ "INSERT INTO demo.stg (id) VALUES (1);\n"
+				+ "UPDATE demo.stg SET id = 2 WHERE id = 1;\n"
+				+ "DELETE FROM demo.stg WHERE id = 2;\n"
+				+ "(VALUES (10), (20));\n"
+				+ "WITH picked AS (SELECT id FROM demo.stg) SELECT id FROM picked;\n"
+				+ "SELECT id FROM demo.stg;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runScriptParsertest(query, parser);
+
+		Map<String, Object> scriptMap = (Map<String, Object>) extractor.getAsTree().get("SCRIPT");
+		Assert.assertNotNull("SCRIPT map should be present", scriptMap);
+		Assert.assertEquals("SCRIPT should contain ten isolated statements", 10, scriptMap.size());
+		Assert.assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), scriptMap.keySet());
+
+		Map<String, Object> createStmt = (Map<String, Object>) scriptMap.get("1");
+		Map<String, Object> alterStmt = (Map<String, Object>) scriptMap.get("2");
+		Map<String, Object> dropStmt = (Map<String, Object>) scriptMap.get("3");
+		Map<String, Object> truncateStmt = (Map<String, Object>) scriptMap.get("4");
+		Map<String, Object> insertStmt = (Map<String, Object>) scriptMap.get("5");
+		Map<String, Object> updateStmt = (Map<String, Object>) scriptMap.get("6");
+		Map<String, Object> deleteStmt = (Map<String, Object>) scriptMap.get("7");
+		Map<String, Object> valuesStmt = (Map<String, Object>) scriptMap.get("8");
+		Map<String, Object> withStmt = (Map<String, Object>) scriptMap.get("9");
+		Map<String, Object> selectStmt = (Map<String, Object>) scriptMap.get("10");
+
+		Assert.assertTrue("Statement 1 should be CREATE", createStmt.containsKey(MUMBLE_CREATE_KEY));
+		Assert.assertEquals("TABLE",
+				((Map<String, Object>) createStmt.get(MUMBLE_CREATE_KEY)).get(MUMBLE_TYPE_KEY));
+		Assert.assertEquals("stage",
+				((Map<String, Object>) ((Map<String, Object>) createStmt.get(MUMBLE_CREATE_KEY)).get(MUMBLE_TABLE_KEY))
+						.get("table"));
+
+		Assert.assertTrue("Statement 2 should be ALTER", alterStmt.containsKey(MUMBLE_ALTER_KEY));
+		Assert.assertEquals("table",
+				((Map<String, Object>) alterStmt.get(MUMBLE_ALTER_KEY)).get(MUMBLE_TYPE_KEY));
+
+		Assert.assertTrue("Statement 3 should be DROP", dropStmt.containsKey(MUMBLE_DROP_KEY));
+		Assert.assertEquals("table",
+				((Map<String, Object>) dropStmt.get(MUMBLE_DROP_KEY)).get(MUMBLE_TYPE_KEY));
+		Assert.assertTrue("Statement 3 DROP should retain IF EXISTS option text",
+				dropStmt.toString().toLowerCase().contains("if exists"));
+
+		Assert.assertTrue("Statement 4 should be TRUNCATE", truncateStmt.containsKey(MUMBLE_TRUNCATE_KEY));
+
+		Assert.assertTrue("Statement 5 should be INSERT",
+				insertStmt.containsKey(MUMBLE_INSERT_PREAMBLE_KEY) && insertStmt.containsKey(MUMBLE_FROM_KEY));
+
+		Assert.assertTrue("Statement 6 should be UPDATE", updateStmt.containsKey(MUMBLE_UPDATE_KEY));
+
+		Assert.assertTrue("Statement 7 should be DELETE", deleteStmt.containsKey(MUMBLE_DELETE_KEY));
+
+		Assert.assertTrue("Statement 8 should be VALUES", valuesStmt.containsKey(MUMBLE_VALUES_KEY));
+
+		Assert.assertTrue("Statement 9 should be WITH ... SELECT",
+				withStmt.containsKey(MUMBLE_WITH_KEY) && withStmt.containsKey(MUMBLE_QUERY_KEY));
+		Assert.assertTrue("Statement 9 WITH clause should name CTE picked",
+				withStmt.toString().contains("picked"));
+		Assert.assertTrue("Statement 9 main query should be SELECT",
+				((Map<String, Object>) withStmt.get(MUMBLE_QUERY_KEY)).containsKey(MUMBLE_SELECT_KEY));
+
+		Assert.assertTrue("Statement 10 should be plain SELECT", selectStmt.containsKey(MUMBLE_SELECT_KEY));
+		Assert.assertFalse("Statement 10 should not be a WITH query", selectStmt.containsKey(MUMBLE_WITH_KEY));
+
+		Map<String, Object> scriptTableDictionary = (Map<String, Object>) extractor.getTableColumnDictionaryMap().get("SCRIPT");
+		Map<String, Object> scriptQueryDictionary = (Map<String, Object>) extractor.getQueryColumnDictionaryMap().get("SCRIPT");
+		Map<String, Object> scriptSymbolTable = (Map<String, Object>) extractor.getSymbolTable().get("SCRIPT");
+
+		Assert.assertEquals("Each SCRIPT statement should have its own table-dictionary snapshot", 10,
+				scriptTableDictionary.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own query-dictionary snapshot", 10,
+				scriptQueryDictionary.size());
+		Assert.assertEquals("Each SCRIPT statement should have its own symbol-table snapshot", 10,
+				scriptSymbolTable.size());
+
+		Assert.assertNotEquals("WITH-query dictionary should not match plain SELECT dictionary",
+				scriptQueryDictionary.get("9"), scriptQueryDictionary.get("10"));
+		Assert.assertNotEquals("VALUES symbol subtree should not match DELETE symbol subtree",
+				scriptSymbolTable.get("8"), scriptSymbolTable.get("7"));
 	}
 
 	// DDL TESTS
@@ -125,7 +303,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={*=[[@5,28:28='*',<290>,1:28]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -152,7 +330,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={col2=[[@15,56:59='col2',<380>,1:56]], col3=[[@19,66:69='col3',<380>,1:66]], col1=[[@11,46:49='col1',<380>,1:46]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -177,7 +355,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -203,7 +381,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={col2=[[@15,54:57='col2',<380>,1:54]], col3=[[@19,64:67='col3',<380>,1:64]], col1=[[@11,44:47='col1',<380>,1:44]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -229,7 +407,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={col2=[[@16,67:70='col2',<380>,1:67]], col3=[[@20,77:80='col3',<380>,1:77]], col1=[[@12,57:60='col1',<380>,1:57]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -253,7 +431,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -277,7 +455,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -304,7 +482,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 				"{query0={col2=[[@19,66:69='col2',<380>,1:66]], col3=[[@23,76:79='col3',<380>,1:76]], col1=[[@15,56:59='col1',<380>,1:56]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -328,7 +506,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -352,7 +530,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -376,7 +554,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -400,7 +578,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -424,7 +602,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -448,7 +626,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -472,7 +650,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -496,7 +674,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}
@@ -520,7 +698,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertNull("Snippet should omit optional array-output collector for non-script parses",
 				extractor.getSnippet().getArrayOutputCollectorsMap());
 	}

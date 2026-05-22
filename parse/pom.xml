@@ -8,17 +8,19 @@
   <artifactId>pss-parse</artifactId>
 	<name>pss-parse</name>
 	<packaging>jar</packaging>
-	<version>5.1.1-1</version>
+	<version>5.1.2-1</version>
   <description>Parser for several PSS Grammars using ANTLR4</description>
 
   <properties>
-    <antlr4.version>4.13.0</antlr4.version>
+    <antlr4.version>4.13.1</antlr4.version>
     <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
     <maven.assembly.plugin.version>3.3.0</maven.assembly.plugin.version>
     <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
+    <maven.clean.plugin.version>3.3.2</maven.clean.plugin.version>
     <jacoco.version>0.8.12</jacoco.version>
   </properties>
 
@@ -46,6 +48,23 @@
 
     <plugins>
 
+      <!-- Ensure stale IDE-side ANTLR caches are removed for deterministic Maven generation -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>${maven.clean.plugin.version}</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}/src/main/antlr4</directory>
+              <includes>
+                <include>**/.antlr/**</include>
+              </includes>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+
       <!-- ANTLR Plugin for Parsers -->
       <plugin>
         <groupId>org.antlr</groupId>
@@ -61,7 +80,8 @@
             <configuration>
               <outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
               <includes>
-                <include>**/*.g4</include>
+                <include>sql/SQLSelectParser.g4</include>
+                <include>puml3/PUML3.g4</include>
               </includes>
             </configuration>
           </execution>

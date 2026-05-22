@@ -133,6 +133,16 @@ options {
 /*
 ===============================================================================
   SQL Script End Point: Any sequence of SQL statements, including DDL, DML, and queries
+
+  Each semicolon-separated command is one sql_statement. Coverage:
+    ddl_primary     -> CREATE, DROP, ALTER, TRUNCATE (standalone truncate_end_point uses same primaries)
+    dml_primary     -> INSERT, UPDATE, DELETE (Snowflake or Postgres), VALUES-only
+    with_query      -> WITH ... SELECT|INSERT|UPDATE|DELETE|VALUES (via inner query rule)
+    query_expression -> SELECT pipelines without a leading WITH
+
+  Standalone parse entry points not duplicated here (same underlying rules):
+    sql, ddl, insert_end_point, update_end_point, delete_end_point, truncate_end_point,
+    values_statement_end, column_value, predicand_value, ...
 ===============================================================================
 */
 script
@@ -140,7 +150,15 @@ script
   ;
 
 sql_statement
-  : (ddl_primary | delete_snowflake_expression | with_query | query) SEMI_COLON?
+  : (ddl_primary | dml_primary | with_query | query_expression) SEMI_COLON?
+  ;
+
+// DML statements that are full script commands (also used by insert/update/delete/truncate end points).
+dml_primary
+  : insert_expression
+  | update_expression
+  | delete_expression
+  | values_statement_primary
   ;
 /*
 ===============================================================================
@@ -479,9 +497,10 @@ query_alias
   : identifier AS
   ;
 
+// Used by with_query / cte_body: SELECT-shaped or DML bodies inside a CTE.
 query
-  : query_expression 
-  | insert_expression 
+  : query_expression
+  | insert_expression
   | update_expression
   | delete_expression
   | values_statement_primary

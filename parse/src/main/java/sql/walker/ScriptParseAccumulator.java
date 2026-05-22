@@ -1,5 +1,6 @@
 package sql.walker;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -8,6 +9,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.antlr.v4.runtime.Token;
+
+import errorhandling.ParseDiagnostic;
+import static mumble.SQLParserEndPoints.SQLPARSER_SCRIPT_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 
 /**
  * Owns script statement sequence and per-statement snapshot accumulation.
@@ -32,6 +37,7 @@ public final class ScriptParseAccumulator {
 	}
 
 	private int scriptStatementSequence;
+	private final ArrayDeque<Integer> scriptStatementSequenceStack = new ArrayDeque<Integer>();
 	private final LinkedHashMap<String, Object> scriptStatementTableDictionaries;
 	private final LinkedHashMap<String, Object> scriptStatementQueryDictionaries;
 	private final LinkedHashMap<String, Object> scriptStatementSubstitutions;
@@ -49,6 +55,7 @@ public final class ScriptParseAccumulator {
 
 	public void reset() {
 		scriptStatementSequence = 0;
+		scriptStatementSequenceStack.clear();
 		scriptStatementTableDictionaries.clear();
 		scriptStatementQueryDictionaries.clear();
 		scriptStatementSubstitutions.clear();
@@ -59,6 +66,23 @@ public final class ScriptParseAccumulator {
 	public int nextStatementSequence() {
 		scriptStatementSequence += 1;
 		return scriptStatementSequence;
+	}
+
+	public int beginStatement() {
+		int statementSequence = nextStatementSequence();
+		scriptStatementSequenceStack.push(statementSequence);
+		return statementSequence;
+	}
+
+	public boolean hasActiveStatement() {
+		return !scriptStatementSequenceStack.isEmpty();
+	}
+
+	public int endStatement() {
+		if (scriptStatementSequenceStack.isEmpty()) {
+			return -1;
+		}
+		return scriptStatementSequenceStack.pop();
 	}
 
 	public void recordLineRange(int statementSequence, Token start, Token stop) {
@@ -85,6 +109,30 @@ public final class ScriptParseAccumulator {
 		scriptStatementArrayOutputs.put(statementKey, arrayOutputMap);
 	}
 
+	public boolean hasArrayOutputs() {
+		return !scriptStatementArrayOutputs.isEmpty();
+	}
+
+	/**
+	 * Builds the SCRIPT branch of {@code Snippet.arrayOutputCollectorsMap}.
+	 */
+	public LinkedHashMap<String, Object> buildScriptArrayOutputCollectorsMap() {
+		LinkedHashMap<String, Object> collectors = new LinkedHashMap<>();
+		collectors.put(SQLPARSER_SCRIPT_TREE_KEY, snapshot().statementArrayOutputs());
+		return collectors;
+	}
+
+	/**
+	 * Builds the SQL (single-statement) branch of {@code Snippet.arrayOutputCollectorsMap}.
+	 */
+	public LinkedHashMap<String, Object> buildSqlArrayOutputCollectorsMap(Set<String> queryInterface) {
+		LinkedHashMap<String, Object> sqlArrays = new LinkedHashMap<>();
+		sqlArrays.put("queryInterface", new ArrayList<>(queryInterface));
+		LinkedHashMap<String, Object> collectors = new LinkedHashMap<>();
+		collectors.put(SQLPARSER_SQL_TREE_KEY, sqlArrays);
+		return collectors;
+	}
+
 	public boolean hasLineRanges() {
 		return !scriptStatementLineRanges.isEmpty();
 	}
@@ -97,6 +145,67 @@ public final class ScriptParseAccumulator {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Prefixes walker diagnostics with the SCRIPT statement key and line captured during the walk.
+	 */
+	public List<ParseDiagnostic> prefixWalkerDiagnostics(List<ParseDiagnostic> diagnostics) {
+		if (diagnostics == null || diagnostics.isEmpty() || !hasLineRanges()) {
+			return diagnostics;
+		}
+
+		List<ParseDiagnostic> updated = new ArrayList<>(diagnostics.size());
+		for (ParseDiagnostic diagnostic : diagnostics) {
+			if (diagnostic == null
+					|| !isPrefixedWalkerSeverity(diagnostic.severity())
+					|| diagnostic.source() == null
+					|| !diagnostic.source().contains("SqlASTWalker")) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			Integer line = diagnostic.line();
+			if (line == null || line.intValue() <= 0) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			String statementKey = findStatementKeyForLine(line);
+			if (statementKey == null) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			String prefix = "Statement " + statementKey + " (l:" + line + "): ";
+			String message = diagnostic.message();
+			if (message == null || message.isBlank() || message.startsWith(prefix)) {
+				updated.add(diagnostic);
+				continue;
+			}
+
+			updated.add(new ParseDiagnostic(
+					diagnostic.severity(),
+					diagnostic.code(),
+					prefix + message,
+					diagnostic.line(),
+					diagnostic.charPositionInLine(),
+					diagnostic.source(),
+					diagnostic.ruleName(),
+					diagnostic.tokenText(),
+					diagnostic.recoverable(),
+					diagnostic.phase(),
+					diagnostic.exceptionType(),
+					diagnostic.details()));
+		}
+
+		return updated;
+	}
+
+	private static boolean isPrefixedWalkerSeverity(ParseDiagnostic.Severity severity) {
+		return severity == ParseDiagnostic.Severity.FATAL
+				|| severity == ParseDiagnostic.Severity.ERROR
+				|| severity == ParseDiagnostic.Severity.SEVERE_WARNING;
 	}
 
 	public ScriptParseSnapshot snapshot() {

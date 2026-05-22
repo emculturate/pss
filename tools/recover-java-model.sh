@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "[recover] Cleaning, generating ANTLR sources, and compiling main/test sources"
-mvn -f parse/pom.xml -DskipTests clean test-compile
+echo "[recover] Running clean package (tests skipped) to regenerate ANTLR and rebuild project artifacts"
+mvn -f parse/pom.xml -DskipTests clean package
 
 echo "[recover] Java model recovery complete"

@@ -17,16 +17,6 @@ import sql.SQLSelectParserParser;
 
 public class PUML3EventWalker extends PUML3BaseListener {
 	
-	final static Boolean showParse = false;
-	final static Boolean showSymbols = false;
-	final static Boolean showOther = false;
-	final static Boolean showResults = true;
-
-	final static Integer parseTrace = 1;
-	final static Integer symbolTrace = 2;
-	final static Integer otherTrace = 3;
-	final static Integer resultTrace = 4;
-
 	private Boolean useAsLeaf = false;
 
 	public PUML3EventWalker() {
@@ -101,23 +91,6 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		return interfac;
 	}
 
-		/**
-	 * Method checks with the level of trace indicated by the calling method
-	 * and if the trace is enabled, it will print the trace to the console.
-	 * This is an in-class built logging capability used for debugging only.
-	 * 
-	 * @param trace
-	 */
-	private void showTrace(Integer traceType, Object trace) {
-		if (traceType.equals(parseTrace) && showParse)
-			System.out.println(trace);
-		if (traceType.equals(symbolTrace) && showSymbols)
-			System.out.println(trace);
-		if (traceType.equals(resultTrace) && showResults)
-			System.out.println(trace);
-		if (traceType.equals(otherTrace) && showOther)
-			System.out.println(trace);
-	}
 
 	private Integer pushStack(Integer ruleIndex) {
 		Integer context = stackTree.get(ruleIndex);
@@ -128,7 +101,6 @@ public class PUML3EventWalker extends PUML3BaseListener {
 			newLevel = context + 1;
 		}
 		stackTree.put(ruleIndex, newLevel);
-		showTrace(otherTrace, "PUSH - " + makeMapIndex(ruleIndex, newLevel) + ": " + stackTree);
 		return newLevel;
 	}
 
@@ -138,7 +110,6 @@ public class PUML3EventWalker extends PUML3BaseListener {
 			stackTree.remove(ruleIndex);
 		}
 		stackTree.put(ruleIndex, level);
-		showTrace(otherTrace, "POP - " + makeMapIndex(ruleIndex, level) + ": " + stackTree);
 		return level;
 	}
 
@@ -232,9 +203,6 @@ public class PUML3EventWalker extends PUML3BaseListener {
 			collectNewRuleMap(ruleIndex, stackLvl);
 		}
 
-		showTrace(parseTrace, "Enter " + makeMapIndex(ruleIndex, stackLvl) + ": "
-				+ PUML3Parser.ruleNames[ruleIndex] + ": " + sqlTree);
-		showTrace(parseTrace, "");
 	}
 
 	/**
@@ -304,14 +272,15 @@ public class PUML3EventWalker extends PUML3BaseListener {
 				} else {
 					Map<String, Object> idMap = getNodeMap(parentNodeIndex, parentStackIndex);
 					if (idMap == null) {
-						showTrace(parseTrace, "EXIT " + makeMapIndex(ruleIndex, stackLevel) + ": "
-								+ SQLSelectParserParser.ruleNames[ruleIndex] + ": Missing pMap");
-						showTrace(parseTrace, "");
+						// Missing expected map for parent rule index: " + parentNodeIndex + " at stack level: " + parentStackIndex);
+						// This should not happen if the stack management is correct
+						System.err.println("Error: Missing expected map for parent rule index: " + parentNodeIndex + " at stack level: " + parentStackIndex);
 					} else
 						idMap.put(((Integer) (idMap.size())).toString(), item);
 				}
 			} else {
-				showTrace(parseTrace, sqlTree);
+				System.out.print("AST: " + sqlTree);
+				System.out.print("Symbol Tree: " + symbolTable);
 			}
 		}
 
@@ -331,8 +300,6 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		Object type = subMap.remove("Type");
 		sqlTree.put(PUML3Constants.PUML3_EQUATION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
-		showTrace(symbolTrace, symbolTable);
-		showTrace(symbolTrace, tableDictionaryMap);
 	}
 
 
@@ -350,8 +317,42 @@ public class PUML3EventWalker extends PUML3BaseListener {
 		Object type = subMap.remove("Type");
 		sqlTree.put(PUML3Constants.PUML3_CONDITION_TREE_KEY, subMap.remove("1"));
 		// showTrace(resultTrace, collector);
-		showTrace(symbolTrace, symbolTable);
-		showTrace(symbolTrace, tableDictionaryMap);
+	}
+
+	@Override
+	public void exitCondition_statement(@NotNull PUML3Parser.Condition_statementContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			// Reference tokens by name directly from the parser context.
+			int orCount = ctx.OR().size();
+			int andCount = ctx.getTokens(PUML3Parser.AND).size();
+			subMap.put("OR_COUNT", orCount);
+			subMap.put("AND_COUNT", andCount);
+		}
+	}
+
+	@Override
+	public void exitNEGATIVE_CONDITION_STMT(@NotNull PUML3Parser.NEGATIVE_CONDITION_STMTContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.put("RULE_LABEL", "NEGATIVE_CONDITION_STMT");
+			subMap.put("HAS_NOT", ctx.NOT() != null);
+		}
+	}
+
+	@Override
+	public void exitCONDITION_STMT(@NotNull PUML3Parser.CONDITION_STMTContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = getNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.put("RULE_LABEL", "CONDITION_STMT");
+			subMap.put("HAS_NOT", false);
+		}
 	}
 
 }

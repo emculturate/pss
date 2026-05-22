@@ -25,13 +25,6 @@ equation
 	:	equation_principal EOF
 	;
 
-//	|	function_call EOF
-//	|	if_function_call EOF
-//	|	boolean_function_call EOF
-//	|	puml_builtin EOF
-//	|	generic_reference EOF
-//	;
-
 // BOOLEAN CONDITIONS
 condition_principal
 	:	condition_statement
@@ -47,7 +40,7 @@ and_condition_statement
 
 
 negative_condition_statement
-	:	NOT  condition_parenthetical					# NEGATIVE_CONDITION_STMT
+	:	NOT  condition_parenthetical				# NEGATIVE_CONDITION_STMT
 	|	condition_parenthetical						# CONDITION_STMT	;
 	
 condition_parenthetical
@@ -55,19 +48,32 @@ condition_parenthetical
 	|	LEFT_PARA condition_statement RIGHT_PARA 	# PARENTHETICAL_CONDITION
 	;
 	
+
 condition_expression
-	:	truth_value	
-	|	if_function_call
-	|	equation_formula boolean_comparator equation_formula
-	|	boolean_function_call 
-	|	equation_formula unit_boolean_comparator	
-
+	: truth_value
+	| if_function_call
+	| equation_formula boolean_comparator equation_formula
+	| boolean_function_call
+	| equation_formula IN in_list
+	| equation_formula isnull_comparator
 	;
 
-unit_boolean_comparator
-	:	IS_NULL | IS_NOT_NULL 
+in_list
+	: LEFT_PARA in_list_elements RIGHT_PARA
 	;
-	
+
+in_list_elements
+	: equation_formula (COMMA equation_formula)*
+	;
+
+// ISNULL comparator (support 'is null', 'is not null')
+isnull_comparator
+	: IS NULL
+	| IS NOT NULL
+	| ISNULL
+	| NOT ISNULL
+	;
+
 truth_value	:	TRUE | FALSE
 	;
 	
@@ -95,7 +101,6 @@ equation_parenthetical
 	:	LEFT_PARA equation_formula RIGHT_PARA 	# PARENTHETICAL_EXPRESSION
 	|	expression_term							# BARE_EXPRESSION
 	;
-
 
 expression_term
 	:	number_term
@@ -128,7 +133,6 @@ bound_function_argument
 	|	equation_formula
 	;
 	
-
 lookup_var_ref
 	:	transformation_ref DOT generic_reference DOT generic_reference # TRANSREF
 	;
@@ -150,7 +154,7 @@ puml_builtin
 	;
 	
 boolean_function_id
-	:	IS_DATE | IS_NUMBER | IS_SPACES | IS_NULL | IS_EMPTY | IS_NOT_EMPTY		
+	:	IS_DATE | IS_NUMBER | IS_SPACES | IS NULL | IS NOT NULL | IS EMPTY | IS NOT EMPTY		
 	;
 	
 lookup_function_id
@@ -189,21 +193,22 @@ modulo		:	MOD;
 power		: 	HAT;
 
 
-boolean_comparator	
-	:	equals | not_equals | less_than | less_or_equal 
-	| greater_than | greater_or_equal 
-	| CONTAINS | ENDS_WITH | STARTS_WITH | MATCHES 
-	| NOT_CONTAINS | NOT_ENDS_WITH | NOT_STARTS_WITH | NOT_MATCHES
+boolean_comparator
+	: EQU
+	| NOT_EQU
+	| LT
+	| LE
+	| GT
+	| GE
+	| CONTAINS
+	| ENDS WITH
+	| STARTS WITH
+	| MATCHES
+	| NOT CONTAINS
+	| NOT ENDS WITH
+	| NOT STARTS WITH
+	| NOT MATCHES
 	;
-
-// boolean operators
-equals		:	EQU;
-not_equals	:	NOT_EQU;
-less_than	:	LT;
-less_or_equal	:	LE;
-greater_than	:	GT;
-greater_or_equal	:	GE;	
-	
 	
 // SHARED
 
@@ -226,107 +231,7 @@ string_constant
 	;
 
 
-//char_list
-//	:	CHARACTERS *
-//	;
-
 /* LEXER */
-	
-// Special Tokens Imaginary tokens OBSOLETE in V4?
-/*
-ARGUMENT_LIST	: 	'argument_list';
-TRANSREF	: 	'transref';
-LKP		:	'lkp';
-LKPLIST		:	'lkplist';
-COND		:	'cond';
-NEGATIVE	:	'negative';
-VARIABLE_REF	:	'variable_ref';
-ATTR_REF	:	'attr_ref';
-PARENTHETICAL
-	:	'parenthetical'	; */
-
-/*
-===============================================================================
-  Tokens for Case Insensitive Keywords
-===============================================================================
-*/
-fragment A
-	:	'A' | 'a';
-
-fragment B
-	:	'B' | 'b';
-
-fragment C
-	:	'C' | 'c';
-
-fragment D
-	:	'D' | 'd';
-
-fragment E
-	:	'E' | 'e';
-
-fragment F
-	:	'F' | 'f';
-
-fragment G
-	:	'G' | 'g';
-
-fragment H
-	:	'H' | 'h';
-
-fragment I
-	:	'I' | 'i';
-
-fragment J
-	:	'J' | 'j';
-
-fragment K
-	:	'K' | 'k';
-
-fragment L
-	:	'L' | 'l';
-
-fragment M
-	:	'M' | 'm';
-
-fragment N
-	:	'N' | 'n';
-
-fragment O
-	:	'O' | 'o';
-
-fragment P
-	:	'P' | 'p';
-
-fragment Q
-	:	'Q' | 'q';
-
-fragment R
-	:	'R' | 'r';
-
-fragment S
-	:	'S' | 's';
-
-fragment T
-	:	'T' | 't';
-
-fragment U
-	:	'U' | 'u';
-
-fragment V
-	:	'V' | 'v';
-
-fragment W
-	:	'W' | 'w';
-
-fragment X
-	:	'X' | 'x';
-
-fragment Y
-	:	'Y' | 'y';
-
-fragment Z
-	:	'Z' | 'z';
 
 /*
 ===============================================================================
@@ -334,35 +239,35 @@ fragment Z
 ===============================================================================
 */
 
-AND		:	A N D;
-BARBAR	:	'||';
-FALSE	:	F A L S E;
-GE		:	'>=';
-LE		:	'<=';
-NOT		:	N O T;
-NOT_EQU	:	'!=';
-OR		:	O R;
-TRUE	:	T R U E;
-
-LEFT_PARA	:	'(';
-DOT		:	'.';
-COMMA		:	',';
-RIGHT_PARA	:	')';
-UNDERSCORE	:	'_';
-BAR		:	'|';	
-COLON	:	':';
-DASH	: 	'-';
-EQU		:	'=';
-GT		:	'>';
-HAT		:	'^';
-LT		:	'<';
-MOD		:	'%';
-EXCLAIM	:	'!';
-PLUS	:	'+';
-SINGLE_QUOTE	:	'\'';
-DBL_QUOTE	:	'"';
-SLASH		:	'/';
-STAR		:	'*';
+TRUE    : T R U E;
+FALSE   : F A L S E;
+AND     : A N D;
+OR      : O R;
+NOT     : N O T;
+IN      : I N;
+DASH	: '-';
+EQU     : '=';
+NOT_EQU : '!=';
+LT      : '<';
+GT      : '>';
+LE      : '<=';
+GE      : '>=';
+PLUS    : '+';
+STAR    : '*';
+SLASH   : '/';
+MOD     : '%';
+HAT     : '^';
+BARBAR  : '||';
+LEFT_PARA : '(';
+RIGHT_PARA: ')';
+DOT     : '.';
+COMMA   : ',';
+UNDERSCORE : '_';
+BAR     : '|';
+COLON   : ':';
+EXCLAIM : '!' ;
+SINGLE_QUOTE : '\'';
+DBL_QUOTE : '"';
 
 // PUML CONSTANTS/BUILTIN VALUES
 
@@ -382,7 +287,6 @@ DATE_ADD 	: D A T E '_' A D D;
 DATE_SUB 	: D A T E '_' S U B;
 CONCAT 		: C O N C A T;
 COUNT 		: C O U N T;
-IN 			: I N;
 INITCAP 	: I N I T C A P;
 INSTR 		: I N S T R;
 LOG 		: L O G;
@@ -401,6 +305,7 @@ IF 			: I F;
 IS_DATE 	: I S '_' D A T E;
 IS_NUMBER 	: I S '_' N U M B E R;
 IS_SPACES 	: I S '_' S P A C E S;
+ISNULL	 	: I S N U L L;
 LAST_DAY 	: L A S T '_' D A Y;
 LENGTH 		: L E N G T H;
 LOOKUP 		: L O O K U P;
@@ -423,20 +328,14 @@ TO_FLOAT 	: T O '_' F L O A T;
 TO_INTEGER 	: T O '_' I N T E G E R;
 TRUNC 		: T R U N C;
 
+ENDS 		: E N D S;
+STARTS 		: S T A R T S;
+WITH		: W I T H;
 CONTAINS	: C O N T A I N S;
-ENDS_WITH	: E N D S '_' W I T H;
 MATCHES		: M A T C H E S;
-STARTS_WITH	: S T A R T S '_' W I T H;
-NOT_CONTAINS	: N O T '_' C O N T A I N S;
-NOT_ENDS_WITH	: N O T '_' E N D S '_' W I T H;
-NOT_MATCHES		: N O T '_' M A T C H E S;
-NOT_STARTS_WITH	: N O T '_' S T A R T S '_' W I T H;
 
-IS_EMPTY	: I S '_' E M P T Y;
-IS_NOT_EMPTY	: I S '_' N O T '_' E M P T Y;
-IS_NULL 	: I S '_' N U L L;
-IS_NOT_NULL	: I S '_' N O T '_' N U L L;
-
+IS	: I S;
+EMPTY	: E M P T Y;
 
 // standard token rules
 	
@@ -454,13 +353,12 @@ FLOAT
     |   ('0'..'9')+ EXPONENT
     ;
 
-BRCKT_ID	
-	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
-	;
-
-PUML_ID	
-	:	('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_')*
-	;
+BRCKT_ID
+    :   '['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' ')*']'
+    ;
+PUML_ID
+    :   ('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|'0'..'9'|'_')*
+    ;
 
 STRING_VALUE 
 	:	'"'('A'..'Z'|'a'..'z'|'0'..'9'|'_'|' '|'|'|'['|']'|'+')*'"'
@@ -510,4 +408,35 @@ UNICODE_ESC
     :   '\\' 'u' HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
     ;
 
+/*
+===============================================================================
+  Tokens for Case Insensitive Keywords (fragments)
+===============================================================================
+*/
+fragment A	:	'A' | 'a';
+fragment B	:	'B' | 'b';
+fragment C	:	'C' | 'c';
+fragment D	:	'D' | 'd';
+fragment E	:	'E' | 'e';
+fragment F	:	'F' | 'f';
+fragment G	:	'G' | 'g';
+fragment H	:	'H' | 'h';
+fragment I	:	'I' | 'i';
+fragment J	:	'J' | 'j';
+fragment K	:	'K' | 'k';
+fragment L	:	'L' | 'l';
+fragment M	:	'M' | 'm';
+fragment N	:	'N' | 'n';
+fragment O	:	'O' | 'o';
+fragment P	:	'P' | 'p';
+fragment Q	:	'Q' | 'q';
+fragment R	:	'R' | 'r';
+fragment S	:	'S' | 's';
+fragment T	:	'T' | 't';
+fragment U	:	'U' | 'u';
+fragment V	:	'V' | 'v';
+fragment W	:	'W' | 'w';
+fragment X	:	'X' | 'x';
+fragment Y	:	'Y' | 'y';
+fragment Z	:	'Z' | 'z';
 

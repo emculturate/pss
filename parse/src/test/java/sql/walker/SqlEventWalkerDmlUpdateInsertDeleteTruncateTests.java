@@ -26,7 +26,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={acct_sales_count=[[@22,99:99='a',<380>,2:24], [@49,248:248='a',<380>,5:14]], last_update=[[@38,183:183='a',<380>,3:64]], emp_id=[[@18,89:89='a',<380>,2:14], [@33,165:165='a',<380>,3:46]]}, employees={score=[[@4,24:28='score',<380>,1:24]], rank_bucket=[[@10,54:64='rank_bucket',<380>,1:54]], emp_id=[[@57,283:283='e',<380>,6:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={acct_sales_count=[[@24,101:116='acct_sales_count',<380>,2:26]], rn=[[@44,206:207='rn',<380>,3:87], [@12,68:70='src',<380>,1:68], [@65,309:311='src',<380>,6:33]], emp_id=[[@20,91:96='emp_id',<380>,2:16], [@61,294:296='src',<380>,6:18]]}, update1={score=[[@4,24:28='score',<380>,1:24]], rank_bucket=[[@10,54:64='rank_bucket',<380>,1:54]]}}",
@@ -51,7 +51,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[quota]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{quota_feed={new_quota=[[@16,77:85='new_quota',<380>,2:31]], dept_id=[[@14,68:74='dept_id',<380>,2:22]], emp_id=[[@12,60:65='emp_id',<380>,2:14]]}, employees={quota=[[@4,24:28='quota',<380>,1:24]], active_flag=[[@38,169:169='e',<380>,3:61]], dept_id=[[@30,141:141='e',<380>,3:33]], emp_id=[[@22,115:115='e',<380>,3:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={new_quota=[[@16,77:85='new_quota',<380>,2:31]], dept_id=[[@14,68:74='dept_id',<380>,2:22], [@34,153:155='src',<380>,3:45]], emp_id=[[@12,60:65='emp_id',<380>,2:14], [@26,126:128='src',<380>,3:18]]}, update1={quota=[[@4,24:28='quota',<380>,1:24]]}}",
@@ -76,7 +76,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[review_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@12,73:77='score',<380>,2:22]], emp_id=[[@10,65:70='emp_id',<380>,2:14]]}, employees={missing_flag=[[@6,38:49='missing_flag',<380>,1:38]], review_flag=[[@4,24:34='review_flag',<380>,1:24]], emp_id=[[@18,106:106='e',<380>,3:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@12,73:77='score',<380>,2:22], [@26,132:134='src',<380>,3:33]], emp_id=[[@10,65:70='emp_id',<380>,2:14], [@22,117:119='src',<380>,3:18]]}, update1={review_flag=[[@4,24:34='review_flag',<380>,1:24]]}}",
@@ -111,7 +111,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[review_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@14,70:74='score',<380>,2:22]], emp_id=[[@12,62:67='emp_id',<380>,2:14]]}, employees={missing_flag=[[@39,176:176='e',<380>,4:33], [@47,213:224='missing_flag',<380>,4:70]], review_flag=[[@4,24:34='review_flag',<380>,1:24]], emp_id=[[@31,150:150='e',<380>,4:7]]}, audit_flags={missing_flag=[[@43,193:194='af',<380>,4:50]], emp_id=[[@27,133:134='af',<380>,3:37]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@14,70:74='score',<380>,2:22]], emp_id=[[@12,62:67='emp_id',<380>,2:14], [@23,120:122='src',<380>,3:24], [@35,161:163='src',<380>,4:18]]}, update1={review_flag=[[@4,24:34='review_flag',<380>,1:24]]}}",
@@ -139,7 +139,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@22,108:108='a',<380>,2:28], [@39,201:201='a',<380>,5:18]], emp_id=[[@16,94:94='a',<380>,2:14], [@33,174:174='a',<380>,4:17]]}, employees={score=[[@44,212:212='e',<380>,5:29]], stale_flag=[[@10,53:62='stale_flag',<380>,1:53]], agg_score=[[@4,24:32='agg_score',<380>,1:24]], emp_id=[[@50,232:232='e',<380>,6:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@27,120:130='total_score',<380>,2:40]], emp_id=[[@18,96:101='emp_id',<380>,2:16], [@54,243:245='src',<380>,6:18]]}, update1={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@10,53:62='stale_flag',<380>,1:53]]}}",
@@ -166,7 +166,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[unknown_rhs, most_recent_update]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={last_update=[[@20,111:111='a',<380>,2:24], [@28,167:167='a',<380>,4:17]], emp_id=[[@16,101:101='a',<380>,2:14]]}, employees={unknown_rhs=[[@10,62:72='unknown_rhs',<380>,1:62]], most_recent_update=[[@4,24:41='most_recent_update',<380>,1:24]], shadow_col=[[@12,76:85='shadow_col',<380>,1:76]], emp_id=[[@35,198:198='e',<380>,5:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={last_update=[[@22,113:123='last_update',<380>,2:26]], emp_id=[[@18,103:108='emp_id',<380>,2:16], [@39,209:211='src',<380>,5:18]]}, update1={most_recent_update=[[@4,24:41='most_recent_update',<380>,1:24]], unknown_rhs=[[@10,62:72='unknown_rhs',<380>,1:62]]}}",
@@ -194,7 +194,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[fallback_note, top_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,104:104='a',<380>,2:24]], last_update=[[@36,177:177='a',<380>,3:64]], rn=[[@47,242:243='rn',<380>,5:14]], emp_id=[[@16,94:94='a',<380>,2:14], [@31,159:159='a',<380>,3:46]]}, employees={fallback_note=[[@10,47:59='fallback_note',<380>,1:47]], unqualified_note=[[@12,63:78='unqualified_note',<380>,1:63]], top_score=[[@4,24:32='top_score',<380>,1:24]], emp_id=[[@53,261:261='e',<380>,6:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,106:110='score',<380>,2:26]], rn=[[@42,200:201='rn',<380>,3:87]], emp_id=[[@18,96:101='emp_id',<380>,2:16], [@57,272:274='src',<380>,6:18]]}, update1={fallback_note=[[@10,47:59='fallback_note',<380>,1:47]], top_score=[[@4,24:32='top_score',<380>,1:24]]}}",
@@ -222,7 +222,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@22,108:108='a',<380>,2:28], [@32,171:171='a',<380>,4:14]], emp_id=[[@16,94:94='a',<380>,2:14], [@41,210:210='a',<380>,5:17]]}, employees={stale_flag=[[@10,53:62='stale_flag',<380>,1:53]], agg_score=[[@4,24:32='agg_score',<380>,1:24]], min_score=[[@36,181:181='e',<380>,4:24]], emp_id=[[@47,231:231='e',<380>,6:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@27,120:130='total_score',<380>,2:40]], emp_id=[[@18,96:101='emp_id',<380>,2:16], [@51,242:244='src',<380>,6:18]]}, update1={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@10,53:62='stale_flag',<380>,1:53]]}}",
@@ -249,7 +249,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,104:104='a',<380>,2:24]], dept_id=[[@32,183:183='a',<380>,4:31]], emp_id=[[@16,94:94='a',<380>,2:14]]}, departments={dept_id=[[@36,195:195='d',<380>,4:43]], region=[[@40,209:209='d',<380>,4:57]]}, employees={stale_flag=[[@10,53:62='stale_flag',<380>,1:53]], agg_score=[[@4,24:32='agg_score',<380>,1:24]], region=[[@44,220:220='e',<380>,4:68]], emp_id=[[@50,241:241='e',<380>,5:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@24,115:125='total_score',<380>,2:35]], emp_id=[[@18,96:101='emp_id',<380>,2:16], [@54,252:254='src',<380>,5:18]]}, update1={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@10,53:62='stale_flag',<380>,1:53]]}}",
@@ -277,7 +277,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, top_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,98:98='a',<380>,2:24], [@36,171:171='a',<380>,3:64]], rn=[[@47,232:233='rn',<380>,5:16]], emp_id=[[@16,88:88='a',<380>,2:14], [@31,153:153='a',<380>,3:46]]}, employees={stale_flag=[[@10,47:56='stale_flag',<380>,1:47]], max_rank=[[@49,238:238='e',<380>,5:22]], top_score=[[@4,24:32='top_score',<380>,1:24]], emp_id=[[@55,261:261='e',<380>,6:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,100:104='score',<380>,2:26]], rn=[[@42,188:189='rn',<380>,3:81]], emp_id=[[@18,90:95='emp_id',<380>,2:16], [@59,272:274='src',<380>,6:18]]}, update1={stale_flag=[[@10,47:56='stale_flag',<380>,1:47]], top_score=[[@4,24:32='top_score',<380>,1:24]]}}",
@@ -304,7 +304,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, most_recent_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,106:106='a',<380>,2:24], [@33,177:177='a',<380>,4:38]], emp_id=[[@16,96:96='a',<380>,2:14]]}, employees={stale_flag=[[@10,55:64='stale_flag',<380>,1:55]], most_recent_score=[[@4,24:40='most_recent_score',<380>,1:24]], sort_priority=[[@28,156:156='e',<380>,4:17]], emp_id=[[@40,202:202='e',<380>,5:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,108:112='score',<380>,2:26]], emp_id=[[@18,98:103='emp_id',<380>,2:16], [@44,213:215='src',<380>,5:18]]}, update1={most_recent_score=[[@4,24:40='most_recent_score',<380>,1:24]], stale_flag=[[@10,55:64='stale_flag',<380>,1:55]]}}",
@@ -329,7 +329,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[latest_score, stale_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@20,101:101='a',<380>,2:24]], emp_id=[[@16,91:91='a',<380>,2:14]]}, employees={latest_score=[[@4,24:35='latest_score',<380>,1:24]], stale_flag=[[@10,50:59='stale_flag',<380>,1:50]], orphan_marker=[[@12,63:75='orphan_marker',<380>,1:63]], emp_id=[[@29,146:146='e',<380>,4:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@22,103:107='score',<380>,2:26]], emp_id=[[@18,93:98='emp_id',<380>,2:16], [@33,157:159='src',<380>,4:18]]}, update1={latest_score=[[@4,24:35='latest_score',<380>,1:24]], stale_flag=[[@10,50:59='stale_flag',<380>,1:50]]}}",
@@ -357,7 +357,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[orphan_sink, score, rank_bucket]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={acct_sales_count=[[@27,133:133='a',<380>,3:24], [@54,282:282='a',<380>,6:14]], last_update=[[@43,217:217='a',<380>,4:64]], emp_id=[[@23,123:123='a',<380>,3:14], [@38,199:199='a',<380>,4:46]]}, employees={orphan_sink=[[@8,44:54='orphan_sink',<380>,1:44]], score=[[@4,24:28='score',<380>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<380>,1:31]], orphan_marker=[[@19,95:107='orphan_marker',<380>,2:38]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={acct_sales_count=[[@29,135:150='acct_sales_count',<380>,3:26], [@11,65:67='src',<380>,2:8]], rn=[[@49,240:241='rn',<380>,4:87], [@15,87:89='src',<380>,2:30]], emp_id=[[@25,125:130='emp_id',<380>,3:16]]}, query1={acct_sales_count=[[@13,69:84='acct_sales_count',<380>,2:12]], orphan_marker=[[@19,95:107='orphan_marker',<380>,2:38]], rn=[[@17,91:92='rn',<380>,2:34]]}, insert2={orphan_sink=[[@8,44:54='orphan_sink',<380>,1:44]], score=[[@4,24:28='score',<380>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<380>,1:31]]}}",
@@ -384,7 +384,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[orphan_sink, quota, dept_id]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{quota_feed={new_quota=[[@27,134:142='new_quota',<380>,3:31], [@35,203:211='new_quota',<380>,5:34]], active_flag=[[@31,183:193='active_flag',<380>,5:14]], dept_id=[[@25,125:131='dept_id',<380>,3:22]], emp_id=[[@23,117:122='emp_id',<380>,3:14]]}, employees={orphan_sink=[[@8,40:50='orphan_sink',<380>,1:40]], quota=[[@4,24:28='quota',<380>,1:24]], orphan_marker=[[@19,89:101='orphan_marker',<380>,2:36]], dept_id=[[@6,31:37='dept_id',<380>,1:31]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={new_quota=[[@27,134:142='new_quota',<380>,3:31], [@11,61:63='src',<380>,2:8]], dept_id=[[@25,125:131='dept_id',<380>,3:22], [@15,76:78='src',<380>,2:23]], emp_id=[[@23,117:122='emp_id',<380>,3:14]]}, query1={new_quota=[[@13,65:73='new_quota',<380>,2:12]], orphan_marker=[[@19,89:101='orphan_marker',<380>,2:36]], dept_id=[[@17,80:86='dept_id',<380>,2:27]]}, insert2={orphan_sink=[[@8,40:50='orphan_sink',<380>,1:40]], dept_id=[[@6,31:37='dept_id',<380>,1:31]], quota=[[@4,24:28='quota',<380>,1:24]]}}",
@@ -409,7 +409,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[orphan_sink, review_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@19,104:108='score',<380>,3:22]], emp_id=[[@17,96:101='emp_id',<380>,3:14]]}, employees={orphan_sink=[[@6,37:47='orphan_sink',<380>,1:37]], missing_flag=[[@13,69:80='missing_flag',<380>,2:19]], review_flag=[[@4,24:34='review_flag',<380>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@19,104:108='score',<380>,3:22], [@9,58:60='src',<380>,2:8]], emp_id=[[@17,96:101='emp_id',<380>,3:14]]}, query1={score=[[@11,62:66='score',<380>,2:12]], missing_flag=[[@13,69:80='missing_flag',<380>,2:19]]}, insert2={orphan_sink=[[@6,37:47='orphan_sink',<380>,1:37]], review_flag=[[@4,24:34='review_flag',<380>,1:24]]}}",
@@ -437,7 +437,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[orphan_sink, review_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@21,106:106='p',<380>,3:24]], emp_id=[[@17,96:96='p',<380>,3:14], [@31,172:172='p',<380>,5:32]]}, employees={orphan_sink=[[@6,37:47='orphan_sink',<380>,1:37]], missing_flag=[[@13,69:80='missing_flag',<380>,2:19]], review_flag=[[@4,24:34='review_flag',<380>,1:24]]}, audit_flags={missing_flag=[[@39,207:208='af',<380>,6:14]], emp_id=[[@35,183:184='af',<380>,5:43]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@23,108:112='score',<380>,3:26], [@9,58:60='src',<380>,2:8]], emp_id=[[@19,98:103='emp_id',<380>,3:16]]}, query1={score=[[@11,62:66='score',<380>,2:12]], missing_flag=[[@13,69:80='missing_flag',<380>,2:19]]}, insert2={orphan_sink=[[@6,37:47='orphan_sink',<380>,1:37]], review_flag=[[@4,24:34='review_flag',<380>,1:24]]}}",
@@ -465,7 +465,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@23,114:114='a',<380>,3:28], [@40,207:207='a',<380>,6:18]], emp_id=[[@17,100:100='a',<380>,3:14], [@34,180:180='a',<380>,5:17]]}, employees={stale_flag=[[@6,35:44='stale_flag',<380>,1:35]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]], agg_score=[[@4,24:32='agg_score',<380>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@28,126:136='total_score',<380>,3:40], [@9,55:57='src',<380>,2:8]], emp_id=[[@19,102:107='emp_id',<380>,3:16]]}, query1={total_score=[[@11,59:69='total_score',<380>,2:12]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]]}, insert2={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@6,35:44='stale_flag',<380>,1:35]]}}",
@@ -492,7 +492,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[unknown_rhs, most_recent_update]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={last_update=[[@21,117:117='a',<380>,3:24], [@29,173:173='a',<380>,5:17]], emp_id=[[@17,107:107='a',<380>,3:14]]}, employees={unknown_rhs=[[@6,44:54='unknown_rhs',<380>,1:44]], most_recent_update=[[@4,24:41='most_recent_update',<380>,1:24]], shadow_col=[[@13,82:91='shadow_col',<380>,2:25]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={last_update=[[@23,119:129='last_update',<380>,3:26], [@9,65:67='src',<380>,2:8]], emp_id=[[@19,109:114='emp_id',<380>,3:16]]}, query1={last_update=[[@11,69:79='last_update',<380>,2:12]], shadow_col=[[@13,82:91='shadow_col',<380>,2:25]]}, insert2={most_recent_update=[[@4,24:41='most_recent_update',<380>,1:24]], unknown_rhs=[[@6,44:54='unknown_rhs',<380>,1:44]]}}",
@@ -520,7 +520,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[fallback_note, top_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@21,110:110='a',<380>,3:24]], last_update=[[@37,183:183='a',<380>,4:64]], rn=[[@48,248:249='rn',<380>,6:14]], emp_id=[[@17,100:100='a',<380>,3:14], [@32,165:165='a',<380>,4:46]]}, employees={fallback_note=[[@6,35:47='fallback_note',<380>,1:35]], unqualified_note=[[@13,69:84='unqualified_note',<380>,2:19]], top_score=[[@4,24:32='top_score',<380>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@23,112:116='score',<380>,3:26], [@9,58:60='src',<380>,2:8]], rn=[[@43,206:207='rn',<380>,4:87]], emp_id=[[@19,102:107='emp_id',<380>,3:16]]}, query1={score=[[@11,62:66='score',<380>,2:12]], unqualified_note=[[@13,69:84='unqualified_note',<380>,2:19]]}, insert2={fallback_note=[[@6,35:47='fallback_note',<380>,1:35]], top_score=[[@4,24:32='top_score',<380>,1:24]]}}",
@@ -548,7 +548,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@23,114:114='a',<380>,3:28], [@33,177:177='a',<380>,5:14]], emp_id=[[@17,100:100='a',<380>,3:14], [@40,206:206='a',<380>,6:17]]}, employees={stale_flag=[[@6,35:44='stale_flag',<380>,1:35]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]], agg_score=[[@4,24:32='agg_score',<380>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@28,126:136='total_score',<380>,3:40], [@9,55:57='src',<380>,2:8]], emp_id=[[@19,102:107='emp_id',<380>,3:16]]}, query1={total_score=[[@11,59:69='total_score',<380>,2:12]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]]}, insert2={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@6,35:44='stale_flag',<380>,1:35]]}}",
@@ -575,7 +575,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, agg_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@21,110:110='a',<380>,3:24]], dept_id=[[@33,189:189='a',<380>,5:31]], emp_id=[[@17,100:100='a',<380>,3:14]]}, departments={dept_id=[[@37,201:201='d',<380>,5:43]]}, employees={stale_flag=[[@6,35:44='stale_flag',<380>,1:35]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]], agg_score=[[@4,24:32='agg_score',<380>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={total_score=[[@25,121:131='total_score',<380>,3:35], [@9,55:57='src',<380>,2:8]], emp_id=[[@19,102:107='emp_id',<380>,3:16]]}, query1={total_score=[[@11,59:69='total_score',<380>,2:12]], orphan_marker=[[@13,72:84='orphan_marker',<380>,2:25]]}, insert2={agg_score=[[@4,24:32='agg_score',<380>,1:24]], stale_flag=[[@6,35:44='stale_flag',<380>,1:35]]}}",
@@ -603,7 +603,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, top_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@21,104:104='a',<380>,3:24], [@37,177:177='a',<380>,4:64]], rn=[[@48,238:239='rn',<380>,6:16]], emp_id=[[@17,94:94='a',<380>,3:14], [@32,159:159='a',<380>,4:46]]}, employees={stale_flag=[[@6,35:44='stale_flag',<380>,1:35]], top_score=[[@4,24:32='top_score',<380>,1:24]], orphan_marker=[[@13,66:78='orphan_marker',<380>,2:19]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@23,106:110='score',<380>,3:26], [@9,55:57='src',<380>,2:8]], rn=[[@43,194:195='rn',<380>,4:81]], emp_id=[[@19,96:101='emp_id',<380>,3:16]]}, query1={score=[[@11,59:63='score',<380>,2:12]], orphan_marker=[[@13,66:78='orphan_marker',<380>,2:19]]}, insert2={stale_flag=[[@6,35:44='stale_flag',<380>,1:35]], top_score=[[@4,24:32='top_score',<380>,1:24]]}}",
@@ -630,7 +630,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[stale_flag, most_recent_score]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@21,112:112='a',<380>,3:24], [@29,162:162='a',<380>,5:17]], emp_id=[[@17,102:102='a',<380>,3:14]]}, employees={stale_flag=[[@6,43:52='stale_flag',<380>,1:43]], most_recent_score=[[@4,24:40='most_recent_score',<380>,1:24]], orphan_marker=[[@13,74:86='orphan_marker',<380>,2:19]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@23,114:118='score',<380>,3:26], [@9,63:65='src',<380>,2:8]], emp_id=[[@19,104:109='emp_id',<380>,3:16]]}, query1={score=[[@11,67:71='score',<380>,2:12]], orphan_marker=[[@13,74:86='orphan_marker',<380>,2:19]]}, insert2={most_recent_score=[[@4,24:40='most_recent_score',<380>,1:24]], stale_flag=[[@6,43:52='stale_flag',<380>,1:43]]}}",
@@ -656,7 +656,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[latest_score, stale_flag]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={score=[[@21,107:107='a',<380>,3:24]], emp_id=[[@17,97:97='a',<380>,3:14]]}, employees={latest_score=[[@4,24:35='latest_score',<380>,1:24]], stale_flag=[[@6,38:47='stale_flag',<380>,1:38]], orphan_marker=[[@13,69:81='orphan_marker',<380>,2:19]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@23,109:113='score',<380>,3:26], [@9,58:60='src',<380>,2:8]], emp_id=[[@19,99:104='emp_id',<380>,3:16]]}, query1={score=[[@11,62:66='score',<380>,2:12]], orphan_marker=[[@13,69:81='orphan_marker',<380>,2:19]]}, insert2={latest_score=[[@4,24:35='latest_score',<380>,1:24]], stale_flag=[[@6,38:47='stale_flag',<380>,1:38]]}}",
@@ -691,7 +691,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[emp_sales_count, redder]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{accounts={acct_sales_count=[[@8,43:43='a',<380>,1:43]]}, employees={emp_sales_count=[[@4,23:23='e',<380>,1:23]], redder=[[@14,67:67='e',<380>,1:67]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={emp_sales_count=[[@6,25:39='emp_sales_count',<380>,1:25]], redder=[[@16,69:74='redder',<380>,1:69]]}}",
@@ -715,7 +715,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[outputC, outputA, outputB]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{that_table={column1=[[@5,32:38='column1',<380>,1:32]], column3=[[@13,70:76='column3',<380>,1:70]], column2=[[@9,51:57='column2',<380>,1:51]], key=[[@21,116:125='that_table',<380>,1:116]]}, this_table={outputC=[[@11,60:66='outputC',<380>,1:60]], outputA=[[@3,22:28='outputA',<380>,1:22]], outputB=[[@7,41:47='outputB',<380>,1:41]], key=[[@17,101:110='this_table',<380>,1:101]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={outputC=[[@11,60:66='outputC',<380>,1:60]], outputA=[[@3,22:28='outputA',<380>,1:22]], outputB=[[@7,41:47='outputB',<380>,1:41]]}}",
@@ -745,7 +745,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@46,195:197='aaa',<380>,6:7], [@60,238:240='aaa',<380>,7:11]], a2=[[@64,246:248='aaa',<380>,7:19]], a3=[[@68,254:256='aaa',<380>,7:27]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23], [@38,172:174='bbb',<380>,5:14]], b3=[[@27,115:117='bbb',<380>,3:62]], b1=[[@7,37:39='bbb',<380>,2:15], [@22,99:101='bbb',<380>,3:46]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27]], ccc=[[@33,131:133='ccc',<380>,3:78], [@54,215:217='ddd',<380>,6:27]], b1=[[@9,41:42='b1',<380>,2:19], [@50,204:206='ddd',<380>,6:16]]}, delete1={a1=[[@62,242:243='a1',<380>,7:15]], a2=[[@66,250:251='a2',<380>,7:23]], a3=[[@70,258:259='a3',<380>,7:31]]}}",
@@ -770,7 +770,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@17,70:72='aaa',<380>,3:7], [@39,132:134='aaa',<380>,4:11]], a2=[[@25,90:92='aaa',<380>,3:27], [@43,140:142='aaa',<380>,4:19]], a3=[[@47,148:150='aaa',<380>,4:27]]}, tab2={b2=[[@9,41:42='b2',<380>,2:19]], b3=[[@11,45:46='b3',<380>,2:23]], b1=[[@7,37:38='b1',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@9,41:42='b2',<380>,2:19], [@29,99:101='bbb',<380>,3:36]], b3=[[@11,45:46='b3',<380>,2:23], [@33,110:112='bbb',<380>,3:47]], b1=[[@7,37:38='b1',<380>,2:15], [@21,79:81='bbb',<380>,3:16]]}, delete1={a1=[[@41,136:137='a1',<380>,4:15]], a2=[[@45,144:145='a2',<380>,4:23]], a3=[[@49,152:153='a3',<380>,4:31]]}}",
@@ -797,7 +797,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@26,116:118='aaa',<380>,5:7], [@40,158:160='aaa',<380>,6:11]], a2=[[@44,166:168='aaa',<380>,6:19]], a3=[[@48,174:176='aaa',<380>,6:27]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@19,92:94='bbb',<380>,4:17]], b1=[[@7,37:39='bbb',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27], [@34,136:138='ccc',<380>,5:27]], b1=[[@9,41:42='b1',<380>,2:19], [@30,125:127='ccc',<380>,5:16]]}, delete1={a1=[[@42,162:163='a1',<380>,6:15]], a2=[[@46,170:171='a2',<380>,6:23]], a3=[[@50,178:179='a3',<380>,6:31]]}}",
@@ -824,7 +824,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@21,101:103='eee',<380>,4:26], [@39,149:151='aaa',<380>,5:7], [@47,176:178='aaa',<380>,6:11]], a2=[[@51,184:186='aaa',<380>,6:19]], a3=[[@29,121:123='eee',<380>,4:46], [@55,192:194='aaa',<380>,6:27]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@33,130:132='bbb',<380>,4:55]], b1=[[@7,37:39='bbb',<380>,2:15], [@25,110:112='bbb',<380>,4:35]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27]], b1=[[@9,41:42='b1',<380>,2:19], [@43,158:160='ccc',<380>,5:16]]}, delete1={a1=[[@49,180:181='a1',<380>,6:15]], a2=[[@53,188:189='a2',<380>,6:23]], a3=[[@57,196:197='a3',<380>,6:31]]}}",
@@ -849,7 +849,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@8,45:47='aaa',<380>,3:7], [@24,92:94='aaa',<380>,4:11]], a2=[[@16,65:67='aaa',<380>,3:27], [@28,100:102='aaa',<380>,4:19]], a3=[[@32,108:110='aaa',<380>,4:27]]}, tab2={b2=[[@20,74:76='bbb',<380>,3:36]], b1=[[@12,54:56='bbb',<380>,3:16]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{delete0={a1=[[@26,96:97='a1',<380>,4:15]], a2=[[@30,104:105='a2',<380>,4:23]], a3=[[@34,112:113='a3',<380>,4:31]]}}",
@@ -876,7 +876,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@30,120:122='aaa',<380>,5:7], [@46,167:169='aaa',<380>,6:11]], a2=[[@38,140:142='aaa',<380>,5:27], [@50,175:177='aaa',<380>,6:19]], a3=[[@54,183:185='aaa',<380>,6:27]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@15,53:55='bbb',<380>,2:31], [@22,97:99='bbb',<380>,4:14]], b1=[[@7,37:39='bbb',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27], [@42,149:151='ccc',<380>,5:36]], b3=[[@17,57:58='b3',<380>,2:35]], b1=[[@9,41:42='b1',<380>,2:19], [@34,129:131='ccc',<380>,5:16]]}, delete1={a1=[[@48,171:172='a1',<380>,6:15]], a2=[[@52,179:180='a2',<380>,6:23]], a3=[[@56,187:188='a3',<380>,6:31]]}}",
@@ -904,7 +904,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@46,195:196='a1',<380>,6:7], [@58,234:235='a1',<380>,7:11]], a2=[[@60,238:239='a2',<380>,7:15]], a3=[[@62,242:243='a3',<380>,7:19]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23], [@38,172:174='bbb',<380>,5:14]], b3=[[@27,115:117='bbb',<380>,3:62]], b1=[[@7,37:39='bbb',<380>,2:15], [@22,99:101='bbb',<380>,3:46]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27]], ccc=[[@33,131:133='ccc',<380>,3:78], [@52,211:213='ddd',<380>,6:23]], b1=[[@9,41:42='b1',<380>,2:19], [@48,200:202='ddd',<380>,6:12]]}, delete1={a1=[[@58,234:235='a1',<380>,7:11]], a2=[[@60,238:239='a2',<380>,7:15]], a3=[[@62,242:243='a3',<380>,7:19]]}}",
@@ -929,7 +929,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@17,70:71='a1',<380>,3:7], [@35,124:125='a1',<380>,4:11]], a2=[[@23,86:87='a2',<380>,3:23], [@37,128:129='a2',<380>,4:15]], a3=[[@39,132:133='a3',<380>,4:19]]}, tab2={b2=[[@9,41:42='b2',<380>,2:19]], b3=[[@11,45:46='b3',<380>,2:23]], b1=[[@7,37:38='b1',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@9,41:42='b2',<380>,2:19], [@25,91:93='bbb',<380>,3:28]], b3=[[@11,45:46='b3',<380>,2:23], [@29,102:104='bbb',<380>,3:39]], b1=[[@7,37:38='b1',<380>,2:15], [@19,75:77='bbb',<380>,3:12]]}, delete1={a1=[[@35,124:125='a1',<380>,4:11]], a2=[[@37,128:129='a2',<380>,4:15]], a3=[[@39,132:133='a3',<380>,4:19]]}}",
@@ -956,7 +956,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@26,116:117='a1',<380>,5:7], [@38,154:155='a1',<380>,6:11]], a2=[[@40,158:159='a2',<380>,6:15]], a3=[[@42,162:163='a3',<380>,6:19]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@19,92:94='bbb',<380>,4:17]], b1=[[@7,37:39='bbb',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27], [@32,132:134='ccc',<380>,5:23]], b1=[[@9,41:42='b1',<380>,2:19], [@28,121:123='ccc',<380>,5:12]]}, delete1={a1=[[@38,154:155='a1',<380>,6:11]], a2=[[@40,158:159='a2',<380>,6:15]], a3=[[@42,162:163='a3',<380>,6:19]]}}",
@@ -983,7 +983,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@21,101:103='eee',<380>,4:26], [@39,149:150='a1',<380>,5:7], [@45,172:173='a1',<380>,6:11]], a2=[[@47,176:177='a2',<380>,6:15]], a3=[[@29,121:123='eee',<380>,4:46], [@49,180:181='a3',<380>,6:19]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@33,130:132='bbb',<380>,4:55]], b1=[[@7,37:39='bbb',<380>,2:15], [@25,110:112='bbb',<380>,4:35]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27]], b1=[[@9,41:42='b1',<380>,2:19], [@41,154:156='ccc',<380>,5:12]]}, delete1={a1=[[@45,172:173='a1',<380>,6:11]], a2=[[@47,176:177='a2',<380>,6:15]], a3=[[@49,180:181='a3',<380>,6:19]]}}",
@@ -1008,7 +1008,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@8,45:46='a1',<380>,3:7], [@20,84:85='a1',<380>,4:11]], a2=[[@14,61:62='a2',<380>,3:23], [@22,88:89='a2',<380>,4:15]], a3=[[@24,92:93='a3',<380>,4:19]]}, tab2={b2=[[@16,66:68='bbb',<380>,3:28]], b1=[[@10,50:52='bbb',<380>,3:12]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{delete0={a1=[[@20,84:85='a1',<380>,4:11]], a2=[[@22,88:89='a2',<380>,4:15]], a3=[[@24,92:93='a3',<380>,4:19]]}}",
@@ -1035,7 +1035,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@30,120:121='a1',<380>,5:7], [@42,159:160='a1',<380>,6:11]], a2=[[@36,136:137='a2',<380>,5:23], [@44,163:164='a2',<380>,6:15]], a3=[[@46,167:168='a3',<380>,6:19]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@15,53:55='bbb',<380>,2:31], [@22,97:99='bbb',<380>,4:14]], b1=[[@7,37:39='bbb',<380>,2:15]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27], [@38,141:143='ccc',<380>,5:28]], b3=[[@17,57:58='b3',<380>,2:35]], b1=[[@9,41:42='b1',<380>,2:19], [@32,125:127='ccc',<380>,5:12]]}, delete1={a1=[[@42,159:160='a1',<380>,6:11]], a2=[[@44,163:164='a2',<380>,6:15]], a3=[[@46,167:168='a3',<380>,6:19]]}}",
@@ -1062,7 +1062,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Interface is wrong", "[a1, b2, a2, b3, a3, b1]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a1=[[@33,131:132='a1',<380>,5:7], [@53,190:191='a1',<380>,6:11]], a2=[[@39,147:148='a2',<380>,5:23], [@55,194:195='a2',<380>,6:15]], a3=[[@57,198:199='a3',<380>,6:19]]}, tab2={b2=[[@11,45:47='bbb',<380>,2:23]], b3=[[@15,53:55='bbb',<380>,2:31], [@22,97:99='bbb',<380>,4:14]], b1=[[@7,37:39='bbb',<380>,2:15]]}, users={id=[[@45,163:165='uuu',<380>,5:39]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={b2=[[@13,49:50='b2',<380>,2:27], [@41,152:154='ccc',<380>,5:28], [@63,210:212='ccc',<380>,6:31]], b3=[[@17,57:58='b3',<380>,2:35], [@49,172:174='ccc',<380>,5:48], [@67,218:220='ccc',<380>,6:39]], b1=[[@9,41:42='b1',<380>,2:19], [@35,136:138='ccc',<380>,5:12], [@59,202:204='ccc',<380>,6:23]]}, delete1={a1=[[@53,190:191='a1',<380>,6:11]], b2=[[@65,214:215='b2',<380>,6:35]], a2=[[@55,194:195='a2',<380>,6:15]], b3=[[@69,222:223='b3',<380>,6:43]], a3=[[@57,198:199='a3',<380>,6:19]], b1=[[@61,206:207='b1',<380>,6:27]]}}",

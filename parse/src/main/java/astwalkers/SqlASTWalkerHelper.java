@@ -223,6 +223,19 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return tableDictionaryMap;
 	}
 
+	/**
+	 * Clears per-statement collectors so SCRIPT statements do not leak counters,
+	 * dictionaries, substitutions, or unresolved-location accumulators into each other.
+	 */
+	public void resetPerStatementScope() {
+		queryCount = 0;
+		predicandCount = 0;
+		getWalkerTableDictionary().clear();
+		queryColumnDictionaryMap.clear();
+		substitutionsMap.clear();
+		globalQualifiedUnresolvedLocations.clear();
+	}
+
 	public Integer findNearestSubqueryParentRuleIndex(ParserRuleContext ctx) {
 		if (ctx == null) {
 			return null;

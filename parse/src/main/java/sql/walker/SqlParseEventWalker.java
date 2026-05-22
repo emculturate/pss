@@ -67,35 +67,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
-	private int scriptStatementSequence = 0;
-	private final ArrayDeque<Integer> scriptStatementSequenceStack = new ArrayDeque<Integer>();
-	private final LinkedHashMap<String, Object> scriptStatementTableDictionaries = new LinkedHashMap<String, Object>();
-	private final LinkedHashMap<String, Object> scriptStatementQueryDictionaries = new LinkedHashMap<String, Object>();
-	private final LinkedHashMap<String, Object> scriptStatementSubstitutions = new LinkedHashMap<String, Object>();
-	private final LinkedHashMap<String, Object> scriptStatementArrayOutputs = new LinkedHashMap<String, Object>();
-	private final LinkedHashMap<String, StatementLineRange> scriptStatementLineRanges = new LinkedHashMap<String, StatementLineRange>();
-
-	private static final class StatementLineRange {
-		private final int startLine;
-		private final int endLine;
-
-		private StatementLineRange(int startLine, int endLine) {
-			this.startLine = startLine;
-			this.endLine = endLine;
-		}
-	}
-
-	private static final class IntoSetPlacementViolation {
-		private final String setOperationType;
-		private final int memberPosition;
-		private final Token token;
-
-		private IntoSetPlacementViolation(String setOperationType, int memberPosition, Token token) {
-			this.setOperationType = setOperationType;
-			this.memberPosition = memberPosition;
-			this.token = token;
-		}
-	}
+	private final ScriptParseAccumulator scriptParseAccumulator = new ScriptParseAccumulator();
 
 	/**
 	 * AST Walker Helper for this instance of the SQL Parse Event Walker
@@ -141,25 +113,38 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.addWalkerFatal("INVALID VARIABLE NAME", message, line, charPos, tokenText);
 	}
 
-	private IntoSetPlacementViolation findIntoSetPlacementViolation(
-			SQLSelectParserParser.Query_specificationContext ctx) {
+	private boolean shouldProjectSelectIntoForQuerySpecification(SQLSelectParserParser.Query_specificationContext ctx) {
+		if (ctx.into_list() == null) {
+			return true;
+		}
+
+		String setOperationType = null;
+		int memberPosition = -1;
+		Token violationToken = null;
+
 		ParserRuleContext child = ctx;
 		ParserRuleContext parent = ctx.getParent();
 
 		while (parent != null) {
 			if (parent instanceof SQLSelectParserParser.Unionized_queryContext unionizedCtx
 					&& child instanceof SQLSelectParserParser.Query_primaryContext queryPrimaryCtx) {
-				int memberPosition = unionizedCtx.query_primary().indexOf(queryPrimaryCtx) + 1;
-				if (memberPosition > 1) {
-					return new IntoSetPlacementViolation("UNION", memberPosition, ctx.getStart());
+				int unionMemberPosition = unionizedCtx.query_primary().indexOf(queryPrimaryCtx) + 1;
+				if (unionMemberPosition > 1) {
+					setOperationType = "UNION";
+					memberPosition = unionMemberPosition;
+					violationToken = ctx.getStart();
+					break;
 				}
 			}
 
 			if (parent instanceof SQLSelectParserParser.Intersected_queryContext intersectedCtx
 					&& child instanceof SQLSelectParserParser.Unionized_queryContext unionizedChildCtx) {
-				int memberPosition = intersectedCtx.unionized_query().indexOf(unionizedChildCtx) + 1;
-				if (memberPosition > 1) {
-					return new IntoSetPlacementViolation("INTERSECTION", memberPosition, ctx.getStart());
+				int intersectMemberPosition = intersectedCtx.unionized_query().indexOf(unionizedChildCtx) + 1;
+				if (intersectMemberPosition > 1) {
+					setOperationType = "INTERSECTION";
+					memberPosition = intersectMemberPosition;
+					violationToken = ctx.getStart();
+					break;
 				}
 			}
 
@@ -167,16 +152,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			parent = parent.getParent();
 		}
 
-		return null;
-	}
-
-	private boolean shouldProjectSelectIntoForQuerySpecification(SQLSelectParserParser.Query_specificationContext ctx) {
-		if (ctx.into_list() == null) {
-			return true;
-		}
-
-		IntoSetPlacementViolation violation = findIntoSetPlacementViolation(ctx);
-		if (violation == null) {
+		if (setOperationType == null) {
 			return true;
 		}
 
@@ -185,11 +161,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				SqlASTWalkerHelper.DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER);
 		String diagMessage = String.format(
 				diagMessageTemplate,
-				violation.setOperationType,
-				String.valueOf(violation.memberPosition));
+				setOperationType,
+				String.valueOf(memberPosition));
 
-		Integer line = violation.token == null ? null : violation.token.getLine();
-		Integer charPos = violation.token == null ? null : violation.token.getCharPositionInLine();
+		Integer line = violationToken == null ? null : violationToken.getLine();
+		Integer charPos = violationToken == null ? null : violationToken.getCharPositionInLine();
 		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, "INTO");
 		return false;
 	}
@@ -811,80 +787,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public Snippet getSnippet() {
 		Snippet snippet = new Snippet(walker.asTree, walker.getWalkerTableDictionary(), walker.queryColumnDictionaryMap,
 				walker.symbolTable, walker.substitutionsMap, getInterface());
-		if (!scriptStatementArrayOutputs.isEmpty()) {
-			snippet.setArrayOutputCollectorsMap(getArrayOutputCollectorsMap());
+		if (scriptParseAccumulator.hasArrayOutputs()) {
+			snippet.setArrayOutputCollectorsMap(scriptParseAccumulator.buildScriptArrayOutputCollectorsMap());
 		}
 		// Handoff: copy walker-generated (non-parser) diagnostics into the snippet.
-		snippet.setParserDiagnosticList(prefixScriptWalkerDiagnostics(new ArrayList<>(walker.getWalkerDiagnostics())));
+		snippet.setParserDiagnosticList(
+				scriptParseAccumulator.prefixWalkerDiagnostics(new ArrayList<>(walker.getWalkerDiagnostics())));
 		return snippet;
 	}
 
-	private List<ParseDiagnostic> prefixScriptWalkerDiagnostics(List<ParseDiagnostic> diagnostics) {
-		if (diagnostics == null || diagnostics.isEmpty() || scriptStatementLineRanges.isEmpty()) {
-			return diagnostics;
-		}
-
-		List<ParseDiagnostic> updated = new ArrayList<ParseDiagnostic>(diagnostics.size());
-		for (ParseDiagnostic diagnostic : diagnostics) {
-			if (diagnostic == null
-					|| !isPrefixedWalkerSeverity(diagnostic.severity())
-					|| diagnostic.source() == null
-					|| !diagnostic.source().contains("SqlASTWalker")) {
-				updated.add(diagnostic);
-				continue;
-			}
-
-			Integer line = diagnostic.line();
-			if (line == null || line.intValue() <= 0) {
-				updated.add(diagnostic);
-				continue;
-			}
-
-			String statementKey = findStatementKeyForLine(line);
-			if (statementKey == null) {
-				updated.add(diagnostic);
-				continue;
-			}
-
-			String prefix = "Statement " + statementKey + " (l:" + line + "): ";
-			String message = diagnostic.message();
-			if (message == null || message.isBlank() || message.startsWith(prefix)) {
-				updated.add(diagnostic);
-				continue;
-			}
-
-			updated.add(new ParseDiagnostic(
-					diagnostic.severity(),
-					diagnostic.code(),
-					prefix + message,
-					diagnostic.line(),
-					diagnostic.charPositionInLine(),
-					diagnostic.source(),
-					diagnostic.ruleName(),
-					diagnostic.tokenText(),
-					diagnostic.recoverable(),
-					diagnostic.phase(),
-					diagnostic.exceptionType(),
-					diagnostic.details()));
-		}
-
-		return updated;
+	public ScriptParseAccumulator getScriptParseAccumulator() {
+		return scriptParseAccumulator;
 	}
 
-	private boolean isPrefixedWalkerSeverity(ParseDiagnostic.Severity severity) {
-		return severity == ParseDiagnostic.Severity.FATAL
-				|| severity == ParseDiagnostic.Severity.ERROR
-				|| severity == ParseDiagnostic.Severity.SEVERE_WARNING;
+	public SqlASTWalkerHelper getWalker() {
+		return walker;
 	}
 
-	private String findStatementKeyForLine(int line) {
-		for (Map.Entry<String, StatementLineRange> entry : scriptStatementLineRanges.entrySet()) {
-			StatementLineRange range = entry.getValue();
-			if (range != null && line >= range.startLine && line <= range.endLine) {
-				return entry.getKey();
-			}
-		}
-		return null;
+	public Map<String, Object> getSubstitutionsMap() {
+		return walker.substitutionsMap;
 	}
 
 	/* ==================================================================================
@@ -906,67 +827,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return SqlASTWalkerHelper.normalizeTableReference(tableRef);
 	}
 
-	public HashMap<String, Object> getSubstitutionsMap() {
-		return walker.substitutionsMap;
-	}
-
-	public HashMap<String, Object> getArrayOutputCollectorsMap() {
-		HashMap<String, Object> arrayOutputMap = new LinkedHashMap<String, Object>();
-		if (!scriptStatementArrayOutputs.isEmpty()) {
-			arrayOutputMap.put(SQLPARSER_SCRIPT_TREE_KEY, new LinkedHashMap<String, Object>(scriptStatementArrayOutputs));
-			return arrayOutputMap;
-		}
-
-		HashMap<String, Object> nonScriptArrays = new LinkedHashMap<String, Object>();
-		nonScriptArrays.put("queryInterface", new ArrayList<String>(getInterface()));
-		arrayOutputMap.put(SQLPARSER_SQL_TREE_KEY, nonScriptArrays);
-		return arrayOutputMap;
-	}
-
-	
-	private HashMap<String, Object> copyMapObject(Object source) {
-		if (!(source instanceof Map<?, ?> sourceMapObj)) {
-			return new LinkedHashMap<String, Object>();
-		}
-
-		HashMap<String, Object> copy = new LinkedHashMap<String, Object>();
-		Map<String, Object> sourceMap = (Map<String, Object>) sourceMapObj;
-		for (Map.Entry<String, Object> entry : sourceMap.entrySet()) {
-			Object value = entry.getValue();
-			if (value instanceof Map<?, ?>) {
-				copy.put(entry.getKey(), copyMapObject(value));
-			} else if (value instanceof List<?> valueListObj) {
-				copy.put(entry.getKey(), new ArrayList<Object>((List<Object>) valueListObj));
-			} else if (value instanceof Set<?> valueSetObj) {
-				copy.put(entry.getKey(), new LinkedHashSet<Object>((Set<Object>) valueSetObj));
-			} else {
-				copy.put(entry.getKey(), value);
-			}
-		}
-		return copy;
-	}
-
-	private void resetStatementScopedCollectors() {
-		walker.queryCount = 0;
-		walker.predicandCount = 0;
-		walker.getWalkerTableDictionary().clear();
-		walker.queryColumnDictionaryMap.clear();
-		walker.substitutionsMap.clear();
-		walker.globalQualifiedUnresolvedLocations.clear();
-	}
-
-	private void snapshotScriptStatementCollectors(int statementSequence) {
-		String statementKey = Integer.toString(statementSequence);
-		scriptStatementTableDictionaries.put(statementKey, copyMapObject(walker.getWalkerTableDictionary()));
-		scriptStatementQueryDictionaries.put(statementKey, copyMapObject(walker.queryColumnDictionaryMap));
-		scriptStatementSubstitutions.put(statementKey, copyMapObject(walker.substitutionsMap));
-
-		HashMap<String, Object> arrayOutputMap = new LinkedHashMap<String, Object>();
-		arrayOutputMap.put("queryInterface", new ArrayList<String>(getInterface()));
-		scriptStatementArrayOutputs.put(statementKey, arrayOutputMap);
-	}
-
-	
 	/*****************************************************************************************************
 	 * Grammar Clauses Start Here
 	 * 
@@ -1064,18 +924,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.popStack(ruleIndex);
 	}
 
-	/*
-	 * These are placeholder methods that will eventually be implemented to handle
-	 * Could handle syntax error reporting but is currently not implemented
-	 */
-	@Override
-	public void visitTerminal( TerminalNode node) {
-	}
-
-	@Override
-	public void visitErrorNode( ErrorNode node) {
-	}
-
 	/******************************************************************************
 	 * 
 	 * RULE EXIT METHODS
@@ -1100,14 +948,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void enterScript( SQLSelectParserParser.ScriptContext ctx) {
 		walker.pushSymbolTable();
-		scriptStatementSequence = 0;
-		scriptStatementSequenceStack.clear();
-		scriptStatementTableDictionaries.clear();
-		scriptStatementQueryDictionaries.clear();
-		scriptStatementSubstitutions.clear();
-		scriptStatementArrayOutputs.clear();
-		scriptStatementLineRanges.clear();
-		resetStatementScopedCollectors();
+		scriptParseAccumulator.reset();
 	}
 
 	@Override
@@ -1133,15 +974,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		walker.asTree.put(SQLPARSER_SCRIPT_TREE_KEY, scriptStatements);
+		ScriptParseSnapshot scriptSnapshot = scriptParseAccumulator.snapshot();
 		walker.tableDictionaryMap = new LinkedHashMap<String, Object>();
-		walker.tableDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY,
-				new LinkedHashMap<String, Object>(scriptStatementTableDictionaries));
+		walker.tableDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY, scriptSnapshot.statementTableDictionaries());
 		walker.queryColumnDictionaryMap = new LinkedHashMap<String, Object>();
-		walker.queryColumnDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY,
-				new LinkedHashMap<String, Object>(scriptStatementQueryDictionaries));
+		walker.queryColumnDictionaryMap.put(SQLPARSER_SCRIPT_TREE_KEY, scriptSnapshot.statementQueryDictionaries());
 		walker.substitutionsMap = new LinkedHashMap<String, Object>();
-		walker.substitutionsMap.put(SQLPARSER_SCRIPT_TREE_KEY,
-				new LinkedHashMap<String, Object>(scriptStatementSubstitutions));
+		walker.substitutionsMap.put(SQLPARSER_SCRIPT_TREE_KEY, scriptSnapshot.statementSubstitutions());
 
 		HashMap<String, Object> scriptSymbolTables = new LinkedHashMap<String, Object>();
 		for (int i = 0; i < ctx.sql_statement().size(); i++) {
@@ -1156,10 +995,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void enterSql_statement( SQLSelectParserParser.Sql_statementContext ctx) {
 		// Each SCRIPT statement gets a fresh scope so counters, dictionaries, and diagnostics do not bleed across statements.
-		scriptStatementSequence += 1;
-		scriptStatementSequenceStack.push(scriptStatementSequence);
+		scriptParseAccumulator.beginStatement();
 		walker.pushSymbolTable();
-		resetStatementScopedCollectors();
+		walker.resetPerStatementScope();
 	}
 
 	@Override
@@ -1182,17 +1020,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Isolation boundary between SCRIPT statements.
 		// It gives each statement its own line range, which is later used to attach statement prefixes to global diagnostics.
 		// It prevents cross-statement carryover in dictionaries and collector outputs.
-		if (!scriptStatementSequenceStack.isEmpty()) {
-			int statementSequence = scriptStatementSequenceStack.pop();
-			int startLine = (ctx.getStart() == null) ? -1 : ctx.getStart().getLine();
-			int endLine = (ctx.getStop() == null || ctx.getStop().getLine() <= 0) ? startLine : ctx.getStop().getLine();
-			if (startLine > 0) {
-				scriptStatementLineRanges.put(Integer.toString(statementSequence), new StatementLineRange(startLine, endLine));
-			}
-			snapshotScriptStatementCollectors(statementSequence);
+		if (scriptParseAccumulator.hasActiveStatement()) {
+			int statementSequence = scriptParseAccumulator.endStatement();
+			scriptParseAccumulator.recordLineRange(statementSequence, ctx.getStart(), ctx.getStop());
+			scriptParseAccumulator.captureStatementSnapshot(
+					statementSequence,
+					walker.getWalkerTableDictionary(),
+					walker.queryColumnDictionaryMap,
+					walker.substitutionsMap,
+					getInterface());
 			HashMap<String, Object> statementSymbols = walker.symbolTable;
 			walker.popSymbolTable(TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX + Integer.toString(statementSequence), statementSymbols);
-			resetStatementScopedCollectors();
 		}
 	}
 
@@ -1207,6 +1045,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitDdl_primary( SQLSelectParserParser.Ddl_primaryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitDml_primary( SQLSelectParserParser.Dml_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		walker.handleOneChild(ruleIndex);
 	}
@@ -9792,7 +9636,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		String value;

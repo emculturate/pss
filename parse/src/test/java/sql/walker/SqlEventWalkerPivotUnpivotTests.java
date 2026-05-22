@@ -26,7 +26,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[metric_name, metric_value, id]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{my_table={jan_sales=[[@15,98:106='jan_sales',<380>,4:35]], mar_sales=[[@19,120:128='mar_sales',<380>,4:57]], metric_name=[[@3,11:21='metric_name',<380>,1:11]], metric_value=[[@5,24:35='metric_value',<380>,1:24]], id=[[@1,7:8='id',<380>,1:7]], feb_sales=[[@17,109:117='feb_sales',<380>,4:46]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={metric_name=[[@3,11:21='metric_name',<380>,1:11]], metric_value=[[@5,24:35='metric_value',<380>,1:24]], id=[[@1,7:8='id',<380>,1:7]]}}",
@@ -49,12 +49,12 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong",
-				"{106_1={}, SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value=sales_amount, for=month_name, in={1={name=jan_sales, label='JAN', table_ref=null}, 2={name=feb_sales, label='FEB', table_ref=null}, 3={name=mar_sales, label='MAR', table_ref=null}}}, table={alias=null, table=monthly_sales}}}}",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value=sales_amount, for=month_name, in={1={name=jan_sales, label='JAN', table_ref=null}, 2={name=feb_sales, label='FEB', table_ref=null}, 3={name=mar_sales, label='MAR', table_ref=null}}}, table={alias=null, table=monthly_sales}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@15,99:107='jan_sales',<380>,3:41]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], mar_sales=[[@23,139:147='mar_sales',<380>,3:81]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]], feb_sales=[[@19,119:127='feb_sales',<380>,3:61]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]]}}",
@@ -79,12 +79,12 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"[Unresolved unqualified column reference(s): [empid [(l:1 c:7)], month_name [(l:1 c:14)], feb_adjusted [(l:3 c:64)], jan_adjusted [(l:3 c:41)], sales_amount [(l:1 c:26)]]]",
 				extractor.getSnippet().getErrorStringList(errorhandling.ParseDiagnostic.Severity.ERROR).toString());
 		Assert.assertEquals("AST is wrong",
-				"{106_1={}, SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value=sales_amount, for=month_name, in={1={name=jan_adjusted, label='JAN', table_ref=null}, 2={name=feb_adjusted, label='FEB', table_ref=null}}}, select={1={column={name=empid, table_ref=null}}, 2={alias=jan_adjusted, calc={left={column={name=jan_sales, table_ref=null}}, right={literal=1.10}, operator=*}}, 3={alias=feb_adjusted, calc={left={column={name=feb_sales, table_ref=null}}, right={literal=1.10}, operator=*}}}, from={table={alias=null, table=monthly_sales}}}}}",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value=sales_amount, for=month_name, in={1={name=jan_adjusted, label='JAN', table_ref=null}, 2={name=feb_adjusted, label='FEB', table_ref=null}}}, select={1={column={name=empid, table_ref=null}}, 2={alias=jan_adjusted, calc={left={column={name=jan_sales, table_ref=null}}, right={literal=1.10}, operator=*}}, 3={alias=feb_adjusted, calc={left={column={name=feb_sales, table_ref=null}}, right={literal=1.10}, operator=*}}}, from={table={alias=null, table=monthly_sales}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@11,59:67='jan_sales',<380>,2:20]], empid=[[@9,52:56='empid',<380>,2:13]], feb_sales=[[@19,93:101='feb_sales',<380>,2:54]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@9,52:56='empid',<380>,2:13]], feb_adjusted=[[@25,113:124='feb_adjusted',<380>,2:74]], jan_adjusted=[[@17,79:90='jan_adjusted',<380>,2:40]]}, query1={empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]]}}",
@@ -112,7 +112,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount, tax]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@23,127:135='jan_sales',<380>,3:41]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], mar_sales=[[@27,149:157='mar_sales',<380>,3:63]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26], [@7,40:51='sales_amount',<380>,1:40], [@31,167:178='sales_amount',<380>,3:81]], feb_sales=[[@25,138:146='feb_sales',<380>,3:52]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]], tax=[[@13,63:65='tax',<380>,1:63]]}}",
@@ -142,7 +142,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount, tax]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={}, targets={month_name=[[@37,185:185='t',<380>,3:33]], target_amount=[[@45,220:220='t',<380>,3:68]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]], tax=[[@13,63:65='tax',<380>,1:63]]}}",
@@ -170,7 +170,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[jan_sales, empid, month_name, sales_amount, feb_sales]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@3,14:22='jan_sales',<380>,1:14], [@19,121:129='jan_sales',<380>,3:41]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@7,36:45='month_name',<380>,1:36]], mar_sales=[[@23,143:151='mar_sales',<380>,3:63]], sales_amount=[[@9,48:59='sales_amount',<380>,1:48]], feb_sales=[[@5,25:33='feb_sales',<380>,1:25], [@21,132:140='feb_sales',<380>,3:52]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={jan_sales=[[@3,14:22='jan_sales',<380>,1:14]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@7,36:45='month_name',<380>,1:36]], sales_amount=[[@9,48:59='sales_amount',<380>,1:48]], feb_sales=[[@5,25:33='feb_sales',<380>,1:25]]}}",
@@ -198,7 +198,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@15,99:107='jan_sales',<380>,3:41]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], mar_sales=[[@19,121:129='mar_sales',<380>,3:63]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]], feb_sales=[[@17,110:118='feb_sales',<380>,3:52]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]]}}",
@@ -229,7 +229,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[a1, empid, month_name, a2, sales_amount]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={}, metrics_table={a1=[[@7,40:41='t2',<380>,1:40]], a2=[[@11,47:48='t2',<380>,1:47]], metric_label=[[@36,185:186='t2',<380>,4:38]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a1=[[@9,43:44='a1',<380>,1:43]], empid=[[@1,7:11='empid',<380>,1:7]], month_name=[[@3,14:23='month_name',<380>,1:14]], a2=[[@13,50:51='a2',<380>,1:50]], sales_amount=[[@5,26:37='sales_amount',<380>,1:26]]}}",
@@ -256,7 +256,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Interface is wrong", "[*]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
-				extractor.getSubstitutionsMap().toString());
+				extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={A=[[@14,49:49='A',<380>,1:49]], B=[[@16,52:52='B',<380>,1:52]], *=[[@1,7:7='*',<290>,1:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<290>,1:7]]}}",
@@ -280,7 +280,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong", "{TUPLE={pivot={value={function={function_name=sum, parameters=col1}}, for=col2, in={1={name=A, table_ref=null}, 2={name=B, table_ref=null}}}, table={table=tab1}}}", extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", extractor.getInterface().toString());
-		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getWalker().substitutionsMap.toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}", extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{table_dictionary={tab1={}}, unresolved_column={A={column={name=A, table_ref=null}, locations=[[@11,35:35='A',<380>,1:35]]}, B={column={name=B, table_ref=null}, locations=[[@13,38:38='B',<380>,1:38]]}}}", extractor.getSymbolTable().toString());
