@@ -908,11 +908,18 @@ relational_modifier_alias
 // Optional alias names the PIVOT result independently from the source alias.
 pivot_clause
   : PIVOT
-    LEFT_PAREN pivot_aggregate FOR relational_modifier_name_column 
-    IN relational_modifier_list RIGHT_PAREN
+    pivot_value_list
     relation_as_clause?
   ;
-
+  
+pivot_value_list
+  : LEFT_PAREN pivot_modifier_in_item (COMMA pivot_modifier_in_item)* RIGHT_PAREN
+  ;
+  
+pivot_modifier_in_item
+  : (alias_identifier | Character_String_Literal) AS column_reference
+  ;
+  
 // Single aggregate applied to the value column being spread across new columns.
 pivot_aggregate
   : set_function_type LEFT_PAREN relational_modifier_value_column RIGHT_PAREN

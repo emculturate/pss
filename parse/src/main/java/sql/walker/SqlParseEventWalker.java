@@ -49,6 +49,7 @@ import errorhandling.ParseDiagnostic;
 
 import sql.SQLSelectParserBaseListener;
 import sql.SQLSelectParserParser;
+import sql.diagnostics.SqlParseDiagnosticService;
 import sql.symboltree.SqlParseSymbolTreeHelper;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
@@ -67,12 +68,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
+	private static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
 	private final ScriptParseAccumulator scriptParseAccumulator = new ScriptParseAccumulator();
 
 	/**
 	 * AST Walker Helper for this instance of the SQL Parse Event Walker
 	 */
 	private final SqlASTWalkerHelper walker;
+	private final SqlParseDiagnosticService diagnosticService;
 	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
 
@@ -83,6 +86,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Initialize the walker with the SqlASTWalkerHelper
 		this.walker = new SqlASTWalkerHelper();
+		this.diagnosticService = new SqlParseDiagnosticService(this.walker);
 		this.symbolTreeHelper = new SqlParseSymbolTreeHelper(this.walker);
 		this.invalidVariableDiagnosticKeys = new HashSet<String>();
 
@@ -156,17 +160,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return true;
 		}
 
-		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER);
-		String diagMessageTemplate = walker.getDiagnosticMessage(
-				SqlASTWalkerHelper.DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER);
-		String diagMessage = String.format(
-				diagMessageTemplate,
-				setOperationType,
-				String.valueOf(memberPosition));
-
-		Integer line = violationToken == null ? null : violationToken.getLine();
-		Integer charPos = violationToken == null ? null : violationToken.getCharPositionInLine();
-		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, "INTO");
+		diagnosticService.emitIntoOnlyAllowedOnFirstSetMember(setOperationType, memberPosition, violationToken);
 		return false;
 	}
 
@@ -6175,6 +6169,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (localCurrentQueryDictionary == null)
 			localCurrentQueryDictionary = new HashMap<String, Object>();
+		ArrayList<Object> localRelationalModifierInterfaceHints =
+				(ArrayList<Object>) walker.symbolTable.remove(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 
 		// Leave these null if they don't exist
@@ -6580,6 +6576,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				localTableAliasMap,
 				deleteTargetTableRef);
 
+		applyUnpivotValueInterfaceDerivations(
+				localInterface,
+				localRelationalModifierInterfaceHints);
+
+		filtersList = applyUnpivotValueDerivationsToReferenceListObject(
+				filtersList,
+				localRelationalModifierInterfaceHints);
+		groupedByList = applyUnpivotValueDerivationsToReferenceListObject(
+				groupedByList,
+				localRelationalModifierInterfaceHints);
+		orderedByList = applyUnpivotValueDerivationsToReferenceListObject(
+				orderedByList,
+				localRelationalModifierInterfaceHints);
+
+		// Remove UNPIVOT-generated (VALUE/FOR) columns and, for query-backed sources, all
+		// source-query interface columns from the unresolved map so they don't produce
+		// spurious "Unresolved unqualified column reference" diagnostics.
+		resolveUnpivotGeneratedColumnsFromUnresolvedMap(localRelationalModifierInterfaceHints, localUnresolvedColumnMap);
+
 		// Late unqualified-reference resolution can materialize new entries (for example,
 		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
 		if (localTableCollection != null && localTableCollection.size() > 0) {
@@ -6635,6 +6650,156 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
 
 		return walker.symbolTable;
+	}
+
+	private void applyUnpivotValueInterfaceDerivations(
+			HashMap<String, Object> localInterface,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (localInterface == null || localInterface.isEmpty()
+				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+			return;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			Object tableRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			Object inListObj = hintMap.get(MUMBLE_IN_KEY);
+
+			if (!(valueObj instanceof String valueColumn)
+					|| valueColumn.isBlank()
+					|| !(tableRefObj instanceof String sourceRef)
+					|| sourceRef.isBlank()
+					|| !(inListObj instanceof ArrayList<?> inColumnsObj)
+					|| inColumnsObj.isEmpty()) {
+				continue;
+			}
+
+			for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+				Object refsObj = interfaceEntry.getValue();
+				if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+					continue;
+				}
+
+				ArrayList<Object> rewrittenRefs = rewriteReferenceListForSingleUnpivotHint(
+						(ArrayList<Object>) refs,
+						valueColumn,
+						sourceRef,
+						(ArrayList<Object>) inColumnsObj);
+
+				if (!rewrittenRefs.equals(refs)) {
+					interfaceEntry.setValue(rewrittenRefs);
+				}
+			}
+		}
+	}
+
+	private Object applyUnpivotValueDerivationsToReferenceListObject(
+			Object referenceListObject,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (!(referenceListObject instanceof ArrayList<?> refsObj)
+				|| refsObj.isEmpty()
+				|| relationalModifierInterfaceHints == null
+				|| relationalModifierInterfaceHints.isEmpty()) {
+			return referenceListObject;
+		}
+
+		ArrayList<Object> rewrittenRefs = new ArrayList<Object>((ArrayList<Object>) refsObj);
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			Object tableRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			Object inListObj = hintMap.get(MUMBLE_IN_KEY);
+
+			if (!(valueObj instanceof String valueColumn)
+					|| valueColumn.isBlank()
+					|| !(tableRefObj instanceof String sourceRef)
+					|| sourceRef.isBlank()
+					|| !(inListObj instanceof ArrayList<?> inColumnsObj)
+					|| inColumnsObj.isEmpty()) {
+				continue;
+			}
+
+			rewrittenRefs = rewriteReferenceListForSingleUnpivotHint(
+					rewrittenRefs,
+					valueColumn,
+					sourceRef,
+					(ArrayList<Object>) inColumnsObj);
+		}
+
+		return rewrittenRefs;
+	}
+
+	private ArrayList<Object> rewriteReferenceListForSingleUnpivotHint(
+			ArrayList<Object> refs,
+			String valueColumn,
+			String sourceRef,
+			ArrayList<Object> inColumnsObj) {
+		ArrayList<Object> rewrittenRefs = new ArrayList<Object>();
+		boolean valueColumnReferenceFound = false;
+
+		for (Object refObj : refs) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (refName != null && refName.equalsIgnoreCase(valueColumn)) {
+				valueColumnReferenceFound = true;
+				for (Object inColumnObj : inColumnsObj) {
+					if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
+						continue;
+					}
+
+					HashMap<String, Object> derivedRef = new HashMap<String, Object>();
+					derivedRef.put(MUMBLE_NAME_KEY, inColumn);
+					derivedRef.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+					appendInterfaceReferenceIfMissing(rewrittenRefs, derivedRef);
+				}
+			} else {
+				appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
+			}
+		}
+
+		if (!valueColumnReferenceFound) {
+			return new ArrayList<Object>(refs);
+		}
+
+		return rewrittenRefs;
+	}
+
+	private void appendInterfaceReferenceIfMissing(ArrayList<Object> targetRefs, Object candidateRef) {
+		if (candidateRef == null) {
+			return;
+		}
+
+		String candidateName = walker.extractReferenceNameFromInterfaceEntry(candidateRef);
+		String candidateTableRef = walker.extractReferenceTableRefFromInterfaceEntry(candidateRef);
+
+		for (Object existingRef : targetRefs) {
+			String existingName = walker.extractReferenceNameFromInterfaceEntry(existingRef);
+			String existingTableRef = walker.extractReferenceTableRefFromInterfaceEntry(existingRef);
+			if (equalsIgnoreCaseNullable(existingName, candidateName)
+					&& equalsIgnoreCaseNullable(existingTableRef, candidateTableRef)) {
+				return;
+			}
+		}
+
+		targetRefs.add(candidateRef);
+	}
+
+	private boolean equalsIgnoreCaseNullable(String left, String right) {
+		if (left == null && right == null) {
+			return true;
+		}
+		if (left == null || right == null) {
+			return false;
+		}
+		return left.equalsIgnoreCase(right);
 	}
 
 	private void pruneUpdateTargetFromInputTableCollection(
@@ -8798,6 +8963,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		   if (modifier != null && modifierKey != null) {
 			   sourceResult.put(modifierKey, modifier);
+			   if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
+				   registerUnpivotValueInterfaceHint(sourceResult, modifier);
+			   }
 		   }
 		   if (outerAlias != null) {
 			   Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
@@ -8817,6 +8985,213 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   }
 
 		   walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
+	}
+
+	private void registerUnpivotValueInterfaceHint(Map<String, Object> sourceResult, Map<String, Object> unpivotMap) {
+		if (sourceResult == null || sourceResult.isEmpty() || unpivotMap == null || unpivotMap.isEmpty()) {
+			return;
+		}
+
+		Object valueObj = unpivotMap.get(MUMBLE_VALUE_KEY);
+		if (!(valueObj instanceof String valueColumn) || valueColumn.isBlank()) {
+			return;
+		}
+
+		ArrayList<String> inColumns = extractUnpivotInListColumnNames(unpivotMap.get(MUMBLE_IN_KEY));
+		if (inColumns.isEmpty()) {
+			return;
+		}
+
+		String sourceRef = resolveUnpivotSourceReference(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return;
+		}
+
+		HashMap<String, Object> hint = new HashMap<String, Object>();
+		hint.put(MUMBLE_VALUE_KEY, valueColumn);
+		hint.put(MUMBLE_IN_KEY, inColumns);
+		hint.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+
+		// Also store the FOR column so the unresolved-map cleanup can mark it as resolved
+		Object forObj = unpivotMap.get(MUMBLE_FOR_KEY);
+		if (forObj instanceof String forColumn && !forColumn.isBlank()) {
+			hint.put(MUMBLE_FOR_KEY, forColumn);
+		}
+
+		Object hintsObj = walker.symbolTable.get(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
+		ArrayList<Object> hints;
+		if (hintsObj instanceof ArrayList<?>) {
+			hints = (ArrayList<Object>) hintsObj;
+		} else {
+			hints = new ArrayList<Object>();
+			walker.symbolTable.put(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY, hints);
+		}
+
+		hints.add(hint);
+	}
+
+	private String resolveUnpivotSourceReference(Map<String, Object> sourceResult) {
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (!(tableObj instanceof Map<?, ?> tableMapObj)) {
+			// Source is a subquery or set operation — find the most recently added query scope key
+			return resolveLatestQueryScopeKeyFromSymbolTable();
+		}
+
+		Map<String, Object> tableMap = (Map<String, Object>) tableMapObj;
+		Object aliasObj = tableMap.get(MUMBLE_ALIAS_KEY);
+		if (aliasObj instanceof String alias && !alias.isBlank()) {
+			return alias;
+		}
+
+		String tableRef = symbolTreeHelper.getQualifiedTableReference(tableMap);
+		if (tableRef == null || tableRef.isBlank()) {
+			return null;
+		}
+
+		return tableRef;
+	}
+
+	/**
+	 * Scans the current symbol table scope for the highest-indexed query scope key
+	 * (query0, query1, union0, intersect0, values0, etc.) excluding definition entries
+	 * (def_*) and temporary entries (_tmp_*). Used to resolve the source reference
+	 * when an UNPIVOT/PIVOT operator is applied to an un-aliased subquery.
+	 */
+	private String resolveLatestQueryScopeKeyFromSymbolTable() {
+		String latestKey = null;
+		int latestIndex = -1;
+		for (String key : walker.symbolTable.keySet()) {
+			if (key == null || key.startsWith("def_") || key.startsWith("_tmp_")) {
+				continue;
+			}
+			String numericSuffix = null;
+			if (key.startsWith(MUMBLE_QUERY_KEY)) {
+				numericSuffix = key.substring(MUMBLE_QUERY_KEY.length());
+			} else if (key.startsWith(MUMBLE_UNION_KEY)) {
+				numericSuffix = key.substring(MUMBLE_UNION_KEY.length());
+			} else if (key.startsWith(MUMBLE_INTERSECT_KEY)) {
+				numericSuffix = key.substring(MUMBLE_INTERSECT_KEY.length());
+			} else if (key.startsWith(MUMBLE_VALUES_KEY)) {
+				numericSuffix = key.substring(MUMBLE_VALUES_KEY.length());
+			}
+			if (numericSuffix == null || numericSuffix.isBlank()) {
+				continue;
+			}
+			try {
+				int idx = Integer.parseInt(numericSuffix);
+				if (idx > latestIndex) {
+					latestIndex = idx;
+					latestKey = key;
+				}
+			} catch (NumberFormatException e) {
+				// ignore non-numeric suffixes
+			}
+		}
+		return latestKey;
+	}
+
+	/**
+	 * After UNPIVOT derivation hints have been applied, removes columns that are
+	 * definitively resolved by the UNPIVOT operator from the unresolved-column map
+	 * so they do not generate spurious diagnostic errors.
+	 *
+	 * <ul>
+	 *   <li>The VALUE column (e.g. {@code sales_amount}) is synthetic — generated by
+	 *       the UNPIVOT operator itself.</li>
+	 *   <li>The FOR column (e.g. {@code month_name}) is also synthetic.</li>
+	 *   <li>When the UNPIVOT source is an un-aliased subquery (sourceRef is a query
+	 *       scope key like {@code query0}), every column that appears in that
+	 *       subquery's output interface (including the IN-list columns and passthrough
+	 *       columns like {@code empid}) is also resolved.</li>
+	 * </ul>
+	 */
+	private void resolveUnpivotGeneratedColumnsFromUnresolvedMap(
+			ArrayList<Object> hints,
+			HashMap<String, Object> unresolvedColumnMap) {
+		if (hints == null || hints.isEmpty() || unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+		for (Object hintObj : hints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hint = (Map<String, Object>) hintMapObj;
+
+			// The UNPIVOT VALUE column is synthetically generated by the UNPIVOT operator
+			Object valueColumnObj = hint.get(MUMBLE_VALUE_KEY);
+			if (valueColumnObj instanceof String valueColumn && !valueColumn.isBlank()) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, valueColumn);
+			}
+
+			// The UNPIVOT FOR column is also synthetically generated by the UNPIVOT operator
+			Object forColumnObj = hint.get(MUMBLE_FOR_KEY);
+			if (forColumnObj instanceof String forColumn && !forColumn.isBlank()) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, forColumn);
+			}
+
+			// When the UNPIVOT source is a query reference (e.g., un-aliased subquery),
+			// every column in the source query's output interface is resolved by that scope.
+			Object sourceRefObj = hint.get(MUMBLE_TABLE_REF_KEY);
+			if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
+				continue;
+			}
+			if (!walker.isNonTableQuerySourceReference(sourceRef)) {
+				continue;
+			}
+			Object sourceQueryScopeObj = walker.symbolTable.get(sourceRef);
+			if (!(sourceQueryScopeObj instanceof Map<?, ?> sourceQueryScopeMapObj)) {
+				continue;
+			}
+			Map<String, Object> sourceQueryScope = (Map<String, Object>) sourceQueryScopeMapObj;
+			Object interfaceObj = sourceQueryScope.get(MUMBLE_INTERFACE_KEY);
+			if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
+				continue;
+			}
+			Map<String, Object> sourceInterface = (Map<String, Object>) interfaceMapObj;
+			for (String interfaceColName : new ArrayList<>(sourceInterface.keySet())) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, interfaceColName);
+			}
+		}
+	}
+
+	private void removeFromUnresolvedMapCaseInsensitive(HashMap<String, Object> unresolvedColumnMap, String columnName) {
+		if (unresolvedColumnMap.remove(columnName) != null) {
+			return;
+		}
+		String matchingKey = null;
+		for (String key : unresolvedColumnMap.keySet()) {
+			if (key.equalsIgnoreCase(columnName)) {
+				matchingKey = key;
+				break;
+			}
+		}
+		if (matchingKey != null) {
+			unresolvedColumnMap.remove(matchingKey);
+		}
+	}
+
+	private ArrayList<String> extractUnpivotInListColumnNames(Object inListObj) {
+		ArrayList<String> inColumns = new ArrayList<String>();
+		if (!(inListObj instanceof Map<?, ?> inListMapObj)) {
+			return inColumns;
+		}
+
+		Map<String, Object> inListMap = (Map<String, Object>) inListMapObj;
+		for (int index = 1; inListMap.containsKey(String.valueOf(index)); index++) {
+			Object inItemObj = inListMap.get(String.valueOf(index));
+			if (!(inItemObj instanceof Map<?, ?> inItemMapObj)) {
+				continue;
+			}
+
+			Object inNameObj = ((Map<String, Object>) inItemMapObj).get(MUMBLE_NAME_KEY);
+			if (!(inNameObj instanceof String inName) || inName.isBlank()) {
+				continue;
+			}
+
+			inColumns.add(inName);
+		}
+
+		return inColumns;
 	}
 
 	
