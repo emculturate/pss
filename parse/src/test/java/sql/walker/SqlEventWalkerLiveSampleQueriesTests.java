@@ -68,6 +68,178 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 
 
 	@Test
+	public void getMissingColumnFromTupleDictionaryTest() {
+		// Predicand Variable Test
+		String query =
+		    "\nwith gifts_allocation as" +
+		    "\n(" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<soft credit id> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        ---cast(replace(replace(ams_gifts_allocation_fulfillment.<soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where ams_gifts_allocation_fulfillment.<soft credit id> is not null" +
+		    "\n      and try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n" +
+		    "\n    union" +
+		    "\n" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<second soft credit id> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        --cast(replace(replace(ams_gifts_allocation_fulfillment.<second soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<second soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where ams_gifts_allocation_fulfillment.<second soft credit id> is not null" +
+		    "\n      and try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<second soft credit amount>,'[^0-9.-]', '') as float)  >= 0" +
+		    "\n" +
+		    "\n    union" +
+		    "\n" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<third soft credit id> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        --cast(replace(replace(ams_gifts_allocation_fulfillment.<third soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<third soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where ams_gifts_allocation_fulfillment.<third soft credit id> is not null" +
+		    "\n      and try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<third soft credit amount>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n" +
+		    "\n    union" +
+		    "\n" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<fourth soft credit id> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        ----cast(replace(replace(ams_gifts_allocation_fulfillment.<fourth soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<fourth soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where ams_gifts_allocation_fulfillment.<fourth soft credit id> is not null" +
+		    "\n      and try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<fourth soft credit amount>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n" +
+		    "\n    union" +
+		    "\n" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<fifth soft credit id> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        ---cast(replace(replace(ams_gifts_allocation_fulfillment.<fifth soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<fifth soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where ams_gifts_allocation_fulfillment.<fifth soft credit id> is not null" +
+		    "\n      and try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<fifth soft credit amount>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n" +
+		    "\n    union" +
+		    "\n" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift id> as varchar) as gift_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<Calculated Field 1> as varchar) as soft_credit_id," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift allocation id> as varchar) as gift_allocation_id," +
+		    "\n        ---cast(replace(replace(ams_gifts_allocation_fulfillment.<soft credit amount>, '$', ''),',','')  as float) as soft_credit_amount," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<intake date> as timestamp) as intake_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<gift date> as timestamp) as gift_dt," +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<credit fiscal year> as varchar) as credit_fiscal_year" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<Calculated Field 2>,'[^0-9.-]', '') as float) = 0" +
+		    "\n      and ams_gifts_allocation_fulfillment.<soft credit id> is null" +
+		    "\n      and  try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n)" +
+		    "\nselect" +
+		    "\n    ga.gift_id as gift_id," +
+		    "\n    ga.soft_credit_id as soft_credit_id," +
+		    "\n    ga.gift_allocation_id as gift_allocation_id," +
+		    "\n    row_number() over (partition by ga.gift_id order by ga.soft_credit_id desc, intake_dt desc) as soft_credit_sequence," +
+		    "\n    ga.soft_credit_amount as soft_credit_amount," +
+		    "\n    ga.intake_dt as intake_dt," +
+		    "\n    ga.gift_dt as gift_dt," +
+		    "\n    case when TO_NUMBER(ga.credit_fiscal_year) is null then gb.credited_fy" +
+		    "\n         else TO_NUMBER(ga.credit_fiscal_year)" +
+		    "\n    end as credit_fiscal_year," +
+		    "\n    case when" +
+		    "\n        (MONTH(cast(getdate() as timestamp)) between <fy_month_1> and <fy_month_2>) then" +
+		    "\n           YEAR(cast(getdate() as timestamp)) +1" +
+		    "\n           else" +
+		    "\n            YEAR(cast(getdate() as timestamp)) end  as  current_fiscal_year," +
+		    "\n    <source_partner_system_name_gifts_allocation> as source_partner_system_name," +
+		    "\n    <source_eab_system_type> as source_eab_system_type" +
+		    "\nfrom gifts_allocation as ga" +
+		    "\njoin <fy_credited_gifts_allocation> as gb" +
+		    "\non coalesce(ga.gift_id,'') = coalesce(gb.gift_id,'')" +
+		    "\n   and coalesce(ga.soft_credit_id,'') = coalesce(gb.soft_credit_id,'')" +
+		    "\n" +
+		    "\n<join_extension_gifts_allocation>" +
+		    "\n          " +
+		    "\nwhere ga.gift_id is not null" +
+		    "\n  and ga.soft_credit_id is not null" +
+		    "\n  and ga.soft_credit_amount is not null";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+	}
+
+
+	@Test
+	public void getMissingColumnFromTupleDictionaryv2Test() {
+		// Predicand Variable Test
+		String query =
+		    "\nwith gifts_allocation as" +
+		    "\n(" +
+		    "\n    select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<Calculated Field 1> as varchar) as soft_credit_id," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<Calculated Field 2>,'[^0-9.-]', '') as float) = 0" +
+		    "\n      and ams_gifts_allocation_fulfillment.<soft credit id> is null" +
+		    "\n      and  try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount2>,'[^0-9.-]', '') as float) >= 0" +
+		    "\n)" +
+		    "\nselect" +
+		    "\n    ga.soft_credit_amount as soft_credit_amount," +
+		    "\n    <source_eab_system_type> as source_eab_system_type" +
+		    "\nfrom gifts_allocation as ga" +
+		    "\nwhere ga.soft_credit_amount is not null";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+	}
+
+	@Test
+	public void getMissingColumnFromTupleDictionaryv3Test() {
+		// Predicand Variable Test
+		String query =
+		    "select" +
+		    "\n        cast(ams_gifts_allocation_fulfillment.<Calculated Field 1> as varchar) as soft_credit_id," +
+		    "\n        try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount>,'[^0-9.-]', '') as float) as  soft_credit_amount" +
+		    "\n    from <[AMS].[gifts_allocation].{fulfillment}> as ams_gifts_allocation_fulfillment" +
+		    "\n    where try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<Calculated Field 2>,'[^0-9.-]', '') as float) = 0" +
+		    "\n      and ams_gifts_allocation_fulfillment.<soft credit id> is null" +
+		    "\n      and  try_cast(regexp_replace(ams_gifts_allocation_fulfillment.<soft credit amount2>,'[^0-9.-]', '') as float) >= 0";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+	}
+
+	@Test
 	public void getComplexPredicandVariablesTest() {
 		// Predicand Variable Test
 		String query = " select cec.* " + 

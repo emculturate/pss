@@ -2793,6 +2793,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				}
 				Map<String, Object> filterEntry = (Map<String, Object>) filterObj;
 				Object filterNameObj = filterEntry.get(MUMBLE_NAME_KEY);
+				if (filterNameObj == null) {
+					Object substitutionObj = filterEntry.get(MUMBLE_SUBSTITUTION_KEY);
+					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
+					}
+				}
 				if (!(filterNameObj instanceof String columnName)) {
 					continue;
 				}

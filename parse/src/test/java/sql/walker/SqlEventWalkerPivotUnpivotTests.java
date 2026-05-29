@@ -363,7 +363,12 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final String query = "select * from tab1 pivot (sum(col1) for col2 in (A, B))";
 
 		final SQLSelectParserParser parser = parse(query);
-		SqlParseEventWalker extractor = runParsertest(query, parser);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parser);
+		Assert.assertNull("Unexpected parser execution failure",
+				runResult.getFailure());
+		Assert.assertNotNull("Extractor should be available after parse attempt",
+				runResult.getExtractor());
+		SqlParseEventWalker extractor = runResult.getExtractor();
 
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);

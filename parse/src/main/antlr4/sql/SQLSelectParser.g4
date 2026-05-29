@@ -908,21 +908,51 @@ relational_modifier_alias
 // Optional alias names the PIVOT result independently from the source alias.
 pivot_clause
   : PIVOT
-    pivot_value_list
+    LEFT_PAREN pivot_aggregate FOR pivot_value_column pivot_in_clause RIGHT_PAREN
+    pivot_default_on_null_clause?
     relation_as_clause?
   ;
-  
-pivot_value_list
-  : LEFT_PAREN pivot_modifier_in_item (COMMA pivot_modifier_in_item)* RIGHT_PAREN
-  ;
-  
-pivot_modifier_in_item
-  : (alias_identifier | Character_String_Literal) AS column_reference
-  ;
-  
-// Single aggregate applied to the value column being spread across new columns.
+
+// Snowflake: <aggregate_function>(<pivot_column>) [[AS] <alias>]
 pivot_aggregate
-  : set_function_type LEFT_PAREN relational_modifier_value_column RIGHT_PAREN
+  : set_function_type LEFT_PAREN column_reference RIGHT_PAREN relation_as_clause?
+  ;
+
+// Snowflake: FOR <value_column>
+pivot_value_column
+  : column_reference
+  ;
+
+// Snowflake: IN ( <value-list> | ANY [ORDER BY ...] | <subquery> )
+pivot_in_clause
+  : IN LEFT_PAREN pivot_in_content RIGHT_PAREN
+  ;
+
+pivot_in_content
+  : pivot_in_value_list
+  | pivot_in_any
+  | pivot_in_subquery
+  ;
+
+pivot_in_value_list
+  : pivot_in_value (COMMA pivot_in_value)*
+  ;
+
+pivot_in_value
+  : value_expression relational_modifier_alias?
+  ;
+
+pivot_in_any
+  : ANY orderby_clause?
+  ;
+
+pivot_in_subquery
+  : query_expression
+  ;
+
+// Snowflake: [ DEFAULT ON NULL (<value>) ]
+pivot_default_on_null_clause
+  : DEFAULT ON NULL LEFT_PAREN value_expression RIGHT_PAREN
   ;
 
 
@@ -1252,12 +1282,6 @@ set_qualifier_type
   | FUSION
   | INTERSECTION
   ;
-
-//  TODO: filter clause variant on aggregate functions not currently supported
-// filter_clause
-//   : FILTER LEFT_PAREN WHERE search_condition RIGHT_PAREN
-//   ;
-
 
 /*
 ===============================================================================
@@ -2134,6 +2158,7 @@ nonreserved_keywords
   | 	DAY
   | 	DEC
   | 	DECADE
+  | 	DEFAULT
   | 	DESC
   | 	DOUBLE
   | 	DOW
@@ -2796,6 +2821,7 @@ CURRENT : C U R R E N T;
 DAY : D A Y;
 DEC : D E C;
 DECADE : D E C A D E;
+DEFAULT : D E F A U L T;
 DESC : D E S C;
 DOW : D O W;
 DOY : D O Y;

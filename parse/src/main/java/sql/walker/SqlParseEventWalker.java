@@ -7502,6 +7502,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					continue;
 				}
 				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
+				if (filterNameObj == null) {
+					Object substitutionObj = filterMap.get(MUMBLE_SUBSTITUTION_KEY);
+					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
+					}
+				}
 				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
 				if (filterNameObj instanceof String filterName
 						&& filterTableRefObj instanceof String filterTableRef
@@ -8441,6 +8447,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 			Object refNameObj = refMap.get(MUMBLE_NAME_KEY);
+			// Substitution-variable column references (e.g. <soft credit id>) do not carry a
+			// plain "name" entry.  Their name is nested under substitution.name, matching the
+			// same fallback chain used by extractReferenceNameFromInterfaceEntry for the
+			// SELECT-clause path.  Without this fallback, every qualified WHERE-clause column
+			// whose name is a substitution variable is silently skipped here and never added
+			// to explicitQualifiedKeys, so it stays unresolved and bubbles up to the parent
+			// query's unresolved list instead of being materialized in the CTE table dictionary.
+			if (refNameObj == null) {
+				Object substitutionObj = refMap.get(MUMBLE_SUBSTITUTION_KEY);
+				if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+					refNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
+				}
+			}
 			Object refTableRefObj = refMap.get(MUMBLE_TABLE_REF_KEY);
 			if (refNameObj instanceof String refName
 					&& refTableRefObj instanceof String refTableRef
@@ -8491,6 +8510,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					continue;
 				}
 				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
+				if (filterNameObj == null) {
+					Object substitutionObj = filterMap.get(MUMBLE_SUBSTITUTION_KEY);
+					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
+					}
+				}
 				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
 				if (filterNameObj instanceof String filterName
 						&& filterTableRefObj instanceof String filterTableRef
@@ -9911,62 +9936,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
 	}
 
-	@Override
-	public void exitPivot_aggregate( SQLSelectParserParser.Pivot_aggregateContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		if (subMap.size() >= 2) {
-			Map<String, Object> function = new LinkedHashMap<String, Object>();
-			function.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
-			function.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
-
-			subMap.clear();
-			subMap.put(MUMBLE_FUNCTION_KEY, function);
-		}
-	}
-
-	@Override
-	
-	public void exitPivot_clause( SQLSelectParserParser.Pivot_clauseContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		// Grammar order:
-		//   1) pivot_aggregate
-		//   2) relational_modifier_name_column
-		//   3) relational_modifier_list
-		//   4) relation_as_clause? (optional)
-		Object aggregate = subMap.get("1");
-		Object nameCol = subMap.get("2");
-		Object inList = subMap.get("3");
-
-		Object alias = null;
-		if (subMap.get("4") instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
-			alias = aliasMap.get(MUMBLE_ALIAS_KEY);
-		}
-
-		Map<String, Object> pivotMap = new LinkedHashMap<>();
-		pivotMap.put(MUMBLE_VALUE_KEY, aggregate);
-		pivotMap.put(MUMBLE_FOR_KEY, nameCol);
-		pivotMap.put(MUMBLE_IN_KEY, inList);
-		if (alias != null) {
-			pivotMap.put(MUMBLE_ALIAS_KEY, alias);
-		}
-
-		Map<String, Object> wrapper = new LinkedHashMap<>();
-		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
-
-		walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
-	}
 
 	@Override
 	public void exitUnpivot_null_policy( SQLSelectParserParser.Unpivot_null_policyContext ctx) {
@@ -10079,6 +10048,62 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			numbered.put(String.valueOf(i), subMap.get(String.valueOf(i)));
 		}
 		walker.collect(ruleIndex, stackLevel, numbered);
+	}
+
+		@Override	
+	public void exitPivot_clause( SQLSelectParserParser.Pivot_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		// Grammar order:
+		//   1) pivot_aggregate
+		//   2) relational_modifier_name_column
+		//   3) relational_modifier_list
+		//   4) relation_as_clause? (optional)
+		Object aggregate = subMap.get("1");
+		Object nameCol = subMap.get("2");
+		Object inList = subMap.get("3");
+
+		Object alias = null;
+		if (subMap.get("4") instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
+			alias = aliasMap.get(MUMBLE_ALIAS_KEY);
+		}
+
+		Map<String, Object> pivotMap = new LinkedHashMap<>();
+		pivotMap.put(MUMBLE_VALUE_KEY, aggregate);
+		pivotMap.put(MUMBLE_FOR_KEY, nameCol);
+		pivotMap.put(MUMBLE_IN_KEY, inList);
+		if (alias != null) {
+			pivotMap.put(MUMBLE_ALIAS_KEY, alias);
+		}
+
+		Map<String, Object> wrapper = new LinkedHashMap<>();
+		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
+	}
+
+	@Override
+	public void exitPivot_aggregate( SQLSelectParserParser.Pivot_aggregateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() >= 2) {
+			Map<String, Object> function = new LinkedHashMap<String, Object>();
+			function.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			function.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+
+			subMap.clear();
+			subMap.put(MUMBLE_FUNCTION_KEY, function);
+		}
 	}
 
 	/*
