@@ -798,8 +798,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return walker;
 	}
 
-	public Map<String, Object> getSubstitutionsMap() {
+	public HashMap<String, Object> getSubstitutionsMap() {
 		return walker.substitutionsMap;
+	}
+
+	public HashMap<String, Object> getArrayOutputCollectorsMap() {
+		if (scriptParseAccumulator.hasArrayOutputs()) {
+			return scriptParseAccumulator.buildScriptArrayOutputCollectorsMap();
+		}
+		return scriptParseAccumulator.buildSqlArrayOutputCollectorsMap(getInterface());
 	}
 
 	/* ==================================================================================
@@ -7501,16 +7508,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (!(filterObj instanceof Map<?, ?> filterMap)) {
 					continue;
 				}
-				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
-				if (filterNameObj == null) {
-					Object substitutionObj = filterMap.get(MUMBLE_SUBSTITUTION_KEY);
-					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
-						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
-					}
-				}
-				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
-				if (filterNameObj instanceof String filterName
-						&& filterTableRefObj instanceof String filterTableRef
+				String filterName = walker.extractReferenceNameFromInterfaceEntry(filterMap);
+				String filterTableRef = walker.extractReferenceTableRefFromInterfaceEntry(filterMap);
+				if (filterName != null
+						&& filterTableRef != null
 						&& columnName.equals(filterName)
 						&& !"*".equals(filterTableRef)) {
 					return filterTableRef;
@@ -8446,23 +8447,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (!(refObj instanceof Map<?, ?> refMap)) {
 				continue;
 			}
-			Object refNameObj = refMap.get(MUMBLE_NAME_KEY);
-			// Substitution-variable column references (e.g. <soft credit id>) do not carry a
-			// plain "name" entry.  Their name is nested under substitution.name, matching the
-			// same fallback chain used by extractReferenceNameFromInterfaceEntry for the
-			// SELECT-clause path.  Without this fallback, every qualified WHERE-clause column
-			// whose name is a substitution variable is silently skipped here and never added
-			// to explicitQualifiedKeys, so it stays unresolved and bubbles up to the parent
-			// query's unresolved list instead of being materialized in the CTE table dictionary.
-			if (refNameObj == null) {
-				Object substitutionObj = refMap.get(MUMBLE_SUBSTITUTION_KEY);
-				if (substitutionObj instanceof Map<?, ?> substitutionMap) {
-					refNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
-				}
-			}
-			Object refTableRefObj = refMap.get(MUMBLE_TABLE_REF_KEY);
-			if (refNameObj instanceof String refName
-					&& refTableRefObj instanceof String refTableRef
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refMap);
+			String refTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refMap);
+			if (refName != null
+					&& refTableRef != null
 					&& !"*".equals(refTableRef)) {
 				String qualifiedKey = refTableRef + "." + refName;
 				if (unresolvedColumnMap.containsKey(qualifiedKey)) {
@@ -8509,16 +8497,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (!(filterObj instanceof Map<?, ?> filterMap)) {
 					continue;
 				}
-				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
-				if (filterNameObj == null) {
-					Object substitutionObj = filterMap.get(MUMBLE_SUBSTITUTION_KEY);
-					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
-						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
-					}
-				}
-				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
-				if (filterNameObj instanceof String filterName
-						&& filterTableRefObj instanceof String filterTableRef
+				String filterName = walker.extractReferenceNameFromInterfaceEntry(filterMap);
+				String filterTableRef = walker.extractReferenceTableRefFromInterfaceEntry(filterMap);
+				if (filterName != null
+						&& filterTableRef != null
 						&& !"*".equals(filterTableRef)) {
 					explicitTableRefByColumn.putIfAbsent(filterName, filterTableRef);
 				}

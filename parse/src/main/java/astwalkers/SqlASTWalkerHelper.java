@@ -2792,21 +2792,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					continue;
 				}
 				Map<String, Object> filterEntry = (Map<String, Object>) filterObj;
-				Object filterNameObj = filterEntry.get(MUMBLE_NAME_KEY);
-				if (filterNameObj == null) {
-					Object substitutionObj = filterEntry.get(MUMBLE_SUBSTITUTION_KEY);
-					if (substitutionObj instanceof Map<?, ?> substitutionMap) {
-						filterNameObj = ((Map<String, Object>) substitutionMap).get(MUMBLE_NAME_KEY);
-					}
-				}
-				if (!(filterNameObj instanceof String columnName)) {
+				String columnName = extractReferenceNameFromInterfaceEntry(filterEntry);
+				if (columnName == null) {
 					continue;
 				}
 
-				Object tableRefObj = filterEntry.get(MUMBLE_TABLE_REF_KEY);
-				String unresolvedKey = (tableRefObj == null)
+				String tableRef = extractReferenceTableRefFromInterfaceEntry(filterEntry);
+				String unresolvedKey = (tableRef == null)
 						? columnName
-						: tableRefObj.toString() + "." + columnName;
+						: tableRef + "." + columnName;
 				Object unresolvedLocations = unresolvedColumnMap.get(unresolvedKey);
 				if (unresolvedLocations == null) {
 					unresolvedLocations = unresolvedColumnMap.get(columnName);
@@ -2827,7 +2821,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				resultEntry.put(MUMBLE_COLUMN_KEY, filterEntry);
 				resultEntry.put("locations", locationList);
 
-				if (tableRefObj == null) {
+				if (tableRef == null) {
 					if (unqualifiedUnknownEntries != null) {
 						unqualifiedUnknownEntries.put(columnName, resultEntry);
 					}

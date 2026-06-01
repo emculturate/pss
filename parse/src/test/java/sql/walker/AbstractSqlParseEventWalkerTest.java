@@ -793,14 +793,14 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
 			System.out.println("Table Dictionary: " + extractor.getTableColumnDictionaryMap());
 			System.out.println("Query Column Dictionary: " + extractor.getQueryColumnDictionaryMap());
-			System.out.println("Substitution Variables: " + extractor.getWalker().substitutionsMap);
+			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
 
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			System.out.println("Parser Errors: " + v.getErrorList());
 
 			Snippet snippet = extractor.getSnippet();
 			HashMap<String, Object> enrichedArrayCollectors = enrichArrayCollectorsForTest(
-					resolveArrayOutputCollectors(extractor), parser, snippet, tree);
+					extractor.getArrayOutputCollectorsMap(), parser, snippet, tree);
 			System.out.println("Array Output Collectors: " + enrichedArrayCollectors);
 			System.out.println("Walker Fatal Errors: " + snippet.getFatalErrorStringList());
 			System.out.println("Walker Non Fatal Errors: " + snippet.getErrorStringList(ParseDiagnostic.Severity.ERROR));
@@ -834,14 +834,6 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			
 			return null;
 		}
-	}
-
-	private HashMap<String, Object> resolveArrayOutputCollectors(SqlParseEventWalker extractor) {
-		ScriptParseAccumulator scriptAccumulator = extractor.getScriptParseAccumulator();
-		if (scriptAccumulator.hasArrayOutputs()) {
-			return scriptAccumulator.buildScriptArrayOutputCollectorsMap();
-		}
-		return scriptAccumulator.buildSqlArrayOutputCollectorsMap(extractor.getInterface());
 	}
 
 	@SuppressWarnings("unchecked")

@@ -3757,10 +3757,10 @@ public class SqlParseSymbolTreeHelper {
 				if (!(filterObj instanceof Map<?, ?> filterMap)) {
 					continue;
 				}
-				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
-				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
-				if (filterNameObj instanceof String filterName
-						&& filterTableRefObj instanceof String filterTableRef
+				String filterName = walker.extractReferenceNameFromInterfaceEntry(filterMap);
+				String filterTableRef = walker.extractReferenceTableRefFromInterfaceEntry(filterMap);
+				if (filterName != null
+						&& filterTableRef != null
 						&& columnName.equals(filterName)
 						&& !"*".equals(filterTableRef)) {
 					return filterTableRef;
@@ -4695,10 +4695,10 @@ public class SqlParseSymbolTreeHelper {
 			if (!(refObj instanceof Map<?, ?> refMap)) {
 				continue;
 			}
-			Object refNameObj = refMap.get(MUMBLE_NAME_KEY);
-			Object refTableRefObj = refMap.get(MUMBLE_TABLE_REF_KEY);
-			if (refNameObj instanceof String refName
-					&& refTableRefObj instanceof String refTableRef
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refMap);
+			String refTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refMap);
+			if (refName != null
+					&& refTableRef != null
 					&& !"*".equals(refTableRef)) {
 				String qualifiedKey = refTableRef + "." + refName;
 				if (unresolvedColumnMap.containsKey(qualifiedKey)) {
@@ -4745,10 +4745,10 @@ public class SqlParseSymbolTreeHelper {
 				if (!(filterObj instanceof Map<?, ?> filterMap)) {
 					continue;
 				}
-				Object filterNameObj = filterMap.get(MUMBLE_NAME_KEY);
-				Object filterTableRefObj = filterMap.get(MUMBLE_TABLE_REF_KEY);
-				if (filterNameObj instanceof String filterName
-						&& filterTableRefObj instanceof String filterTableRef
+				String filterName = walker.extractReferenceNameFromInterfaceEntry(filterMap);
+				String filterTableRef = walker.extractReferenceTableRefFromInterfaceEntry(filterMap);
+				if (filterName != null
+						&& filterTableRef != null
 						&& !"*".equals(filterTableRef)) {
 					explicitTableRefByColumn.putIfAbsent(filterName, filterTableRef);
 				}
