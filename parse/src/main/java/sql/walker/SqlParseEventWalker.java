@@ -66,6 +66,7 @@ import sql.symboltree.SqlParseSymbolTreeHelper;
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
+	private static final String TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY = "_tmp_insert_source_root_scope";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	private static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
@@ -2565,13 +2566,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
 
 		walker.handleOneChild(ruleIndex);
-		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
+		symbolTreeHelper.finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
 
 		// Close the insert-local symbol scope and persist it as insertN in the parent scope.
 		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
 		walker.popSymbolTable(insertScopeKey, walker.symbolTable);
-		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
-		publishInsertScopeQueryDictionary(insertScopeKey);
+		symbolTreeHelper.mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
+		symbolTreeHelper.publishInsertScopeQueryDictionary(insertScopeKey);
 		walker.queryCount++;
 	}
 
@@ -2629,28 +2630,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			insertNode.put(MUMBLE_COLUMNS_KEY, insertColumns);
 		}
 
-		String insertTargetTableRef = getInsertTargetTableReference(insertNode);
+		String insertTargetTableRef = symbolTreeHelper.getInsertTargetTableReference(insertNode);
 
-		String insertSourceScopeKey = findLatestInsertSourceScopeKey();
-		Map<String, Object> insertSourceDefinition = normalizeInsertSourceDefinition(insertSourceScopeKey);
-		Map<String, Object> insertInterface = buildInsertInterfaceFromSource(
-				insertSourceDefinition,
-				insertColumns,
-				insertSourceScopeKey);
-		if (!insertInterface.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, insertInterface);
-		}
-
-		populateImplicitInsertTargetColumnsFromSourceDictionary(
-				insertTargetTableRef,
-				insertColumns,
-				insertSourceDefinition,
-				insertInterface);
-
-		resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable(
-				insertTargetTableRef,
-				insertSourceDefinition,
-				insertInterface);
+		// Source (SELECT / VALUES / TVF) is already resolved in def_queryN / def_valuesN; this only maps target columns.
+		symbolTreeHelper.wrapInsertTargetFromResolvedSource(insertTargetTableRef, insertColumns);
 
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
@@ -2726,6 +2709,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (insertColumns != null && !insertColumns.isEmpty()) {
 			subMap.put(MUMBLE_COLUMNS_KEY, insertColumns);
+			symbolTreeHelper.recordInsertTargetColumnListLocation(ctx);
 			populateInsertTargetColumnsFromTargetSubtree(insertTargetTableRef, insertColumns, ctx);
 		}
 
@@ -2751,93 +2735,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
-	private void resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable(
-			String insertTargetTableRef,
-			Map<String, Object> insertSourceDefinition,
-			Map<String, Object> insertInterface) {
-		if (insertTargetTableRef == null || insertTargetTableRef.isBlank()) {
-			return;
-		}
-		if (insertSourceDefinition == null || insertSourceDefinition.isEmpty()) {
-			return;
-		}
-		if (insertInterface == null || insertInterface.isEmpty()) {
-			return;
-		}
-
-		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
-		HashMap<String, Object> insertTargetDictionary = ensureTableDictionaryEntry(currentTableDictionary, insertTargetTableRef);
-
-		for (Object interfaceEntryObj : insertInterface.values()) {
-			if (!(interfaceEntryObj instanceof List<?> interfaceRefsObj)) {
-				continue;
-			}
-
-			for (Object interfaceRefObj : interfaceRefsObj) {
-				String sourceColumnName = walker.extractReferenceNameFromInterfaceEntry(interfaceRefObj);
-				String sourceScopeRef = walker.extractReferenceTableRefFromInterfaceEntry(interfaceRefObj);
-
-				if (sourceColumnName == null || sourceColumnName.isBlank() || "*".equals(sourceColumnName)) {
-					continue;
-				}
-				if (sourceScopeRef == null || sourceScopeRef.isBlank()) {
-					continue;
-				}
-				if (containsKeyIgnoreCase(insertTargetDictionary, sourceColumnName)) {
-					continue;
-				}
-
-				Map<String, Object> sourceScopeDefinition = normalizeInsertSourceDefinition(sourceScopeRef);
-				if ((sourceScopeDefinition == null || sourceScopeDefinition.isEmpty()) && sourceScopeRef != null) {
-					Object queryDefObj = getQueryDefinitionSymbol(sourceScopeRef);
-					if (queryDefObj instanceof Map<?, ?> queryDefMapObj) {
-						sourceScopeDefinition = (Map<String, Object>) queryDefMapObj;
-					}
-				}
-				if (sourceScopeDefinition == null || sourceScopeDefinition.isEmpty()) {
-					continue;
-				}
-
-				Object sourceScopeQueryDictionaryObj = sourceScopeDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
-				if (!(sourceScopeQueryDictionaryObj instanceof Map<?, ?> sourceScopeQueryDictionaryMapObj)) {
-					continue;
-				}
-
-				Map<String, Object> sourceScopeQueryDictionary = (Map<String, Object>) sourceScopeQueryDictionaryMapObj;
-				Object sourceScopeInterfaceObj = sourceScopeDefinition.get(MUMBLE_INTERFACE_KEY);
-				if (!(sourceScopeInterfaceObj instanceof Map<?, ?> sourceScopeInterfaceMapObj)) {
-					continue;
-				}
-				Map<String, Object> sourceScopeInterface = (Map<String, Object>) sourceScopeInterfaceMapObj;
-				Object sourceInterfaceRefsObj = sourceScopeInterface.get(sourceColumnName);
-				if (!(sourceInterfaceRefsObj instanceof List<?> sourceInterfaceRefs)) {
-					continue;
-				}
-
-				boolean hasNullTableRef = false;
-				for (Object sourceInterfaceRefObj : sourceInterfaceRefs) {
-					String sourceInterfaceTableRef = walker.extractReferenceTableRefFromInterfaceEntry(sourceInterfaceRefObj);
-					if (sourceInterfaceTableRef == null || sourceInterfaceTableRef.isBlank()) {
-						hasNullTableRef = true;
-						break;
-					}
-				}
-				if (!hasNullTableRef) {
-					continue;
-				}
-
-				Object sourceRefsObj = sourceScopeQueryDictionary.get(sourceColumnName);
-				if (!(sourceRefsObj instanceof ArrayList<?> sourceRefsListObj) || sourceRefsListObj.isEmpty()) {
-					continue;
-				}
-
-				insertTargetDictionary.put(sourceColumnName, new ArrayList<Object>((ArrayList<Object>) sourceRefsListObj));
-				removeUnresolvedColumnEntry(sourceColumnName);
-			}
-		}
-	}
-
-	
 	private void removeUnresolvedColumnEntry(String columnName) {
 		if (columnName == null || columnName.isBlank()) {
 			return;
@@ -2853,101 +2750,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (unresolvedMap.isEmpty()) {
 			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 		}
-	}
-
-	
-	private void mergeInsertScopeTableDictionaryIntoGlobal(String insertScopeKey) {
-		if (insertScopeKey == null || insertScopeKey.isBlank()) {
-			return;
-		}
-
-		Object insertScopeObj = walker.symbolTable.get(insertScopeKey);
-		if (!(insertScopeObj instanceof Map<?, ?> insertScopeMapObj)) {
-			return;
-		}
-
-		Map<String, Object> insertScopeMap = (Map<String, Object>) insertScopeMapObj;
-		Object localTableDictionaryObj = insertScopeMap.get(MUMBLE_TABLE_DICTIONARY_KEY);
-		if (!(localTableDictionaryObj instanceof Map<?, ?> localTableDictionaryMapObj)) {
-			return;
-		}
-
-		Map<String, Object> localTableDictionary = (Map<String, Object>) localTableDictionaryMapObj;
-		if (!hasAnyColumnsInTableDictionary(localTableDictionary)) {
-			return;
-		}
-
-		HashMap<String, Object> globalTableDictionary = walker.getWalkerTableDictionary();
-		for (Map.Entry<String, Object> tableEntry : localTableDictionary.entrySet()) {
-			String tableRef = tableEntry.getKey();
-			if (tableRef == null
-					|| MUMBLE_TABLE_ALIAS_KEY.equals(tableRef)
-					|| MUMBLE_TABLE_DICTIONARY_KEY.equals(tableRef)) {
-				continue;
-			}
-			if (!(tableEntry.getValue() instanceof Map<?, ?> sourceColumnsMapObj)) {
-				continue;
-			}
-
-			String normalizedTableRef = normalizeTableRef(tableRef);
-			HashMap<String, Object> targetColumns = ensureTableDictionaryEntry(globalTableDictionary, normalizedTableRef);
-			Map<String, Object> sourceColumns = (Map<String, Object>) sourceColumnsMapObj;
-			for (Map.Entry<String, Object> columnEntry : sourceColumns.entrySet()) {
-				String columnName = columnEntry.getKey();
-				if (columnName == null) {
-					continue;
-				}
-				Object existingRefs = targetColumns.get(columnName);
-				if (existingRefs == null) {
-					targetColumns.put(columnName, columnEntry.getValue());
-				} else {
-					targetColumns.put(columnName, mergeReferenceCollections(existingRefs, columnEntry.getValue()));
-				}
-			}
-		}
-	}
-
-	
-	private void publishInsertScopeQueryDictionary(String insertScopeKey) {
-		if (insertScopeKey == null || insertScopeKey.isBlank()) {
-			return;
-		}
-
-		Object insertScopeObj = walker.symbolTable.get(insertScopeKey);
-		if (!(insertScopeObj instanceof Map<?, ?> insertScopeMapObj)) {
-			return;
-		}
-
-		Map<String, Object> insertScopeMap = (Map<String, Object>) insertScopeMapObj;
-		Object queryDictionaryObj = insertScopeMap.get(MUMBLE_QUERY_DICTIONARY_KEY);
-		HashMap<String, Object> queryDictionary = (queryDictionaryObj instanceof Map<?, ?> queryDictionaryMapObj)
-				? new HashMap<String, Object>((Map<String, Object>) queryDictionaryMapObj)
-				: new HashMap<String, Object>();
-
-		HashMap<String, Object> inferredQueryDictionary =
-				buildInsertScopeQueryDictionaryFromTableDictionary(insertScopeMap);
-		if (!inferredQueryDictionary.isEmpty()) {
-			for (Map.Entry<String, Object> inferredEntry : inferredQueryDictionary.entrySet()) {
-				String columnName = inferredEntry.getKey();
-				if (columnName == null) {
-					continue;
-				}
-				Object existingRefs = queryDictionary.get(columnName);
-				if (existingRefs == null) {
-					queryDictionary.put(columnName, inferredEntry.getValue());
-				} else {
-					queryDictionary.put(columnName, mergeReferenceCollections(existingRefs, inferredEntry.getValue()));
-				}
-			}
-		}
-
-		sanitizeQueryDictionaryForGlobalExport(queryDictionary);
-		if (queryDictionary.isEmpty()) {
-			return;
-		}
-
-		walker.queryColumnDictionaryMap.put(insertScopeKey, queryDictionary);
-		insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
 	}
 
 	
@@ -2970,79 +2772,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 		walker.queryColumnDictionaryMap.put(updateScopeKey, queryDictionary);
-	}
-
-	
-	private HashMap<String, Object> buildInsertScopeQueryDictionaryFromTableDictionary(Map<String, Object> insertScopeMap) {
-		HashMap<String, Object> inferred = new HashMap<String, Object>();
-		if (insertScopeMap == null || insertScopeMap.isEmpty()) {
-			return inferred;
-		}
-
-		HashSet<String> allowedInsertOutputColumns = new HashSet<String>();
-		Object insertInterfaceObj = insertScopeMap.get(MUMBLE_INTERFACE_KEY);
-		if (insertInterfaceObj instanceof Map<?, ?> insertInterfaceMapObj) {
-			Map<String, Object> insertInterfaceMap = (Map<String, Object>) insertInterfaceMapObj;
-			allowedInsertOutputColumns.addAll(insertInterfaceMap.keySet());
-		}
-
-		Object localTableDictionaryObj = insertScopeMap.get(MUMBLE_TABLE_DICTIONARY_KEY);
-		if (!(localTableDictionaryObj instanceof Map<?, ?> localTableDictionaryMapObj)) {
-			return inferred;
-		}
-
-		Map<String, Object> localTableDictionary = (Map<String, Object>) localTableDictionaryMapObj;
-		Map<String, Object> targetColumns = null;
-		for (Map.Entry<String, Object> tableEntry : localTableDictionary.entrySet()) {
-			String tableRef = tableEntry.getKey();
-			if (tableRef == null
-					|| MUMBLE_TABLE_ALIAS_KEY.equals(tableRef)
-					|| MUMBLE_TABLE_DICTIONARY_KEY.equals(tableRef)) {
-				continue;
-			}
-			if (!(tableEntry.getValue() instanceof Map<?, ?> columnMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> candidateColumns = (Map<String, Object>) columnMapObj;
-			if (!candidateColumns.isEmpty()) {
-				targetColumns = candidateColumns;
-				break;
-			}
-		}
-
-		if (targetColumns == null || targetColumns.isEmpty()) {
-			return inferred;
-		}
-
-		for (Map.Entry<String, Object> columnEntry : targetColumns.entrySet()) {
-			String columnName = columnEntry.getKey();
-			if (columnName == null) {
-				continue;
-			}
-			if (!allowedInsertOutputColumns.isEmpty()
-					&& !containsIgnoreCase(allowedInsertOutputColumns, columnName)) {
-				continue;
-			}
-			Object refsObj = columnEntry.getValue();
-			if (refsObj instanceof ArrayList<?> refsListObj) {
-				inferred.put(columnName, new ArrayList<Object>((ArrayList<Object>) refsListObj));
-			}
-		}
-
-		return inferred;
-	}
-
-	private boolean containsIgnoreCase(Set<String> values, String candidate) {
-		if (values == null || values.isEmpty() || candidate == null) {
-			return false;
-		}
-		for (String value : values) {
-			if (value != null && value.equalsIgnoreCase(candidate)) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	
@@ -3088,334 +2817,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return false;
 	}
 
-	
-	private void populateImplicitInsertTargetColumnsFromSourceDictionary(
-			String insertTargetTableRef,
-			Map<String, Object> insertColumns,
-			Map<String, Object> insertSourceDefinition,
-			Map<String, Object> insertInterface) {
-		if (insertColumns != null && !insertColumns.isEmpty()) {
-			return;
-		}
-		if (insertTargetTableRef == null || insertTargetTableRef.isBlank()) {
-			return;
-		}
-		if (insertSourceDefinition == null || insertSourceDefinition.isEmpty()) {
-			return;
-		}
-
-		Object sourceQueryDictionaryObj = insertSourceDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
-		if (!(sourceQueryDictionaryObj instanceof Map<?, ?> sourceQueryDictionaryMapObj)) {
-			return;
-		}
-
-		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
-		HashMap<String, Object> insertTargetDictionary = ensureTableDictionaryEntry(currentTableDictionary, insertTargetTableRef);
-		Map<String, Object> sourceQueryDictionary = (Map<String, Object>) sourceQueryDictionaryMapObj;
-
-		for (String inferredColumnName : insertInterface.keySet()) {
-			Object sourceRefsObj = sourceQueryDictionary.get(inferredColumnName);
-			if (!(sourceRefsObj instanceof ArrayList<?> sourceRefsListObj)) {
-				continue;
-			}
-
-			ArrayList<Object> copiedRefs = new ArrayList<Object>((ArrayList<Object>) sourceRefsListObj);
-			Object existingRefsObj = insertTargetDictionary.get(inferredColumnName);
-			if (existingRefsObj == null) {
-				insertTargetDictionary.put(inferredColumnName, copiedRefs);
-			} else {
-				insertTargetDictionary.put(inferredColumnName, mergeReferenceCollections(existingRefsObj, copiedRefs));
-			}
-		}
-	}
-
-	
-	private String getInsertTargetTableReference(Map<String, Object> insertNode) {
-		if (insertNode == null) {
-			return null;
-		}
-
-		Object targetTableObj = insertNode.get(MUMBLE_TARGET_TABLE_KEY);
-		if (!(targetTableObj instanceof Map<?, ?>)) {
-			targetTableObj = insertNode.get(MUMBLE_TABLE_KEY);
-		}
-		if (!(targetTableObj instanceof Map<?, ?> targetTableMapObj)) {
-			return null;
-		}
-
-		Map<String, Object> targetTableMap = (Map<String, Object>) targetTableMapObj;
-		Object nestedTableObj = targetTableMap.get(MUMBLE_TABLE_KEY);
-		if (nestedTableObj instanceof Map<?, ?> nestedTableMapObj) {
-			String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) nestedTableMapObj);
-			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
-		}
-
-		String tableRef = symbolTreeHelper.getQualifiedTableReference(targetTableMap);
-		return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
-	}
-
-	private String findLatestInsertSourceScopeKey() {
-		String selectedKey = null;
-		int highestIndex = -1;
-
-		for (String symbolKey : walker.symbolTable.keySet()) {
-			if (symbolKey == null) {
-				continue;
-			}
-
-			String normalizedSymbolKey = symbolKey;
-			if (symbolKey.startsWith("def_")) {
-				normalizedSymbolKey = symbolKey.substring("def_".length());
-			}
-
-			if (!isInsertSourceScopeReference(normalizedSymbolKey)) {
-				continue;
-			}
-
-			int prefixLength = getInsertScopePrefixLength(normalizedSymbolKey);
-			if (prefixLength < 0) {
-				continue;
-			}
-
-			String suffix = normalizedSymbolKey.substring(prefixLength);
-			if (suffix.isEmpty()) {
-				if (selectedKey == null) {
-					selectedKey = normalizedSymbolKey;
-				}
-				continue;
-			}
-
-			int keyIndex;
-			try {
-				keyIndex = Integer.parseInt(suffix);
-			} catch (NumberFormatException ex) {
-				continue;
-			}
-
-			if (keyIndex > highestIndex) {
-				highestIndex = keyIndex;
-				selectedKey = normalizedSymbolKey;
-			}
-		}
-
-		return selectedKey;
-	}
-
-	private boolean isInsertSourceScopeReference(String sourceRef) {
-		if (sourceRef == null || sourceRef.isBlank()) {
-			return false;
-		}
-		return sourceRef.startsWith(MUMBLE_QUERY_KEY)
-				|| sourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| sourceRef.startsWith(MUMBLE_INSERT_KEY)
-				|| sourceRef.startsWith(MUMBLE_UPDATE_KEY)
-				|| sourceRef.startsWith(MUMBLE_DELETE_KEY);
-	}
-
-	private int getInsertScopePrefixLength(String sourceRef) {
-		if (sourceRef.startsWith(MUMBLE_QUERY_KEY)) {
-			return MUMBLE_QUERY_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_UNION_KEY)) {
-			return MUMBLE_UNION_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_INTERSECT_KEY)) {
-			return MUMBLE_INTERSECT_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_VALUES_KEY)) {
-			return MUMBLE_VALUES_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_INSERT_KEY)) {
-			return MUMBLE_INSERT_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_UPDATE_KEY)) {
-			return MUMBLE_UPDATE_KEY.length();
-		}
-		if (sourceRef.startsWith(MUMBLE_DELETE_KEY)) {
-			return MUMBLE_DELETE_KEY.length();
-		}
-		return -1;
-	}
-
-	
-	private Map<String, Object> normalizeInsertSourceDefinition(String sourceScopeKey) {
-		if (sourceScopeKey == null || sourceScopeKey.isBlank()) {
-			return new HashMap<String, Object>();
-		}
-
-		String definitionKey = sourceScopeKey.startsWith("def_") ? sourceScopeKey : "def_" + sourceScopeKey;
-		Object sourceDefinitionObj = walker.symbolTable.get(definitionKey);
-
-		if (!(sourceDefinitionObj instanceof Map<?, ?>)) {
-			Object directScopeObj = walker.symbolTable.remove(sourceScopeKey);
-			if (directScopeObj instanceof Map<?, ?>) {
-				sourceDefinitionObj = directScopeObj;
-				walker.symbolTable.put(definitionKey, sourceDefinitionObj);
-			}
-		} else if (isInsertSourceScopeReference(sourceScopeKey)) {
-			// Avoid leaving a dangling empty queryN/valuesN reference alongside def_queryN/def_valuesN.
-			walker.symbolTable.remove(sourceScopeKey);
-		}
-
-		if (sourceDefinitionObj instanceof Map<?, ?> sourceDefinitionMapObj) {
-			return (Map<String, Object>) sourceDefinitionMapObj;
-		}
-
-		return new HashMap<String, Object>();
-	}
-
-	
-	private Map<String, Object> buildInsertInterfaceFromSource(
-			Map<String, Object> sourceDefinition,
-			Map<String, Object> insertColumns,
-			String sourceScopeKey) {
-		Map<String, Object> insertInterface = new LinkedHashMap<String, Object>();
-		ArrayList<String> insertColumnNames = extractInsertColumnNames(insertColumns);
-		if (sourceDefinition == null || sourceDefinition.isEmpty()) {
-			for (String insertColumnName : insertColumnNames) {
-				insertInterface.put(insertColumnName, new ArrayList<Object>());
-			}
-			return insertInterface;
-		}
-
-		Object sourceInterfaceObj = sourceDefinition.get(MUMBLE_INTERFACE_KEY);
-		if (!(sourceInterfaceObj instanceof Map<?, ?> sourceInterfaceObjMap)) {
-			for (String insertColumnName : insertColumnNames) {
-				insertInterface.put(insertColumnName, new ArrayList<Object>());
-			}
-			return insertInterface;
-		}
-
-		Map<String, Object> sourceInterface = (Map<String, Object>) sourceInterfaceObjMap;
-		if (sourceInterface.isEmpty()) {
-			for (String insertColumnName : insertColumnNames) {
-				insertInterface.put(insertColumnName, new ArrayList<Object>());
-			}
-			return insertInterface;
-		}
-
-		if (insertColumns == null || insertColumns.isEmpty()) {
-			Map<String, Object> clonedSourceInterface = new HashMap<String, Object>(sourceInterface);
-			for (String childColumnName : clonedSourceInterface.keySet()) {
-				insertInterface.put(childColumnName, buildSingleInsertInterfaceReference(childColumnName, sourceScopeKey));
-			}
-			return insertInterface;
-		}
-
-		ArrayList<String> sourceColumnNames = resolveInsertSourceColumnSequence(sourceDefinition, sourceInterface);
-		for (int i = 0; i < insertColumnNames.size(); i++) {
-			String insertColumnName = insertColumnNames.get(i);
-			String sourceColumnName = (i < sourceColumnNames.size())
-					? sourceColumnNames.get(i)
-					: insertColumnName;
-			insertInterface.put(insertColumnName, buildSingleInsertInterfaceReference(sourceColumnName, sourceScopeKey));
-		}
-
-		return insertInterface;
-	}
-
-	
-	private ArrayList<String> resolveInsertSourceColumnSequence(
-			Map<String, Object> sourceDefinition,
-			Map<String, Object> sourceInterface) {
-		ArrayList<String> sourceColumnNames = new ArrayList<String>();
-		if (sourceDefinition != null) {
-			Object sequenceObj = sourceDefinition.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
-			if (sequenceObj instanceof ArrayList<?> sequenceList) {
-				for (Object sequenceItem : sequenceList) {
-					if (!(sequenceItem instanceof String columnName)) {
-						continue;
-					}
-					if (!sourceInterface.containsKey(columnName) || sourceColumnNames.contains(columnName)) {
-						continue;
-					}
-					sourceColumnNames.add(columnName);
-				}
-			}
-		}
-
-		for (String interfaceKey : sourceInterface.keySet()) {
-			if (!sourceColumnNames.contains(interfaceKey)) {
-				sourceColumnNames.add(interfaceKey);
-			}
-		}
-
-		return sourceColumnNames;
-	}
-
-	private ArrayList<Object> buildSingleInsertInterfaceReference(String sourceColumnName, String sourceScopeKey) {
-		ArrayList<Object> refs = new ArrayList<Object>();
-		HashMap<String, Object> ref = new HashMap<String, Object>();
-		ref.put(MUMBLE_NAME_KEY, sourceColumnName);
-		ref.put(MUMBLE_TABLE_REF_KEY, sourceScopeKey);
-		refs.add(ref);
-		return refs;
-	}
-
-	
-	private ArrayList<String> extractInsertColumnNames(Map<String, Object> insertColumns) {
-		ArrayList<String> columnNames = new ArrayList<String>();
-		if (insertColumns == null || insertColumns.isEmpty()) {
-			return columnNames;
-		}
-
-		for (int i = 1; i <= insertColumns.size(); i++) {
-			Object columnEntryObj = insertColumns.get(String.valueOf(i));
-			String columnName = extractInsertColumnNameFromEntry(columnEntryObj);
-			if (columnName != null && !columnName.isBlank()) {
-				columnNames.add(columnName);
-			}
-		}
-
-		if (!columnNames.isEmpty()) {
-			return columnNames;
-		}
-
-		for (Object columnEntryObj : insertColumns.values()) {
-			String columnName = extractInsertColumnNameFromEntry(columnEntryObj);
-			if (columnName != null && !columnName.isBlank()) {
-				columnNames.add(columnName);
-			}
-		}
-
-		return columnNames;
-	}
-
-	
-	private String extractInsertColumnNameFromEntry(Object columnEntryObj) {
-		if (!(columnEntryObj instanceof Map<?, ?> columnEntryMapObj)) {
-			return null;
-		}
-
-		Map<String, Object> columnEntryMap = (Map<String, Object>) columnEntryMapObj;
-		Object columnObj = columnEntryMap.get(MUMBLE_COLUMN_KEY);
-		if (columnObj instanceof Map<?, ?> columnMapObj) {
-			Object nameObj = ((Map<String, Object>) columnMapObj).get(MUMBLE_NAME_KEY);
-			if (nameObj != null) {
-				return nameObj.toString();
-			}
-		}
-
-		Object nameObj = columnEntryMap.get(MUMBLE_NAME_KEY);
-		if (nameObj != null) {
-			return nameObj.toString();
-		}
-
-		for (Object nestedValueObj : columnEntryMap.values()) {
-			if (!(nestedValueObj instanceof Map<?, ?> nestedMapObj)) {
-				continue;
-			}
-			Object nestedNameObj = ((Map<String, Object>) nestedMapObj).get(MUMBLE_NAME_KEY);
-			if (nestedNameObj != null) {
-				return nestedNameObj.toString();
-			}
-		}
-
-		return null;
-	}
-	  
 	
 	@Override
 	public void exitInsert_preamble( SQLSelectParserParser.Insert_preambleContext ctx) {
@@ -3993,7 +3394,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.addToParent(parentRuleIndex, parentStackLevel, item);
 			
 			// Finish Symbol Table Construction
-			finalizeValuesScopeSymbolTable();
+			symbolTreeHelper.finalizeValuesScopeSymbolTable();
 		}
 		
 		
@@ -4020,7 +3421,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 				// Replace the interface entry in the symbol table from the values statement
 				Map<String, Object> hold = (Map<String, Object>) walker.symbolTable.get(MUMBLE_VALUES_KEY);
-				walker.symbolTable.put(MUMBLE_INTERFACE_KEY, buildValuesOutputInterface(hold));
+				walker.symbolTable.put(MUMBLE_INTERFACE_KEY, symbolTreeHelper.buildValuesOutputInterface(hold));
 				
 				// Resolve Symbol Table, add alias from Values statement to the Symbol Table.
 			} else {
@@ -4079,10 +3480,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// Build values symbols from current scope structures so VALUES uses the same
 			// query-dictionary-driven lifecycle as query sources.
-			Map<String, Object> valueColumns = resolveCurrentValuesColumns();
+			Map<String, Object> valueColumns = symbolTreeHelper.resolveCurrentValuesColumns();
 			walker.symbolTable.put(MUMBLE_VALUES_KEY, valueColumns);
-			Map<String, Object> hold = buildValuesOutputInterface(valueColumns);
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, hold);
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, symbolTreeHelper.buildValuesOutputInterface(valueColumns));
 
 			// Add the matrix to the SQL Tree
 			Map<String, Object> item = new HashMap<String, Object>();
@@ -4167,95 +3567,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		
-		private Map<String, Object> resolveCurrentValuesColumns() {
-			Object directValuesObj = walker.symbolTable.get(MUMBLE_VALUES_KEY);
-			if (directValuesObj instanceof Map<?, ?> directValuesMap) {
-				return new HashMap<String, Object>((Map<String, Object>) directValuesMap);
-			}
-
-			HashMap<String, Object> derivedValues = new HashMap<String, Object>();
-			Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-			if (unresolvedObj instanceof Map<?, ?> unresolvedMapObj) {
-				Map<String, Object> unresolvedMap = (Map<String, Object>) unresolvedMapObj;
-				for (Map.Entry<String, Object> unresolvedEntry : unresolvedMap.entrySet()) {
-					String unresolvedKey = unresolvedEntry.getKey();
-					if (unresolvedKey == null || !unresolvedKey.startsWith(MUMBLE_VALUES_KEY + ".")) {
-						continue;
-					}
-
-					String valueColumnName = unresolvedKey.substring((MUMBLE_VALUES_KEY + ".").length());
-					Object valueObject = unresolvedEntry.getValue();
-					if (!(valueObject instanceof Map<?, ?> valueMapObj)) {
-						continue;
-					}
-
-					Map<String, Object> valueMap = (Map<String, Object>) valueMapObj;
-					Object locationsObj = valueMap.get("locations");
-					if (locationsObj instanceof ArrayList<?>) {
-						derivedValues.put(valueColumnName, locationsObj);
-					}
-				}
-			}
-
-			return derivedValues;
-		}
-
-		private Map<String, Object> buildValuesOutputInterface(Map<String, Object> valueColumns) {
-			Map<String, Object> interfaceMap = new HashMap<String, Object>();
-			if (valueColumns == null || valueColumns.isEmpty()) {
-				return interfaceMap;
-			}
-
-			for (Map.Entry<String, Object> entry : valueColumns.entrySet()) {
-				if (entry.getKey() == null || entry.getValue() instanceof String) {
-					continue;
-				}
-				interfaceMap.put(entry.getKey(), new ArrayList<Object>());
-			}
-
-			return interfaceMap;
-		}
-
-		
-		private void finalizeValuesScopeSymbolTable() {
-			HashMap<String, Object> symbols =  walker.symbolTable;
-			String key = MUMBLE_VALUES_KEY + walker.queryCount;
-
-			// Capture Query Column Dictionary for this level
-			HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
-			if (localCurrentQueryDictionary == null)
-				localCurrentQueryDictionary = new HashMap<String, Object>();
-
-			// Treat VALUES scope like a query definition: column entries belong in query_dictionary.
-			Object valuesObj = symbols.remove(MUMBLE_VALUES_KEY);
-			if (valuesObj instanceof Map<?, ?> valuesMapObj) {
-				Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
-				for (Map.Entry<String, Object> valuesEntry : valuesMap.entrySet()) {
-					String valuesColumn = valuesEntry.getKey();
-					Object valuesRefs = valuesEntry.getValue();
-					if (valuesColumn == null || valuesRefs instanceof String) {
-						continue;
-					}
-					localCurrentQueryDictionary.putIfAbsent(valuesColumn, valuesRefs);
-				}
-			}
-
-			symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
-			symbols.put(MUMBLE_TABLE_DICTIONARY_KEY, new HashMap<String, Object>());
-			walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
-			walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-
-			// Keep VALUES scope payload aligned to expected grouped-source shape.
-			symbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-			symbols.remove(MUMBLE_TABLE_ALIAS_KEY);
-
-			// Keep it as valuesN at this stage; def_ wrapping is applied later where tuple/table sources are normalized.
-			walker.popSymbolTable(key, symbols);
-
-			walker.queryCount++;
-		}
-	
-		
 		@Override
 		public void exitValues_aliases_list( SQLSelectParserParser.Values_aliases_listContext ctx) {
 			int ruleIndex = ctx.getRuleIndex();
@@ -4308,12 +3619,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			item.put(MUMBLE_VALUES_KEY, subMap);
 			walker.addToParent(parentRuleIndex, parentStackLevel, item);
 
-			Map<String, Object> valueColumns = resolveCurrentValuesColumns();
+			Map<String, Object> valueColumns = symbolTreeHelper.resolveCurrentValuesColumns();
 			walker.symbolTable.put(MUMBLE_VALUES_KEY, valueColumns);
-			Map<String, Object> hold = buildValuesOutputInterface(valueColumns);
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, hold);
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, symbolTreeHelper.buildValuesOutputInterface(valueColumns));
 
-			finalizeValuesScopeSymbolTable();
+			symbolTreeHelper.finalizeValuesScopeSymbolTable();
 
 		}
 
@@ -4362,6 +3672,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols =  walker.symbolTable;
 
 		if (walker.intersectClauseFound) {
+			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+				symbolTreeHelper.hoistInsertSourceSequenceToSetOperationRoot(symbols);
+			}
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_INTERSECT_KEY + walker.queryCount;
 
@@ -4458,6 +3771,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols =  walker.symbolTable;
 
 		if (walker.unionClauseFound) {
+			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+				symbolTreeHelper.hoistInsertSourceSequenceToSetOperationRoot(symbols);
+			}
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_UNION_KEY + walker.queryCount;
 
@@ -6155,6 +5471,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String updateTargetTableRef) {
 	
 		// deconstruct current symbol table into components for analysis
+		Object preservedInsertSourceSelectSequence = null;
+		if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+			preservedInsertSourceSelectSequence = walker.symbolTable.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+
  		HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
 		HashMap<String, Object> localLhsUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY);
 		if (localLhsUnresolvedColumnMap == null)
@@ -6655,6 +5976,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.symbolTable.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
 		if (orderedByList != null)
 			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		if (preservedInsertSourceSelectSequence != null) {
+			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
+		}
 
 		return walker.symbolTable;
 	}
@@ -9493,11 +8817,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols = walker.symbolTable;
 		String queryRefKey = getSubqueryReferenceKey(symbols);
 		if (queryRefKey != null && !queryRefKey.startsWith("def_")) {
-			Object queryDefinitionObj = symbols.get(queryRefKey);
-			if (queryDefinitionObj instanceof Map<?, ?> queryDefinitionMapObj) {
-				((Map<String, Object>) queryDefinitionMapObj).remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
-			}
 			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
+			symbols.put(TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY, "def_" + queryRefKey);
 		}
 		walker.popSymbolTablePutAll(symbols);
 
@@ -10602,7 +9923,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		for (String insertColumnName : extractInsertColumnNames(insertColumns)) {
+		for (String insertColumnName : symbolTreeHelper.extractInsertColumnNames(insertColumns)) {
 			if (insertColumnName == null || insertColumnName.isBlank()) {
 				continue;
 			}

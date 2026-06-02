@@ -37,6 +37,8 @@ public class SqlParseSymbolTreeHelper {
 
 	// --- Constants shared with SqlParseEventWalker ---
 	public static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
+	public static final String TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY = "_tmp_insert_source_root_scope";
+	public static final String TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY = "_tmp_insert_target_column_list_location";
 	public static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 
 	// --- Getters/setters for moved fields ---
@@ -108,8 +110,26 @@ public class SqlParseSymbolTreeHelper {
 		return tableName;
 	}
 
-	@SuppressWarnings("unchecked")
+	/**
+	 * Drains {@code unresolved_column} from the current symbol scope and emits statement-level
+	 * diagnostics for anything still unresolved.
+	 * <p>
+	 * INSERT statements only drain the bucket: target-column tokens are not UPDATE-rehomed and are
+	 * not validated like SELECT output. Call {@link #finalizeTopLevelUnresolvedColumnsAtInsertBoundary()}
+	 * from {@code exitInsert_expression} (before the SQL tree is attached) or rely on
+	 * {@link #isInsertStatementSqlTree()} at {@code exitSql}.
+	 */
 	public void finalizeTopLevelUnresolvedColumns() {
+		finalizeTopLevelUnresolvedColumns(false);
+	}
+
+	/** INSERT boundary finalize: drain only, no UPDATE rehome or statement-level unresolved diagnostics. */
+	public void finalizeTopLevelUnresolvedColumnsAtInsertBoundary() {
+		finalizeTopLevelUnresolvedColumns(true);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void finalizeTopLevelUnresolvedColumns(boolean insertStatementBoundary) {
 		Object unresolvedObject = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 		if (!(unresolvedObject instanceof HashMap<?, ?> unresolvedMapObject)) {
 			return;
@@ -121,7 +141,13 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		rehomeUpdateUnqualifiedUnknownsToSingleFromTable(unresolvedMap);
+		boolean insertStatement = insertStatementBoundary || isInsertStatementSqlTree();
+		if (!insertStatement) {
+			rehomeUpdateUnqualifiedUnknownsToSingleFromTable(unresolvedMap);
+		}
+		if (insertStatement) {
+			return;
+		}
 
 		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
 		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
@@ -129,6 +155,21 @@ public class SqlParseSymbolTreeHelper {
 
 		emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolved);
 		emitQualifiedSourceNotFoundFatals(qualifiedUnresolved);
+	}
+
+	@SuppressWarnings("unchecked")
+	public boolean isInsertStatementSqlTree() {
+		Object sqlTreeObj = walker.asTree.get(SQLPARSER_SQL_TREE_KEY);
+		if (!(sqlTreeObj instanceof Map<?, ?> sqlTree)) {
+			return false;
+		}
+
+		for (Object keyObj : sqlTree.keySet()) {
+			if (keyObj instanceof String key && key.startsWith(MUMBLE_INSERT_KEY)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -625,6 +666,23 @@ public class SqlParseSymbolTreeHelper {
 				? new HashMap<String, Object>((Map<String, Object>) queryDictionaryMapObj)
 				: new HashMap<String, Object>();
 
+		HashMap<String, Object> mappedQueryDictionary =
+				buildInsertScopeQueryDictionaryFromMappedInterface(insertScopeMap);
+		if (!mappedQueryDictionary.isEmpty()) {
+			for (Map.Entry<String, Object> mappedEntry : mappedQueryDictionary.entrySet()) {
+				String columnName = mappedEntry.getKey();
+				if (columnName == null) {
+					continue;
+				}
+				Object existingRefs = queryDictionary.get(columnName);
+				if (existingRefs == null) {
+					queryDictionary.put(columnName, mappedEntry.getValue());
+				} else {
+					queryDictionary.put(columnName, mergeReferenceCollections(existingRefs, mappedEntry.getValue()));
+				}
+			}
+		}
+
 		HashMap<String, Object> inferredQueryDictionary =
 				buildInsertScopeQueryDictionaryFromTableDictionary(insertScopeMap);
 		if (!inferredQueryDictionary.isEmpty()) {
@@ -671,6 +729,82 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		walker.queryColumnDictionaryMap.put(updateScopeKey, queryDictionary);
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> buildInsertScopeQueryDictionaryFromMappedInterface(Map<String, Object> insertScopeMap) {
+		HashMap<String, Object> queryDictionary = new HashMap<String, Object>();
+		if (insertScopeMap == null || insertScopeMap.isEmpty()) {
+			return queryDictionary;
+		}
+
+		Object insertInterfaceObj = insertScopeMap.get(MUMBLE_INTERFACE_KEY);
+		if (!(insertInterfaceObj instanceof Map<?, ?> insertInterfaceMapObj)) {
+			return queryDictionary;
+		}
+
+		Map<String, Object> insertInterface = (Map<String, Object>) insertInterfaceMapObj;
+		for (Map.Entry<String, Object> interfaceEntry : insertInterface.entrySet()) {
+			String targetColumnName = interfaceEntry.getKey();
+			if (targetColumnName == null || targetColumnName.isBlank()) {
+				continue;
+			}
+			if (!(interfaceEntry.getValue() instanceof List<?> interfaceRefsObj)) {
+				continue;
+			}
+
+			ArrayList<Object> targetRefs = null;
+			for (Object interfaceRefObj : interfaceRefsObj) {
+				String sourceColumnName = walker.extractReferenceNameFromInterfaceEntry(interfaceRefObj);
+				String sourceScopeRef = walker.extractReferenceTableRefFromInterfaceEntry(interfaceRefObj);
+				if (sourceColumnName == null || sourceColumnName.isBlank() || "*".equals(sourceColumnName)) {
+					continue;
+				}
+				if (sourceScopeRef == null || sourceScopeRef.isBlank()) {
+					continue;
+				}
+
+				Map<String, Object> sourceScopeDefinition = normalizeInsertSourceDefinition(sourceScopeRef);
+				if ((sourceScopeDefinition == null || sourceScopeDefinition.isEmpty()) && sourceScopeRef != null) {
+					Object queryDefObj = getQueryDefinitionSymbol(sourceScopeRef);
+					if (queryDefObj instanceof Map<?, ?> queryDefMapObj) {
+						sourceScopeDefinition = (Map<String, Object>) queryDefMapObj;
+					}
+				}
+				if (sourceScopeDefinition == null || sourceScopeDefinition.isEmpty()) {
+					continue;
+				}
+
+				Object sourceRefsObj = null;
+				Object sourceScopeQueryDictionaryObj = sourceScopeDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
+				if (sourceScopeQueryDictionaryObj instanceof Map<?, ?> sourceScopeQueryDictionaryMapObj) {
+					Map<String, Object> sourceScopeQueryDictionary =
+							(Map<String, Object>) sourceScopeQueryDictionaryMapObj;
+					sourceRefsObj = sourceScopeQueryDictionary.get(sourceColumnName);
+				}
+				if (sourceRefsObj == null) {
+					sourceRefsObj = resolveInsertSourceColumnFromScopeDefinition(
+							sourceScopeDefinition,
+							sourceColumnName);
+				}
+				if (!(sourceRefsObj instanceof ArrayList<?> sourceRefsListObj) || sourceRefsListObj.isEmpty()) {
+					continue;
+				}
+
+				ArrayList<Object> copiedRefs = new ArrayList<Object>((ArrayList<Object>) sourceRefsListObj);
+				if (targetRefs == null) {
+					targetRefs = copiedRefs;
+				} else {
+					targetRefs = (ArrayList<Object>) mergeReferenceCollections(targetRefs, copiedRefs);
+				}
+			}
+
+			if (targetRefs != null && !targetRefs.isEmpty()) {
+				queryDictionary.put(targetColumnName, targetRefs);
+			}
+		}
+
+		return queryDictionary;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -789,19 +923,22 @@ public class SqlParseSymbolTreeHelper {
 		return false;
 	}
 
+	/**
+	 * When the insert has no explicit target column list, copy source token refs onto the target table
+	 * using the mapped insert interface keys (same names as the resolved source outputs).
+	 */
 	@SuppressWarnings("unchecked")
-	public void populateImplicitInsertTargetColumnsFromSourceDictionary(
+	public void applyImplicitInsertTargetTableDictionaryFromMappedSource(
 			String insertTargetTableRef,
-			Map<String, Object> insertColumns,
 			Map<String, Object> insertSourceDefinition,
 			Map<String, Object> insertInterface) {
-		if (insertColumns != null && !insertColumns.isEmpty()) {
-			return;
-		}
 		if (insertTargetTableRef == null || insertTargetTableRef.isBlank()) {
 			return;
 		}
 		if (insertSourceDefinition == null || insertSourceDefinition.isEmpty()) {
+			return;
+		}
+		if (insertInterface == null || insertInterface.isEmpty()) {
 			return;
 		}
 
@@ -831,6 +968,21 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	public void populateImplicitInsertTargetColumnsFromSourceDictionary(
+			String insertTargetTableRef,
+			Map<String, Object> insertColumns,
+			Map<String, Object> insertSourceDefinition,
+			Map<String, Object> insertInterface) {
+		if (insertColumns != null && !insertColumns.isEmpty()) {
+			return;
+		}
+		applyImplicitInsertTargetTableDictionaryFromMappedSource(
+				insertTargetTableRef,
+				insertSourceDefinition,
+				insertInterface);
+	}
+
+	@SuppressWarnings("unchecked")
 	public String getInsertTargetTableReference(Map<String, Object> insertNode) {
 		if (insertNode == null) {
 			return null;
@@ -856,6 +1008,14 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	public String findLatestInsertSourceScopeKey() {
+		Object rootScopeObj = walker.symbolTable.remove(TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY);
+		if (rootScopeObj instanceof String rootScopeKey && !rootScopeKey.isBlank()) {
+			if (rootScopeKey.startsWith("def_")) {
+				return rootScopeKey.substring("def_".length());
+			}
+			return rootScopeKey;
+		}
+
 		String selectedKey = null;
 		int highestIndex = -1;
 
@@ -967,11 +1127,16 @@ public class SqlParseSymbolTreeHelper {
 		return new HashMap<String, Object>();
 	}
 
+	/**
+	 * Projects a resolved insert source ({@code def_queryN} / {@code def_valuesN}) onto insert-target column names.
+	 * Source scope resolution must already be complete before this runs.
+	 */
 	@SuppressWarnings("unchecked")
-	public Map<String, Object> buildInsertInterfaceFromSource(
+	public Map<String, Object> mapInsertTargetInterfaceFromResolvedSource(
 			Map<String, Object> sourceDefinition,
 			Map<String, Object> insertColumns,
-			String sourceScopeKey) {
+			String sourceScopeKey,
+			String insertTargetTableRef) {
 		Map<String, Object> insertInterface = new LinkedHashMap<String, Object>();
 		ArrayList<String> insertColumnNames = extractInsertColumnNames(insertColumns);
 		if (sourceDefinition == null || sourceDefinition.isEmpty()) {
@@ -1002,6 +1167,10 @@ public class SqlParseSymbolTreeHelper {
 			for (String childColumnName : clonedSourceInterface.keySet()) {
 				insertInterface.put(childColumnName, buildSingleInsertInterfaceReference(childColumnName, sourceScopeKey));
 			}
+			applyImplicitInsertTargetTableDictionaryFromMappedSource(
+					insertTargetTableRef,
+					sourceDefinition,
+					insertInterface);
 			return insertInterface;
 		}
 
@@ -1018,18 +1187,310 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public ArrayList<String> resolveInsertSourceColumnSequence(
+	public Map<String, Object> buildInsertInterfaceFromSource(
+			Map<String, Object> sourceDefinition,
+			Map<String, Object> insertColumns,
+			String sourceScopeKey) {
+		return mapInsertTargetInterfaceFromResolvedSource(
+				sourceDefinition,
+				insertColumns,
+				sourceScopeKey,
+				null);
+	}
+
+	public boolean isSetOperationParticipantKey(String key) {
+		if (key == null) {
+			return false;
+		}
+
+		String normalizedKey = normalizeSetOperationParticipantKey(key);
+		return matchesNumberedScopeKey(normalizedKey, MUMBLE_QUERY_KEY)
+				|| matchesNumberedScopeKey(normalizedKey, MUMBLE_UNION_KEY)
+				|| matchesNumberedScopeKey(normalizedKey, MUMBLE_INTERSECT_KEY)
+				|| matchesNumberedScopeKey(normalizedKey, MUMBLE_VALUES_KEY);
+	}
+
+	private boolean matchesNumberedScopeKey(String key, String prefix) {
+		if (key == null || prefix == null || !key.startsWith(prefix)) {
+			return false;
+		}
+
+		String suffix = key.substring(prefix.length());
+		if (suffix.isEmpty()) {
+			return true;
+		}
+
+		for (int i = 0; i < suffix.length(); i++) {
+			if (!Character.isDigit(suffix.charAt(i))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	public String normalizeSetOperationParticipantKey(String key) {
+		if (key == null) {
+			return null;
+		}
+		if (key.startsWith("def_")) {
+			return key.substring("def_".length());
+		}
+		return key;
+	}
+
+	public int extractSetOperationParticipantKeyIndex(String key) {
+		if (key == null) {
+			return Integer.MAX_VALUE;
+		}
+
+		String normalizedKey = normalizeSetOperationParticipantKey(key);
+		int prefixLength = -1;
+		if (normalizedKey.startsWith(MUMBLE_QUERY_KEY)) {
+			prefixLength = MUMBLE_QUERY_KEY.length();
+		} else if (normalizedKey.startsWith(MUMBLE_UNION_KEY)) {
+			prefixLength = MUMBLE_UNION_KEY.length();
+		} else if (normalizedKey.startsWith(MUMBLE_INTERSECT_KEY)) {
+			prefixLength = MUMBLE_INTERSECT_KEY.length();
+		} else if (normalizedKey.startsWith(MUMBLE_VALUES_KEY)) {
+			prefixLength = MUMBLE_VALUES_KEY.length();
+		}
+
+		if (prefixLength < 0) {
+			return Integer.MAX_VALUE;
+		}
+
+		String suffix = normalizedKey.substring(prefixLength);
+		if (suffix.isEmpty()) {
+			return 0;
+		}
+
+		try {
+			return Integer.parseInt(suffix);
+		} catch (NumberFormatException ex) {
+			return Integer.MAX_VALUE;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public boolean isSetOperationDefinition(Map<String, Object> scopeDefinition) {
+		if (scopeDefinition == null || scopeDefinition.isEmpty()) {
+			return false;
+		}
+
+		int participantCount = 0;
+		for (Map.Entry<String, Object> entry : scopeDefinition.entrySet()) {
+			if (isSetOperationParticipantKey(entry.getKey()) && entry.getValue() instanceof Map<?, ?>) {
+				participantCount++;
+			}
+		}
+
+		return participantCount >= 2;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> findFirstSetOperationParticipant(Map<String, Object> setOperationDefinition) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
+			return null;
+		}
+
+		String selectedKey = null;
+		int lowestIndex = Integer.MAX_VALUE;
+		for (Map.Entry<String, Object> entry : setOperationDefinition.entrySet()) {
+			String key = entry.getKey();
+			if (!isSetOperationParticipantKey(key) || !(entry.getValue() instanceof Map<?, ?>)) {
+				continue;
+			}
+
+			int keyIndex = extractSetOperationParticipantKeyIndex(key);
+			if (keyIndex < lowestIndex) {
+				lowestIndex = keyIndex;
+				selectedKey = key;
+			} else if (keyIndex == lowestIndex && selectedKey != null && key.compareTo(selectedKey) < 0) {
+				selectedKey = key;
+			}
+		}
+
+		if (selectedKey == null) {
+			return null;
+		}
+
+		return (Map<String, Object>) setOperationDefinition.get(selectedKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> findFirstSetOperationLeafDefinition(Map<String, Object> scopeDefinition) {
+		if (scopeDefinition == null || scopeDefinition.isEmpty()) {
+			return null;
+		}
+
+		if (!isSetOperationDefinition(scopeDefinition)) {
+			return scopeDefinition;
+		}
+
+		Map<String, Object> firstParticipant = findFirstSetOperationParticipant(scopeDefinition);
+		if (firstParticipant == null) {
+			return null;
+		}
+
+		if (isSetOperationDefinition(firstParticipant)) {
+			return findFirstSetOperationLeafDefinition(firstParticipant);
+		}
+
+		return firstParticipant;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Object resolveInsertSourceSelectSequenceObject(Map<String, Object> scopeDefinition) {
+		if (scopeDefinition == null || scopeDefinition.isEmpty()) {
+			return null;
+		}
+
+		Object sequenceObj = scopeDefinition.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		if (sequenceObj instanceof ArrayList<?>) {
+			return sequenceObj;
+		}
+
+		if (!isSetOperationDefinition(scopeDefinition)) {
+			return null;
+		}
+
+		Map<String, Object> firstParticipant = findFirstSetOperationParticipant(scopeDefinition);
+		if (firstParticipant != null) {
+			Object participantSequenceObj = resolveInsertSourceSelectSequenceObject(firstParticipant);
+			if (participantSequenceObj instanceof ArrayList<?>) {
+				return participantSequenceObj;
+			}
+		}
+
+		Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(scopeDefinition);
+		if (firstLeaf != null && firstLeaf != scopeDefinition && firstLeaf != firstParticipant) {
+			return firstLeaf.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> resolveInsertSourceSequenceHolder(Map<String, Object> sourceDefinition) {
+		if (sourceDefinition == null || sourceDefinition.isEmpty()) {
+			return null;
+		}
+
+		if (sourceDefinition.containsKey(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY)) {
+			return sourceDefinition;
+		}
+
+		if (isSetOperationDefinition(sourceDefinition)) {
+			Map<String, Object> firstParticipant = findFirstSetOperationParticipant(sourceDefinition);
+			if (firstParticipant != null
+					&& firstParticipant.containsKey(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY)) {
+				return firstParticipant;
+			}
+
+			Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(sourceDefinition);
+			if (firstLeaf != null) {
+				return firstLeaf;
+			}
+		}
+
+		return sourceDefinition;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void clearInsertSourceSequenceFromSetOperationTree(Map<String, Object> scopeDefinition) {
+		if (scopeDefinition == null || scopeDefinition.isEmpty()) {
+			return;
+		}
+
+		scopeDefinition.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		for (Object value : scopeDefinition.values()) {
+			if (value instanceof Map<?, ?> valueMapObj) {
+				clearInsertSourceSequenceFromSetOperationTree((Map<String, Object>) valueMapObj);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void hoistInsertSourceSequenceToSetOperationRoot(Map<String, Object> setOperationDefinition) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()
+				|| !isSetOperationDefinition(setOperationDefinition)) {
+			return;
+		}
+
+		Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(setOperationDefinition);
+		Map<String, Object> firstParticipant = findFirstSetOperationParticipant(setOperationDefinition);
+		Object sequenceObj = resolveInsertSourceSelectSequenceObject(setOperationDefinition);
+		if (!(sequenceObj instanceof ArrayList<?>) && firstLeaf != null) {
+			sequenceObj = firstLeaf.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+		if (!(sequenceObj instanceof ArrayList<?>) && firstParticipant != null) {
+			sequenceObj = firstParticipant.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+		if (!(sequenceObj instanceof ArrayList<?>)) {
+			return;
+		}
+
+		clearInsertSourceSequenceFromSetOperationTree(setOperationDefinition);
+		setOperationDefinition.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, sequenceObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	public Object resolveInsertSourceColumnFromScopeDefinition(
+			Map<String, Object> sourceScopeDefinition,
+			String sourceColumnName) {
+		if (sourceScopeDefinition == null || sourceColumnName == null || sourceColumnName.isBlank()) {
+			return null;
+		}
+
+		Object sourceScopeQueryDictionaryObj = sourceScopeDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (sourceScopeQueryDictionaryObj instanceof Map<?, ?> sourceScopeQueryDictionaryMapObj) {
+			Map<String, Object> sourceScopeQueryDictionary =
+					(Map<String, Object>) sourceScopeQueryDictionaryMapObj;
+			Object directRefs = sourceScopeQueryDictionary.get(sourceColumnName);
+			if (directRefs != null) {
+				return directRefs;
+			}
+		}
+
+		if (isSetOperationDefinition(sourceScopeDefinition)) {
+			Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(sourceScopeDefinition);
+			if (firstLeaf != null && firstLeaf != sourceScopeDefinition) {
+				return resolveInsertSourceColumnFromScopeDefinition(firstLeaf, sourceColumnName);
+			}
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> buildInsertSourceColumnSequenceList(
 			Map<String, Object> sourceDefinition,
 			Map<String, Object> sourceInterface) {
 		ArrayList<String> sourceColumnNames = new ArrayList<String>();
-		if (sourceDefinition != null) {
-			Object sequenceObj = sourceDefinition.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		Map<String, Object> sequenceHolder = resolveInsertSourceSequenceHolder(sourceDefinition);
+		Map<String, Object> positionalInterface = sourceInterface;
+		if (sourceDefinition != null
+				&& isSetOperationDefinition(sourceDefinition)
+				&& sequenceHolder != null
+				&& sequenceHolder != sourceDefinition) {
+			Object leafInterfaceObj = sequenceHolder.get(MUMBLE_INTERFACE_KEY);
+			if (leafInterfaceObj instanceof Map<?, ?> leafInterfaceMapObj) {
+				positionalInterface = (Map<String, Object>) leafInterfaceMapObj;
+			}
+		}
+
+		if (sequenceHolder != null) {
+			Object sequenceObj = resolveInsertSourceSelectSequenceObject(sourceDefinition);
+			if (!(sequenceObj instanceof ArrayList<?>) && sequenceHolder != sourceDefinition) {
+				sequenceObj = sequenceHolder.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+			}
 			if (sequenceObj instanceof ArrayList<?> sequenceList) {
 				for (Object sequenceItem : sequenceList) {
 					if (!(sequenceItem instanceof String columnName)) {
 						continue;
 					}
-					if (!sourceInterface.containsKey(columnName) || sourceColumnNames.contains(columnName)) {
+					if (!positionalInterface.containsKey(columnName) || sourceColumnNames.contains(columnName)) {
 						continue;
 					}
 					sourceColumnNames.add(columnName);
@@ -1037,10 +1498,24 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		for (String interfaceKey : sourceInterface.keySet()) {
+		for (String interfaceKey : positionalInterface.keySet()) {
 			if (!sourceColumnNames.contains(interfaceKey)) {
 				sourceColumnNames.add(interfaceKey);
 			}
+		}
+
+		return sourceColumnNames;
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> resolveInsertSourceColumnSequence(
+			Map<String, Object> sourceDefinition,
+			Map<String, Object> sourceInterface) {
+		ArrayList<String> sourceColumnNames = buildInsertSourceColumnSequenceList(sourceDefinition, sourceInterface);
+		if (sourceDefinition != null && isSetOperationDefinition(sourceDefinition)) {
+			clearInsertSourceSequenceFromSetOperationTree(sourceDefinition);
+		} else if (sourceDefinition != null) {
+			sourceDefinition.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
 		}
 
 		return sourceColumnNames;
@@ -1374,8 +1849,8 @@ public class SqlParseSymbolTreeHelper {
 		return (startToken == null) ? null : startToken.toString();
 	}
 
-		@SuppressWarnings("unchecked")
-		public Map<String, Object> resolveCurrentValuesColumns() {
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> resolveCurrentValuesColumns() {
 			Object directValuesObj = walker.symbolTable.get(MUMBLE_VALUES_KEY);
 			if (directValuesObj instanceof Map<?, ?> directValuesMap) {
 				return new HashMap<String, Object>((Map<String, Object>) directValuesMap);
@@ -1408,60 +1883,249 @@ public class SqlParseSymbolTreeHelper {
 			return derivedValues;
 		}
 
-		public Map<String, Object> buildValuesOutputInterface(Map<String, Object> valueColumns) {
-			Map<String, Object> interfaceMap = new HashMap<String, Object>();
-			if (valueColumns == null || valueColumns.isEmpty()) {
-				return interfaceMap;
-			}
+	public String getPendingValuesScopeKey() {
+		return MUMBLE_VALUES_KEY + walker.queryCount;
+	}
 
-			for (Map.Entry<String, Object> entry : valueColumns.entrySet()) {
-				if (entry.getKey() == null || entry.getValue() instanceof String) {
-					continue;
-				}
-				interfaceMap.put(entry.getKey(), new ArrayList<Object>());
-			}
-
+	public Map<String, Object> buildValuesOutputInterface(Map<String, Object> valueColumns) {
+		Map<String, Object> interfaceMap = new HashMap<String, Object>();
+		if (valueColumns == null || valueColumns.isEmpty()) {
 			return interfaceMap;
 		}
 
-		@SuppressWarnings("unchecked")
-		public void finalizeValuesScopeSymbolTable() {
-			HashMap<String, Object> symbols =  walker.symbolTable;
-			String key = MUMBLE_VALUES_KEY + walker.queryCount;
-
-			// Capture Query Column Dictionary for this level
-			HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
-			if (localCurrentQueryDictionary == null)
-				localCurrentQueryDictionary = new HashMap<String, Object>();
-
-			// Treat VALUES scope like a query definition: column entries belong in query_dictionary.
-			Object valuesObj = symbols.remove(MUMBLE_VALUES_KEY);
-			if (valuesObj instanceof Map<?, ?> valuesMapObj) {
-				Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
-				for (Map.Entry<String, Object> valuesEntry : valuesMap.entrySet()) {
-					String valuesColumn = valuesEntry.getKey();
-					Object valuesRefs = valuesEntry.getValue();
-					if (valuesColumn == null || valuesRefs instanceof String) {
-						continue;
-					}
-					localCurrentQueryDictionary.putIfAbsent(valuesColumn, valuesRefs);
-				}
+		for (Map.Entry<String, Object> entry : valueColumns.entrySet()) {
+			String columnName = entry.getKey();
+			if (columnName == null || columnName.isBlank()) {
+				continue;
 			}
-
-			symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
-			symbols.put(MUMBLE_TABLE_DICTIONARY_KEY, new HashMap<String, Object>());
-			walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
-			walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-
-			// Keep VALUES scope payload aligned to expected grouped-source shape.
-			symbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-			symbols.remove(MUMBLE_TABLE_ALIAS_KEY);
-
-			// Keep it as valuesN at this stage; def_ wrapping is applied later where tuple/table sources are normalized.
-			walker.popSymbolTable(key, symbols);
-
-			walker.queryCount++;
+			if (!(entry.getValue() instanceof ArrayList<?>)) {
+				continue;
+			}
+			// VALUES scope interface keys mirror query_dictionary columns; refs are filled on parent scopes.
+			interfaceMap.put(columnName, new ArrayList<Object>());
 		}
+
+		return interfaceMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> mergeValuesColumnsIntoQueryDictionary(
+			HashMap<String, Object> scopeSymbols,
+			HashMap<String, Object> queryDictionary) {
+		HashMap<String, Object> localQueryDictionary = (queryDictionary == null)
+				? new HashMap<String, Object>()
+				: queryDictionary;
+
+		Object valuesObj = scopeSymbols.remove(MUMBLE_VALUES_KEY);
+		if (valuesObj instanceof Map<?, ?> valuesMapObj) {
+			Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
+			for (Map.Entry<String, Object> valuesEntry : valuesMap.entrySet()) {
+				String valuesColumn = valuesEntry.getKey();
+				Object valuesRefs = valuesEntry.getValue();
+				if (valuesColumn == null || valuesRefs instanceof String) {
+					continue;
+				}
+				localQueryDictionary.putIfAbsent(valuesColumn, valuesRefs);
+			}
+		}
+
+		return localQueryDictionary;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void resolveValuesScopeSymbolTable(HashMap<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+
+		Object interfaceObj = scopeSymbols.get(MUMBLE_INTERFACE_KEY);
+		Object queryDictionaryObj = scopeSymbols.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (interfaceObj instanceof HashMap<?, ?> interfaceMapObj
+				&& queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
+			walker.validateQueryInterface(
+					(HashMap<String, Object>) interfaceMapObj,
+					(HashMap<String, Object>) queryDictionaryMapObj,
+					new HashMap<String, Object>(),
+					new HashMap<String, Object>());
+		}
+
+		// Literal-only VALUES scopes have no FROM sources; keep prior behavior of not
+		// leaving tuple-local unresolved entries on the published scope payload.
+		scopeSymbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		scopeSymbols.remove(MUMBLE_TABLE_ALIAS_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void publishQueryLikeScope(String scopeKey, HashMap<String, Object> scopePayload) {
+		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
+			return;
+		}
+
+		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
+			walker.queryColumnDictionaryMap.put(scopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
+		} else {
+			walker.queryColumnDictionaryMap.put(scopeKey, new HashMap<String, Object>());
+		}
+
+		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
+		walker.popSymbolTable(scopeKey, scopePayload);
+		walker.queryCount++;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void finalizeValuesScopeSymbolTable() {
+		HashMap<String, Object> scopeSymbols = walker.symbolTable;
+		String scopeKey = getPendingValuesScopeKey();
+
+		HashMap<String, Object> localCurrentQueryDictionary =
+				(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		localCurrentQueryDictionary = mergeValuesColumnsIntoQueryDictionary(scopeSymbols, localCurrentQueryDictionary);
+
+		scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		scopeSymbols.put(MUMBLE_INTERFACE_KEY, buildValuesOutputInterface(localCurrentQueryDictionary));
+		scopeSymbols.put(MUMBLE_TABLE_DICTIONARY_KEY, new HashMap<String, Object>());
+
+		resolveValuesScopeSymbolTable(scopeSymbols);
+		publishQueryLikeScope(scopeKey, scopeSymbols);
+	}
+
+	/**
+	 * Records the token location of the insert target column list for cardinality diagnostics.
+	 */
+	public void recordInsertTargetColumnListLocation(
+			SQLSelectParserParser.Insert_target_table_primaryContext ctx) {
+		if (ctx == null || ctx.column_reference_list() == null) {
+			return;
+		}
+
+		org.antlr.v4.runtime.Token locationToken = null;
+		if (ctx.LEFT_PAREN() != null) {
+			locationToken = ctx.LEFT_PAREN().getSymbol();
+		} else {
+			locationToken = ctx.column_reference_list().getStart();
+		}
+		if (locationToken == null) {
+			return;
+		}
+
+		HashMap<String, Object> location = new HashMap<String, Object>();
+		location.put("line", locationToken.getLine());
+		location.put("char", locationToken.getCharPositionInLine());
+		walker.symbolTable.put(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY, location);
+	}
+
+	@SuppressWarnings("unchecked")
+	public int countResolvedInsertSourceColumns(
+			Map<String, Object> sourceDefinition,
+			Map<String, Object> sourceInterface) {
+		if (sourceInterface == null || sourceInterface.isEmpty()) {
+			return 0;
+		}
+
+		return buildInsertSourceColumnSequenceList(sourceDefinition, sourceInterface).size();
+	}
+
+	@SuppressWarnings("unchecked")
+	public void emitInsertTargetSourceColumnCountMismatchFatal(Map<String, Object> insertColumns,
+			Map<String, Object> sourceDefinition) {
+		if (insertColumns == null || insertColumns.isEmpty()) {
+			return;
+		}
+
+		Object locationObj = walker.symbolTable.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);
+		if (sourceDefinition == null || sourceDefinition.isEmpty()) {
+			return;
+		}
+
+		Object sourceInterfaceObj = sourceDefinition.get(MUMBLE_INTERFACE_KEY);
+		if (!(sourceInterfaceObj instanceof Map<?, ?> sourceInterfaceMapObj)) {
+			return;
+		}
+
+		Map<String, Object> sourceInterface = (Map<String, Object>) sourceInterfaceMapObj;
+		if (sourceInterface.isEmpty()) {
+			return;
+		}
+
+		int targetCount = extractInsertColumnNames(insertColumns).size();
+		int sourceCount = countResolvedInsertSourceColumns(sourceDefinition, sourceInterface);
+		if (targetCount == 0 || sourceCount == 0 || targetCount == sourceCount) {
+			return;
+		}
+
+		Integer line = null;
+		Integer charPosition = null;
+		if (locationObj instanceof Map<?, ?> locationMapObj) {
+			Object lineObj = locationMapObj.get("line");
+			Object charObj = locationMapObj.get("char");
+			if (lineObj instanceof Integer lineValue) {
+				line = lineValue;
+			} else if (lineObj instanceof Number lineNumber) {
+				line = lineNumber.intValue();
+			}
+			if (charObj instanceof Integer charValue) {
+				charPosition = charValue;
+			} else if (charObj instanceof Number charNumber) {
+				charPosition = charNumber.intValue();
+			}
+		}
+
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Insert Mismatch: Target has %d columns, Source has %d columns, (l:%d c:%d)",
+						targetCount,
+						sourceCount,
+						line,
+						charPosition)
+				: String.format(diagTemplate, targetCount, sourceCount, line, charPosition);
+
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPosition, null);
+	}
+
+	/**
+	 * Thin insert wrap: map target columns from an already-resolved source scope, then apply orphan promotion.
+	 */
+	@SuppressWarnings("unchecked")
+	public void wrapInsertTargetFromResolvedSource(
+			String insertTargetTableRef,
+			Map<String, Object> insertColumns) {
+		String insertSourceScopeKey = findLatestInsertSourceScopeKey();
+		Map<String, Object> insertSourceDefinition = normalizeInsertSourceDefinition(insertSourceScopeKey);
+		if (isSetOperationDefinition(insertSourceDefinition)) {
+			hoistInsertSourceSequenceToSetOperationRoot(insertSourceDefinition);
+		}
+		emitInsertTargetSourceColumnCountMismatchFatal(insertColumns, insertSourceDefinition);
+		Map<String, Object> insertInterface = mapInsertTargetInterfaceFromResolvedSource(
+				insertSourceDefinition,
+				insertColumns,
+				insertSourceScopeKey,
+				insertTargetTableRef);
+		if (!insertInterface.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, insertInterface);
+		}
+
+		resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable(
+				insertTargetTableRef,
+				insertSourceDefinition,
+				insertInterface);
+		clearInsertSourceColumnSequence(insertSourceDefinition);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void clearInsertSourceColumnSequence(Map<String, Object> sourceDefinition) {
+		if (sourceDefinition == null || sourceDefinition.isEmpty()) {
+			return;
+		}
+
+		if (isSetOperationDefinition(sourceDefinition)) {
+			clearInsertSourceSequenceFromSetOperationTree(sourceDefinition);
+		} else {
+			sourceDefinition.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+	}
 
 	@SuppressWarnings("unchecked")
 	public void normalizeFromClauseCteAliasMappings(Map<String, Object> queryMap) {

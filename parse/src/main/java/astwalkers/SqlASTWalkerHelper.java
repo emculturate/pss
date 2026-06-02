@@ -25,6 +25,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS = "SQL_UNRESOLVED_QUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
+		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 
 		
@@ -191,6 +192,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH,
 				 "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
 				 "%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).");
+		 registerDiagnostic(
+				 DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH,
+				 "INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH",
+				 "Insert Mismatch: Target has %d columns, Source has %d columns, (l:%d c:%d)");
 		 registerDiagnostic(
 				 DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER,
 				 "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",

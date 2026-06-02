@@ -339,6 +339,467 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 	}
 
 
+	/*
+	===============================================================================
+	  INSERT ... VALUES
+	===============================================================================
+	*/
+
+	@Test
+	public void insertValuesPlainMatrixNoTargetColumnsV1() {
+		final String query = " insert into employees values (100, 1, 'active')";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}, 3={literal='active'}}}}}}, target_table={table={alias=null, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[$1, $2, $3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}, insert1={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}, table_dictionary={employees={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}}, def_values0={query_dictionary={$1=[[@4,30:30='(',<287>,1:30]], $2=[[@4,30:30='(',<287>,1:30]], $3=[[@4,30:30='(',<287>,1:30]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={$1=[{name=$1, table_ref=values0}], $2=[{name=$2, table_ref=values0}], $3=[{name=$3, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesExplicitTargetColumnsV2() {
+		final String query = " insert into employees (score, rank_bucket) values (100, 1)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,51:51='(',<287>,1:51]], $2=[[@9,51:51='(',<287>,1:51]]}, insert1={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_values0={query_dictionary={$1=[[@9,51:51='(',<287>,1:51]], $2=[[@9,51:51='(',<287>,1:51]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesMultiRowNoTargetColumnsV3() {
+		final String query = " insert into employees values (100, 1), (200, 2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}, 2={row={1={literal=200}, 2={literal=2}}}}}}, target_table={table={alias=null, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[$1, $2]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}, insert1={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}, table_dictionary={employees={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}}, def_values0={query_dictionary={$1=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]], $2=[[@4,30:30='(',<287>,1:30], [@10,40:40='(',<287>,1:40]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={$1=[{name=$1, table_ref=values0}], $2=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesMultiRowExplicitTargetColumnsV4() {
+		final String query = " insert into employees (score, rank_bucket) values (100, 1), (200, 2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}, 2={row={1={literal=200}, 2={literal=2}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,51:51='(',<287>,1:51], [@15,61:61='(',<287>,1:61]], $2=[[@9,51:51='(',<287>,1:51], [@15,61:61='(',<287>,1:61]]}, insert1={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_values0={query_dictionary={$1=[[@9,51:51='(',<287>,1:51], [@15,61:61='(',<287>,1:61]], $2=[[@9,51:51='(',<287>,1:51], [@15,61:61='(',<287>,1:61]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesSingleExplicitTargetColumnV5() {
+		final String query = " insert into employees (score) values (100)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@7,38:38='(',<287>,1:38]]}, insert1={score=[[@4,24:28='score',<381>,1:24]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]]}}, def_values0={query_dictionary={$1=[[@7,38:38='(',<287>,1:38]]}, table_dictionary={}, interface={$1=[]}}, interface={score=[{name=$1, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesThreeExplicitTargetColumnsV6() {
+		final String query = " insert into employees (score, rank_bucket, orphan_sink) values (100, 1, 'z')";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}, 3={literal='z'}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}, 3={column={name=orphan_sink, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[orphan_sink, score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@11,64:64='(',<287>,1:64]], $2=[[@11,64:64='(',<287>,1:64]], $3=[[@11,64:64='(',<287>,1:64]]}, insert1={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_values0={query_dictionary={$1=[[@11,64:64='(',<287>,1:64]], $2=[[@11,64:64='(',<287>,1:64]], $3=[[@11,64:64='(',<287>,1:64]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}], orphan_sink=[{name=$3, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesSourceNamedColumnsAndAliasV7() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select col1, col2 from (values (100, 1)) as value_src (col1, col2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, alias=value_src, matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@26,105:108='col2',<381>,1:105]], col1=[[@24,99:102='col1',<381>,1:99]]}, query1={values0={value_src=values0, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, insert2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query1={query_dictionary={values0={value_src=values0, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, table_dictionary={}, def_values0={query_dictionary={col2=[[@26,105:108='col2',<381>,1:105]], col1=[[@24,99:102='col1',<381>,1:99]]}, table_dictionary={}, interface={col2=[], col1=[]}}, interface={col2=[{name=col2, table_ref=values0}], col1=[{name=col1, table_ref=values0}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesSourceAliasOnlyV8() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select col1, col2 from (values (100, 1)) as value_src";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={values={alias=value_src, matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]], col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@15,75:75='(',<287>,1:75]], $2=[[@15,75:75='(',<287>,1:75]]}, query1={col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, insert2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]], col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}}, def_query1={query_dictionary={col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, table_dictionary={}, def_values0={query_dictionary={$1=[[@15,75:75='(',<287>,1:75]], $2=[[@15,75:75='(',<287>,1:75]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesExtraTargetColumnV9() {
+		final String query = " insert into employees (score, rank_bucket, orphan_sink) values (100, 1)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH",
+				"Insert Mismatch: Target has 3 columns, Source has 2 columns, (l:1 c:23)",
+				null,
+				1,
+				23);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}, 3={column={name=orphan_sink, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[orphan_sink, score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@11,64:64='(',<287>,1:64]], $2=[[@11,64:64='(',<287>,1:64]]}, insert1={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_values0={query_dictionary={$1=[[@11,64:64='(',<287>,1:64]], $2=[[@11,64:64='(',<287>,1:64]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}], orphan_sink=[{name=orphan_sink, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertValuesExtraValuesColumnV10() {
+		final String query = " insert into employees (score, rank_bucket) values (100, 1, 'extra')";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH",
+				"Insert Mismatch: Target has 2 columns, Source has 3 columns, (l:1 c:23)",
+				null,
+				1,
+				23);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}, 3={literal='extra'}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,51:51='(',<287>,1:51]], $2=[[@9,51:51='(',<287>,1:51]], $3=[[@9,51:51='(',<287>,1:51]]}, insert1={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_values0={query_dictionary={$1=[[@9,51:51='(',<287>,1:51]], $2=[[@9,51:51='(',<287>,1:51]], $3=[[@9,51:51='(',<287>,1:51]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectExtraTargetColumnV11() {
+		final String query = " insert into employees (score, rank_bucket, orphan_sink)"
+				+ " select emp_id, score from perf_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH",
+				"Insert Mismatch: Target has 3 columns, Source has 2 columns, (l:1 c:23)",
+				null,
+				1,
+				23);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=null, table=perf_feed}}, select={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}, 3={column={name=orphan_sink, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[orphan_sink, score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@13,72:76='score',<381>,1:72]], emp_id=[[@11,64:69='emp_id',<381>,1:64]]}, employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@13,72:76='score',<381>,1:72]], emp_id=[[@11,64:69='emp_id',<381>,1:64]]}, insert1={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Tree is wrong", "{insert1={query_dictionary={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query0={query_dictionary={score=[[@13,72:76='score',<381>,1:72]], emp_id=[[@11,64:69='emp_id',<381>,1:64]]}, table_dictionary={perf_feed={score=[[@13,72:76='score',<381>,1:72]], emp_id=[[@11,64:69='emp_id',<381>,1:64]]}}, interface={score=[{name=score, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=[{name=emp_id, table_ref=query0}], rank_bucket=[{name=score, table_ref=query0}], orphan_sink=[{name=orphan_sink, table_ref=query0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectExtraSourceColumnV12() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select emp_id, score, dept_id from perf_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH",
+				"Insert Mismatch: Target has 2 columns, Source has 3 columns, (l:1 c:23)",
+				null,
+				1,
+				23);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=null, table=perf_feed}}, select={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}, 3={column={name=dept_id, table_ref=null}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@11,59:63='score',<381>,1:59]], dept_id=[[@13,66:72='dept_id',<381>,1:66]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@11,59:63='score',<381>,1:59]], dept_id=[[@13,66:72='dept_id',<381>,1:66]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, insert1={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Tree is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query0={query_dictionary={score=[[@11,59:63='score',<381>,1:59]], dept_id=[[@13,66:72='dept_id',<381>,1:66]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, table_dictionary={perf_feed={score=[[@11,59:63='score',<381>,1:59]], dept_id=[[@13,66:72='dept_id',<381>,1:66]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}}, interface={score=[{name=score, table_ref=perf_feed}], dept_id=[{name=dept_id, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=[{name=emp_id, table_ref=query0}], rank_bucket=[{name=score, table_ref=query0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectImplicitNoTargetColumnsV13() {
+		final String query = " insert into employees select emp_id, score from perf_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=null, table=perf_feed}}, select={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}}, target_table={table={alias=null, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}, employees={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}, insert1={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Tree is wrong", "{insert1={query_dictionary={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}, table_dictionary={employees={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}}, def_query0={query_dictionary={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}, table_dictionary={perf_feed={score=[[@6,38:42='score',<381>,1:38]], emp_id=[[@4,30:35='emp_id',<381>,1:30]]}}, interface={score=[{name=score, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=[{name=score, table_ref=query0}], emp_id=[{name=emp_id, table_ref=query0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectSwappedNamesPositionalMappingV14() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select new_quota, dept_id from quota_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=null, table=quota_feed}}, select={1={column={name=new_quota, table_ref=null}}, 2={column={name=dept_id, table_ref=null}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{quota_feed={new_quota=[[@9,51:59='new_quota',<381>,1:51]], dept_id=[[@11,62:68='dept_id',<381>,1:62]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={new_quota=[[@9,51:59='new_quota',<381>,1:51]], dept_id=[[@11,62:68='dept_id',<381>,1:62]]}, insert1={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Tree is wrong", "{insert1={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query0={query_dictionary={new_quota=[[@9,51:59='new_quota',<381>,1:51]], dept_id=[[@11,62:68='dept_id',<381>,1:62]]}, table_dictionary={quota_feed={new_quota=[[@9,51:59='new_quota',<381>,1:51]], dept_id=[[@11,62:68='dept_id',<381>,1:62]]}}, interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}]}}, interface={score=[{name=new_quota, table_ref=query0}], rank_bucket=[{name=dept_id, table_ref=query0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectUnionSourceWithExplicitTargetColumnsV15() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select emp_id, score from perf_feed union select dept_id, new_quota from quota_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={select={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_feed}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_feed}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@11,59:63='score',<381>,1:59]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, quota_feed={new_quota=[[@18,102:110='new_quota',<381>,1:102]], dept_id=[[@16,93:99='dept_id',<381>,1:93]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@11,59:63='score',<381>,1:59]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, query1={new_quota=[[@18,102:110='new_quota',<381>,1:102]], dept_id=[[@16,93:99='dept_id',<381>,1:93]]}, insert3={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Tree is wrong", "{insert3={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, def_union2={query0={query_dictionary={score=[[@11,59:63='score',<381>,1:59]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}, table_dictionary={perf_feed={score=[[@11,59:63='score',<381>,1:59]], emp_id=[[@9,51:56='emp_id',<381>,1:51]]}}, interface={score=[{name=score, table_ref=perf_feed}], emp_id=[{name=emp_id, table_ref=perf_feed}]}}, interface={score=query_column, emp_id=query_column}, query1={query_dictionary={new_quota=[[@18,102:110='new_quota',<381>,1:102]], dept_id=[[@16,93:99='dept_id',<381>,1:93]]}, table_dictionary={quota_feed={new_quota=[[@18,102:110='new_quota',<381>,1:102]], dept_id=[[@16,93:99='dept_id',<381>,1:93]]}}, interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}]}}}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=emp_id, table_ref=union2}], rank_bucket=[{name=score, table_ref=union2}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void insertSelectIntersectSourceWithExplicitTargetColumnsV16() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select rank, score from perf_feed intersect select dept_id, new_quota from quota_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertTrue("Insert interface should map score to first-branch rank",
+				extractor.getSymbolTable().toString()
+						.contains("interface={score=[{name=rank, table_ref=intersect2}]"));
+		Assert.assertTrue("Insert interface should map rank_bucket to first-branch score",
+				extractor.getSymbolTable().toString()
+						.contains("rank_bucket=[{name=score, table_ref=intersect2}]"));
+	}
+
+	@Test
+	public void insertSelectThreeWayUnionSourceWithExplicitTargetColumnsV17() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select rank, score from perf_feed"
+				+ " union select dept_id, new_quota from quota_feed"
+				+ " union select alpha_col, beta_col from third_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertTrue("Insert interface should map score to first-branch rank",
+				extractor.getSymbolTable().toString()
+						.contains("interface={score=[{name=rank, table_ref=union"));
+		Assert.assertTrue("Insert interface should map rank_bucket to first-branch score",
+				extractor.getSymbolTable().toString()
+						.contains("rank_bucket=[{name=score, table_ref=union"));
+	}
+
+	@Test
+	public void insertSelectThreeWayIntersectSourceWithExplicitTargetColumnsV18() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select rank, score from perf_feed"
+				+ " intersect select dept_id, new_quota from quota_feed"
+				+ " intersect select alpha_col, beta_col from third_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertTrue("Insert interface should map score to first-branch rank",
+				extractor.getSymbolTable().toString()
+						.contains("interface={score=[{name=rank, table_ref=intersect"));
+		Assert.assertTrue("Insert interface should map rank_bucket to first-branch score",
+				extractor.getSymbolTable().toString()
+						.contains("rank_bucket=[{name=score, table_ref=intersect"));
+	}
+
+	@Test
+	public void insertSelectUnionOverTwoIntersectsWithExplicitTargetColumnsV19() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " (select rank, score from perf_a intersect select x_col, y_col from perf_b)"
+				+ " union (select dept_id, new_quota from quota_a intersect select p_col, q_col from quota_b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertTrue("Insert interface should map score to nested first-branch rank",
+				extractor.getSymbolTable().toString()
+						.contains("score=[{name=rank, table_ref=intersect2}]"));
+		Assert.assertTrue("Insert interface should map rank_bucket to nested first-branch score",
+				extractor.getSymbolTable().toString()
+						.contains("rank_bucket=[{name=score, table_ref=intersect2}]"));
+	}
+
+	@Test
+	public void insertSelectIntersectOverTwoUnionsWithExplicitTargetColumnsV20() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " (select rank, score from perf_a union select x_col, y_col from perf_b)"
+				+ " intersect (select dept_id, new_quota from quota_a union select p_col, q_col from quota_b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertTrue("Insert interface should map score to nested first-branch rank",
+				extractor.getSymbolTable().toString()
+						.contains("score=[{name=rank, table_ref=intersect6}]"));
+		Assert.assertTrue("Insert interface should map rank_bucket to nested first-branch score",
+				extractor.getSymbolTable().toString()
+						.contains("rank_bucket=[{name=score, table_ref=intersect6}]"));
+	}
+
 	@Test
 	public void insertDictionaryHandlingQualifiedColumnsFromWindowedSubqueryAndOrphanRhsV1() {
 		final String query = " insert into employees (score, rank_bucket, orphan_sink)"
@@ -362,7 +823,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={acct_sales_count=[[@29,135:150='acct_sales_count',<381>,3:26], [@11,65:67='src',<381>,2:8]], rn=[[@49,240:241='rn',<381>,4:87], [@15,87:89='src',<381>,2:30]], emp_id=[[@25,125:130='emp_id',<381>,3:16]]}, query1={acct_sales_count=[[@13,69:84='acct_sales_count',<381>,2:12]], orphan_marker=[[@19,95:107='orphan_marker',<381>,2:38]], rn=[[@17,91:92='rn',<381>,2:34]]}, insert2={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]], orphan_marker=[[@19,95:107='orphan_marker',<381>,2:38]]}}, def_query1={query_dictionary={acct_sales_count=[[@13,69:84='acct_sales_count',<381>,2:12]], orphan_marker=[[@19,95:107='orphan_marker',<381>,2:38]], rn=[[@17,91:92='rn',<381>,2:34]]}, table_dictionary={}, def_query0={query_dictionary={acct_sales_count=[[@29,135:150='acct_sales_count',<381>,3:26], [@11,65:67='src',<381>,2:8]], rn=[[@49,240:241='rn',<381>,4:87], [@15,87:89='src',<381>,2:30]], emp_id=[[@25,125:130='emp_id',<381>,3:16]]}, table_dictionary={accounts={acct_sales_count=[[@27,133:133='a',<381>,3:24], [@54,282:282='a',<381>,6:14]], last_update=[[@43,217:217='a',<381>,4:64]], emp_id=[[@23,123:123='a',<381>,3:14], [@38,199:199='a',<381>,4:46]]}}, _tmp_insert_source_select_sequence=[emp_id, acct_sales_count, rn], filters=[{name=acct_sales_count, table_ref=a}], interface={acct_sales_count=[{name=acct_sales_count, table_ref=a}], rn=[{name=emp_id, table_ref=a}, {name=last_update, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, interface={acct_sales_count=[{name=acct_sales_count, table_ref=src}], orphan_marker=[{name=orphan_marker, table_ref=null}], rn=[{name=rn, table_ref=src}]}, table_alias={src=query0}}, interface={score=[{name=acct_sales_count, table_ref=query1}], rank_bucket=[{name=orphan_marker, table_ref=query1}], orphan_sink=[{name=rn, table_ref=query1}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={orphan_sink=[[@8,44:54='orphan_sink',<381>,1:44]], score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]], orphan_marker=[[@19,95:107='orphan_marker',<381>,2:38]]}}, def_query1={query_dictionary={acct_sales_count=[[@13,69:84='acct_sales_count',<381>,2:12]], orphan_marker=[[@19,95:107='orphan_marker',<381>,2:38]], rn=[[@17,91:92='rn',<381>,2:34]]}, table_dictionary={}, def_query0={query_dictionary={acct_sales_count=[[@29,135:150='acct_sales_count',<381>,3:26], [@11,65:67='src',<381>,2:8]], rn=[[@49,240:241='rn',<381>,4:87], [@15,87:89='src',<381>,2:30]], emp_id=[[@25,125:130='emp_id',<381>,3:16]]}, table_dictionary={accounts={acct_sales_count=[[@27,133:133='a',<381>,3:24], [@54,282:282='a',<381>,6:14]], last_update=[[@43,217:217='a',<381>,4:64]], emp_id=[[@23,123:123='a',<381>,3:14], [@38,199:199='a',<381>,4:46]]}}, _tmp_insert_source_select_sequence=[emp_id, acct_sales_count, rn], filters=[{name=acct_sales_count, table_ref=a}], interface={acct_sales_count=[{name=acct_sales_count, table_ref=a}], rn=[{name=emp_id, table_ref=a}, {name=last_update, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=accounts}}, interface={acct_sales_count=[{name=acct_sales_count, table_ref=src}], orphan_marker=[{name=orphan_marker, table_ref=null}], rn=[{name=rn, table_ref=src}]}, table_alias={src=query0}}, interface={score=[{name=acct_sales_count, table_ref=query1}], rank_bucket=[{name=rn, table_ref=query1}], orphan_sink=[{name=orphan_marker, table_ref=query1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -389,7 +850,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={new_quota=[[@27,134:142='new_quota',<381>,3:31], [@11,61:63='src',<381>,2:8]], dept_id=[[@25,125:131='dept_id',<381>,3:22], [@15,76:78='src',<381>,2:23]], emp_id=[[@23,117:122='emp_id',<381>,3:14]]}, query1={new_quota=[[@13,65:73='new_quota',<381>,2:12]], orphan_marker=[[@19,89:101='orphan_marker',<381>,2:36]], dept_id=[[@17,80:86='dept_id',<381>,2:27]]}, insert2={orphan_sink=[[@8,40:50='orphan_sink',<381>,1:40]], dept_id=[[@6,31:37='dept_id',<381>,1:31]], quota=[[@4,24:28='quota',<381>,1:24]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={orphan_sink=[[@8,40:50='orphan_sink',<381>,1:40]], dept_id=[[@6,31:37='dept_id',<381>,1:31]], quota=[[@4,24:28='quota',<381>,1:24]]}, table_dictionary={employees={orphan_sink=[[@8,40:50='orphan_sink',<381>,1:40]], quota=[[@4,24:28='quota',<381>,1:24]], orphan_marker=[[@19,89:101='orphan_marker',<381>,2:36]], dept_id=[[@6,31:37='dept_id',<381>,1:31]]}}, def_query1={query_dictionary={new_quota=[[@13,65:73='new_quota',<381>,2:12]], orphan_marker=[[@19,89:101='orphan_marker',<381>,2:36]], dept_id=[[@17,80:86='dept_id',<381>,2:27]]}, table_dictionary={}, def_query0={query_dictionary={new_quota=[[@27,134:142='new_quota',<381>,3:31], [@11,61:63='src',<381>,2:8]], dept_id=[[@25,125:131='dept_id',<381>,3:22], [@15,76:78='src',<381>,2:23]], emp_id=[[@23,117:122='emp_id',<381>,3:14]]}, table_dictionary={quota_feed={new_quota=[[@27,134:142='new_quota',<381>,3:31], [@35,203:211='new_quota',<381>,5:34]], active_flag=[[@31,183:193='active_flag',<381>,5:14]], dept_id=[[@25,125:131='dept_id',<381>,3:22]], emp_id=[[@23,117:122='emp_id',<381>,3:14]]}}, _tmp_insert_source_select_sequence=[emp_id, dept_id, new_quota], filters=[{name=active_flag, table_ref=quota_feed}, {name=new_quota, table_ref=quota_feed}], interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}], emp_id=[{name=emp_id, table_ref=quota_feed}]}}, interface={new_quota=[{name=new_quota, table_ref=src}], orphan_marker=[{name=orphan_marker, table_ref=null}], dept_id=[{name=dept_id, table_ref=src}]}, table_alias={src=query0}}, interface={quota=[{name=new_quota, table_ref=query1}], dept_id=[{name=orphan_marker, table_ref=query1}], orphan_sink=[{name=dept_id, table_ref=query1}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={orphan_sink=[[@8,40:50='orphan_sink',<381>,1:40]], dept_id=[[@6,31:37='dept_id',<381>,1:31]], quota=[[@4,24:28='quota',<381>,1:24]]}, table_dictionary={employees={orphan_sink=[[@8,40:50='orphan_sink',<381>,1:40]], quota=[[@4,24:28='quota',<381>,1:24]], orphan_marker=[[@19,89:101='orphan_marker',<381>,2:36]], dept_id=[[@6,31:37='dept_id',<381>,1:31]]}}, def_query1={query_dictionary={new_quota=[[@13,65:73='new_quota',<381>,2:12]], orphan_marker=[[@19,89:101='orphan_marker',<381>,2:36]], dept_id=[[@17,80:86='dept_id',<381>,2:27]]}, table_dictionary={}, def_query0={query_dictionary={new_quota=[[@27,134:142='new_quota',<381>,3:31], [@11,61:63='src',<381>,2:8]], dept_id=[[@25,125:131='dept_id',<381>,3:22], [@15,76:78='src',<381>,2:23]], emp_id=[[@23,117:122='emp_id',<381>,3:14]]}, table_dictionary={quota_feed={new_quota=[[@27,134:142='new_quota',<381>,3:31], [@35,203:211='new_quota',<381>,5:34]], active_flag=[[@31,183:193='active_flag',<381>,5:14]], dept_id=[[@25,125:131='dept_id',<381>,3:22]], emp_id=[[@23,117:122='emp_id',<381>,3:14]]}}, _tmp_insert_source_select_sequence=[emp_id, dept_id, new_quota], filters=[{name=active_flag, table_ref=quota_feed}, {name=new_quota, table_ref=quota_feed}], interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}], emp_id=[{name=emp_id, table_ref=quota_feed}]}}, interface={new_quota=[{name=new_quota, table_ref=src}], orphan_marker=[{name=orphan_marker, table_ref=null}], dept_id=[{name=dept_id, table_ref=src}]}, table_alias={src=query0}}, interface={quota=[{name=new_quota, table_ref=query1}], dept_id=[{name=dept_id, table_ref=query1}], orphan_sink=[{name=orphan_marker, table_ref=query1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
