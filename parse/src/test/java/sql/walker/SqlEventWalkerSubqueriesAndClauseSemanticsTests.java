@@ -5349,6 +5349,59 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 	}
 
 	@Test
+	public void valuesSourceAliasOnlySelectRaisesUnresolvedColumnDiagnosticV1() {
+		final String query = " select col1, col2 from (values (100, 1)) as value_src";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				null,
+				"col1",
+				1);
+		assertFatalDiagnosticCount(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				null,
+				"col2",
+				1);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"col1 [(l:1 c:8)]",
+				null,
+				1);
+		assertDiagnosticCountBySeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"col2 [(l:1 c:14)]",
+				null,
+				1);
+		assertDiagnosticListByCodeAndSeverity(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"token=col2, col1 line=1 char=14 code=UNRESOLVED_UNQUALIFIED_COLUMNS severity=ERROR");
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, from={values={alias=value_src, matrix={1={row={1={literal=100}, 2={literal=1}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@7,32:32='(',<287>,1:32]], $2=[[@7,32:32='(',<287>,1:32]]}, query1={col2=[[@3,14:17='col2',<381>,1:14]], col1=[[@1,8:11='col1',<381>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={col2=[[@3,14:17='col2',<381>,1:14]], col1=[[@1,8:11='col1',<381>,1:8]]}, table_dictionary={}, def_values0={query_dictionary={$1=[[@7,32:32='(',<287>,1:32]], $2=[[@7,32:32='(',<287>,1:32]]}, table_dictionary={}, interface={$1=[], $2=[]}}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={value_src=values0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
 	public void valuesStatementWithAsClauseInSelectTest() {
 			
 		final String query = " select * from (values (1, 2, 'aaa'), (92, 3, 'aaa')) as source";

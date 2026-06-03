@@ -583,7 +583,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = " select dd.a aa, cc.b, c from " 
 		+ "\n (select x as a from tab1) dd join (select y as b, missing from "
 		+ "\n (select z as y from tab2) ee) cc on dd.a = cc.b";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=dd}, alias=aa}, 2={column={name=b, table_ref=cc}}, 3={column={name=c, table_ref=null}}}, from={join={1={table={alias=dd, query={select={1={column={name=x, table_ref=null}, alias=a}}, from={table={alias=null, table=tab1}}}}}, 2={join=join, on={condition={left={column={name=a, table_ref=dd}}, right={column={name=b, table_ref=cc}}, operator==}}}, 3={table={alias=cc, query={select={1={column={name=y, table_ref=null}, alias=b}, 2={column={name=missing, table_ref=null}}}, from={table={alias=ee, query={select={1={column={name=z, table_ref=null}, alias=y}}, from={table={alias=null, table=tab2}}}}}}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -598,6 +598,8 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query3={query_dictionary={aa=[[@4,13:14='aa',<381>,1:13]], b=[[@8,20:20='b',<381>,1:20]], c=[[@10,23:23='c',<381>,1:23]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@16,45:45='a',<381>,2:14], [@1,8:9='dd',<381>,1:8], [@42,133:134='dd',<381>,3:37]]}, table_dictionary={tab1={x=[[@14,40:40='x',<381>,2:9]]}}, interface={a=[{name=x, table_ref=tab1}]}}, filters=[{name=a, table_ref=dd}, {name=b, table_ref=cc}], interface={aa=[{name=a, table_ref=dd}], b=[{name=b, table_ref=cc}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0, cc=query2}, def_query2={query_dictionary={b=[[@26,79:79='b',<381>,2:48], [@6,17:18='cc',<381>,1:17], [@46,140:141='cc',<381>,3:44]], missing=[[@28,82:88='missing',<381>,2:51]]}, table_dictionary={}, def_query1={query_dictionary={y=[[@34,110:110='y',<381>,3:14]]}, table_dictionary={tab2={z=[[@32,105:105='z',<381>,3:9]]}}, interface={y=[{name=z, table_ref=tab2}]}}, interface={b=[{name=y, table_ref=query1}], missing=[{name=missing, table_ref=null}]}, table_alias={ee=query1}}}}",
 				snippet.getSymbolTable().toString());
 
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "c", 1);
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "missing", 1);
 		assertDiagnosticAtPosition(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
@@ -619,7 +621,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void unresolvedUnknownSymbolTableWithSimpleSubqueryWithAccessObjectMergedDiagnosticsTest() {
 		final String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 0);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
@@ -634,6 +636,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Symbol Table is wrong", "{query1={query_dictionary={aa=[[@2,10:11='aa',<381>,1:10]], b=[[@4,14:14='b',<381>,1:14]], c=[[@6,17:17='c',<381>,1:17]]}, table_dictionary={}, def_query0={query_dictionary={a=[[@10,32:32='a',<381>,1:32]], b=[[@14,40:40='b',<381>,1:40]]}, table_dictionary={ee={a=[[@10,32:32='a',<381>,1:32]], e=[[@12,35:35='e',<381>,1:35]]}}, filters=[], interface={a=[{name=a, table_ref=ee}], b=[{name=e, table_ref=ee}]}}, interface={aa=[{name=a, table_ref=query0}], b=[{name=b, table_ref=query0}], c=[{name=c, table_ref=null}]}, table_alias={dd=query0}}}",
 				snippet.getSymbolTable().toString());
 
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "c", 1);
 		assertUnresolvedUnknownColumnsDiagnostic(snippet, 1, 17, ParseDiagnostic.Severity.ERROR, "c");
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
@@ -646,11 +649,12 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery1() {
 		// Parent query selects alias 'c' which is not produced by the single subquery source
 		String query = " select a aa, b, c from (select a, e as b from ee where 1=1) dd";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 0);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}, alias=aa}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=dd, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}, alias=b}}, from={table={alias=null, table=ee}}, where={condition={left={literal=1}, right={literal=1}, operator==}}}}}}}",
 				snippet.getSqlAbstractTree().toString());
 
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "c", 1);
 		assertUnresolvedUnknownColumnsDiagnostic(snippet, 1, 17, ParseDiagnostic.Severity.ERROR, "c");
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "c", 1);
 	}
@@ -659,10 +663,11 @@ public class SqlParseEventWalkerWithAccessObjectTest {
     public void ambiguityWarnings_UnresolvedInterfaceColumnInSingleSubquery2() {
 		// Parent query selects column 'a'which is not produced by the single subquery source
 		String query = " SELECT distinct a,b,c FROM (select all b,c from tab2) tab1";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 0);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
 		Assert.assertNotNull("Snippet should not be null", snippet);
 		Assert.assertNotNull("AST should not be null", snippet.getSqlAbstractTree());
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "a", 1);
 		assertUnresolvedUnknownColumnsDiagnostic(snippet, 1, 17, ParseDiagnostic.Severity.ERROR, "a");
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
     }
@@ -670,8 +675,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void ambiguityWarnings_UnknownImplicitInterfaceColumnDiagnosticTest() {
 		String query = "SELECT a FROM (SELECT b FROM tab2) tab1";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 0);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
 
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "a", 1);
 		assertDiagnosticByCode(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
@@ -870,13 +876,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<381>,1:21]], c=[[@4,18:18='c',<381>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}}, def_query0={query_dictionary={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}, table_dictionary={tab2={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}}, interface={a=[{name=a, table_ref=tab2}], b=[{name=b, table_ref=tab2}]}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<381>,1:21], [@11,33:33='b',<381>,1:33]], c=[[@4,18:18='c',<381>,1:18], [@9,31:31='a',<381>,1:31]]}, table_dictionary={tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}}, def_query0={query_dictionary={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}, table_dictionary={tab2={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}}, interface={a=[{name=a, table_ref=tab2}], b=[{name=b, table_ref=tab2}]}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}, tab2={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}, insert1={d=[[@6,21:21='d',<381>,1:21]], c=[[@4,18:18='c',<381>,1:18]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@9,31:31='a',<381>,1:31]], b=[[@11,33:33='b',<381>,1:33]]}, insert1={d=[[@6,21:21='d',<381>,1:21], [@11,33:33='b',<381>,1:33]], c=[[@4,18:18='c',<381>,1:18], [@9,31:31='a',<381>,1:31]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
    
@@ -910,13 +916,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<381>,1:21]], c=[[@4,18:18='c',<381>,1:18]]}, table_dictionary={tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}}, def_query0={query_dictionary={a=[[@11,34:34='a',<381>,1:34]], b=[[@15,40:40='b',<381>,1:40]]}, table_dictionary={tab3={b=[[@13,37:38='gg',<381>,1:37]], id=[[@27,79:80='gg',<381>,1:79]]}, tab2={a=[[@9,31:32='ff',<381>,1:31]], id=[[@23,71:72='ff',<381>,1:71]]}}, filters=[{name=id, table_ref=ff}, {name=id, table_ref=gg}], interface={a=[{name=a, table_ref=ff}], b=[{name=b, table_ref=gg}]}, table_alias={ff=tab2, gg=tab3}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,21:21='d',<381>,1:21], [@15,40:40='b',<381>,1:40]], c=[[@4,18:18='c',<381>,1:18], [@11,34:34='a',<381>,1:34]]}, table_dictionary={tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}}, def_query0={query_dictionary={a=[[@11,34:34='a',<381>,1:34]], b=[[@15,40:40='b',<381>,1:40]]}, table_dictionary={tab3={b=[[@13,37:38='gg',<381>,1:37]], id=[[@27,79:80='gg',<381>,1:79]]}, tab2={a=[[@9,31:32='ff',<381>,1:31]], id=[[@23,71:72='ff',<381>,1:71]]}}, filters=[{name=id, table_ref=ff}, {name=id, table_ref=gg}], interface={a=[{name=a, table_ref=ff}], b=[{name=b, table_ref=gg}]}, table_alias={ff=tab2, gg=tab3}}, interface={c=[{name=a, table_ref=query0}], d=[{name=b, table_ref=query0}]}}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab3={b=[[@13,37:38='gg',<381>,1:37]], id=[[@27,79:80='gg',<381>,1:79]]}, tab1={c=[[@4,18:18='c',<381>,1:18]], d=[[@6,21:21='d',<381>,1:21]]}, tab2={a=[[@9,31:32='ff',<381>,1:31]], id=[[@23,71:72='ff',<381>,1:71]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@11,34:34='a',<381>,1:34]], b=[[@15,40:40='b',<381>,1:40]]}, insert1={d=[[@6,21:21='d',<381>,1:21]], c=[[@4,18:18='c',<381>,1:18]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@11,34:34='a',<381>,1:34]], b=[[@15,40:40='b',<381>,1:40]]}, insert1={d=[[@6,21:21='d',<381>,1:21], [@15,40:40='b',<381>,1:40]], c=[[@4,18:18='c',<381>,1:18], [@11,34:34='a',<381>,1:34]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
@@ -951,13 +957,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,22:22='d',<381>,1:22]], c=[[@4,19:19='c',<381>,1:19]]}, table_dictionary={tab1={c=[[@4,19:19='c',<381>,1:19]], d=[[@6,22:22='d',<381>,1:22]]}}, def_values0={query_dictionary={$1=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $2=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $3=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={c=[{name=$1, table_ref=values0}], d=[{name=$2, table_ref=values0}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert1={query_dictionary={d=[[@6,22:22='d',<381>,1:22], [@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], c=[[@4,19:19='c',<381>,1:19], [@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}, table_dictionary={tab1={c=[[@4,19:19='c',<381>,1:19]], d=[[@6,22:22='d',<381>,1:22]]}}, def_values0={query_dictionary={$1=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $2=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $3=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}, table_dictionary={}, interface={$1=[], $2=[], $3=[]}}, interface={c=[{name=$1, table_ref=values0}], d=[{name=$2, table_ref=values0}]}}}",
         	snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={c=[[@4,19:19='c',<381>,1:19]], d=[[@6,22:22='d',<381>,1:22]]}}",
         	snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
         	snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $2=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $3=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}, insert1={d=[[@6,22:22='d',<381>,1:22]], c=[[@4,19:19='c',<381>,1:19]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $2=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], $3=[[@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}, insert1={d=[[@6,22:22='d',<381>,1:22], [@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]], c=[[@4,19:19='c',<381>,1:19], [@9,33:33='(',<287>,1:33], [@17,42:42='(',<287>,1:42]]}}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
 
@@ -976,13 +982,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[newcol2, newcol1]",
 				snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={newcol2=[[@10,36:42='newcol2',<381>,1:36]], newcol1=[[@8,27:33='newcol1',<381>,1:27]]}, table_dictionary={sch.subj.tbl={newcol2=[[@10,36:42='newcol2',<381>,1:36]], newcol1=[[@8,27:33='newcol1',<381>,1:27]]}}, def_query1={query_dictionary={att2=[[@21,70:73='att2',<381>,1:70]], att1=[[@17,62:65='att1',<381>,1:62]]}, table_dictionary={}, def_query0={query_dictionary={att2=[[@35,115:118='att2',<381>,1:115], [@19,68:68='b',<381>,1:68]], att1=[[@29,99:102='att1',<381>,1:99], [@15,60:60='b',<381>,1:60]]}, table_dictionary={sch.subj.tab1={col2=[[@31,105:105='a',<381>,1:105]], col3=[[@49,161:161='a',<381>,1:161]], col1=[[@25,89:89='a',<381>,1:89], [@45,151:151='a',<381>,1:151]]}}, filters=[{name=col1, table_ref=a}, {name=col3, table_ref=a}], interface={att2=[{name=col2, table_ref=a}], att1=[{name=col1, table_ref=a}]}, table_alias={a=sch.subj.tab1}}, interface={att2=[{name=att2, table_ref=b}], att1=[{name=att1, table_ref=b}]}, table_alias={b=query0}}, interface={newcol1=[{name=att1, table_ref=query1}], newcol2=[{name=att2, table_ref=query1}]}, table_alias={values=sch.subj.tbl}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={newcol2=[[@10,36:42='newcol2',<381>,1:36], [@21,70:73='att2',<381>,1:70]], newcol1=[[@8,27:33='newcol1',<381>,1:27], [@17,62:65='att1',<381>,1:62]]}, table_dictionary={sch.subj.tbl={newcol2=[[@10,36:42='newcol2',<381>,1:36]], newcol1=[[@8,27:33='newcol1',<381>,1:27]]}}, def_query1={query_dictionary={att2=[[@21,70:73='att2',<381>,1:70]], att1=[[@17,62:65='att1',<381>,1:62]]}, table_dictionary={}, def_query0={query_dictionary={att2=[[@35,115:118='att2',<381>,1:115], [@19,68:68='b',<381>,1:68]], att1=[[@29,99:102='att1',<381>,1:99], [@15,60:60='b',<381>,1:60]]}, table_dictionary={sch.subj.tab1={col2=[[@31,105:105='a',<381>,1:105]], col3=[[@49,161:161='a',<381>,1:161]], col1=[[@25,89:89='a',<381>,1:89], [@45,151:151='a',<381>,1:151]]}}, filters=[{name=col1, table_ref=a}, {name=col3, table_ref=a}], interface={att2=[{name=col2, table_ref=a}], att1=[{name=col1, table_ref=a}]}, table_alias={a=sch.subj.tab1}}, interface={att2=[{name=att2, table_ref=b}], att1=[{name=att1, table_ref=b}]}, table_alias={b=query0}}, interface={newcol1=[{name=att1, table_ref=query1}], newcol2=[{name=att2, table_ref=query1}]}, table_alias={values=sch.subj.tbl}}}",
 				snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{sch.subj.tbl={newcol2=[[@10,36:42='newcol2',<381>,1:36]], newcol1=[[@8,27:33='newcol1',<381>,1:27]]}, sch.subj.tab1={col2=[[@31,105:105='a',<381>,1:105]], col3=[[@49,161:161='a',<381>,1:161]], col1=[[@25,89:89='a',<381>,1:89], [@45,151:151='a',<381>,1:151]]}}",
 				snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				snippet.getSubstitutionsMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={att2=[[@35,115:118='att2',<381>,1:115], [@19,68:68='b',<381>,1:68]], att1=[[@29,99:102='att1',<381>,1:99], [@15,60:60='b',<381>,1:60]]}, query1={att2=[[@21,70:73='att2',<381>,1:70]], att1=[[@17,62:65='att1',<381>,1:62]]}, insert2={newcol2=[[@10,36:42='newcol2',<381>,1:36]], newcol1=[[@8,27:33='newcol1',<381>,1:27]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={att2=[[@35,115:118='att2',<381>,1:115], [@19,68:68='b',<381>,1:68]], att1=[[@29,99:102='att1',<381>,1:99], [@15,60:60='b',<381>,1:60]]}, query1={att2=[[@21,70:73='att2',<381>,1:70]], att1=[[@17,62:65='att1',<381>,1:62]]}, insert2={newcol2=[[@10,36:42='newcol2',<381>,1:36], [@21,70:73='att2',<381>,1:70]], newcol1=[[@8,27:33='newcol1',<381>,1:27], [@17,62:65='att1',<381>,1:62]]}}",
 				snippet.getQueryColumnDictionaryMap().toString());
 
 	}
@@ -1379,7 +1385,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query6={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={a=[[@11,32:32='a',<381>,2:11]], b=[[@13,34:34='b',<381>,2:13]], c=[[@15,36:36='c',<381>,2:15]]}, table_dictionary={t1={a=[[@11,32:32='a',<381>,2:11], [@35,110:110='a',<381>,5:11]], b=[[@13,34:34='b',<381>,2:13], [@37,112:112='b',<381>,5:13]], c=[[@15,36:36='c',<381>,2:15], [@39,114:114='c',<381>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=[{name=a, table_ref=t1}, {name=a, table_ref=t2}], b=[{name=b, table_ref=t1}, {name=b, table_ref=t2}], c=[{name=c, table_ref=t1}, {name=c, table_ref=t2}]}, query1={query_dictionary={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11]], c=[[@22,72:72='c',<381>,3:13]], d=[[@24,74:74='d',<381>,3:15]]}, table_dictionary={t2={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11], [@46,150:150='b',<381>,6:11]], c=[[@22,72:72='c',<381>,3:13], [@48,152:152='c',<381>,6:13]], d=[[@24,74:74='d',<381>,3:15], [@50,154:154='d',<381>,6:15]]}}, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}}, def_intersect5={interface={a=[{name=a, table_ref=t1}, {name=b, table_ref=t2}], b=[{name=b, table_ref=t1}, {name=c, table_ref=t2}], c=[{name=c, table_ref=t1}, {name=d, table_ref=t2}], d=[{name=d, table_ref=t1}]}, query4={query_dictionary={b=[[@46,150:150='b',<381>,6:11]], c=[[@48,152:152='c',<381>,6:13]], d=[[@50,154:154='d',<381>,6:15]]}, table_dictionary={t2={b=[[@46,150:150='b',<381>,6:11]], c=[[@48,152:152='c',<381>,6:13]], d=[[@50,154:154='d',<381>,6:15]]}}, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, query3={query_dictionary={a=[[@35,110:110='a',<381>,5:11]], b=[[@37,112:112='b',<381>,5:13]], c=[[@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}, table_dictionary={t1={a=[[@35,110:110='a',<381>,5:11]], b=[[@37,112:112='b',<381>,5:13]], c=[[@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}], d=[{name=d, table_ref=intersect5}]}, table_alias={i1=intersect2, i2=intersect5}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query6={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, table_dictionary={}, def_intersect2={query0={query_dictionary={a=[[@11,32:32='a',<381>,2:11]], b=[[@13,34:34='b',<381>,2:13]], c=[[@15,36:36='c',<381>,2:15]]}, table_dictionary={t1={a=[[@11,32:32='a',<381>,2:11], [@35,110:110='a',<381>,5:11]], b=[[@13,34:34='b',<381>,2:13], [@37,112:112='b',<381>,5:13]], c=[[@15,36:36='c',<381>,2:15], [@39,114:114='c',<381>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=[{name=a, table_ref=t1}, {name=b, table_ref=t2}], b=[{name=b, table_ref=t1}, {name=c, table_ref=t2}], c=[{name=c, table_ref=t1}, {name=d, table_ref=t2}]}, query1={query_dictionary={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11]], c=[[@22,72:72='c',<381>,3:13]], d=[[@24,74:74='d',<381>,3:15]]}, table_dictionary={t2={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11], [@46,150:150='b',<381>,6:11]], c=[[@22,72:72='c',<381>,3:13], [@48,152:152='c',<381>,6:13]], d=[[@24,74:74='d',<381>,3:15], [@50,154:154='d',<381>,6:15]]}}, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}}, def_intersect5={interface={a=[{name=a, table_ref=t1}, {name=b, table_ref=t2}], b=[{name=b, table_ref=t1}, {name=c, table_ref=t2}], c=[{name=c, table_ref=t1}, {name=d, table_ref=t2}], d=[{name=d, table_ref=t1}]}, query4={query_dictionary={b=[[@46,150:150='b',<381>,6:11]], c=[[@48,152:152='c',<381>,6:13]], d=[[@50,154:154='d',<381>,6:15]]}, table_dictionary={t2={b=[[@46,150:150='b',<381>,6:11]], c=[[@48,152:152='c',<381>,6:13]], d=[[@50,154:154='d',<381>,6:15]]}}, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, query3={query_dictionary={a=[[@35,110:110='a',<381>,5:11]], b=[[@37,112:112='b',<381>,5:13]], c=[[@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}, table_dictionary={t1={a=[[@35,110:110='a',<381>,5:11]], b=[[@37,112:112='b',<381>,5:13]], c=[[@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}], d=[{name=d, table_ref=intersect5}]}, table_alias={i1=intersect2, i2=intersect5}}}",
 			snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@11,32:32='a',<381>,2:11], [@35,110:110='a',<381>,5:11]], b=[[@13,34:34='b',<381>,2:13], [@37,112:112='b',<381>,5:13]], c=[[@15,36:36='c',<381>,2:15], [@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}, t2={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11], [@46,150:150='b',<381>,6:11]], c=[[@22,72:72='c',<381>,3:13], [@48,152:152='c',<381>,6:13]], d=[[@24,74:74='d',<381>,3:15], [@50,154:154='d',<381>,6:15]]}}",
 			snippet.getTableDictionary().toString());
@@ -1402,12 +1408,13 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				+ "    intersect\n"
 				+ "    select b,c,d from t2"
 				+ ") as i2\n";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 3);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
 
 		Assert.assertTrue("Expected intersect mismatch diagnostic",
 			snippet.getFatalErrorStringList().stream().anyMatch(message -> message.contains("INTERSECTION has different column counts")));
 		Assert.assertTrue("Expected participant set-operation mismatch diagnostic",
 			snippet.getFatalErrorStringList().stream().anyMatch(message -> message.contains("SET_OPERATION has different column counts")));
+		assertFatalDiagnosticCount(snippet, "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "d", 1);
 	}
 
 	// Tests of new "qualify" syntax support with set operations and subqueries

@@ -242,8 +242,12 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getSymbolTable().toString());
 				
 		Snippet snippet = extractor.getSnippet();
-		Assert.assertEquals("Expected no fatal errors but got: " + snippet.getFatalErrorStringList(), 
-				0, snippet.getFatalErrorStringList().size());
+		assertFatalDiagnosticCount(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				null,
+				"a",
+				1);
 		assertDiagnosticCountBySeverity(snippet, "UNRESOLVED_UNQUALIFIED_COLUMNS", ParseDiagnostic.Severity.ERROR, null, "a", 1);
 		}
 

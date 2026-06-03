@@ -41,12 +41,12 @@ MOVE_METHODS = {
 
     # INSERT scope management
     "isColumnReferenceListNode",
-    "resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable",
     "removeUnresolvedColumnEntry",
     "mergeInsertScopeTableDictionaryIntoGlobal",
     "publishInsertScopeQueryDictionary",
     "publishUpdateScopeQueryDictionary",
     "buildInsertScopeQueryDictionaryFromTableDictionary",
+    "resolveInsertSourceDefinitionForScope",
     "containsIgnoreCase",
     "mergeReferenceCollections",
     "hasAnyColumnsInTableDictionary",

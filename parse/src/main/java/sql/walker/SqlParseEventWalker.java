@@ -7408,7 +7408,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		return queryAliasCount > 1;
+		return queryAliasCount >= 1;
 	}
 
 	private void emitUnqualifiedNotFoundInQueryAliasFatal(
