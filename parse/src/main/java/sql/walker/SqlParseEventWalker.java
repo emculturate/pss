@@ -66,7 +66,6 @@ import sql.symboltree.SqlParseSymbolTreeHelper;
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
-	private static final String TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY = "_tmp_insert_source_root_scope";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	private static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
@@ -3672,9 +3671,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols =  walker.symbolTable;
 
 		if (walker.intersectClauseFound) {
-			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
-				symbolTreeHelper.hoistInsertSourceSequenceToSetOperationRoot(symbols);
-			}
+			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
+			symbolTreeHelper.finalizeSetOperationAtExit(symbols, insertSource);
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_INTERSECT_KEY + walker.queryCount;
 
@@ -3771,9 +3769,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols =  walker.symbolTable;
 
 		if (walker.unionClauseFound) {
-			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
-				symbolTreeHelper.hoistInsertSourceSequenceToSetOperationRoot(symbols);
-			}
+			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
+			symbolTreeHelper.finalizeSetOperationAtExit(symbols, insertSource);
 			// Retrieve outer symbol table, insert this symbol table into it
 			String key = MUMBLE_UNION_KEY + walker.queryCount;
 
@@ -8815,11 +8812,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_FROM_KEY, sourceNode);
 
 		HashMap<String, Object> symbols = walker.symbolTable;
-		String queryRefKey = getSubqueryReferenceKey(symbols);
-		if (queryRefKey != null && !queryRefKey.startsWith("def_")) {
-			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
-			symbols.put(TEMP_INSERT_SOURCE_ROOT_SCOPE_KEY, "def_" + queryRefKey);
-		}
+		symbolTreeHelper.finalizeInsertSourceAtPrimaryExit(symbols);
 		walker.popSymbolTablePutAll(symbols);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);

@@ -1897,7 +1897,7 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{intersect3={union1={query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={*=query_column}}, union2={}, interface={*=union_column}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{intersect3={union1={query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={*=query_column}}, union2={}, interface={*=[]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
