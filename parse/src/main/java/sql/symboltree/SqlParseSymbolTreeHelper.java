@@ -40,6 +40,7 @@ public class SqlParseSymbolTreeHelper {
 	public static final String INSERT_SOURCE_REF_KEY = "insert_source_ref";
 	public static final String TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY = "_tmp_insert_target_column_list_location";
 	public static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
+	public static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
 
 	// --- Getters/setters for moved fields ---
 
@@ -56,6 +57,765 @@ public class SqlParseSymbolTreeHelper {
 
 	// =========================================================================
 	// Methods moved from SqlParseEventWalker
+
+	// --- UNPIVOT / convertSymbolTable resolution (canonical from event walker) ---
+
+	public void applyUnpivotValueInterfaceDerivations(
+			HashMap<String, Object> localInterface,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (localInterface == null || localInterface.isEmpty()
+				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+			return;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			Object tableRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			Object inListObj = hintMap.get(MUMBLE_IN_KEY);
+
+			if (!(valueObj instanceof String valueColumn)
+					|| valueColumn.isBlank()
+					|| !(tableRefObj instanceof String sourceRef)
+					|| sourceRef.isBlank()
+					|| !(inListObj instanceof ArrayList<?> inColumnsObj)
+					|| inColumnsObj.isEmpty()) {
+				continue;
+			}
+
+			for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+				Object refsObj = interfaceEntry.getValue();
+				if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+					continue;
+				}
+
+				ArrayList<Object> rewrittenRefs = rewriteReferenceListForSingleUnpivotHint(
+						(ArrayList<Object>) refs,
+						valueColumn,
+						sourceRef,
+						(ArrayList<Object>) inColumnsObj);
+
+				if (!rewrittenRefs.equals(refs)) {
+					interfaceEntry.setValue(rewrittenRefs);
+				}
+			}
+		}
+	}
+
+	public Object applyUnpivotValueDerivationsToReferenceListObject(
+			Object referenceListObject,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (!(referenceListObject instanceof ArrayList<?> refsObj)
+				|| refsObj.isEmpty()
+				|| relationalModifierInterfaceHints == null
+				|| relationalModifierInterfaceHints.isEmpty()) {
+			return referenceListObject;
+		}
+
+		ArrayList<Object> rewrittenRefs = new ArrayList<Object>((ArrayList<Object>) refsObj);
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			Object tableRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			Object inListObj = hintMap.get(MUMBLE_IN_KEY);
+
+			if (!(valueObj instanceof String valueColumn)
+					|| valueColumn.isBlank()
+					|| !(tableRefObj instanceof String sourceRef)
+					|| sourceRef.isBlank()
+					|| !(inListObj instanceof ArrayList<?> inColumnsObj)
+					|| inColumnsObj.isEmpty()) {
+				continue;
+			}
+
+			rewrittenRefs = rewriteReferenceListForSingleUnpivotHint(
+					rewrittenRefs,
+					valueColumn,
+					sourceRef,
+					(ArrayList<Object>) inColumnsObj);
+		}
+
+		return rewrittenRefs;
+	}
+
+	public ArrayList<Object> rewriteReferenceListForSingleUnpivotHint(
+			ArrayList<Object> refs,
+			String valueColumn,
+			String sourceRef,
+			ArrayList<Object> inColumnsObj) {
+		ArrayList<Object> rewrittenRefs = new ArrayList<Object>();
+		boolean valueColumnReferenceFound = false;
+
+		for (Object refObj : refs) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (refName != null && refName.equalsIgnoreCase(valueColumn)) {
+				valueColumnReferenceFound = true;
+				for (Object inColumnObj : inColumnsObj) {
+					if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
+						continue;
+					}
+
+					HashMap<String, Object> derivedRef = new HashMap<String, Object>();
+					derivedRef.put(MUMBLE_NAME_KEY, inColumn);
+					derivedRef.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+					appendInterfaceReferenceIfMissing(rewrittenRefs, derivedRef);
+				}
+			} else {
+				appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
+			}
+		}
+
+		if (!valueColumnReferenceFound) {
+			return new ArrayList<Object>(refs);
+		}
+
+		return rewrittenRefs;
+	}
+
+	public void appendInterfaceReferenceIfMissing(ArrayList<Object> targetRefs, Object candidateRef) {
+		if (candidateRef == null) {
+			return;
+		}
+
+		String candidateName = walker.extractReferenceNameFromInterfaceEntry(candidateRef);
+		String candidateTableRef = walker.extractReferenceTableRefFromInterfaceEntry(candidateRef);
+
+		for (Object existingRef : targetRefs) {
+			String existingName = walker.extractReferenceNameFromInterfaceEntry(existingRef);
+			String existingTableRef = walker.extractReferenceTableRefFromInterfaceEntry(existingRef);
+			if (equalsIgnoreCaseNullable(existingName, candidateName)
+					&& equalsIgnoreCaseNullable(existingTableRef, candidateTableRef)) {
+				return;
+			}
+		}
+
+		targetRefs.add(candidateRef);
+	}
+
+	public boolean equalsIgnoreCaseNullable(String left, String right) {
+		if (left == null && right == null) {
+			return true;
+		}
+		if (left == null || right == null) {
+			return false;
+		}
+		return left.equalsIgnoreCase(right);
+	}
+
+	/**
+	 * After UNPIVOT derivation hints have been applied, removes columns that are
+	 * definitively resolved by the UNPIVOT operator from the unresolved-column map
+	 * so they do not generate spurious diagnostic errors.
+	 *
+	 * <ul>
+	 *   <li>The VALUE column (e.g. {@code sales_amount}) is synthetic — generated by
+	 *       the UNPIVOT operator itself.</li>
+	 *   <li>The FOR column (e.g. {@code month_name}) is also synthetic.</li>
+	 *   <li>When the UNPIVOT source is an un-aliased subquery (sourceRef is a query
+	 *       scope key like {@code query0}), every column that appears in that
+	 *       subquery's output interface (including the IN-list columns and passthrough
+	 *       columns like {@code empid}) is also resolved.</li>
+	 * </ul>
+	 */
+	public void resolveUnpivotGeneratedColumnsFromUnresolvedMap(
+			ArrayList<Object> hints,
+			HashMap<String, Object> unresolvedColumnMap) {
+		if (hints == null || hints.isEmpty() || unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+		for (Object hintObj : hints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hint = (Map<String, Object>) hintMapObj;
+
+			// The UNPIVOT VALUE column is synthetically generated by the UNPIVOT operator
+			Object valueColumnObj = hint.get(MUMBLE_VALUE_KEY);
+			if (valueColumnObj instanceof String valueColumn && !valueColumn.isBlank()) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, valueColumn);
+			}
+
+			// The UNPIVOT FOR column is also synthetically generated by the UNPIVOT operator
+			Object forColumnObj = hint.get(MUMBLE_FOR_KEY);
+			if (forColumnObj instanceof String forColumn && !forColumn.isBlank()) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, forColumn);
+			}
+
+			// When the UNPIVOT source is a query reference (e.g., un-aliased subquery),
+			// every column in the source query's output interface is resolved by that scope.
+			Object sourceRefObj = hint.get(MUMBLE_TABLE_REF_KEY);
+			if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
+				continue;
+			}
+			if (!walker.isNonTableQuerySourceReference(sourceRef)) {
+				continue;
+			}
+			Object sourceQueryScopeObj = walker.symbolTable.get(sourceRef);
+			if (!(sourceQueryScopeObj instanceof Map<?, ?> sourceQueryScopeMapObj)) {
+				continue;
+			}
+			Map<String, Object> sourceQueryScope = (Map<String, Object>) sourceQueryScopeMapObj;
+			Object interfaceObj = sourceQueryScope.get(MUMBLE_INTERFACE_KEY);
+			if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
+				continue;
+			}
+			Map<String, Object> sourceInterface = (Map<String, Object>) interfaceMapObj;
+			for (String interfaceColName : new ArrayList<>(sourceInterface.keySet())) {
+				removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, interfaceColName);
+			}
+		}
+	}
+
+	public void removeFromUnresolvedMapCaseInsensitive(HashMap<String, Object> unresolvedColumnMap, String columnName) {
+		if (unresolvedColumnMap.remove(columnName) != null) {
+			return;
+		}
+		String matchingKey = null;
+		for (String key : unresolvedColumnMap.keySet()) {
+			if (key.equalsIgnoreCase(columnName)) {
+				matchingKey = key;
+				break;
+			}
+		}
+		if (matchingKey != null) {
+			unresolvedColumnMap.remove(matchingKey);
+		}
+	}
+
+	/**
+	 * Create Dictionary from Symbol Table
+	 * Validate and assign all columns to a specific source table or query
+	 * Perform quality diagnostics for any unresolved columns, and if emitFinalUnresolvedUnknownFatal is true,
+	 * then add fatal diagnostics to parser resultfor any remaining unresolved columns after this process
+	 * 
+	 * @return
+	 */
+	public HashMap<String, Object> convertSymbolTableToTableDictionary(
+			boolean emitFinalUnresolvedUnknownFatal,
+			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
+			String updateTargetTableRef) {
+	
+		// deconstruct current symbol table into components for analysis
+		Object preservedInsertSourceSelectSequence = null;
+		if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+			preservedInsertSourceSelectSequence = walker.symbolTable.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
+		}
+
+ 		HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+		HashMap<String, Object> localLhsUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY);
+		if (localLhsUnresolvedColumnMap == null)
+			localLhsUnresolvedColumnMap = new HashMap<String, Object>();
+		walker.captureQualifiedUnresolvedLocations(localLhsUnresolvedColumnMap);
+		HashMap<String, Object> localUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (localUnresolvedColumnMap == null)
+			localUnresolvedColumnMap = new HashMap<String, Object>();
+		walker.captureQualifiedUnresolvedLocations(localUnresolvedColumnMap);
+		HashMap<String, Object> localTableAliasMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_ALIAS_KEY);
+		if (localTableAliasMap == null)
+			localTableAliasMap = new HashMap<String, Object>();
+		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (localTableCollection == null)
+			localTableCollection = new HashMap<String, Object>();
+		HashMap<String, Object> localTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TARGET_TABLE_KEY);
+		if (localTargetTableCollection == null)
+			localTargetTableCollection = new HashMap<String, Object>();
+		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (localCurrentQueryDictionary == null)
+			localCurrentQueryDictionary = new HashMap<String, Object>();
+		ArrayList<Object> localRelationalModifierInterfaceHints =
+				(ArrayList<Object>) walker.symbolTable.remove(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
+		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
+
+		// Leave these null if they don't exist
+		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
+        Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
+		Object groupedByList = walker.symbolTable.remove(MUMBLE_GROUPED_BY_KEY);
+		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
+
+
+		// Add query/derived-source aliases into the alias collection for downstream source resolution.
+		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
+
+		// Resolve alias-backed table refs so tableCollection keys align with canonical table references.
+		walker.reconcileAliasBackedTableReferences(localTableCollection, localTableAliasMap);
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
+			pruneUpdateTargetFromInputTableCollection(localTableCollection, updateTargetTableRef, localTableAliasMap);
+		}
+
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
+			resolveUpdateLhsColumnsToTargetTable(
+					localLhsUnresolvedColumnMap,
+					localUnresolvedColumnMap,
+					localTableAliasMap,
+					localTargetTableCollection,
+					updateTargetTableRef);
+			resolveUpdateQualifiedUnresolvedColumnsToInputTables(
+					localUnresolvedColumnMap,
+					localTableAliasMap,
+					localTableCollection);
+			resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
+					localUnresolvedColumnMap,
+					localTableCollection,
+					localTargetTableCollection,
+					localTableAliasMap,
+					updateTargetTableRef);
+		}
+
+		// // Add scalar subquery aliases into the alias collection for downstream source resolution, which allows scalar subqueries to be resolved as sources for columns in the query interface.
+		// walker.mergeScalarSubqueryAliasesIntoAliasCollection(localScalarSubqueryAliases, localTableAliasMap);
+			
+		if (localScalarSubqueryAliases != null && !localScalarSubqueryAliases.isEmpty()) {
+			HashMap<String, Object> qualifiedUnresolvedColumns = new HashMap<String, Object>();
+			HashMap<String, Object> unqualifiedUnresolvedColumns = new HashMap<String, Object>();
+			// Split unresolved column map into sets: ones with explicit table qualifiers, and ones without.  This allows us to apply different resolution strategies to each set, and also allows us to provide more accurate diagnostics for explicitly qualified columns that cannot be resolved to a source.
+			walker.splitExplicitlyQualifiedUnknownEntriesFromUnqualified(localUnresolvedColumnMap, localInterface, 
+				filtersList, qualifiedUnresolvedColumns, unqualifiedUnresolvedColumns);
+		} // temp location
+
+		// Expand wildcard unknown entries (for example *, alias.*) into concrete source-scoped unknowns.
+		walker.processWildcardUnknownEntries(
+				localUnresolvedColumnMap,
+				localInterface,
+				localTableAliasMap,
+				localTableCollection,
+				localCurrentQueryDictionary);
+
+		walker.moveUnknownEntriesToSingleWildcardBackedNonTableSource(
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				localTableAliasMap);
+
+		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
+		propagateUnqualifiedSelectStarToScopeTables(
+				localInterface,
+				localCurrentQueryDictionary,
+				localTableCollection);
+		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
+
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
+			resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable(
+					localUnresolvedColumnMap,
+					localTableCollection,
+					localTargetTableCollection,
+					localTableAliasMap,
+					visibleQuerySourceCollection,
+					updateTargetTableRef);
+		}
+
+		if (!localUnresolvedColumnMap.isEmpty()) {
+			// Check for explicitly qualified columns whose table qualifiers do not exist
+			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
+					localUnresolvedColumnMap,
+					localInterface,
+					filtersList,
+					groupedByList,
+					orderedByList);
+			if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
+				explicitQualifiedUnknownEntries = retainOnlyLocallyResolvableExplicitQualifiedUnknowns(
+						explicitQualifiedUnknownEntries,
+						localInterface,
+						filtersList,
+						localTableAliasMap,
+						localTableCollection,
+						localCurrentQueryDictionary,
+						localUnresolvedColumnMap);
+			}
+			emitExplicitQualifiedUnknownDiagnostics(
+					explicitQualifiedUnknownEntries,
+					localInterface,
+					filtersList,
+					localTableAliasMap,
+					localTableCollection,
+					visibleQuerySourceCollection,
+					localCurrentQueryDictionary,
+					localUnresolvedColumnMap);
+
+			// Only relocate unresolved unqualified columns to a single target when no column
+			// still has multiple viable logical sources in scope.
+			boolean hasMultiSourceUnqualifiedUnknown = hasUnqualifiedUnknownWithMultipleViableSources(
+					localUnresolvedColumnMap,
+					localTableCollection,
+					visibleQuerySourceCollection,
+					localTableAliasMap);
+			if (!hasMultiSourceUnqualifiedUnknown) {
+				// Attempt to resolve any remaining unqualified unknowns that only have one possible source table, and move them to the resolved table dictionary for downstream resolution.  This allows us to resolve queries with unqualified columns that only have one possible source.
+				boolean movedToSingleTableTarget = 
+					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, localTableCollection);
+				if (!movedToSingleTableTarget && !localUnresolvedColumnMap.isEmpty()) {
+					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, currentTableDictionary);
+				}
+			}
+		}
+
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
+			// Before merging, resolve any remaining qualified unresolved columns whose
+			// qualifier matches the update target table (e.g. WHERE-clause filter columns
+			// like this_table.key, or RHS predicand refs like target.col) into the target
+			// table collection.  After this step, if the unresolved map is empty the normal
+			// diagnostic block was never reached and the merge can proceed cleanly;
+			// otherwise the remaining entries will continue through the usual diagnostics.
+			resolveRemainingQualifiedUnresolvedColumnsToTargetTable(
+					localUnresolvedColumnMap,
+					localTableAliasMap,
+					localTargetTableCollection,
+					updateTargetTableRef);
+			mergeUpdateTargetAndLhsIntoTableDictionary(
+					localTargetTableCollection,
+					localLhsUnresolvedColumnMap,
+					localTableCollection,
+					localTableAliasMap,
+					updateTargetTableRef);
+			localTargetTableCollection.clear();
+			localLhsUnresolvedColumnMap.clear();
+		}
+
+		// Merge table collection into the table dictionary map, which is used for symbol resolution in the rest of the query processing.
+		//   This allows all table references to be resolved against the same dictionary regardless of where they are defined in the query.
+		if (localTableCollection != null && localTableCollection.size() > 0) {
+			for (String tab_ref : localTableCollection.keySet()) {
+				String reference = normalizeTableRef(tab_ref);
+				HashMap<String, Object> currDict = (HashMap<String, Object>)  currentTableDictionary.get(reference);
+				if (currDict != null)
+					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+				else {
+					HashMap<String, Object> newDict = new HashMap<String, Object>();
+					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+					 currentTableDictionary.put(reference, newDict);
+				}
+			}
+		}
+	
+		// Validation that follows checks that the query's output interface can be constructed from the available columns
+		// in the query context, which includes the FROM clause tables and any query-level filters.  If the interface 
+		// cannot be constructed, then we have an invalid query and any unexplained logic will add fatal errors to the diagnostics 
+		// list that will help the user understand why their query is invalid.
+		if (localInterface != null) {
+		for (String outputCol: localInterface.keySet()) {
+			if (localScalarSubqueryAliases != null && localScalarSubqueryAliases.contains(outputCol)) {
+				continue;
+			}
+			boolean hasSpecificResolutionFatalForOutputColumn = false;
+			Object refsObj = localInterface.get(outputCol);
+			if (refsObj instanceof ArrayList<?>) {
+				ArrayList<Object> refs = (ArrayList<Object>) refsObj;
+				for (int refIndex = 0; refIndex < refs.size(); refIndex++) {
+					Object refObj = refs.get(refIndex);
+					String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+					String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+					String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(refObj);
+
+					if (substitutionType != null
+							&& (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+						continue;
+					}
+
+					if (columnName == null || "*".equals(columnName)) {
+						continue;
+					}
+
+					if (tableRef != null) {
+						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
+						if (resolvedNonTableSourceRef == null) {
+							resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, localTableAliasMap);
+						}
+						boolean explicitQueryReference = resolvedNonTableSourceRef != null
+								|| walker.isNonTableQuerySourceReference(resolvedTableRef);
+						boolean resolvedInSource = false;
+
+						if (explicitQueryReference) {
+							String queryDictionaryKey = (resolvedNonTableSourceRef != null)
+									? resolvedNonTableSourceRef
+									: resolvedTableRef;
+							Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
+							if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
+								resolvedInSource = containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)
+										|| ((Map<String, Object>) queryDictionary).containsKey("*");
+							}
+							if (!resolvedInSource) {
+								resolvedInSource = hasColumnInQueryOutputInterface(queryDictionaryKey, columnName);
+							}
+							if (!resolvedInSource) {
+								resolvedInSource = hasWildcardInQueryOutputInterface(queryDictionaryKey);
+							}
+							if (resolvedInSource) {
+								Object qualifiedUnknownEntry = consumeQualifiedUnknownEntry(
+										localUnresolvedColumnMap,
+										tableRef,
+										columnName,
+										false);
+								if (qualifiedUnknownEntry == null) {
+									qualifiedUnknownEntry = consumeUnqualifiedUnknownEntry(
+											localUnresolvedColumnMap,
+											columnName);
+								}
+								if (qualifiedUnknownEntry != null) {
+									mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+											queryDictionaryKey,
+											columnName,
+											qualifiedUnknownEntry);
+								}
+							} else {
+								// Fatal for query-alias references is already emitted by emitExplicitQualifiedUnknownDiagnostics.
+								hasSpecificResolutionFatalForOutputColumn = true;
+								continue;
+							}
+						} else {
+							HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
+									resolvedTableRef,
+									localTableCollection);
+							// For explicit table references (table.column), table/alias existence is sufficient.
+							// Physical table schemas are not always available at parse time.
+							resolvedInSource = indicatedTableDictionary != null;
+						}
+
+						if (!resolvedInSource) {
+							if (deferCorrelatedValueSubqueryQualifiedUnknowns && !explicitQueryReference) {
+								// Defer unresolved explicit table refs in correlated value-subqueries so
+								// parent query aliases/tables can resolve them after this scope exits.
+								continue;
+							}
+							Integer[] refLocation = (localCurrentQueryDictionary == null)
+									? new Integer[] { null, null }
+									: walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
+							if (refLocation[0] == null || refLocation[1] == null) {
+								refLocation = walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
+							}
+
+							String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+							String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+							String indicatedSourceRef = (resolvedNonTableSourceRef != null)
+									? resolvedNonTableSourceRef
+									: resolvedTableRef;
+							String diagMessage =  String.format(diagTemplate,
+											columnName,
+											refLocation[0],
+											refLocation[1],
+											indicatedSourceRef);
+
+							walker.addWalkerFatal(
+									diagCode,
+									diagMessage,
+									refLocation[0],
+									refLocation[1],
+									columnName);
+							hasSpecificResolutionFatalForOutputColumn = true;
+						}
+					} else {
+						Integer[] refLocation = resolveUnqualifiedReferenceLocation(
+								columnName,
+								refObj,
+								localUnresolvedColumnMap,
+								localCurrentQueryDictionary,
+								outputCol);
+
+						ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
+								columnName,
+								localTableCollection,
+								visibleQuerySourceCollection,
+								localTableAliasMap);
+
+						String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
+								deleteTargetTableRef,
+								localTableAliasMap,
+								localTableCollection,
+								sourceRefs);
+						if (preferredDeleteTargetRef != null) {
+							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
+							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							materializeResolvedUnqualifiedReference(
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localTableAliasMap,
+									resolvedSourceRef,
+									columnName);
+							continue;
+						}
+
+						if (sourceRefs.isEmpty()) {
+							// Scenario: implicit reference has no candidate source.
+							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+								emitUnqualifiedNotFoundInQueryAliasFatal(
+										columnName,
+										refLocation,
+										localTableAliasMap);
+								hasSpecificResolutionFatalForOutputColumn = true;
+							}
+							continue;
+						} else if (sourceRefs.size() > 1) {
+								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
+									continue;
+								}
+							// Scenario: implicit reference matches multiple candidate sources.
+							String possibleSources = sourceRefs.toString();
+							String diagCode = walker.getDiagnosticCode(
+									SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
+							String diagTemplate = walker.getDiagnosticMessage(
+									SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
+							String diagMessage = (diagTemplate == null)
+									? String.format(
+											"Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s",
+											columnName,
+											refLocation[0],
+											refLocation[1],
+											possibleSources)
+									: String.format(diagTemplate,
+											columnName,
+											refLocation[0],
+											refLocation[1],
+											possibleSources);
+
+							walker.addWalkerDiagnostic(
+									ParseDiagnostic.Severity.SEVERE_WARNING,
+									diagCode,
+									diagMessage,
+									refLocation[0],
+									refLocation[1],
+									walker.getClass().getSimpleName(),
+									null,
+									columnName,
+									true,
+									"ast-walk",
+									null,
+									null);
+							hasSpecificResolutionFatalForOutputColumn = true;
+						} else {
+							// Resolve an implicit column with a single source by updating only
+							// the interface entry copy (do not mutate shared AST map objects).
+							String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
+							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							materializeResolvedUnqualifiedReference(
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localTableAliasMap,
+									resolvedSourceRef,
+									columnName);
+						}
+					}
+				}
+			}
+		}
+		}
+
+		mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				localTableAliasMap,
+				visibleQuerySourceCollection);
+
+		assignTableRefsForColumnReferenceList(
+				filtersList,
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				deleteTargetTableRef);
+		assignTableRefsForColumnReferenceList(
+				groupedByList,
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				deleteTargetTableRef);
+		assignTableRefsForColumnReferenceList(
+				orderedByList,
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				deleteTargetTableRef);
+
+		applyUnpivotValueInterfaceDerivations(
+				localInterface,
+				localRelationalModifierInterfaceHints);
+
+		filtersList = applyUnpivotValueDerivationsToReferenceListObject(
+				filtersList,
+				localRelationalModifierInterfaceHints);
+		groupedByList = applyUnpivotValueDerivationsToReferenceListObject(
+				groupedByList,
+				localRelationalModifierInterfaceHints);
+		orderedByList = applyUnpivotValueDerivationsToReferenceListObject(
+				orderedByList,
+				localRelationalModifierInterfaceHints);
+
+		// Remove UNPIVOT-generated (VALUE/FOR) columns and, for query-backed sources, all
+		// source-query interface columns from the unresolved map so they don't produce
+		// spurious "Unresolved unqualified column reference" diagnostics.
+		resolveUnpivotGeneratedColumnsFromUnresolvedMap(localRelationalModifierInterfaceHints, localUnresolvedColumnMap);
+
+		// Late unqualified-reference resolution can materialize new entries (for example,
+		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
+		if (localTableCollection != null && localTableCollection.size() > 0) {
+			for (String tab_ref : localTableCollection.keySet()) {
+				String reference = normalizeTableRef(tab_ref);
+				HashMap<String, Object> currDict = (HashMap<String, Object>) currentTableDictionary.get(reference);
+				if (currDict != null) {
+					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+				} else {
+					HashMap<String, Object> newDict = new HashMap<String, Object>();
+					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
+					currentTableDictionary.put(reference, newDict);
+				}
+			}
+		}
+
+		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
+		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
+
+		// Merge everything back together into the final symbol table for this level of the query, with table aliases first, 
+		// then symbol table entries, then query entries, then table entries, then the interface and current query dictionary 
+		// for this level, and finally any filters list for this level if it exists.
+		if (localTableAliasMap != null && !localTableAliasMap.isEmpty())
+			walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, localTableAliasMap);
+		walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, localTableCollection);
+		if (!localTargetTableCollection.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_TARGET_TABLE_KEY, localTargetTableCollection);
+		}
+		if (updateTargetTableRef == null || !localCurrentQueryDictionary.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		}
+		//walker.symbolTable.putAll(localCurrentQueryDictionary);
+		//walker.symbolTable.putAll(localTableCollection);
+		if (updateTargetTableRef == null) {
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
+		}
+		if (!localLhsUnresolvedColumnMap.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY, localLhsUnresolvedColumnMap);
+		}
+		if (!localUnresolvedColumnMap.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
+		}
+		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
+		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
+		
+		if (localScalarSubqueryAliases != null)
+			walker.symbolTable.put(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY, localScalarSubqueryAliases);
+		if (filtersList != null)
+			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
+		if (groupedByList != null)
+			walker.symbolTable.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
+		if (orderedByList != null)
+			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		if (preservedInsertSourceSelectSequence != null) {
+			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
+		}
+
+		return walker.symbolTable;
+	}
+
 	// =========================================================================
 
 	@SuppressWarnings("unchecked")
@@ -3199,503 +3959,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
-	/**
-	 * Create Dictionary from Symbol Table
-	 * Validate and assign all columns to a specific source table or query
-	 * Perform quality diagnostics for any unresolved columns, and if emitFinalUnresolvedUnknownFatal is true,
-	 * then add fatal diagnostics to parser resultfor any remaining unresolved columns after this process
-	 * 
-	 * @return
-	 */
-	public HashMap<String, Object> convertSymbolTableToTableDictionary(
-			boolean emitFinalUnresolvedUnknownFatal,
-			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
-			String updateTargetTableRef) {
-	
-		// deconstruct current symbol table into components for analysis
- 		HashMap<String, Object> localInterface = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
-		HashMap<String, Object> localLhsUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY);
-		if (localLhsUnresolvedColumnMap == null)
-			localLhsUnresolvedColumnMap = new HashMap<String, Object>();
-		walker.captureQualifiedUnresolvedLocations(localLhsUnresolvedColumnMap);
-		HashMap<String, Object> localUnresolvedColumnMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		if (localUnresolvedColumnMap == null)
-			localUnresolvedColumnMap = new HashMap<String, Object>();
-		walker.captureQualifiedUnresolvedLocations(localUnresolvedColumnMap);
-		HashMap<String, Object> localTableAliasMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_ALIAS_KEY);
-		if (localTableAliasMap == null)
-			localTableAliasMap = new HashMap<String, Object>();
-		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
-		if (localTableCollection == null)
-			localTableCollection = new HashMap<String, Object>();
-		HashMap<String, Object> localTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TARGET_TABLE_KEY);
-		if (localTargetTableCollection == null)
-			localTargetTableCollection = new HashMap<String, Object>();
-		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
-		if (localCurrentQueryDictionary == null)
-			localCurrentQueryDictionary = new HashMap<String, Object>();
-		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
-
-		// Leave these null if they don't exist
-		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-        Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
-		Object groupedByList = walker.symbolTable.remove(MUMBLE_GROUPED_BY_KEY);
-		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
-
-
-		// Add query/derived-source aliases into the alias collection for downstream source resolution.
-		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
-
-		// Resolve alias-backed table refs so tableCollection keys align with canonical table references.
-		walker.reconcileAliasBackedTableReferences(localTableCollection, localTableAliasMap);
-		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
-			pruneUpdateTargetFromInputTableCollection(localTableCollection, updateTargetTableRef, localTableAliasMap);
-		}
-
-		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
-			resolveUpdateLhsColumnsToTargetTable(
-					localLhsUnresolvedColumnMap,
-					localUnresolvedColumnMap,
-					localTableAliasMap,
-					localTargetTableCollection,
-					updateTargetTableRef);
-			resolveUpdateQualifiedUnresolvedColumnsToInputTables(
-					localUnresolvedColumnMap,
-					localTableAliasMap,
-					localTableCollection);
-			resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
-					localUnresolvedColumnMap,
-					localTableCollection,
-					localTargetTableCollection,
-					localTableAliasMap,
-					updateTargetTableRef);
-		}
-
-		// // Add scalar subquery aliases into the alias collection for downstream source resolution, which allows scalar subqueries to be resolved as sources for columns in the query interface.
-		// walker.mergeScalarSubqueryAliasesIntoAliasCollection(localScalarSubqueryAliases, localTableAliasMap);
-			
-		if (localScalarSubqueryAliases != null && !localScalarSubqueryAliases.isEmpty()) {
-			HashMap<String, Object> qualifiedUnresolvedColumns = new HashMap<String, Object>();
-			HashMap<String, Object> unqualifiedUnresolvedColumns = new HashMap<String, Object>();
-			// Split unresolved column map into sets: ones with explicit table qualifiers, and ones without.  This allows us to apply different resolution strategies to each set, and also allows us to provide more accurate diagnostics for explicitly qualified columns that cannot be resolved to a source.
-			walker.splitExplicitlyQualifiedUnknownEntriesFromUnqualified(localUnresolvedColumnMap, localInterface, 
-				filtersList, qualifiedUnresolvedColumns, unqualifiedUnresolvedColumns);
-		} // temp location
-
-		// Expand wildcard unknown entries (for example *, alias.*) into concrete source-scoped unknowns.
-		walker.processWildcardUnknownEntries(
-				localUnresolvedColumnMap,
-				localInterface,
-				localTableAliasMap,
-				localTableCollection,
-				localCurrentQueryDictionary);
-
-		walker.moveUnknownEntriesToSingleWildcardBackedNonTableSource(
-				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localTableAliasMap);
-
-		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
-		propagateUnqualifiedSelectStarToScopeTables(
-				localInterface,
-				localCurrentQueryDictionary,
-				localTableCollection);
-		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
-
-		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
-			resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable(
-					localUnresolvedColumnMap,
-					localTableCollection,
-					localTargetTableCollection,
-					localTableAliasMap,
-					visibleQuerySourceCollection,
-					updateTargetTableRef);
-		}
-
-		if (!localUnresolvedColumnMap.isEmpty()) {
-			// Check for explicitly qualified columns whose table qualifiers do not exist
-			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
-					localUnresolvedColumnMap,
-					localInterface,
-					filtersList,
-					groupedByList,
-					orderedByList);
-			if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
-				explicitQualifiedUnknownEntries = retainOnlyLocallyResolvableExplicitQualifiedUnknowns(
-						explicitQualifiedUnknownEntries,
-						localInterface,
-						filtersList,
-						localTableAliasMap,
-						localTableCollection,
-						localCurrentQueryDictionary,
-						localUnresolvedColumnMap);
-			}
-			emitExplicitQualifiedUnknownDiagnostics(
-					explicitQualifiedUnknownEntries,
-					localInterface,
-					filtersList,
-					localTableAliasMap,
-					localTableCollection,
-					visibleQuerySourceCollection,
-					localCurrentQueryDictionary,
-					localUnresolvedColumnMap);
-
-			// Only relocate unresolved unqualified columns to a single target when no column
-			// still has multiple viable logical sources in scope.
-			boolean hasMultiSourceUnqualifiedUnknown = hasUnqualifiedUnknownWithMultipleViableSources(
-					localUnresolvedColumnMap,
-					localTableCollection,
-					visibleQuerySourceCollection,
-					localTableAliasMap);
-			if (!hasMultiSourceUnqualifiedUnknown) {
-				// Attempt to resolve any remaining unqualified unknowns that only have one possible source table, and move them to the resolved table dictionary for downstream resolution.  This allows us to resolve queries with unqualified columns that only have one possible source.
-				boolean movedToSingleTableTarget = 
-					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, localTableCollection);
-				if (!movedToSingleTableTarget && !localUnresolvedColumnMap.isEmpty()) {
-					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, currentTableDictionary);
-				}
-			}
-		}
-
-		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
-			// Before merging, resolve any remaining qualified unresolved columns whose
-			// qualifier matches the update target table (e.g. WHERE-clause filter columns
-			// like this_table.key, or RHS predicand refs like target.col) into the target
-			// table collection.  After this step, if the unresolved map is empty the normal
-			// diagnostic block was never reached and the merge can proceed cleanly;
-			// otherwise the remaining entries will continue through the usual diagnostics.
-			resolveRemainingQualifiedUnresolvedColumnsToTargetTable(
-					localUnresolvedColumnMap,
-					localTableAliasMap,
-					localTargetTableCollection,
-					updateTargetTableRef);
-			mergeUpdateTargetAndLhsIntoTableDictionary(
-					localTargetTableCollection,
-					localLhsUnresolvedColumnMap,
-					localTableCollection,
-					localTableAliasMap,
-					updateTargetTableRef);
-			localTargetTableCollection.clear();
-			localLhsUnresolvedColumnMap.clear();
-		}
-
-		// Merge table collection into the table dictionary map, which is used for symbol resolution in the rest of the query processing.
-		//   This allows all table references to be resolved against the same dictionary regardless of where they are defined in the query.
-		if (localTableCollection != null && localTableCollection.size() > 0) {
-			for (String tab_ref : localTableCollection.keySet()) {
-				String reference = normalizeTableRef(tab_ref);
-				HashMap<String, Object> currDict = (HashMap<String, Object>)  currentTableDictionary.get(reference);
-				if (currDict != null)
-					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-				else {
-					HashMap<String, Object> newDict = new HashMap<String, Object>();
-					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-					 currentTableDictionary.put(reference, newDict);
-				}
-			}
-		}
-	
-		// Validation that follows checks that the query's output interface can be constructed from the available columns
-		// in the query context, which includes the FROM clause tables and any query-level filters.  If the interface 
-		// cannot be constructed, then we have an invalid query and any unexplained logic will add fatal errors to the diagnostics 
-		// list that will help the user understand why their query is invalid.
-		if (localInterface != null) {
-		for (String outputCol: localInterface.keySet()) {
-			if (localScalarSubqueryAliases != null && localScalarSubqueryAliases.contains(outputCol)) {
-				continue;
-			}
-			boolean hasSpecificResolutionFatalForOutputColumn = false;
-			Object refsObj = localInterface.get(outputCol);
-			if (refsObj instanceof ArrayList<?>) {
-				ArrayList<Object> refs = (ArrayList<Object>) refsObj;
-				for (int refIndex = 0; refIndex < refs.size(); refIndex++) {
-					Object refObj = refs.get(refIndex);
-					String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
-					String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
-					String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(refObj);
-
-					if (substitutionType != null
-							&& (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
-						continue;
-					}
-
-					if (columnName == null || "*".equals(columnName)) {
-						continue;
-					}
-
-					if (tableRef != null) {
-						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
-						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
-						if (resolvedNonTableSourceRef == null) {
-							resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, localTableAliasMap);
-						}
-						boolean explicitQueryReference = resolvedNonTableSourceRef != null
-								|| walker.isNonTableQuerySourceReference(resolvedTableRef);
-						boolean resolvedInSource = false;
-
-						if (explicitQueryReference) {
-							String queryDictionaryKey = (resolvedNonTableSourceRef != null)
-									? resolvedNonTableSourceRef
-									: resolvedTableRef;
-							Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
-							if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
-								resolvedInSource = containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)
-										|| ((Map<String, Object>) queryDictionary).containsKey("*");
-							}
-							if (!resolvedInSource) {
-								resolvedInSource = hasColumnInQueryOutputInterface(queryDictionaryKey, columnName);
-							}
-							if (!resolvedInSource) {
-								resolvedInSource = hasWildcardInQueryOutputInterface(queryDictionaryKey);
-							}
-							if (resolvedInSource) {
-								Object qualifiedUnknownEntry = consumeQualifiedUnknownEntry(
-										localUnresolvedColumnMap,
-										tableRef,
-										columnName,
-										false);
-								if (qualifiedUnknownEntry == null) {
-									qualifiedUnknownEntry = consumeUnqualifiedUnknownEntry(
-											localUnresolvedColumnMap,
-											columnName);
-								}
-								if (qualifiedUnknownEntry != null) {
-									mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
-											queryDictionaryKey,
-											columnName,
-											qualifiedUnknownEntry);
-								}
-							} else {
-								// Fatal for query-alias references is already emitted by emitExplicitQualifiedUnknownDiagnostics.
-								hasSpecificResolutionFatalForOutputColumn = true;
-								continue;
-							}
-						} else {
-							HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-									resolvedTableRef,
-									localTableCollection);
-							// For explicit table references (table.column), table/alias existence is sufficient.
-							// Physical table schemas are not always available at parse time.
-							resolvedInSource = indicatedTableDictionary != null;
-						}
-
-						if (!resolvedInSource) {
-							if (deferCorrelatedValueSubqueryQualifiedUnknowns && !explicitQueryReference) {
-								// Defer unresolved explicit table refs in correlated value-subqueries so
-								// parent query aliases/tables can resolve them after this scope exits.
-								continue;
-							}
-							Integer[] refLocation = (localCurrentQueryDictionary == null)
-									? new Integer[] { null, null }
-									: walker.getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(outputCol));
-							if (refLocation[0] == null || refLocation[1] == null) {
-								refLocation = walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
-							}
-
-							String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
-							String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
-							String indicatedSourceRef = (resolvedNonTableSourceRef != null)
-									? resolvedNonTableSourceRef
-									: resolvedTableRef;
-							String diagMessage =  String.format(diagTemplate,
-											columnName,
-											refLocation[0],
-											refLocation[1],
-											indicatedSourceRef);
-
-							walker.addWalkerFatal(
-									diagCode,
-									diagMessage,
-									refLocation[0],
-									refLocation[1],
-									columnName);
-							hasSpecificResolutionFatalForOutputColumn = true;
-						}
-					} else {
-						Integer[] refLocation = resolveUnqualifiedReferenceLocation(
-								columnName,
-								refObj,
-								localUnresolvedColumnMap,
-								localCurrentQueryDictionary,
-								outputCol);
-
-						ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
-								columnName,
-								localTableCollection,
-								visibleQuerySourceCollection,
-								localTableAliasMap);
-
-						String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
-								deleteTargetTableRef,
-								localTableAliasMap,
-								localTableCollection,
-								sourceRefs);
-						if (preferredDeleteTargetRef != null) {
-							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
-							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-							materializeResolvedUnqualifiedReference(
-									localUnresolvedColumnMap,
-									localTableCollection,
-									localTableAliasMap,
-									resolvedSourceRef,
-									columnName);
-							continue;
-						}
-
-						if (sourceRefs.isEmpty()) {
-							// Scenario: implicit reference has no candidate source.
-							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
-								emitUnqualifiedNotFoundInQueryAliasFatal(
-										columnName,
-										refLocation,
-										localTableAliasMap);
-								hasSpecificResolutionFatalForOutputColumn = true;
-							}
-							continue;
-						} else if (sourceRefs.size() > 1) {
-								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
-									continue;
-								}
-							// Scenario: implicit reference matches multiple candidate sources.
-							String possibleSources = sourceRefs.toString();
-							String diagCode = walker.getDiagnosticCode(
-									SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
-							String diagTemplate = walker.getDiagnosticMessage(
-									SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
-							String diagMessage = (diagTemplate == null)
-									? String.format(
-											"Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s",
-											columnName,
-											refLocation[0],
-											refLocation[1],
-											possibleSources)
-									: String.format(diagTemplate,
-											columnName,
-											refLocation[0],
-											refLocation[1],
-											possibleSources);
-
-							walker.addWalkerDiagnostic(
-									ParseDiagnostic.Severity.SEVERE_WARNING,
-									diagCode,
-									diagMessage,
-									refLocation[0],
-									refLocation[1],
-									walker.getClass().getSimpleName(),
-									null,
-									columnName,
-									true,
-									"ast-walk",
-									null,
-									null);
-							hasSpecificResolutionFatalForOutputColumn = true;
-						} else {
-							// Resolve an implicit column with a single source by updating only
-							// the interface entry copy (do not mutate shared AST map objects).
-							String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
-							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-							materializeResolvedUnqualifiedReference(
-									localUnresolvedColumnMap,
-									localTableCollection,
-									localTableAliasMap,
-									resolvedSourceRef,
-									columnName);
-						}
-					}
-				}
-			}
-		}
-		}
-
-		mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
-				localInterface,
-				localCurrentQueryDictionary,
-				localUnresolvedColumnMap,
-				localTableAliasMap,
-				visibleQuerySourceCollection);
-
-		assignTableRefsForColumnReferenceList(
-				filtersList,
-				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
-				localTableAliasMap,
-				deleteTargetTableRef);
-		assignTableRefsForColumnReferenceList(
-				groupedByList,
-				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
-				localTableAliasMap,
-				deleteTargetTableRef);
-		assignTableRefsForColumnReferenceList(
-				orderedByList,
-				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
-				localTableAliasMap,
-				deleteTargetTableRef);
-
-		// Late unqualified-reference resolution can materialize new entries (for example,
-		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
-		if (localTableCollection != null && localTableCollection.size() > 0) {
-			for (String tab_ref : localTableCollection.keySet()) {
-				String reference = normalizeTableRef(tab_ref);
-				HashMap<String, Object> currDict = (HashMap<String, Object>) currentTableDictionary.get(reference);
-				if (currDict != null) {
-					currDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-				} else {
-					HashMap<String, Object> newDict = new HashMap<String, Object>();
-					newDict.putAll((Map<? extends String, ? extends Object>) localTableCollection.get(tab_ref));
-					currentTableDictionary.put(reference, newDict);
-				}
-			}
-		}
-
-		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
-		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
-
-		// Merge everything back together into the final symbol table for this level of the query, with table aliases first, 
-		// then symbol table entries, then query entries, then table entries, then the interface and current query dictionary 
-		// for this level, and finally any filters list for this level if it exists.
-		if (localTableAliasMap != null && !localTableAliasMap.isEmpty())
-			walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, localTableAliasMap);
-		walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, localTableCollection);
-		if (!localTargetTableCollection.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_TARGET_TABLE_KEY, localTargetTableCollection);
-		}
-		if (updateTargetTableRef == null || !localCurrentQueryDictionary.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
-		}
-		//walker.symbolTable.putAll(localCurrentQueryDictionary);
-		//walker.symbolTable.putAll(localTableCollection);
-		if (updateTargetTableRef == null) {
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, localInterface);
-		}
-		if (!localLhsUnresolvedColumnMap.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY, localLhsUnresolvedColumnMap);
-		}
-		if (!localUnresolvedColumnMap.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
-		}
-		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
-		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
-		
-		if (localScalarSubqueryAliases != null)
-			walker.symbolTable.put(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY, localScalarSubqueryAliases);
-		if (filtersList != null)
-			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
-		if (groupedByList != null)
-			walker.symbolTable.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
-		if (orderedByList != null)
-			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
-
-		 walker.showTrace(walker.symbolTrace, "Symbol Table: " + walker.symbolTable);
-		return walker.symbolTable;
-	}
 
 	public void pruneUpdateTargetFromInputTableCollection(
 			HashMap<String, Object> tableCollection,
