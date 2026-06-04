@@ -474,6 +474,16 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("AST is wrong",
 				"{SQL={preamble=insert_into, from={from={table_function={function_name=GENERATOR, parameters={rowcount={literal=10}}}}, select={1={column={name=*, table_ref=*}}}}, target_table={table={alias=null, table=my_table}}}}",
 				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{generator0={*=[[@4,28:28='*',<291>,1:28]]}, my_table={*=[[@4,28:28='*',<291>,1:28]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={*=[[@4,28:28='*',<291>,1:28]]}, insert1={*=[[@4,28:28='*',<291>,1:28]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{insert1={query_dictionary={*=[[@4,28:28='*',<291>,1:28]]}, table_dictionary={my_table={*=[[@4,28:28='*',<291>,1:28]]}}, def_query0={query_dictionary={*=[[@4,28:28='*',<291>,1:28]]}, table_dictionary={generator0={*=[[@4,28:28='*',<291>,1:28]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={*=[{name=*, table_ref=query0}]}}}",
 				extractor.getSymbolTable().toString());

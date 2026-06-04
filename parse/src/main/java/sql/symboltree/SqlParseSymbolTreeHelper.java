@@ -576,20 +576,21 @@ public class SqlParseSymbolTreeHelper {
 				? new HashMap<String, Object>((Map<String, Object>) queryDictionaryMapObj)
 				: new HashMap<String, Object>();
 
-		// Insert query_dictionary carries INSERT target column token refs only — not source-branch tokens.
-		HashMap<String, Object> inferredQueryDictionary =
-				buildInsertScopeQueryDictionaryFromTableDictionary(insertScopeMap);
-		if (!inferredQueryDictionary.isEmpty()) {
-			for (Map.Entry<String, Object> inferredEntry : inferredQueryDictionary.entrySet()) {
-				String columnName = inferredEntry.getKey();
+		// Explicit target lists populate query_dictionary during populateInsertTargetColumnsFromTargetSubtree.
+		// Implicit inserts seed from the insert-scope target table_dictionary (same refs, explicit path).
+		HashMap<String, Object> seededQueryDictionary =
+				seedInsertScopeQueryDictionaryFromTargetTableDictionary(insertScopeMap);
+		if (!seededQueryDictionary.isEmpty()) {
+			for (Map.Entry<String, Object> seededEntry : seededQueryDictionary.entrySet()) {
+				String columnName = seededEntry.getKey();
 				if (columnName == null) {
 					continue;
 				}
 				Object existingRefs = queryDictionary.get(columnName);
 				if (existingRefs == null) {
-					queryDictionary.put(columnName, inferredEntry.getValue());
+					queryDictionary.put(columnName, seededEntry.getValue());
 				} else {
-					queryDictionary.put(columnName, mergeReferenceCollections(existingRefs, inferredEntry.getValue()));
+					queryDictionary.put(columnName, mergeReferenceCollections(existingRefs, seededEntry.getValue()));
 				}
 			}
 		}
@@ -626,77 +627,11 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public HashMap<String, Object> buildInsertScopeQueryDictionaryFromMappedInterface(Map<String, Object> insertScopeMap) {
-		HashMap<String, Object> queryDictionary = new HashMap<String, Object>();
+	public HashMap<String, Object> seedInsertScopeQueryDictionaryFromTargetTableDictionary(
+			Map<String, Object> insertScopeMap) {
+		HashMap<String, Object> seeded = new HashMap<String, Object>();
 		if (insertScopeMap == null || insertScopeMap.isEmpty()) {
-			return queryDictionary;
-		}
-
-		Object insertInterfaceObj = insertScopeMap.get(MUMBLE_INTERFACE_KEY);
-		if (!(insertInterfaceObj instanceof Map<?, ?> insertInterfaceMapObj)) {
-			return queryDictionary;
-		}
-
-		Map<String, Object> insertInterface = (Map<String, Object>) insertInterfaceMapObj;
-		for (Map.Entry<String, Object> interfaceEntry : insertInterface.entrySet()) {
-			String targetColumnName = interfaceEntry.getKey();
-			if (targetColumnName == null || targetColumnName.isBlank()) {
-				continue;
-			}
-			if (!(interfaceEntry.getValue() instanceof List<?> interfaceRefsObj)) {
-				continue;
-			}
-
-			ArrayList<Object> targetRefs = null;
-			for (Object interfaceRefObj : interfaceRefsObj) {
-				String sourceColumnName = walker.extractReferenceNameFromInterfaceEntry(interfaceRefObj);
-				String sourceScopeRef = walker.extractReferenceTableRefFromInterfaceEntry(interfaceRefObj);
-				if (sourceColumnName == null || sourceColumnName.isBlank() || "*".equals(sourceColumnName)) {
-					continue;
-				}
-				if (sourceScopeRef == null || sourceScopeRef.isBlank()) {
-					continue;
-				}
-
-				Map<String, Object> sourceScopeDefinition = resolveInsertSourceDefinitionForScope(
-						insertScopeMap,
-						sourceScopeRef);
-				if (sourceScopeDefinition == null || sourceScopeDefinition.isEmpty()) {
-					continue;
-				}
-
-				Object sourceRefsObj = null;
-				Object sourceScopeQueryDictionaryObj = sourceScopeDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
-				if (sourceScopeQueryDictionaryObj instanceof Map<?, ?> sourceScopeQueryDictionaryMapObj) {
-					Map<String, Object> sourceScopeQueryDictionary =
-							(Map<String, Object>) sourceScopeQueryDictionaryMapObj;
-					sourceRefsObj = sourceScopeQueryDictionary.get(sourceColumnName);
-				}
-				if (!(sourceRefsObj instanceof ArrayList<?> sourceRefsListObj) || sourceRefsListObj.isEmpty()) {
-					continue;
-				}
-
-				ArrayList<Object> copiedRefs = new ArrayList<Object>((ArrayList<Object>) sourceRefsListObj);
-				if (targetRefs == null) {
-					targetRefs = copiedRefs;
-				} else {
-					targetRefs = (ArrayList<Object>) mergeReferenceCollections(targetRefs, copiedRefs);
-				}
-			}
-
-			if (targetRefs != null && !targetRefs.isEmpty()) {
-				queryDictionary.put(targetColumnName, targetRefs);
-			}
-		}
-
-		return queryDictionary;
-	}
-
-	@SuppressWarnings("unchecked")
-	public HashMap<String, Object> buildInsertScopeQueryDictionaryFromTableDictionary(Map<String, Object> insertScopeMap) {
-		HashMap<String, Object> inferred = new HashMap<String, Object>();
-		if (insertScopeMap == null || insertScopeMap.isEmpty()) {
-			return inferred;
+			return seeded;
 		}
 
 		HashSet<String> allowedInsertOutputColumns = new HashSet<String>();
@@ -708,7 +643,7 @@ public class SqlParseSymbolTreeHelper {
 
 		Object localTableDictionaryObj = insertScopeMap.get(MUMBLE_TABLE_DICTIONARY_KEY);
 		if (!(localTableDictionaryObj instanceof Map<?, ?> localTableDictionaryMapObj)) {
-			return inferred;
+			return seeded;
 		}
 
 		Map<String, Object> localTableDictionary = (Map<String, Object>) localTableDictionaryMapObj;
@@ -732,7 +667,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (targetColumns == null || targetColumns.isEmpty()) {
-			return inferred;
+			return seeded;
 		}
 
 		for (Map.Entry<String, Object> columnEntry : targetColumns.entrySet()) {
@@ -746,11 +681,11 @@ public class SqlParseSymbolTreeHelper {
 			}
 			Object refsObj = columnEntry.getValue();
 			if (refsObj instanceof ArrayList<?> refsListObj) {
-				inferred.put(columnName, new ArrayList<Object>((ArrayList<Object>) refsListObj));
+				seeded.put(columnName, new ArrayList<Object>((ArrayList<Object>) refsListObj));
 			}
 		}
 
-		return inferred;
+		return seeded;
 	}
 
 	public boolean containsIgnoreCase(Set<String> values, String candidate) {
@@ -939,35 +874,6 @@ public class SqlParseSymbolTreeHelper {
 
 		if (sourceDefinitionObj instanceof Map<?, ?> sourceDefinitionMapObj) {
 			return (Map<String, Object>) sourceDefinitionMapObj;
-		}
-
-		return new HashMap<String, Object>();
-	}
-
-	@SuppressWarnings("unchecked")
-	public Map<String, Object> resolveInsertSourceDefinitionForScope(
-			Map<String, Object> insertScopeMap,
-			String sourceScopeRef) {
-		if (sourceScopeRef == null || sourceScopeRef.isBlank()) {
-			return new HashMap<String, Object>();
-		}
-
-		if (insertScopeMap != null && !insertScopeMap.isEmpty()) {
-			String definitionKey = sourceScopeRef.startsWith("def_") ? sourceScopeRef : "def_" + sourceScopeRef;
-			Object nestedDefinitionObj = insertScopeMap.get(definitionKey);
-			if (nestedDefinitionObj instanceof Map<?, ?> nestedDefinitionMapObj) {
-				return (Map<String, Object>) nestedDefinitionMapObj;
-			}
-		}
-
-		Map<String, Object> sourceScopeDefinition = normalizeInsertSourceDefinition(sourceScopeRef);
-		if (sourceScopeDefinition != null && !sourceScopeDefinition.isEmpty()) {
-			return sourceScopeDefinition;
-		}
-
-		Object queryDefObj = getQueryDefinitionSymbol(sourceScopeRef);
-		if (queryDefObj instanceof Map<?, ?> queryDefMapObj) {
-			return (Map<String, Object>) queryDefMapObj;
 		}
 
 		return new HashMap<String, Object>();
