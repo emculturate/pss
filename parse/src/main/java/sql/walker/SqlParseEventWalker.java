@@ -2266,14 +2266,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
 
 		walker.handleOneChild(ruleIndex);
-		symbolTreeHelper.finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
-
-		// Close the insert-local symbol scope and persist it as insertN in the parent scope.
-		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
-		walker.popSymbolTable(insertScopeKey, walker.symbolTable);
-		symbolTreeHelper.mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
-		symbolTreeHelper.publishInsertScopeQueryDictionary(insertScopeKey);
-		walker.queryCount++;
+		symbolTreeHelper.finalizeInsertScopeSymbolTable();
 	}
 
 	@Override
@@ -2494,15 +2487,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_UPDATE_KEY, updateNode);
 
-		String updateTargetTableRef = symbolTreeHelper.getUpdateTargetTableReference(updateNode);
-		symbolTreeHelper.initializeUpdateTargetTableSubtree(updateTargetTableRef);
-		symbolTreeHelper.convertSymbolTableToTableDictionary(false, false, updateTargetTableRef);
-
-		// Keep update scope numbering in the symbol table for parity with query-like scopes.
-		String updateScopeKey = MUMBLE_UPDATE_KEY + walker.queryCount;
-		walker.popSymbolTable(updateScopeKey, walker.symbolTable);
-		symbolTreeHelper.publishUpdateScopeQueryDictionary(updateScopeKey);
-		walker.queryCount++;
+		symbolTreeHelper.finalizeUpdateScopeSymbolTable(updateNode);
 	}
 
 	@Override
@@ -2555,16 +2540,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
 
-		String deleteTargetTableRef = symbolTreeHelper.getDeleteTargetTableReference(deleteNode);
-		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
-			walker.symbolTable.put(TEMP_DELETE_TARGET_TABLE_REF_KEY, deleteTargetTableRef);
-		}
-
-		symbolTreeHelper.convertSymbolTableToTableDictionary(false, false, null);
-
-		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
-		walker.popSymbolTable(deleteScopeKey, walker.symbolTable);
-		walker.queryCount++;
+		symbolTreeHelper.finalizeDeleteScopeSymbolTable(deleteNode, false);
 	}
 
 	@Override
@@ -2613,26 +2589,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
 
-		String deleteTargetTableRef = symbolTreeHelper.getDeleteTargetTableReference(deleteNode);
-		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
-			walker.symbolTable.put(TEMP_DELETE_TARGET_TABLE_REF_KEY, deleteTargetTableRef);
-		}
-
 		// RETURNING columns were already registered as query interface entries by exitSelect_item.
-		// convertSymbolTableToTableDictionary resolves all column references against the FROM and USING tables.
-		symbolTreeHelper.convertSymbolTableToTableDictionary(false, false, null);
-
-		// Publish RETURNING columns as the query column dictionary for this delete scope.
-		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
-		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
-		if (localCurrentQueryDictionary == null)
-			localCurrentQueryDictionary = new HashMap<String, Object>();
-		symbolTreeHelper.sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-		walker.queryColumnDictionaryMap.put(deleteScopeKey, localCurrentQueryDictionary);
-		walker.symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
-
-		walker.popSymbolTable(deleteScopeKey, walker.symbolTable);
-		walker.queryCount++;
+		symbolTreeHelper.finalizeDeleteScopeSymbolTable(deleteNode, true);
 	}
 
 	@Override
@@ -3016,12 +2974,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (walker.intersectClauseFound) {
 			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
-			symbolTreeHelper.finalizeSetOperationAtExit(symbols, insertSource);
-			// Retrieve outer symbol table, insert this symbol table into it
-			String key = MUMBLE_INTERSECT_KEY + walker.queryCount;
-
-			walker.popSymbolTable(key, symbols);
-			walker.queryCount++;
+			symbolTreeHelper.finalizeSetOperationScopeSymbolTable(
+					MUMBLE_INTERSECT_KEY + walker.queryCount,
+					symbols,
+					insertSource);
 		} else {
 			walker.popSymbolTablePutAll(symbols);
 		}
@@ -3114,12 +3070,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (walker.unionClauseFound) {
 			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
-			symbolTreeHelper.finalizeSetOperationAtExit(symbols, insertSource);
-			// Retrieve outer symbol table, insert this symbol table into it
-			String key = MUMBLE_UNION_KEY + walker.queryCount;
-
-			walker.popSymbolTable(key, symbols);
-			walker.queryCount++;
+			symbolTreeHelper.finalizeSetOperationScopeSymbolTable(
+					MUMBLE_UNION_KEY + walker.queryCount,
+					symbols,
+					insertSource);
 		} else {
 			walker.popSymbolTablePutAll(symbols);
 		}
@@ -3289,101 +3243,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		symbolTreeHelper.normalizeFromClauseCteAliasMappings(subMap);
 
-		Integer symbolScopeLevel = walker.stackSymbols.get("symbolTable");
-		boolean hasParentQueryScope = symbolScopeLevel != null && symbolScopeLevel > 2;
-		Integer subqueryParentRuleIndex = walker.findNearestSubqueryParentRuleIndex(ctx);
-		boolean passUpQualifiedUnresolvedFromThisSubquery =
-				walker.shouldPassUpQualifiedUnresolvedForSubqueryParent(subqueryParentRuleIndex);
-		boolean emitQualifiedUnresolvedFromThisSubquery =
-				walker.shouldEmitQualifiedUnresolvedForSubqueryParent(subqueryParentRuleIndex);
-		boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary =
-				symbolTreeHelper.shouldDeferSubqueryUnresolvedDiagnosticsToStatementBoundary(ctx);
-		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
-		boolean deferCorrelatedValueSubqueryQualifiedUnknowns = hasParentQueryScope
-				&& passUpQualifiedUnresolvedFromThisSubquery;
-		// Handle symbol tables		
-		HashMap<String, Object> symbols = symbolTreeHelper.convertSymbolTableToTableDictionary(
-				emitFinalUnresolvedUnknownFatal,
-				deferCorrelatedValueSubqueryQualifiedUnknowns,
-				null);
-
-		// Retrieve outer symbol table, insert this symbol table into it
-		String key = "query" + walker.queryCount;
-
-		// Capture Query Column Dictionary for this level
-		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
-		if (localCurrentQueryDictionary == null)
-			localCurrentQueryDictionary = new HashMap<String, Object>();
-
-		symbolTreeHelper.sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-		walker.queryColumnDictionaryMap.put(key, localCurrentQueryDictionary);
-		symbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
-		if (shouldProjectSelectIntoForQuerySpecification(ctx)) {
-			symbolTreeHelper.projectSelectIntoTargetFromInterface(subMap, symbols, localCurrentQueryDictionary);
-		}
-		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-
-		// Get the remaining unresolved column references from this query and push them up one level with the query key as a prefix
-		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		HashMap<String, Object> qualifiedUnresolvedForParent = new HashMap<String, Object>();
-		HashMap<String, Object> unqualifiedUnresolvedForLocal = new HashMap<String, Object>();
-		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
-			symbolTreeHelper.splitUnresolvedEntriesByQualification(unresolvedMap, qualifiedUnresolvedForParent, unqualifiedUnresolvedForLocal);
-			if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
-				if (!symbolTreeHelper.canResolveUnqualifiedFromSingleWildcardQuerySource(unqualifiedUnresolvedForLocal)) {
-					symbolTreeHelper.emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolvedForLocal);
-				}
-				HashMap<String, Object> tableAliasMap = (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
-				symbolTreeHelper.emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(
-						qualifiedUnresolvedForParent,
-						tableAliasMap);
-			}
-		}
-	
-		walker.popSymbolTable(key, symbols);
-		walker.queryCount++;
-		if (!hasParentQueryScope && !deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
-			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		}
-
-		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
-			HashMap<String, Object> deferredUnresolvedForParent = new HashMap<String, Object>();
-			deferredUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
-			deferredUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
-			symbolTreeHelper.mergeUnresolvedEntriesIntoCurrentScope(deferredUnresolvedForParent);
-			return;
-		}
-
-		if (emitQualifiedUnresolvedFromThisSubquery && !qualifiedUnresolvedForParent.isEmpty()) {
-			symbolTreeHelper.emitQualifiedUnresolvedColumnsFatal(qualifiedUnresolvedForParent);
-		} else if (hasParentQueryScope
-				&& passUpQualifiedUnresolvedFromThisSubquery
-				&& !qualifiedUnresolvedForParent.isEmpty()) {
-			HashMap<String, Object> parentResolvableQualifiedUnknowns =
-					symbolTreeHelper.partitionParentResolvableQualifiedUnknownsAndEmit(
-							qualifiedUnresolvedForParent,
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY),
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY),
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_QUERY_DICTIONARY_KEY));
-			if (!parentResolvableQualifiedUnknowns.isEmpty()) {
-				Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-				if (parentUnresolvedObject instanceof HashMap<?, ?>) {
-					walker.mergeUnknownEntries((HashMap<String, Object>) parentUnresolvedObject, parentResolvableQualifiedUnknowns);
-				} else {
-					walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, parentResolvableQualifiedUnknowns);
-				}
-			}
-		} else if (hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
-			Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-			if (parentUnresolvedObject instanceof HashMap<?, ?>) {
-				walker.mergeUnknownEntries((HashMap<String, Object>) parentUnresolvedObject, qualifiedUnresolvedForParent);
-			} else {
-				walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qualifiedUnresolvedForParent);
-			}
-		} else if (!hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
-			symbolTreeHelper.emitQualifiedSourceNotFoundFatals(qualifiedUnresolvedForParent);
-		}
-
+		symbolTreeHelper.finalizeQueryScopeSymbolTable(
+				ctx,
+				subMap,
+				shouldProjectSelectIntoForQuerySpecification(ctx));
 	}
 
 	

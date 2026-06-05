@@ -2691,6 +2691,220 @@ public class SqlParseSymbolTreeHelper {
 		scopeSymbols.remove(MUMBLE_TABLE_ALIAS_KEY);
 	}
 
+	/**
+	 * Computes parent/subquery unresolved flags for a query_specification exit and
+	 * finalizes the scope under {@code query<N>}.
+	 */
+	public void finalizeQueryScopeSymbolTable(
+			SQLSelectParserParser.Query_specificationContext ctx,
+			Map<String, Object> querySpecificationSubMap,
+			boolean projectSelectIntoTarget) {
+		Integer symbolScopeLevel = walker.stackSymbols.get("symbolTable");
+		boolean hasParentQueryScope = symbolScopeLevel != null && symbolScopeLevel > 2;
+		Integer subqueryParentRuleIndex = walker.findNearestSubqueryParentRuleIndex(ctx);
+		boolean passUpQualifiedUnresolvedFromThisSubquery =
+				walker.shouldPassUpQualifiedUnresolvedForSubqueryParent(subqueryParentRuleIndex);
+		boolean emitQualifiedUnresolvedFromThisSubquery =
+				walker.shouldEmitQualifiedUnresolvedForSubqueryParent(subqueryParentRuleIndex);
+		boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary =
+				shouldDeferSubqueryUnresolvedDiagnosticsToStatementBoundary(ctx);
+
+		finalizeQueryScopeSymbolTable(
+				"query" + walker.queryCount,
+				querySpecificationSubMap,
+				projectSelectIntoTarget,
+				hasParentQueryScope,
+				passUpQualifiedUnresolvedFromThisSubquery,
+				emitQualifiedUnresolvedFromThisSubquery,
+				deferSubqueryUnresolvedDiagnosticsToStatementBoundary);
+	}
+
+	/**
+	 * Finalizes a leaf SELECT / query_specification scope the same way VALUES scopes do:
+	 * convert symbol table, export query dictionary, publish scope payload, then bubble
+	 * or emit deferred unresolved columns according to parent/subquery flags.
+	 */
+	@SuppressWarnings("unchecked")
+	public void finalizeQueryScopeSymbolTable(
+			String scopeKey,
+			Map<String, Object> querySpecificationSubMap,
+			boolean projectSelectIntoTarget,
+			boolean hasParentQueryScope,
+			boolean passUpQualifiedUnresolvedFromThisSubquery,
+			boolean emitQualifiedUnresolvedFromThisSubquery,
+			boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
+		boolean deferCorrelatedValueSubqueryQualifiedUnknowns = hasParentQueryScope
+				&& passUpQualifiedUnresolvedFromThisSubquery;
+
+		HashMap<String, Object> scopeSymbols = convertSymbolTableToTableDictionary(
+				emitFinalUnresolvedUnknownFatal,
+				deferCorrelatedValueSubqueryQualifiedUnknowns,
+				null);
+
+		HashMap<String, Object> localCurrentQueryDictionary =
+				(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+		if (localCurrentQueryDictionary == null) {
+			localCurrentQueryDictionary = new HashMap<String, Object>();
+		}
+
+		sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
+		walker.queryColumnDictionaryMap.put(scopeKey, localCurrentQueryDictionary);
+		scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		if (projectSelectIntoTarget && querySpecificationSubMap != null) {
+			projectSelectIntoTargetFromInterface(querySpecificationSubMap, scopeSymbols, localCurrentQueryDictionary);
+		}
+		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
+
+		HashMap<String, Object> unresolvedMap =
+				(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		HashMap<String, Object> qualifiedUnresolvedForParent = new HashMap<String, Object>();
+		HashMap<String, Object> unqualifiedUnresolvedForLocal = new HashMap<String, Object>();
+		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
+			splitUnresolvedEntriesByQualification(
+					unresolvedMap, qualifiedUnresolvedForParent, unqualifiedUnresolvedForLocal);
+			if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+				if (!canResolveUnqualifiedFromSingleWildcardQuerySource(unqualifiedUnresolvedForLocal)) {
+					emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolvedForLocal);
+				}
+				HashMap<String, Object> tableAliasMap =
+						(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+				emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(
+						qualifiedUnresolvedForParent,
+						tableAliasMap);
+			}
+		}
+
+		publishQueryLikeScope(scopeKey, scopeSymbols);
+
+		if (!hasParentQueryScope && !deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		}
+
+		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+			HashMap<String, Object> deferredUnresolvedForParent = new HashMap<String, Object>();
+			deferredUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
+			deferredUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
+			mergeUnresolvedEntriesIntoCurrentScope(deferredUnresolvedForParent);
+			return;
+		}
+
+		if (emitQualifiedUnresolvedFromThisSubquery && !qualifiedUnresolvedForParent.isEmpty()) {
+			emitQualifiedUnresolvedColumnsFatal(qualifiedUnresolvedForParent);
+		} else if (hasParentQueryScope
+				&& passUpQualifiedUnresolvedFromThisSubquery
+				&& !qualifiedUnresolvedForParent.isEmpty()) {
+			HashMap<String, Object> parentResolvableQualifiedUnknowns =
+					partitionParentResolvableQualifiedUnknownsAndEmit(
+							qualifiedUnresolvedForParent,
+							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY),
+							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY),
+							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_QUERY_DICTIONARY_KEY));
+			if (!parentResolvableQualifiedUnknowns.isEmpty()) {
+				Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+				if (parentUnresolvedObject instanceof HashMap<?, ?>) {
+					walker.mergeUnknownEntries(
+							(HashMap<String, Object>) parentUnresolvedObject, parentResolvableQualifiedUnknowns);
+				} else {
+					walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, parentResolvableQualifiedUnknowns);
+				}
+			}
+		} else if (hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
+			Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+			if (parentUnresolvedObject instanceof HashMap<?, ?>) {
+				walker.mergeUnknownEntries(
+						(HashMap<String, Object>) parentUnresolvedObject, qualifiedUnresolvedForParent);
+			} else {
+				walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qualifiedUnresolvedForParent);
+			}
+		} else if (!hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
+			emitQualifiedSourceNotFoundFatals(qualifiedUnresolvedForParent);
+		}
+	}
+
+	/**
+	 * Finalizes a UNION / INTERSECT scope: publish merged set-op interface, then pop the
+	 * scope payload the same way VALUES and leaf SELECT scopes do.
+	 */
+	@SuppressWarnings("unchecked")
+	public void finalizeSetOperationScopeSymbolTable(
+			String scopeKey,
+			Map<String, Object> scopeSymbols,
+			boolean insertSource) {
+		finalizeSetOperationAtExit(scopeSymbols, insertSource);
+		publishQueryLikeScope(scopeKey, (HashMap<String, Object>) scopeSymbols);
+	}
+
+	/**
+	 * Finalizes an UPDATE scope: resolve columns against the target table, publish the
+	 * scope payload, then export {@code update_dictionary} as the global query dictionary.
+	 */
+	public void finalizeUpdateScopeSymbolTable(Map<String, Object> updateNode) {
+		String updateTargetTableRef = getUpdateTargetTableReference(updateNode);
+		initializeUpdateTargetTableSubtree(updateTargetTableRef);
+		convertSymbolTableToTableDictionary(false, false, updateTargetTableRef);
+
+		String updateScopeKey = MUMBLE_UPDATE_KEY + walker.queryCount;
+		publishScopeSymbolTable(updateScopeKey, walker.symbolTable);
+		publishUpdateScopeQueryDictionary(updateScopeKey);
+	}
+
+	/**
+	 * Finalizes a DELETE scope: optionally seeds {@code query_dictionary} for RETURNING,
+	 * then publishes the scope payload under {@code delete<N>}.
+	 */
+	@SuppressWarnings("unchecked")
+	public void finalizeDeleteScopeSymbolTable(
+			Map<String, Object> deleteNode,
+			boolean publishReturningQueryDictionary) {
+		String deleteTargetTableRef = getDeleteTargetTableReference(deleteNode);
+		if (deleteTargetTableRef != null && !deleteTargetTableRef.isBlank()) {
+			walker.symbolTable.put(TEMP_DELETE_TARGET_TABLE_REF_KEY, deleteTargetTableRef);
+		}
+
+		convertSymbolTableToTableDictionary(false, false, null);
+
+		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
+		HashMap<String, Object> scopeSymbols = walker.symbolTable;
+		if (publishReturningQueryDictionary) {
+			HashMap<String, Object> localCurrentQueryDictionary =
+					(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
+			if (localCurrentQueryDictionary == null) {
+				localCurrentQueryDictionary = new HashMap<String, Object>();
+			}
+			sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
+			walker.queryColumnDictionaryMap.put(deleteScopeKey, localCurrentQueryDictionary);
+			scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		}
+
+		publishScopeSymbolTable(deleteScopeKey, scopeSymbols);
+	}
+
+	/**
+	 * Finalizes an INSERT scope: emit deferred unresolved diagnostics at the insert boundary,
+	 * publish the scope payload, merge local table dictionary into global, then export
+	 * {@code query_dictionary} for the insert scope.
+	 */
+	public void finalizeInsertScopeSymbolTable() {
+		finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
+
+		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
+		publishScopeSymbolTable(insertScopeKey, walker.symbolTable);
+		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
+		publishInsertScopeQueryDictionary(insertScopeKey);
+	}
+
+	/**
+	 * Pops a finalized scope payload into the parent symbol table and advances {@code queryCount}.
+	 */
+	public void publishScopeSymbolTable(String scopeKey, HashMap<String, Object> scopePayload) {
+		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
+			return;
+		}
+		walker.popSymbolTable(scopeKey, scopePayload);
+		walker.queryCount++;
+	}
+
 	@SuppressWarnings("unchecked")
 	public void publishQueryLikeScope(String scopeKey, HashMap<String, Object> scopePayload) {
 		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
@@ -2700,13 +2914,10 @@ public class SqlParseSymbolTreeHelper {
 		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
 			walker.queryColumnDictionaryMap.put(scopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
-		} else {
-			walker.queryColumnDictionaryMap.put(scopeKey, new HashMap<String, Object>());
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-		walker.popSymbolTable(scopeKey, scopePayload);
-		walker.queryCount++;
+		publishScopeSymbolTable(scopeKey, scopePayload);
 	}
 
 	@SuppressWarnings("unchecked")
