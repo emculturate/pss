@@ -3266,8 +3266,10 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		upsertCurrentTableAliasMapping(tableRef, cteScopeRef);
+		recordLocalFromRegisteredAlias(tableRef);
 		if (aliasObj instanceof String alias && !alias.isBlank()) {
 			upsertCurrentTableAliasMapping(alias, cteScopeRef);
+			recordLocalFromRegisteredAlias(alias);
 			upsertVisibleCteAliasMapping(alias, tableRef, cteScopeRef);
 		}
 	}
@@ -3282,8 +3284,52 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (aliasObj instanceof String alias && !alias.isBlank()) {
 			upsertCurrentTableAliasMapping(alias, tableRef);
+			recordLocalFromRegisteredAlias(alias);
 		}
+		recordLocalFromRegisteredAlias(tableRef);
 		walker.ensureTableDictionaryEntry(tableRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void recordLocalFromRegisteredAlias(String alias) {
+		if (alias == null || alias.isBlank()) {
+			return;
+		}
+
+		Object registeredAliasesObj = walker.symbolTable.get(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
+		LinkedHashSet<String> registeredAliases;
+		if (registeredAliasesObj instanceof LinkedHashSet<?>) {
+			registeredAliases = (LinkedHashSet<String>) registeredAliasesObj;
+		} else {
+			registeredAliases = new LinkedHashSet<String>();
+			walker.symbolTable.put(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY, registeredAliases);
+		}
+
+		for (String existingAlias : registeredAliases) {
+			if (existingAlias != null && existingAlias.equalsIgnoreCase(alias)) {
+				return;
+			}
+		}
+		registeredAliases.add(alias);
+	}
+
+	private boolean isLocalFromRegisteredAlias(String aliasKey) {
+		if (aliasKey == null || aliasKey.isBlank()) {
+			return false;
+		}
+
+		Object registeredAliasesObj = walker.symbolTable.get(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
+		if (!(registeredAliasesObj instanceof Set<?> registeredAliases) || registeredAliases.isEmpty()) {
+			return false;
+		}
+
+		for (Object registeredAliasObj : registeredAliases) {
+			if (registeredAliasObj instanceof String registeredAlias
+					&& registeredAlias.equalsIgnoreCase(aliasKey)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public void upsertVisibleCteAliasMapping(String alias, String sourceRef, String cteScopeRef) {
@@ -4318,6 +4364,7 @@ public class SqlParseSymbolTreeHelper {
 		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true, null);
 
 		walker.pushSymbolTable();
+		walker.symbolTable.put(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY, new LinkedHashSet<String>());
 		if (!outerVisibleScope.contextList.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, outerVisibleScope.contextList);
 		}
@@ -6329,20 +6376,54 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Collects every local unqualified-resolution candidate for {@code columnName} in this query
+	 * frame. All local physical {@code FROM} tables are included regardless of column dictionary
+	 * state. Local query-backed {@code FROM} aliases are added when the subquery has a wildcard
+	 * output interface or lists {@code columnName} in its output interface. Inherited
+	 * {@code context_list} CTE aliases (e.g. {@code aaa} inside {@code bbb}'s body) are excluded
+	 * unless re-registered by this frame's {@code FROM} clause. Queries without {@code WITH} have
+	 * no {@code context_list} and never apply this filter. Callers resolve diagnostics from the
+	 * returned count: 0 = not found, 1 = bind, {@code >1} = ambiguous.
+	 */
 	public ArrayList<String> collectUnqualifiedSourceReferences(
 			String columnName,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection,
 			HashMap<String, Object> tableAliasCollection) {
+		LinkedHashSet<String> candidates = new LinkedHashSet<String>();
+
 		HashMap<String, Object> localPhysicalTables = buildLocalPhysicalFromTableCollection(tableCollection);
-		if (hasLocalPhysicalFromTables(localPhysicalTables)) {
-			return collectLocalPhysicalUnqualifiedSourceReferences(columnName, localPhysicalTables);
+		for (String tableRef : localPhysicalTables.keySet()) {
+			addIgnoringCase(candidates, tableRef);
 		}
-		return collectLocalQueryFromUnqualifiedSourceReferences(
-				columnName,
-				tableCollection,
-				queryCollection,
-				tableAliasCollection);
+
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+				String aliasKey = aliasEntry.getKey();
+				if (isInheritedCteContextListAlias(aliasKey)
+						&& !isLocalFromRegisteredAlias(aliasKey)) {
+					continue;
+				}
+				Object mappedSourceObj = aliasEntry.getValue();
+				if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
+					continue;
+				}
+				if (!isQuerySourceReference(mappedSource) && !isTableFunctionSourceReference(mappedSource)) {
+					continue;
+				}
+				if (isTableFunctionSourceReference(mappedSource)) {
+					addIgnoringCase(candidates, mappedSource);
+					continue;
+				}
+				if (isWildcardBackedQueryCandidate(mappedSource, queryCollection)
+						|| querySourceHasExactColumn(mappedSource, columnName, queryCollection)) {
+					addIgnoringCase(candidates, mappedSource);
+				}
+			}
+		}
+
+		return new ArrayList<String>(candidates);
 	}
 
 	/**
@@ -6375,112 +6456,26 @@ public class SqlParseSymbolTreeHelper {
 		return localPhysicalTables != null && !localPhysicalTables.isEmpty();
 	}
 
-	private boolean tableDictionaryContainsColumn(Object tableDictObj, String columnName) {
-		if (!(tableDictObj instanceof Map<?, ?> columns) || columnName == null || columnName.isBlank()) {
+	/**
+	 * True when {@code aliasKey} names a CTE entry in this frame's inherited {@code context_list}
+	 * from {@code WITH} scope propagation. Absent or empty {@code context_list} always yields false.
+	 */
+	private boolean isInheritedCteContextListAlias(String aliasKey) {
+		if (aliasKey == null || aliasKey.isBlank()) {
 			return false;
 		}
-		return containsKeyIgnoreCase((Map<String, Object>) columns, columnName)
-				|| ((Map<String, Object>) columns).containsKey("*");
-	}
 
-	private boolean hasNonEmptyColumnDictionary(Object tableDictObj) {
-		return tableDictObj instanceof Map<?, ?> columns && !((Map<String, Object>) columns).isEmpty();
-	}
+		Map<String, Object> contextList = getContextListSymbolMap(walker.symbolTable);
+		if (contextList == null || contextList.isEmpty()) {
+			return false;
+		}
 
-	private ArrayList<String> collectLocalPhysicalUnqualifiedSourceReferences(
-			String columnName,
-			HashMap<String, Object> localPhysicalTables) {
-		LinkedHashSet<String> matchedTableSources = new LinkedHashSet<String>();
-		LinkedHashSet<String> nonEmptyLocalFromTables = new LinkedHashSet<String>();
-
-		for (Map.Entry<String, Object> entry : localPhysicalTables.entrySet()) {
-			String tableRef = entry.getKey();
-			if (tableRef == null || tableRef.isBlank()) {
-				continue;
-			}
-			if (hasNonEmptyColumnDictionary(entry.getValue())) {
-				addIgnoringCase(nonEmptyLocalFromTables, tableRef);
-			}
-			if (tableDictionaryContainsColumn(entry.getValue(), columnName)) {
-				addIgnoringCase(matchedTableSources, tableRef);
+		for (String contextAlias : contextList.keySet()) {
+			if (contextAlias != null && contextAlias.equalsIgnoreCase(aliasKey)) {
+				return true;
 			}
 		}
-
-		if (matchedTableSources.size() >= 2) {
-			return new ArrayList<String>(matchedTableSources);
-		}
-		if (matchedTableSources.size() == 1) {
-			return new ArrayList<String>(matchedTableSources);
-		}
-
-		if (nonEmptyLocalFromTables.size() >= 2) {
-			return new ArrayList<String>(nonEmptyLocalFromTables);
-		}
-		if (nonEmptyLocalFromTables.size() == 1) {
-			return new ArrayList<String>(nonEmptyLocalFromTables);
-		}
-
-		if (localPhysicalTables.size() == 1) {
-			return new ArrayList<String>(localPhysicalTables.keySet());
-		}
-		if (localPhysicalTables.size() >= 2) {
-			return new ArrayList<String>(localPhysicalTables.keySet());
-		}
-
-		return new ArrayList<String>();
-	}
-
-	/**
-	 * Query-backed sources from this frame's {@code FROM} (not inherited {@code context_list}).
-	 * Used only when the frame has no local physical tables.
-	 */
-	@SuppressWarnings("unchecked")
-	private ArrayList<String> collectLocalQueryFromUnqualifiedSourceReferences(
-			String columnName,
-			HashMap<String, Object> tableCollection,
-			HashMap<String, Object> queryCollection,
-			HashMap<String, Object> tableAliasCollection) {
-		LinkedHashSet<String> queryExactSources = new LinkedHashSet<String>();
-		LinkedHashSet<String> queryWildcardOnlySources = new LinkedHashSet<String>();
-
-		if (tableAliasCollection == null || tableAliasCollection.isEmpty()) {
-			return new ArrayList<String>();
-		}
-
-		for (Object mappedSourceObj : tableAliasCollection.values()) {
-			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
-				continue;
-			}
-			if (!isQuerySourceReference(mappedSource) && !isTableFunctionSourceReference(mappedSource)) {
-				continue;
-			}
-			if (isTableFunctionSourceReference(mappedSource)) {
-				addIgnoringCase(queryWildcardOnlySources, mappedSource);
-				continue;
-			}
-			if (querySourceHasExactColumn(mappedSource, columnName, queryCollection)) {
-				addIgnoringCase(queryExactSources, mappedSource);
-				continue;
-			}
-			if (isWildcardBackedQueryCandidate(mappedSource, queryCollection)) {
-				addIgnoringCase(queryWildcardOnlySources, mappedSource);
-			}
-		}
-
-		if (queryExactSources.size() >= 2) {
-			return new ArrayList<String>(queryExactSources);
-		}
-		if (queryExactSources.size() == 1) {
-			return new ArrayList<String>(queryExactSources);
-		}
-		if (queryWildcardOnlySources.size() >= 2) {
-			return new ArrayList<String>(queryWildcardOnlySources);
-		}
-		if (queryWildcardOnlySources.size() == 1) {
-			return new ArrayList<String>(queryWildcardOnlySources);
-		}
-
-		return new ArrayList<String>();
+		return false;
 	}
 
 	public void addIgnoringCase(Set<String> bucket, String candidate) {
@@ -7360,6 +7355,7 @@ public class SqlParseSymbolTreeHelper {
 		tableFunctionSourceRefs.add(functionRef.toLowerCase());
 		if (alias != null && !alias.isBlank()) {
 			walker.collectTableAlias(alias, functionRef);
+			recordLocalFromRegisteredAlias(alias);
 		}
 	}
 
@@ -7524,6 +7520,7 @@ public class SqlParseSymbolTreeHelper {
 			// add alias to query
 			if (alias != null) {
 				walker.collectTableAlias(alias, queryName);
+				recordLocalFromRegisteredAlias(alias);
 			} else
 				 walker.symbolTable.put(queryName, new HashMap<String, Object>());
 
@@ -8126,6 +8123,7 @@ public class SqlParseSymbolTreeHelper {
 		walker.mergeUnknownEntries(deferredForParent, resolveVisibleOuterDeferredUnresolved(outerCorrelated));
 		stripUnresolvedFromScopePayloads(predicateFrameSymbols);
 		predicateFrameSymbols.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		predicateFrameSymbols.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
 		// Predicate frames inherit context-backed aliases for inner resolution only; merging
 		// that snapshot onto the parent would overwrite locally registered FROM aliases (e.g. kk).
 		predicateFrameSymbols.remove(MUMBLE_TABLE_ALIAS_KEY);
@@ -8386,6 +8384,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		scopePayload.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		scopePayload.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
 		for (Object nestedValue : scopePayload.values()) {
 			if (nestedValue instanceof HashMap<?, ?> nestedScopeObj) {
 				stripInheritedVisibleAliasesFromPublishedTree((HashMap<String, Object>) nestedScopeObj);

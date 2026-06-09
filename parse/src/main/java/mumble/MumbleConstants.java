@@ -43,6 +43,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_OUTER_DEF_ENTRIES_KEY = "outer_def_entries_backup"; // Saved outer def_* symbol-table entries before a nested WITH clause absorbs them
     /** Immutable alias snapshot captured when a nested scope inherits visible outer scope. */
     public static final String MUMBLE_INHERITED_VISIBLE_ALIASES_KEY = "inherited_visible_aliases";
+    /** Alias keys registered by this frame's local {@code FROM} clause (not inherited-only snapshots). */
+    public static final String MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY = "local_from_registered_aliases";
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DELETE_KEY = "delete";
