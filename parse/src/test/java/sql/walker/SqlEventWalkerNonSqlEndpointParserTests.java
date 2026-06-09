@@ -1027,7 +1027,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}, table_dictionary={scbcrse={scbcrse_coll_code=[[@2,8:9='aa',<381>,1:8]]}}, interface={scbcrse_coll_code=[{name=scbcrse_coll_code, table_ref=aa}]}, table_alias={aa=scbcrse}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}, table_dictionary={scbcrse={scbcrse_coll_code=[[@2,8:9='aa',<381>,1:8]]}}, interface={scbcrse_coll_code=[{name=scbcrse_coll_code, table_ref=aa}]}, table_alias={aa=scbcrse}}, predicand1=query0}",
 				extractor.getSymbolTable().toString());
 	}
 

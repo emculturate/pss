@@ -429,6 +429,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public Boolean intersectClauseFound = false;
 	public Boolean firstIntersectClause = false;
 	public  Boolean useAsLeaf = false;
+	/**
+	 * Per query_specification stack frame: {@code null} when the frame is not a SELECT
+	 * query_spec, {@code false} before {@code exitFrom_clause}, {@code true} after.
+	 */
+	public Boolean queryFromClauseComplete = null;
 	private final HashSet<String> validatedSetOperationEntries = new HashSet<String>();
 	private final HashSet<String> validatedSetOperationSiblingGroups = new HashSet<String>();
 
@@ -469,6 +474,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		flagMap.put("intersectClauseFound",intersectClauseFound);
 		flagMap.put("firstIntersectClause",firstIntersectClause);
 		flagMap.put("useAsLeaf",useAsLeaf);
+		flagMap.put("queryFromClauseComplete", queryFromClauseComplete);
 
 		pushStack("flagMapTable", flagMap);
 
@@ -478,6 +484,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		intersectClauseFound = false;
 		firstIntersectClause = false;
 		useAsLeaf = false;
+		queryFromClauseComplete = null;
 	}
 
 	/**
@@ -513,6 +520,45 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		intersectClauseFound =  (Boolean) flagMap.get ("intersectClauseFound");
 		firstIntersectClause =  (Boolean) flagMap.get ("firstIntersectClause");
 		useAsLeaf =  (Boolean) flagMap.get ("useAsLeaf");
+		queryFromClauseComplete = (Boolean) flagMap.get("queryFromClauseComplete");
+	}
+
+	/** Marks the current stack frame as a SELECT query_spec whose FROM clause is not yet complete. */
+	public void beginQuerySpecificationFromClause() {
+		queryFromClauseComplete = Boolean.FALSE;
+	}
+
+	/** Marks the current query_spec frame's FROM clause as complete. */
+	public void markCurrentQueryFromClauseComplete() {
+		if (Boolean.FALSE.equals(queryFromClauseComplete)) {
+			queryFromClauseComplete = Boolean.TRUE;
+		}
+	}
+
+	/**
+	 * Returns true when any query_specification frame on the symbol/flag stack still
+	 * has a pending FROM clause (select-list-before-FROM walk order).
+	 */
+	@SuppressWarnings("unchecked")
+	public boolean anyIncompleteQuerySpecificationOnStack() {
+		if (Boolean.FALSE.equals(queryFromClauseComplete)) {
+			return true;
+		}
+		Integer level = stackSymbols.get("flagMapTable");
+		if (level == null) {
+			return false;
+		}
+		for (int stackIndex = level; stackIndex >= 1; stackIndex--) {
+			Object flagMapObj = asTree.get("flagMapTable_" + stackIndex);
+			if (!(flagMapObj instanceof HashMap<?, ?> flagMapObjTyped)) {
+				continue;
+			}
+			HashMap<String, Object> flagMap = (HashMap<String, Object>) flagMapObjTyped;
+			if (Boolean.FALSE.equals(flagMap.get("queryFromClauseComplete"))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
     
@@ -1831,6 +1877,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				if ((tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
 					|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
 					|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))
+					|| MUMBLE_DEPENDENT_QUERIES_KEY.equals(tab_ref)
 					|| (tab_ref.startsWith("def_"))) {
 						continue; // skip symbol table items that are not table or query references
 				} else if ((tab_ref.startsWith(getASTWALKER_QUERY_KEY())) 
@@ -2581,7 +2628,108 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		HashMap<String, Object> indicatedTableDictionary = getTableDictionaryForReference(
 				resolvedTableRef,
 				tableCollection);
-		return indicatedTableDictionary != null;
+		if (indicatedTableDictionary != null) {
+			return true;
+		}
+
+		// Bare physical table names (no alias) are visible once registered in the table collection.
+		if (tableCollection != null && !tableCollection.isEmpty()) {
+			for (Map.Entry<String, Object> tableEntry : tableCollection.entrySet()) {
+				String tableKey = tableEntry.getKey();
+				if (tableKey == null || isNonTableQuerySourceReference(tableKey)) {
+					continue;
+				}
+				if (tableKey.equals(sourceRef) || tableKey.equalsIgnoreCase(sourceRef)) {
+					return tableEntry.getValue() instanceof Map<?, ?>;
+				}
+			}
+		}
+
+		// A visible physical-table alias is sufficient even before column refs populate the dictionary.
+		if (resolvedTableRef != null
+				&& !resolvedTableRef.isBlank()
+				&& !isNonTableQuerySourceReference(resolvedTableRef)
+				&& tableAliasCollection != null
+				&& !tableAliasCollection.isEmpty()) {
+			if (tableAliasCollection.containsKey(sourceRef)) {
+				return true;
+			}
+			for (String alias : tableAliasCollection.keySet()) {
+				if (alias != null && alias.equalsIgnoreCase(sourceRef)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Like {@link #canResolveQualifiedUnknownInScope} but for physical table-backed refs requires
+	 * the column to already exist in the indicated table dictionary (not merely the table entry).
+	 */
+	public boolean canFullyResolveQualifiedUnknownInScope(
+			String unresolvedQualifiedKey,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> queryCollection) {
+		if (!canResolveQualifiedUnknownInScope(
+				unresolvedQualifiedKey,
+				tableAliasCollection,
+				tableCollection,
+				queryCollection)) {
+			return false;
+		}
+
+		int dotIndex = unresolvedQualifiedKey.indexOf('.');
+		if (dotIndex <= 0 || dotIndex + 1 >= unresolvedQualifiedKey.length()) {
+			return false;
+		}
+
+		String sourceRef = unresolvedQualifiedKey.substring(0, dotIndex);
+		String columnName = unresolvedQualifiedKey.substring(dotIndex + 1);
+
+		if (isNonTableQuerySource(sourceRef)) {
+			return true;
+		}
+
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			Object aliasMappedObj = tableAliasCollection.get(sourceRef);
+			if (!(aliasMappedObj instanceof String)) {
+				for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+					if (aliasEntry.getKey() != null
+							&& aliasEntry.getKey().equalsIgnoreCase(sourceRef)
+							&& aliasEntry.getValue() instanceof String) {
+						aliasMappedObj = aliasEntry.getValue();
+						break;
+					}
+				}
+			}
+			if (aliasMappedObj instanceof String aliasMappedSource
+					&& isNonTableQuerySource(aliasMappedSource)) {
+				return true;
+			}
+		}
+
+		String resolvedTableRef = resolveAliasToTableName(sourceRef, tableAliasCollection);
+		if (resolvedTableRef != null && isNonTableQuerySourceReference(resolvedTableRef)) {
+			return true;
+		}
+
+		HashMap<String, Object> indicatedTableDictionary = getTableDictionaryForReference(
+				resolvedTableRef,
+				tableCollection);
+		if (indicatedTableDictionary == null) {
+			return false;
+		}
+		if (indicatedTableDictionary.containsKey(columnName)) {
+			return true;
+		}
+		for (String key : indicatedTableDictionary.keySet()) {
+			if (key != null && key.equalsIgnoreCase(columnName)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")

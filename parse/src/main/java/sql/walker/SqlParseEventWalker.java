@@ -583,6 +583,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	public HashMap<String, Object> getSymbolTable() {
+		if (walker.symbolTable != null) {
+			symbolTreeHelper.stripInheritedVisibleAliasesFromPublishedTree(walker.symbolTable);
+		}
 		return walker.symbolTable;
 	}
 
@@ -2070,14 +2073,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable = new HashMap<String, Object>();
 		walker.symbolTable.put(queryName, currentQuerySymbolTable);
 		currentQuerySymbolTable.putAll(symbols);
+		symbolTreeHelper.stripInheritedVisibleAliasesFromPublishedTree(currentQuerySymbolTable);
 
 		// If this was a nested WITH, enterWith_clause saved the outer WITH clause's
-		// in-progress cte_list under MUMBLE_OUTER_CTE_LIST_KEY. It was absorbed into
+		// in-progress cte_list under MUMBLE_OUTER_CONTEXT_LIST_KEY. It was absorbed into
 		// currentQuerySymbolTable by putAll(symbols) above. Restore it to the new outer
 		// symbol table so the outer WITH clause can continue adding its own CTEs.
-		Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CTE_LIST_KEY);
+		Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
 		if (outerCteListObj instanceof Map<?, ?> outerCteListMapObj) {
-			walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
+			walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
 		}
 		// Similarly restore any outer def_* entries (e.g. def_delete0) that were saved
 		// in enterWith_clause and absorbed here. Without this, getQueryDefinitionSymbol
@@ -2092,6 +2096,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+		symbolTreeHelper.hoistMainBodyDeferredUnresolvedFromWithQueryScope(currentQuerySymbolTable);
 	}
 
 
@@ -2099,11 +2104,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void enterWith_clause( SQLSelectParserParser.With_clauseContext ctx) {
 		// Each WITH clause owns its own cte_list scope. For nested WITHs the outer
 		// WITH clause's in-progress cte_list sits in the SAME symbol table frame
-		// (no push has occurred yet). We save it under MUMBLE_OUTER_CTE_LIST_KEY so
+		// (no push has occurred yet). We save it under MUMBLE_OUTER_CONTEXT_LIST_KEY so
 		// exitWith_query can restore it once the nested scope collapses back.
 		Map<String, Object> existingCteList = symbolTreeHelper.getCteListSymbolMap(walker.symbolTable);
 		if (existingCteList != null && !existingCteList.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_OUTER_CTE_LIST_KEY, new LinkedHashMap<String, Object>(existingCteList));
+			walker.symbolTable.put(MUMBLE_OUTER_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(existingCteList));
 		}
 		// Also save all outer def_* entries (e.g. def_delete0, def_values0) so that
 		// exitWith_query can restore them after the nested scope's putAll absorbs them.
@@ -2122,7 +2127,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (existingCteList != null) {
 			withCteScope.putAll(existingCteList);
 		}
-		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, withCteScope);
+		walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, withCteScope);
 	}
 
 	@Override
@@ -2487,6 +2492,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_UPDATE_KEY, updateNode);
 
+		symbolTreeHelper.normalizeFromClauseCteAliasMappings(updateNode);
 		symbolTreeHelper.finalizeUpdateScopeSymbolTable(updateNode);
 	}
 
@@ -2540,6 +2546,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
 
+		symbolTreeHelper.normalizeFromClauseCteAliasMappings(deleteNode);
 		symbolTreeHelper.finalizeDeleteScopeSymbolTable(deleteNode, false);
 	}
 
@@ -2590,6 +2597,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_DELETE_KEY, deleteNode);
 
 		// RETURNING columns were already registered as query interface entries by exitSelect_item.
+		symbolTreeHelper.normalizeFromClauseCteAliasMappings(deleteNode);
 		symbolTreeHelper.finalizeDeleteScopeSymbolTable(deleteNode, true);
 	}
 
@@ -2960,7 +2968,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterIntersected_query( SQLSelectParserParser.Intersected_queryContext ctx) {
-		symbolTreeHelper.pushSymbolTableWithParentCteList();
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 	}
 
 	@Override
@@ -3038,7 +3046,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	
 	@Override
 	public void enterUnionized_query( SQLSelectParserParser.Unionized_queryContext ctx) {
-		symbolTreeHelper.pushSymbolTableWithParentCteList();
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 	}
 
 	@Override
@@ -3174,7 +3182,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterQuery_specification( SQLSelectParserParser.Query_specificationContext ctx) {
-		symbolTreeHelper.pushSymbolTableWithParentCteList();
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		walker.beginQuerySpecificationFromClause();
 	}
 
 	
@@ -3366,14 +3375,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
-		ArrayList<Object> queryReferenceList = new ArrayList<Object>();
-		symbolTreeHelper.flattenSubTreeForInterfaceQueryReferences(interfaceReference, queryReferenceList);
-		boolean hasQueryReferences = !queryReferenceList.isEmpty();
-		if (hasQueryReferences) {
-			columnList.addAll(queryReferenceList);
-		} else {
-			symbolTreeHelper.flattenSubTreeForInterfaceColumns(interfaceReference, columnList);
-		}
+		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
 
 		Object existingInterfaceEntry = selectInterface.get(interfaceAlias);
 		if (existingInterfaceEntry != null) {
@@ -3382,7 +3384,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		selectInterface.put(interfaceAlias, columnList);
 		symbolTreeHelper.recordInsertSourceSelectItemSequence(interfaceAlias);
-		if (hasQueryReferences || symbolTreeHelper.isQueryBackedSelectItemReference(interfaceReference)) {
+		if (symbolTreeHelper.isQueryBackedSelectItemReference(interfaceReference)) {
 			symbolTreeHelper.addCurrentQueryScalarSubqueryAlias(interfaceAlias);
 		}
 
@@ -3492,6 +3494,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.putAll((Map<String, Object>) subMap.remove("1"));
 			if (subMap.containsKey("2"))
 				subMap.put(MUMBLE_JOIN_EXTENSION_KEY, subMap.remove("2"));
+		}
+		if (symbolTreeHelper.isQuerySpecificationFromClause(ctx)) {
+			walker.markCurrentQueryFromClauseComplete();
 		}
 		walker.handlePushDown(ruleIndex);
 	}
@@ -6661,53 +6666,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterIn_predicate_value( SQLSelectParserParser.In_predicate_valueContext ctx) {
-		walker.pushSymbolTable();
+		symbolTreeHelper.pushDependentQueryContextForFrame(ctx);
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 	}
 
 	@Override
 	public void exitIn_predicate_value( SQLSelectParserParser.In_predicate_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "in_list");
 
 		walker.handleOneChild(ruleIndex);
-
-		// Conditionally restore or inject based on whether the IN value is a subquery.
-		HashMap<String, Object> symbols = walker.symbolTable;
-
-		// Decide based on the subtree content in reference: true when it contains SELECT key
-		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
-		
-		if (isSubquery) {
-			// Subquery case: inject the subquery's local symbol table under IN predicate.
-			// Extract the singular query reference key from the local symbol table (e.g., "query0")
-			String queryRefKey = symbolTreeHelper.getSubqueryReferenceKey(symbols);
-			if (queryRefKey == null && symbols != null && !symbols.isEmpty()) {
-				queryRefKey = symbols.keySet().iterator().next();
-			}
-			symbolTreeHelper.annotateSubqueryReference(reference, queryRefKey);
-
-			// Capture Query Column Dictionary for this level
-// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
-
-			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
-			if (queryRefKey != null && !queryRefKey.startsWith("def_")) {
-				symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
-			}
-
-			// Merge local symbol table back into parent
-			walker.popSymbolTablePutAll(symbols);
-
-			// Advance query counter after recording the injection
-			walker.queryCount++;
-
-		} else {
-			// Default: not a subquery, just restore the parent's symbol table
-			walker.popSymbolTablePutAll(symbols);
-		}
-			
+		symbolTreeHelper.exitPredicateSubqueryFrame(
+				reference,
+				walker.symbolTable,
+				SqlParseSymbolTreeHelper.PredicateSubqueryMergeKind.IN);
+		symbolTreeHelper.popDependentQueryContextForFrame();
 	}
 
 
@@ -6768,94 +6743,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void enterExists_predicate_value( SQLSelectParserParser.Exists_predicate_valueContext ctx) {
-		symbolTreeHelper.pushSymbolTableWithParentCteList();
+		symbolTreeHelper.pushDependentQueryContextForFrame(ctx);
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 	}
 
 	@Override
 	public void exitExists_predicate_value( SQLSelectParserParser.Exists_predicate_valueContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
 
 		walker.handleOneChild(ruleIndex);
-
-		// Conditionally restore or inject based on whether the IN value is a subquery.
-		HashMap<String, Object> symbols = walker.symbolTable;
-
-		// Decide based on the subtree content in reference: true when it contains SELECT key
-		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
-		
-		if (isSubquery) {
-			// Subquery case: inject the subquery's local symbol table under EXISTS<N>
-			String key = MUMBLE_EXISTS_KEY + walker.queryCount;
-			// Extract the singular query reference key from the local symbol table (e.g., "query0")
-			String queryRefKey = symbolTreeHelper.getSubqueryReferenceKey(symbols);
-			// Store only the query reference key under the EXISTS<N> entry
-			symbols.put(key, queryRefKey);
-			// Capture Query Column Dictionary for this level
-// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
-			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
-			if (queryRefKey != null && !queryRefKey.startsWith("def_")) {
-				symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
-			}
-			// Merge local symbol table back into parent
-			walker.popSymbolTablePutAll(symbols);
-			// Advance query counter after recording the injection
-			walker.queryCount++;
-
-		} else {
-			// Default: not a subquery, just restore the parent's symbol table
-			walker.popSymbolTablePutAll(symbols);
-		}
-			
+		symbolTreeHelper.exitPredicateSubqueryFrame(
+				reference,
+				walker.symbolTable,
+				SqlParseSymbolTreeHelper.PredicateSubqueryMergeKind.EXISTS);
+		symbolTreeHelper.popDependentQueryContextForFrame();
 	}
 
 	@Override
 	public void enterPredicand_subquery( SQLSelectParserParser.Predicand_subqueryContext ctx) {
-		walker.pushSymbolTable();
+		symbolTreeHelper.pushDependentQueryContextForFrame(ctx);
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 	}
 
 	@Override
 	public void exitPredicand_subquery( SQLSelectParserParser.Predicand_subqueryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
 
 		walker.handleOneChild(ruleIndex);
-
-		// Conditionally restore or inject based on whether the IN value is a subquery.
-		HashMap<String, Object> symbols = walker.symbolTable;
-
-		// Decide based on the subtree content in reference: true when it contains SELECT key
-		boolean isSubquery = (reference != null) && reference.containsKey(MUMBLE_SELECT_KEY);
-		
-		if (isSubquery) {
-			// Subquery case: inject the subquery's local symbol table under predicand<N>
-			// Capture Query Column Dictionary for this level
-// ***			walker.queryColumnDictionaryMap.put(key, walker.symbolTable.remove(CURRENT_QUERY_COLUMN_DICTIONARY));
-
-			// Extract the singular query reference key from the local symbol table (e.g., "query0")
-			String queryRefKey = null;
-			if (symbols != null && !symbols.isEmpty()) {
-				queryRefKey = symbols.keySet().iterator().next();
-			}
-			symbolTreeHelper.annotateSubqueryReference(reference, queryRefKey);
-			// Modify the symbol table by removing the query and adding it back with the def prefix to avoid conflicts
-			symbols.put("def_" + queryRefKey, symbols.remove(queryRefKey));
-			// Merge local symbol table back into parent
-			walker.popSymbolTablePutAll(symbols);
-			// Advance query counter after recording the injection
-			walker.queryCount++;
-
-		} else {
-			// Default: not a subquery, just restore the parent's symbol table
-			walker.popSymbolTablePutAll(symbols);
-		}
-			
+		symbolTreeHelper.exitPredicateSubqueryFrame(
+				reference,
+				walker.symbolTable,
+				SqlParseSymbolTreeHelper.PredicateSubqueryMergeKind.PREDICAND);
+		symbolTreeHelper.popDependentQueryContextForFrame();
 	}
 
 	@Override

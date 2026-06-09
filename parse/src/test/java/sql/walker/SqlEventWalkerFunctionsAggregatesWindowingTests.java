@@ -407,7 +407,7 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@14,77:79='end',<12>,1:77]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@14,77:79='end',<12>,1:77]]}, table_dictionary={tab1={}}, interface={unnamed_0=[{name=<column2>, type=predicand}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@14,77:79='end',<12>,1:77]]}, table_dictionary={tab1={}}, interface={unnamed_0=[{name=<column2>, type=predicand, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -533,7 +533,7 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_1=[[@14,57:57=')',<288>,1:57]], unnamed_0=[[@7,37:37=')',<288>,1:37]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_1=[[@14,57:57=')',<288>,1:57]], unnamed_0=[[@7,37:37=')',<288>,1:37]]}, table_dictionary={scbcrse={}}, interface={unnamed_1=[{name=<field2>, type=predicand}], unnamed_0=[{name=<field1>, type=predicand}]}, table_alias={a=scbcrse}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_1=[[@14,57:57=')',<288>,1:57]], unnamed_0=[[@7,37:37=')',<288>,1:37]]}, table_dictionary={scbcrse={}}, interface={unnamed_1=[{name=<field2>, type=predicand, table_ref=scbcrse}], unnamed_0=[{name=<field1>, type=predicand, table_ref=scbcrse}]}, table_alias={a=scbcrse}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -702,7 +702,7 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={apple=[[@1,7:11='apple',<381>,1:7]], unnamed_0=[[@6,27:27=')',<288>,1:27]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={apple=[[@1,7:11='apple',<381>,1:7]], unnamed_0=[[@6,27:27=')',<288>,1:27]]}, table_dictionary={tab1={apple=[[@1,7:11='apple',<381>,1:7], [@11,48:52='apple',<381>,1:48]]}}, grouped_by=[{name=apple, table_ref=tab1}], interface={apple=[{name=apple, table_ref=tab1}], unnamed_0=[{name=<other>, type=predicand}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={apple=[[@1,7:11='apple',<381>,1:7]], unnamed_0=[[@6,27:27=')',<288>,1:27]]}, table_dictionary={tab1={apple=[[@1,7:11='apple',<381>,1:7], [@11,48:52='apple',<381>,1:48]]}}, grouped_by=[{name=apple, table_ref=tab1}], interface={apple=[{name=apple, table_ref=tab1}], unnamed_0=[{name=<other>, type=predicand, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1728,7 +1728,7 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@23,150:150=')',<288>,1:150]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@23,150:150=')',<288>,1:150]]}, table_dictionary={dual={}}, interface={unnamed_0=[{name=<expression2>, type=predicand}, {name=<expression3>, type=predicand}, {name=<expression1>, type=predicand}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={unnamed_0=[[@23,150:150=')',<288>,1:150]]}, table_dictionary={dual={}}, interface={unnamed_0=[{name=<expression2>, type=predicand, table_ref=dual}, {name=<expression3>, type=predicand, table_ref=dual}, {name=<expression1>, type=predicand, table_ref=dual}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 

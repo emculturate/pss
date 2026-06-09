@@ -282,7 +282,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}, outer={literal=TRUE}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]], items=[[@10,42:42='t',<381>,1:42]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -327,7 +327,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=key, table_ref=f}}, 2={column={name=value, table_ref=f}}}, from={join={1={table={alias=t, table=my_table}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=obj_col, table_ref=t}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={value=[[@7,16:20='value',<381>,1:16]], key=[[@3,9:11='key',<381>,1:9]]}, table_dictionary={my_table={}, flatten0={value=[[@5,14:14='f',<381>,1:14]], key=[[@1,7:7='f',<381>,1:7]]}}, interface={value=[{name=value, table_ref=f}], key=[{name=key, table_ref=f}]}, table_alias={t=my_table, f=flatten0}}}",
+				"{query0={query_dictionary={value=[[@7,16:20='value',<381>,1:16]], key=[[@3,9:11='key',<381>,1:9]]}, table_dictionary={my_table={obj_col=[[@17,64:64='t',<381>,1:64]]}, flatten0={value=[[@5,14:14='f',<381>,1:14]], key=[[@1,7:7='f',<381>,1:7]]}}, interface={value=[{name=value, table_ref=f}], key=[{name=key, table_ref=f}]}, table_alias={t=my_table, f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -374,7 +374,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=f}}, 2={column={name=*, table_ref=e}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=a, table_ref=t}}}}}}, 4={modifier=LATERAL}, 5={table={alias=e, table_function={function_name=FLATTEN, parameters={input={column={name=value, table_ref=f}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@3,9:9='*',<291>,1:9], [@7,14:14='*',<291>,1:14]]}, table_dictionary={t={}, flatten1={*=[[@5,12:12='e',<381>,1:12]]}, flatten0={}}, interface={*=[{name=*, table_ref=e}]}, table_alias={e=flatten1, f=flatten0}}}",
+				"{query0={query_dictionary={*=[[@3,9:9='*',<291>,1:9], [@7,14:14='*',<291>,1:14]]}, table_dictionary={t={a=[[@16,49:49='t',<381>,1:49]]}, flatten1={*=[[@5,12:12='e',<381>,1:12]]}, flatten0={*=[[@1,7:7='f',<381>,1:7]], value=[[@27,82:82='f',<381>,1:82]]}}, interface={*=[{name=*, table_ref=e}]}, table_alias={e=flatten1, f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -413,7 +413,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=value, table_ref=f}}}, from={join={1={table={alias=null, table=t}}, 2={join=JOIN, on={condition={left={column={name=value, json_path=id, table_ref=f}}, right={column={name=id, table_ref=t}}, operator==}}}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=json_col, table_ref=t}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={id=[[@3,9:10='id',<381>,1:9]], value=[[@7,15:19='value',<381>,1:15]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@28,88:88='t',<381>,1:88]]}, flatten0={value=[[@5,13:13='f',<381>,1:13], [@22,75:75='f',<381>,1:75]]}}, filters=[{name=value, json_path=id, table_ref=f}, {name=id, table_ref=t}], interface={id=[{name=id, table_ref=t}], value=[{name=value, table_ref=f}]}, table_alias={f=flatten0}}}",
+				"{query0={query_dictionary={id=[[@3,9:10='id',<381>,1:9]], value=[[@7,15:19='value',<381>,1:15]]}, table_dictionary={t={json_col=[[@16,58:58='t',<381>,1:58]], id=[[@1,7:7='t',<381>,1:7], [@28,88:88='t',<381>,1:88]]}, flatten0={value=[[@5,13:13='f',<381>,1:13], [@22,75:75='f',<381>,1:75]]}}, filters=[{name=value, json_path=id, table_ref=f}, {name=id, table_ref=t}], interface={id=[{name=id, table_ref=t}], value=[{name=value, table_ref=f}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -430,7 +430,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=o}}, 2={column={name=sku, table_ref=f}, alias=sku}, 3={column={name=name, table_ref=p}}}, from={join={1={table={alias=o, table=orders}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=o}}}}}}, 5={join=JOIN, on={condition={left={column={name=sku, table_ref=p}}, right={column={name=sku, table_ref=f}}, operator==}}}, 6={table={alias=p, table=products}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<381>,1:9]], sku=[[@9,22:24='sku',<381>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<381>,1:7]]}, flatten0={sku=[[@5,13:13='f',<381>,1:13], [@37,122:122='f',<381>,1:122]]}, products={name=[[@11,27:27='p',<381>,1:27]], sku=[[@33,114:114='p',<381>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",
+				"{query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<381>,1:9]], sku=[[@9,22:24='sku',<381>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<381>,1:7]], items=[[@24,84:84='o',<381>,1:84]]}, flatten0={sku=[[@5,13:13='f',<381>,1:13], [@37,122:122='f',<381>,1:122]]}, products={name=[[@11,27:27='p',<381>,1:27]], sku=[[@33,114:114='p',<381>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -445,7 +445,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=value, table_ref=f}}}, from={join={1={table={alias=null, table=t}}, 2={join=JOIN, on={condition={left={column={name=id, table_ref=f}}, right={column={name=id, table_ref=t}}, operator==}}}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=json_col, table_ref=t}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={id=[[@3,9:10='id',<381>,1:9]], value=[[@7,15:19='value',<381>,1:15]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@26,82:82='t',<381>,1:82]]}, flatten0={id=[[@22,75:75='f',<381>,1:75]], value=[[@5,13:13='f',<381>,1:13]]}}, filters=[{name=id, table_ref=f}, {name=id, table_ref=t}], interface={id=[{name=id, table_ref=t}], value=[{name=value, table_ref=f}]}, table_alias={f=flatten0}}}",
+				"{query0={query_dictionary={id=[[@3,9:10='id',<381>,1:9]], value=[[@7,15:19='value',<381>,1:15]]}, table_dictionary={t={json_col=[[@16,58:58='t',<381>,1:58]], id=[[@1,7:7='t',<381>,1:7], [@26,82:82='t',<381>,1:82]]}, flatten0={id=[[@22,75:75='f',<381>,1:75]], value=[[@5,13:13='f',<381>,1:13]]}}, filters=[{name=id, table_ref=f}, {name=id, table_ref=t}], interface={id=[{name=id, table_ref=t}], value=[{name=value, table_ref=f}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -460,7 +460,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=t, table=big_table}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}}}}}, 5={join=JOIN, on={condition={left={column={name=id, table_ref=d}}, right={column={name=id, table_ref=f}}, operator==}}}, 6={table={alias=d, table=dim}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={big_table={*=[[@1,7:7='*',<291>,1:7]]}, dim={*=[[@1,7:7='*',<291>,1:7]], id=[[@21,87:87='d',<381>,1:87]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]], id=[[@25,94:94='f',<381>,1:94]]}}, filters=[{name=id, table_ref=d}, {name=id, table_ref=f}], interface={*=[{name=*, table_ref=*}]}, table_alias={t=big_table, d=dim, f=flatten0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={big_table={*=[[@1,7:7='*',<291>,1:7]], items=[[@12,62:62='t',<381>,1:62]]}, dim={*=[[@1,7:7='*',<291>,1:7]], id=[[@21,87:87='d',<381>,1:87]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]], id=[[@25,94:94='f',<381>,1:94]]}}, filters=[{name=id, table_ref=d}, {name=id, table_ref=f}], interface={*=[{name=*, table_ref=*}]}, table_alias={t=big_table, d=dim, f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -526,7 +526,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={table={alias=s, table_function={function={function_name=SPLIT_TO_TABLE, parameters={1={column={name=csv_col, table_ref=t}}, 2={literal=','}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={s=table_function0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={csv_col=[[@9,38:38='t',<381>,1:38]], *=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={s=table_function0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -539,7 +539,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=u, table_function={function={function_name=my_udtf, parameters={1={column={name=col, table_ref=t}}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={u=table_function0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={col=[[@11,49:49='t',<381>,1:49]], *=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={u=table_function0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -584,7 +584,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=col, table_ref=t}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={col=[[@11,52:52='t',<381>,1:52]], *=[[@1,7:7='*',<291>,1:7]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -597,7 +597,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={join=LEFT, on={literal=TRUE}}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, filters=[], interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
+				"{query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t={*=[[@1,7:7='*',<291>,1:7]], items=[[@11,51:51='t',<381>,1:51]]}, flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, filters=[], interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -627,7 +627,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=o}}, 2={column={name=sku, table_ref=f}, alias=sku}, 3={column={name=name, table_ref=p}}}, from={join={1={table={alias=o, table=orders}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=o}}}}}}, 5={join=JOIN, on={condition={left={column={name=sku, table_ref=p}}, right={column={name=sku, table_ref=f}}, operator==}}}, 6={table={alias=p, table=products}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<381>,1:9]], sku=[[@9,22:24='sku',<381>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<381>,1:7]]}, flatten0={sku=[[@5,13:13='f',<381>,1:13], [@37,122:122='f',<381>,1:122]]}, products={name=[[@11,27:27='p',<381>,1:27]], sku=[[@33,114:114='p',<381>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",
+				"{query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<381>,1:9]], sku=[[@9,22:24='sku',<381>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<381>,1:7]], items=[[@24,84:84='o',<381>,1:84]]}, flatten0={sku=[[@5,13:13='f',<381>,1:13], [@37,122:122='f',<381>,1:122]]}, products={name=[[@11,27:27='p',<381>,1:27]], sku=[[@33,114:114='p',<381>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",
 				extractor.getSymbolTable().toString());
 	}
 

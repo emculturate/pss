@@ -30,6 +30,7 @@ public class SqlParseSymbolTreeHelper {
 	private int tableFunctionSourceCount = 0;
 	private final Set<String> suppressedAmbiguousUnqualifiedKeys = new HashSet<String>();
 	private final Set<String> tableFunctionSourceRefs = new HashSet<String>();
+	private final ArrayDeque<String> dependentQueryContextStack = new ArrayDeque<>();
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -361,6 +362,9 @@ public class SqlParseSymbolTreeHelper {
 					localUnresolvedColumnMap,
 					localTableAliasMap,
 					localTableCollection);
+			resolveUpdateQualifiedUnresolvedColumnsToCteSources(
+					localUnresolvedColumnMap,
+					localTableAliasMap);
 			resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
 					localUnresolvedColumnMap,
 					localTableCollection,
@@ -398,7 +402,17 @@ public class SqlParseSymbolTreeHelper {
 				localInterface,
 				localCurrentQueryDictionary,
 				localTableCollection);
+		HashMap<String, Object> localFromTableCollection =
+				buildLocalPhysicalFromTableCollection(localTableCollection);
+		if (!localUnresolvedColumnMap.isEmpty()) {
+			// Bind unqualified refs to the sole local physical FROM table before ambiguity checks.
+			walker.moveEntriesToSingleTableIfSingleTarget(
+					localUnresolvedColumnMap,
+					localFromTableCollection);
+		}
 		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
+		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
+		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
 
 		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank()) {
 			resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable(
@@ -432,26 +446,24 @@ public class SqlParseSymbolTreeHelper {
 					explicitQualifiedUnknownEntries,
 					localInterface,
 					filtersList,
-					localTableAliasMap,
-					localTableCollection,
+					effectiveAliasMap,
+					effectiveTableCollection,
 					visibleQuerySourceCollection,
 					localCurrentQueryDictionary,
-					localUnresolvedColumnMap);
+					localUnresolvedColumnMap,
+					localTableCollection);
 
 			// Only relocate unresolved unqualified columns to a single target when no column
 			// still has multiple viable logical sources in scope.
 			boolean hasMultiSourceUnqualifiedUnknown = hasUnqualifiedUnknownWithMultipleViableSources(
 					localUnresolvedColumnMap,
-					localTableCollection,
-					visibleQuerySourceCollection,
+					localFromTableCollection,
+					null,
 					localTableAliasMap);
 			if (!hasMultiSourceUnqualifiedUnknown) {
-				// Attempt to resolve any remaining unqualified unknowns that only have one possible source table, and move them to the resolved table dictionary for downstream resolution.  This allows us to resolve queries with unqualified columns that only have one possible source.
-				boolean movedToSingleTableTarget = 
-					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, localTableCollection);
-				if (!movedToSingleTableTarget && !localUnresolvedColumnMap.isEmpty()) {
-					walker.moveEntriesToSingleTableIfSingleTarget(localUnresolvedColumnMap, currentTableDictionary);
-				}
+				walker.moveEntriesToSingleTableIfSingleTarget(
+						localUnresolvedColumnMap,
+						localFromTableCollection);
 			}
 		}
 
@@ -562,6 +574,16 @@ public class SqlParseSymbolTreeHelper {
 											queryDictionaryKey,
 											columnName,
 											qualifiedUnknownEntry);
+									String cteScopeRef = resolveCteScopeReference(tableRef, effectiveAliasMap);
+									if (cteScopeRef != null && !cteScopeRef.isBlank()) {
+										materializeCteContextQualifiedUnresolvedEntry(
+												tableRef,
+												columnName,
+												qualifiedUnknownEntry,
+												effectiveAliasMap,
+												cteScopeRef,
+												localTableCollection);
+									}
 								}
 							} else {
 								// Fatal for query-alias references is already emitted by emitExplicitQualifiedUnknownDiagnostics.
@@ -571,7 +593,7 @@ public class SqlParseSymbolTreeHelper {
 						} else {
 							HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
 									resolvedTableRef,
-									localTableCollection);
+									effectiveTableCollection);
 							// For explicit table references (table.column), table/alias existence is sufficient.
 							// Physical table schemas are not always available at parse time.
 							resolvedInSource = indicatedTableDictionary != null;
@@ -619,21 +641,21 @@ public class SqlParseSymbolTreeHelper {
 
 						ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
 								columnName,
-								localTableCollection,
-								visibleQuerySourceCollection,
+								localFromTableCollection,
+								null,
 								localTableAliasMap);
 
 						String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
 								deleteTargetTableRef,
 								localTableAliasMap,
-								localTableCollection,
+								localFromTableCollection,
 								sourceRefs);
 						if (preferredDeleteTargetRef != null) {
 							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
 							materializeResolvedUnqualifiedReference(
 									localUnresolvedColumnMap,
-									localTableCollection,
+									localFromTableCollection,
 									localTableAliasMap,
 									resolvedSourceRef,
 									columnName);
@@ -642,7 +664,8 @@ public class SqlParseSymbolTreeHelper {
 
 						if (sourceRefs.isEmpty()) {
 							// Scenario: implicit reference has no candidate source.
-							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+							if (!hasLocalPhysicalFromTables(localFromTableCollection)
+									&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 								emitUnqualifiedNotFoundInQueryAliasFatal(
 										columnName,
 										refLocation,
@@ -694,7 +717,7 @@ public class SqlParseSymbolTreeHelper {
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
 							materializeResolvedUnqualifiedReference(
 									localUnresolvedColumnMap,
-									localTableCollection,
+									localFromTableCollection,
 									localTableAliasMap,
 									resolvedSourceRef,
 									columnName);
@@ -716,24 +739,24 @@ public class SqlParseSymbolTreeHelper {
 				filtersList,
 				localUnresolvedColumnMap,
 				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
+				localFromTableCollection,
+				null,
 				localTableAliasMap,
 				deleteTargetTableRef);
 		assignTableRefsForColumnReferenceList(
 				groupedByList,
 				localUnresolvedColumnMap,
 				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
+				localFromTableCollection,
+				null,
 				localTableAliasMap,
 				deleteTargetTableRef);
 		assignTableRefsForColumnReferenceList(
 				orderedByList,
 				localUnresolvedColumnMap,
 				localCurrentQueryDictionary,
-				localTableCollection,
-				visibleQuerySourceCollection,
+				localFromTableCollection,
+				null,
 				localTableAliasMap,
 				deleteTargetTableRef);
 
@@ -772,8 +795,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
-		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, localTableAliasMap, localTableCollection);
+		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
+
+		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
+		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
 
 		// Merge everything back together into the final symbol table for this level of the query, with table aliases first, 
 		// then symbol table entries, then query entries, then table entries, then the interface and current query dictionary 
@@ -811,6 +836,10 @@ public class SqlParseSymbolTreeHelper {
 			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
 		if (preservedInsertSourceSelectSequence != null) {
 			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
+		}
+
+		if (localTableCollection != null && !localTableCollection.isEmpty()) {
+			walker.mergeTableDictionaryIntoWalkerTableDictionary(localTableCollection);
 		}
 
 		return walker.symbolTable;
@@ -890,13 +919,7 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public void finalizeTopLevelUnresolvedColumns(boolean insertStatementBoundary) {
-		Object unresolvedObject = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		if (!(unresolvedObject instanceof HashMap<?, ?> unresolvedMapObject)) {
-			return;
-		}
-
-		HashMap<String, Object> unresolvedMap = unresolvedObject instanceof HashMap<?, ?> 
-											  ? (HashMap<String, Object>) unresolvedMapObject : null;
+		HashMap<String, Object> unresolvedMap = collectStatementBoundaryUnresolvedColumns();
 		if (unresolvedMap == null || unresolvedMap.isEmpty()) {
 			return;
 		}
@@ -1110,22 +1133,28 @@ public class SqlParseSymbolTreeHelper {
 				unknownColumnsCsv);
 	}
 
-	public void mergeCteListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
-		Map<String, Object> withCteList = getCteListSymbolMap(withSymbols);
-		if (withCteList == null || withCteList.isEmpty()) {
+	public void mergeContextListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
+		Map<String, Object> withContextList = getContextListSymbolMap(withSymbols);
+		if (withContextList == null || withContextList.isEmpty()) {
 			return;
 		}
 
-		Map<String, Object> queryCteList = getCteListSymbolMap(querySymbols);
-		if (queryCteList == null) {
-			querySymbols.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>(withCteList));
+		Map<String, Object> queryContextList = getContextListSymbolMap(querySymbols);
+		if (queryContextList == null) {
+			querySymbols.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(withContextList));
 		} else {
-			for (Map.Entry<String, Object> entry : withCteList.entrySet()) {
-				queryCteList.putIfAbsent(entry.getKey(), entry.getValue());
+			for (Map.Entry<String, Object> entry : withContextList.entrySet()) {
+				queryContextList.putIfAbsent(entry.getKey(), entry.getValue());
 			}
 		}
 
-		withSymbols.remove(MUMBLE_CTE_LIST_KEY);
+		withSymbols.remove(MUMBLE_CONTEXT_LIST_KEY);
+	}
+
+	/** @deprecated use {@link #mergeContextListIntoQueryScope(Map, Map)} */
+	@Deprecated
+	public void mergeCteListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
+		mergeContextListIntoQueryScope(querySymbols, withSymbols);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1220,15 +1249,21 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Map<String, Object> ensureCteListSymbolMap() {
-		Object cteListObject = walker.symbolTable.get(MUMBLE_CTE_LIST_KEY);
-		if (cteListObject instanceof Map<?, ?> cteListMapObject) {
-			return (Map<String, Object>) cteListMapObject;
+	public Map<String, Object> ensureContextListSymbolMap() {
+		Object contextListObject = walker.symbolTable.get(MUMBLE_CONTEXT_LIST_KEY);
+		if (contextListObject instanceof Map<?, ?> contextListMapObject) {
+			return (Map<String, Object>) contextListMapObject;
 		}
 
-		Map<String, Object> cteListMap = new LinkedHashMap<String, Object>();
-		walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, cteListMap);
-		return cteListMap;
+		Map<String, Object> contextListMap = new LinkedHashMap<String, Object>();
+		walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, contextListMap);
+		return contextListMap;
+	}
+
+	/** @deprecated use {@link #ensureContextListSymbolMap()} */
+	@Deprecated
+	public Map<String, Object> ensureCteListSymbolMap() {
+		return ensureContextListSymbolMap();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2709,6 +2744,7 @@ public class SqlParseSymbolTreeHelper {
 		boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary =
 				shouldDeferSubqueryUnresolvedDiagnosticsToStatementBoundary(ctx);
 
+		boolean isStatementTopLevelQueryScope = isMainStatementQuerySpecification(ctx);
 		finalizeQueryScopeSymbolTable(
 				"query" + walker.queryCount,
 				querySpecificationSubMap,
@@ -2716,7 +2752,23 @@ public class SqlParseSymbolTreeHelper {
 				hasParentQueryScope,
 				passUpQualifiedUnresolvedFromThisSubquery,
 				emitQualifiedUnresolvedFromThisSubquery,
-				deferSubqueryUnresolvedDiagnosticsToStatementBoundary);
+				deferSubqueryUnresolvedDiagnosticsToStatementBoundary,
+				isStatementTopLevelQueryScope);
+	}
+
+	/** True for the outermost {@code query_specification} not nested under a {@code Subquery} node. */
+	private boolean isMainStatementQuerySpecification(ParserRuleContext ctx) {
+		if (ctx == null) {
+			return false;
+		}
+		ParserRuleContext ancestor = ctx.getParent();
+		while (ancestor != null) {
+			if (ancestor instanceof SQLSelectParserParser.SubqueryContext) {
+				return false;
+			}
+			ancestor = ancestor.getParent();
+		}
+		return true;
 	}
 
 	/**
@@ -2732,7 +2784,8 @@ public class SqlParseSymbolTreeHelper {
 			boolean hasParentQueryScope,
 			boolean passUpQualifiedUnresolvedFromThisSubquery,
 			boolean emitQualifiedUnresolvedFromThisSubquery,
-			boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+			boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary,
+			boolean isStatementTopLevelQueryScope) {
 		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
 		boolean deferCorrelatedValueSubqueryQualifiedUnknowns = hasParentQueryScope
 				&& passUpQualifiedUnresolvedFromThisSubquery;
@@ -2758,6 +2811,14 @@ public class SqlParseSymbolTreeHelper {
 
 		HashMap<String, Object> unresolvedMap =
 				(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		HashMap<String, Object> scopeTreeUnresolved = new HashMap<String, Object>();
+		collectAndStripUnresolvedFromScopeTree(scopeSymbols, scopeTreeUnresolved);
+		if (!scopeTreeUnresolved.isEmpty()) {
+			if (unresolvedMap == null) {
+				unresolvedMap = new HashMap<String, Object>();
+			}
+			walker.mergeUnknownEntries(unresolvedMap, scopeTreeUnresolved);
+		}
 		HashMap<String, Object> qualifiedUnresolvedForParent = new HashMap<String, Object>();
 		HashMap<String, Object> unqualifiedUnresolvedForLocal = new HashMap<String, Object>();
 		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
@@ -2775,11 +2836,66 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		publishQueryLikeScope(scopeKey, scopeSymbols);
-
-		if (!hasParentQueryScope && !deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
-			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary && !qualifiedUnresolvedForParent.isEmpty()) {
+			if (emitQualifiedUnresolvedFromThisSubquery && !isStatementTopLevelQueryScope) {
+				HashMap<String, Object> localScopeFatals = new HashMap<String, Object>();
+				HashMap<String, Object> deferToStatementTop = new HashMap<String, Object>();
+				@SuppressWarnings("unchecked")
+				HashMap<String, Object> tableAliasMap =
+						(walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY) instanceof HashMap<?, ?>)
+								? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY)
+								: new HashMap<String, Object>();
+				@SuppressWarnings("unchecked")
+				HashMap<String, Object> tableCollection =
+						(walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY) instanceof HashMap<?, ?>)
+								? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY)
+								: new HashMap<String, Object>();
+				HashMap<String, Object> visibleAliasMap = buildEffectiveVisibleAliasMap(tableAliasMap);
+				HashMap<String, Object> visibleTableCollection = buildEffectiveVisibleTableCollection(tableCollection);
+				for (Map.Entry<String, Object> entry : qualifiedUnresolvedForParent.entrySet()) {
+					if (shouldDeferQualifiedUntilStatementTop(
+							entry.getKey(),
+							visibleAliasMap,
+							visibleTableCollection)) {
+						deferToStatementTop.put(entry.getKey(), entry.getValue());
+					} else {
+						localScopeFatals.put(entry.getKey(), entry.getValue());
+					}
+				}
+				resolveQualifiedUnresolvedEntries(
+						localScopeFatals,
+						copyLocalScopeAliasMap(tableAliasMap),
+						copyLocalScopeTableCollection(tableCollection),
+						true);
+				qualifiedUnresolvedForParent.clear();
+				qualifiedUnresolvedForParent.putAll(deferToStatementTop);
+			}
+			resolveQualifiedUnresolvedAtQueryScopeExit(
+					qualifiedUnresolvedForParent,
+					isStatementTopLevelQueryScope);
+			if (isStatementTopLevelQueryScope) {
+				@SuppressWarnings("unchecked")
+				HashMap<String, Object> tableAliasMap =
+						(walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY) instanceof HashMap<?, ?>)
+								? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY)
+								: new HashMap<String, Object>();
+				@SuppressWarnings("unchecked")
+				HashMap<String, Object> tableCollection =
+						(walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY) instanceof HashMap<?, ?>)
+								? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY)
+								: new HashMap<String, Object>();
+				HashMap<String, Object> visibleAliasMap = buildEffectiveVisibleAliasMap(tableAliasMap);
+				mergePublishedScopeContextListIntoAliasMap(visibleAliasMap);
+				materializeResolvableGlobalQualifiedUnresolvedLocations(
+						visibleAliasMap,
+						buildEffectiveVisibleTableCollection(tableCollection));
+			}
 		}
+
+		materializeRemainingSingleTableUnqualifiedAtScopeExit(unqualifiedUnresolvedForLocal, scopeSymbols);
+		mergeScopeTableDictionaryIntoGlobalWalkerDictionary(scopeSymbols);
+
+		publishQueryLikeScope(scopeKey, scopeSymbols);
 
 		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
 			HashMap<String, Object> deferredUnresolvedForParent = new HashMap<String, Object>();
@@ -2789,27 +2905,18 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		if (emitQualifiedUnresolvedFromThisSubquery && !qualifiedUnresolvedForParent.isEmpty()) {
-			emitQualifiedUnresolvedColumnsFatal(qualifiedUnresolvedForParent);
-		} else if (hasParentQueryScope
-				&& passUpQualifiedUnresolvedFromThisSubquery
-				&& !qualifiedUnresolvedForParent.isEmpty()) {
-			HashMap<String, Object> parentResolvableQualifiedUnknowns =
-					partitionParentResolvableQualifiedUnknownsAndEmit(
-							qualifiedUnresolvedForParent,
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY),
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY),
-							(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_QUERY_DICTIONARY_KEY));
-			if (!parentResolvableQualifiedUnknowns.isEmpty()) {
-				Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-				if (parentUnresolvedObject instanceof HashMap<?, ?>) {
-					walker.mergeUnknownEntries(
-							(HashMap<String, Object>) parentUnresolvedObject, parentResolvableQualifiedUnknowns);
-				} else {
-					walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, parentResolvableQualifiedUnknowns);
-				}
+		if (!passUpQualifiedUnresolvedFromThisSubquery && !qualifiedUnresolvedForParent.isEmpty()) {
+			Object archivedUnresolved = scopeSymbols.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+			if (archivedUnresolved instanceof HashMap<?, ?>) {
+				walker.mergeUnknownEntries(
+						(HashMap<String, Object>) archivedUnresolved,
+						qualifiedUnresolvedForParent);
+			} else {
+				scopeSymbols.put(MUMBLE_UNRESOLVED_COLUMN_KEY, new HashMap<String, Object>(qualifiedUnresolvedForParent));
 			}
-		} else if (hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
+		}
+
+		if (passUpQualifiedUnresolvedFromThisSubquery && !qualifiedUnresolvedForParent.isEmpty()) {
 			Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
 			if (parentUnresolvedObject instanceof HashMap<?, ?>) {
 				walker.mergeUnknownEntries(
@@ -2817,8 +2924,6 @@ public class SqlParseSymbolTreeHelper {
 			} else {
 				walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qualifiedUnresolvedForParent);
 			}
-		} else if (!hasParentQueryScope && !qualifiedUnresolvedForParent.isEmpty()) {
-			emitQualifiedSourceNotFoundFatals(qualifiedUnresolvedForParent);
 		}
 	}
 
@@ -2832,7 +2937,16 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> scopeSymbols,
 			boolean insertSource) {
 		finalizeSetOperationAtExit(scopeSymbols, insertSource);
-		publishQueryLikeScope(scopeKey, (HashMap<String, Object>) scopeSymbols);
+		HashMap<String, Object> scopePayload = (HashMap<String, Object>) scopeSymbols;
+
+		HashMap<String, Object> liveDeferred = new HashMap<String, Object>();
+		Object liveUnresolved = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (liveUnresolved instanceof HashMap<?, ?>) {
+			walker.mergeUnknownEntries(liveDeferred, (HashMap<String, Object>) liveUnresolved);
+		}
+
+		finalizeScopeDeferredUnresolved(scopePayload, liveDeferred, getVisiblePriorNamedScopeRefs());
+		publishQueryLikeScope(scopeKey, scopePayload);
 	}
 
 	/**
@@ -2895,12 +3009,19 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * Accidental archive key produced when {@code unresolved_column} was renamed via {@code def_}
+	 * promotion. Hoist entries back into the active {@link #MUMBLE_UNRESOLVED_COLUMN_KEY} pipeline.
+	 */
+	private static final String DEF_ARCHIVED_UNRESOLVED_COLUMN_KEY = "def_" + MUMBLE_UNRESOLVED_COLUMN_KEY;
+
+	/**
 	 * Pops a finalized scope payload into the parent symbol table and advances {@code queryCount}.
 	 */
 	public void publishScopeSymbolTable(String scopeKey, HashMap<String, Object> scopePayload) {
 		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
 			return;
 		}
+		stripInheritedVisibleAliasesFromPublishedTree(scopePayload);
 		walker.popSymbolTable(scopeKey, scopePayload);
 		walker.queryCount++;
 	}
@@ -2917,7 +3038,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
-		publishScopeSymbolTable(scopeKey, scopePayload);
+		HashMap<String, Object> hoistedUnresolved = new HashMap<String, Object>();
+		collectAndStripUnresolvedFromScopeTree(scopePayload, hoistedUnresolved);
+		stripUnresolvedFromScopePayload(scopePayload);
+		walker.popSymbolTable(scopeKey, scopePayload);
+		mergeUnresolvedEntriesIntoCurrentScope(hoistedUnresolved);
+		walker.queryCount++;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3091,17 +3217,31 @@ public class SqlParseSymbolTreeHelper {
 
 		if (nodeObj instanceof Map<?, ?> nodeMapObj) {
 			Map<String, Object> nodeMap = (Map<String, Object>) nodeMapObj;
+			if (nodeMap.containsKey(MUMBLE_SELECT_KEY)) {
+				return;
+			}
 
 			Object tableObj = nodeMap.get(MUMBLE_TABLE_KEY);
 			if (tableObj instanceof String) {
 				String tableRef = getQualifiedTableReference(nodeMap);
-				registerCteBackedSourceAliasMappings(tableRef, nodeMap.get(MUMBLE_ALIAS_KEY));
+				Object aliasObj = nodeMap.get(MUMBLE_ALIAS_KEY);
+				registerCteBackedSourceAliasMappings(tableRef, aliasObj);
+				registerPhysicalTableAliasMappings(tableRef, aliasObj);
 			} else if (tableObj instanceof Map<?, ?> tableMapObj) {
-				collectFromClauseCteAliasMappingsRecursive(tableMapObj);
+				Map<String, Object> tableMap = (Map<String, Object>) tableMapObj;
+				if (!tableMap.containsKey(MUMBLE_QUERY_KEY)) {
+					collectFromClauseCteAliasMappingsRecursive(tableMapObj);
+				}
 			}
 
 			for (Object valueObj : nodeMap.values()) {
-				if (valueObj instanceof Map<?, ?> || valueObj instanceof List<?>) {
+				if (valueObj instanceof Map<?, ?> valueMapObj) {
+					Map<String, Object> valueMap = (Map<String, Object>) valueMapObj;
+					if (valueMap.containsKey(MUMBLE_SELECT_KEY) || valueMap.containsKey(MUMBLE_QUERY_KEY)) {
+						continue;
+					}
+					collectFromClauseCteAliasMappingsRecursive(valueObj);
+				} else if (valueObj instanceof List<?>) {
 					collectFromClauseCteAliasMappingsRecursive(valueObj);
 				}
 			}
@@ -3130,6 +3270,20 @@ public class SqlParseSymbolTreeHelper {
 			upsertCurrentTableAliasMapping(alias, cteScopeRef);
 			upsertVisibleCteAliasMapping(alias, tableRef, cteScopeRef);
 		}
+	}
+
+	/** Re-register physical-table aliases from the FROM AST before scope finalization. */
+	public void registerPhysicalTableAliasMappings(String tableRef, Object aliasObj) {
+		if (tableRef == null || tableRef.isBlank()) {
+			return;
+		}
+		if (resolveCteOrExistingQueryScopeInVisibleScopes(tableRef) != null) {
+			return;
+		}
+		if (aliasObj instanceof String alias && !alias.isBlank()) {
+			upsertCurrentTableAliasMapping(alias, tableRef);
+		}
+		walker.ensureTableDictionaryEntry(tableRef);
 	}
 
 	public void upsertVisibleCteAliasMapping(String alias, String sourceRef, String cteScopeRef) {
@@ -3218,6 +3372,615 @@ public class SqlParseSymbolTreeHelper {
 		return false;
 	}
 
+	/** True when this FROM clause belongs to a SELECT {@code query_specification}, not DML. */
+	public boolean isQuerySpecificationFromClause(ParserRuleContext fromClauseContext) {
+		if (fromClauseContext == null) {
+			return false;
+		}
+		ParserRuleContext cursor = fromClauseContext.getParent();
+		while (cursor != null) {
+			int ruleIndex = cursor.getRuleIndex();
+			if (ruleIndex == SQLSelectParserParser.RULE_query_specification) {
+				return true;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_insert_expression
+					|| ruleIndex == SQLSelectParserParser.RULE_update_expression
+					|| ruleIndex == SQLSelectParserParser.RULE_delete_expression) {
+				return false;
+			}
+			cursor = cursor.getParent();
+		}
+		return false;
+	}
+
+	/** Defer outer-correlated refs while the statement's main query_spec is still being assembled. */
+	private boolean shouldDeferQualifiedUntilStatementTop(
+			String unresolvedKey,
+			HashMap<String, Object> visibleAliasMap,
+			HashMap<String, Object> visibleTableDictionary) {
+		if (unresolvedKey == null || !unresolvedKey.contains(".")) {
+			return false;
+		}
+		if (!walker.anyIncompleteQuerySpecificationOnStack()) {
+			return false;
+		}
+		HashMap<String, Object> tableDictionaryView =
+				buildQualifiedResolutionTableDictionaryView(visibleTableDictionary);
+		if (walker.canResolveQualifiedUnknownInScope(
+				unresolvedKey,
+				visibleAliasMap,
+				tableDictionaryView,
+				walker.queryColumnDictionaryMap)) {
+			return false;
+		}
+		int dotIndex = unresolvedKey.indexOf('.');
+		String columnName = unresolvedKey.substring(dotIndex + 1);
+		return columnName.startsWith("<") && columnName.endsWith(">");
+	}
+
+	/** Resolve or fatal qualified unknowns once at query_spec exit using stack-visible scope only. */
+	@SuppressWarnings("unchecked")
+	private void resolveQualifiedUnresolvedAtQueryScopeExit(
+			HashMap<String, Object> qualifiedUnresolved,
+			boolean emitRemainingFatals) {
+		if (qualifiedUnresolved == null || qualifiedUnresolved.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> tableAliasMap =
+				(walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY)
+						: new HashMap<String, Object>();
+		HashMap<String, Object> tableCollection =
+				(walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY)
+						: new HashMap<String, Object>();
+		HashMap<String, Object> visibleAliasMap;
+		HashMap<String, Object> visibleTableCollection;
+		if (emitRemainingFatals) {
+			visibleAliasMap = buildEffectiveVisibleAliasMap(tableAliasMap);
+			mergePublishedScopeContextListIntoAliasMap(visibleAliasMap);
+			visibleTableCollection = buildEffectiveVisibleTableCollection(tableCollection);
+		} else {
+			visibleAliasMap = copyLocalScopeAliasMap(tableAliasMap);
+			mergePublishedScopeContextListIntoAliasMap(visibleAliasMap);
+			visibleTableCollection = copyLocalScopeTableCollection(tableCollection);
+		}
+		resolveQualifiedUnresolvedEntries(
+				qualifiedUnresolved,
+				visibleAliasMap,
+				visibleTableCollection,
+				emitRemainingFatals);
+	}
+
+	private HashMap<String, Object> copyLocalScopeAliasMap(HashMap<String, Object> localAliasMap) {
+		HashMap<String, Object> localOnly = new HashMap<String, Object>();
+		if (localAliasMap != null && !localAliasMap.isEmpty()) {
+			localOnly.putAll(localAliasMap);
+		}
+		return localOnly;
+	}
+
+	private HashMap<String, Object> copyLocalScopeTableCollection(HashMap<String, Object> localTableCollection) {
+		HashMap<String, Object> localOnly = new HashMap<String, Object>();
+		if (localTableCollection != null && !localTableCollection.isEmpty()) {
+			localOnly.putAll(localTableCollection);
+		}
+		return localOnly;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildQualifiedResolutionTableDictionaryView(
+			HashMap<String, Object> visibleTableDictionary) {
+		HashMap<String, Object> tableDictionaryView = new HashMap<String, Object>();
+		if (visibleTableDictionary != null) {
+			tableDictionaryView.putAll(visibleTableDictionary);
+		}
+		return tableDictionaryView;
+	}
+
+	/**
+	 * Writes one resolvable qualified entry into the global walker table dictionary and the
+	 * current scope local table dictionary.
+	 */
+	@SuppressWarnings("unchecked")
+	private boolean materializeQualifiedUnresolvedEntry(
+			String unresolvedKey,
+			Object entryValue,
+			HashMap<String, Object> visibleAliasMap) {
+		return materializeQualifiedUnresolvedEntry(
+				unresolvedKey,
+				entryValue,
+				visibleAliasMap,
+				null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean materializeQualifiedUnresolvedEntry(
+			String unresolvedKey,
+			Object entryValue,
+			HashMap<String, Object> visibleAliasMap,
+			HashMap<String, Object> localTableCollectionOverride) {
+		if (unresolvedKey == null || unresolvedKey.isBlank() || !unresolvedKey.contains(".") || entryValue == null) {
+			return false;
+		}
+
+		int dotIndex = unresolvedKey.indexOf('.');
+		String sourceRef = unresolvedKey.substring(0, dotIndex);
+		String columnName = unresolvedKey.substring(dotIndex + 1);
+		if (hasCteListSymbolMap()) {
+			String cteScopeRef = resolveCteScopeReference(sourceRef, visibleAliasMap);
+			if (cteScopeRef != null && !cteScopeRef.isBlank()) {
+				boolean resolvedInCte = "*".equals(columnName)
+						|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
+						|| hasWildcardInQueryOutputInterface(cteScopeRef);
+				if (resolvedInCte) {
+					return materializeCteContextQualifiedUnresolvedEntry(
+							sourceRef,
+							columnName,
+							entryValue,
+							visibleAliasMap,
+							cteScopeRef,
+							localTableCollectionOverride);
+				}
+			}
+		}
+		String resolvedTableRef = walker.resolveAliasToTableName(sourceRef, visibleAliasMap);
+		if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
+			resolvedTableRef = sourceRef;
+		}
+		if (walker.isNonTableQuerySourceReference(resolvedTableRef)
+				|| walker.isNonTableQuerySourceReference(sourceRef)) {
+			return false;
+		}
+		if (visibleAliasMap != null && !visibleAliasMap.isEmpty()) {
+			String queryAliasTarget = resolveAliasToQuerySourceFromAliasMap(sourceRef, visibleAliasMap);
+			if (queryAliasTarget != null && walker.isNonTableQuerySourceReference(queryAliasTarget)) {
+				return false;
+			}
+			String aliasResolvedTarget = walker.resolveAliasToTableName(sourceRef, visibleAliasMap);
+			if (aliasResolvedTarget != null
+					&& walker.isNonTableQuerySourceReference(aliasResolvedTarget)) {
+				return false;
+			}
+		}
+
+		HashMap<String, Object> globalTableDictionary = walker.getWalkerTableDictionary();
+		HashMap<String, Object> targetDictionary = walker.getTableDictionaryForReference(
+				resolvedTableRef,
+				globalTableDictionary);
+		if (targetDictionary == null && globalTableDictionary != null) {
+			targetDictionary = ensureTableDictionaryEntry(globalTableDictionary, resolvedTableRef);
+		}
+		if (targetDictionary == null) {
+			return false;
+		}
+
+		walker.mergeResolvedColumnIntoDictionary(targetDictionary, columnName, entryValue);
+		HashMap<String, Object> localTableCollection = localTableCollectionOverride;
+		if (localTableCollection == null) {
+			Object localTableDictObj = walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+			if (localTableDictObj instanceof HashMap<?, ?>) {
+				localTableCollection = (HashMap<String, Object>) localTableDictObj;
+			}
+		}
+		if (localTableCollection != null) {
+			HashMap<String, Object> localTarget = ensureTableDictionaryEntry(
+					localTableCollection,
+					normalizeTableRef(resolvedTableRef));
+			walker.mergeResolvedColumnIntoDictionary(localTarget, columnName, entryValue);
+		}
+		if (walker.globalQualifiedUnresolvedLocations != null) {
+			walker.globalQualifiedUnresolvedLocations.remove(unresolvedKey);
+		}
+		return true;
+	}
+
+	/** Publishes a finalized scope local table dictionary into the global walker dictionary. */
+	@SuppressWarnings("unchecked")
+	private void mergeScopeTableDictionaryIntoGlobalWalkerDictionary(Map<String, Object> scopeSymbols) {
+		if (scopeSymbols == null) {
+			return;
+		}
+		Object tableDictionaryObj = scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (tableDictionaryObj instanceof HashMap<?, ?> tableDictionaryMap
+				&& !tableDictionaryMap.isEmpty()) {
+			walker.mergeTableDictionaryIntoWalkerTableDictionary(
+					(HashMap<String, Object>) tableDictionaryMap);
+		}
+	}
+
+	/** Resolves deferred unqualified columns when the scope has exactly one physical table source. */
+	@SuppressWarnings("unchecked")
+	private void materializeRemainingSingleTableUnqualifiedAtScopeExit(
+			HashMap<String, Object> unqualifiedUnresolved,
+			Map<String, Object> scopeSymbols) {
+		if (unqualifiedUnresolved == null || unqualifiedUnresolved.isEmpty() || scopeSymbols == null) {
+			return;
+		}
+
+		HashMap<String, Object> tableCollection =
+				(scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY)
+						: new HashMap<String, Object>();
+		if (tableCollection.isEmpty()) {
+			return;
+		}
+
+		if (walker.moveEntriesToSingleTableIfSingleTarget(unqualifiedUnresolved, tableCollection)) {
+			scopeSymbols.put(MUMBLE_TABLE_DICTIONARY_KEY, tableCollection);
+			walker.mergeTableDictionaryIntoWalkerTableDictionary(tableCollection);
+			Object interfaceObj = scopeSymbols.get(MUMBLE_INTERFACE_KEY);
+			if (interfaceObj instanceof HashMap<?, ?>) {
+				patchInterfaceTableRefsForSinglePhysicalTableScope(
+						(HashMap<String, Object>) interfaceObj,
+						tableCollection);
+			}
+		}
+	}
+
+	/**
+	 * Unified qualified-column egress at query exit: resolve via CTE context or stack-visible
+	 * scope, materialize into the global table dictionary, optionally fatal the remainder.
+	 */
+	@SuppressWarnings("unchecked")
+	private void resolveQualifiedUnresolvedEntries(
+			HashMap<String, Object> qualifiedUnresolved,
+			HashMap<String, Object> visibleAliasMap,
+			HashMap<String, Object> visibleTableDictionary,
+			boolean emitUnresolvedFatals) {
+		if (qualifiedUnresolved == null || qualifiedUnresolved.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> tableDictionaryView =
+				buildQualifiedResolutionTableDictionaryView(visibleTableDictionary);
+		ArrayList<String> resolvedKeys = new ArrayList<String>();
+		for (Map.Entry<String, Object> entry : qualifiedUnresolved.entrySet()) {
+			String unresolvedKey = entry.getKey();
+			if (unresolvedKey == null || unresolvedKey.isBlank() || !unresolvedKey.contains(".")) {
+				continue;
+			}
+			int dotIndex = unresolvedKey.indexOf('.');
+			String sourceRef = unresolvedKey.substring(0, dotIndex);
+			String columnName = unresolvedKey.substring(dotIndex + 1);
+			if ("*".equals(columnName)) {
+				Object aliasTargetObj = visibleAliasMap.get(sourceRef);
+				if (!(aliasTargetObj instanceof String)) {
+					for (Map.Entry<String, Object> aliasEntry : visibleAliasMap.entrySet()) {
+						if (aliasEntry.getKey() != null
+								&& aliasEntry.getKey().equalsIgnoreCase(sourceRef)
+								&& aliasEntry.getValue() instanceof String) {
+							aliasTargetObj = aliasEntry.getValue();
+							break;
+						}
+					}
+				}
+				if (aliasTargetObj instanceof String aliasTarget) {
+					boolean aliasTargetsQuery = aliasTarget.startsWith(MUMBLE_QUERY_KEY)
+							|| aliasTarget.startsWith(MUMBLE_UNION_KEY)
+							|| aliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
+							|| aliasTarget.startsWith(MUMBLE_VALUES_KEY)
+							|| MUMBLE_VALUES_KEY.equals(aliasTarget);
+					if (aliasTargetsQuery) {
+						promoteQualifiedWildcardIntoQuerySource(aliasTarget, entry.getValue());
+						resolvedKeys.add(unresolvedKey);
+						continue;
+					}
+				}
+			}
+			if (tryResolveQualifiedEntryViaCteContext(unresolvedKey, entry.getValue(), visibleAliasMap)) {
+				resolvedKeys.add(unresolvedKey);
+				continue;
+			}
+			if (walker.canResolveQualifiedUnknownInScope(
+					unresolvedKey,
+					visibleAliasMap,
+					tableDictionaryView,
+					walker.queryColumnDictionaryMap)
+					&& materializeQualifiedUnresolvedEntry(
+							unresolvedKey,
+							entry.getValue(),
+							visibleAliasMap)) {
+				resolvedKeys.add(unresolvedKey);
+			}
+		}
+		for (String resolvedKey : resolvedKeys) {
+			qualifiedUnresolved.remove(resolvedKey);
+		}
+		if (qualifiedUnresolved.isEmpty() || !emitUnresolvedFatals) {
+			return;
+		}
+
+		ArrayList<String> diagnosedKeys = new ArrayList<String>();
+		for (Map.Entry<String, Object> unresolvedEntry : qualifiedUnresolved.entrySet()) {
+			String unresolvedKey = unresolvedEntry.getKey();
+			int dotIndex = unresolvedKey == null ? -1 : unresolvedKey.indexOf('.');
+			String columnName = (dotIndex > 0 && dotIndex + 1 < unresolvedKey.length())
+					? unresolvedKey.substring(dotIndex + 1)
+					: unresolvedKey;
+			if (columnName != null
+					&& columnName.startsWith("<")
+					&& columnName.endsWith(">")
+					&& isQualifiedEntryAlreadyMaterialized(unresolvedKey, visibleAliasMap)) {
+				diagnosedKeys.add(unresolvedKey);
+				continue;
+			}
+			if (isQualifiedEntryAlreadyMaterialized(unresolvedKey, visibleAliasMap)) {
+				diagnosedKeys.add(unresolvedKey);
+				continue;
+			}
+			emitQualifiedSourceNotFoundFatalForEntry(
+					unresolvedKey,
+					unresolvedEntry.getValue(),
+					qualifiedUnresolved);
+			diagnosedKeys.add(unresolvedKey);
+		}
+		for (String diagnosedKey : diagnosedKeys) {
+			qualifiedUnresolved.remove(diagnosedKey);
+		}
+	}
+
+	/** Resolve a qualified ref against a prior WITH/CTE entry in {@code context_list}. */
+	@SuppressWarnings("unchecked")
+	private boolean tryResolveQualifiedEntryViaCteContext(
+			String unresolvedKey,
+			Object entryValue,
+			HashMap<String, Object> visibleAliasMap) {
+		if (unresolvedKey == null || !unresolvedKey.contains(".") || !hasCteListSymbolMap()) {
+			return false;
+		}
+
+		int dotIndex = unresolvedKey.indexOf('.');
+		String sourceRef = unresolvedKey.substring(0, dotIndex);
+		String columnName = unresolvedKey.substring(dotIndex + 1);
+		String cteScopeRef = resolveCteScopeReference(sourceRef, visibleAliasMap);
+		if (cteScopeRef == null || cteScopeRef.isBlank()) {
+			return false;
+		}
+
+		boolean resolvedInCte = "*".equals(columnName)
+				|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
+				|| hasWildcardInQueryOutputInterface(cteScopeRef);
+		if (!resolvedInCte) {
+			return false;
+		}
+		return materializeCteContextQualifiedUnresolvedEntry(
+				sourceRef,
+				columnName,
+				entryValue,
+				visibleAliasMap,
+				cteScopeRef,
+				null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void materializeColumnIntoScopeAndGlobalTableDictionaries(
+			String tableDictionaryKey,
+			String columnName,
+			Object entryValue,
+			HashMap<String, Object> localTableCollectionOverride) {
+		if (tableDictionaryKey == null || tableDictionaryKey.isBlank()
+				|| columnName == null || columnName.isBlank() || entryValue == null) {
+			return;
+		}
+
+		String normalizedKey = normalizeTableRef(tableDictionaryKey);
+		HashMap<String, Object> globalTableDictionary = walker.getWalkerTableDictionary();
+		HashMap<String, Object> globalTarget = ensureTableDictionaryEntry(globalTableDictionary, normalizedKey);
+		walker.mergeResolvedColumnIntoDictionary(globalTarget, columnName, entryValue);
+
+		HashMap<String, Object> localTableCollection = localTableCollectionOverride;
+		if (localTableCollection == null) {
+			Object localTableDictObj = walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+			if (localTableDictObj instanceof HashMap<?, ?>) {
+				localTableCollection = (HashMap<String, Object>) localTableDictObj;
+			}
+		}
+		if (localTableCollection != null) {
+			HashMap<String, Object> localTarget = ensureTableDictionaryEntry(localTableCollection, normalizedKey);
+			walker.mergeResolvedColumnIntoDictionary(localTarget, columnName, entryValue);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean propagateMaterializedColumnToCtePhysicalTables(
+			String cteScopeRef,
+			String columnName,
+			Object entryValue,
+			HashMap<String, Object> localTableCollectionOverride) {
+		if (cteScopeRef == null || cteScopeRef.isBlank()
+				|| columnName == null || columnName.isBlank() || entryValue == null) {
+			return false;
+		}
+
+		String defScopeKey = cteScopeRef.startsWith("def_") ? cteScopeRef : "def_" + cteScopeRef;
+		Object defScopeObj = findInCurrentOrAncestorSymbolTables(defScopeKey);
+		if (!(defScopeObj instanceof Map<?, ?>)) {
+			return false;
+		}
+
+		Object tableDictObj = ((Map<String, Object>) defScopeObj).get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (!(tableDictObj instanceof Map<?, ?> physicalTables) || physicalTables.isEmpty()) {
+			return false;
+		}
+
+		boolean materialized = false;
+		for (Map.Entry<?, ?> tableEntry : physicalTables.entrySet()) {
+			if (!(tableEntry.getKey() instanceof String physicalTableKey)
+					|| walker.isNonTableQuerySourceReference(physicalTableKey)) {
+				continue;
+			}
+			Object columnsObj = tableEntry.getValue();
+			if (!(columnsObj instanceof Map<?, ?> columns)) {
+				continue;
+			}
+			if (containsKeyIgnoreCase((Map<String, Object>) columns, columnName)
+					|| ((Map<String, Object>) columns).containsKey("*")) {
+				materializeColumnIntoScopeAndGlobalTableDictionaries(
+						physicalTableKey,
+						columnName,
+						entryValue,
+						null);
+				materialized = true;
+			}
+		}
+		return materialized;
+	}
+
+	/**
+	 * CTE-qualified refs materialize only onto backing physical tables from the CTE body —
+	 * never under CTE names or their FROM aliases in local or global table dictionaries.
+	 */
+	@SuppressWarnings("unchecked")
+	private boolean materializeCteContextQualifiedUnresolvedEntry(
+			String sourceRef,
+			String columnName,
+			Object entryValue,
+			HashMap<String, Object> visibleAliasMap,
+			String cteScopeRef,
+			HashMap<String, Object> localTableCollectionOverride) {
+		if (cteScopeRef == null || cteScopeRef.isBlank()) {
+			return false;
+		}
+
+		boolean materialized = propagateMaterializedColumnToCtePhysicalTables(
+				cteScopeRef,
+				columnName,
+				entryValue,
+				localTableCollectionOverride);
+		if (!materialized) {
+			return false;
+		}
+
+		if (walker.globalQualifiedUnresolvedLocations != null
+				&& sourceRef != null && !sourceRef.isBlank()) {
+			walker.globalQualifiedUnresolvedLocations.remove(sourceRef + "." + columnName);
+		}
+		return true;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isQualifiedEntryAlreadyMaterialized(
+			String unresolvedKey,
+			HashMap<String, Object> visibleAliasMap) {
+		if (unresolvedKey == null || !unresolvedKey.contains(".")) {
+			return false;
+		}
+		int dotIndex = unresolvedKey.indexOf('.');
+		String sourceRef = unresolvedKey.substring(0, dotIndex);
+		String columnName = unresolvedKey.substring(dotIndex + 1);
+		String resolvedTableRef = walker.resolveAliasToTableName(sourceRef, visibleAliasMap);
+		if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
+			resolvedTableRef = sourceRef;
+		}
+		HashMap<String, Object> globalTableDictionary = walker.getCurrentTableDictionary();
+		if (globalTableDictionary == null || globalTableDictionary.isEmpty()) {
+			globalTableDictionary = walker.getWalkerTableDictionary();
+		}
+		HashMap<String, Object> targetDictionary = walker.getTableDictionaryForReference(
+				resolvedTableRef,
+				globalTableDictionary);
+		if (targetDictionary == null) {
+			return false;
+		}
+		return targetDictionary.containsKey(columnName)
+				|| containsKeyIgnoreCase(targetDictionary, columnName);
+	}
+
+	private void emitQualifiedSourceNotFoundFatalForEntry(
+			String unresolvedKey,
+			Object unresolvedValue,
+			HashMap<String, Object> qualifiedUnresolvedMap) {
+		if (unresolvedKey == null || unresolvedKey.isBlank()) {
+			return;
+		}
+
+		int dotIndex = unresolvedKey.indexOf('.');
+		if (dotIndex <= 0 || dotIndex + 1 >= unresolvedKey.length()) {
+			return;
+		}
+
+		String sourceRef = unresolvedKey.substring(0, dotIndex);
+		String columnName = unresolvedKey.substring(dotIndex + 1);
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+
+		Object capturedValue = walker.getCapturedQualifiedUnresolvedLocationEntry(unresolvedKey);
+		Object diagnosticValue = (capturedValue != null) ? capturedValue : unresolvedValue;
+
+		Integer[] refLocation = walker.getLineAndCharacterFromEntry(diagnosticValue);
+		if (refLocation[0] == null || refLocation[1] == null) {
+			refLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
+		}
+
+		String allLocationsInline = walker.formatAllLocationsForEntryInline(diagnosticValue);
+		boolean hasMergedLocations = allLocationsInline != null && allLocationsInline.contains(",");
+
+		String diagMessage;
+		if (hasMergedLocations) {
+			diagMessage = String.format(
+					"Source Table not found for Column '%s' at %s. No alias or table called '%s'.",
+					columnName,
+					allLocationsInline,
+					sourceRef);
+		} else {
+			diagMessage = (diagTemplate == null)
+					? String.format(
+							"Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.",
+							columnName,
+							refLocation[0],
+							refLocation[1],
+							sourceRef)
+					: String.format(
+							diagTemplate,
+							columnName,
+							refLocation[0],
+							refLocation[1],
+							sourceRef);
+		}
+
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				refLocation[0],
+				refLocation[1],
+				columnName);
+	}
+
+	/** Materialize resolvable qualified refs captured at parse ingress into the global table dictionary. */
+	@SuppressWarnings("unchecked")
+	private void materializeResolvableGlobalQualifiedUnresolvedLocations(
+			HashMap<String, Object> visibleAliasMap,
+			HashMap<String, Object> visibleTableDictionary) {
+		HashMap<String, Object> globalLocations = walker.globalQualifiedUnresolvedLocations;
+		if (globalLocations == null || globalLocations.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> tableDictionaryView =
+				buildQualifiedResolutionTableDictionaryView(visibleTableDictionary);
+		for (Map.Entry<String, Object> entry : new ArrayList<>(globalLocations.entrySet())) {
+			String unresolvedKey = entry.getKey();
+			if (unresolvedKey == null || unresolvedKey.isBlank() || !unresolvedKey.contains(".")) {
+				continue;
+			}
+			if (tryResolveQualifiedEntryViaCteContext(unresolvedKey, entry.getValue(), visibleAliasMap)) {
+				continue;
+			}
+			if (walker.canResolveQualifiedUnknownInScope(
+					unresolvedKey,
+					visibleAliasMap,
+					tableDictionaryView,
+					walker.queryColumnDictionaryMap)) {
+				materializeQualifiedUnresolvedEntry(
+						unresolvedKey,
+						entry.getValue(),
+						visibleAliasMap);
+			}
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public void projectSelectIntoTargetFromInterface(
 			Map<String, Object> queryAst,
@@ -3285,38 +4048,6 @@ public class SqlParseSymbolTreeHelper {
 		globalTargetColumns.putAll(targetColumns);
 	}
 
-	public HashMap<String, Object> partitionParentResolvableQualifiedUnknownsAndEmit(
-			HashMap<String, Object> qualifiedUnresolvedMap,
-			HashMap<String, Object> parentTableAliasMap,
-			HashMap<String, Object> parentTableCollection,
-			HashMap<String, Object> parentQueryCollection) {
-		HashMap<String, Object> parentResolvable = new HashMap<String, Object>();
-		HashMap<String, Object> unresolvedInParent = new HashMap<String, Object>();
-
-		if (qualifiedUnresolvedMap == null || qualifiedUnresolvedMap.isEmpty()) {
-			return parentResolvable;
-		}
-
-		for (Map.Entry<String, Object> entry : qualifiedUnresolvedMap.entrySet()) {
-			String unresolvedKey = entry.getKey();
-			if (walker.canResolveQualifiedUnknownInScope(
-					unresolvedKey,
-					parentTableAliasMap,
-					parentTableCollection,
-					parentQueryCollection)) {
-				parentResolvable.put(unresolvedKey, entry.getValue());
-			} else {
-				unresolvedInParent.put(unresolvedKey, entry.getValue());
-			}
-		}
-
-		if (!unresolvedInParent.isEmpty()) {
-			walker.mergeUnknownEntries(parentResolvable, unresolvedInParent);
-		}
-
-		return parentResolvable;
-	}
-
 	public void emitQualifiedSourceNotFoundFatals(HashMap<String, Object> qualifiedUnresolvedMap) {
 		if (qualifiedUnresolvedMap == null || qualifiedUnresolvedMap.isEmpty()) {
 			return;
@@ -3325,18 +4056,33 @@ public class SqlParseSymbolTreeHelper {
 		@SuppressWarnings("unchecked")
 		HashMap<String, Object> currentTableAliasMap = (walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY) instanceof HashMap<?, ?>)
 				? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY)
-				: null;
-		if (currentTableAliasMap == null || currentTableAliasMap.isEmpty()) {
-			currentTableAliasMap = getTopLevelQueryTableAliasMap();
+				: new HashMap<String, Object>();
+		HashMap<String, Object> visibleAliasMap =
+				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).aliases;
+		for (Map.Entry<String, Object> aliasEntry : visibleAliasMap.entrySet()) {
+			currentTableAliasMap.putIfAbsent(aliasEntry.getKey(), aliasEntry.getValue());
+		}
+		mergePublishedScopeContextListIntoAliasMap(currentTableAliasMap);
+		if (currentTableAliasMap.isEmpty()) {
+			HashMap<String, Object> topLevelAliasMap = getTopLevelQueryTableAliasMap();
+			if (topLevelAliasMap != null) {
+				currentTableAliasMap.putAll(topLevelAliasMap);
+			}
 		}
 		HashMap<String, Object> currentTableCollection = walker.peekCurrentTableDictionary();
 		if (currentTableCollection == null || currentTableCollection.isEmpty()) {
-			currentTableCollection = walker.getWalkerTableDictionary();
+			currentTableCollection = new HashMap<String, Object>();
+		}
+		HashMap<String, Object> visibleTableCollection =
+				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).tableDictionary;
+		for (Map.Entry<String, Object> tableEntry : visibleTableCollection.entrySet()) {
+			currentTableCollection.putIfAbsent(tableEntry.getKey(), tableEntry.getValue());
 		}
 
 		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
 		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
 		boolean hasCteList = hasCteListSymbolMap();
+		ArrayList<String> cteProcessedKeys = new ArrayList<String>();
 
 		for (Map.Entry<String, Object> unresolvedEntry : qualifiedUnresolvedMap.entrySet()) {
 			String unresolvedKey = unresolvedEntry.getKey();
@@ -3354,77 +4100,22 @@ public class SqlParseSymbolTreeHelper {
 			String cteScopeRef = resolveCteScopeReference(sourceRef, currentTableAliasMap);
 
 			// If WITH/CTE context is active and sourceRef maps to a CTE entry, CTE interface resolution is authoritative.
-			if (hasCteList && cteScopeRef != null && !cteScopeRef.isBlank()) {
-				boolean resolvedInCte = "*".equals(columnName)
-						|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
-						|| hasWildcardInQueryOutputInterface(cteScopeRef);
-				if (resolvedInCte) {
-					String resolvedSourceRef = walker.resolveAliasToTableName(sourceRef, currentTableAliasMap);
-					if (resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
-						resolvedSourceRef = sourceRef;
-					}
-
-					HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-							resolvedSourceRef,
-							currentTableCollection);
-					if (indicatedTableDictionary == null && !sourceRef.equals(resolvedSourceRef)) {
-						indicatedTableDictionary = walker.getTableDictionaryForReference(sourceRef, currentTableCollection);
-					}
-					if (indicatedTableDictionary != null) {
-						walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry.getValue());
-					}
-					continue;
-				}
-
-				Object unresolvedValue = unresolvedEntry.getValue();
-				Object capturedValue = walker.getCapturedQualifiedUnresolvedLocationEntry(unresolvedKey);
-				Object diagnosticValue = (capturedValue != null) ? capturedValue : unresolvedValue;
-
-				Integer[] refLocation = walker.getLineAndCharacterFromEntry(diagnosticValue);
-				if (refLocation[0] == null || refLocation[1] == null) {
-					refLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
-				}
-
-				String allLocationsInline = walker.formatAllLocationsForEntryInline(diagnosticValue);
-				boolean hasMergedLocations = allLocationsInline != null && allLocationsInline.contains(",");
-
-				String diagMessage;
-				if (hasMergedLocations) {
-					diagMessage = String.format(
-							"Source Table not found for Column '%s' at %s. No alias or table called '%s'.",
-							columnName,
-							allLocationsInline,
-							sourceRef);
-				} else {
-					diagMessage = String.format(
-							diagTemplate,
-							columnName,
-							refLocation[0],
-							refLocation[1],
-							sourceRef);
-				}
-
-				walker.addWalkerFatal(
-						diagCode,
-						diagMessage,
-						refLocation[0],
-						refLocation[1],
-						columnName);
+			if (!hasCteList || cteScopeRef == null || cteScopeRef.isBlank()) {
 				continue;
 			}
 
-			if (walker.canResolveQualifiedUnknownInScope(
-					unresolvedKey,
-					currentTableAliasMap,
-					currentTableCollection,
-					walker.queryColumnDictionaryMap)) {
-				String resolvedSourceRef = walker.resolveAliasToTableName(sourceRef, currentTableAliasMap);
-				HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-						resolvedSourceRef,
+			cteProcessedKeys.add(unresolvedKey);
+			boolean resolvedInCte = "*".equals(columnName)
+					|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
+					|| hasWildcardInQueryOutputInterface(cteScopeRef);
+			if (resolvedInCte) {
+				materializeCteContextQualifiedUnresolvedEntry(
+						sourceRef,
+						columnName,
+						unresolvedEntry.getValue(),
+						currentTableAliasMap,
+						cteScopeRef,
 						currentTableCollection);
-				if (indicatedTableDictionary != null) {
-					walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry.getValue());
-				}
 				continue;
 			}
 
@@ -3463,10 +4154,24 @@ public class SqlParseSymbolTreeHelper {
 					refLocation[1],
 					columnName);
 		}
+
+		for (String cteProcessedKey : cteProcessedKeys) {
+			qualifiedUnresolvedMap.remove(cteProcessedKey);
+		}
+
+		resolveQualifiedUnresolvedEntries(
+				qualifiedUnresolvedMap,
+				currentTableAliasMap,
+				currentTableCollection,
+				true);
 	}
 
 	@SuppressWarnings("unchecked")
 	public boolean hasCteListSymbolMap() {
+		if (!collectPublishedScopeContextList().isEmpty()) {
+			return true;
+		}
+
 		Map<String, Object> currentCteList = getCteListSymbolMap(walker.symbolTable);
 		if (currentCteList != null && !currentCteList.isEmpty()) {
 			return true;
@@ -3488,9 +4193,30 @@ public class SqlParseSymbolTreeHelper {
 			return null;
 		}
 
+		Map<String, Object> publishedContextList = collectPublishedScopeContextList();
+		if (!publishedContextList.isEmpty()) {
+			String publishedScope = resolveCteScopeReferenceInContextList(
+					sourceRef, tableAliasMap, publishedContextList);
+			if (publishedScope != null) {
+				return publishedScope;
+			}
+		}
+
 		String localScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, walker.symbolTable);
 		if (localScope != null) {
 			return localScope;
+		}
+
+		for (Object scopeObj : walker.symbolTable.values()) {
+			if (scopeObj instanceof Map<?, ?> nestedScopeObj) {
+				String nestedScope = resolveCteScopeReferenceInSymbols(
+						sourceRef,
+						tableAliasMap,
+						(Map<String, Object>) nestedScopeObj);
+				if (nestedScope != null) {
+					return nestedScope;
+				}
+			}
 		}
 
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
@@ -3582,21 +4308,149 @@ public class SqlParseSymbolTreeHelper {
 				null);
 	}
 
+	/**
+	 * Opens a nested symbol-table frame inheriting the nearest visible named scope registry
+	 * ({@code context_list}), table aliases, and table dictionary from ancestor frames.
+	 * Used for WITH bodies, correlated subqueries (predicand/IN/EXISTS), and nested FROM scopes.
+	 */
 	@SuppressWarnings("unchecked")
+	public void pushSymbolTableWithParentVisibleScope() {
+		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true, null);
+
+		walker.pushSymbolTable();
+		if (!outerVisibleScope.contextList.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, outerVisibleScope.contextList);
+		}
+		if (!outerVisibleScope.aliases.isEmpty()) {
+			walker.symbolTable.put(
+					MUMBLE_INHERITED_VISIBLE_ALIASES_KEY,
+					new HashMap<String, Object>(outerVisibleScope.aliases));
+			HashMap<String, Object> contextBackedAliases = new HashMap<String, Object>();
+			for (Map.Entry<String, Object> contextEntry : outerVisibleScope.contextList.entrySet()) {
+				String contextAlias = contextEntry.getKey();
+				if (contextAlias == null || contextAlias.isBlank()) {
+					continue;
+				}
+				Object aliasTarget = outerVisibleScope.aliases.get(contextAlias);
+				if (aliasTarget instanceof String aliasTargetRef && !aliasTargetRef.isBlank()) {
+					contextBackedAliases.put(contextAlias, aliasTargetRef);
+				} else if (contextEntry.getValue() instanceof String contextRef && !contextRef.isBlank()) {
+					contextBackedAliases.put(contextAlias, contextRef);
+				}
+			}
+			if (!contextBackedAliases.isEmpty()) {
+				walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, contextBackedAliases);
+			}
+		}
+	}
+
+	/** @deprecated use {@link #pushSymbolTableWithParentVisibleScope()} */
+	@Deprecated
 	public void pushSymbolTableWithParentCteList() {
-		Map<String, Object> inheritedCteList = getCteListSymbolMap(walker.symbolTable);
-		if (inheritedCteList == null || inheritedCteList.isEmpty()) {
-			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
-				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
-					inheritedCteList = ancestorCteList;
-					break;
+		pushSymbolTableWithParentVisibleScope();
+	}
+
+	@SuppressWarnings("unchecked")
+	private static final class OuterVisibleScope {
+		private final LinkedHashMap<String, Object> contextList = new LinkedHashMap<String, Object>();
+		private final HashMap<String, Object> aliases = new HashMap<String, Object>();
+		private final HashMap<String, Object> tableDictionary = new HashMap<String, Object>();
+	}
+
+	/**
+	 * Ancestor-only visible scope: direct {@code table_alias}, {@code table_dictionary}, and
+	 * {@code context_list} per frame, plus nested {@code context_list} from published child scopes.
+	 * Never merges sibling branch {@code table_alias} or {@code table_dictionary} maps from nested
+	 * {@code queryN}/{@code def_*} payloads.
+	 *
+	 * @param ancestorStopFrame when non-null, stop after merging this ancestor (exclusive outward)
+	 */
+	@SuppressWarnings("unchecked")
+	private OuterVisibleScope collectOuterVisibleScope(
+			Map<String, Object> ancestorStopFrame,
+			boolean includeActiveFrame,
+			Map<String, Object> priorNamedScopeRefs) {
+		OuterVisibleScope result = new OuterVisibleScope();
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			mergeOuterVisibleScopeFromFrame(result, ancestorSymbols);
+			if (ancestorStopFrame != null && ancestorStopFrame == ancestorSymbols) {
+				break;
+			}
+		}
+		if (includeActiveFrame) {
+			mergeOuterVisibleScopeFromFrame(result, walker.symbolTable);
+		}
+		if (priorNamedScopeRefs != null) {
+			for (String cteAlias : priorNamedScopeRefs.keySet()) {
+				if (cteAlias != null && !cteAlias.isBlank()) {
+					result.aliases.putIfAbsent(cteAlias, cteAlias);
 				}
 			}
 		}
-		walker.pushSymbolTable();
-		if (inheritedCteList != null && !inheritedCteList.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_CTE_LIST_KEY, new LinkedHashMap<String, Object>(inheritedCteList));
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeOuterVisibleScopeFromFrame(
+			OuterVisibleScope result,
+			Map<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+		Object inheritedAliasesObj = scopeSymbols.get(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		if (inheritedAliasesObj instanceof HashMap<?, ?> inheritedAliasMapObj) {
+			result.aliases.putAll((HashMap<String, Object>) inheritedAliasMapObj);
+		}
+		mergeContextListFromScopeSymbols(result.contextList, scopeSymbols);
+		Object aliasObj = scopeSymbols.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasObj instanceof HashMap<?, ?> aliasMapObj) {
+			result.aliases.putAll((HashMap<String, Object>) aliasMapObj);
+		}
+		Map<String, Object> contextList = getContextListSymbolMap(scopeSymbols);
+		if (contextList != null) {
+			for (Map.Entry<String, Object> entry : contextList.entrySet()) {
+				if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
+					result.aliases.putIfAbsent(entry.getKey(), scopeRef);
+				}
+			}
+		}
+		for (Object valueObj : scopeSymbols.values()) {
+			if (valueObj instanceof Map<?, ?> nestedScopeObj) {
+				Map<String, Object> nestedContextList = getContextListSymbolMap((Map<String, Object>) nestedScopeObj);
+				if (nestedContextList != null) {
+					for (Map.Entry<String, Object> entry : nestedContextList.entrySet()) {
+						if (entry.getKey() != null
+								&& entry.getValue() instanceof String scopeRef
+								&& !scopeRef.isBlank()) {
+							result.aliases.putIfAbsent(entry.getKey(), scopeRef);
+						}
+					}
+				}
+			}
+		}
+		Object tableDictObj = scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (tableDictObj instanceof HashMap<?, ?> tableDictMapObj) {
+			result.tableDictionary.putAll((HashMap<String, Object>) tableDictMapObj);
+		}
+		Object targetTableObj = scopeSymbols.get(MUMBLE_TARGET_TABLE_KEY);
+		if (targetTableObj instanceof HashMap<?, ?> targetTableMapObj) {
+			result.tableDictionary.putAll((HashMap<String, Object>) targetTableMapObj);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeContextListFromScopeSymbols(
+			LinkedHashMap<String, Object> merged,
+			Map<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+		Map<String, Object> contextList = getContextListSymbolMap(scopeSymbols);
+		if (contextList == null || contextList.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, Object> entry : contextList.entrySet()) {
+			merged.putIfAbsent(entry.getKey(), entry.getValue());
 		}
 	}
 
@@ -3615,16 +4469,22 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Map<String, Object> getCteListSymbolMap(Map<String, Object> symbols) {
+	public Map<String, Object> getContextListSymbolMap(Map<String, Object> symbols) {
 		if (symbols == null) {
 			return null;
 		}
 
-		Object cteListObj = symbols.get(MUMBLE_CTE_LIST_KEY);
-		if (cteListObj instanceof Map<?, ?> cteListMapObj) {
-			return (Map<String, Object>) cteListMapObj;
+		Object contextListObj = symbols.get(MUMBLE_CONTEXT_LIST_KEY);
+		if (contextListObj instanceof Map<?, ?> contextListMapObj) {
+			return (Map<String, Object>) contextListMapObj;
 		}
 		return null;
+	}
+
+	/** @deprecated use {@link #getContextListSymbolMap(Map)} */
+	@Deprecated
+	public Map<String, Object> getCteListSymbolMap(Map<String, Object> symbols) {
+		return getContextListSymbolMap(symbols);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3648,6 +4508,13 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableAliasMap,
 			Map<String, Object> symbols) {
 		Map<String, Object> cteListMap = getCteListSymbolMap(symbols);
+		return resolveCteScopeReferenceInContextList(sourceRef, tableAliasMap, cteListMap);
+	}
+
+	public String resolveCteScopeReferenceInContextList(
+			String sourceRef,
+			HashMap<String, Object> tableAliasMap,
+			Map<String, Object> cteListMap) {
 		if (cteListMap == null || cteListMap.isEmpty() || sourceRef == null || sourceRef.isBlank()) {
 			return null;
 		}
@@ -3680,6 +4547,46 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeContextListFromPublishedScopePayloads(
+			LinkedHashMap<String, Object> merged,
+			Map<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+
+		mergeContextListFromScopeSymbols(merged, scopeSymbols);
+		for (Object valueObj : scopeSymbols.values()) {
+			if (valueObj instanceof Map<?, ?> nestedScopeObj) {
+				mergeContextListFromScopeSymbols(merged, (Map<String, Object>) nestedScopeObj);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> collectPublishedScopeContextList() {
+		LinkedHashMap<String, Object> merged = new LinkedHashMap<String, Object>();
+		mergeContextListFromPublishedScopePayloads(merged, walker.symbolTable);
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			mergeContextListFromPublishedScopePayloads(merged, ancestorSymbols);
+		}
+		return merged;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergePublishedScopeContextListIntoAliasMap(HashMap<String, Object> aliasMap) {
+		if (aliasMap == null) {
+			return;
+		}
+
+		Map<String, Object> publishedContextList = collectPublishedScopeContextList();
+		for (Map.Entry<String, Object> entry : publishedContextList.entrySet()) {
+			if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
+				aliasMap.putIfAbsent(entry.getKey(), scopeRef);
+			}
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3722,6 +4629,24 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return selectedAliasMap;
+	}
+
+	/**
+	 * Collects deferred unresolved columns at statement exit. Only the root live map is
+	 * drained here; archived scopes finalize at {@link #finalizeScopeDeferredUnresolved}
+	 * (WITH CTE registration, UNION/INTERSECT exit, and DML scope publish).
+	 * and {@code exitWith_query} hoists main-body deferred refs back to the root.
+	 */
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> collectStatementBoundaryUnresolvedColumns() {
+		HashMap<String, Object> collected = new HashMap<String, Object>();
+
+		Object rootUnresolvedObject = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (rootUnresolvedObject instanceof HashMap<?, ?>) {
+			walker.mergeUnknownEntries(collected, (HashMap<String, Object>) rootUnresolvedObject);
+		}
+
+		return collected;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4135,7 +5060,33 @@ public class SqlParseSymbolTreeHelper {
 	// which it adds to the column list with the alias as the key
 
 	public void flattenSubTreeForInterfaceColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		flattenSubTreeForDependencyColumns(subTree, columnList, false);
+	}
+
+	/**
+	 * Collects column and column/predicand substitution references from an AST subtree.
+	 * Interface flattening recurses into query-backed subtrees so output-column dependencies
+	 * (e.g. scalar subquery {@code max(D)}) are recorded on the interface entry.
+	 */
+	public void flattenSubTreeForDependencyColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
+		flattenSubTreeForDependencyColumns(subTree, columnList, false);
+	}
+
+	/**
+	 * Clause flattening ({@code filters}, {@code grouped_by}, {@code ordered_by}) collects only
+	 * references in the enclosing query scope. Subquery-local columns are collected into that
+	 * subquery's {@code unresolved_column} map, resolved at subquery exit, and linked via
+	 * {@link #MUMBLE_DEPENDENT_QUERIES_KEY}; they must not be re-hoisted here.
+	 */
+	private void flattenSubTreeForDependencyColumns(
+			HashMap<String, Object> subTree,
+			ArrayList<Object> columnList,
+			boolean skipQueryBackedSubtrees) {
 		if (subTree == null) {
+			return;
+		}
+
+		if (skipQueryBackedSubtrees && isQueryBackedSelectItemReference(subTree)) {
 			return;
 		}
 
@@ -4144,26 +5095,36 @@ public class SqlParseSymbolTreeHelper {
 			if (!columnList.contains(col)) {
 				columnList.add(col);
 			}
-		} else if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			return;
+		}
+		if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 			Object subst = subTree.get(MUMBLE_SUBSTITUTION_KEY);
-			if (subst instanceof HashMap) {
-				HashMap<String, Object> substMap = (HashMap<String, Object>) subst;
-				Object type = substMap.get("type");
+			if (subst instanceof HashMap<?, ?> substMapObj) {
+				Object type = substMapObj.get("type");
 				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
 					if (!columnList.contains(subst)) {
 						columnList.add(subst);
 					}
 				}
 			}
-		} else {
-			for (Object value : subTree.values()) {
-				if (value instanceof HashMap<?, ?> valueMapObj) {
-					flattenSubTreeForInterfaceColumns((HashMap<String, Object>) valueMapObj, columnList);
-				} else if (value instanceof ArrayList<?> valueListObj) {
-					for (Object listItem : (ArrayList<Object>) valueListObj) {
-						if (listItem instanceof HashMap<?, ?> listMapObj) {
-							flattenSubTreeForInterfaceColumns((HashMap<String, Object>) listMapObj, columnList);
+			return;
+		}
+
+		for (Object value : subTree.values()) {
+			if (value instanceof HashMap<?, ?> valueMapObj) {
+				HashMap<String, Object> valueMap = (HashMap<String, Object>) valueMapObj;
+				if (skipQueryBackedSubtrees && isQueryBackedSelectItemReference(valueMap)) {
+					continue;
+				}
+				flattenSubTreeForDependencyColumns(valueMap, columnList, skipQueryBackedSubtrees);
+			} else if (value instanceof ArrayList<?> valueListObj) {
+				for (Object listItem : (ArrayList<Object>) valueListObj) {
+					if (listItem instanceof HashMap<?, ?> listMapObj) {
+						HashMap<String, Object> listMap = (HashMap<String, Object>) listMapObj;
+						if (skipQueryBackedSubtrees && isQueryBackedSelectItemReference(listMap)) {
+							continue;
 						}
+						flattenSubTreeForDependencyColumns(listMap, columnList, skipQueryBackedSubtrees);
 					}
 				}
 			}
@@ -4389,6 +5350,61 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			tableEntry.put(columnName, normalizedRefs);
+			resolvedKeys.add(unresolvedKey);
+		}
+
+		for (String resolvedKey : resolvedKeys) {
+			unresolvedColumnMap.remove(resolvedKey);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void resolveUpdateQualifiedUnresolvedColumnsToCteSources(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableAliasMap) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> effectiveAliasMap = tableAliasMap != null
+				? new HashMap<String, Object>(tableAliasMap)
+				: new HashMap<String, Object>();
+		mergePublishedScopeContextListIntoAliasMap(effectiveAliasMap);
+
+		ArrayList<String> resolvedKeys = new ArrayList<String>();
+		for (Map.Entry<String, Object> unresolvedEntry : unresolvedColumnMap.entrySet()) {
+			String unresolvedKey = unresolvedEntry.getKey();
+			if (unresolvedKey == null) {
+				continue;
+			}
+
+			int separatorIndex = unresolvedKey.lastIndexOf('.');
+			if (separatorIndex <= 0 || separatorIndex + 1 >= unresolvedKey.length()) {
+				continue;
+			}
+
+			String qualifier = unresolvedKey.substring(0, separatorIndex);
+			String columnName = unresolvedKey.substring(separatorIndex + 1);
+			if (columnName.isBlank()) {
+				continue;
+			}
+
+			String cteScopeRef = resolveCteScopeReference(qualifier, effectiveAliasMap);
+			if (cteScopeRef == null || cteScopeRef.isBlank()) {
+				continue;
+			}
+
+			boolean resolvedInCte = "*".equals(columnName)
+					|| hasColumnInQueryOutputInterface(cteScopeRef, columnName)
+					|| hasWildcardInQueryOutputInterface(cteScopeRef);
+			if (!resolvedInCte) {
+				continue;
+			}
+
+			mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+					cteScopeRef,
+					columnName,
+					unresolvedEntry.getValue());
 			resolvedKeys.add(unresolvedKey);
 		}
 
@@ -4805,6 +5821,15 @@ public class SqlParseSymbolTreeHelper {
 			return locallyResolvableEntries;
 		}
 
+		HashMap<String, Object> visibleAliasMap = new HashMap<String, Object>();
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			visibleAliasMap.putAll(tableAliasCollection);
+		}
+		HashMap<String, Object> visibleTableCollection = new HashMap<String, Object>();
+		if (tableCollection != null && !tableCollection.isEmpty()) {
+			visibleTableCollection.putAll(tableCollection);
+		}
+
 		for (Map.Entry<String, Object> unknownEntry : explicitQualifiedUnknownEntries.entrySet()) {
 			String unresolvedKey = unknownEntry.getKey();
 			String explicitTableRef = resolveExplicitTableRefForUnknownEntry(
@@ -4816,14 +5841,21 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			String resolvedTableRef = walker.resolveAliasToTableName(explicitTableRef, tableAliasCollection);
-			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(explicitTableRef, scopedQueryCollection);
+			String resolvedTableRef = walker.resolveAliasToTableName(explicitTableRef, visibleAliasMap);
+			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(
+					explicitTableRef, scopedQueryCollection);
+			if (resolvedNonTableSourceRef == null) {
+				resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(
+						explicitTableRef, visibleAliasMap);
+			}
 			HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
 					resolvedTableRef,
-					tableCollection);
+					visibleTableCollection);
 
-			boolean hasLocalSource = resolvedNonTableSourceRef != null || indicatedTableDictionary != null;
-			if (hasLocalSource) {
+			boolean hasVisibleSource = resolvedNonTableSourceRef != null
+					|| indicatedTableDictionary != null
+					|| containsKeyIgnoreCase(visibleAliasMap, explicitTableRef);
+			if (hasVisibleSource) {
 				locallyResolvableEntries.put(unresolvedKey, unknownEntry.getValue());
 			} else if (unresolvedColumnMap != null) {
 				unresolvedColumnMap.put(unresolvedKey, unknownEntry.getValue());
@@ -5081,6 +6113,49 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	private void patchInterfaceTableRefsForSinglePhysicalTableScope(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localTableCollection) {
+		if (localInterface == null || localInterface.isEmpty()
+				|| localTableCollection == null || localTableCollection.size() != 1) {
+			return;
+		}
+
+		String onlyTableRef = normalizeTableRef(localTableCollection.keySet().iterator().next());
+		if (onlyTableRef == null || onlyTableRef.isBlank()
+				|| walker.isNonTableQuerySourceReference(onlyTableRef)
+				|| isTableFunctionSourceReference(onlyTableRef)) {
+			return;
+		}
+
+		for (Object refsObj : localInterface.values()) {
+			if (!(refsObj instanceof ArrayList<?> refs)) {
+				continue;
+			}
+			ArrayList<Object> mutableRefs = (ArrayList<Object>) refs;
+			for (int refIndex = 0; refIndex < mutableRefs.size(); refIndex++) {
+				Object refObj = mutableRefs.get(refIndex);
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+				if (tableRef != null && !tableRef.isBlank()) {
+					continue;
+				}
+				if (!(refObj instanceof Map<?, ?> refMapObj)) {
+					continue;
+				}
+				Map<String, Object> refMap = (Map<String, Object>) refMapObj;
+				if (refMap.containsKey(MUMBLE_QUERY_KEY)) {
+					continue;
+				}
+				String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				if (columnName != null && !columnName.isBlank() && !"*".equals(columnName)) {
+					continue;
+				}
+				mutableRefs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, onlyTableRef));
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
 	public Object cloneReferenceWithResolvedTableRef(Object refObj, String resolvedSourceRef) {
 		if (refObj == null || resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
 			return refObj;
@@ -5160,7 +6235,8 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			if (sourceRefs.isEmpty()) {
-				if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+				if (!hasLocalPhysicalFromTables(localTableCollection)
+						&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 					emitUnqualifiedNotFoundInQueryAliasFatal(
 							columnName,
 							refLocation,
@@ -5258,131 +6334,150 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection,
 			HashMap<String, Object> tableAliasCollection) {
-		LinkedHashSet<String> visibleTableSources = new LinkedHashSet<String>();
-		LinkedHashSet<String> visibleQuerySources = new LinkedHashSet<String>();
+		HashMap<String, Object> localPhysicalTables = buildLocalPhysicalFromTableCollection(tableCollection);
+		if (hasLocalPhysicalFromTables(localPhysicalTables)) {
+			return collectLocalPhysicalUnqualifiedSourceReferences(columnName, localPhysicalTables);
+		}
+		return collectLocalQueryFromUnqualifiedSourceReferences(
+				columnName,
+				tableCollection,
+				queryCollection,
+				tableAliasCollection);
+	}
+
+	/**
+	 * Physical tables registered in this query frame's {@code table_dictionary} only.
+	 * Inherited CTE {@code context_list} / query aliases are excluded.
+	 */
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> buildLocalPhysicalFromTableCollection(
+			HashMap<String, Object> tableCollection) {
+		HashMap<String, Object> localPhysical = new HashMap<String, Object>();
+		if (tableCollection == null || tableCollection.isEmpty()) {
+			return localPhysical;
+		}
+		for (Map.Entry<String, Object> entry : tableCollection.entrySet()) {
+			String tableRef = entry.getKey();
+			if (tableRef == null || tableRef.isBlank()) {
+				continue;
+			}
+			if (isQuerySourceReference(tableRef)
+					|| isTableFunctionSourceReference(tableRef)
+					|| walker.isNonTableQuerySourceReference(tableRef)) {
+				continue;
+			}
+			localPhysical.put(tableRef, entry.getValue());
+		}
+		return localPhysical;
+	}
+
+	public boolean hasLocalPhysicalFromTables(HashMap<String, Object> localPhysicalTables) {
+		return localPhysicalTables != null && !localPhysicalTables.isEmpty();
+	}
+
+	private boolean tableDictionaryContainsColumn(Object tableDictObj, String columnName) {
+		if (!(tableDictObj instanceof Map<?, ?> columns) || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		return containsKeyIgnoreCase((Map<String, Object>) columns, columnName)
+				|| ((Map<String, Object>) columns).containsKey("*");
+	}
+
+	private boolean hasNonEmptyColumnDictionary(Object tableDictObj) {
+		return tableDictObj instanceof Map<?, ?> columns && !((Map<String, Object>) columns).isEmpty();
+	}
+
+	private ArrayList<String> collectLocalPhysicalUnqualifiedSourceReferences(
+			String columnName,
+			HashMap<String, Object> localPhysicalTables) {
+		LinkedHashSet<String> matchedTableSources = new LinkedHashSet<String>();
+		LinkedHashSet<String> nonEmptyLocalFromTables = new LinkedHashSet<String>();
+
+		for (Map.Entry<String, Object> entry : localPhysicalTables.entrySet()) {
+			String tableRef = entry.getKey();
+			if (tableRef == null || tableRef.isBlank()) {
+				continue;
+			}
+			if (hasNonEmptyColumnDictionary(entry.getValue())) {
+				addIgnoringCase(nonEmptyLocalFromTables, tableRef);
+			}
+			if (tableDictionaryContainsColumn(entry.getValue(), columnName)) {
+				addIgnoringCase(matchedTableSources, tableRef);
+			}
+		}
+
+		if (matchedTableSources.size() >= 2) {
+			return new ArrayList<String>(matchedTableSources);
+		}
+		if (matchedTableSources.size() == 1) {
+			return new ArrayList<String>(matchedTableSources);
+		}
+
+		if (nonEmptyLocalFromTables.size() >= 2) {
+			return new ArrayList<String>(nonEmptyLocalFromTables);
+		}
+		if (nonEmptyLocalFromTables.size() == 1) {
+			return new ArrayList<String>(nonEmptyLocalFromTables);
+		}
+
+		if (localPhysicalTables.size() == 1) {
+			return new ArrayList<String>(localPhysicalTables.keySet());
+		}
+		if (localPhysicalTables.size() >= 2) {
+			return new ArrayList<String>(localPhysicalTables.keySet());
+		}
+
+		return new ArrayList<String>();
+	}
+
+	/**
+	 * Query-backed sources from this frame's {@code FROM} (not inherited {@code context_list}).
+	 * Used only when the frame has no local physical tables.
+	 */
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> collectLocalQueryFromUnqualifiedSourceReferences(
+			String columnName,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> queryCollection,
+			HashMap<String, Object> tableAliasCollection) {
 		LinkedHashSet<String> queryExactSources = new LinkedHashSet<String>();
 		LinkedHashSet<String> queryWildcardOnlySources = new LinkedHashSet<String>();
 
-		if (tableCollection != null) {
-			for (String tableRef : tableCollection.keySet()) {
-				addIgnoringCase(visibleTableSources, tableRef);
-			}
+		if (tableAliasCollection == null || tableAliasCollection.isEmpty()) {
+			return new ArrayList<String>();
 		}
 
-		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
-			for (Object mappedSourceObj : tableAliasCollection.values()) {
-				if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
-					continue;
-				}
-
-				if (isQuerySourceReference(mappedSource) || isTableFunctionSourceReference(mappedSource)) {
-					addIgnoringCase(visibleQuerySources, mappedSource);
-					continue;
-				}
-
-				String resolvedTableRef = walker.resolveAliasToTableName(mappedSource, tableAliasCollection);
-				if (resolvedTableRef != null && !resolvedTableRef.isBlank()) {
-					addIgnoringCase(visibleTableSources, resolvedTableRef);
-				} else {
-					addIgnoringCase(visibleTableSources, mappedSource);
-				}
-			}
-		}
-
-		ArrayList<String> dictionaryMatches = walker.collectSourceReferencesForColumn(
-				columnName,
-				tableCollection,
-				queryCollection);
-		LinkedHashSet<String> matchedTableSources = new LinkedHashSet<String>();
-		for (String sourceRef : dictionaryMatches) {
-			if (isQuerySourceReference(sourceRef) || isTableFunctionSourceReference(sourceRef)) {
-				boolean allowDirectQuerySource = isValuesSourceReference(sourceRef)
-						|| isTableFunctionSourceReference(sourceRef);
-				if (allowDirectQuerySource) {
-					addIgnoringCase(visibleQuerySources, sourceRef);
-				} else {
-					boolean queryIsVisibleAliasSource = false;
-					for (String visibleQueryRef : visibleQuerySources) {
-						if (visibleQueryRef != null && visibleQueryRef.equalsIgnoreCase(sourceRef)) {
-							queryIsVisibleAliasSource = true;
-							break;
-						}
-					}
-					if (queryIsVisibleAliasSource) {
-						addIgnoringCase(visibleQuerySources, sourceRef);
-					}
-				}
-			} else {
-				addIgnoringCase(visibleTableSources, sourceRef);
-				addIgnoringCase(matchedTableSources, sourceRef);
-			}
-		}
-
-		for (String querySourceRef : visibleQuerySources) {
-			if (isTableFunctionSourceReference(querySourceRef)) {
-				// Table functions are runtime-shaped sources; treat as query wildcard providers.
-				addIgnoringCase(queryWildcardOnlySources, querySourceRef);
+		for (Object mappedSourceObj : tableAliasCollection.values()) {
+			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
 				continue;
 			}
-
-			if (querySourceHasExactColumn(querySourceRef, columnName, queryCollection)) {
-				addIgnoringCase(queryExactSources, querySourceRef);
+			if (!isQuerySourceReference(mappedSource) && !isTableFunctionSourceReference(mappedSource)) {
 				continue;
 			}
-
-			if (isWildcardBackedQueryCandidate(querySourceRef, queryCollection)) {
-				addIgnoringCase(queryWildcardOnlySources, querySourceRef);
+			if (isTableFunctionSourceReference(mappedSource)) {
+				addIgnoringCase(queryWildcardOnlySources, mappedSource);
+				continue;
+			}
+			if (querySourceHasExactColumn(mappedSource, columnName, queryCollection)) {
+				addIgnoringCase(queryExactSources, mappedSource);
+				continue;
+			}
+			if (isWildcardBackedQueryCandidate(mappedSource, queryCollection)) {
+				addIgnoringCase(queryWildcardOnlySources, mappedSource);
 			}
 		}
-
-		// Table-function sources are query-like for unqualified handling; keep them out of table bucket.
-		visibleTableSources.removeIf(this::isTableFunctionSourceReference);
 
 		if (queryExactSources.size() >= 2) {
 			return new ArrayList<String>(queryExactSources);
 		}
-
 		if (queryExactSources.size() == 1) {
-			if (!matchedTableSources.isEmpty()) {
-				ArrayList<String> mixed = new ArrayList<String>();
-				mixed.addAll(matchedTableSources);
-				mixed.addAll(queryExactSources);
-				return mixed;
-			}
 			return new ArrayList<String>(queryExactSources);
 		}
-
 		if (queryWildcardOnlySources.size() >= 2) {
 			return new ArrayList<String>(queryWildcardOnlySources);
 		}
-
 		if (queryWildcardOnlySources.size() == 1) {
-			if (!visibleTableSources.isEmpty()) {
-				ArrayList<String> mixed = new ArrayList<String>();
-				mixed.addAll(queryWildcardOnlySources);
-				mixed.addAll(visibleTableSources);
-				return mixed;
-			}
-
 			return new ArrayList<String>(queryWildcardOnlySources);
-		}
-
-		if (visibleTableSources.size() >= 2) {
-			LinkedHashSet<String> orderedTableSources = new LinkedHashSet<String>();
-			for (String sourceRef : dictionaryMatches) {
-				if (isQuerySourceReference(sourceRef)) {
-					continue;
-				}
-				addIgnoringCase(orderedTableSources, sourceRef);
-			}
-			for (String tableRef : visibleTableSources) {
-				addIgnoringCase(orderedTableSources, tableRef);
-			}
-			return new ArrayList<String>(orderedTableSources);
-		}
-
-		if (visibleTableSources.size() == 1) {
-			return new ArrayList<String>(visibleTableSources);
 		}
 
 		return new ArrayList<String>();
@@ -5769,7 +6864,8 @@ public class SqlParseSymbolTreeHelper {
 				for (Object refObj : refs) {
 					String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
 					String refTable = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
-					if (refName != null && refTable != null && !"*".equals(refTable)) {
+					if (refName != null && refTable != null
+							&& !"*".equals(refTable) && !"*".equals(refName)) {
 						String qualifiedKey = refTable + "." + refName;
 						if (unresolvedColumnMap.containsKey(qualifiedKey)) {
 							explicitQualifiedKeys.add(qualifiedKey);
@@ -5812,7 +6908,8 @@ public class SqlParseSymbolTreeHelper {
 			String refTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refMap);
 			if (refName != null
 					&& refTableRef != null
-					&& !"*".equals(refTableRef)) {
+					&& !"*".equals(refTableRef)
+					&& !"*".equals(refName)) {
 				String qualifiedKey = refTableRef + "." + refName;
 				if (unresolvedColumnMap.containsKey(qualifiedKey)) {
 					explicitQualifiedKeys.add(qualifiedKey);
@@ -5832,7 +6929,8 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> scopedQueryCollection,
 			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> unresolvedCollector) {
+			HashMap<String, Object> unresolvedCollector,
+			HashMap<String, Object> localTableCollection) {
 		if (explicitQualifiedUnknownEntries == null || explicitQualifiedUnknownEntries.isEmpty()) {
 			return;
 		}
@@ -5918,6 +7016,16 @@ public class SqlParseSymbolTreeHelper {
 							querySourceRef,
 							columnName,
 							unknownEntry.getValue());
+					String cteScopeRef = resolveCteScopeReference(tableRef, tableAliasCollection);
+					if (cteScopeRef != null && !cteScopeRef.isBlank()) {
+						materializeCteContextQualifiedUnresolvedEntry(
+								tableRef,
+								columnName,
+								unknownEntry.getValue(),
+								tableAliasCollection,
+								cteScopeRef,
+								localTableCollection);
+					}
 					continue;
 				}
 				if (!foundInQueryInterface) {
@@ -5955,19 +7063,9 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			String indicatedSourceRef = (resolvedNonTableSourceRef != null)
-					? resolvedNonTableSourceRef
-					: (resolvedTableRef != null ? resolvedTableRef : tableRef);
-
-			HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-					resolvedTableRef,
-					tableCollection);
-			if (indicatedTableDictionary != null) {
-				// Explicitly qualified table reference is valid when source table/alias exists.
-				// Materialize the resolved column on that source so table dictionaries remain complete.
-				walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unknownEntry.getValue());
-				continue;
-			}
+			String qualifiedStorageKey = (unresolvedKey != null && unresolvedKey.contains("."))
+					? unresolvedKey
+					: tableRef + "." + columnName;
 
 			boolean isSubstitutionQualifiedReference = false;
 			if (unknownEntry.getValue() instanceof Map<?, ?> unknownEntryMapObj) {
@@ -5984,8 +7082,27 @@ public class SqlParseSymbolTreeHelper {
 			if (!isSubstitutionQualifiedReference
 					&& localCurrentQueryDictionary != null
 					&& localCurrentQueryDictionary.containsKey(columnName)) {
-				// Regular qualified columns selected into the interface are validated in the
-				// downstream interface-resolution pass; avoid duplicate fatals here.
+				String querySourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, tableAliasCollection);
+				if (querySourceRef != null && walker.isNonTableQuerySourceReference(querySourceRef)) {
+					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+							querySourceRef,
+							columnName,
+							unknownEntry.getValue());
+					continue;
+				}
+				if (resolvedTableRef != null
+						&& walker.isNonTableQuerySourceReference(resolvedTableRef)) {
+					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
+							resolvedTableRef,
+							columnName,
+							unknownEntry.getValue());
+					continue;
+				}
+				materializeQualifiedUnresolvedEntry(
+						unresolvedKey,
+						unknownEntry.getValue(),
+						tableAliasCollection,
+						localTableCollection);
 				continue;
 			}
 
@@ -5995,9 +7112,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			if (unresolvedCollector != null) {
-				String qualifiedStorageKey = (unresolvedKey != null && unresolvedKey.contains("."))
-						? unresolvedKey
-						: tableRef + "." + columnName;
 				HashMap<String, Object> singleEntry = new HashMap<String, Object>();
 				singleEntry.put(qualifiedStorageKey, unknownEntry.getValue());
 				walker.mergeUnknownEntries(unresolvedCollector, singleEntry);
@@ -6417,6 +7531,7 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> hold = (Map<String, Object>)  walker.symbolTable.get(queryName);
 			// Move unknowns to query
 			Map<String, Object> unk = (Map<String, Object>)  walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+			HashMap<String, Object> liveDeferred = new HashMap<String, Object>();
 
 			if (unk != null) {
 				if (hold != null) {
@@ -6430,18 +7545,28 @@ public class SqlParseSymbolTreeHelper {
 						}
 				}
 
-				// if any unknowns left, put them back into table
-				if (unk.size() > 0)
-					 walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unk);
+				if (!unk.isEmpty()) {
+					walker.mergeUnknownEntries(liveDeferred, (HashMap<String, Object>) unk);
+				}
 			}
 
 			// Always publish query definition in the parent symbol table.
 			walker.symbolTable.put("def_" + queryName, query);
 
-			// WITH-specific cte_list tracks alias -> query scope reference (without def_ prefix).
 			if (definitionTarget != null && alias != null) {
+				finalizeCteScopeDeferredUnresolved(
+						alias,
+						queryName,
+						(HashMap<String, Object>) query,
+						definitionTarget,
+						liveDeferred);
 				definitionTarget.put(alias, queryName);
+			} else {
+				if (!liveDeferred.isEmpty()) {
+					walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, liveDeferred);
+				}
 			}
+
 			return true;
 		} else
 			return false;
@@ -6571,49 +7696,7 @@ public class SqlParseSymbolTreeHelper {
 	// which it adds to the column list with the alias as the key
 
 	public void flattenSubTreeForClauseColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
-		if (subTree == null) {
-			return;
-		}
-
-		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
-			Object col = subTree.get(MUMBLE_COLUMN_KEY);
-			if (!columnList.contains(col)) {
-				columnList.add(col);
-			}
-		} else if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-			Object subst = subTree.get(MUMBLE_SUBSTITUTION_KEY);
-			if (subst instanceof HashMap) {
-				HashMap<String, Object> substMap = (HashMap<String, Object>) subst;
-				Object type = substMap.get("type");
-				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
-					if (!columnList.contains(subst)) {
-						columnList.add(subst);
-					}
-				}
-			}
-		} else if (isQueryBackedSelectItemReference(subTree)) {
-			String queryReference = resolveQueryReferenceFromSubTree(subTree);
-			if (isQuerySourceReference(queryReference)) {
-				HashMap<String, Object> queryEntry = new HashMap<String, Object>();
-				queryEntry.put(MUMBLE_QUERY_KEY, queryReference);
-				if (!columnList.contains(queryEntry)) {
-					columnList.add(queryEntry);
-				}
-			}
-			subTree.remove(MUMBLE_QUERY_KEY);
-		} else {
-			for (Object value : subTree.values()) {
-				if (value instanceof HashMap<?, ?> valueMapObj) {
-					flattenSubTreeForClauseColumns((HashMap<String, Object>) valueMapObj, columnList);
-				} else if (value instanceof ArrayList<?> valueListObj) {
-					for (Object listItem : (ArrayList<Object>) valueListObj) {
-						if (listItem instanceof HashMap<?, ?> listMapObj) {
-							flattenSubTreeForClauseColumns((HashMap<String, Object>) listMapObj, columnList);
-						}
-					}
-				}
-			}
-		}
+		flattenSubTreeForDependencyColumns(subTree, columnList, true);
 	}
 
 	public String getSubqueryReferenceKey(Map<String, Object> symbols) {
@@ -6628,6 +7711,750 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Returns the nearest visible {@code cte_list} from the current frame or an ancestor scope.
+	 */
+	public Map<String, Object> getVisiblePriorNamedScopeRefs() {
+		Map<String, Object> cteList = getCteListSymbolMap(walker.symbolTable);
+		if (cteList != null && !cteList.isEmpty()) {
+			return cteList;
+		}
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			cteList = getCteListSymbolMap(ancestorSymbols);
+			if (cteList != null && !cteList.isEmpty()) {
+				return cteList;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Shared exit finalizer for archived query-like scopes (WITH CTE bodies, UNION/INTERSECT).
+	 * Resolves scope-local deferred unknowns in-place; merges outer-correlated refs into the
+	 * global table dictionary when the alias is visible — no upward bubble.
+	 */
+	@SuppressWarnings("unchecked")
+	public void finalizeScopeDeferredUnresolved(
+			HashMap<String, Object> scopePayload,
+			HashMap<String, Object> liveDeferred,
+			Map<String, Object> priorNamedScopeRefs) {
+		if (scopePayload == null) {
+			return;
+		}
+
+		HashMap<String, Object> pending = new HashMap<String, Object>();
+		if (liveDeferred != null && !liveDeferred.isEmpty()) {
+			walker.mergeUnknownEntries(pending, liveDeferred);
+		}
+		collectAndStripUnresolvedFromScopeTree(scopePayload, pending);
+
+		if (pending.isEmpty()) {
+			return;
+		}
+
+		resolveNestedScopeDeferredUnresolved(scopePayload, pending);
+
+		HashMap<String, Object> scopeLocal = new HashMap<String, Object>();
+		HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
+
+		for (Map.Entry<String, Object> entry : pending.entrySet()) {
+			String tableRef = extractTableRefFromUnresolvedEntry(entry.getKey(), entry.getValue());
+			if (isAliasLocalToScopeTree(scopePayload, tableRef)
+					|| isPriorCteAlias(tableRef, priorNamedScopeRefs)) {
+				scopeLocal.put(entry.getKey(), entry.getValue());
+			} else {
+				outerCorrelated.put(entry.getKey(), entry.getValue());
+			}
+		}
+
+		resolveScopeBodyDeferredUnresolved(scopeLocal, scopePayload, priorNamedScopeRefs);
+		mergeUnresolvedEntriesIntoCurrentScope(
+				resolveVisibleOuterDeferredUnresolved(outerCorrelated));
+	}
+
+	/**
+	 * Finalizes deferred unresolved columns when a WITH CTE is registered in {@code context_list}.
+	 */
+	public void finalizeCteScopeDeferredUnresolved(
+			String cteAlias,
+			String queryName,
+			HashMap<String, Object> cteScopePayload,
+			Map<String, Object> priorCteList,
+			HashMap<String, Object> liveDeferred) {
+		finalizeScopeDeferredUnresolved(cteScopePayload, liveDeferred, priorCteList);
+	}
+
+	/**
+	 * After {@code exitWith_query} nests the main body under {@code queryN}, resolves any remaining
+	 * archived deferred refs against visible outer scope (no bubble into the parent frame).
+	 */
+	@SuppressWarnings("unchecked")
+	public void hoistMainBodyDeferredUnresolvedFromWithQueryScope(HashMap<String, Object> queryScopePayload) {
+		if (queryScopePayload == null || queryScopePayload.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> hoisted = new HashMap<String, Object>();
+		walker.mergeUnknownEntries(hoisted, extractDefArchivedUnresolved(queryScopePayload));
+		walker.mergeUnknownEntries(hoisted, extractUnresolvedColumnMapFromScopePayload(queryScopePayload));
+		mergeUnresolvedEntriesIntoCurrentScope(resolveVisibleOuterDeferredUnresolved(hoisted));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectAndStripUnresolvedFromScopeTree(
+			HashMap<String, Object> scopeNode,
+			HashMap<String, Object> collected) {
+		if (scopeNode == null || scopeNode.isEmpty()) {
+			return;
+		}
+
+		walker.mergeUnknownEntries(collected, extractDefArchivedUnresolved(scopeNode));
+		walker.mergeUnknownEntries(collected, extractUnresolvedColumnMapFromScopePayload(scopeNode));
+
+		for (Object value : scopeNode.values()) {
+			if (value instanceof HashMap<?, ?>) {
+				collectAndStripUnresolvedFromScopeTree((HashMap<String, Object>) value, collected);
+			}
+		}
+	}
+
+	private boolean isPriorCteAlias(String tableRef, Map<String, Object> priorCteList) {
+		if (tableRef == null || tableRef.isBlank() || priorCteList == null || priorCteList.isEmpty()) {
+			return false;
+		}
+		if (priorCteList.containsKey(tableRef)) {
+			return true;
+		}
+		for (String alias : priorCteList.keySet()) {
+			if (alias != null && alias.equalsIgnoreCase(tableRef)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void resolveNestedScopeDeferredUnresolved(
+			HashMap<String, Object> cteScopePayload,
+			HashMap<String, Object> pending) {
+		if (pending == null || pending.isEmpty()) {
+			return;
+		}
+
+		ArrayList<String> consumed = new ArrayList<String>();
+		for (Map.Entry<String, Object> entry : pending.entrySet()) {
+			String tableRef = extractTableRefFromUnresolvedEntry(entry.getKey(), entry.getValue());
+			HashMap<String, Object> nestedScope = findInnermostNestedScopeForTableRef(cteScopePayload, tableRef);
+			if (nestedScope == null) {
+				continue;
+			}
+
+			HashMap<String, Object> singlePending = new HashMap<String, Object>();
+			singlePending.put(entry.getKey(), entry.getValue());
+			HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
+			HashMap<String, Object> innerLocal = new HashMap<String, Object>();
+			partitionPredicateUnresolvedByScope(singlePending, nestedScope, outerCorrelated, innerLocal);
+			if (!innerLocal.isEmpty()) {
+				resolveInnerLocalPredicateUnresolved(innerLocal, nestedScope);
+				consumed.add(entry.getKey());
+			}
+		}
+
+		for (String key : consumed) {
+			pending.remove(key);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> findInnermostNestedScopeForTableRef(
+			HashMap<String, Object> cteScopePayload,
+			String tableRef) {
+		if (tableRef == null || tableRef.isBlank() || cteScopePayload == null) {
+			return null;
+		}
+
+		HashMap<String, Object> topAliasMap = getScopeTableAliasMap(cteScopePayload);
+		if (isAliasLocalToScope(tableRef, topAliasMap)) {
+			return null;
+		}
+
+		return findInnermostNestedScopeForTableRefRecursive(cteScopePayload, tableRef, false);
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> findInnermostNestedScopeForTableRefRecursive(
+			HashMap<String, Object> node,
+			String tableRef,
+			boolean belowTop) {
+		HashMap<String, Object> bestMatch = null;
+
+		if (belowTop) {
+			HashMap<String, Object> aliasMap = getScopeTableAliasMap(node);
+			if (isAliasLocalToScope(tableRef, aliasMap)) {
+				bestMatch = node;
+			}
+		}
+
+		for (Object value : node.values()) {
+			if (value instanceof HashMap<?, ?>) {
+				HashMap<String, Object> nestedMatch = findInnermostNestedScopeForTableRefRecursive(
+						(HashMap<String, Object>) value,
+						tableRef,
+						true);
+				if (nestedMatch != null) {
+					bestMatch = nestedMatch;
+				}
+			}
+		}
+
+		return bestMatch;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void resolveScopeBodyDeferredUnresolved(
+			HashMap<String, Object> scopeLocal,
+			HashMap<String, Object> scopePayload,
+			Map<String, Object> priorNamedScopeRefs) {
+		if (scopeLocal == null || scopeLocal.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
+		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
+		splitUnresolvedEntriesByQualification(scopeLocal, qualifiedUnresolved, unqualifiedUnresolved);
+
+		if (!unqualifiedUnresolved.isEmpty()) {
+			emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolved);
+		}
+		if (qualifiedUnresolved.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> scopeAliasMap = collectScopeTreeTableAliasMap(scopePayload);
+		HashMap<String, Object> scopeTableDictionary = getEffectiveScopeTableDictionary(scopePayload);
+
+		HashMap<String, Object> priorNamedRefs = new HashMap<String, Object>();
+		HashMap<String, Object> scopeBodyRefs = new HashMap<String, Object>();
+		for (Map.Entry<String, Object> entry : qualifiedUnresolved.entrySet()) {
+			String tableRef = extractTableRefFromUnresolvedEntry(entry.getKey(), entry.getValue());
+			if (isPriorCteAlias(tableRef, priorNamedScopeRefs)) {
+				priorNamedRefs.put(entry.getKey(), entry.getValue());
+			} else {
+				scopeBodyRefs.put(entry.getKey(), entry.getValue());
+			}
+		}
+
+		final HashMap<String, Object> scopeAliasMapFinal = scopeAliasMap;
+		if (!scopeBodyRefs.isEmpty()) {
+			emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(scopeBodyRefs, scopeAliasMapFinal);
+			scopeBodyRefs.entrySet().removeIf(entry -> walker.canFullyResolveQualifiedUnknownInScope(
+					entry.getKey(),
+					scopeAliasMapFinal,
+					scopeTableDictionary,
+					walker.queryColumnDictionaryMap));
+			resolveQualifiedUnresolvedEntries(scopeBodyRefs, scopeAliasMapFinal, scopeTableDictionary, true);
+		}
+		if (!priorNamedRefs.isEmpty()) {
+			emitQualifiedSourceNotFoundFatals(priorNamedRefs);
+		}
+	}
+
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> collectScopeTreeTableAliasMap(HashMap<String, Object> scopeRoot) {
+		HashMap<String, Object> merged = new HashMap<String, Object>();
+		if (scopeRoot == null) {
+			return merged;
+		}
+		mergeScopeTreeTableAliasMapRecursive(scopeRoot, merged);
+		return merged;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeScopeTreeTableAliasMapRecursive(
+			HashMap<String, Object> scopeNode,
+			HashMap<String, Object> merged) {
+		if (scopeNode == null || scopeNode.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> aliasMap = getScopeTableAliasMap(scopeNode);
+		if (aliasMap != null && !aliasMap.isEmpty()) {
+			merged.putAll(aliasMap);
+		}
+
+		for (Map.Entry<String, Object> entry : scopeNode.entrySet()) {
+			String key = entry.getKey();
+			if (key == null
+					|| !(key.startsWith("def_")
+							|| key.startsWith(MUMBLE_QUERY_KEY)
+							|| key.startsWith(MUMBLE_UNION_KEY)
+							|| key.startsWith(MUMBLE_INTERSECT_KEY))) {
+				continue;
+			}
+			if (entry.getValue() instanceof HashMap<?, ?> nestedScopeObj) {
+				mergeScopeTreeTableAliasMapRecursive((HashMap<String, Object>) nestedScopeObj, merged);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isAliasLocalToScopeTree(HashMap<String, Object> scopeRoot, String tableRef) {
+		return findNestedScopeOwningAlias(scopeRoot, tableRef) != null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> findNestedScopeOwningAlias(
+			HashMap<String, Object> scopeRoot,
+			String tableRef) {
+		if (tableRef == null || tableRef.isBlank() || scopeRoot == null) {
+			return null;
+		}
+
+		if (isAliasLocalToScope(tableRef, getScopeTableAliasMap(scopeRoot))) {
+			return scopeRoot;
+		}
+
+		return findInnermostNestedScopeForTableRefRecursive(scopeRoot, tableRef, false);
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getEffectiveScopeTableDictionary(HashMap<String, Object> scopePayload) {
+		HashMap<String, Object> merged = new HashMap<String, Object>();
+		if (scopePayload == null) {
+			return merged;
+		}
+		Object tableDictObj = scopePayload.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (tableDictObj instanceof HashMap<?, ?> tableDictMapObj) {
+			merged.putAll((HashMap<String, Object>) tableDictMapObj);
+		}
+		mergeTargetTableDictionaryFromScopeSymbols(merged, scopePayload);
+		return merged;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeTargetTableDictionaryFromScopeSymbols(
+			HashMap<String, Object> merged,
+			Map<String, Object> scopeSymbols) {
+		if (merged == null || scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+		Object targetTableObj = scopeSymbols.get(MUMBLE_TARGET_TABLE_KEY);
+		if (targetTableObj instanceof HashMap<?, ?> targetTableMapObj) {
+			merged.putAll((HashMap<String, Object>) targetTableMapObj);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildEffectiveVisibleAliasMap(HashMap<String, Object> localAliasMap) {
+		HashMap<String, Object> effective =
+				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).aliases;
+		if (localAliasMap != null && !localAliasMap.isEmpty()) {
+			effective.putAll(localAliasMap);
+		}
+		return effective;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildEffectiveVisibleTableCollection(HashMap<String, Object> localTableCollection) {
+		HashMap<String, Object> effective =
+				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).tableDictionary;
+		if (localTableCollection != null && !localTableCollection.isEmpty()) {
+			effective.putAll(localTableCollection);
+		}
+		return effective;
+	}
+
+	/**
+	 * Predicate contexts that wrap a parenthesized SELECT (IN list, EXISTS test, scalar predicand).
+	 */
+	public enum PredicateSubqueryMergeKind {
+		IN,
+		EXISTS,
+		PREDICAND
+	}
+
+	/**
+	 * Closes a predicate-local symbol-table frame after {@code exitQuery_specification} has already
+	 * published the inner SELECT as {@code queryN}.
+	 * <p>
+	 * Two-store model (do not re-export {@code query_dictionary} here):
+	 * <ul>
+	 *   <li>Global map: {@code queryColumnDictionaryMap["queryN"]} was written at leaf SELECT finalization.</li>
+	 *   <li>Parent symbol table: inner scope is published as {@code def_queryN}; predicate kind stores a
+	 *       lightweight pointer ({@code existsN}, {@code predicandN}, or {@code in_listN}) under
+	 *       {@link MumbleConstants#MUMBLE_DEPENDENT_QUERIES_KEY} pointing at {@code queryN}.</li>
+	 * </ul>
+	 * Unresolved entries in the predicate frame are partitioned into outer-correlated vs
+	 * subquery-local refs. Outer-correlated entries are resolved or diagnosed against inherited
+	 * visible scope (not bubbled to the parent). Subquery-local entries are resolved against the
+	 * {@code def_queryN} alias map or discarded (filters already capture them).
+	 * This is a merge ({@link SqlASTWalkerHelper#popSymbolTablePutAll}), not a scope publish —
+	 * do not call {@link #finalizeQueryScopeSymbolTable} from predicate exits.
+	 */
+	@SuppressWarnings("unchecked")
+	public void exitPredicateSubqueryFrame(
+			Map<String, Object> astReference,
+			HashMap<String, Object> predicateFrameSymbols,
+			PredicateSubqueryMergeKind kind) {
+		boolean isSubquery = astReference != null && astReference.containsKey(MUMBLE_SELECT_KEY);
+		if (!isSubquery) {
+			popPredicateFrameSymbolTableMerge(predicateFrameSymbols);
+			return;
+		}
+
+		HashMap<String, Object> pendingUnresolved =
+				consumePredicateFrameUnresolvedEntries(predicateFrameSymbols);
+		String queryRefKey = resolveSubqueryReferenceKeyFromPredicateFrame(predicateFrameSymbols, kind);
+		switch (kind) {
+			case PREDICAND -> recordDependentQueryReference(
+					predicateFrameSymbols, MUMBLE_PREDICAND_KEY, queryRefKey);
+			case EXISTS -> recordDependentQueryReference(
+					predicateFrameSymbols, MUMBLE_EXISTS_KEY, queryRefKey);
+			case IN -> recordDependentQueryReference(
+					predicateFrameSymbols, MUMBLE_IN_LIST_KEY, queryRefKey);
+		}
+
+		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, queryRefKey);
+		HashMap<String, Object> defScopePayload = getDefQueryScopePayload(predicateFrameSymbols, queryRefKey);
+		HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
+		HashMap<String, Object> innerLocal = new HashMap<String, Object>();
+		partitionPredicateUnresolvedByScope(pendingUnresolved, defScopePayload, outerCorrelated, innerLocal);
+		HashMap<String, Object> deferredForParent = resolveInnerLocalPredicateUnresolved(innerLocal, defScopePayload);
+		walker.mergeUnknownEntries(deferredForParent, resolveVisibleOuterDeferredUnresolved(outerCorrelated));
+		stripUnresolvedFromScopePayloads(predicateFrameSymbols);
+		predicateFrameSymbols.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		// Predicate frames inherit context-backed aliases for inner resolution only; merging
+		// that snapshot onto the parent would overwrite locally registered FROM aliases (e.g. kk).
+		predicateFrameSymbols.remove(MUMBLE_TABLE_ALIAS_KEY);
+		popPredicateFrameSymbolTableMerge(predicateFrameSymbols);
+		mergeUnresolvedEntriesIntoCurrentScope(deferredForParent);
+		walker.queryCount++;
+	}
+
+	public void pushDependentQueryContextForFrame(ParserRuleContext ctx) {
+		dependentQueryContextStack.push(inferDependentQueryContext(ctx));
+	}
+
+	public void popDependentQueryContextForFrame() {
+		if (!dependentQueryContextStack.isEmpty()) {
+			dependentQueryContextStack.pop();
+		}
+	}
+
+	private String inferDependentQueryContext(ParserRuleContext ctx) {
+		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
+			int ruleIndex = walk.getRuleIndex();
+			if (ruleIndex == SQLSelectParserParser.RULE_select_list
+					|| ruleIndex == SQLSelectParserParser.RULE_select_item) {
+				return MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_groupby_clause) {
+				return MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
+				return MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_where_clause
+					|| ruleIndex == SQLSelectParserParser.RULE_having_clause
+					|| ruleIndex == SQLSelectParserParser.RULE_qualify_clause
+					|| ruleIndex == SQLSelectParserParser.RULE_search_condition) {
+				return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
+			}
+		}
+		return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void recordDependentQueryReference(
+			HashMap<String, Object> scopeSymbols,
+			String referenceKindKey,
+			String queryRefKey) {
+		if (scopeSymbols == null || queryRefKey == null || !isQuerySourceReference(queryRefKey)) {
+			return;
+		}
+		String entryKey = referenceKindKey + walker.queryCount;
+		HashMap<String, Object> entryPayload = new HashMap<>();
+		entryPayload.put(MUMBLE_QUERY_KEY, queryRefKey);
+		if (!dependentQueryContextStack.isEmpty()) {
+			entryPayload.put(MUMBLE_DEPENDENT_QUERY_TYPE_KEY, dependentQueryContextStack.peek());
+		}
+		getOrCreateDependentQueriesMap(scopeSymbols).put(entryKey, entryPayload);
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getOrCreateDependentQueriesMap(HashMap<String, Object> scopeSymbols) {
+		Object existing = scopeSymbols.get(MUMBLE_DEPENDENT_QUERIES_KEY);
+		if (existing instanceof HashMap<?, ?> map) {
+			return (HashMap<String, Object>) map;
+		}
+		HashMap<String, Object> created = new HashMap<>();
+		scopeSymbols.put(MUMBLE_DEPENDENT_QUERIES_KEY, created);
+		return created;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void popPredicateFrameSymbolTableMerge(HashMap<String, Object> predicateFrameSymbols) {
+		Object incomingDependent = predicateFrameSymbols.remove(MUMBLE_DEPENDENT_QUERIES_KEY);
+		walker.popSymbolTablePutAll(predicateFrameSymbols);
+		if (incomingDependent instanceof Map<?, ?> incoming && !incoming.isEmpty()) {
+			getOrCreateDependentQueriesMap(walker.symbolTable).putAll((Map<String, Object>) incoming);
+		}
+	}
+
+	/**
+	 * Locates the {@code queryN} key left in the predicate frame by {@link #finalizeQueryScopeSymbolTable}.
+	 * Uses {@link #getSubqueryReferenceKey} with a first-key fallback for all predicate kinds.
+	 */
+	private String resolveSubqueryReferenceKeyFromPredicateFrame(
+			HashMap<String, Object> predicateFrameSymbols,
+			PredicateSubqueryMergeKind kind) {
+		String queryRefKey = getSubqueryReferenceKey(predicateFrameSymbols);
+		if (queryRefKey != null || kind == PredicateSubqueryMergeKind.EXISTS) {
+			return queryRefKey;
+		}
+		if (predicateFrameSymbols != null && !predicateFrameSymbols.isEmpty()) {
+			return predicateFrameSymbols.keySet().iterator().next();
+		}
+		return null;
+	}
+
+	/** Renames {@code queryN} to {@code def_queryN} in the predicate frame before merging into the parent. */
+	private void promotePublishedQueryScopeToDefPrefix(
+			HashMap<String, Object> predicateFrameSymbols,
+			String queryRefKey) {
+		if (queryRefKey == null || queryRefKey.startsWith("def_") || !isQuerySourceReference(queryRefKey)) {
+			return;
+		}
+		predicateFrameSymbols.put("def_" + queryRefKey, predicateFrameSymbols.remove(queryRefKey));
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getDefQueryScopePayload(
+			HashMap<String, Object> predicateFrameSymbols,
+			String queryRefKey) {
+		if (queryRefKey == null || predicateFrameSymbols == null) {
+			return null;
+		}
+		String defKey = queryRefKey.startsWith("def_") ? queryRefKey : "def_" + queryRefKey;
+		Object payloadObj = predicateFrameSymbols.get(defKey);
+		if (payloadObj instanceof HashMap<?, ?>) {
+			return (HashMap<String, Object>) payloadObj;
+		}
+		return null;
+	}
+
+	/**
+	 * Splits predicate-frame unresolved entries into outer-correlated (bubble to parent) vs
+	 * subquery-local (alias exists only inside the {@code def_queryN} body).
+	 */
+	@SuppressWarnings("unchecked")
+	private void partitionPredicateUnresolvedByScope(
+			HashMap<String, Object> pendingUnresolved,
+			HashMap<String, Object> defScopePayload,
+			HashMap<String, Object> outerCorrelated,
+			HashMap<String, Object> innerLocal) {
+		if (pendingUnresolved == null || pendingUnresolved.isEmpty()) {
+			return;
+		}
+		HashMap<String, Object> innerAliasMap = collectScopeTreeTableAliasMap(defScopePayload);
+		for (Map.Entry<String, Object> entry : pendingUnresolved.entrySet()) {
+			String unresolvedKey = entry.getKey();
+			if (unresolvedKey == null || unresolvedKey.isBlank()) {
+				continue;
+			}
+			String tableRef = extractTableRefFromUnresolvedEntry(unresolvedKey, entry.getValue());
+			if (tableRef != null && isAliasLocalToScope(tableRef, innerAliasMap)) {
+				innerLocal.put(unresolvedKey, entry.getValue());
+			} else {
+				outerCorrelated.put(unresolvedKey, entry.getValue());
+			}
+		}
+	}
+
+	private boolean isAliasLocalToScope(String tableRef, HashMap<String, Object> scopeAliasMap) {
+		if (tableRef == null || tableRef.isBlank() || scopeAliasMap == null || scopeAliasMap.isEmpty()) {
+			return false;
+		}
+		if (scopeAliasMap.containsKey(tableRef)) {
+			return true;
+		}
+		for (String alias : scopeAliasMap.keySet()) {
+			if (alias != null && alias.equalsIgnoreCase(tableRef)) {
+				return true;
+			}
+		}
+		for (Object aliasTargetObj : scopeAliasMap.values()) {
+			if (aliasTargetObj instanceof String aliasTarget
+					&& (aliasTarget.equals(tableRef) || aliasTarget.equalsIgnoreCase(tableRef))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getScopeTableAliasMap(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null) {
+			return null;
+		}
+		Object aliasObj = scopePayload.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasObj instanceof HashMap<?, ?>) {
+			return (HashMap<String, Object>) aliasObj;
+		}
+		return null;
+	}
+
+	private String extractTableRefFromUnresolvedEntry(String unresolvedKey, Object unresolvedValue) {
+		if (unresolvedKey != null) {
+			int dotIndex = unresolvedKey.indexOf('.');
+			if (dotIndex > 0) {
+				return unresolvedKey.substring(0, dotIndex);
+			}
+		}
+		if (!(unresolvedValue instanceof Map<?, ?> valueMap)) {
+			return null;
+		}
+		Object columnObj = valueMap.get("column");
+		if (!(columnObj instanceof Map<?, ?> columnMap)) {
+			return null;
+		}
+		Object tableRefObj = columnMap.get("table_ref");
+		return tableRefObj instanceof String tableRef ? tableRef : null;
+	}
+
+	/**
+	 * Hoists predicate-local unresolved refs for parent query exit resolution.
+	 */
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> resolveInnerLocalPredicateUnresolved(
+			HashMap<String, Object> innerLocal,
+			HashMap<String, Object> defScopePayload) {
+		HashMap<String, Object> deferredForParent = new HashMap<String, Object>();
+		if (innerLocal == null || innerLocal.isEmpty()) {
+			return deferredForParent;
+		}
+
+		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
+		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
+		splitUnresolvedEntriesByQualification(innerLocal, qualifiedUnresolved, unqualifiedUnresolved);
+
+		HashMap<String, Object> innerAliasMap = getScopeTableAliasMap(defScopePayload);
+		if (innerAliasMap == null) {
+			innerAliasMap = new HashMap<String, Object>();
+		}
+		if (!qualifiedUnresolved.isEmpty()) {
+			emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(qualifiedUnresolved, innerAliasMap);
+			deferredForParent.putAll(qualifiedUnresolved);
+		}
+		if (!unqualifiedUnresolved.isEmpty()) {
+			walker.mergeUnknownEntries(deferredForParent, unqualifiedUnresolved);
+		}
+		return deferredForParent;
+	}
+
+	/** Hoists outer-correlated predicate unresolved refs to the parent query exit pipeline. */
+	private HashMap<String, Object> resolveVisibleOuterDeferredUnresolved(
+			HashMap<String, Object> outerCorrelated) {
+		if (outerCorrelated == null || outerCorrelated.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+		return outerCorrelated;
+	}
+
+
+	private void stripUnresolvedFromScopePayload(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null || scopePayload.isEmpty()) {
+			return;
+		}
+		scopePayload.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		scopePayload.remove(DEF_ARCHIVED_UNRESOLVED_COLUMN_KEY);
+		scopePayload.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		for (Object nestedValue : scopePayload.values()) {
+			if (nestedValue instanceof HashMap<?, ?> nestedScopeObj) {
+				stripUnresolvedFromScopePayload((HashMap<String, Object>) nestedScopeObj);
+			}
+		}
+	}
+
+	/** Removes walk-time inheritance snapshots from published symbol-tree payloads. */
+	@SuppressWarnings("unchecked")
+	public void stripInheritedVisibleAliasesFromPublishedTree(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null || scopePayload.isEmpty()) {
+			return;
+		}
+		scopePayload.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
+		for (Object nestedValue : scopePayload.values()) {
+			if (nestedValue instanceof HashMap<?, ?> nestedScopeObj) {
+				stripInheritedVisibleAliasesFromPublishedTree((HashMap<String, Object>) nestedScopeObj);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void stripUnresolvedFromScopePayloads(HashMap<String, Object> predicateFrameSymbols) {
+		if (predicateFrameSymbols == null || predicateFrameSymbols.isEmpty()) {
+			return;
+		}
+		for (Object value : predicateFrameSymbols.values()) {
+			if (value instanceof HashMap<?, ?>) {
+				stripUnresolvedFromScopePayload((HashMap<String, Object>) value);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> consumePredicateFrameUnresolvedEntries(
+			HashMap<String, Object> predicateFrameSymbols) {
+		HashMap<String, Object> collected = new HashMap<String, Object>();
+		if (predicateFrameSymbols == null || predicateFrameSymbols.isEmpty()) {
+			return collected;
+		}
+		Object active = predicateFrameSymbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (active instanceof HashMap<?, ?>) {
+			walker.mergeUnknownEntries(collected, (HashMap<String, Object>) active);
+		}
+		Object archived = predicateFrameSymbols.remove(DEF_ARCHIVED_UNRESOLVED_COLUMN_KEY);
+		if (archived instanceof HashMap<?, ?>) {
+			walker.mergeUnknownEntries(collected, (HashMap<String, Object>) archived);
+		}
+		for (Object value : predicateFrameSymbols.values()) {
+			if (!(value instanceof HashMap<?, ?> scopePayload)) {
+				continue;
+			}
+			walker.mergeUnknownEntries(collected, extractUnresolvedColumnMapFromScopePayload(
+					(HashMap<String, Object>) scopePayload));
+			walker.mergeUnknownEntries(collected, extractDefArchivedUnresolved(
+					(HashMap<String, Object>) scopePayload));
+		}
+		return collected;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> extractUnresolvedColumnMapFromScopePayload(
+			HashMap<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+		Object unresolved = scopeSymbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (unresolved instanceof HashMap<?, ?>) {
+			return new HashMap<String, Object>((HashMap<String, Object>) unresolved);
+		}
+		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> extractDefArchivedUnresolved(HashMap<String, Object> scopeSymbols) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+		Object archived = scopeSymbols.remove(DEF_ARCHIVED_UNRESOLVED_COLUMN_KEY);
+		if (archived instanceof HashMap<?, ?>) {
+			return new HashMap<String, Object>((HashMap<String, Object>) archived);
+		}
+		return new HashMap<String, Object>();
 	}
 
 }

@@ -31,12 +31,29 @@ public final class MumbleConstants {
     public static final String MUMBLE_CONDITION_KEY = "condition";
     public static final String MUMBLE_CREATE_KEY = "create";
     public static final String MUMBLE_CTE_KEY = "cte";
-    public static final String MUMBLE_CTE_LIST_KEY = "cte_list"; // Special key for symbol table CTE definition list in WITH scopes
-    public static final String MUMBLE_OUTER_CTE_LIST_KEY = "outer_cte_list_backup"; // Saved outer cte_list before a nested WITH clause overwrites it
+    /** Named scope registry (WITH CTEs, inherited outer aliases) visible to nested subqueries. */
+    public static final String MUMBLE_CONTEXT_LIST_KEY = "context_list";
+    /** @deprecated use {@link #MUMBLE_CONTEXT_LIST_KEY} */
+    @Deprecated
+    public static final String MUMBLE_CTE_LIST_KEY = MUMBLE_CONTEXT_LIST_KEY;
+    public static final String MUMBLE_OUTER_CONTEXT_LIST_KEY = "outer_context_list_backup";
+    /** @deprecated use {@link #MUMBLE_OUTER_CONTEXT_LIST_KEY} */
+    @Deprecated
+    public static final String MUMBLE_OUTER_CTE_LIST_KEY = MUMBLE_OUTER_CONTEXT_LIST_KEY;
     public static final String MUMBLE_OUTER_DEF_ENTRIES_KEY = "outer_def_entries_backup"; // Saved outer def_* symbol-table entries before a nested WITH clause absorbs them
+    /** Immutable alias snapshot captured when a nested scope inherits visible outer scope. */
+    public static final String MUMBLE_INHERITED_VISIBLE_ALIASES_KEY = "inherited_visible_aliases";
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DELETE_KEY = "delete";
+    /** Submap grouping predicandN, in_listN, and existsN query references on a scope. */
+    public static final String MUMBLE_DEPENDENT_QUERIES_KEY = "dependent_queries";
+    /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). */
+    public static final String MUMBLE_DEPENDENT_QUERY_TYPE_KEY = "type";
+    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE = "interface";
+    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS = "filters";
+    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY = "group_by";
+    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY = "order_by";
     public static final String MUMBLE_DROP_KEY = "drop";
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";
