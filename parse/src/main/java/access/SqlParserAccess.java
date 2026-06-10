@@ -202,6 +202,9 @@ public class SqlParserAccess extends AbstractParserAccess {
             this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
             System.out.println("Exception: " + this.getFatalErrorList());
         }
+        if (this.extractor != null) {
+            this.extractor.finalizeHandoffSymbolTable();
+        }
         // Save the results in a local Snippet object
         this.snippet = this.extractor.getSnippet();
 

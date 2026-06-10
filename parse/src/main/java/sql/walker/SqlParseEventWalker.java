@@ -584,9 +584,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	public HashMap<String, Object> getSymbolTable() {
 		if (walker.symbolTable != null) {
-			symbolTreeHelper.stripInheritedVisibleAliasesFromPublishedTree(walker.symbolTable);
+			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
 		}
 		return walker.symbolTable;
+	}
+
+	/**
+	 * Removes walk-time-only symbol-table entries from the artifact handed to clients.
+	 * Invoked at successful grammar exit points and after aborted walks at the access boundary.
+	 */
+	public void finalizeHandoffSymbolTable() {
+		if (walker.symbolTable != null) {
+			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
+		}
 	}
 
 	
@@ -989,10 +999,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> scriptSymbolTables = new LinkedHashMap<String, Object>();
 		for (int i = 0; i < ctx.sql_statement().size(); i++) {
 			Object statementSymbols = walker.symbolTable.remove(TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX + Integer.toString(i + 1));
-			if (statementSymbols != null) {
+			if (statementSymbols instanceof HashMap<?, ?> statementSymbolsMap) {
+				symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(
+						(HashMap<String, Object>) statementSymbolsMap);
+				scriptSymbolTables.put(Integer.toString(i + 1), statementSymbolsMap);
+			} else if (statementSymbols != null) {
 				scriptSymbolTables.put(Integer.toString(i + 1), statementSymbols);
 			}
 		}
+		symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(scriptSymbolTables);
 		walker.popSymbolTable(SQLPARSER_SCRIPT_TREE_KEY, scriptSymbolTables);
 	}
 
@@ -1034,6 +1049,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					walker.substitutionsMap,
 					getInterface());
 			HashMap<String, Object> statementSymbols = walker.symbolTable;
+			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(statementSymbols);
 			walker.popSymbolTable(TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX + Integer.toString(statementSequence), statementSymbols);
 		}
 	}
@@ -1077,6 +1093,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
+		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1096,6 +1113,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
+		finalizeHandoffSymbolTable();
 
 	}
 
@@ -1113,6 +1131,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
 	
 		walker.addQueryInputColumnsToTableDictionary();
+		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1129,6 +1148,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
+		finalizeHandoffSymbolTable();
 	}
 	
 
@@ -1146,6 +1166,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
+		finalizeHandoffSymbolTable();
 	}
 
 
@@ -1163,6 +1184,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
+		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1185,6 +1207,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		 walker.asTree.put(SQLPARSER_TUPLE_TREE_KEY, item);
+		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1202,6 +1225,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 
 		walker.addQueryInputColumnsToTableDictionary();
+		finalizeHandoffSymbolTable();
 	}
 
 	
@@ -1222,6 +1246,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 		walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
+		finalizeHandoffSymbolTable();
 	}
 	
 
@@ -1237,6 +1262,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
+		finalizeHandoffSymbolTable();
 	}
 	/*
 	===============================================================================
@@ -1323,7 +1349,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.handleOneChild(ruleIndex);
 
 		String createScopeKey = MUMBLE_CREATE_KEY + walker.queryCount;
-		walker.popSymbolTable(createScopeKey, walker.symbolTable);
+		symbolTreeHelper.publishNamedScopeAndPop(createScopeKey, walker.symbolTable);
 		walker.queryCount++;
 	}
 
@@ -1798,7 +1824,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_DROP_KEY, dropNode);
 
 		String dropScopeKey = MUMBLE_DROP_KEY + walker.queryCount;
-		walker.popSymbolTable(dropScopeKey, walker.symbolTable);
+		symbolTreeHelper.publishNamedScopeAndPop(dropScopeKey, walker.symbolTable);
 		walker.queryCount++;
 	}
 
@@ -1879,7 +1905,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_ALTER_KEY, alterNode);
 
 		String alterScopeKey = MUMBLE_ALTER_KEY + walker.queryCount;
-		walker.popSymbolTable(alterScopeKey, walker.symbolTable);
+		symbolTreeHelper.publishNamedScopeAndPop(alterScopeKey, walker.symbolTable);
 		walker.queryCount++;
 	}
 
@@ -1921,7 +1947,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_TRUNCATE_KEY, truncateNode);
 
 		String truncateScopeKey = MUMBLE_TRUNCATE_KEY + walker.queryCount;
-		walker.popSymbolTable(truncateScopeKey, walker.symbolTable);
+		symbolTreeHelper.publishNamedScopeAndPop(truncateScopeKey, walker.symbolTable);
 		walker.queryCount++;
 	}
 
@@ -2073,7 +2099,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable = new HashMap<String, Object>();
 		walker.symbolTable.put(queryName, currentQuerySymbolTable);
 		currentQuerySymbolTable.putAll(symbols);
-		symbolTreeHelper.stripInheritedVisibleAliasesFromPublishedTree(currentQuerySymbolTable);
+		symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
 
 		// If this was a nested WITH, enterWith_clause saved the outer WITH clause's
 		// in-progress cte_list under MUMBLE_OUTER_CONTEXT_LIST_KEY. It was absorbed into
@@ -2987,7 +3013,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					symbols,
 					insertSource);
 		} else {
-			walker.popSymbolTablePutAll(symbols);
+			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 		}
 
 		// clear union clause count
@@ -3083,7 +3109,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					symbols,
 					insertSource);
 		} else {
-			walker.popSymbolTablePutAll(symbols);
+			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 		}
 
 	}
@@ -3957,7 +3983,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		HashMap<String, Object> symbols = walker.symbolTable;
 		symbolTreeHelper.finalizeInsertSourceAtPrimaryExit(symbols);
-		walker.popSymbolTablePutAll(symbols);
+		symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 	}

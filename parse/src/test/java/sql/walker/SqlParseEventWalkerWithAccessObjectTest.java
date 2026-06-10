@@ -1460,21 +1460,29 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<381>,1:13]]}, t2={b=[[@5,17:17='b',<381>,1:17]], c=[[@9,33:33='c',<381>,1:33]]}}, update_dictionary={a=[[@3,13:13='a',<381>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<381>,1:13]]}, t2={}}, update_dictionary={a=[[@3,13:13='a',<381>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<381>,1:13]]}, t2={b=[[@5,17:17='b',<381>,1:17]], c=[[@9,33:33='c',<381>,1:33]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<381>,1:13]]}, t2={}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{update0={a=[[@3,13:13='a',<381>,1:13]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 
-		assertDiagnosticByCode(
-			snippet,
-			"AMBIGUOUS_COLUMN_REFERENCE",
-			ParseDiagnostic.Severity.SEVERE_WARNING,
-			"Ambiguous column reference 'c'",
-			"c");
+		Assert.assertTrue("Expected ambiguous unqualified reference warning for b",
+				countDiagnosticsBySeverity(
+						snippet,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						"Ambiguous column reference 'b'",
+						"b") >= 1);
+		Assert.assertTrue("Expected ambiguous unqualified reference warning for c",
+				countDiagnosticsBySeverity(
+						snippet,
+						"AMBIGUOUS_COLUMN_REFERENCE",
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						"Ambiguous column reference 'c'",
+						"c") >= 1);
 	}
 
 	@Test
@@ -1486,9 +1494,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<381>,1:13]]}, t2={b=[[@5,17:17='b',<381>,1:17]], c=[[@9,33:33='c',<381>,1:33]]}}, update_dictionary={a=[[@3,13:13='a',<381>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
+		Assert.assertEquals("Symbol Table is wrong", "{update0={assignments={a=[{name=b, table_ref=null}]}, table_dictionary={t={a=[[@3,13:13='a',<381>,1:13]]}, t2={}}, update_dictionary={a=[[@3,13:13='a',<381>,1:13]]}, filters=[{name=c, table_ref=null}]}}",
 			snippet.getSymbolTable().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<381>,1:13]]}, t2={b=[[@5,17:17='b',<381>,1:17]], c=[[@9,33:33='c',<381>,1:33]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{t={a=[[@3,13:13='a',<381>,1:13]]}, t2={}}",
 			snippet.getTableDictionary().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 			snippet.getSubstitutionsMap().toString());
@@ -2255,7 +2263,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Interface is wrong", "[a]",
 				snippet.getQueryInterface().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{update0={assignments={a=[{name=b, table_ref=src}]}, table_dictionary={s={b=[[@7,24:26='src',<381>,1:24]], id=[[@19,59:61='src',<381>,1:59]]}, t={a=[[@5,20:20='a',<381>,1:20]], flag=[[@23,70:72='tgt',<381>,1:70]], id=[[@15,50:52='tgt',<381>,1:50]]}}, update_dictionary={a=[[@5,20:20='a',<381>,1:20]]}, filters=[{name=id, table_ref=tgt}, {name=id, table_ref=src}, {name=flag, table_ref=tgt}], table_alias={tgt=t, src=s}}}",
+				"{update0={assignments={a=[{name=b, table_ref=src}]}, table_dictionary={s={b=[[@7,24:26='src',<381>,1:24]], id=[[@19,59:61='src',<381>,1:59]]}, t={a=[[@5,20:20='a',<381>,1:20]], id=[[@15,50:52='tgt',<381>,1:50]], flag=[[@23,70:72='tgt',<381>,1:70]]}}, update_dictionary={a=[[@5,20:20='a',<381>,1:20]]}, filters=[{name=id, table_ref=tgt}, {name=id, table_ref=src}, {name=flag, table_ref=tgt}], table_alias={tgt=t, src=s}}}",
 				snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
 				"{s={b=[[@7,24:26='src',<381>,1:24]], id=[[@19,59:61='src',<381>,1:59]]}, t={a=[[@5,20:20='a',<381>,1:20]], flag=[[@23,70:72='tgt',<381>,1:70]], id=[[@15,50:52='tgt',<381>,1:50]]}}",
