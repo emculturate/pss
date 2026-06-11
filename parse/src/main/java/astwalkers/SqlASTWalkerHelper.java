@@ -3,6 +3,7 @@ package astwalkers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -72,6 +73,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * so final diagnostics can render merged source positions.
 	 */
 	public HashMap<String, Object> globalQualifiedUnresolvedLocations;
+
+	/**
+	 * Tracks qualified unresolved keys already diagnosed with QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE
+	 * during the current statement to avoid duplicate fatal emissions from multiple finalize paths.
+	 */
+	public HashSet<String> emittedQualifiedSourceNotFoundKeys;
 
 
 /**
@@ -154,6 +161,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
          symbolTable = new HashMap<String, Object>();
          substitutionsMap = new HashMap<String, Object>();
 		 globalQualifiedUnresolvedLocations = new HashMap<String, Object>();
+		 emittedQualifiedSourceNotFoundKeys = new HashSet<String>();
          initializeAstKeyCrosswalkMap();
 		 initializeSqlDiagnosticCatalog();
 
@@ -239,6 +247,26 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		queryColumnDictionaryMap.clear();
 		substitutionsMap.clear();
 		globalQualifiedUnresolvedLocations.clear();
+		emittedQualifiedSourceNotFoundKeys.clear();
+	}
+
+	public boolean hasEmittedQualifiedSourceNotFoundFatal(String unresolvedQualifiedKey) {
+		if (unresolvedQualifiedKey == null
+				|| unresolvedQualifiedKey.isBlank()
+				|| emittedQualifiedSourceNotFoundKeys == null) {
+			return false;
+		}
+		return emittedQualifiedSourceNotFoundKeys.contains(unresolvedQualifiedKey);
+	}
+
+	public void markEmittedQualifiedSourceNotFoundFatal(String unresolvedQualifiedKey) {
+		if (unresolvedQualifiedKey == null || unresolvedQualifiedKey.isBlank()) {
+			return;
+		}
+		if (emittedQualifiedSourceNotFoundKeys == null) {
+			emittedQualifiedSourceNotFoundKeys = new HashSet<String>();
+		}
+		emittedQualifiedSourceNotFoundKeys.add(unresolvedQualifiedKey);
 	}
 
 	public Integer findNearestSubqueryParentRuleIndex(ParserRuleContext ctx) {

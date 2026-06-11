@@ -3796,6 +3796,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				   registerUnpivotValueInterfaceHint(sourceResult, modifier);
 			   }
 		   }
+		   String modifierAlias = null;
+		   if (modifier != null) {
+			   Object modifierAliasObj = modifier.get(MUMBLE_ALIAS_KEY);
+			   if (modifierAliasObj instanceof String alias && !alias.isBlank()) {
+				   modifierAlias = alias;
+			   }
+		   }
 		   if (outerAlias != null) {
 			   Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
 			   if (tableEntry instanceof Map<?, ?> tableMap) {
@@ -3806,10 +3813,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					   String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
 					   symbolTreeHelper.upsertCurrentTableAliasMapping(outerAlias, aliasTarget);
 				   } else {
-					   walker.collectTableAlias(outerAlias, modifierKey);
+					   String sourceRef = resolveUnpivotSourceReference(sourceResult);
+					   if (sourceRef != null && !sourceRef.isBlank()) {
+						   symbolTreeHelper.upsertCurrentTableAliasMapping(outerAlias, sourceRef);
+					   } else {
+						   walker.collectTableAlias(outerAlias, modifierKey);
+					   }
 				   }
 			   } else {
 				   sourceResult.put(MUMBLE_ALIAS_KEY, outerAlias);
+			   }
+		   }
+		   if (modifier != null && modifierAlias != null && outerAlias == null) {
+			   String sourceRef = resolveUnpivotSourceReference(sourceResult);
+			   if (sourceRef != null && !sourceRef.isBlank()) {
+				   symbolTreeHelper.upsertCurrentTableAliasMapping(modifierAlias, sourceRef);
+			   } else {
+				   walker.collectTableAlias(modifierAlias, modifierKey);
 			   }
 		   }
 

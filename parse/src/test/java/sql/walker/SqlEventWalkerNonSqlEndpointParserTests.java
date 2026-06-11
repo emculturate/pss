@@ -1017,7 +1017,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runPredicandParsertest(sql, parser);
 		
-		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={from={table={alias=aa, table=scbcrse}}, select={1={column={name=scbcrse_coll_code, table_ref=aa}}}, query=query0}}}",
+		Assert.assertEquals("AST is wrong", "{PREDICAND={lookup={from={table={alias=aa, table=scbcrse}}, select={1={column={name=scbcrse_coll_code, table_ref=aa}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
@@ -1027,7 +1027,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}, table_dictionary={scbcrse={scbcrse_coll_code=[[@2,8:9='aa',<381>,1:8]]}}, interface={scbcrse_coll_code=[{name=scbcrse_coll_code, table_ref=aa}]}, table_alias={aa=scbcrse}}, predicand1=query0}",
+		Assert.assertEquals("Symbol Table is wrong", "{dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={scbcrse_coll_code=[[@4,11:27='scbcrse_coll_code',<381>,1:11]]}, table_dictionary={scbcrse={scbcrse_coll_code=[[@2,8:9='aa',<381>,1:8]]}}, interface={scbcrse_coll_code=[{name=scbcrse_coll_code, table_ref=aa}]}, table_alias={aa=scbcrse}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1736,7 +1736,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		SqlParseEventWalker extractor = runInListPredicateParsertest(sql, parser);
 		
 		
-		Assert.assertEquals("AST is wrong", "{IN_LIST={select={1={column={name=*, table_ref=*}}}, query=query0, from={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{IN_LIST={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=tab1}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
 				extractor.getInterface().toString());
@@ -1746,7 +1746,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@2,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@2,8:8='*',<291>,1:8]]}, table_dictionary={tab1={*=[[@2,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{dependent_queries={in_list1={query=query0, type=filters}}, def_query0={query_dictionary={*=[[@2,8:8='*',<291>,1:8]]}, table_dictionary={tab1={*=[[@2,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}",
 				extractor.getSymbolTable().toString());
 
 	}

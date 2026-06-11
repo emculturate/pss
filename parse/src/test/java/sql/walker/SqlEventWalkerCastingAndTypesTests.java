@@ -780,7 +780,7 @@ public class SqlEventWalkerCastingAndTypesTests extends AbstractSqlParseEventWal
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@7,31:31='a',<381>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={a=[[@7,31:31='a',<381>,1:31]]}, table_dictionary={tab1={}}, interface={a=[{name=<var1>, type=predicand, table_ref=tab1}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{query0={query_dictionary={a=[[@7,31:31='a',<381>,1:31]]}, table_dictionary={tab1={}}, interface={a=[{name=<var1>, type=predicand}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
