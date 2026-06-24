@@ -433,6 +433,31 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	public ArrayList<String> extractRelationalModifierInListColumnNames(Object inListObj) {
+		ArrayList<String> inColumns = new ArrayList<String>();
+		if (!(inListObj instanceof Map<?, ?> inListMapObj)) {
+			return inColumns;
+		}
+
+		Map<String, Object> inListMap = (Map<String, Object>) inListMapObj;
+		for (int index = 1; inListMap.containsKey(String.valueOf(index)); index++) {
+			Object inItemObj = inListMap.get(String.valueOf(index));
+			if (!(inItemObj instanceof Map<?, ?> inItemMapObj)) {
+				continue;
+			}
+
+			Object inNameObj = ((Map<String, Object>) inItemMapObj).get(MUMBLE_NAME_KEY);
+			if (!(inNameObj instanceof String inName) || inName.isBlank()) {
+				continue;
+			}
+
+			inColumns.add(inName);
+		}
+
+		return inColumns;
+	}
+
+	@SuppressWarnings("unchecked")
 	public void registerUnpivotGeneratedColumnAmbiguitySuppressions(
 			ArrayList<Object> hints,
 			HashMap<String, Object> localCurrentQueryDictionary) {
