@@ -42,7 +42,7 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY = "_tmp_insert_target_column_list_location";
 	public static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	public static final String TEMP_DELETE_TARGET_ALIAS_KEY = "_tmp_delete_target_alias";
-	public static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
+	public static final String DERIVED_COLUMNS_HINTS_KEY = "derived_columns";
 
 	// --- Getters/setters for moved fields ---
 
@@ -348,6 +348,74 @@ public class SqlParseSymbolTreeHelper {
 
 	}
 
+	/**
+	 * Applies PIVOT derivation hints to the local interface, adding new interface entries
+	 * for derived pivot columns created by combining aggregates and IN-list values.
+	 * 
+	 * For each pivot hint:
+	 * - Extracts aggregate column names (function names or explicit aliases)
+	 * - Extracts IN-list column names (pivot value columns)
+	 * - For each combination of aggregate and IN value, creates a derived column name
+	 * - Adds new interface entries for these derived columns
+	 */
+	@SuppressWarnings("unchecked")
+	public void applyPivotValueInterfaceDerivations(
+			HashMap<String, Object> localInterface,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (localInterface == null || localInterface.isEmpty()
+				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+			return;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object aggregateColumnsObj = hintMap.get("pivot_aggregate_columns");
+			Object inColumnsObj = hintMap.get("pivot_in_columns");
+
+			if (!(aggregateColumnsObj instanceof ArrayList<?> aggregateColumnsList)
+					|| aggregateColumnsList.isEmpty()
+					|| !(inColumnsObj instanceof ArrayList<?> inColumnsList)
+					|| inColumnsList.isEmpty()) {
+				continue;
+			}
+
+			// Create derived column names for each aggregate-IN value combination
+			// Naming convention: <in_value>_<aggregate_name>
+			for (Object aggregateObj : aggregateColumnsList) {
+				if (!(aggregateObj instanceof String aggregate) || aggregate.isBlank()) {
+					continue;
+				}
+
+				for (Object inObj : inColumnsList) {
+					if (!(inObj instanceof String inValue) || inValue.isBlank()) {
+						continue;
+					}
+
+					String derivedColumnName = inValue + "_" + aggregate;
+					HashMap<String, Object> derivedRef = new HashMap<String, Object>();
+					derivedRef.put(MUMBLE_NAME_KEY, derivedColumnName);
+					derivedRef.put(MUMBLE_TABLE_REF_KEY, null);
+
+					// Add to interface if not already present
+					Object interfaceRefsObj = localInterface.get(derivedColumnName);
+					ArrayList<Object> interfaceRefs;
+					if (interfaceRefsObj instanceof ArrayList<?>) {
+						interfaceRefs = (ArrayList<Object>) interfaceRefsObj;
+					} else {
+						interfaceRefs = new ArrayList<Object>();
+						localInterface.put(derivedColumnName, interfaceRefs);
+					}
+
+					appendInterfaceReferenceIfMissing(interfaceRefs, derivedRef);
+				}
+			}
+		}
+	}
+
 	public void removeFromUnresolvedMapCaseInsensitive(HashMap<String, Object> unresolvedColumnMap, String columnName) {
 		if (unresolvedColumnMap.remove(columnName) != null) {
 			return;
@@ -486,7 +554,7 @@ public class SqlParseSymbolTreeHelper {
 		if (localCurrentQueryDictionary == null)
 			localCurrentQueryDictionary = new HashMap<String, Object>();
 		ArrayList<Object> localRelationalModifierInterfaceHints =
-				(ArrayList<Object>) walker.symbolTable.remove(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
+				(ArrayList<Object>) walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		String deleteTargetAlias = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 
@@ -909,6 +977,10 @@ public class SqlParseSymbolTreeHelper {
 				visibleQuerySourceCollection);
 
 		applyUnpivotValueInterfaceDerivations(
+				localInterface,
+				localRelationalModifierInterfaceHints);
+
+		applyPivotValueInterfaceDerivations(
 				localInterface,
 				localRelationalModifierInterfaceHints);
 
@@ -9205,7 +9277,7 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
 		scopePayload.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
 		scopePayload.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
-		scopePayload.remove(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
+		scopePayload.remove(DERIVED_COLUMNS_HINTS_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);

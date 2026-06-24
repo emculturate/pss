@@ -171,6 +171,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_UNION_KEY = "union";
     public static final String MUMBLE_UNKNOWN_KEY = "unknown";
     public static final String MUMBLE_PIVOT_KEY = "pivot";
+    public static final String MUMBLE_PIVOT_LITERAL_KEY = "pivot_literal";
+    public static final String MUMBLE_PIVOT_PREFIX_KEY = "pivot_prefix";
     public static final String MUMBLE_UNPIVOT_KEY = "unpivot";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
     public static final String MUMBLE_UPDATE_DICTIONARY_KEY = "update_dictionary"; // Special key for update statement assignment token references

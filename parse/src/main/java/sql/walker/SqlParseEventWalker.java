@@ -37,9 +37,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.CharStream;
 
-import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.misc.Interval;
-import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
@@ -65,10 +63,7 @@ import sql.symboltree.SqlParseSymbolTreeHelper;
  */
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseEventWalker extends SQLSelectParserBaseListener {
-	private static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
-	private static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
-	private static final String TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY = "_tmp_relational_modifier_interface_hints";
 	private final ScriptParseAccumulator scriptParseAccumulator = new ScriptParseAccumulator();
 
 	/**
@@ -3794,6 +3789,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			   sourceResult.put(modifierKey, modifier);
 			   if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
 				   registerUnpivotValueInterfaceHint(sourceResult, modifier);
+			   } else if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
+				   resolvePivotScopeAtPrimaryExit(sourceResult);
 			   }
 		   }
 		   String modifierAlias = null;
@@ -3836,6 +3833,99 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
 	}
 
+	@SuppressWarnings("unchecked")
+	private void registerPivotValueInterfaceHint(
+			Object aggregateObj,
+			Object inListObj,
+			Object nameColObj) {
+		if (aggregateObj == null || inListObj == null) {
+			return;
+		}
+
+		ArrayList<String> aggregateColumns = extractPivotAggregateColumnNames(aggregateObj);
+		ArrayList<String> inListColumns = extractPivotInListColumnNames(inListObj);
+
+		if (aggregateColumns.isEmpty() || inListColumns.isEmpty()) {
+			return;
+		}
+
+		String forColumn = (nameColObj instanceof String) ? (String) nameColObj : null;
+
+		HashMap<String, Object> hint = new HashMap<String, Object>();
+		hint.put("pivot_aggregate_columns", aggregateColumns);
+		hint.put("pivot_in_columns", inListColumns);
+		if (forColumn != null && !forColumn.isBlank()) {
+			hint.put(MUMBLE_FOR_KEY, forColumn);
+		}
+
+		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
+		ArrayList<Object> hints;
+		if (hintsObj instanceof ArrayList<?>) {
+			hints = (ArrayList<Object>) hintsObj;
+		} else {
+			hints = new ArrayList<Object>();
+			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, hints);
+		}
+
+		hints.add(hint);
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> extractPivotAggregateColumnNames(Object aggregateObj) {
+		ArrayList<String> columnNames = new ArrayList<String>();
+		if (!(aggregateObj instanceof Map<?, ?> aggregateMapObj)) {
+			return columnNames;
+		}
+
+		Map<String, Object> aggregateMap = (Map<String, Object>) aggregateMapObj;
+		for (int index = 1; aggregateMap.containsKey(String.valueOf(index)); index++) {
+			Object aggItemObj = aggregateMap.get(String.valueOf(index));
+			if (!(aggItemObj instanceof Map<?, ?> aggItemMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> aggItemMap = (Map<String, Object>) aggItemMapObj;
+			Object aliasObj = aggItemMap.get(MUMBLE_ALIAS_KEY);
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				columnNames.add(alias);
+			} else {
+				Object functionObj = aggItemMap.get(MUMBLE_FUNCTION_KEY);
+				if (functionObj instanceof Map<?, ?> functionMapObj) {
+					Object functionNameObj = ((Map<String, Object>) functionMapObj).get(MUMBLE_FUNCTION_NAME_KEY);
+					if (functionNameObj instanceof String functionName && !functionName.isBlank()) {
+						columnNames.add(functionName);
+					}
+				}
+			}
+		}
+
+		return columnNames;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> extractPivotInListColumnNames(Object inListObj) {
+		ArrayList<String> columnNames = new ArrayList<String>();
+		if (!(inListObj instanceof Map<?, ?> inListMapObj)) {
+			return columnNames;
+		}
+
+		Map<String, Object> inListMap = (Map<String, Object>) inListMapObj;
+		for (int index = 1; inListMap.containsKey(String.valueOf(index)); index++) {
+			Object inItemObj = inListMap.get(String.valueOf(index));
+			if (!(inItemObj instanceof Map<?, ?> inItemMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> inItemMap = (Map<String, Object>) inItemMapObj;
+			Object nameObj = inItemMap.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String name && !name.isBlank()) {
+				columnNames.add(name);
+			}
+		}
+
+		return columnNames;
+	}
+
 	private void registerUnpivotValueInterfaceHint(Map<String, Object> sourceResult, Map<String, Object> unpivotMap) {
 		if (sourceResult == null || sourceResult.isEmpty() || unpivotMap == null || unpivotMap.isEmpty()) {
 			return;
@@ -3867,13 +3957,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			hint.put(MUMBLE_FOR_KEY, forColumn);
 		}
 
-		Object hintsObj = walker.symbolTable.get(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY);
+		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
 		ArrayList<Object> hints;
 		if (hintsObj instanceof ArrayList<?>) {
 			hints = (ArrayList<Object>) hintsObj;
 		} else {
 			hints = new ArrayList<Object>();
-			walker.symbolTable.put(TEMP_RELATIONAL_MODIFIER_INTERFACE_HINTS_KEY, hints);
+			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, hints);
 		}
 
 		hints.add(hint);
@@ -3937,6 +4027,255 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		return latestKey;
+	}
+
+	private String resolveLatestPivotScopeKeyFromSymbolTable() {
+		String latestKey = null;
+		int latestIndex = -1;
+		for (String key : walker.symbolTable.keySet()) {
+			if (key == null || key.startsWith("def_") || key.startsWith("_tmp_")) {
+				continue;
+			}
+			if (!key.startsWith(MUMBLE_PIVOT_KEY)) {
+				continue;
+			}
+			String numericSuffix = key.substring(MUMBLE_PIVOT_KEY.length());
+			if (numericSuffix.isBlank()) {
+				continue;
+			}
+			try {
+				int idx = Integer.parseInt(numericSuffix);
+				if (idx > latestIndex) {
+					latestIndex = idx;
+					latestKey = key;
+				}
+			} catch (NumberFormatException e) {
+				// ignore non-numeric suffixes
+			}
+		}
+		return latestKey;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void resolvePivotScopeAtPrimaryExit(Map<String, Object> sourceResult) {
+		String pivotScopeKey = resolveLatestPivotScopeKeyFromSymbolTable();
+		if (pivotScopeKey == null) {
+			return;
+		}
+
+		Object pivotScopeObj = walker.symbolTable.get(pivotScopeKey);
+		if (!(pivotScopeObj instanceof Map<?, ?> pivotScopeMapObj)) {
+			return;
+		}
+		Map<String, Object> pivotScope = (Map<String, Object>) pivotScopeMapObj;
+
+		Object unresolvedObj = pivotScope.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		HashMap<String, Object> unresolvedMap = (unresolvedObj instanceof HashMap<?, ?>)
+				? (HashMap<String, Object>) unresolvedObj
+				: new HashMap<String, Object>();
+
+		Object identifiersObj = pivotScope.get("pivot_in_identifiers");
+		HashMap<String, Object> pivotIdentifierMap = (identifiersObj instanceof HashMap<?, ?>)
+				? (HashMap<String, Object>) identifiersObj
+				: new HashMap<String, Object>();
+
+		String tableRef = null;
+		Object tableObj = sourceResult == null ? null : sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableObj instanceof Map<?, ?> tableMapObj) {
+			tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMapObj);
+		}
+
+		if (tableRef != null && !tableRef.isBlank()) {
+			walker.ensureTableDictionaryEntry(tableRef);
+			HashMap<String, Object> tableDictionary = walker.getCurrentTableDictionary();
+			Object tableColumnsObj = tableDictionary.get(tableRef);
+			if (tableColumnsObj instanceof HashMap<?, ?>) {
+				HashMap<String, Object> singleTableCollection = new HashMap<String, Object>();
+				singleTableCollection.put(tableRef, tableColumnsObj);
+				walker.moveEntriesToSingleTableIfSingleTarget(unresolvedMap, singleTableCollection);
+			}
+
+			emitPivotIdentifierSevereWarnings(pivotIdentifierMap);
+			removePivotIdentifierEntriesFromUnresolved(unresolvedMap, pivotIdentifierMap);
+			pivotIdentifierMap.clear();
+		} else {
+			Map<String, Object> interfaceMap = resolvePrimarySourceInterface(sourceResult);
+			boolean wildcardInterface = interfaceMap.containsKey("*");
+			if (!unresolvedMap.isEmpty() && (wildcardInterface || !interfaceMap.isEmpty())) {
+				for (String unresolvedKey : new ArrayList<String>(unresolvedMap.keySet())) {
+					if (unresolvedKey == null || unresolvedKey.contains(".")) {
+						continue;
+					}
+					if (wildcardInterface || interfaceMap.containsKey(unresolvedKey)) {
+						unresolvedMap.remove(unresolvedKey);
+					}
+				}
+			}
+
+			for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
+				if (!containsUnresolvedIdentifierEntry(unresolvedMap, identifier)) {
+					pivotIdentifierMap.remove(identifier);
+				}
+			}
+
+			emitPivotIdentifierSevereWarnings(pivotIdentifierMap);
+			removePivotIdentifierEntriesFromUnresolved(unresolvedMap, pivotIdentifierMap);
+			pivotIdentifierMap.clear();
+		}
+
+		if (pivotIdentifierMap.isEmpty()) {
+			pivotScope.remove("pivot_in_identifiers");
+		} else {
+			pivotScope.put("pivot_in_identifiers", pivotIdentifierMap);
+		}
+
+		if (unresolvedMap.isEmpty()) {
+			pivotScope.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		} else {
+			pivotScope.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unresolvedMap);
+		}
+
+		if (pivotScope.isEmpty()) {
+			walker.symbolTable.remove(pivotScopeKey);
+		}
+	}
+
+	private boolean containsUnresolvedIdentifierEntry(Map<String, Object> unresolvedMap, String identifier) {
+		if (unresolvedMap == null || unresolvedMap.isEmpty() || identifier == null || identifier.isBlank()) {
+			return false;
+		}
+		if (unresolvedMap.containsKey(identifier)) {
+			return true;
+		}
+		for (String key : unresolvedMap.keySet()) {
+			if (key != null && key.equalsIgnoreCase(identifier)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void removePivotIdentifierEntriesFromUnresolved(
+			Map<String, Object> unresolvedMap,
+			Map<String, Object> pivotIdentifierMap) {
+		if (unresolvedMap == null || unresolvedMap.isEmpty()
+				|| pivotIdentifierMap == null || pivotIdentifierMap.isEmpty()) {
+			return;
+		}
+
+		for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
+			if (identifier == null || identifier.isBlank()) {
+				continue;
+			}
+			if (unresolvedMap.containsKey(identifier)) {
+				unresolvedMap.remove(identifier);
+				continue;
+			}
+			for (String unresolvedKey : new ArrayList<String>(unresolvedMap.keySet())) {
+				if (unresolvedKey != null && unresolvedKey.equalsIgnoreCase(identifier)) {
+					unresolvedMap.remove(unresolvedKey);
+					break;
+				}
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> resolvePrimarySourceInterface(Map<String, Object> sourceResult) {
+		String sourceRef = resolveUnpivotSourceReference(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object sourceScopeObj = walker.symbolTable.get(sourceRef);
+		if (!(sourceScopeObj instanceof Map<?, ?> sourceScopeMapObj)) {
+			return new HashMap<String, Object>();
+		}
+
+		Map<String, Object> sourceScope = (Map<String, Object>) sourceScopeMapObj;
+		Object interfaceObj = sourceScope.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof Map<?, ?> interfaceMapObj) {
+			return (Map<String, Object>) interfaceMapObj;
+		}
+
+		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void emitPivotIdentifierSevereWarnings(Map<String, Object> pivotIdentifierMap) {
+		if (pivotIdentifierMap == null || pivotIdentifierMap.isEmpty()) {
+			return;
+		}
+
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE);
+
+		for (Map.Entry<String, Object> entry : pivotIdentifierMap.entrySet()) {
+			String identifier = entry.getKey();
+			Object tokenListObj = entry.getValue();
+			if (!(tokenListObj instanceof List<?> tokenList) || tokenList.isEmpty()) {
+				continue;
+			}
+
+			for (Object tokenObj : tokenList) {
+				String tokenString = tokenObj == null ? null : tokenObj.toString();
+				Integer[] lineAndChar = extractLineAndCharFromTokenString(tokenString);
+				Integer line = lineAndChar[0];
+				Integer charPos = lineAndChar[1];
+
+				String diagMessage = (diagTemplate == null)
+						? String.format("PIVOT IN identifier '%s' at (l:%s c:%s) is interpreted as a column reference.",
+								identifier,
+								String.valueOf(line),
+								String.valueOf(charPos))
+						: String.format(diagTemplate,
+								identifier,
+								String.valueOf(line),
+								String.valueOf(charPos));
+
+				walker.addWalkerDiagnostic(
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						diagCode,
+						diagMessage,
+						line,
+						charPos,
+						walker.getClass().getSimpleName(),
+						null,
+						identifier,
+						true,
+						"ast-walk",
+						null,
+						null);
+			}
+		}
+	}
+
+	private Integer[] extractLineAndCharFromTokenString(String tokenString) {
+		Integer[] result = new Integer[] { null, null };
+		if (tokenString == null || tokenString.isBlank()) {
+			return result;
+		}
+
+		int lastComma = tokenString.lastIndexOf(',');
+		if (lastComma < 0 || lastComma + 1 >= tokenString.length()) {
+			return result;
+		}
+
+		String tail = tokenString.substring(lastComma + 1).replace("]", "").trim();
+		int colon = tail.indexOf(':');
+		if (colon < 0) {
+			return result;
+		}
+
+		String lineStr = tail.substring(0, colon).trim();
+		String charStr = tail.substring(colon + 1).trim();
+		try {
+			result[0] = Integer.parseInt(lineStr);
+			result[1] = Integer.parseInt(charStr);
+		} catch (NumberFormatException e) {
+			// leave as nulls
+		}
+		return result;
 	}
 
 
@@ -4116,6 +4455,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Keep relational modifier as a direct sibling of table/query source in tuple endpoint AST.
 			// Example: {TUPLE={table={...}, pivot={...}}} instead of {TUPLE={table={...}, modifier={pivot={...}}}}
 			sourceResult.putAll(modifier);
+			if (modifier.containsKey(MUMBLE_PIVOT_KEY)) {
+				resolvePivotScopeAtPrimaryExit(sourceResult);
+			}
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
@@ -4457,7 +4799,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.collect(ruleIndex, stackLevel, numbered);
 	}
 
-		@Override	
+	@Override
+	public void enterPivot_clause( SQLSelectParserParser.Pivot_clauseContext ctx) {
+		// Create a new symbol table context for the pivot clause
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		// Create pivot-specific identifier map: identifier -> [tokenString references]
+		walker.symbolTable.put("pivot_in_identifiers", new HashMap<String, Object>());
+	}
+
+	@Override
 	public void exitPivot_clause( SQLSelectParserParser.Pivot_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -4494,6 +4844,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
+		
+		// Register pivot hints for later interface/unresolved derivation
+		registerPivotValueInterfaceHint(aggregate, inList, nameCol);
+		
+		// Collect the pivot symbol table and add to parent after building the AST
+		String pivotScopeKey = MUMBLE_PIVOT_KEY + walker.queryCount;
+		symbolTreeHelper.publishNamedScopeAndPop(pivotScopeKey, walker.symbolTable);
+		walker.queryCount++;
 	}
 
 	@Override
@@ -4507,10 +4865,181 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> function = new LinkedHashMap<String, Object>();
 			function.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
 			function.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+			Object aliasObj = subMap.remove("3");
 
 			subMap.clear();
 			subMap.put(MUMBLE_FUNCTION_KEY, function);
+			if (aliasObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
+				subMap.put(MUMBLE_ALIAS_KEY, aliasMap.get(MUMBLE_ALIAS_KEY));
+			}
 		}
+	}
+
+	@Override
+	public void exitPivot_aggregate_clause( SQLSelectParserParser.Pivot_aggregate_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitSnowflake_pivot_aggregate_list( SQLSelectParserParser.Snowflake_pivot_aggregate_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> numbered = new LinkedHashMap<String, Object>();
+		int count = ctx.snowflake_pivot_aggregate().size();
+		for (int i = 1; i <= count; i++) {
+			numbered.put(String.valueOf(i), subMap.get(String.valueOf(i)));
+		}
+		walker.collect(ruleIndex, stackLevel, numbered);
+	}
+
+	@Override
+	public void exitSnowflake_pivot_aggregate( SQLSelectParserParser.Snowflake_pivot_aggregateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() >= 2) {
+			Map<String, Object> function = new LinkedHashMap<String, Object>();
+			function.put(MUMBLE_FUNCTION_NAME_KEY, subMap.remove("1"));
+			function.put(MUMBLE_PARAMETERS_KEY, subMap.remove("2"));
+			Object aliasObj = subMap.remove("3");
+
+			subMap.clear();
+			subMap.put(MUMBLE_FUNCTION_KEY, function);
+			if (aliasObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
+				subMap.put(MUMBLE_ALIAS_KEY, aliasMap.get(MUMBLE_ALIAS_KEY));
+			}
+		}
+	}
+
+	@Override
+	public void exitPivot_value_column( SQLSelectParserParser.Pivot_value_columnContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitPivot_in_clause( SQLSelectParserParser.Pivot_in_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitPivot_in_content( SQLSelectParserParser.Pivot_in_contentContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitPivot_in_value_list( SQLSelectParserParser.Pivot_in_value_listContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> numbered = new LinkedHashMap<String, Object>();
+		int count = ctx.pivot_in_value().size();
+		for (int i = 1; i <= count; i++) {
+			numbered.put(String.valueOf(i), subMap.get(String.valueOf(i)));
+		}
+		walker.collect(ruleIndex, stackLevel, numbered);
+	}
+
+	@Override
+	public void exitPivot_in_value( SQLSelectParserParser.Pivot_in_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		}
+
+		String literalText = ctx.pivot_in_literal().getText();
+		Map<String, Object> item = new LinkedHashMap<String, Object>();
+		item.put(MUMBLE_PIVOT_LITERAL_KEY, literalText);
+		if (ctx.pivot_in_prefix() != null) {
+			item.put(MUMBLE_PIVOT_PREFIX_KEY, ctx.pivot_in_prefix().getText().replaceFirst("(?i)^AS", "").trim());
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, item);
+	}
+
+	@Override
+	public void exitPivot_in_literal( SQLSelectParserParser.Pivot_in_literalContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		}
+
+		// If this is an identifier (not a string literal), it is a column reference
+		// that must be tracked in pivot_in_identifiers and as an unresolved column.
+		if (ctx.identifier() != null) {
+			String identifierText = ctx.identifier().getText();
+
+			@SuppressWarnings("unchecked")
+			Map<String, Object> pivotInIdentifiers = (Map<String, Object>) walker.symbolTable.get("pivot_in_identifiers");
+			if (pivotInIdentifiers != null) {
+				Object tokenRefsObj = pivotInIdentifiers.get(identifierText);
+				ArrayList<String> tokenRefs;
+				if (tokenRefsObj instanceof ArrayList<?>) {
+					tokenRefs = (ArrayList<String>) tokenRefsObj;
+				} else {
+					tokenRefs = new ArrayList<String>();
+					pivotInIdentifiers.put(identifierText, tokenRefs);
+				}
+				String tokenString = ctx.getStart() == null ? null : ctx.getStart().toString();
+				if (tokenString != null && !tokenRefs.contains(tokenString)) {
+					tokenRefs.add(tokenString);
+				}
+			}
+
+			Map<String, Object> columnSubTree = new HashMap<String, Object>();
+			columnSubTree.put(MUMBLE_TABLE_REF_KEY, null);
+			columnSubTree.put(MUMBLE_NAME_KEY, identifierText);
+			walker.collectUnresolvedColumnReference(MUMBLE_UNKNOWN_KEY, columnSubTree, ctx.getStart());
+		}
+	}
+
+	@Override
+	public void exitPivot_in_prefix( SQLSelectParserParser.Pivot_in_prefixContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		}
+	}
+
+	@Override
+	public void exitPivot_in_any( SQLSelectParserParser.Pivot_in_anyContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> anyMap = new LinkedHashMap<String, Object>();
+		anyMap.put(MUMBLE_NAME_KEY, "ANY");
+		if (subMap.containsKey("1")) {
+			anyMap.put(MUMBLE_ORDERBY_KEY, subMap.remove("1"));
+		}
+		subMap.clear();
+		subMap.putAll(anyMap);
+	}
+
+	@Override
+	public void exitPivot_in_subquery( SQLSelectParserParser.Pivot_in_subqueryContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
 	}
 
 	/*
@@ -4518,7 +5047,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  TABLE FUNCTION clauses
 	  ===========================================
 	*/
-
 	private Map<String, Object> buildSequentialList(Map<String, Object> subMap) {
 		Map<String, Object> ordered = new LinkedHashMap<String, Object>();
 		for (int inputIndex = 1, outputIndex = 1; subMap.containsKey(String.valueOf(inputIndex)); inputIndex++) {

@@ -28,6 +28,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
+		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
 
 		
     /*************************************
@@ -208,6 +209,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER,
 				 "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
 				 "%s member %s contains INTO. INTO is allowed only in the first SELECT of a set operation.");
+		 registerDiagnostic(
+				 DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE,
+				 "PIVOT_IN_IDENTIFIER_REFERENCE",
+				 "PIVOT IN identifier '%s' at (l:%s c:%s) is interpreted as a column reference.");
 	 }
 
 	@SuppressWarnings("unchecked")

@@ -908,14 +908,39 @@ relational_modifier_alias
 // Optional alias names the PIVOT result independently from the source alias.
 pivot_clause
   : PIVOT
-    LEFT_PAREN pivot_aggregate FOR pivot_value_column pivot_in_clause RIGHT_PAREN
+    LEFT_PAREN pivot_aggregate_clause FOR pivot_value_column pivot_in_clause RIGHT_PAREN
     pivot_default_on_null_clause?
     relation_as_clause?
   ;
 
-// Snowflake: <aggregate_function>(<pivot_column>) [[AS] <alias>]
+// Generic aggregate entry for PIVOT value position.
+// Supports either a single aggregate expression (typical SQL)
+// or Snowflake's documented comma-separated aggregate list.
+pivot_aggregate_clause
+  : pivot_aggregate
+  | snowflake_pivot_aggregate_list
+  ;
+
+// <aggregate_function>(<pivot_column>) [[AS] <alias>]
 pivot_aggregate
   : set_function_type LEFT_PAREN column_reference RIGHT_PAREN relation_as_clause?
+  ;
+
+// Snowflake official PIVOT aggregate list support: AVG, COUNT, MAX, MIN, SUM.
+snowflake_pivot_aggregate_list
+  : snowflake_pivot_aggregate (COMMA snowflake_pivot_aggregate)*
+  ;
+
+snowflake_pivot_aggregate
+  : snowflake_pivot_aggregate_function LEFT_PAREN column_reference RIGHT_PAREN relation_as_clause?
+  ;
+
+snowflake_pivot_aggregate_function
+  : AVG
+  | COUNT
+  | MAX
+  | MIN
+  | SUM
   ;
 
 // Snowflake: FOR <value_column>
@@ -939,7 +964,18 @@ pivot_in_value_list
   ;
 
 pivot_in_value
-  : value_expression relational_modifier_alias?
+  : pivot_in_literal pivot_in_prefix?
+  ;
+
+// PIVOT IN entries are literal selector values, not column references.
+pivot_in_literal
+  : Character_String_Literal
+  | identifier
+  ;
+
+// Snowflake optional prefix label for output columns.
+pivot_in_prefix
+  : AS alias_identifier
   ;
 
 pivot_in_any
@@ -3284,6 +3320,10 @@ Extended_Control_Characters         :   '\u0080' .. '\u009F';
 Character_String_Literal
   : QUOTE ( ESC_SEQ | DOUBLE_QUOTE_ESCAPE | ~('\\'|'\'') )* QUOTE
   ;
+
+Pivot_Identifier
+  : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
+;
 
 fragment
 DOUBLE_QUOTE_ESCAPE
