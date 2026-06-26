@@ -332,12 +332,20 @@ public abstract class AbstractSqlParseEventWalkerTest {
 	// COMMON TEST METHODS
 
 	protected void assertNoFatalErrors(SqlParseEventWalker extractor) {
+		Assert.assertNotNull(
+				"Parser/walker run did not produce an extractor (likely parser rejection or walker setup failure). "
+						+ "Use ParserRunResult#getFailure and parser diagnostics for details.",
+				extractor);
 		Snippet snippet = extractor.getSnippet();
 		Assert.assertEquals("Expected no errors but got some: " + snippet.getFatalErrorStringList(), 
 				0, snippet.getFatalErrorStringList().size());
 	}
 
 	protected void assertNoWalkerDiagnostics(SqlParseEventWalker extractor) {
+		Assert.assertNotNull(
+				"Parser/walker run did not produce an extractor (likely parser rejection or walker setup failure). "
+						+ "Use ParserRunResult#getFailure and parser diagnostics for details.",
+				extractor);
 		Snippet snippet = extractor.getSnippet();
 		Assert.assertEquals(
 				"Unexpected FATAL diagnostics from Walker/WalkerHelper: "

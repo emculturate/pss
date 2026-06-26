@@ -3,6 +3,7 @@ package sql.diagnostics;
 import org.antlr.v4.runtime.Token;
 
 import astwalkers.SqlASTWalkerHelper;
+import errorhandling.ParseDiagnostic;
 
 /**
  * Shared diagnostics packaging helpers for SQL parse/walk logic.
@@ -31,5 +32,43 @@ public class SqlParseDiagnosticService {
 				String.valueOf(memberPosition));
 
 		emitFatal(diagCode, diagMessage, token, "INTO");
+	}
+
+	public void emitRelationalModifierAliasConflict(
+			String retainedAlias,
+			Token retainedAliasToken,
+			String ignoredAlias,
+			Token ignoredAliasToken) {
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT);
+		String diagMessageTemplate = walker
+				.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT);
+
+		Integer retainedLine = retainedAliasToken == null ? null : retainedAliasToken.getLine();
+		Integer retainedChar = retainedAliasToken == null ? null : retainedAliasToken.getCharPositionInLine();
+		Integer ignoredLine = ignoredAliasToken == null ? null : ignoredAliasToken.getLine();
+		Integer ignoredChar = ignoredAliasToken == null ? null : ignoredAliasToken.getCharPositionInLine();
+
+		String diagMessage = String.format(
+				diagMessageTemplate,
+				String.valueOf(retainedAlias),
+				String.valueOf(retainedLine),
+				String.valueOf(retainedChar),
+				String.valueOf(ignoredAlias),
+				String.valueOf(ignoredLine),
+				String.valueOf(ignoredChar));
+
+		walker.addWalkerDiagnostic(
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				diagCode,
+				diagMessage,
+				retainedLine,
+				retainedChar,
+				walker.getClass().getSimpleName(),
+				null,
+				String.valueOf(retainedAlias),
+				true,
+				"ast-walk",
+				null,
+				null);
 	}
 }

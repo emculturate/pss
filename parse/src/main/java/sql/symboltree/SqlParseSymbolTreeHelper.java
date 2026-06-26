@@ -458,6 +458,179 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> buildDerivedColumnsMapFromHints(ArrayList<Object> hints) {
+		HashMap<String, Object> derivedColumns = new HashMap<String, Object>();
+		if (hints == null || hints.isEmpty()) {
+			return derivedColumns;
+		}
+
+		for (Object hintObj : hints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			if (valueObj instanceof String valueColumn && !valueColumn.isBlank()) {
+				addDerivedColumnNameIfMissing(derivedColumns, valueColumn);
+				mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, valueColumn);
+			}
+
+			Object forObj = hintMap.get(MUMBLE_FOR_KEY);
+			if (forObj instanceof String forColumn && !forColumn.isBlank()) {
+				addDerivedColumnNameIfMissing(derivedColumns, forColumn);
+				mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, forColumn);
+			}
+
+			Object aggregateColumnsObj = hintMap.get("pivot_aggregate_columns");
+			Object inColumnsObj = hintMap.get("pivot_in_columns");
+			if (aggregateColumnsObj instanceof ArrayList<?> aggregateColumns
+					&& !aggregateColumns.isEmpty()
+					&& inColumnsObj instanceof ArrayList<?> inColumns
+					&& !inColumns.isEmpty()) {
+				for (Object inObj : inColumns) {
+					if (!(inObj instanceof String inValue) || inValue.isBlank()) {
+						continue;
+					}
+					String normalizedInValue = normalizePivotDerivedComponent(inValue);
+					for (Object aggObj : aggregateColumns) {
+						if (!(aggObj instanceof String aggName) || aggName.isBlank()) {
+							continue;
+						}
+						String derivedColumnName = inValue + "_" + aggName;
+						addDerivedColumnNameIfMissing(derivedColumns, derivedColumnName);
+						mergePivotAggregateResolvedRefsIfPresent(
+								derivedColumns,
+								hintMap,
+								aggName,
+								derivedColumnName);
+						if (!normalizedInValue.equals(inValue)) {
+							String normalizedDerivedColumnName = normalizedInValue + "_" + aggName;
+							addDerivedColumnNameIfMissing(derivedColumns, normalizedDerivedColumnName);
+							mergePivotAggregateResolvedRefsIfPresent(
+									derivedColumns,
+									hintMap,
+									aggName,
+									normalizedDerivedColumnName);
+						}
+					}
+				}
+			}
+		}
+
+		return derivedColumns;
+	}
+
+	private void addDerivedColumnNameIfMissing(HashMap<String, Object> derivedColumns, String columnName) {
+		if (columnName == null || columnName.isBlank()) {
+			return;
+		}
+		if (containsKeyIgnoreCase(derivedColumns, columnName)) {
+			return;
+		}
+		derivedColumns.put(columnName, new ArrayList<Object>());
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeUnpivotDerivedRefsIfPresent(
+			HashMap<String, Object> derivedColumns,
+			Map<String, Object> hintMap,
+			String derivedColumnName) {
+		if (derivedColumns == null
+				|| hintMap == null
+				|| derivedColumnName == null
+				|| derivedColumnName.isBlank()) {
+			return;
+		}
+
+		Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
+			return;
+		}
+
+		Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
+		if (!(inColumnsObj instanceof ArrayList<?> inColumns) || inColumns.isEmpty()) {
+			return;
+		}
+
+		Object existingRefsObj = derivedColumns.get(derivedColumnName);
+		ArrayList<Object> existingRefs;
+		if (existingRefsObj instanceof ArrayList<?>) {
+			existingRefs = (ArrayList<Object>) existingRefsObj;
+		} else {
+			existingRefs = new ArrayList<Object>();
+			derivedColumns.put(derivedColumnName, existingRefs);
+		}
+
+		for (Object inObj : inColumns) {
+			if (!(inObj instanceof String inColumn) || inColumn.isBlank()) {
+				continue;
+			}
+			HashMap<String, Object> ref = new HashMap<String, Object>();
+			ref.put(MUMBLE_NAME_KEY, inColumn);
+			ref.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+			appendInterfaceReferenceIfMissing(existingRefs, ref);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergePivotAggregateResolvedRefsIfPresent(
+			HashMap<String, Object> derivedColumns,
+			Map<String, Object> hintMap,
+			String aggregateName,
+			String derivedColumnName) {
+		if (derivedColumns == null
+				|| hintMap == null
+				|| aggregateName == null
+				|| aggregateName.isBlank()
+				|| derivedColumnName == null
+				|| derivedColumnName.isBlank()) {
+			return;
+		}
+
+		Object resolvedRefsObj = hintMap.get("pivot_aggregate_resolved_refs");
+		if (!(resolvedRefsObj instanceof Map<?, ?> resolvedRefsMapObj)) {
+			return;
+		}
+
+		Object aggregateRefsObj = ((Map<String, Object>) resolvedRefsMapObj).get(aggregateName);
+		if (!(aggregateRefsObj instanceof ArrayList<?> aggregateRefs) || aggregateRefs.isEmpty()) {
+			return;
+		}
+
+		Object existingRefsObj = derivedColumns.get(derivedColumnName);
+		ArrayList<Object> existingRefs;
+		if (existingRefsObj instanceof ArrayList<?>) {
+			existingRefs = (ArrayList<Object>) existingRefsObj;
+		} else {
+			existingRefs = new ArrayList<Object>();
+			derivedColumns.put(derivedColumnName, existingRefs);
+		}
+
+		for (Object refObj : aggregateRefs) {
+			if (refObj instanceof Map<?, ?> refMapObj) {
+				HashMap<String, Object> clonedRef = new HashMap<String, Object>((Map<String, Object>) refMapObj);
+				appendInterfaceReferenceIfMissing(existingRefs, clonedRef);
+			} else {
+				appendInterfaceReferenceIfMissing(existingRefs, refObj);
+			}
+		}
+	}
+
+	private String normalizePivotDerivedComponent(String component) {
+		if (component == null || component.length() < 2) {
+			return component;
+		}
+		char first = component.charAt(0);
+		char last = component.charAt(component.length() - 1);
+		if ((first == '\'' && last == '\'') || (first == '"' && last == '"')) {
+			return component.substring(1, component.length() - 1);
+		}
+		return component;
+	}
+
+	@SuppressWarnings("unchecked")
 	public void registerUnpivotGeneratedColumnAmbiguitySuppressions(
 			ArrayList<Object> hints,
 			HashMap<String, Object> localCurrentQueryDictionary) {
@@ -580,6 +753,8 @@ public class SqlParseSymbolTreeHelper {
 			localCurrentQueryDictionary = new HashMap<String, Object>();
 		ArrayList<Object> localRelationalModifierInterfaceHints =
 				(ArrayList<Object>) walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
+		HashMap<String, Object> localDerivedColumns =
+				buildDerivedColumnsMapFromHints(localRelationalModifierInterfaceHints);
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		String deleteTargetAlias = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 
@@ -770,6 +945,11 @@ public class SqlParseSymbolTreeHelper {
 					}
 
 					if (columnName == null || "*".equals(columnName)) {
+						continue;
+					}
+
+					if (containsKeyIgnoreCase(localDerivedColumns, columnName)) {
+						consumeUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
 						continue;
 					}
 
@@ -1093,7 +1273,22 @@ public class SqlParseSymbolTreeHelper {
 		// for this level, and finally any filters list for this level if it exists.
 		if (localTableAliasMap != null && !localTableAliasMap.isEmpty())
 			walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, localTableAliasMap);
-		walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, localTableCollection);
+		HashMap<String, Object> tableDictionaryForSymbolTable = new HashMap<String, Object>();
+		for (Map.Entry<String, Object> tableEntry : localTableCollection.entrySet()) {
+			String tableRef = tableEntry.getKey();
+			if (tableRef == null
+					|| tableRef.isBlank()
+					|| isQuerySourceReference(tableRef)
+					|| walker.isNonTableQuerySourceReference(tableRef)) {
+				continue;
+			}
+			tableDictionaryForSymbolTable.put(tableRef, tableEntry.getValue());
+		}
+		if (tableDictionaryForSymbolTable.isEmpty()) {
+			walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
+		} else {
+			walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionaryForSymbolTable);
+		}
 		if (!localTargetTableCollection.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_TARGET_TABLE_KEY, localTargetTableCollection);
 		}
@@ -1110,6 +1305,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
+		}
+		if (!localDerivedColumns.isEmpty()) {
+			walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localDerivedColumns);
 		}
 		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
 		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
@@ -9302,7 +9500,6 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
 		scopePayload.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
 		scopePayload.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
-		scopePayload.remove(DERIVED_COLUMNS_HINTS_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);

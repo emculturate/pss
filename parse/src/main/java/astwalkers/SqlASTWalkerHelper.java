@@ -29,6 +29,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
+		public static final String DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT = "SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT";
 
 		
     /*************************************
@@ -212,7 +213,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(
 				 DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE,
 				 "PIVOT_IN_IDENTIFIER_REFERENCE",
-				 "PIVOT IN identifier '%s' at (l:%s c:%s) is interpreted as a column reference.");
+				 "PIVOT IN identifier \"%s\" at (l:%s c:%s) is interpreted as a column reference.");
+		 registerDiagnostic(
+				 DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT,
+				 "RELATIONAL_MODIFIER_ALIAS_CONFLICT",
+				 "Relation has two aliases: Outer alias is retained '%s' at (l:%s c:%s); ignored dropped '%s' at (l:%s c:%s).");
 	 }
 
 	@SuppressWarnings("unchecked")
