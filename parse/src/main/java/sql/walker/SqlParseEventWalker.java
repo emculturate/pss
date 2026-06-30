@@ -4438,11 +4438,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String sourceRef = (relationAlias != null && !relationAlias.isBlank())
+		String interfaceSourceRef = (relationAlias != null && !relationAlias.isBlank())
 				? relationAlias
 				: resolveRelationalModifierSourceReference(sourceResult);
-		if (sourceRef == null || sourceRef.isBlank()) {
+		if (interfaceSourceRef == null || interfaceSourceRef.isBlank()) {
 			return;
+		}
+
+		String dictionarySourceRef = resolveRelationalModifierSourceReference(sourceResult);
+		if (dictionarySourceRef == null || dictionarySourceRef.isBlank()) {
+			dictionarySourceRef = interfaceSourceRef;
 		}
 
 		for (Object hintObj : (ArrayList<Object>) hintListObj) {
@@ -4450,8 +4455,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				continue;
 			}
 			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
-			hintMap.put(MUMBLE_TABLE_REF_KEY, sourceRef);
-			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, sourceRef);
+			hintMap.put(MUMBLE_TABLE_REF_KEY, interfaceSourceRef);
+			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionarySourceRef);
 		}
 
 		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
