@@ -554,7 +554,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={literal=1}, operator=+}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
+				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -569,7 +569,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={literal=2}, operator=+}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
+				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -672,7 +672,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={literal=1}, operator=+}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
+				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -687,7 +687,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={literal=3}, operator=+}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
+				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -700,7 +700,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={column={name=v, table_ref=null}}, operator=+}}}, from={union={1={select={1={alias=v, literal=1}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={alias=v, literal=2}}}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, def_query3={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, union2={query0={query_dictionary={v=[[@26,75:75='v',<381>,1:75]]}, table_dictionary={}, interface={v=[]}}, interface={v=[]}, query1={query_dictionary={v=[[@32,99:99='v',<381>,1:99]]}, table_dictionary={}, interface={v=[]}}}, interface={x=[{name=id, table_ref=t}, {name=v, table_ref=null}]}}, table_alias={sub=query3}}}",
+				"{query4={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, def_query3={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, union2={query0={query_dictionary={v=[[@26,75:75='v',<381>,1:75]]}, interface={v=[]}}, interface={v=[]}, query1={query_dictionary={v=[[@32,99:99='v',<381>,1:99]]}, interface={v=[]}}}, interface={x=[{name=id, table_ref=t}, {name=v, table_ref=null}]}}, table_alias={sub=query3}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -713,7 +713,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				"{SQL={select={1={column={name=id, table_ref=t}}, 2={column={name=x, table_ref=sub}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=sub, query={select={1={alias=x, calc={left={column={name=id, table_ref=t}}, right={literal=1}, operator=+}}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, table_dictionary={}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
+				"{query1={query_dictionary={x=[[@7,17:17='x',<381>,1:17]], id=[[@3,9:10='id',<381>,1:9]]}, table_dictionary={t={id=[[@1,7:7='t',<381>,1:7], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43], [@14,43:43='t',<381>,1:43]]}}, def_query0={query_dictionary={x=[[@20,55:55='x',<381>,1:55], [@5,13:15='sub',<381>,1:13]]}, interface={x=[{name=id, table_ref=t}]}}, interface={x=[{name=x, table_ref=sub}], id=[{name=id, table_ref=t}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 

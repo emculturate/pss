@@ -864,12 +864,10 @@ table_relational_modifier
   ;
 
 // Postfix operator over a single table source that creates a derived relation namespace.
-// Optional alias here allows naming the UNPIVOT result independently from the source alias.
 unpivot_clause
   : UNPIVOT unpivot_null_policy?
     LEFT_PAREN relational_modifier_value_column FOR relational_modifier_name_column 
     IN relational_modifier_list RIGHT_PAREN
-    relation_as_clause?
   ;
 
 relational_modifier_list
@@ -905,12 +903,10 @@ relational_modifier_alias
  */
 
 // Postfix operator that rotates rows into columns over a single table source.
-// Optional alias names the PIVOT result independently from the source alias.
 pivot_clause
   : PIVOT
     LEFT_PAREN pivot_aggregate_clause FOR pivot_value_column pivot_in_clause RIGHT_PAREN
     pivot_default_on_null_clause?
-    relation_as_clause?
   ;
 
 // Generic aggregate entry for PIVOT value position.

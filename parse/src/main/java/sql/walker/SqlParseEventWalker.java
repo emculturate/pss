@@ -73,6 +73,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final SqlParseDiagnosticService diagnosticService;
 	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
+	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
 
 
 	// Constructors
@@ -115,7 +116,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private void enterRelationalModifierClauseScope(String modifierKey) {
 		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
 		if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
-			walker.symbolTable.put("pivot_in_identifiers", new HashMap<String, Object>());
+			walker.symbolTable.put(PIVOT_IN_IDENTIFIER_REFERENCES_KEY, new HashMap<String, Object>());
 		}
 	}
 
@@ -147,7 +148,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			unresolvedForParent = new HashMap<String, Object>((HashMap<String, Object>) unresolvedMapObj);
 		}
 
-		Object pivotIdentifiersObj = walker.symbolTable.get("pivot_in_identifiers");
+		Object pivotIdentifiersObj = walker.symbolTable.get(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 		HashMap<String, Object> pivotIdentifiersForParent = null;
 		if (pivotIdentifiersObj instanceof HashMap<?, ?> pivotIdentifierMapObj
 				&& !((HashMap<String, Object>) pivotIdentifierMapObj).isEmpty()) {
@@ -236,13 +237,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (pivotIdentifiersForParent != null && MUMBLE_PIVOT_KEY.equals(modifierKey)) {
-			Object parentPivotIdentifiersObj = walker.symbolTable.get("pivot_in_identifiers");
+			Object parentPivotIdentifiersObj = walker.symbolTable.get(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 			HashMap<String, Object> parentPivotIdentifiers;
 			if (parentPivotIdentifiersObj instanceof HashMap<?, ?>) {
 				parentPivotIdentifiers = (HashMap<String, Object>) parentPivotIdentifiersObj;
 			} else {
 				parentPivotIdentifiers = new HashMap<String, Object>();
-				walker.symbolTable.put("pivot_in_identifiers", parentPivotIdentifiers);
+				walker.symbolTable.put(PIVOT_IN_IDENTIFIER_REFERENCES_KEY, parentPivotIdentifiers);
 			}
 			parentPivotIdentifiers.putAll(pivotIdentifiersForParent);
 		}
@@ -1224,7 +1225,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
-		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1244,7 +1244,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
 		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
-		finalizeHandoffSymbolTable();
 
 	}
 
@@ -1262,7 +1261,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_COLUMN_TREE_KEY, subMap.remove("1"));
 	
 		walker.addQueryInputColumnsToTableDictionary();
-		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1279,7 +1277,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_PREDICAND_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
-		finalizeHandoffSymbolTable();
 	}
 	
 
@@ -1297,7 +1294,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_IN_LIST_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
-		finalizeHandoffSymbolTable();
 	}
 
 
@@ -1315,7 +1311,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		 walker.asTree.put(SQLPARSER_CONDITION_TREE_KEY, subMap.remove("1"));
 
 		walker.addQueryInputColumnsToTableDictionary();
-		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1338,7 +1333,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		 walker.asTree.put(SQLPARSER_TUPLE_TREE_KEY, item);
-		finalizeHandoffSymbolTable();
 	}
 
 	/*
@@ -1356,7 +1350,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 
 		walker.addQueryInputColumnsToTableDictionary();
-		finalizeHandoffSymbolTable();
 	}
 
 	
@@ -1377,7 +1370,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
 		walker.symbolTable.remove(MUMBLE_INTERFACE_KEY);
-		finalizeHandoffSymbolTable();
 	}
 	
 
@@ -1393,7 +1385,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_VALUES_TREE_KEY, subMap.remove("1"));
-		finalizeHandoffSymbolTable();
 	}
 	/*
 	===============================================================================
@@ -3904,7 +3895,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   Map<String, Object> sourceResult = (Map<String, Object>) subMap.remove("1");
 		   Map<String, Object> modifier = null;
 		   String outerAlias = null;
-		   Token outerAliasToken = null;
 		   String modifierKey = null;
 
 		   for (int i = 2; subMap.containsKey(String.valueOf(i)); i++) {
@@ -3912,7 +3902,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			   if (entry instanceof Map<?, ?> entryMap) {
 				   if (entryMap.containsKey(MUMBLE_ALIAS_KEY)) {
 					   outerAlias = (String) entryMap.get(MUMBLE_ALIAS_KEY);
-					   outerAliasToken = (ctx.relation_as_clause() == null) ? null : ctx.relation_as_clause().getStop();
 				   } else if (entryMap.containsKey(MUMBLE_UNPIVOT_KEY)) {
 					   modifier = (Map<String, Object>) entryMap.get(MUMBLE_UNPIVOT_KEY);
 					   modifierKey = MUMBLE_UNPIVOT_KEY;
@@ -3923,35 +3912,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			   }
 		   }
 
-		   String modifierAlias = null;
-		   Token modifierAliasToken = null;
-		   if (modifier != null) {
-			   Object modifierAliasObj = modifier.get(MUMBLE_ALIAS_KEY);
-			   if (modifierAliasObj instanceof String alias && !alias.isBlank()) {
-				   modifierAlias = alias;
-				   modifierAliasToken = (ctx.table_relational_modifier() == null)
-						   ? null
-						   : ctx.table_relational_modifier().getStop();
-			   }
-		   }
-
-		   if (outerAlias != null && !outerAlias.isBlank() && modifierAlias != null && !modifierAlias.isBlank()) {
-			   diagnosticService.emitRelationalModifierAliasConflict(
-					   outerAlias,
-					   outerAliasToken,
-					   modifierAlias,
-					   modifierAliasToken);
-		   }
-
 		   String relationAlias = null;
 		   if (outerAlias != null && !outerAlias.isBlank()) {
 			   relationAlias = outerAlias;
-		   } else if (modifierAlias != null && !modifierAlias.isBlank()) {
-			   relationAlias = modifierAlias;
 		   }
 
 		   if (modifier != null && relationAlias != null) {
-			   String sourceRef = resolveUnpivotSourceReference(sourceResult);
+			   String sourceRef = resolveRelationalModifierSourceReference(sourceResult);
 			   if (sourceRef != null && !sourceRef.isBlank()) {
 				   symbolTreeHelper.upsertCurrentTableAliasMapping(relationAlias, sourceRef);
 			   } else {
@@ -3960,14 +3927,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   }
 
 		   if (modifier != null && modifierKey != null) {
-			   // Normalize operator-local alias to the combined relation node.
-			   modifier.remove(MUMBLE_ALIAS_KEY);
 			   sourceResult.put(modifierKey, modifier);
 			   if (relationAlias != null) {
 				   sourceResult.put(MUMBLE_ALIAS_KEY, relationAlias);
-			   }
-			   if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
-				   registerUnpivotValueInterfaceHint(sourceResult, modifier, relationAlias);
 			   }
 			   resolveRelationalModifierScopeAtPrimaryExit(modifierKey, sourceResult, relationAlias);
 		   }
@@ -4006,17 +3968,85 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String forColumn = (nameColObj instanceof String) ? (String) nameColObj : null;
+		ArrayList<String> sourceColumns = new ArrayList<String>();
+		if (forColumn != null && !forColumn.isBlank()) {
+			sourceColumns.add(forColumn);
+		}
 
 		HashMap<String, Object> hint = new HashMap<String, Object>();
+		hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERATOR_KEY, MUMBLE_PIVOT_KEY);
 		hint.put("pivot_aggregate_columns", aggregateColumns);
 		hint.put("pivot_in_columns", inListColumns);
 		HashMap<String, Object> aggregateDependencyColumns =
 				extractPivotAggregateDependencyColumns(aggregateObj);
 		if (!aggregateDependencyColumns.isEmpty()) {
 			hint.put("pivot_aggregate_dependency_columns", aggregateDependencyColumns);
+			for (Object dependencyListObj : aggregateDependencyColumns.values()) {
+				if (!(dependencyListObj instanceof ArrayList<?> dependencyList)) {
+					continue;
+				}
+				for (Object dependencyObj : dependencyList) {
+					if (dependencyObj instanceof String dependency
+							&& !dependency.isBlank()
+							&& !containsStringIgnoreCase(sourceColumns, dependency)) {
+						sourceColumns.add(dependency);
+					}
+				}
+			}
 		}
 		if (forColumn != null && !forColumn.isBlank()) {
 			hint.put(MUMBLE_FOR_KEY, forColumn);
+		}
+		if (!sourceColumns.isEmpty()) {
+			hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, sourceColumns);
+		}
+		hint.put(
+				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
+				buildPivotDerivedColumnNames(aggregateColumns, inListColumns));
+
+		addRelationalModifierHint(hint);
+	}
+
+	private boolean containsStringIgnoreCase(ArrayList<String> values, String candidate) {
+		if (values == null || candidate == null) {
+			return false;
+		}
+		for (String value : values) {
+			if (value != null && value.equalsIgnoreCase(candidate)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private ArrayList<String> buildPivotDerivedColumnNames(ArrayList<String> aggregateColumns, ArrayList<String> inListColumns) {
+		ArrayList<String> derivedColumnNames = new ArrayList<String>();
+		if (aggregateColumns == null || aggregateColumns.isEmpty()
+				|| inListColumns == null || inListColumns.isEmpty()) {
+			return derivedColumnNames;
+		}
+
+		for (String inValue : inListColumns) {
+			if (inValue == null || inValue.isBlank()) {
+				continue;
+			}
+			for (String aggregate : aggregateColumns) {
+				if (aggregate == null || aggregate.isBlank()) {
+					continue;
+				}
+				String derivedColumnName = inValue + "_" + aggregate;
+				if (!containsStringIgnoreCase(derivedColumnNames, derivedColumnName)) {
+					derivedColumnNames.add(derivedColumnName);
+				}
+			}
+		}
+		return derivedColumnNames;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void addRelationalModifierHint(HashMap<String, Object> hint) {
+		if (hint == null || hint.isEmpty()) {
+			return;
 		}
 
 		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
@@ -4027,7 +4057,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			hints = new ArrayList<Object>();
 			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, hints);
 		}
-
 		hints.add(hint);
 	}
 
@@ -4039,6 +4068,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Map<String, Object> aggregateMap = (Map<String, Object>) aggregateMapObj;
+		if (aggregateMap.containsKey(MUMBLE_FUNCTION_KEY)) {
+			String aggregateName = extractPivotAggregateOutputName(aggregateMap);
+			if (aggregateName != null && !aggregateName.isBlank()) {
+				columnNames.add(aggregateName);
+			}
+			return columnNames;
+		}
+
 		for (int index = 1; aggregateMap.containsKey(String.valueOf(index)); index++) {
 			Object aggItemObj = aggregateMap.get(String.valueOf(index));
 			if (!(aggItemObj instanceof Map<?, ?> aggItemMapObj)) {
@@ -4071,6 +4108,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Map<String, Object> aggregateMap = (Map<String, Object>) aggregateMapObj;
+		if (aggregateMap.containsKey(MUMBLE_FUNCTION_KEY)) {
+			String aggregateName = extractPivotAggregateOutputName(aggregateMap);
+			if (aggregateName == null || aggregateName.isBlank()) {
+				return dependenciesByAggregate;
+			}
+			Object functionObj = aggregateMap.get(MUMBLE_FUNCTION_KEY);
+			if (!(functionObj instanceof Map<?, ?> functionMapObj)) {
+				return dependenciesByAggregate;
+			}
+			Object parametersObj = ((Map<String, Object>) functionMapObj).get(MUMBLE_PARAMETERS_KEY);
+			String dependencyName = extractPivotAggregateDependencyName(parametersObj);
+			if (dependencyName != null && !dependencyName.isBlank()) {
+				ArrayList<String> dependencyNames = new ArrayList<String>();
+				dependencyNames.add(dependencyName);
+				dependenciesByAggregate.put(aggregateName, dependencyNames);
+			}
+			return dependenciesByAggregate;
+		}
+
 		for (int index = 1; aggregateMap.containsKey(String.valueOf(index)); index++) {
 			Object aggItemObj = aggregateMap.get(String.valueOf(index));
 			if (!(aggItemObj instanceof Map<?, ?> aggItemMapObj)) {
@@ -4168,7 +4224,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else {
 				Object literalObj = inItemMap.get(MUMBLE_PIVOT_LITERAL_KEY);
 				if (literalObj instanceof String literal && !literal.isBlank()) {
-					component = literal;
+					component = stripSingleQuotedPivotComponent(literal);
 				}
 			}
 
@@ -4180,11 +4236,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return nameComponents;
 	}
 
-	private void registerUnpivotValueInterfaceHint(
-			Map<String, Object> sourceResult,
-			Map<String, Object> unpivotMap,
-			String relationAlias) {
-		if (sourceResult == null || sourceResult.isEmpty() || unpivotMap == null || unpivotMap.isEmpty()) {
+	private String stripSingleQuotedPivotComponent(String component) {
+		if (component == null) {
+			return null;
+		}
+		String trimmed = component.trim();
+		if (trimmed.length() >= 2 && trimmed.startsWith("'") && trimmed.endsWith("'")) {
+			return trimmed.substring(1, trimmed.length() - 1);
+		}
+		return component;
+	}
+
+	private void registerUnpivotValueInterfaceHint(Map<String, Object> unpivotMap) {
+		if (unpivotMap == null || unpivotMap.isEmpty()) {
 			return;
 		}
 
@@ -4199,37 +4263,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String sourceRef = (relationAlias != null && !relationAlias.isBlank())
-				? relationAlias
-				: resolveUnpivotSourceReference(sourceResult);
-		if (sourceRef == null || sourceRef.isBlank()) {
-			return;
-		}
-
 		HashMap<String, Object> hint = new HashMap<String, Object>();
+		hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERATOR_KEY, MUMBLE_UNPIVOT_KEY);
 		hint.put(MUMBLE_VALUE_KEY, valueColumn);
 		hint.put(MUMBLE_IN_KEY, inColumns);
-		hint.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+		hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, inColumns);
 
 		// Also store the FOR column so the unresolved-map cleanup can mark it as resolved
+		ArrayList<String> derivedColumns = new ArrayList<String>();
+		derivedColumns.add(valueColumn);
 		Object forObj = unpivotMap.get(MUMBLE_FOR_KEY);
 		if (forObj instanceof String forColumn && !forColumn.isBlank()) {
 			hint.put(MUMBLE_FOR_KEY, forColumn);
+			if (!containsStringIgnoreCase(derivedColumns, forColumn)) {
+				derivedColumns.add(forColumn);
+			}
 		}
+		hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY, derivedColumns);
 
-		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
-		ArrayList<Object> hints;
-		if (hintsObj instanceof ArrayList<?>) {
-			hints = (ArrayList<Object>) hintsObj;
-		} else {
-			hints = new ArrayList<Object>();
-			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, hints);
-		}
-
-		hints.add(hint);
+		addRelationalModifierHint(hint);
 	}
 
-	private String resolveUnpivotSourceReference(Map<String, Object> sourceResult) {
+	private String resolveRelationalModifierSourceReference(Map<String, Object> sourceResult) {
 		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
 		if (!(tableObj instanceof Map<?, ?> tableMapObj)) {
 			// Source is a subquery or set operation — find the most recently added query scope key
@@ -4339,78 +4394,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private void resolvePivotScopeAtPrimaryExit(Map<String, Object> sourceResult, String relationAlias) {
 		String sourceRef = (relationAlias != null && !relationAlias.isBlank())
 				? relationAlias
-				: resolveUnpivotSourceReference(sourceResult);
+				: resolveRelationalModifierSourceReference(sourceResult);
+		addRelationalModifierSourceReferenceToHints(sourceRef);
 		Map<String, Object> sourceInterfaceMap = resolvePrimarySourceInterface(sourceResult);
 		enrichPivotAggregateHintReferencesForQuerySource(walker.symbolTable, sourceRef, sourceInterfaceMap);
 
-		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		HashMap<String, Object> unresolvedMap = (unresolvedObj instanceof HashMap<?, ?>)
-				? (HashMap<String, Object>) unresolvedObj
-				: new HashMap<String, Object>();
-
-		Object identifiersObj = walker.symbolTable.get("pivot_in_identifiers");
+		Object identifiersObj = walker.symbolTable.get(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 		HashMap<String, Object> pivotIdentifierMap = (identifiersObj instanceof HashMap<?, ?>)
 				? (HashMap<String, Object>) identifiersObj
 				: new HashMap<String, Object>();
 
-		String tableRef = null;
-		Object tableObj = sourceResult == null ? null : sourceResult.get(MUMBLE_TABLE_KEY);
-		if (tableObj instanceof Map<?, ?> tableMapObj) {
-			tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMapObj);
-		}
-
-		if (tableRef != null && !tableRef.isBlank()) {
-			walker.ensureTableDictionaryEntry(tableRef);
-			HashMap<String, Object> tableDictionary = walker.getCurrentTableDictionary();
-			Object tableColumnsObj = tableDictionary.get(tableRef);
-			if (tableColumnsObj instanceof HashMap<?, ?>) {
-				HashMap<String, Object> singleTableCollection = new HashMap<String, Object>();
-				singleTableCollection.put(tableRef, tableColumnsObj);
-				walker.moveEntriesToSingleTableIfSingleTarget(unresolvedMap, singleTableCollection);
-			}
-
-			emitPivotIdentifierSevereWarnings(pivotIdentifierMap);
-			for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
-				symbolTreeHelper.removeFromUnresolvedMapCaseInsensitive(unresolvedMap, identifier);
-			}
+		if (isDirectTableSource(sourceResult)) {
+			emitPivotIdentifierUnresolvedFatals(pivotIdentifierMap);
 			pivotIdentifierMap.clear();
 		} else {
 			Map<String, Object> interfaceMap = resolvePrimarySourceInterface(sourceResult);
 			boolean wildcardInterface = interfaceMap.containsKey("*");
-			if (!unresolvedMap.isEmpty() && (wildcardInterface || !interfaceMap.isEmpty())) {
-				for (String unresolvedKey : new ArrayList<String>(unresolvedMap.keySet())) {
-					if (unresolvedKey == null || unresolvedKey.contains(".")) {
-						continue;
-					}
-					if (wildcardInterface || interfaceMap.containsKey(unresolvedKey)) {
-						unresolvedMap.remove(unresolvedKey);
-					}
-				}
-			}
 
 			for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
-				if (!symbolTreeHelper.containsKeyIgnoreCase(unresolvedMap, identifier)) {
-					pivotIdentifierMap.remove(identifier);
+				boolean resolvesAgainstSource = wildcardInterface || containsMapKeyIgnoreCase(interfaceMap, identifier);
+				HashMap<String, Object> singleIdentifierMap = new HashMap<String, Object>();
+				singleIdentifierMap.put(identifier, pivotIdentifierMap.get(identifier));
+				if (resolvesAgainstSource) {
+					emitPivotIdentifierSevereWarnings(singleIdentifierMap);
+				} else {
+					emitPivotIdentifierUnresolvedFatals(singleIdentifierMap);
 				}
-			}
-
-			emitPivotIdentifierSevereWarnings(pivotIdentifierMap);
-			for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
-				symbolTreeHelper.removeFromUnresolvedMapCaseInsensitive(unresolvedMap, identifier);
 			}
 			pivotIdentifierMap.clear();
 		}
 
 		if (pivotIdentifierMap.isEmpty()) {
-			walker.symbolTable.remove("pivot_in_identifiers");
+			walker.symbolTable.remove(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 		} else {
-			walker.symbolTable.put("pivot_in_identifiers", pivotIdentifierMap);
-		}
-
-		if (unresolvedMap.isEmpty()) {
-			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		} else {
-			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, unresolvedMap);
+			walker.symbolTable.put(PIVOT_IN_IDENTIFIER_REFERENCES_KEY, pivotIdentifierMap);
 		}
 	}
 
@@ -4423,7 +4440,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		String sourceRef = (relationAlias != null && !relationAlias.isBlank())
 				? relationAlias
-				: resolveUnpivotSourceReference(sourceResult);
+				: resolveRelationalModifierSourceReference(sourceResult);
 		if (sourceRef == null || sourceRef.isBlank()) {
 			return;
 		}
@@ -4434,6 +4451,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
 			hintMap.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, sourceRef);
 		}
 
 		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
@@ -4458,6 +4476,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			resolvePivotScopeAtPrimaryExit(sourceResult, relationAlias);
 		} else if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
 			resolveUnpivotScopeAtPrimaryExit(sourceResult, relationAlias);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void addRelationalModifierSourceReferenceToHints(String sourceRef) {
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return;
+		}
+		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
+		if (!(hintsObj instanceof ArrayList<?> hintListObj)) {
+			return;
+		}
+		for (Object hintObj : (ArrayList<Object>) hintListObj) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, sourceRef);
+			hintMap.put(MUMBLE_TABLE_REF_KEY, sourceRef);
 		}
 	}
 
@@ -4577,7 +4614,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> resolvePrimarySourceInterface(Map<String, Object> sourceResult) {
-		String sourceRef = resolveUnpivotSourceReference(sourceResult);
+		String sourceRef = resolveRelationalModifierSourceReference(sourceResult);
 		if (sourceRef == null || sourceRef.isBlank()) {
 			return new HashMap<String, Object>();
 		}
@@ -4620,6 +4657,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isDirectTableSource(Map<String, Object> sourceResult) {
+		Object tableObj = sourceResult == null ? null : sourceResult.get(MUMBLE_TABLE_KEY);
+		if (!(tableObj instanceof Map<?, ?> tableMapObj)) {
+			return false;
+		}
+
+		Object tableNameObj = ((Map<String, Object>) tableMapObj).get(MUMBLE_TABLE_KEY);
+		return tableNameObj instanceof String tableName && !tableName.isBlank();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4667,6 +4715,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						"ast-walk",
 						null,
 						null);
+			}
+		}
+	}
+
+	private void emitPivotIdentifierUnresolvedFatals(Map<String, Object> pivotIdentifierMap) {
+		if (pivotIdentifierMap == null || pivotIdentifierMap.isEmpty()) {
+			return;
+		}
+
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED);
+
+		for (Map.Entry<String, Object> entry : pivotIdentifierMap.entrySet()) {
+			String identifier = entry.getKey();
+			Object tokenListObj = entry.getValue();
+			if (!(tokenListObj instanceof List<?> tokenList) || tokenList.isEmpty()) {
+				continue;
+			}
+
+			for (Object tokenObj : tokenList) {
+				String tokenString = tokenObj == null ? null : tokenObj.toString();
+				Integer[] lineAndChar = extractLineAndCharFromTokenString(tokenString);
+				Integer line = lineAndChar[0];
+				Integer charPos = lineAndChar[1];
+				String diagMessage = (diagTemplate == null)
+						? String.format(
+								"PIVOT IN identifier \"%s\" at (l:%s c:%s) cannot be resolved against the PIVOT source.",
+								identifier,
+								String.valueOf(line),
+								String.valueOf(charPos))
+						: String.format(
+								diagTemplate,
+								identifier,
+								String.valueOf(line),
+								String.valueOf(charPos));
+				walker.addWalkerFatal(diagCode, diagMessage, line, charPos, identifier);
 			}
 		}
 	}
@@ -4849,39 +4933,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (modifier != null) {
-			String relationAlias = null;
 			Map<String, Object> unpivotMap = null;
 			Map<String, Object> pivotMap = null;
 			if (modifier.containsKey(MUMBLE_UNPIVOT_KEY)) {
 				unpivotMap = (Map<String, Object>) modifier.get(MUMBLE_UNPIVOT_KEY);
-				Object aliasObj = unpivotMap == null ? null : unpivotMap.get(MUMBLE_ALIAS_KEY);
-				if (aliasObj instanceof String alias && !alias.isBlank()) {
-					relationAlias = alias;
-					unpivotMap.remove(MUMBLE_ALIAS_KEY);
-				}
 			}
 			if (modifier.containsKey(MUMBLE_PIVOT_KEY)) {
 				pivotMap = (Map<String, Object>) modifier.get(MUMBLE_PIVOT_KEY);
-				Object aliasObj = pivotMap == null ? null : pivotMap.get(MUMBLE_ALIAS_KEY);
-				if (aliasObj instanceof String alias && !alias.isBlank()) {
-					relationAlias = alias;
-					pivotMap.remove(MUMBLE_ALIAS_KEY);
-				}
 			}
 
 			// Keep relational modifier as a direct sibling of table/query source in tuple endpoint AST.
 			// Example: {TUPLE={table={...}, pivot={...}}} instead of {TUPLE={table={...}, modifier={pivot={...}}}}
 			sourceResult.putAll(modifier);
-			if (relationAlias != null) {
-				sourceResult.put(MUMBLE_ALIAS_KEY, relationAlias);
-			}
 			if (unpivotMap != null) {
-				registerUnpivotValueInterfaceHint(sourceResult, unpivotMap, relationAlias);
-			}
-			if (unpivotMap != null) {
-				resolveRelationalModifierScopeAtPrimaryExit(MUMBLE_UNPIVOT_KEY, sourceResult, relationAlias);
+				resolveRelationalModifierScopeAtPrimaryExit(MUMBLE_UNPIVOT_KEY, sourceResult, null);
 			} else if (pivotMap != null) {
-				resolveRelationalModifierScopeAtPrimaryExit(MUMBLE_PIVOT_KEY, sourceResult, relationAlias);
+				resolveRelationalModifierScopeAtPrimaryExit(MUMBLE_PIVOT_KEY, sourceResult, null);
 			}
 		}
 
@@ -5052,7 +5119,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	//   - unpivot_null_policy  → Map containing MUMBLE_NULLS_POLICY_KEY
 	//   - unpivot_list         → numbered map whose "1" entry is a flattened in-item map
 	//                            (name/table_ref[/alias])
-	//   - relation_as_clause   → Map containing MUMBLE_ALIAS_KEY
 	//   - value / name columns → plain String (alias_identifier collapses via handleOneChild)
 	//                            first String = value column, second = name column
 	@Override
@@ -5075,7 +5141,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Object nullPolicy = null;
 		Object inList     = null;
-		Object alias      = null;
 		List<Object> nameSlots = new ArrayList<>();   // valueCol then nameCol, in arrival order
 
 		for (int i = 1; subMap.containsKey(String.valueOf(i)); i++) {
@@ -5083,8 +5148,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (entry instanceof Map<?, ?> entryMap) {
 				if (entryMap.containsKey(MUMBLE_NULLS_POLICY_KEY)) {
 					nullPolicy = entry;
-				} else if (entryMap.containsKey(MUMBLE_ALIAS_KEY)) {
-					alias = entryMap.get(MUMBLE_ALIAS_KEY);
 				} else if (entryMap.containsKey("1")
 						&& entryMap.get("1") instanceof Map<?, ?> firstItem
 						&& (((Map<?, ?>) firstItem).containsKey(MUMBLE_NAME_KEY)
@@ -5106,8 +5169,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_VALUE_KEY, valueCol);
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_FOR_KEY, nameCol);
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_IN_KEY, inList);
-		   if (alias != null)
-			   unpivotMap.put(mumble.MumbleConstants.MUMBLE_ALIAS_KEY, alias);
 		   // Do NOT add ASTWALKER_RULE_TYPE_KEY or MUMBLE_UNPIVOT_KEY=true here
 
 		   // Wrap in a map with MUMBLE_UNPIVOT_KEY as the only key
@@ -5115,42 +5176,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   wrapper.put(MUMBLE_UNPIVOT_KEY, unpivotMap);
 		   walker.addToParent(parentRuleIndex, parentStackLevel, wrapper);
 
-		   registerUnpivotScopeDerivedColumnsHint(valueCol, nameCol, inList);
+		   registerUnpivotValueInterfaceHint(unpivotMap);
 		   publishRelationalModifierScopeAndPop(MUMBLE_UNPIVOT_KEY, ctx.getStart());
-	}
-
-	@SuppressWarnings("unchecked")
-	private void registerUnpivotScopeDerivedColumnsHint(
-			Object valueObj,
-			Object forObj,
-			Object inListObj) {
-		if (!(valueObj instanceof String valueColumn) || valueColumn.isBlank()) {
-			return;
-		}
-		if (!(forObj instanceof String forColumn) || forColumn.isBlank()) {
-			return;
-		}
-
-		ArrayList<String> inColumns = symbolTreeHelper.extractRelationalModifierInListColumnNames(inListObj);
-		if (inColumns.isEmpty()) {
-			return;
-		}
-
-		HashMap<String, Object> hint = new HashMap<String, Object>();
-		hint.put(MUMBLE_VALUE_KEY, valueColumn);
-		hint.put(MUMBLE_FOR_KEY, forColumn);
-		hint.put(MUMBLE_IN_KEY, inColumns);
-
-		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
-		ArrayList<Object> hints;
-		if (hintsObj instanceof ArrayList<?>) {
-			hints = (ArrayList<Object>) hintsObj;
-		} else {
-			hints = new ArrayList<Object>();
-			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, hints);
-		}
-
-		hints.add(hint);
 	}
 
 
@@ -5285,25 +5312,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Grammar order:
 		//   1) pivot_aggregate
-		//   2) relational_modifier_name_column
-		//   3) relational_modifier_list
-		//   4) relation_as_clause? (optional)
+		//   2) pivot_value_column
+		//   3) pivot_in_clause
 		Object aggregate = subMap.get("1");
 		Object nameCol = subMap.get("2");
 		Object inList = subMap.get("3");
-
-		Object alias = null;
-		if (subMap.get("4") instanceof Map<?, ?> aliasMap && aliasMap.containsKey(MUMBLE_ALIAS_KEY)) {
-			alias = aliasMap.get(MUMBLE_ALIAS_KEY);
-		}
 
 		Map<String, Object> pivotMap = new LinkedHashMap<>();
 		pivotMap.put(MUMBLE_VALUE_KEY, aggregate);
 		pivotMap.put(MUMBLE_FOR_KEY, nameCol);
 		pivotMap.put(MUMBLE_IN_KEY, inList);
-		if (alias != null) {
-			pivotMap.put(MUMBLE_ALIAS_KEY, alias);
-		}
 
 		Map<String, Object> wrapper = new LinkedHashMap<>();
 		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
@@ -5445,13 +5463,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		}
 
-		// If this is an identifier (not a string literal), it is a column reference
-		// that must be tracked in pivot_in_identifiers and as an unresolved column.
+		// Identifier-form PIVOT IN values can be static source values in Snowflake
+		// when the PIVOT source is a query exposing matching columns.
 		if (ctx.identifier() != null) {
 			String identifierText = ctx.identifier().getText();
 
 			@SuppressWarnings("unchecked")
-			Map<String, Object> pivotInIdentifiers = (Map<String, Object>) walker.symbolTable.get("pivot_in_identifiers");
+			Map<String, Object> pivotInIdentifiers =
+					(Map<String, Object>) walker.symbolTable.get(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 			if (pivotInIdentifiers != null) {
 				Object tokenRefsObj = pivotInIdentifiers.get(identifierText);
 				ArrayList<String> tokenRefs;
@@ -5466,11 +5485,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					tokenRefs.add(tokenString);
 				}
 			}
-
-			Map<String, Object> columnSubTree = new HashMap<String, Object>();
-			columnSubTree.put(MUMBLE_TABLE_REF_KEY, null);
-			columnSubTree.put(MUMBLE_NAME_KEY, identifierText);
-			walker.collectUnresolvedColumnReference(MUMBLE_UNKNOWN_KEY, columnSubTree, ctx.getStart());
 		}
 	}
 

@@ -3,7 +3,6 @@ package astwalkers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +28,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
-		public static final String DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT = "SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT";
+		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED = "SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED";
 
 		
     /*************************************
@@ -215,9 +214,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 "PIVOT_IN_IDENTIFIER_REFERENCE",
 				 "PIVOT IN identifier \"%s\" at (l:%s c:%s) is interpreted as a column reference.");
 		 registerDiagnostic(
-				 DIAG_SQL_RELATIONAL_MODIFIER_ALIAS_CONFLICT,
-				 "RELATIONAL_MODIFIER_ALIAS_CONFLICT",
-				 "Relation has two aliases: Outer alias is retained '%s' at (l:%s c:%s); ignored dropped '%s' at (l:%s c:%s).");
+				 DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED,
+				 "PIVOT_IN_IDENTIFIER_UNRESOLVED",
+				 "PIVOT IN identifier \"%s\" at (l:%s c:%s) cannot be resolved against the PIVOT source. Identifier-form PIVOT IN values are only supported when the PIVOT source is a subquery exposing that column or a wildcard interface.");
 	 }
 
 	@SuppressWarnings("unchecked")
