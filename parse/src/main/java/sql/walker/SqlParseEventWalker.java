@@ -3797,7 +3797,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Table functions are table sources, not query sources.
 				subMap.putAll(item);
 				symbolTreeHelper.registerTableFunctionSourceReference(item, null);
-			} else { // VALUES STATEMENT can only happen in this instance
+			} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
 				subMap.putAll(item);
 
 				// exitValues_statement always stores a Map under MUMBLE_VALUES_KEY
@@ -3805,14 +3805,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (valuesObject instanceof Map<?, ?> valuesMapObj) {
 					Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
 					String valuesScopeKey = symbolTreeHelper.findTopLevelValuesScopeKey();
-					symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
 					Object aliasObj = valuesMap.get(MUMBLE_ALIAS_KEY);
-					if (aliasObj instanceof String valuesAlias) {
+					if (aliasObj instanceof String valuesAlias && !valuesAlias.isBlank()) {
+						symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
 						symbolTreeHelper.addCurrentScopeValuesAliasMapping(valuesAlias, valuesScopeKey);
 						walker.collectTableAlias(valuesAlias, valuesScopeKey);
+					} else {
+						symbolTreeHelper.registerUnaliasedFromSource(item);
 					}
 				}
 
+			} else {
+				subMap.putAll(item);
+				symbolTreeHelper.registerUnaliasedFromSource(item);
 			}
 
 		} else if (ctx.getChildCount() == 2) {

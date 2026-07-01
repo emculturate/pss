@@ -5529,4 +5529,557 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 					extractor.getAsTree().toString());
 	}
 
+
+
+	// UNALIASED DERIVED TABLE IN FROM/JOIN TESTS
+	// Outer query exercises unqualified column resolution across SELECT list, JOIN ON
+	// (second unaliased subquery), WHERE, EXISTS, GROUP BY, HAVING, QUALIFY, and ORDER BY.
+
+	@Test
+	public void unaliasedDerivedSimpleAllOuterClausesV1Test() {
+		// plain inner select from tab1
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@48,197:197='x',<381>,5:41], [@52,206:209='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@27,100:108='match_col',<381>,3:21]]}, query2={unnamed_0=[[@43,177:177='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@43,177:177='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@52,206:209='col1',<381>,5:50], [@48,197:197='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedSimpleFilteredInnerV2Test() {
+		// inner select with WHERE col1 > 0
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 WHERE col1 > 0)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=col1, table_ref=null}}, right={literal=0}, operator=>}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@52,212:212='x',<381>,5:41], [@56,221:224='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13], [@22,84:87='col1',<381>,2:46]]}, tab2={col2=[[@29,107:110='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@31,115:123='match_col',<381>,3:21]]}, query2={unnamed_0=[[@47,192:192='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@31,115:123='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@29,107:110='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13], [@22,84:87='col1',<381>,2:46]]}}, filters=[{name=col1, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@47,192:192='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@56,221:224='col1',<381>,5:50], [@52,212:212='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedSimpleInnerFromTab2V3Test() {
+		// inner select from tab2
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab2)\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT 1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@48,197:197='x',<381>,5:41], [@52,206:209='col1',<381>,5:50]]}, tab2={col2=[[@16,57:60='col2',<381>,2:19], [@25,92:95='col2',<381>,3:13]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@27,100:108='match_col',<381>,3:21]]}, query2={unnamed_0=[[@43,177:177='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab2={col2=[[@16,57:60='col2',<381>,2:19], [@25,92:95='col2',<381>,3:13]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@43,177:177='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@52,206:209='col1',<381>,5:50], [@48,197:197='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedSimpleInnerFromTab3V4Test() {
+		// inner select from tab3
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab3)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab3}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13], [@48,197:197='x',<381>,5:41], [@52,206:209='col1',<381>,5:50]]}, tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@27,100:108='match_col',<381>,3:21]]}, query2={unnamed_0=[[@43,177:177='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab3={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13], [@48,197:197='x',<381>,5:41], [@52,206:209='col1',<381>,5:50]]}}, interface={col2=[{name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab3}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@43,177:177='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@52,206:209='col1',<381>,5:50], [@48,197:197='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedSimpleInnerNotNullFilterV5Test() {
+		// inner select with IS NOT NULL filter
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 WHERE col3 IS NOT NULL)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=col3, table_ref=null}}, operator=IS NOT NULL}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@53,220:220='x',<381>,5:41], [@57,229:232='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25], [@22,84:87='col3',<381>,2:46]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@30,115:118='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@32,123:131='match_col',<381>,3:21]]}, query2={unnamed_0=[[@48,200:200='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@32,123:131='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@30,115:118='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25], [@22,84:87='col3',<381>,2:46]], col1=[[@14,51:54='col1',<381>,2:13]]}}, filters=[{name=col3, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@48,200:200='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@57,229:232='col1',<381>,5:50], [@53,220:220='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedSimpleInnerGroupedV6Test() {
+		// inner select with GROUP BY
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 GROUP BY col1, col2, col3)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@55,223:223='x',<381>,5:41], [@59,232:235='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19], [@25,93:96='col2',<381>,2:55]], col3=[[@18,63:66='col3',<381>,2:25], [@27,99:102='col3',<381>,2:61]], col1=[[@14,51:54='col1',<381>,2:13], [@23,87:90='col1',<381>,2:49]]}, tab2={col2=[[@32,118:121='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@34,126:134='match_col',<381>,3:21]]}, query2={unnamed_0=[[@50,203:203='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@34,126:134='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@32,118:121='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19], [@25,93:96='col2',<381>,2:55]], col3=[[@18,63:66='col3',<381>,2:25], [@27,99:102='col3',<381>,2:61]], col1=[[@14,51:54='col1',<381>,2:13], [@23,87:90='col1',<381>,2:49]]}}, grouped_by=[{name=col1, table_ref=tab1}, {name=col2, table_ref=tab1}, {name=col3, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@50,203:203='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@59,232:235='col1',<381>,5:50], [@55,223:223='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedUnionAllOuterClausesV7Test() {
+		// UNION inner derived table
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 UNION SELECT col1, col2, col3 FROM tab2)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("union2=union2"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={union={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@57,237:237='x',<381>,5:41], [@61,246:249='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@25,97:100='col2',<381>,2:59], [@34,132:135='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={unnamed_0=[[@52,217:217='1',<300>,5:21]]}, query6={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, query3={match_col=[[@36,140:148='match_col',<381>,3:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query6={union2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@34,132:135='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], ordered_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], filters=[{name=col1, table_ref=union2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=union2}, {name=col2, table_ref=union2}], interface={total=[{name=col3, table_ref=union2}], col2=[{name=col2, table_ref=union2}], col1=[{name=col1, table_ref=union2}]}, def_query4={query_dictionary={unnamed_0=[[@52,217:217='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@61,246:249='col1',<381>,5:50], [@57,237:237='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, def_query3={query_dictionary={match_col=[[@36,140:148='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,132:135='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists5={query=query4, type=filters}}, table_alias={union2=union2, query3=query3}, query3={}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedUnionAllInnerAllOuterClausesV8Test() {
+		// UNION ALL inner derived table
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 UNION ALL SELECT col1, col2, col3 FROM tab2)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("union2=union2"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={union={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@58,241:241='x',<381>,5:41], [@62,250:253='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@26,101:104='col2',<381>,2:63], [@35,136:139='col2',<381>,3:13]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={unnamed_0=[[@53,221:221='1',<300>,5:21]]}, query6={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@26,101:104='col2',<381>,2:63]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}, query3={match_col=[[@37,144:152='match_col',<381>,3:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query6={union2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@26,101:104='col2',<381>,2:63]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@26,101:104='col2',<381>,2:63], [@35,136:139='col2',<381>,3:13]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], ordered_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], filters=[{name=col1, table_ref=union2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=union2}, {name=col2, table_ref=union2}], interface={total=[{name=col3, table_ref=union2}], col2=[{name=col2, table_ref=union2}], col1=[{name=col1, table_ref=union2}]}, def_query4={query_dictionary={unnamed_0=[[@53,221:221='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@62,250:253='col1',<381>,5:50], [@58,241:241='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, def_query3={query_dictionary={match_col=[[@37,144:152='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@35,136:139='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists5={query=query4, type=filters}}, table_alias={union2=union2, query3=query3}, query3={}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedIntersectAllOuterClausesV9Test() {
+		// INTERSECT inner derived table
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 INTERSECT SELECT col1, col2, col3 FROM tab2)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("intersect2=intersect2"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={intersect={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@57,241:241='x',<381>,5:41], [@61,250:253='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@25,101:104='col2',<381>,2:63], [@34,136:139='col2',<381>,3:13]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={unnamed_0=[[@52,221:221='1',<300>,5:21]]}, query6={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,101:104='col2',<381>,2:63]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}, query3={match_col=[[@36,144:152='match_col',<381>,3:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query6={intersect2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@25,101:104='col2',<381>,2:63]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@25,101:104='col2',<381>,2:63], [@34,136:139='col2',<381>,3:13]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=intersect2}, {name=col2, table_ref=intersect2}], ordered_by=[{name=col1, table_ref=intersect2}, {name=col2, table_ref=intersect2}], filters=[{name=col1, table_ref=intersect2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=intersect2}, {name=col2, table_ref=intersect2}], interface={total=[{name=col3, table_ref=intersect2}], col2=[{name=col2, table_ref=intersect2}], col1=[{name=col1, table_ref=intersect2}]}, def_query4={query_dictionary={unnamed_0=[[@52,221:221='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@61,250:253='col1',<381>,5:50], [@57,241:241='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, def_query3={query_dictionary={match_col=[[@36,144:152='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,136:139='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists5={query=query4, type=filters}}, table_alias={intersect2=intersect2, query3=query3}, query3={}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedExceptAllOuterClausesV10Test() {
+		// EXCEPT inner derived table
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 EXCEPT SELECT col1, col2, col3 FROM tab2)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("union2=union2"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={union={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@57,238:238='x',<381>,5:41], [@61,247:250='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@25,98:101='col2',<381>,2:60], [@34,133:136='col2',<381>,3:13]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={unnamed_0=[[@52,218:218='1',<300>,5:21]]}, query6={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,98:101='col2',<381>,2:60]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}, query3={match_col=[[@36,141:149='match_col',<381>,3:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query6={union2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@25,98:101='col2',<381>,2:60]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}, table_dictionary={tab2={col2=[[@25,98:101='col2',<381>,2:60], [@34,133:136='col2',<381>,3:13]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], ordered_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], filters=[{name=col1, table_ref=union2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=union2}, {name=col2, table_ref=union2}], interface={total=[{name=col3, table_ref=union2}], col2=[{name=col2, table_ref=union2}], col1=[{name=col1, table_ref=union2}]}, def_query4={query_dictionary={unnamed_0=[[@52,218:218='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@61,247:250='col1',<381>,5:50], [@57,238:238='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, def_query3={query_dictionary={match_col=[[@36,141:149='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,133:136='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists5={query=query4, type=filters}}, table_alias={union2=union2, query3=query3}, query3={}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedUnionIntersectAllOuterClausesV11Test() {
+		// UNION then INTERSECT inner derived table
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT col1, col2, col3 FROM tab1 UNION SELECT col1, col2, col3 FROM tab2 INTERSECT SELECT col1, col2, col3 FROM tab3)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("intersect4=intersect4"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={intersect={1={union={1={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97], [@66,281:281='x',<381>,5:41], [@70,290:293='col1',<381>,5:50]]}, tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, tab2={col2=[[@25,97:100='col2',<381>,2:59], [@43,176:179='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query8={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query5={match_col=[[@45,184:192='match_col',<381>,3:21]]}, query6={unnamed_0=[[@61,261:261='1',<300>,5:21]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, query3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query8={def_query6={query_dictionary={unnamed_0=[[@61,261:261='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@70,290:293='col1',<381>,5:50], [@66,281:281='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, intersect4={union2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@43,176:179='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}, {name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}, {name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}, {name=col1, table_ref=tab3}]}, query3={query_dictionary={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}, table_dictionary={tab3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97], [@66,281:281='x',<381>,5:41], [@70,290:293='col1',<381>,5:50]]}}, interface={col2=[{name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab3}]}}}, grouped_by=[{name=col1, table_ref=intersect4}, {name=col2, table_ref=intersect4}], ordered_by=[{name=col1, table_ref=intersect4}, {name=col2, table_ref=intersect4}], filters=[{name=col1, table_ref=intersect4}, {name=match_col, table_ref=query5}, {name=col3, table_ref=intersect4}, {name=col2, table_ref=intersect4}], def_query5={query_dictionary={match_col=[[@45,184:192='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@43,176:179='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, interface={total=[{name=col3, table_ref=intersect4}], col2=[{name=col2, table_ref=intersect4}], col1=[{name=col1, table_ref=intersect4}]}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists7={query=query6, type=filters}}, query5={}, table_alias={intersect4=intersect4, query5=query5}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedUnionMixedColumnNamesV12Test() {
+		// UNION with mixed inner column names
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT a AS col1, b AS col2, c AS col3 FROM tab1 UNION SELECT col1, col2, col3 FROM tab2)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("union2=union2"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={union={1={select={1={column={name=a, table_ref=null}, alias=col1}, 2={column={name=b, table_ref=null}, alias=col2}, 3={column={name=c, table_ref=null}, alias=col3}}, from={table={alias=null, table=tab1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@63,252:252='x',<381>,5:41], [@67,261:264='col1',<381>,5:50]]}, tab1={a=[[@14,51:51='a',<381>,2:13]], b=[[@18,62:62='b',<381>,2:24]], c=[[@22,73:73='c',<381>,2:35]]}, tab2={col2=[[@31,112:115='col2',<381>,2:74], [@40,147:150='col2',<381>,3:13]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={unnamed_0=[[@58,232:232='1',<300>,5:21]]}, query6={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@20,67:70='col2',<381>,2:29]], col3=[[@24,78:81='col3',<381>,2:40]], col1=[[@16,56:59='col1',<381>,2:18]]}, query1={col2=[[@31,112:115='col2',<381>,2:74]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}, query3={match_col=[[@42,155:163='match_col',<381>,3:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query6={union2={query0={query_dictionary={col2=[[@20,67:70='col2',<381>,2:29]], col3=[[@24,78:81='col3',<381>,2:40]], col1=[[@16,56:59='col1',<381>,2:18]]}, table_dictionary={tab1={a=[[@14,51:51='a',<381>,2:13]], b=[[@18,62:62='b',<381>,2:24]], c=[[@22,73:73='c',<381>,2:35]]}}, interface={col2=[{name=b, table_ref=tab1}], col3=[{name=c, table_ref=tab1}], col1=[{name=a, table_ref=tab1}]}}, interface={col2=[{name=b, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=c, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=a, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@31,112:115='col2',<381>,2:74]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}, table_dictionary={tab2={col2=[[@31,112:115='col2',<381>,2:74], [@40,147:150='col2',<381>,3:13]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], ordered_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], filters=[{name=col1, table_ref=union2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=union2}, {name=col2, table_ref=union2}], interface={total=[{name=col3, table_ref=union2}], col2=[{name=col2, table_ref=union2}], col1=[{name=col1, table_ref=union2}]}, def_query4={query_dictionary={unnamed_0=[[@58,232:232='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@67,261:264='col1',<381>,5:50], [@63,252:252='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, def_query3={query_dictionary={match_col=[[@42,155:163='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@40,147:150='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists5={query=query4, type=filters}}, table_alias={union2=union2, query3=query3}, query3={}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedValuesPositionalAllOuterClausesV13Test() {
+		// plain unaliased VALUES (positional $1/$2/$3)
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (VALUES (1, 2, 3), (4, 5, 6))\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parser);
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("values0=values0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=4}, 2={literal=5}, 3={literal=6}}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@56,191:191='x',<381>,5:41], [@60,200:203='col1',<381>,5:50]]}, tab2={col2=[[@33,86:89='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@35,94:102='match_col',<381>,3:21]]}, query2={unnamed_0=[[@51,171:171='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={values0={}, def_values0={query_dictionary={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, interface={$1=[], $2=[], $3=[]}}, grouped_by=[{name=col1, table_ref=null}, {name=col2, table_ref=null}], def_query1={query_dictionary={match_col=[[@35,94:102='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@33,86:89='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, ordered_by=[{name=col1, table_ref=null}, {name=col2, table_ref=null}], filters=[{name=col1, table_ref=null}, {name=match_col, table_ref=query1}, {name=col3, table_ref=null}, {name=col2, table_ref=null}], interface={total=[{name=col3, table_ref=null}], col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, def_query2={query_dictionary={unnamed_0=[[@51,171:171='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@60,200:203='col1',<381>,5:50], [@56,191:191='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query1={}, table_alias={values0=values0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col1", 1);
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col2", 1);
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col3", 1);
+	}
+
+	@Test
+	public void unaliasedValuesAliasOnlyAllOuterClausesV14Test() {
+		// aliased VALUES without column list
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (VALUES (1, 2, 3), (4, 5, 6)) AS src\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parser);
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("src=values0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={values={alias=src, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=4}, 2={literal=5}, 3={literal=6}}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@58,198:198='x',<381>,5:41], [@62,207:210='col1',<381>,5:50]]}, tab2={col2=[[@35,93:96='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@37,101:109='match_col',<381>,3:21]]}, query2={unnamed_0=[[@53,178:178='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={def_values0={query_dictionary={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, interface={$1=[], $2=[], $3=[]}}, grouped_by=[{name=col1, table_ref=null}, {name=col2, table_ref=null}], def_query1={query_dictionary={match_col=[[@37,101:109='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@35,93:96='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, ordered_by=[{name=col1, table_ref=null}, {name=col2, table_ref=null}], filters=[{name=col1, table_ref=null}, {name=match_col, table_ref=query1}, {name=col3, table_ref=null}, {name=col2, table_ref=null}], interface={total=[{name=col3, table_ref=null}], col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, def_query2={query_dictionary={unnamed_0=[[@53,178:178='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@62,207:210='col1',<381>,5:50], [@58,198:198='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query1={}, table_alias={src=values0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col1", 1);
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col2", 1);
+		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col3", 1);
+	}
+
+	@Test
+	public void unaliasedValuesNamedColumnsAllOuterClausesV15Test() {
+		// aliased VALUES with explicit column names
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (VALUES (1, 2, 3), (4, 5, 6)) AS src (col1, col2, col3)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT ex1 FROM (select ex1 from tab3) x WHERE x.ex1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("src=values0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={values={columns={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={column={name=col3, table_ref=null}}}, alias=src, matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=4}, 2={literal=5}, 3={literal=6}}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@65,217:217='x',<381>,5:41], [@69,226:229='col1',<381>,5:50]]}, tab2={col2=[[@42,112:115='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@35,87:90='col2',<381>,2:49]], col3=[[@37,93:96='col3',<381>,2:55]], col1=[[@33,81:84='col1',<381>,2:43]]}, query4={values0={src=values0, col2=[[@3,13:16='col2',<381>,1:13], [@75,247:250='col2',<381>,6:15], [@94,328:331='col2',<381>,8:54], [@102,353:356='col2',<381>,9:15]], col3=[[@7,23:26='col3',<381>,1:23], [@53,167:170='col3',<381>,4:6], [@79,263:266='col3',<381>,7:11]], col1=[[@1,7:10='col1',<381>,1:7], [@49,144:147='col1',<381>,3:45], [@73,241:244='col1',<381>,6:9], [@91,314:317='col1',<381>,8:40], [@100,347:350='col1',<381>,9:9]]}, total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@44,120:128='match_col',<381>,3:21]]}, query2={unnamed_0=[[@60,197:197='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={def_values0={query_dictionary={col2=[[@35,87:90='col2',<381>,2:49]], col3=[[@37,93:96='col3',<381>,2:55]], col1=[[@33,81:84='col1',<381>,2:43]]}, interface={col2=[], col3=[], col1=[]}}, grouped_by=[{name=col1, table_ref=values0}, {name=col2, table_ref=values0}], def_query1={query_dictionary={match_col=[[@44,120:128='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@42,112:115='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, ordered_by=[{name=col1, table_ref=values0}, {name=col2, table_ref=values0}], filters=[{name=col1, table_ref=values0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=values0}, {name=col2, table_ref=values0}], interface={total=[{name=col3, table_ref=values0}], col2=[{name=col2, table_ref=values0}], col1=[{name=col1, table_ref=values0}]}, def_query2={query_dictionary={unnamed_0=[[@60,197:197='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@69,226:229='col1',<381>,5:50], [@65,217:217='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={values0={src=values0, col2=[[@3,13:16='col2',<381>,1:13], [@75,247:250='col2',<381>,6:15], [@94,328:331='col2',<381>,8:54], [@102,353:356='col2',<381>,9:15]], col3=[[@7,23:26='col3',<381>,1:23], [@53,167:170='col3',<381>,4:6], [@79,263:266='col3',<381>,7:11]], col1=[[@1,7:10='col1',<381>,1:7], [@49,144:147='col1',<381>,3:45], [@73,241:244='col1',<381>,6:9], [@91,314:317='col1',<381>,8:40], [@100,347:350='col1',<381>,9:9]]}, total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query1={}, table_alias={src=values0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test() {
+		// unaliased inner SELECT with LATERAL FLATTEN table function
+		final String query =
+			"SELECT col1, col2, SUM(col3) AS total\n" +
+			"FROM (SELECT t.id AS col1, f.value AS col2, f.value AS col3 FROM tab1 t, LATERAL FLATTEN(input => t.items) f)\n" +
+			"JOIN (SELECT col2 AS match_col FROM tab2) ON col1 = match_col\n" +
+			"WHERE col3 > 0\n" +
+			"  AND EXISTS (SELECT 1 FROM tab3 x WHERE x.col1 = col1)\n" +
+			"GROUP BY col1, col2\n" +
+			"HAVING SUM(col3) > 10\n" +
+			"QUALIFY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2) = 1\n" +
+			"ORDER BY col1, col2";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected self-alias registration for inner source",
+				extractor.getSymbolTable().toString().contains("query0=query0"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}, alias=total}}, having={condition={left={function={function_name=SUM, qualifier=null, parameters={column={name=col3, table_ref=null}}}}, right={literal=10}, operator=>}}, orderby={1={null_order=null, predicand={column={name=col1, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}, from={join={1={select={1={column={name=id, table_ref=t}, alias=col1}, 2={column={name=value, table_ref=f}, alias=col2}, 3={column={name=value, table_ref=f}, alias=col3}}, from={join={1={table={alias=t, table=tab1}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}}}}}}}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=null}}, right={column={name=match_col, table_ref=null}}, operator==}}}, 3={select={1={column={name=col2, table_ref=null}, alias=match_col}}, from={table={alias=null, table=tab2}}}}}, where={and={1={condition={left={column={name=col3, table_ref=null}}, right={literal=0}, operator=>}}, 2={exists={select={1={literal=1}}, from={table={alias=x, table=tab3}}, where={condition={left={column={name=col1, table_ref=x}}, right={column={name=col1, table_ref=null}}, operator==}}, operator=EXISTS}}}}, groupby={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[total, col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab3={col1=[[@72,266:266='x',<381>,5:41], [@76,275:278='col1',<381>,5:50]]}, tab1={id=[[@14,51:51='t',<381>,2:13]], items=[[@40,136:136='t',<381>,2:98]]}, flatten0={value=[[@20,65:65='f',<381>,2:27], [@26,82:82='f',<381>,2:44]]}, tab2={col2=[[@49,161:164='col2',<381>,3:13]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@24,76:79='col2',<381>,2:38]], col3=[[@30,93:96='col3',<381>,2:55]], col1=[[@18,59:62='col1',<381>,2:21]]}, query1={match_col=[[@51,169:177='match_col',<381>,3:21]]}, query2={unnamed_0=[[@67,246:246='1',<300>,5:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{query4={grouped_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], def_query1={query_dictionary={match_col=[[@51,169:177='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@49,161:164='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@24,76:79='col2',<381>,2:38]], col3=[[@30,93:96='col3',<381>,2:55]], col1=[[@18,59:62='col1',<381>,2:21]]}, table_dictionary={tab1={id=[[@14,51:51='t',<381>,2:13]], items=[[@40,136:136='t',<381>,2:98]]}, flatten0={value=[[@20,65:65='f',<381>,2:27], [@26,82:82='f',<381>,2:44]]}}, interface={col2=[{name=value, table_ref=f}], col3=[{name=value, table_ref=f}], col1=[{name=id, table_ref=t}]}, table_alias={t=tab1, f=flatten0}}, ordered_by=[{name=col1, table_ref=query0}, {name=col2, table_ref=query0}], filters=[{name=col1, table_ref=query0}, {name=match_col, table_ref=query1}, {name=col3, table_ref=query0}, {name=col2, table_ref=query0}], interface={total=[{name=col3, table_ref=query0}], col2=[{name=col2, table_ref=query0}], col1=[{name=col1, table_ref=query0}]}, def_query2={query_dictionary={unnamed_0=[[@67,246:246='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@76,275:278='col1',<381>,5:50], [@72,266:266='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=tab3}], interface={unnamed_0=[]}, table_alias={x=tab3}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists3={query=query2, type=filters}}, query0={col2={column={name=col2, table_ref=null}, locations=[[@3,13:16='col2',<381>,1:13]]}, col3={column={name=col3, table_ref=null}, locations=[[@7,23:26='col3',<381>,1:23]]}, col1={column={name=col1, table_ref=null}, locations=[[@1,7:10='col1',<381>,1:7]]}}, query1={}, table_alias={query0=query0, query1=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

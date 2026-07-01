@@ -36,6 +36,44 @@
       }
     },
     {
+      "label": "Run All Tests (Maven)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-f",
+        "parse/pom.xml",
+        "test"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Run All Tests (Maven, Verbose)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-f",
+        "parse/pom.xml",
+        "-Dpss.walker.test.verbose=true",
+        "test"
+      ],
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
       "label": "Clean Package (Force ANTLR)",
       "type": "shell",
       "command": "mvn",

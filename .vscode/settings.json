@@ -12,7 +12,8 @@
   "java.import.maven.offline.enabled": false,
   "java.import.maven.downloadSources": true,
   "java.import.gradle.enabled": false,
+  "java.debug.settings.console": "internalConsole",
   "java.test.config": {
-    "vmArgs": ["-Xmx2g", "-Xms256m"]
+    "vmArgs": ["-Dpss.walker.test.verbose=true", "-Xmx2g", "-Xms256m"]
   }
 }

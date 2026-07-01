@@ -37,6 +37,25 @@ import sql.factory.SQLSelectParserFactory;
 
 public abstract class AbstractSqlParseEventWalkerTest {
 
+	/**
+	 * Walker tests emit large symbol-tree dumps when verbose. Default is quiet so IDE
+	 * test runs stay responsive; enable with {@code -Dpss.walker.test.verbose=true}.
+	 */
+	private static final boolean WALKER_TEST_VERBOSE =
+			Boolean.parseBoolean(System.getProperty("pss.walker.test.verbose", "false"));
+
+	private static void testLogLine() {
+		if (WALKER_TEST_VERBOSE) {
+			testLogLine();
+		}
+	}
+
+	private static void testLog(String message) {
+		if (WALKER_TEST_VERBOSE) {
+			System.out.println(message);
+		}
+	}
+
 	protected void assertUnresolvedUnknownColumnsDiagnostic(
 			Snippet snippet,
 			int expectedLine,
@@ -482,7 +501,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 				List<?> listeners = parser.getErrorListeners();
 				for (Object listener : listeners) {
 					if (listener instanceof ParseErrorListener parseErrorListener){
-						System.out.println(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
+						testLog(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
 					}
 				}
 			}
@@ -792,35 +811,35 @@ public abstract class AbstractSqlParseEventWalkerTest {
 
 			// walk the tree and extract the SQL USING THE CUSTOM Extractor
 			ParseTreeWalker.DEFAULT.walk(extractor, tree);
-			System.out.println("Result: " + extractor.getAsTree());
+			testLog("Result: " + extractor.getAsTree());
 			if (getInterface) {
-				System.out.println("Interface: " + extractor.getInterface());
+				testLog("Interface: " + extractor.getInterface());
 			} else {
-				System.out.println("No Interface requested");
+				testLog("No Interface requested");
 			}
-			System.out.println("Symbol Tree: " + extractor.getSymbolTable());
-			System.out.println("Table Dictionary: " + extractor.getTableColumnDictionaryMap());
-			System.out.println("Query Column Dictionary: " + extractor.getQueryColumnDictionaryMap());
-			System.out.println("Substitution Variables: " + extractor.getSubstitutionsMap());
+			testLog("Symbol Tree: " + extractor.getSymbolTable());
+			testLog("Table Dictionary: " + extractor.getTableColumnDictionaryMap());
+			testLog("Query Column Dictionary: " + extractor.getQueryColumnDictionaryMap());
+			testLog("Substitution Variables: " + extractor.getSubstitutionsMap());
 
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-			System.out.println("Parser Errors: " + v.getErrorList());
+			testLog("Parser Errors: " + v.getErrorList());
 
 			Snippet snippet = extractor.getSnippet();
 			HashMap<String, Object> enrichedArrayCollectors = enrichArrayCollectorsForTest(
 					extractor.getArrayOutputCollectorsMap(), parser, snippet, tree);
-			System.out.println("Array Output Collectors: " + enrichedArrayCollectors);
-			System.out.println("Walker Fatal Errors: " + snippet.getFatalErrorStringList());
-			System.out.println("Walker Non Fatal Errors: " + snippet.getErrorStringList(ParseDiagnostic.Severity.ERROR));
-			System.out.println("Walker Severe Warnings: " + snippet.getErrorStringList(ParseDiagnostic.Severity.SEVERE_WARNING));
-			System.out.println("Walker Warnings: " + snippet.getErrorStringList(ParseDiagnostic.Severity.WARNING));
-			System.out.println("Walker Info: " + snippet.getErrorStringList(ParseDiagnostic.Severity.INFO));
+			testLog("Array Output Collectors: " + enrichedArrayCollectors);
+			testLog("Walker Fatal Errors: " + snippet.getFatalErrorStringList());
+			testLog("Walker Non Fatal Errors: " + snippet.getErrorStringList(ParseDiagnostic.Severity.ERROR));
+			testLog("Walker Severe Warnings: " + snippet.getErrorStringList(ParseDiagnostic.Severity.SEVERE_WARNING));
+			testLog("Walker Warnings: " + snippet.getErrorStringList(ParseDiagnostic.Severity.WARNING));
+			testLog("Walker Info: " + snippet.getErrorStringList(ParseDiagnostic.Severity.INFO));
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
 			for (Object listener : listeners) {
 				if (listener instanceof ParseErrorListener parseErrorListener){
-					System.out.println(listener.getClass().getName() 
-					+ " found Diagnostics: " 
+					testLog(listener.getClass().getName()
+					+ " found Diagnostics: "
 					+ parseErrorListener.getDiagnostics());
 				}
 			}
@@ -830,13 +849,13 @@ public abstract class AbstractSqlParseEventWalkerTest {
 			System.err.println("Recognition Exception: " + e.getMessage());
 
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
-			System.out.println("Parser Errors: " + v.getErrorList());
+			testLog("Parser Errors: " + v.getErrorList());
 
 			// check for Syntax Errors Captured by the Listeners
 			List<?> listeners = parser.getErrorListeners();
 			for (Object listener : listeners) {
 				if (listener instanceof ParseErrorListener parseErrorListener){
-					System.out.println(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
+					testLog(listener.getClass().getName() + " Diagnostics: " + parseErrorListener.getDiagnostics());
 				}
 			}
 			
@@ -1136,16 +1155,16 @@ public abstract class AbstractSqlParseEventWalkerTest {
 					for (ParseDiagnostic item : parseErrorListener.getDiagnostics()) {
 						errorList.add(item.toString());
 					}					
-					System.out.println(listener.getClass().getName() 
-						+ " found Diagnostics: " 
+					testLog(listener.getClass().getName()
+						+ " found Diagnostics: "
 						+ parseErrorListener.getDiagnostics());
 							}}
 			// check for Syntax Errors Captured by the ParseErrorCollector
 			ParseErrorCollector v = (ParseErrorCollector) parser.getErrorHandler();
 			errorList.addAll(v.getErrorList());
 			int numErrors = v.getErrorCount();
-			System.out.println("Expected Syntax Failures for: " + query);
-			System.out.println("There were "+ numErrors + " errors: "+ v.getErrorList());
+			testLog("Expected Syntax Failures for: " + query);
+			testLog("There were "+ numErrors + " errors: "+ v.getErrorList());
 
 			Assert.assertNotEquals("Expected " + numErrors + " for " + query, 0, numErrors);
 		} catch (RecognitionException e) {

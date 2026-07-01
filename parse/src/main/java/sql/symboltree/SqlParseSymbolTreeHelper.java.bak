@@ -1449,12 +1449,6 @@ public class SqlParseSymbolTreeHelper {
 							if (!hasLocalPhysicalFromTables(localFromTableCollection)
 									&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 								emitUnqualifiedNotFoundInQueryAliasFatal(
-								// If we have a parent scope visible, defer this unresolved column
-								// to the parent so it can attempt resolution there before we emit fatal.
-								if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
-									// Leave unresolved; will bubble up to parent scope
-									continue;
-								}
 										columnName,
 										refLocation,
 										localTableAliasMap);
@@ -8952,11 +8946,7 @@ public class SqlParseSymbolTreeHelper {
 		return normalizedFunctionName + tableFunctionSourceCount++;
 	}
 
-	public String findTopLevelScopeKey(String hdr) {
-		if (hdr == null || hdr.isBlank()) {
-			return null;
-		}
-
+	public String findTopLevelValuesScopeKey() {
 		String selectedKey = null;
 		int highestIndex = -1;
 		for (String symbolKey : walker.symbolTable.keySet()) {
@@ -8964,17 +8954,17 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			String normalizedKey = null;
-			if (symbolKey.startsWith(hdr)) {
-				normalizedKey = symbolKey;
-			} else if (symbolKey.startsWith("def_" + hdr)) {
-				normalizedKey = symbolKey.substring("def_".length());
+			String normalizedValuesKey = null;
+			if (symbolKey.startsWith(MUMBLE_VALUES_KEY)) {
+				normalizedValuesKey = symbolKey;
+			} else if (symbolKey.startsWith("def_" + MUMBLE_VALUES_KEY)) {
+				normalizedValuesKey = symbolKey.substring("def_".length());
 			}
 
-			if (normalizedKey == null) {
+			if (normalizedValuesKey == null) {
 				continue;
 			}
-			String suffix = normalizedKey.substring(hdr.length());
+			String suffix = normalizedValuesKey.substring(MUMBLE_VALUES_KEY.length());
 			if (suffix.isEmpty()) {
 				continue;
 			}
@@ -8986,14 +8976,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 			if (keyIndex > highestIndex) {
 				highestIndex = keyIndex;
-				selectedKey = normalizedKey;
+				selectedKey = normalizedValuesKey;
 			}
 		}
 		return selectedKey;
-	}
-
-	public String findTopLevelValuesScopeKey() {
-		return findTopLevelScopeKey(MUMBLE_VALUES_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9084,71 +9070,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
-	public String resolveQueryBackedSourceHeaderFromItem(Map<String, Object> item) {
-		if (item == null || item.isEmpty()) {
-			return null;
-		}
-		if (item.containsKey(MUMBLE_UNION_KEY)) {
-			return MUMBLE_UNION_KEY;
-		}
-		if (item.containsKey(MUMBLE_INTERSECT_KEY)) {
-			return MUMBLE_INTERSECT_KEY;
-		}
-		if (item.containsKey(MUMBLE_VALUES_KEY)) {
-			return MUMBLE_VALUES_KEY;
-		}
-		if (item.containsKey(MUMBLE_SELECT_KEY)) {
-			return MUMBLE_QUERY_KEY;
-		}
-		return null;
-	}
-
-	public void registerUnaliasedScopeSelfAlias(String scopeKey) {
-		if (scopeKey == null || scopeKey.isBlank()) {
-			return;
-		}
-		upsertCurrentTableAliasMapping(scopeKey, scopeKey);
-		recordLocalFromRegisteredAlias(scopeKey);
-	}
-
-	public Boolean collectUnaliasedFromSourceSymbolTable(Map<String, Object> item) {
-		String hdr = resolveQueryBackedSourceHeaderFromItem(item);
-		if (hdr != null) {
-			return collectQuerySymbolTable(hdr, null);
-		}
-
-		Boolean done = collectQuerySymbolTable(MUMBLE_QUERY_KEY, null);
-		if (!done) {
-			done = collectQuerySymbolTable(MUMBLE_INSERT_KEY, null);
-		}
-		if (!done) {
-			done = collectQuerySymbolTable(MUMBLE_UPDATE_KEY, null);
-		}
-		if (!done) {
-			done = collectQuerySymbolTable(MUMBLE_DELETE_KEY, null);
-		}
-		return done;
-	}
-
-	/**
-	 * Registers an unaliased FROM source so unqualified columns resolve against the inner scope.
-	 * Set operations only receive a self-alias mapping; full collection would disturb nested set-op scopes.
-	 */
-	public void registerUnaliasedFromSource(Map<String, Object> item) {
-		String hdr = resolveQueryBackedSourceHeaderFromItem(item);
-		if (MUMBLE_UNION_KEY.equals(hdr) || MUMBLE_INTERSECT_KEY.equals(hdr)) {
-			registerUnaliasedScopeSelfAlias(findTopLevelScopeKey(hdr));
-			return;
-		}
-		if (MUMBLE_VALUES_KEY.equals(hdr)) {
-			if (!collectQuerySymbolTable(MUMBLE_VALUES_KEY, null)) {
-				registerUnaliasedScopeSelfAlias(findTopLevelScopeKey(MUMBLE_VALUES_KEY));
-			}
-			return;
-		}
-		collectUnaliasedFromSourceSymbolTable(item);
-	}
-
 	public Boolean collectQuerySymbolTable(String hdr, String alias) {
 		return collectQuerySymbolTable(hdr, alias, null);
 	}
@@ -9166,11 +9087,8 @@ public class SqlParseSymbolTreeHelper {
 			if (alias != null) {
 				walker.collectTableAlias(alias, queryName);
 				recordLocalFromRegisteredAlias(alias);
-			} else {
-				walker.symbolTable.put(queryName, new HashMap<String, Object>());
-				upsertCurrentTableAliasMapping(queryName, queryName);
-				recordLocalFromRegisteredAlias(queryName);
-			}
+			} else
+				 walker.symbolTable.put(queryName, new HashMap<String, Object>());
 
 			// propagate interface to outer layer of query
 			Map<String, Object> hold = (Map<String, Object>)  walker.symbolTable.get(queryName);
