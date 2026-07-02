@@ -8619,8 +8619,6 @@ public class SqlParseSymbolTreeHelper {
 						String qualifiedKey = refTable + "." + refName;
 						if (unresolvedColumnMap.containsKey(qualifiedKey)) {
 							explicitQualifiedKeys.add(qualifiedKey);
-						} else if (unresolvedColumnMap.containsKey(refName)) {
-							explicitQualifiedKeys.add(refName);
 						}
 					}
 				}
@@ -8663,8 +8661,6 @@ public class SqlParseSymbolTreeHelper {
 				String qualifiedKey = refTableRef + "." + refName;
 				if (unresolvedColumnMap.containsKey(qualifiedKey)) {
 					explicitQualifiedKeys.add(qualifiedKey);
-				} else if (unresolvedColumnMap.containsKey(refName)) {
-					explicitQualifiedKeys.add(refName);
 				}
 			}
 		}
@@ -8720,15 +8716,14 @@ public class SqlParseSymbolTreeHelper {
 
 		for (Map.Entry<String, Object> unknownEntry : explicitQualifiedUnknownEntries.entrySet()) {
 			String unresolvedKey = unknownEntry.getKey();
+			if (unresolvedKey == null || !unresolvedKey.contains(".")) {
+				// Explicit-qualified diagnostics are only for truly qualified keys.
+				continue;
+			}
 			String columnName = unresolvedKey;
 			String tableRef = null;
-			if (unresolvedKey != null && unresolvedKey.contains(".")) {
-				tableRef = unresolvedKey.substring(0, unresolvedKey.lastIndexOf('.'));
-				columnName = unresolvedKey.substring(unresolvedKey.lastIndexOf('.') + 1);
-			}
-			if (tableRef == null) {
-				tableRef = explicitTableRefByColumn.get(columnName);
-			}
+			tableRef = unresolvedKey.substring(0, unresolvedKey.lastIndexOf('.'));
+			columnName = unresolvedKey.substring(unresolvedKey.lastIndexOf('.') + 1);
 			if (tableRef == null) {
 				continue;
 			}

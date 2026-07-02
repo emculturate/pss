@@ -1485,7 +1485,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		HashMap<String, Map<String, Object>> participantQueryMaps = new HashMap<String, Map<String, Object>>();
 		HashMap<String, Map<String, Object>> participantInterfaces = new HashMap<String, Map<String, Object>>();
-		HashMap<String, String> normalizedParticipantKeys = new HashMap<String, String>();
 		ArrayList<String> participantKeys = new ArrayList<String>();
 
 		for (Map.Entry<String, Object> setEntry : setOperationMap.entrySet()) {
@@ -1497,28 +1496,18 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							|| setEntryKey.startsWith(MUMBLE_VALUES_KEY))) {
 				continue;
 			}
-			if (!(setEntry.getValue() instanceof Map<?, ?> queryMapObj)) {
+			if (!(setEntry.getValue() instanceof Map<?, ?> queryMap)) {
 				continue;
 			}
 
-			Map<String, Object> queryMap = (Map<String, Object>) queryMapObj;
-			Map.Entry<String, Map<String, Object>> normalizedParticipant =
-					resolveNormalizedSetOperationParticipant(setEntryKey, queryMap);
-			if (normalizedParticipant == null || normalizedParticipant.getValue() == null) {
-				continue;
-			}
-			String normalizedParticipantKey = normalizedParticipant.getKey();
-			Map<String, Object> normalizedParticipantMap = normalizedParticipant.getValue();
-
-			Object queryInterfaceObj = normalizedParticipantMap.get(MUMBLE_INTERFACE_KEY);
+			Object queryInterfaceObj = ((Map<String, Object>) queryMap).get(MUMBLE_INTERFACE_KEY);
 			if (!(queryInterfaceObj instanceof Map<?, ?> queryInterfaceMap)) {
 				continue;
 			}
 
 			participantKeys.add(setEntryKey);
-			participantQueryMaps.put(setEntryKey, normalizedParticipantMap);
+			participantQueryMaps.put(setEntryKey, (Map<String, Object>) queryMap);
 			participantInterfaces.put(setEntryKey, (Map<String, Object>) queryInterfaceMap);
-			normalizedParticipantKeys.put(setEntryKey, normalizedParticipantKey);
 		}
 
 		// Only compare true set-operation children (query/union/intersect/values branches) to each other.
@@ -1613,83 +1602,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualLineText,
 							actualCharText);
 
-			String diagTokenKey = normalizedParticipantKeys.get(setEntryKey);
-			if (diagTokenKey == null || diagTokenKey.isBlank()) {
-				diagTokenKey = setEntryKey;
-			}
-
 			addWalkerFatal(
 					diagCode,
 					diagMessage,
 					actualLine,
 					actualChar,
-					diagTokenKey);
+					setEntryKey);
 		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map.Entry<String, Map<String, Object>> resolveNormalizedSetOperationParticipant(
-			String participantKey,
-			Map<String, Object> participantScope) {
-		if (participantKey == null || participantScope == null) {
-			return null;
-		}
-
-		if (!participantKey.startsWith(MUMBLE_QUERY_KEY)) {
-			return Map.entry(participantKey, participantScope);
-		}
-
-		Map.Entry<String, Map<String, Object>> directSetDefinition =
-				findTopDirectSetOperationDefinition(participantScope);
-		if (directSetDefinition == null) {
-			return Map.entry(participantKey, participantScope);
-		}
-
-		String normalizedKey = directSetDefinition.getKey();
-		if (normalizedKey != null && normalizedKey.startsWith("def_")) {
-			normalizedKey = normalizedKey.substring("def_".length());
-		}
-
-		return Map.entry(
-				normalizedKey == null || normalizedKey.isBlank() ? participantKey : normalizedKey,
-				directSetDefinition.getValue());
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map.Entry<String, Map<String, Object>> findTopDirectSetOperationDefinition(
-			Map<String, Object> queryScope) {
-		if (queryScope == null || queryScope.isEmpty()) {
-			return null;
-		}
-
-		Map.Entry<String, Map<String, Object>> topSetDefinition = null;
-		int highestIndex = Integer.MIN_VALUE;
-		for (Map.Entry<String, Object> entry : queryScope.entrySet()) {
-			String key = entry.getKey();
-			if (key == null
-					|| !(key.startsWith("def_" + MUMBLE_UNION_KEY)
-							|| key.startsWith("def_" + MUMBLE_INTERSECT_KEY))) {
-				continue;
-			}
-			if (!(entry.getValue() instanceof Map<?, ?> setDefinitionObj)) {
-				continue;
-			}
-
-			Map<String, Object> setDefinition = (Map<String, Object>) setDefinitionObj;
-			Object interfaceObj = setDefinition.get(MUMBLE_INTERFACE_KEY);
-			if (!(interfaceObj instanceof Map<?, ?>)) {
-				continue;
-			}
-
-			String normalizedKey = key.substring("def_".length());
-			int index = extractTrailingNumericSuffix(normalizedKey);
-			if (topSetDefinition == null || index >= highestIndex) {
-				highestIndex = index;
-				topSetDefinition = Map.entry(key, setDefinition);
-			}
-		}
-
-		return topSetDefinition;
 	}
 
 	@SuppressWarnings("unchecked")
