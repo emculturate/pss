@@ -1466,8 +1466,7 @@ public class SqlParseSymbolTreeHelper {
 
 						if (sourceRefs.isEmpty()) {
 							// Scenario: implicit reference has no candidate source.
-							if (!hasLocalPhysicalFromTables(localFromTableCollection)
-									&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+							if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 								// If we should NOT emit fatal (i.e., we're in a nested scope with a parent),
 								// defer this unresolved column so parent can attempt resolution.
 								if (!emitFinalUnresolvedUnknownFatal) {
@@ -7865,7 +7864,9 @@ public class SqlParseSymbolTreeHelper {
 			
 			// If not found in visible sources, check all query sources in the dictionary
 			// (needed for deferred columns from nested scopes)
-			if (querySourcesWithColumn.isEmpty() && walker.queryColumnDictionaryMap != null) {
+			if (querySourcesWithColumn.isEmpty()
+					&& walker.queryColumnDictionaryMap != null
+					&& !hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 				for (String queryRef : walker.queryColumnDictionaryMap.keySet()) {
 					// Skip already-checked visible sources
 					if (visibleQuerySourceCollection != null && visibleQuerySourceCollection.containsKey(queryRef)) {
@@ -7935,8 +7936,7 @@ public class SqlParseSymbolTreeHelper {
 			} else {
 				// No sources found at all - completely unresolved
 				// Check if we're in a nested scope with only query-backed aliases
-				if (!hasLocalPhysicalFromTables(localTableCollection)
-						&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+				if (hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 					// In nested scope with only query aliases - emit FATAL
 					Integer[] refLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
 					if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
@@ -8247,11 +8247,13 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		int queryAliasCount = 0;
+		int localAliasCount = 0;
 		for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
 			String aliasKey = aliasEntry.getKey();
 			if (aliasKey == null || !isLocalFromRegisteredAlias(aliasKey)) {
 				continue;
 			}
+			localAliasCount++;
 			Object mappedSourceObj = aliasEntry.getValue();
 			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
 				continue;
@@ -8262,7 +8264,30 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		return queryAliasCount >= 1;
+		if (localAliasCount > 0) {
+			return queryAliasCount >= 1;
+		}
+
+		// Fallback: some frames may carry query-backed aliases in table_alias without
+		// local FROM registration markers. Treat these as query-alias-only if every
+		// alias maps to a query-backed source.
+		int fallbackQueryAliasCount = 0;
+		for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+			String aliasKey = aliasEntry.getKey();
+			if (aliasKey == null || aliasKey.isBlank()) {
+				continue;
+			}
+			Object mappedSourceObj = aliasEntry.getValue();
+			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
+				continue;
+			}
+			fallbackQueryAliasCount++;
+			if (!isQuerySourceReference(mappedSource)) {
+				return false;
+			}
+		}
+
+		return fallbackQueryAliasCount >= 1;
 	}
 
 	public void emitUnqualifiedNotFoundInQueryAliasFatal(
