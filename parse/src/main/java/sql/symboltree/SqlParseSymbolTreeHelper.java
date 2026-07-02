@@ -42,6 +42,8 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY = "_tmp_insert_target_column_list_location";
 	public static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	public static final String TEMP_DELETE_TARGET_ALIAS_KEY = "_tmp_delete_target_alias";
+	public static final String TEMP_UPDATE_NODEFROM_TARGET_KEY = "_tmp_update_nodefrom_target";
+	public static final String TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY = "_tmp_update_nodefrom_target_table_collection";
 	public static final String DERIVED_COLUMNS_HINTS_KEY = "derived_columns";
 	public static final String RELATIONAL_MODIFIER_OPERATOR_KEY = "operator";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
@@ -59,6 +61,37 @@ public class SqlParseSymbolTreeHelper {
 
 	public static String normalizeTableRef(String tableRef) {
 		return SqlASTWalkerHelper.normalizeTableReference(tableRef);
+	}
+
+	// --- Wrapper classes for tracking unresolved column locations ---
+
+	/**
+	 * Tracks a single occurrence of an unqualified column reference in a clause list.
+	 * Used during Option 2 deferred resolution to update clause references after resolution.
+	 */
+	public static class ClauseRefLocation {
+		public final String clauseName;  // "filters", "groupedByList", "orderedByList", etc.
+		public final ArrayList<Object> clauseList;  // The actual ArrayList holding the references
+		public final int index;  // Index within that list
+
+		public ClauseRefLocation(String clauseName, ArrayList<Object> clauseList, int index) {
+			this.clauseName = clauseName;
+			this.clauseList = clauseList;
+			this.index = index;
+		}
+	}
+
+	/**
+	 * Tracks all occurrences of a single unqualified column across multiple clause lists.
+	 * Stores the original columnRefObj and all locations where it appears.
+	 */
+	public static class UnresolvedColumnTracking {
+		public final Object columnRefObj;  // Original column reference object
+		public final Set<ClauseRefLocation> locations = new HashSet<>();  // All occurrences
+
+		public UnresolvedColumnTracking(Object columnRefObj) {
+			this.columnRefObj = columnRefObj;
+		}
 	}
 
 	// =========================================================================
@@ -1111,26 +1144,13 @@ public class SqlParseSymbolTreeHelper {
 					localTableAliasMap,
 					localTargetTableCollection,
 					updateTargetTableRef);
+			// DEFER UPDATE no-FROM target resolution to unified resolver at query exit
+			// This allows UPDATE target columns to be resolved alongside other clause columns
+			// in a single unified pass, rather than multiple early resolution steps.
 			if (!updateHasFromClause) {
-				resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
-						localUnresolvedColumnMap,
-						localTableCollection,
-						localTargetTableCollection,
-						localTableAliasMap,
-						updateTargetTableRef);
-				resolveRemainingQualifiedUnresolvedColumnsToTargetTable(
-						localUnresolvedColumnMap,
-						localTableAliasMap,
-						localTargetTableCollection,
-						updateTargetTableRef);
-				mergeUpdateTargetAndLhsIntoTableDictionary(
-						localTargetTableCollection,
-						localLhsUnresolvedColumnMap,
-						localTableCollection,
-						localTableAliasMap,
-						updateTargetTableRef);
-				localTargetTableCollection.clear();
-				localLhsUnresolvedColumnMap.clear();
+				// Store target table ref for unified resolver to use later
+				walker.symbolTable.put(TEMP_UPDATE_NODEFROM_TARGET_KEY, updateTargetTableRef);
+				walker.symbolTable.put(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY, localTargetTableCollection);
 			} else {
 				mergeUpdateTargetAndLhsIntoTableDictionary(
 						localTargetTableCollection,
@@ -1448,13 +1468,13 @@ public class SqlParseSymbolTreeHelper {
 							// Scenario: implicit reference has no candidate source.
 							if (!hasLocalPhysicalFromTables(localFromTableCollection)
 									&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
-								emitUnqualifiedNotFoundInQueryAliasFatal(
-								// If we have a parent scope visible, defer this unresolved column
-								// to the parent so it can attempt resolution there before we emit fatal.
-								if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
+								// If we should NOT emit fatal (i.e., we're in a nested scope with a parent),
+								// defer this unresolved column so parent can attempt resolution.
+								if (!emitFinalUnresolvedUnknownFatal) {
 									// Leave unresolved; will bubble up to parent scope
 									continue;
 								}
+								emitUnqualifiedNotFoundInQueryAliasFatal(
 										columnName,
 										refLocation,
 										localTableAliasMap);
@@ -1562,51 +1582,76 @@ public class SqlParseSymbolTreeHelper {
 				orderedByList,
 				localRelationalModifierInterfaceHints);
 
-		assignTableRefsForColumnReferenceList(
+		// Option 2 refactoring: Collect clause columns into unresolvedColumnMap without resolving.
+		// All resolution deferred to unified resolver at query exit.
+		// Also track where each column appears for later reference updates.
+		HashMap<String, Set<ClauseRefLocation>> unresolvedColumnLocations = new HashMap<>();
+		collectClauseColumnsIntoUnresolved(
 				filtersList,
+				"filters",
 				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localFromTableCollection,
-				null,
-				localTableAliasMap,
+				unresolvedColumnLocations,
 				localDerivedColumns,
-				localRelationalModifierInterfaceHints,
-				deleteTargetTableRef);
-		assignTableRefsForColumnReferenceList(
+				localRelationalModifierInterfaceHints);
+		collectClauseColumnsIntoUnresolved(
 				groupedByList,
+				"groupedByList",
 				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localFromTableCollection,
-				null,
-				localTableAliasMap,
+				unresolvedColumnLocations,
 				localDerivedColumns,
-				localRelationalModifierInterfaceHints,
-				deleteTargetTableRef);
-		assignTableRefsForColumnReferenceList(
+				localRelationalModifierInterfaceHints);
+		collectClauseColumnsIntoUnresolved(
 				orderedByList,
+				"orderedByList",
 				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localFromTableCollection,
-				null,
-				localTableAliasMap,
+				unresolvedColumnLocations,
 				localDerivedColumns,
-				localRelationalModifierInterfaceHints,
-				deleteTargetTableRef);
+				localRelationalModifierInterfaceHints);
 		if (isUpdateScope && updateHasFromClause) {
 			Object assignmentsObj = walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY);
 			if (assignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
 				for (Object rhsRefsObj : assignmentsMapObj.values()) {
-					assignTableRefsForColumnReferenceList(
+					collectClauseColumnsIntoUnresolved(
 							rhsRefsObj,
+							"updateAssignments",
 							localUnresolvedColumnMap,
-							localCurrentQueryDictionary,
-							localFromTableCollection,
-							visibleQuerySourceCollection,
-							localTableAliasMap,
+							unresolvedColumnLocations,
 							localDerivedColumns,
-							localRelationalModifierInterfaceHints,
-							null);
+							localRelationalModifierInterfaceHints);
 				}
+			}
+		}
+
+		// Resolve remaining unqualified unresolved entries against visible query sources.
+		// This handles columns that were deferred from nested scopes (e.g., EXISTS predicates)
+		// and merged back after clause processing, following the same resolution pattern as
+		// columns in SELECT, WHERE, GROUP BY, etc.
+		// This also handles UPDATE no-FROM target table resolution via unified resolver.
+		// Also updates all tracked clause list locations with resolved table references.
+		// 
+		// However, for deferred correlated subqueries (like EXISTS), unqualified columns
+		// should NOT be resolved locally - they should be passed up to the parent query
+		// for resolution after the parent finishes building its interface.
+		if (!deferCorrelatedValueSubqueryQualifiedUnknowns) {
+			resolveRemainingUnresolvedAgainstQuerySources(
+					localUnresolvedColumnMap,
+					unresolvedColumnLocations,
+					localFromTableCollection,
+					visibleQuerySourceCollection,
+					localTableAliasMap);
+		}
+
+		// If UPDATE with no FROM was deferred, merge resolved target columns back into localTableCollection
+		if (isUpdateScope && !updateHasFromClause) {
+			HashMap<String, Object> updateTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
+			if (updateTargetTableCollection != null && !updateTargetTableCollection.isEmpty()) {
+				mergeUpdateTargetAndLhsIntoTableDictionary(
+						updateTargetTableCollection,
+						localLhsUnresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap,
+						updateTargetTableRef);
+				localLhsUnresolvedColumnMap.clear();
 			}
 		}
 
@@ -3710,7 +3755,9 @@ public class SqlParseSymbolTreeHelper {
 		if (unresolvedMap != null && !unresolvedMap.isEmpty()) {
 			splitUnresolvedEntriesByQualification(
 					unresolvedMap, qualifiedUnresolvedForParent, unqualifiedUnresolvedForLocal);
-			if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+			// For deferred correlated subqueries (EXISTS, etc.), pass up ALL unresolved columns to the parent.
+			// The parent query will resolve them after its own assembly is complete.
+			if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary && !passUpQualifiedUnresolvedFromThisSubquery) {
 				if (!canResolveUnqualifiedFromSingleWildcardQuerySource(unqualifiedUnresolvedForLocal)) {
 					emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolvedForLocal);
 				}
@@ -3792,6 +3839,24 @@ public class SqlParseSymbolTreeHelper {
 			deferredUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
 			deferredUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
 			mergeUnresolvedEntriesIntoCurrentScope(deferredUnresolvedForParent);
+			return;
+		}
+
+		// For correlated subqueries (passUpQualifiedUnresolvedFromThisSubquery=true), pass up ALL unresolved
+		// columns (both qualified and unqualified) to the parent query for resolution.
+		if (passUpQualifiedUnresolvedFromThisSubquery) {
+			HashMap<String, Object> allUnresolvedForParent = new HashMap<String, Object>();
+			allUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
+			allUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
+			if (!allUnresolvedForParent.isEmpty()) {
+				Object parentUnresolvedObject = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+				if (parentUnresolvedObject instanceof HashMap<?, ?>) {
+					walker.mergeUnknownEntries(
+							(HashMap<String, Object>) parentUnresolvedObject, allUnresolvedForParent);
+				} else {
+					walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, allUnresolvedForParent);
+				}
+			}
 			return;
 		}
 
@@ -7280,6 +7345,12 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Extract the actual columnRefObj if stored in tracking wrapper
+		Object columnRefObj = unresolvedEntry;
+		if (unresolvedEntry instanceof UnresolvedColumnTracking tracking) {
+			columnRefObj = tracking.columnRefObj;
+		}
+
 		String canonicalSourceRef = normalizeTableRef(resolvedSourceRef);
 		String queryAliasSourceRef = resolveAliasToQuerySourceFromAliasMap(
 				canonicalSourceRef,
@@ -7309,7 +7380,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry);
+		walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, columnRefObj);
 	}
 
 	public Object consumeUnqualifiedUnknownEntry(
@@ -7602,72 +7673,98 @@ public class SqlParseSymbolTreeHelper {
 		return updatedRefMap;
 	}
 
-	@SuppressWarnings("unchecked")
-	public void assignTableRefsForColumnReferenceList(
-			Object columnListObj,
-			HashMap<String, Object> unresolvedColumnMap,
-			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> localTableCollection,
-			HashMap<String, Object> visibleQuerySourceCollection,
-			HashMap<String, Object> localTableAliasMap,
-			HashMap<String, Object> localDerivedColumns,
-			ArrayList<Object> relationalModifierInterfaceHints,
-			String deleteTargetTableRef) {
-		if (!(columnListObj instanceof ArrayList<?>)) {
+	/**
+	 * Materialized references with resolved table references. Called after column resolution
+	 * to update the actual clause list arrays.
+	 */
+	private void updateTrackedClauseLocationsWithResolvedTableRef(
+			Set<ClauseRefLocation> locations,
+			String resolvedSourceRef) {
+		if (locations == null || locations.isEmpty() || resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
 			return;
 		}
 
-		ArrayList<Object> columnRefs = (ArrayList<Object>) columnListObj;
-		for (int index = 0; index < columnRefs.size(); index++) {
-			Object columnRefObj = columnRefs.get(index);
-			String columnName = walker.extractReferenceNameFromInterfaceEntry(columnRefObj);
-			String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnRefObj);
-			String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(columnRefObj);
-
-			if (substitutionType != null
-					&& (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+		String canonicalSourceRef = normalizeTableRef(resolvedSourceRef);
+		for (ClauseRefLocation location : locations) {
+			if (location == null || location.clauseList == null || location.index < 0 || location.index >= location.clauseList.size()) {
 				continue;
 			}
 
-			if (columnName == null || "*".equals(columnName)) {
-				continue;
-			}
+			Object currentRefObj = location.clauseList.get(location.index);
+			Object updatedRefObj = cloneReferenceWithResolvedTableRef(currentRefObj, canonicalSourceRef);
+			location.clauseList.set(location.index, updatedRefObj);
+		}
+	}
 
-			if (isRelationalModifierDerivedColumnReference(
-					localDerivedColumns,
-					relationalModifierInterfaceHints,
-					tableRef,
-					columnName)) {
-				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
-				continue;
-			}
-
-			if (tableRef != null) {
-				// Skip explicit refs; explicit unresolved handling is covered by unresolved-map diagnostics.
-				continue;
-			}
-
-			Integer[] refLocation = resolveUnqualifiedReferenceLocation(
-					columnName,
-					columnRefObj,
+	/**
+	 * Resolve remaining unqualified, unresolved entries against visible query sources.
+	 * Handles columns deferred from nested scopes (e.g., EXISTS predicates) that are merged
+	 * back after clause processing. Applies the same resolution strategy as clause columns:
+	 * if exactly one query source has the column, bind it to that source.
+	 */
+	@SuppressWarnings("unchecked")
+	private void resolveRemainingUnresolvedAgainstQuerySources(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Set<ClauseRefLocation>> unresolvedColumnLocations,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		// Check if we're in UPDATE with no FROM clause - if so, resolve against UPDATE target first
+		String updateTargetTableRef = (String) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_KEY);
+		HashMap<String, Object> updateTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
+		
+		if (updateTargetTableRef != null && !updateTargetTableRef.isBlank() && updateTargetTableCollection != null) {
+			// Resolve UPDATE no-FROM unqualified columns against target table first
+			resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources(
 					unresolvedColumnMap,
-					localCurrentQueryDictionary,
-					columnName);
+					localTableCollection,
+					updateTargetTableCollection,
+					localTableAliasMap,
+					updateTargetTableRef);
+			resolveRemainingQualifiedUnresolvedColumnsToTargetTable(
+					unresolvedColumnMap,
+					localTableAliasMap,
+					updateTargetTableCollection,
+					updateTargetTableRef);
+			// Clean up temporary storage
+			walker.symbolTable.remove(TEMP_UPDATE_NODEFROM_TARGET_KEY);
+			walker.symbolTable.remove(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
+		}
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
 
+		// Process each unresolved entry to see if it can be resolved against local or query sources
+		for (String unresolvedKey : new ArrayList<String>(unresolvedColumnMap.keySet())) {
+			Object unresolvedEntry = unresolvedColumnMap.get(unresolvedKey);
+			
+			// Extract the column name and table ref from the unresolved entry
+			String columnName = extractColumnNameFromUnresolvedEntry(unresolvedKey, unresolvedEntry);
+			String tableRef = extractTableRefFromUnresolvedEntry(unresolvedKey, unresolvedEntry);
+			
+			if (columnName == null || columnName.isBlank() || tableRef != null) {
+				// Skip if qualified (has explicit table ref) or if column name couldn't be extracted
+				continue;
+			}
+
+			// First try local tables (WHERE, GROUP BY, ORDER BY typically reference local tables)
 			ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
 					columnName,
 					localTableCollection,
 					visibleQuerySourceCollection,
 					localTableAliasMap);
-
-			String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
-					deleteTargetTableRef,
-					localTableAliasMap,
-					localTableCollection,
-					sourceRefs);
-			if (preferredDeleteTargetRef != null) {
-				String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
-				columnRefs.set(index, cloneReferenceWithResolvedTableRef(columnRefObj, resolvedSourceRef));
+			
+			if (sourceRefs.size() == 1) {
+				String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
+				
+				// Update all tracked clause list locations with the resolved table reference
+				Set<ClauseRefLocation> locations = (unresolvedColumnLocations != null) 
+					? unresolvedColumnLocations.get(columnName)
+					: null;
+				if (locations != null && !locations.isEmpty()) {
+					updateTrackedClauseLocationsWithResolvedTableRef(locations, resolvedSourceRef);
+				}
+				
 				materializeResolvedUnqualifiedReference(
 						unresolvedColumnMap,
 						localTableCollection,
@@ -7677,18 +7774,11 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			if (sourceRefs.isEmpty()) {
-				if (!hasLocalPhysicalFromTables(localTableCollection)
-						&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
-					emitUnqualifiedNotFoundInQueryAliasFatal(
-							columnName,
-							refLocation,
-							localTableAliasMap);
-				}
-				continue;
-			} else if (sourceRefs.size() > 1) {
-				if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
-					continue;
+			// If exactly multiple local sources found, emit ambiguous diagnostic
+			if (sourceRefs.size() > 1) {
+				Integer[] refLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
+				if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
+					refLocation = new Integer[] { null, null };
 				}
 				String possibleSources = sourceRefs.toString();
 				String diagCode = walker.getDiagnosticCode(
@@ -7721,17 +7811,192 @@ public class SqlParseSymbolTreeHelper {
 						"ast-walk",
 						null,
 						null);
-			} else {
-				String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
-				columnRefs.set(index, cloneReferenceWithResolvedTableRef(columnRefObj, resolvedSourceRef));
+				continue;
+			}
+
+			// If no local sources found, check query sources (for deferred columns from nested scopes)
+			ArrayList<String> querySourcesWithColumn = new ArrayList<String>();
+			
+			// First check visible query sources
+			if (visibleQuerySourceCollection != null && !visibleQuerySourceCollection.isEmpty()) {
+				for (String queryRef : visibleQuerySourceCollection.keySet()) {
+					if (querySourceHasExactColumn(queryRef, columnName, null)) {
+						querySourcesWithColumn.add(queryRef);
+					}
+				}
+			}
+			
+			// If not found in visible sources, check all query sources in the dictionary
+			// (needed for deferred columns from nested scopes)
+			if (querySourcesWithColumn.isEmpty() && walker.queryColumnDictionaryMap != null) {
+				for (String queryRef : walker.queryColumnDictionaryMap.keySet()) {
+					// Skip already-checked visible sources
+					if (visibleQuerySourceCollection != null && visibleQuerySourceCollection.containsKey(queryRef)) {
+						continue;
+					}
+					if (querySourceHasExactColumn(queryRef, columnName, null)) {
+						querySourcesWithColumn.add(queryRef);
+					}
+				}
+			}
+
+			// If exactly one query source has this column, bind the unresolved entry to it
+			if (querySourcesWithColumn.size() == 1) {
+				String resolvedSourceRef = normalizeTableRef(querySourcesWithColumn.get(0));
+				
+				// Update all tracked clause list locations with the resolved table reference
+				Set<ClauseRefLocation> locations = (unresolvedColumnLocations != null)
+					? unresolvedColumnLocations.get(columnName)
+					: null;
+				if (locations != null && !locations.isEmpty()) {
+					updateTrackedClauseLocationsWithResolvedTableRef(locations, resolvedSourceRef);
+				}
+				
 				materializeResolvedUnqualifiedReference(
 						unresolvedColumnMap,
 						localTableCollection,
 						localTableAliasMap,
 						resolvedSourceRef,
 						columnName);
+			} else if (querySourcesWithColumn.size() > 1) {
+				// Multiple query sources have this column - ambiguous
+				Integer[] refLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
+				if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
+					refLocation = new Integer[] { null, null };
+				}
+				String possibleSources = querySourcesWithColumn.toString();
+				String diagCode = walker.getDiagnosticCode(
+						SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
+				String diagTemplate = walker.getDiagnosticMessage(
+						SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE);
+				String diagMessage = (diagTemplate == null)
+						? String.format(
+								"Ambiguous column reference '%s' at (l:%s c:%s). Possible sources: %s",
+								columnName,
+								refLocation[0],
+								refLocation[1],
+								possibleSources)
+						: String.format(diagTemplate,
+								columnName,
+								refLocation[0],
+								refLocation[1],
+								possibleSources);
+
+				walker.addWalkerDiagnostic(
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						diagCode,
+						diagMessage,
+						refLocation[0],
+						refLocation[1],
+						walker.getClass().getSimpleName(),
+						null,
+						columnName,
+						true,
+						"ast-walk",
+						null,
+						null);
+			} else {
+				// No sources found at all - completely unresolved
+				// Check if we're in a nested scope with only query-backed aliases
+				if (!hasLocalPhysicalFromTables(localTableCollection)
+						&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
+					// In nested scope with only query aliases - emit FATAL
+					Integer[] refLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
+					if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
+						refLocation = new Integer[] { null, null };
+					}
+					emitUnqualifiedNotFoundInQueryAliasFatal(
+							columnName,
+							refLocation,
+							localTableAliasMap);
+				}
+				// Otherwise leave unresolved for later validation phase to handle
 			}
 		}
+	}
+
+	/**
+	 * Collects unqualified column references from a clause list into the unresolvedColumnMap
+	 * without attempting to resolve them. Also tracks the location (clause + index) in a separate
+	 * tracking map for later reference updates. This is used in Option 2 refactoring to defer all
+	 * column resolution to a unified pass at query exit time.
+	 */
+	@SuppressWarnings("unchecked")
+	public void collectClauseColumnsIntoUnresolved(
+			Object columnListObj,
+			String clauseName,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Set<ClauseRefLocation>> unresolvedColumnLocations,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (!(columnListObj instanceof ArrayList<?>)) {
+			return;
+		}
+
+		ArrayList<Object> columnRefs = (ArrayList<Object>) columnListObj;
+		for (int i = 0; i < columnRefs.size(); i++) {
+			Object columnRefObj = columnRefs.get(i);
+			String columnName = walker.extractReferenceNameFromInterfaceEntry(columnRefObj);
+			String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnRefObj);
+			String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(columnRefObj);
+
+			// Skip substitution types that aren't direct column references
+			if (substitutionType != null
+					&& (MUMBLE_COLUMN_KEY.equals(substitutionType) || MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+				continue;
+			}
+
+			// Skip wildcards and null/blank column names
+			if (columnName == null || "*".equals(columnName)) {
+				continue;
+			}
+
+			// Skip PIVOT/UNPIVOT derived columns (they're handled separately)
+			if (isRelationalModifierDerivedColumnReference(
+					localDerivedColumns,
+					relationalModifierInterfaceHints,
+					tableRef,
+					columnName)) {
+				continue;
+			}
+
+			// Skip qualified references (tableRef.columnName) - these are handled by
+			// qualified column resolution, not the unresolved map
+			if (tableRef != null) {
+				continue;
+			}
+
+			// Add unqualified column to unresolvedColumnMap for deferred resolution
+			Object existingEntry = unresolvedColumnMap.get(columnName);
+			if (existingEntry == null) {
+				unresolvedColumnMap.put(columnName, columnRefObj);
+			}
+
+			// Track this occurrence's location for later reference updates
+			if (unresolvedColumnLocations != null) {
+				Set<ClauseRefLocation> locations = unresolvedColumnLocations
+					.computeIfAbsent(columnName, k -> new HashSet<>());
+				locations.add(new ClauseRefLocation(clauseName, columnRefs, i));
+			}
+		}
+	}
+
+	/**
+	 * Overloaded version for backward compatibility - calls new version with clauseName="unknown" and no tracking
+	 */
+	@SuppressWarnings("unchecked")
+	public void collectClauseColumnsIntoUnresolved(
+			Object columnListObj,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		collectClauseColumnsIntoUnresolved(
+				columnListObj,
+				"unknown",
+				unresolvedColumnMap,
+				null,
+				localDerivedColumns,
+				relationalModifierInterfaceHints);
 	}
 
 	public String resolvePreferredDeleteTargetForUnqualified(
@@ -8040,30 +8305,32 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> collectVisibleQuerySourceCollection(HashMap<String, Object> tableAliasCollection) {
 		HashMap<String, Object> visibleQuerySources = new HashMap<String, Object>();
-		if (tableAliasCollection == null || tableAliasCollection.isEmpty()) {
-			return visibleQuerySources;
-		}
+		
+		// ONLY add sources from the current query's local table alias collection
+		// Do NOT look into nested or ancestor symbol tables - those have their own resolution pass
+		// This ensures each query only resolves against its direct sources (FROM/JOIN)
+		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+			for (Object mappedSourceObj : tableAliasCollection.values()) {
+				if (!(mappedSourceObj instanceof String mappedSource) || !isQuerySourceReference(mappedSource)) {
+					continue;
+				}
 
-		for (Object mappedSourceObj : tableAliasCollection.values()) {
-			if (!(mappedSourceObj instanceof String mappedSource) || !isQuerySourceReference(mappedSource)) {
-				continue;
-			}
+				Object querySourceObj = walker.symbolTable.get(mappedSource);
+				if (querySourceObj instanceof HashMap<?, ?>) {
+					visibleQuerySources.put(mappedSource, querySourceObj);
+					continue;
+				}
 
-			Object querySourceObj = walker.symbolTable.get(mappedSource);
-			if (querySourceObj instanceof HashMap<?, ?>) {
-				visibleQuerySources.put(mappedSource, querySourceObj);
-				continue;
-			}
+				Object queryDefinitionObj = findInCurrentOrAncestorSymbolTables("def_" + mappedSource);
+				if (queryDefinitionObj instanceof HashMap<?, ?>) {
+					visibleQuerySources.put(mappedSource, queryDefinitionObj);
+					continue;
+				}
 
-			Object queryDefinitionObj = findInCurrentOrAncestorSymbolTables("def_" + mappedSource);
-			if (queryDefinitionObj instanceof HashMap<?, ?>) {
-				visibleQuerySources.put(mappedSource, queryDefinitionObj);
-				continue;
-			}
-
-			Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(mappedSource);
-			if (queryDictionaryObj instanceof HashMap<?, ?>) {
-				visibleQuerySources.put(mappedSource, queryDictionaryObj);
+				Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(mappedSource);
+				if (queryDictionaryObj instanceof HashMap<?, ?>) {
+					visibleQuerySources.put(mappedSource, queryDictionaryObj);
+				}
 			}
 		}
 
@@ -8720,9 +8987,33 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	private String normalizeQueryScopeDefinitionKey(String queryKey) {
+		if (queryKey == null || queryKey.isBlank()) {
+			return null;
+		}
+		if (queryKey.startsWith("def_")) {
+			return queryKey;
+		}
+		if (!isQuerySourceReference(queryKey)) {
+			return null;
+		}
+		return "def_" + queryKey;
+	}
+
 	public Object getQueryDefinitionSymbol(String queryKey) {
 		if (queryKey == null || queryKey.isBlank()) {
 			return null;
+		}
+
+		String definitionKey = normalizeQueryScopeDefinitionKey(queryKey);
+		if (definitionKey != null) {
+			Object normalizedDefObj = findInCurrentOrAncestorSymbolTables(definitionKey);
+			if (normalizedDefObj == null) {
+				normalizedDefObj = findInCurrentOrAncestorSymbolTablesRecursive(definitionKey);
+			}
+			if (normalizedDefObj != null) {
+				return normalizedDefObj;
+			}
 		}
 
 		Object directObj = walker.symbolTable.get(queryKey);
@@ -8732,7 +9023,14 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (queryKey.startsWith("def_")) {
-			return directObj;
+			if (directObj != null) {
+				return directObj;
+			}
+			Object scopedDefObj = findInCurrentOrAncestorSymbolTables(queryKey);
+			if (scopedDefObj != null) {
+				return scopedDefObj;
+			}
+			return findInCurrentOrAncestorSymbolTablesRecursive(queryKey);
 		}
 
 		String cteScopeRef = resolveCteScopeReference(queryKey, null);
@@ -9179,15 +9477,14 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> liveDeferred = new HashMap<String, Object>();
 
 			if (unk != null) {
-				if (hold != null) {
-					// move any other interface elements to query and empty unknowns
-					Map<String, Object> interfac = (Map<String, Object>) query.get(MUMBLE_INTERFACE_KEY);
-					if (interfac != null)
-						for (String key : interfac.keySet()) {
-							Object unkItem = unk.remove(key);
-							if (unkItem != null)
-								hold.put(key, unkItem);
+				Map<String, Object> interfac = (Map<String, Object>) query.get(MUMBLE_INTERFACE_KEY);
+				if (hold != null && interfac != null) {
+					for (String key : interfac.keySet()) {
+						Object unkItem = unk.remove(key);
+						if (unkItem != null) {
+							hold.put(key, unkItem);
 						}
+					}
 				}
 
 				if (!unk.isEmpty()) {
@@ -9970,6 +10267,18 @@ public class SqlParseSymbolTreeHelper {
 		return tableRefObj instanceof String tableRef ? tableRef : null;
 	}
 
+	private String extractColumnNameFromUnresolvedEntry(String unresolvedKey, Object unresolvedValue) {
+		if (unresolvedKey != null) {
+			int dotIndex = unresolvedKey.indexOf('.');
+			if (dotIndex > 0) {
+				return unresolvedKey.substring(dotIndex + 1);
+			}
+			// No dot means the key is the column name
+			return unresolvedKey;
+		}
+		return null;
+	}
+
 	/**
 	 * Hoists predicate-local unresolved refs for parent query exit resolution.
 	 */
@@ -10042,6 +10351,8 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);
+		scopePayload.remove(TEMP_UPDATE_NODEFROM_TARGET_KEY);
+		scopePayload.remove(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
 	}
 
 	/** Removes walk-time-only symbol-table entries from a published scope tree. */
