@@ -3577,6 +3577,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		Object normalizedColumnRefs = normalizeColumnRefsForDictionary(columnRefs);
+		if (normalizedColumnRefs == null) {
+			return;
+		}
 
 		String matchedColumnKey = findMatchingColumnKey(dictionary, columnName);
 		String targetColumnKey = matchedColumnKey == null ? columnName : matchedColumnKey;
@@ -3603,6 +3606,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (locationsObj instanceof ArrayList<?>) {
 				return locationsObj;
 			}
+			// Ignore structural refs (for example interface/filter objects) when
+			// merging dictionary columns; dictionary entries should remain token lists.
+			return null;
 		}
 		return columnRefs;
 	}

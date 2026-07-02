@@ -1638,7 +1638,8 @@ public class SqlParseSymbolTreeHelper {
 					unresolvedColumnLocations,
 					localFromTableCollection,
 					visibleQuerySourceCollection,
-					localTableAliasMap);
+					localTableAliasMap,
+					deleteTargetTableRef);
 		}
 
 		// If UPDATE with no FROM was deferred, merge resolved target columns back into localTableCollection
@@ -7340,7 +7341,19 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Object unresolvedEntry = consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		String canonicalSourceRef = normalizeTableRef(resolvedSourceRef);
+		Object unresolvedEntry = consumeQualifiedUnknownEntry(
+				unresolvedColumnMap,
+				canonicalSourceRef,
+				columnName,
+				true);
+		if (unresolvedEntry == null) {
+			unresolvedEntry = consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		} else {
+			// Clear any map-shaped fallback entry inserted by deferred clause collection
+			// so unresolved diagnostics are not polluted by duplicates.
+			consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		}
 		if (unresolvedEntry == null || resolvedSourceRef == null || resolvedSourceRef.isBlank()) {
 			return;
 		}
@@ -7351,7 +7364,6 @@ public class SqlParseSymbolTreeHelper {
 			columnRefObj = tracking.columnRefObj;
 		}
 
-		String canonicalSourceRef = normalizeTableRef(resolvedSourceRef);
 		String queryAliasSourceRef = resolveAliasToQuerySourceFromAliasMap(
 				canonicalSourceRef,
 				tableAliasCollection);
@@ -7708,7 +7720,8 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Set<ClauseRefLocation>> unresolvedColumnLocations,
 			HashMap<String, Object> localTableCollection,
 			HashMap<String, Object> visibleQuerySourceCollection,
-			HashMap<String, Object> localTableAliasMap) {
+			HashMap<String, Object> localTableAliasMap,
+			String deleteTargetTableRef) {
 		// Check if we're in UPDATE with no FROM clause - if so, resolve against UPDATE target first
 		String updateTargetTableRef = (String) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_KEY);
 		HashMap<String, Object> updateTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
@@ -7753,6 +7766,30 @@ public class SqlParseSymbolTreeHelper {
 					localTableCollection,
 					visibleQuerySourceCollection,
 					localTableAliasMap);
+
+			String preferredDeleteTargetRef = resolvePreferredDeleteTargetForUnqualified(
+					deleteTargetTableRef,
+					localTableAliasMap,
+					localTableCollection,
+					sourceRefs);
+			if (preferredDeleteTargetRef != null) {
+				String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
+
+				Set<ClauseRefLocation> locations = (unresolvedColumnLocations != null)
+						? unresolvedColumnLocations.get(columnName)
+						: null;
+				if (locations != null && !locations.isEmpty()) {
+					updateTrackedClauseLocationsWithResolvedTableRef(locations, resolvedSourceRef);
+				}
+
+				materializeResolvedUnqualifiedReference(
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap,
+						resolvedSourceRef,
+						columnName);
+				continue;
+			}
 			
 			if (sourceRefs.size() == 1) {
 				String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
@@ -7966,8 +8003,26 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			// Add unqualified column to unresolvedColumnMap for deferred resolution
-			Object existingEntry = unresolvedColumnMap.get(columnName);
+			// Add unqualified column to unresolvedColumnMap for deferred resolution.
+			// Use case-insensitive lookup so we do not insert a map-shaped fallback
+			// entry when a token-backed unresolved entry already exists with
+			// different identifier casing.
+			Object existingEntry = getUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+			if (existingEntry == null && unresolvedColumnMap != null && !unresolvedColumnMap.isEmpty()) {
+				for (String unresolvedKey : unresolvedColumnMap.keySet()) {
+					if (unresolvedKey == null || !unresolvedKey.contains(".")) {
+						continue;
+					}
+					int dotIndex = unresolvedKey.lastIndexOf('.');
+					if (dotIndex >= 0 && dotIndex + 1 < unresolvedKey.length()) {
+						String keyColumnName = unresolvedKey.substring(dotIndex + 1);
+						if (keyColumnName.equalsIgnoreCase(columnName)) {
+							existingEntry = unresolvedColumnMap.get(unresolvedKey);
+							break;
+						}
+					}
+				}
+			}
 			if (existingEntry == null) {
 				unresolvedColumnMap.put(columnName, columnRefObj);
 			}
@@ -8054,9 +8109,12 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableAliasCollection) {
 		LinkedHashSet<String> candidates = new LinkedHashSet<String>();
 
-		HashMap<String, Object> localPhysicalTables = buildLocalPhysicalFromTableCollection(tableCollection);
-		for (String tableRef : localPhysicalTables.keySet()) {
-			addIgnoringCase(candidates, tableRef);
+		boolean queryAliasOnlyScope = hasOnlyQueryBackedAliasSources(tableAliasCollection);
+		if (!queryAliasOnlyScope) {
+			HashMap<String, Object> localPhysicalTables = buildLocalPhysicalFromTableCollection(tableCollection);
+			for (String tableRef : localPhysicalTables.keySet()) {
+				addIgnoringCase(candidates, tableRef);
+			}
 		}
 
 		if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
@@ -8091,7 +8149,6 @@ public class SqlParseSymbolTreeHelper {
 	 * Physical tables registered in this query frame's {@code table_dictionary} only.
 	 * Inherited CTE {@code context_list} / query aliases are excluded.
 	 */
-	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> buildLocalPhysicalFromTableCollection(
 			HashMap<String, Object> tableCollection) {
 		HashMap<String, Object> localPhysical = new HashMap<String, Object>();
@@ -8190,7 +8247,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		int queryAliasCount = 0;
-		for (Object mappedSourceObj : tableAliasCollection.values()) {
+		for (Map.Entry<String, Object> aliasEntry : tableAliasCollection.entrySet()) {
+			String aliasKey = aliasEntry.getKey();
+			if (aliasKey == null || !isLocalFromRegisteredAlias(aliasKey)) {
+				continue;
+			}
+			Object mappedSourceObj = aliasEntry.getValue();
 			if (!(mappedSourceObj instanceof String mappedSource) || mappedSource.isBlank()) {
 				continue;
 			}
@@ -8343,6 +8405,15 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
+		String normalizedQueryRef = queryRef;
+		if (normalizedQueryRef.startsWith("def_")) {
+			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
+		}
+		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+			return hasWildcardInQueryOutputInterface(queryRef);
+		}
+
 		if (queryCollection != null) {
 			Object queryObj = queryCollection.get(queryRef);
 			if (queryObj instanceof Map<?, ?> queryMap
@@ -8367,6 +8438,17 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> queryCollection) {
 		if (queryRef == null || !isQuerySourceReference(queryRef)) {
 			return false;
+		}
+
+		String normalizedQueryRef = queryRef;
+		if (normalizedQueryRef.startsWith("def_")) {
+			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
+		}
+		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+			// Set-operation sources expose only their published output interface.
+			return hasColumnInQueryOutputInterface(queryRef, columnName)
+					|| hasWildcardInQueryOutputInterface(queryRef);
 		}
 
 		if (isWildcardBackedQueryCandidate(queryRef, queryCollection)) {
@@ -8397,6 +8479,16 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> queryCollection) {
 		if (queryRef == null || !isQuerySourceReference(queryRef) || columnName == null || columnName.isBlank()) {
 			return false;
+		}
+
+		String normalizedQueryRef = queryRef;
+		if (normalizedQueryRef.startsWith("def_")) {
+			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
+		}
+		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+			// Set-operation sources must resolve against set-operation output interface only.
+			return hasColumnInQueryOutputInterface(queryRef, columnName);
 		}
 
 		if (isTableFunctionSourceReference(queryRef)) {

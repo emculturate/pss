@@ -3137,9 +3137,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 		}
-
-		// clear union clause count
-		walker.unionClauseFound = false;
 	}
 
 	@Override
