@@ -3,7 +3,6 @@ package astwalkers;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +29,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED = "SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED";
+		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
+		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 
 		
     /*************************************
@@ -474,6 +475,35 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public Boolean queryFromClauseComplete = null;
 	private final HashSet<String> validatedSetOperationEntries = new HashSet<String>();
 	private final HashSet<String> validatedSetOperationSiblingGroups = new HashSet<String>();
+	private final HashSet<String> emittedSetOperationMismatchSignatures = new HashSet<String>();
+	private final HashMap<String, PendingSetOperationMismatchFatal> pendingGenericSetOperationMismatches = new HashMap<String, PendingSetOperationMismatchFatal>();
+	private static final String SET_OPERATION_SUMMARY_KEY = "set_operation_key";
+	private static final String SET_OPERATION_SUMMARY_COLUMN_COUNT_KEY = "column_count";
+	private static final String SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY = "column_names_csv";
+	private static final String SET_OPERATION_SUMMARY_LINE_KEY = "anchor_line";
+	private static final String SET_OPERATION_SUMMARY_CHAR_KEY = "anchor_char";
+	private static final String SET_OPERATION_SUMMARY_PARTICIPANT_LINEAGE_KEYS = "participant_lineage_summary_keys";
+
+	private static final class PendingSetOperationMismatchFatal {
+		private final String diagCode;
+		private final String diagMessage;
+		private final Integer line;
+		private final Integer character;
+		private final String source;
+
+		private PendingSetOperationMismatchFatal(
+				String diagCode,
+				String diagMessage,
+				Integer line,
+				Integer character,
+				String source) {
+			this.diagCode = diagCode;
+			this.diagMessage = diagMessage;
+			this.line = line;
+			this.character = character;
+			this.source = source;
+		}
+	}
 
     
 	/*
@@ -1148,17 +1178,18 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		int highestIndex = Integer.MIN_VALUE;
 		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
 			String key = symbolEntry.getKey();
-			if (key == null || !(key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY))) {
+			if (!isSetOperationScopeKey(key)) {
 				continue;
 			}
 			if (!(symbolEntry.getValue() instanceof HashMap<?, ?> entryMap)) {
 				continue;
 			}
 
-			int index = extractTrailingNumericSuffix(key);
+			String liveKey = normalizeSetOperationScopeKey(key);
+			int index = extractTrailingNumericSuffix(liveKey);
 			if (index >= highestIndex) {
 				highestIndex = index;
-				topSetEntry = Map.entry(key, (HashMap<String, Object>) entryMap);
+				topSetEntry = Map.entry(liveKey, (HashMap<String, Object>) entryMap);
 			}
 		}
 
@@ -1175,13 +1206,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				new ArrayList<Map.Entry<String, HashMap<String, Object>>>();
 		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
 			String key = symbolEntry.getKey();
-			if (key == null || !(key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY))) {
+			if (!isSetOperationScopeKey(key)) {
 				continue;
 			}
 			if (!(symbolEntry.getValue() instanceof HashMap<?, ?> entryMap)) {
 				continue;
 			}
-			setOperationEntries.add(Map.entry(key, (HashMap<String, Object>) entryMap));
+			String liveKey = normalizeSetOperationScopeKey(key);
+			setOperationEntries.add(Map.entry(liveKey, (HashMap<String, Object>) entryMap));
 		}
 
 		if (setOperationEntries.isEmpty()) {
@@ -1209,118 +1241,24 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		validateTopLevelSetOperationSiblings(setOperationEntries);
-		validateTopLevelVsNestedSetOperations(setOperationEntries);
-	}
-
-	@SuppressWarnings("unchecked")
-	private void validateTopLevelVsNestedSetOperations(
-			List<Map.Entry<String, HashMap<String, Object>>> setOperationEntries) {
-		if (setOperationEntries == null || setOperationEntries.size() != 1) {
-			return;
-		}
-
-		Map.Entry<String, HashMap<String, Object>> topLevelEntry = setOperationEntries.get(0);
-		if (emitNestedParticipantSetOperationMismatch(topLevelEntry.getValue())) {
-			return;
-		}
-		Object topInterfaceObject = topLevelEntry.getValue().get(MUMBLE_INTERFACE_KEY);
-		if (!(topInterfaceObject instanceof Map<?, ?> topInterfaceObj)) {
-			return;
-		}
-
-		Map<String, Object> topInterface = (Map<String, Object>) topInterfaceObj;
-		int topCount = topInterface.size();
-		Map<String, Object> topDictionary = extractQueryDictionary(topLevelEntry.getValue());
-		ColumnListSummary topSummary = withSetOperationAnchorFallback(
-				buildColumnListSummary(topInterface, topDictionary),
-				topLevelEntry.getValue());
-
-		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
-		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
-
-		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
-			String symbolKey = symbolEntry.getKey();
-			if (symbolKey == null || !symbolKey.startsWith(MUMBLE_QUERY_KEY)) {
-				continue;
-			}
-			if (!(symbolEntry.getValue() instanceof Map<?, ?> queryMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> queryMap = (Map<String, Object>) queryMapObj;
-			for (Map.Entry<String, Object> queryEntry : queryMap.entrySet()) {
-				String queryEntryKey = queryEntry.getKey();
-				if (queryEntryKey == null
-						|| !(queryEntryKey.startsWith("def_" + MUMBLE_UNION_KEY)
-								|| queryEntryKey.startsWith("def_" + MUMBLE_INTERSECT_KEY))) {
-					continue;
-				}
-				if (!(queryEntry.getValue() instanceof Map<?, ?> nestedSetMapObj)) {
-					continue;
-				}
-
-				Map<String, Object> nestedSetMap = (Map<String, Object>) nestedSetMapObj;
-				Object nestedInterfaceObject = nestedSetMap.get(MUMBLE_INTERFACE_KEY);
-				if (!(nestedInterfaceObject instanceof Map<?, ?> nestedInterfaceObj)) {
-					continue;
-				}
-
-				Map<String, Object> nestedInterface = (Map<String, Object>) nestedInterfaceObj;
-				int nestedCount = nestedInterface.size();
-				if (nestedCount == topCount) {
-					continue;
-				}
-
-				Map<String, Object> nestedDictionary = extractQueryDictionary(nestedSetMap);
-				ColumnListSummary nestedSummary = withSetOperationAnchorFallback(
-						buildColumnListSummary(nestedInterface, nestedDictionary),
-						nestedSetMap);
-				Integer expectedLine = nestedSummary.anchorLine();
-				Integer expectedChar = nestedSummary.anchorChar();
-				Integer actualLine = topSummary.anchorLine();
-				Integer actualChar = topSummary.anchorChar();
-				String expectedLineText = expectedLine == null ? "?" : String.valueOf(expectedLine);
-				String expectedCharText = expectedChar == null ? "?" : String.valueOf(expectedChar);
-				String actualLineText = actualLine == null ? "?" : String.valueOf(actualLine);
-				String actualCharText = actualChar == null ? "?" : String.valueOf(actualChar);
-
-				String diagMessage = (diagTemplate == null)
-						? String.format(
-								"SET_OPERATION has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
-								nestedCount,
-								nestedSummary.columnNamesCsv(),
-								expectedLineText,
-								expectedCharText,
-								topCount,
-								topSummary.columnNamesCsv(),
-								actualLineText,
-								actualCharText)
-						: String.format(
-								diagTemplate,
-								"SET_OPERATION",
-								nestedCount,
-								nestedSummary.columnNamesCsv(),
-								expectedLineText,
-								expectedCharText,
-								topCount,
-								topSummary.columnNamesCsv(),
-								actualLineText,
-								actualCharText);
-
-				addWalkerFatal(
-						diagCode,
-						diagMessage,
-						actualLine,
-						actualChar,
-						topLevelEntry.getKey());
-			}
-		}
+		flushPendingGenericSetOperationMismatchFatals();
 	}
 
 	@SuppressWarnings("unchecked")
 	private void validateTopLevelSetOperationSiblings(
 			List<Map.Entry<String, HashMap<String, Object>>> setOperationEntries) {
-		if (setOperationEntries == null || setOperationEntries.size() < 2) {
+		HashMap<String, Object> summaryMapBySetOperationKey = consumeSetOperationInterfaceSummaryMap();
+		HashMap<String, Object> querySummaryKeysMap = consumeQuerySetOperationSummaryKeysMap();
+
+		if (setOperationEntries == null || setOperationEntries.isEmpty()) {
+			return;
+		}
+
+		if (setOperationEntries.size() < 2) {
+			emitSetOperationMismatchFromHandoff(
+					setOperationEntries,
+					summaryMapBySetOperationKey,
+					querySummaryKeysMap);
 			return;
 		}
 
@@ -1330,42 +1268,17 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			entryMapByKey.put(setEntry.getKey(), setEntry.getValue());
 		}
 
-		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
-			String symbolKey = symbolEntry.getKey();
-			if (symbolKey == null || !symbolKey.startsWith(MUMBLE_QUERY_KEY)) {
-				continue;
-			}
-			if (!(symbolEntry.getValue() instanceof Map<?, ?> queryMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> queryMap = (Map<String, Object>) queryMapObj;
-			for (Map.Entry<String, Object> queryEntry : queryMap.entrySet()) {
-				String queryEntryKey = queryEntry.getKey();
-				if (queryEntryKey == null
-						|| !(queryEntryKey.startsWith("def_" + MUMBLE_UNION_KEY)
-								|| queryEntryKey.startsWith("def_" + MUMBLE_INTERSECT_KEY))) {
-					continue;
-				}
-				if (!(queryEntry.getValue() instanceof Map<?, ?> setEntryMapObj)) {
-					continue;
-				}
-
-				String normalizedKey = queryEntryKey.substring(4);
-				entryMapByKey.putIfAbsent(normalizedKey, (Map<String, Object>) setEntryMapObj);
-			}
-		}
-
 		for (Map.Entry<String, Map<String, Object>> setEntry : entryMapByKey.entrySet()) {
 			for (Map.Entry<String, Object> participantEntry : setEntry.getValue().entrySet()) {
 				String participantKey = participantEntry.getKey();
 				if (participantKey == null) {
 					continue;
 				}
-				if (entryMapByKey.containsKey(participantKey)
-						&& (participantKey.startsWith(MUMBLE_UNION_KEY)
-								|| participantKey.startsWith(MUMBLE_INTERSECT_KEY))) {
-					referencedSetOperationKeys.add(participantKey);
+				String liveParticipantKey = normalizeSetOperationScopeKey(participantKey);
+				if (liveParticipantKey != null
+						&& entryMapByKey.containsKey(liveParticipantKey)
+						&& isSetOperationScopeKey(participantKey)) {
+					referencedSetOperationKeys.add(liveParticipantKey);
 				}
 			}
 		}
@@ -1378,6 +1291,19 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		if (topLevelSetOperationKeys.size() < 2) {
+			if (topLevelSetOperationKeys.size() == 1) {
+				String topLevelSetOperationKey = topLevelSetOperationKeys.get(0);
+				emitSetOperationMismatchFromHandoffTopLevel(
+						topLevelSetOperationKey,
+						entryMapByKey.get(topLevelSetOperationKey),
+						summaryMapBySetOperationKey,
+						querySummaryKeysMap);
+			} else {
+				emitSetOperationMismatchFromHandoff(
+						setOperationEntries,
+						summaryMapBySetOperationKey,
+						querySummaryKeysMap);
+			}
 			return;
 		}
 
@@ -1468,15 +1394,493 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualLineText,
 							actualCharText);
 
-			addWalkerFatal(
+			emitSetOperationMismatchFatalIfNew(
+					"SET_OPERATION",
 					diagCode,
 					diagMessage,
 					actualLine,
 					actualChar,
-					siblingKey);
+					siblingKey,
+					expectedCount,
+					expectedSummary.columnNamesCsv(),
+					expectedLine,
+					expectedChar,
+					actualCount,
+					actualSummary.columnNamesCsv(),
+					actualLine,
+					actualChar);
 		}
 
+		String latestTopLevelSetOperationKey = topLevelSetOperationKeys.get(topLevelSetOperationKeys.size() - 1);
+		emitSetOperationMismatchFromHandoffTopLevel(
+				latestTopLevelSetOperationKey,
+				entryMapByKey.get(latestTopLevelSetOperationKey),
+				summaryMapBySetOperationKey,
+				querySummaryKeysMap);
+
 		validatedSetOperationSiblingGroups.add(groupKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void emitSetOperationMismatchFromHandoff(
+			List<Map.Entry<String, HashMap<String, Object>>> setOperationEntries,
+			Map<String, Object> summaryMapBySetOperationKey,
+			Map<String, Object> querySummaryKeysMap) {
+		if (setOperationEntries == null || setOperationEntries.size() != 1
+				|| summaryMapBySetOperationKey == null || summaryMapBySetOperationKey.isEmpty()) {
+			return;
+		}
+
+		Map.Entry<String, HashMap<String, Object>> topSetOperationEntry = setOperationEntries.get(0);
+		emitSetOperationMismatchFromHandoffTopLevel(
+				topSetOperationEntry.getKey(),
+				topSetOperationEntry.getValue(),
+				summaryMapBySetOperationKey,
+				querySummaryKeysMap);
+	}
+
+	private void emitSetOperationMismatchFromHandoffTopLevel(
+			String topSetOperationKey,
+			Map<String, Object> topSetOperationMap,
+			Map<String, Object> summaryMapBySetOperationKey,
+			Map<String, Object> querySummaryKeysMap) {
+		if (topSetOperationKey == null
+				|| topSetOperationMap == null
+				|| topSetOperationMap.isEmpty()
+				|| summaryMapBySetOperationKey == null
+				|| summaryMapBySetOperationKey.isEmpty()) {
+			return;
+		}
+
+		Map<String, Object> topLevelSummary = asSetOperationSummary(
+				summaryMapBySetOperationKey.get(topSetOperationKey));
+		if (topLevelSummary == null || topLevelSummary.isEmpty()) {
+			return;
+		}
+
+		ArrayList<String> participantSummaryKeys = extractProducerLineageSummaryKeys(
+				topLevelSummary,
+				summaryMapBySetOperationKey);
+		if (participantSummaryKeys.size() < 2) {
+			return;
+		}
+
+		HashSet<String> seenKeys = new HashSet<String>();
+		ArrayList<String> orderedParticipantSummaryKeys = new ArrayList<String>();
+		for (String key : participantSummaryKeys) {
+			if (key == null || !seenKeys.add(key)) {
+				continue;
+			}
+			orderedParticipantSummaryKeys.add(key);
+		}
+
+		orderedParticipantSummaryKeys.sort((left, right) -> {
+			int leftIndex = extractTrailingNumericSuffix(left);
+			int rightIndex = extractTrailingNumericSuffix(right);
+			int indexCompare = Integer.compare(leftIndex, rightIndex);
+			if (indexCompare != 0) {
+				return indexCompare;
+			}
+			return left.compareTo(right);
+		});
+
+		Map<String, Object> expectedSummary = asSetOperationSummary(
+				summaryMapBySetOperationKey.get(orderedParticipantSummaryKeys.get(0)));
+		if (expectedSummary == null || expectedSummary.isEmpty()) {
+			return;
+		}
+
+		Integer expectedCount = getSetOperationSummaryInteger(
+				expectedSummary,
+				SET_OPERATION_SUMMARY_COLUMN_COUNT_KEY);
+		if (expectedCount == null) {
+			return;
+		}
+
+		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
+		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
+
+		for (int i = 1; i < orderedParticipantSummaryKeys.size(); i++) {
+			String actualSummaryKey = orderedParticipantSummaryKeys.get(i);
+			Map<String, Object> actualSummary = asSetOperationSummary(summaryMapBySetOperationKey.get(actualSummaryKey));
+			if (actualSummary == null || actualSummary.isEmpty()) {
+				continue;
+			}
+
+			Integer actualCount = getSetOperationSummaryInteger(actualSummary, SET_OPERATION_SUMMARY_COLUMN_COUNT_KEY);
+			if (actualCount == null || actualCount.equals(expectedCount)) {
+				continue;
+			}
+
+			Integer expectedLine = getSetOperationSummaryInteger(expectedSummary, SET_OPERATION_SUMMARY_LINE_KEY);
+			Integer expectedChar = getSetOperationSummaryInteger(expectedSummary, SET_OPERATION_SUMMARY_CHAR_KEY);
+			Integer actualLine = getSetOperationSummaryInteger(actualSummary, SET_OPERATION_SUMMARY_LINE_KEY);
+			Integer actualChar = getSetOperationSummaryInteger(actualSummary, SET_OPERATION_SUMMARY_CHAR_KEY);
+			String expectedColumns = getSetOperationSummaryString(expectedSummary, SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY);
+			String actualColumns = getSetOperationSummaryString(actualSummary, SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY);
+			String expectedLineText = expectedLine == null ? "?" : String.valueOf(expectedLine);
+			String expectedCharText = expectedChar == null ? "?" : String.valueOf(expectedChar);
+			String actualLineText = actualLine == null ? "?" : String.valueOf(actualLine);
+			String actualCharText = actualChar == null ? "?" : String.valueOf(actualChar);
+
+			String diagMessage = (diagTemplate == null)
+					? String.format(
+							"SET_OPERATION has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
+							expectedCount,
+							expectedColumns,
+							expectedLineText,
+							expectedCharText,
+							actualCount,
+							actualColumns,
+							actualLineText,
+							actualCharText)
+					: String.format(
+							diagTemplate,
+							"SET_OPERATION",
+							expectedCount,
+							expectedColumns,
+							expectedLineText,
+							expectedCharText,
+							actualCount,
+							actualColumns,
+							actualLineText,
+							actualCharText);
+
+			emitSetOperationMismatchFatalIfNew(
+					"SET_OPERATION",
+					diagCode,
+					diagMessage,
+					actualLine,
+					actualChar,
+					actualSummaryKey,
+					expectedCount,
+					expectedColumns,
+					expectedLine,
+					expectedChar,
+					actualCount,
+					actualColumns,
+					actualLine,
+					actualChar);
+		}
+	}
+
+	private void emitSetOperationMismatchFatalIfNew(
+			String mismatchType,
+			String diagCode,
+			String diagMessage,
+			Integer line,
+			Integer character,
+			String source,
+			int expectedCount,
+			String expectedColumns,
+			Integer expectedLine,
+			Integer expectedChar,
+			int actualCount,
+			String actualColumns,
+			Integer actualLine,
+			Integer actualChar) {
+		String signature = buildSetOperationMismatchSignature(
+				expectedCount,
+				expectedColumns,
+				expectedLine,
+				expectedChar,
+				actualCount,
+				actualColumns,
+				actualLine,
+				actualChar);
+
+		if (!emittedSetOperationMismatchSignatures.add(signature)) {
+			return;
+		}
+
+		if ("SET_OPERATION".equalsIgnoreCase(mismatchType)) {
+			pendingGenericSetOperationMismatches.putIfAbsent(
+					signature,
+					new PendingSetOperationMismatchFatal(diagCode, diagMessage, line, character, source));
+			return;
+		}
+
+		pendingGenericSetOperationMismatches.remove(signature);
+		addWalkerFatal(diagCode, diagMessage, line, character, source);
+	}
+
+	private void flushPendingGenericSetOperationMismatchFatals() {
+		if (pendingGenericSetOperationMismatches.isEmpty()) {
+			return;
+		}
+
+		for (PendingSetOperationMismatchFatal pendingFatal : pendingGenericSetOperationMismatches.values()) {
+			addWalkerFatal(
+					pendingFatal.diagCode,
+					pendingFatal.diagMessage,
+					pendingFatal.line,
+					pendingFatal.character,
+					pendingFatal.source);
+		}
+
+		pendingGenericSetOperationMismatches.clear();
+	}
+
+	private String buildSetOperationMismatchSignature(
+			int expectedCount,
+			String expectedColumns,
+			Integer expectedLine,
+			Integer expectedChar,
+			int actualCount,
+			String actualColumns,
+			Integer actualLine,
+			Integer actualChar) {
+		String normalizedExpectedColumns = expectedColumns == null ? "" : expectedColumns.trim().toLowerCase();
+		String normalizedActualColumns = actualColumns == null ? "" : actualColumns.trim().toLowerCase();
+
+		return expectedCount
+				+ "|" + normalizedExpectedColumns
+				+ "|" + actualCount
+				+ "|" + normalizedActualColumns;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> extractProducerLineageSummaryKeys(
+			Map<String, Object> topLevelSummary,
+			Map<String, Object> summaryMapBySetOperationKey) {
+		ArrayList<String> keys = new ArrayList<String>();
+		if (topLevelSummary == null
+				|| topLevelSummary.isEmpty()
+				|| summaryMapBySetOperationKey == null
+				|| summaryMapBySetOperationKey.isEmpty()) {
+			return keys;
+		}
+
+		Object lineageObj = topLevelSummary.get(SET_OPERATION_SUMMARY_PARTICIPANT_LINEAGE_KEYS);
+		if (!(lineageObj instanceof List<?> lineageList)) {
+			return keys;
+		}
+
+		for (Object lineageKeyObj : lineageList) {
+			if (!(lineageKeyObj instanceof String summaryKey)
+					|| !summaryMapBySetOperationKey.containsKey(summaryKey)) {
+				continue;
+			}
+			keys.add(summaryKey);
+		}
+
+		keys.sort((left, right) -> {
+			int leftIndex = extractTrailingNumericSuffix(left);
+			int rightIndex = extractTrailingNumericSuffix(right);
+			int indexCompare = Integer.compare(leftIndex, rightIndex);
+			if (indexCompare != 0) {
+				return indexCompare;
+			}
+			return left.compareTo(right);
+		});
+
+		return keys;
+	}
+
+	public void putSetOperationParticipantLineageSummaryKeys(
+			Map<String, Object> setOperationSummary,
+			List<String> lineageSummaryKeys) {
+		if (setOperationSummary == null || setOperationSummary.isEmpty()) {
+			return;
+		}
+
+		if (lineageSummaryKeys == null || lineageSummaryKeys.isEmpty()) {
+			setOperationSummary.remove(SET_OPERATION_SUMMARY_PARTICIPANT_LINEAGE_KEYS);
+			return;
+		}
+
+		ArrayList<String> normalizedLineage = new ArrayList<String>();
+		for (String lineageKey : lineageSummaryKeys) {
+			if (lineageKey == null || lineageKey.isBlank() || normalizedLineage.contains(lineageKey)) {
+				continue;
+			}
+			normalizedLineage.add(lineageKey);
+		}
+
+		if (normalizedLineage.isEmpty()) {
+			setOperationSummary.remove(SET_OPERATION_SUMMARY_PARTICIPANT_LINEAGE_KEYS);
+			return;
+		}
+
+		setOperationSummary.put(SET_OPERATION_SUMMARY_PARTICIPANT_LINEAGE_KEYS, normalizedLineage);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> asSetOperationSummary(Object summaryObj) {
+		if (!(summaryObj instanceof Map<?, ?> summaryMapObj)) {
+			return null;
+		}
+		return (Map<String, Object>) summaryMapObj;
+	}
+
+	private Integer getSetOperationSummaryInteger(Map<String, Object> summary, String key) {
+		if (summary == null || key == null) {
+			return null;
+		}
+		Object valueObj = summary.get(key);
+		if (valueObj instanceof Integer intValue) {
+			return intValue;
+		}
+		if (valueObj instanceof Number numberValue) {
+			return numberValue.intValue();
+		}
+		if (valueObj instanceof String textValue) {
+			try {
+				return Integer.parseInt(textValue);
+			} catch (NumberFormatException ex) {
+				return null;
+			}
+		}
+		return null;
+	}
+
+	private String getSetOperationSummaryString(Map<String, Object> summary, String key) {
+		if (summary == null || key == null) {
+			return "";
+		}
+		Object valueObj = summary.get(key);
+		return valueObj == null ? "" : String.valueOf(valueObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void mergeSetOperationInterfaceSummariesIntoCurrentScope(Map<String, Object> summaryBySetOperationKey) {
+		if (summaryBySetOperationKey == null || summaryBySetOperationKey.isEmpty()) {
+			return;
+		}
+
+		Object existingObj = symbolTable.get(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
+		HashMap<String, Object> existingSummaryMap;
+		if (existingObj instanceof HashMap<?, ?> existingMapObj) {
+			existingSummaryMap = (HashMap<String, Object>) existingMapObj;
+		} else {
+			existingSummaryMap = new HashMap<String, Object>();
+			symbolTable.put(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY, existingSummaryMap);
+		}
+
+		for (Map.Entry<String, Object> summaryEntry : summaryBySetOperationKey.entrySet()) {
+			if (summaryEntry.getKey() == null) {
+				continue;
+			}
+			existingSummaryMap.put(summaryEntry.getKey(), summaryEntry.getValue());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void mergeQuerySetOperationSummaryKeysIntoCurrentScope(Map<String, Object> queryToSummaryKeysMap) {
+		if (queryToSummaryKeysMap == null || queryToSummaryKeysMap.isEmpty()) {
+			return;
+		}
+
+		Object existingObj = symbolTable.get(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
+		HashMap<String, Object> existingMap;
+		if (existingObj instanceof HashMap<?, ?> existingMapObj) {
+			existingMap = (HashMap<String, Object>) existingMapObj;
+		} else {
+			existingMap = new HashMap<String, Object>();
+			symbolTable.put(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY, existingMap);
+		}
+
+		for (Map.Entry<String, Object> queryEntry : queryToSummaryKeysMap.entrySet()) {
+			String queryKey = queryEntry.getKey();
+			if (queryKey == null || !(queryEntry.getValue() instanceof List<?> summaryKeysListObj)) {
+				continue;
+			}
+
+			ArrayList<String> mergedSummaryKeys = new ArrayList<String>();
+			if (existingMap.get(queryKey) instanceof List<?> existingSummaryKeysObj) {
+				for (Object existingKeyObj : existingSummaryKeysObj) {
+					if (existingKeyObj instanceof String existingKey) {
+						mergedSummaryKeys.add(existingKey);
+					}
+				}
+			}
+
+			for (Object incomingKeyObj : summaryKeysListObj) {
+				if (!(incomingKeyObj instanceof String incomingKey) || mergedSummaryKeys.contains(incomingKey)) {
+					continue;
+				}
+				mergedSummaryKeys.add(incomingKey);
+			}
+
+			existingMap.put(queryKey, mergedSummaryKeys);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> consumeSetOperationInterfaceSummaryMap() {
+		Object summariesObj = symbolTable.get(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
+		if (summariesObj instanceof HashMap<?, ?> summariesMapObj) {
+			return (HashMap<String, Object>) summariesMapObj;
+		}
+		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> consumeQuerySetOperationSummaryKeysMap() {
+		Object summaryKeysObj = symbolTable.get(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
+		if (summaryKeysObj instanceof HashMap<?, ?> summaryKeysMapObj) {
+			return (HashMap<String, Object>) summaryKeysMapObj;
+		}
+		return new HashMap<String, Object>();
+	}
+
+	public HashMap<String, Object> buildSetOperationInterfaceSummary(
+			String setOperationKey,
+			Map<String, Object> scopeDefinition) {
+		if (setOperationKey == null || setOperationKey.isBlank() || scopeDefinition == null || scopeDefinition.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object interfaceObj = scopeDefinition.get(MUMBLE_INTERFACE_KEY);
+		if (!(interfaceObj instanceof Map<?, ?> interfaceMapObj)) {
+			return new HashMap<String, Object>();
+		}
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> interfaceMap = (Map<String, Object>) interfaceMapObj;
+		if (interfaceMap.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Map<String, Object> queryDictionary = extractQueryDictionary(scopeDefinition);
+		ColumnListSummary summary = withSetOperationAnchorFallback(
+				buildColumnListSummary(interfaceMap, queryDictionary),
+				scopeDefinition);
+
+		HashMap<String, Object> summaryMap = new HashMap<String, Object>();
+		summaryMap.put(SET_OPERATION_SUMMARY_KEY, setOperationKey);
+		summaryMap.put(SET_OPERATION_SUMMARY_COLUMN_COUNT_KEY, interfaceMap.size());
+		summaryMap.put(SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY, summary.columnNamesCsv());
+		summaryMap.put(SET_OPERATION_SUMMARY_LINE_KEY, summary.anchorLine());
+		summaryMap.put(SET_OPERATION_SUMMARY_CHAR_KEY, summary.anchorChar());
+		return summaryMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> extractSetOperationSummaryKeys(Map<String, Object> summaryBySetOperationKey) {
+		ArrayList<String> keys = new ArrayList<String>();
+		if (summaryBySetOperationKey == null || summaryBySetOperationKey.isEmpty()) {
+			return keys;
+		}
+
+		for (Map.Entry<String, Object> entry : summaryBySetOperationKey.entrySet()) {
+			if (entry.getKey() == null || !(entry.getValue() instanceof Map<?, ?>)) {
+				continue;
+			}
+			keys.add(entry.getKey());
+		}
+
+		keys.sort((left, right) -> {
+			int leftIndex = extractTrailingNumericSuffix(left);
+			int rightIndex = extractTrailingNumericSuffix(right);
+			int indexCompare = Integer.compare(leftIndex, rightIndex);
+			if (indexCompare != 0) {
+				return indexCompare;
+			}
+			return left.compareTo(right);
+		});
+
+		return keys;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1485,7 +1889,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
-		String setOperationType = setOperationKey.startsWith(MUMBLE_INTERSECT_KEY) ? "INTERSECTION" : "UNION";
+		String normalizedSetOperationKey = normalizeSetOperationScopeKey(setOperationKey);
+		String setOperationType = normalizedSetOperationKey != null
+				&& normalizedSetOperationKey.startsWith(MUMBLE_INTERSECT_KEY)
+				? "INTERSECTION"
+				: "UNION";
 
 		HashMap<String, Map<String, Object>> participantQueryMaps = new HashMap<String, Map<String, Object>>();
 		HashMap<String, Map<String, Object>> participantInterfaces = new HashMap<String, Map<String, Object>>();
@@ -1493,11 +1901,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		for (Map.Entry<String, Object> setEntry : setOperationMap.entrySet()) {
 			String setEntryKey = setEntry.getKey();
-			if (setEntryKey == null
-					|| !(setEntryKey.startsWith(MUMBLE_QUERY_KEY)
-							|| setEntryKey.startsWith(MUMBLE_UNION_KEY)
-							|| setEntryKey.startsWith(MUMBLE_INTERSECT_KEY)
-							|| setEntryKey.startsWith(MUMBLE_VALUES_KEY))) {
+			if (!isSetOperationParticipantScopeKey(setEntryKey)) {
 				continue;
 			}
 			if (!(setEntry.getValue() instanceof Map<?, ?> queryMap)) {
@@ -1606,192 +2010,24 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualLineText,
 							actualCharText);
 
-			addWalkerFatal(
+			emitSetOperationMismatchFatalIfNew(
+					setOperationType,
 					diagCode,
 					diagMessage,
 					actualLine,
 					actualChar,
-					setEntryKey);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private Map.Entry<String, Map<String, Object>> resolveSetOperationValidationParticipant(
-			String participantKey,
-			Map<String, Object> participantMap) {
-		if (participantKey == null || participantMap == null || participantMap.isEmpty()) {
-			return Map.entry(participantKey, participantMap);
-		}
-
-		if (!participantKey.startsWith(MUMBLE_QUERY_KEY)) {
-			return Map.entry(participantKey, participantMap);
-		}
-
-		Map.Entry<String, Map<String, Object>> nestedSetParticipant = null;
-		for (Map.Entry<String, Object> entry : participantMap.entrySet()) {
-			String nestedKey = entry.getKey();
-			if (nestedKey == null) {
-				continue;
-			}
-
-			String normalizedNestedKey = nestedKey;
-			if (normalizedNestedKey.startsWith("def_")) {
-				normalizedNestedKey = normalizedNestedKey.substring(4);
-			}
-			if (!(normalizedNestedKey.startsWith(MUMBLE_UNION_KEY)
-					|| normalizedNestedKey.startsWith(MUMBLE_INTERSECT_KEY))) {
-				continue;
-			}
-			if (!(entry.getValue() instanceof Map<?, ?> nestedMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> nestedMap = (Map<String, Object>) nestedMapObj;
-			Object nestedInterfaceObj = nestedMap.get(MUMBLE_INTERFACE_KEY);
-			if (!(nestedInterfaceObj instanceof Map<?, ?>)) {
-				continue;
-			}
-
-			if (nestedSetParticipant != null) {
-				return Map.entry(participantKey, participantMap);
-			}
-			nestedSetParticipant = Map.entry(normalizedNestedKey, nestedMap);
-		}
-
-		return nestedSetParticipant == null ? Map.entry(participantKey, participantMap) : nestedSetParticipant;
-	}
-
-	@SuppressWarnings("unchecked")
-	private boolean emitNestedParticipantSetOperationMismatch(Map<String, Object> topLevelSetOperationMap) {
-		if (topLevelSetOperationMap == null || topLevelSetOperationMap.isEmpty()) {
-			return false;
-		}
-
-		LinkedHashMap<String, Map<String, Object>> nestedParticipants = new LinkedHashMap<String, Map<String, Object>>();
-		for (Map.Entry<String, Object> entry : topLevelSetOperationMap.entrySet()) {
-			String entryKey = entry.getKey();
-			if (entryKey == null) {
-				continue;
-			}
-
-			if ((entryKey.startsWith(MUMBLE_UNION_KEY) || entryKey.startsWith(MUMBLE_INTERSECT_KEY))
-					&& entry.getValue() instanceof Map<?, ?> setMapObj) {
-				nestedParticipants.putIfAbsent(entryKey, (Map<String, Object>) setMapObj);
-				continue;
-			}
-
-			if (!entryKey.startsWith(MUMBLE_QUERY_KEY) || !(entry.getValue() instanceof Map<?, ?> queryMapObj)) {
-				continue;
-			}
-
-			Map.Entry<String, Map<String, Object>> resolvedParticipant =
-					resolveSetOperationValidationParticipant(entryKey, (Map<String, Object>) queryMapObj);
-			if (resolvedParticipant.getKey() == null
-					|| resolvedParticipant.getValue() == null
-					|| resolvedParticipant.getKey().equals(entryKey)) {
-				continue;
-			}
-			nestedParticipants.putIfAbsent(resolvedParticipant.getKey(), resolvedParticipant.getValue());
-		}
-
-		if (nestedParticipants.size() < 2) {
-			return false;
-		}
-
-		ArrayList<String> participantKeys = new ArrayList<String>(nestedParticipants.keySet());
-		participantKeys.sort((left, right) -> {
-			int leftIndex = extractTrailingNumericSuffix(left);
-			int rightIndex = extractTrailingNumericSuffix(right);
-			int indexCompare = Integer.compare(leftIndex, rightIndex);
-			if (indexCompare != 0) {
-				return indexCompare;
-			}
-			return left.compareTo(right);
-		});
-
-		String baselineKey = participantKeys.get(0);
-		Map<String, Object> baselineMap = nestedParticipants.get(baselineKey);
-		if (baselineMap == null) {
-			return false;
-		}
-		Object baselineInterfaceObj = baselineMap.get(MUMBLE_INTERFACE_KEY);
-		if (!(baselineInterfaceObj instanceof Map<?, ?> baselineInterface)) {
-			return false;
-		}
-
-		int expectedCount = ((Map<String, Object>) baselineInterface).size();
-		Map<String, Object> baselineQueryDictionary = extractQueryDictionary(baselineMap);
-		ColumnListSummary expectedSummary = withSetOperationAnchorFallback(
-				buildColumnListSummary((Map<String, Object>) baselineInterface, baselineQueryDictionary),
-				baselineMap);
-
-		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
-		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
-		boolean emitted = false;
-
-		for (int i = 1; i < participantKeys.size(); i++) {
-			String participantKey = participantKeys.get(i);
-			Map<String, Object> participantMap = nestedParticipants.get(participantKey);
-			if (participantMap == null) {
-				continue;
-			}
-			Object participantInterfaceObj = participantMap.get(MUMBLE_INTERFACE_KEY);
-			if (!(participantInterfaceObj instanceof Map<?, ?> participantInterface)) {
-				continue;
-			}
-
-			int actualCount = ((Map<String, Object>) participantInterface).size();
-			if (actualCount == expectedCount) {
-				continue;
-			}
-
-			Map<String, Object> participantDictionary = extractQueryDictionary(participantMap);
-			ColumnListSummary actualSummary = withSetOperationAnchorFallback(
-					buildColumnListSummary((Map<String, Object>) participantInterface, participantDictionary),
-					participantMap);
-			Integer expectedLine = expectedSummary.anchorLine();
-			Integer expectedChar = expectedSummary.anchorChar();
-			Integer actualLine = actualSummary.anchorLine();
-			Integer actualChar = actualSummary.anchorChar();
-			String expectedLineText = expectedLine == null ? "?" : String.valueOf(expectedLine);
-			String expectedCharText = expectedChar == null ? "?" : String.valueOf(expectedChar);
-			String actualLineText = actualLine == null ? "?" : String.valueOf(actualLine);
-			String actualCharText = actualChar == null ? "?" : String.valueOf(actualChar);
-
-			String diagMessage = (diagTemplate == null)
-					? String.format(
-							"SET_OPERATION has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
-							expectedCount,
-							expectedSummary.columnNamesCsv(),
-							expectedLineText,
-							expectedCharText,
-							actualCount,
-							actualSummary.columnNamesCsv(),
-							actualLineText,
-							actualCharText)
-					: String.format(
-							diagTemplate,
-							"SET_OPERATION",
-							expectedCount,
-							expectedSummary.columnNamesCsv(),
-							expectedLineText,
-							expectedCharText,
-							actualCount,
-							actualSummary.columnNamesCsv(),
-							actualLineText,
-							actualCharText);
-
-			addWalkerFatal(
-					diagCode,
-					diagMessage,
+					setEntryKey,
+					expectedCount,
+					effectiveExpectedSummary.columnNamesCsv(),
+					expectedLine,
+					expectedChar,
+					actualCount,
+					actualSummary.columnNamesCsv(),
 					actualLine,
-					actualChar,
-					participantKey);
-			emitted = true;
+					actualChar);
 		}
-
-		return emitted;
 	}
+
 
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> extractQueryDictionary(Map<String, Object> queryMap) {
@@ -1927,20 +2163,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		ArrayList<Map.Entry<String, Object>> participantEntries = new ArrayList<Map.Entry<String, Object>>();
 		for (Map.Entry<String, Object> setEntry : setOperationMap.entrySet()) {
-			String setEntryKey = setEntry.getKey();
-			if (setEntryKey == null
-					|| !(setEntryKey.startsWith(MUMBLE_QUERY_KEY)
-							|| setEntryKey.startsWith(MUMBLE_UNION_KEY)
-							|| setEntryKey.startsWith(MUMBLE_INTERSECT_KEY)
-							|| setEntryKey.startsWith(MUMBLE_VALUES_KEY))) {
+			if (!isSetOperationParticipantScopeKey(setEntry.getKey())) {
 				continue;
 			}
 			participantEntries.add(setEntry);
 		}
 
 		participantEntries.sort((left, right) -> {
-			int leftIndex = extractTrailingNumericSuffix(left.getKey());
-			int rightIndex = extractTrailingNumericSuffix(right.getKey());
+			int leftIndex = extractTrailingNumericSuffix(normalizeSetOperationScopeKey(left.getKey()));
+			int rightIndex = extractTrailingNumericSuffix(normalizeSetOperationScopeKey(right.getKey()));
 			int indexCompare = Integer.compare(leftIndex, rightIndex);
 			if (indexCompare != 0) {
 				return indexCompare;
@@ -2004,12 +2235,42 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	private record ColumnListSummary(String columnNamesCsv, Integer anchorLine, Integer anchorChar) {
 	}
 
+	private String normalizeSetOperationScopeKey(String scopeKey) {
+		if (scopeKey == null || scopeKey.isBlank()) {
+			return scopeKey;
+		}
+		if (scopeKey.startsWith("def_")) {
+			return scopeKey.substring("def_".length());
+		}
+		return scopeKey;
+	}
+
+	private boolean isSetOperationScopeKey(String scopeKey) {
+		if (scopeKey == null) {
+			return false;
+		}
+		String normalizedScopeKey = normalizeSetOperationScopeKey(scopeKey);
+		return normalizedScopeKey.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedScopeKey.startsWith(MUMBLE_INTERSECT_KEY);
+	}
+
+	private boolean isSetOperationParticipantScopeKey(String scopeKey) {
+		if (scopeKey == null) {
+			return false;
+		}
+		String normalizedScopeKey = normalizeSetOperationScopeKey(scopeKey);
+		return normalizedScopeKey.startsWith(MUMBLE_QUERY_KEY)
+				|| normalizedScopeKey.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedScopeKey.startsWith(MUMBLE_INTERSECT_KEY)
+				|| normalizedScopeKey.startsWith(MUMBLE_VALUES_KEY);
+	}
+
 	private int extractTrailingNumericSuffix(String key) {
 		if (key == null || key.isBlank()) {
 			return -1;
 		}
 
-		String suffix = key.replaceFirst("^[^0-9]+", "");
+		String suffix = normalizeSetOperationScopeKey(key).replaceFirst("^[^0-9]+", "");
 		if (suffix.isBlank()) {
 			return -1;
 		}

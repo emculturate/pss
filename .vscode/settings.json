@@ -13,7 +13,12 @@
   "java.import.maven.downloadSources": true,
   "java.import.gradle.enabled": false,
   "java.debug.settings.console": "internalConsole",
-  "java.test.config": {
-    "vmArgs": ["-Dpss.walker.test.verbose=true", "-Xmx2g", "-Xms256m"]
-  }
+  "java.test.defaultConfig": "pss-verbose",
+  "java.test.config": [
+    {
+      "name": "pss-verbose",
+      "workingDirectory": "${workspaceFolder}",
+      "vmArgs": ["-Dpss.walker.test.verbose=true", "-Xmx2g", "-Xms256m"]
+    }
+  ]
 }

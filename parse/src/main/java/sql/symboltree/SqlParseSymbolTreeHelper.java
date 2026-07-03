@@ -45,6 +45,10 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_KEY = "_tmp_update_nodefrom_target";
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY = "_tmp_update_nodefrom_target_table_collection";
 	public static final String DERIVED_COLUMNS_HINTS_KEY = "derived_columns";
+	private static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY =
+			SqlASTWalkerHelper.TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY;
+	private static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY =
+			SqlASTWalkerHelper.TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY;
 	public static final String RELATIONAL_MODIFIER_OPERATOR_KEY = "operator";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
@@ -1328,10 +1332,10 @@ public class SqlParseSymbolTreeHelper {
 
 					if (tableRef != null) {
 						String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
-						String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
-						if (resolvedNonTableSourceRef == null) {
-							resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, localTableAliasMap);
-						}
+						String resolvedNonTableSourceRef = resolveAliasToQuerySourceRefPreferDefinition(
+								tableRef,
+								localTableAliasMap,
+								visibleQuerySourceCollection);
 						boolean explicitQueryReference = resolvedNonTableSourceRef != null
 								|| walker.isNonTableQuerySourceReference(resolvedTableRef);
 						boolean resolvedInSource = false;
@@ -1340,7 +1344,7 @@ public class SqlParseSymbolTreeHelper {
 							String queryDictionaryKey = (resolvedNonTableSourceRef != null)
 									? resolvedNonTableSourceRef
 									: resolvedTableRef;
-							Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryDictionaryKey);
+							Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(queryDictionaryKey);
 							if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
 								resolvedInSource = containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)
 										|| ((Map<String, Object>) queryDictionary).containsKey("*");
@@ -2539,24 +2543,21 @@ public class SqlParseSymbolTreeHelper {
 		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
 			return null;
 		}
-
-		if (sourceRef.startsWith("def_")) {
-			return sourceRef.substring("def_".length());
-		}
-		return sourceRef;
+		return normalizeQuerySourceReference(sourceRef);
 	}
 
 	public boolean isInsertSourceScopeReference(String sourceRef) {
-		if (sourceRef == null || sourceRef.isBlank()) {
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
+		if (normalizedSourceRef == null || normalizedSourceRef.isBlank()) {
 			return false;
 		}
-		return sourceRef.startsWith(MUMBLE_QUERY_KEY)
-				|| sourceRef.startsWith(MUMBLE_UNION_KEY)
-				|| sourceRef.startsWith(MUMBLE_INTERSECT_KEY)
-				|| sourceRef.startsWith(MUMBLE_VALUES_KEY)
-				|| sourceRef.startsWith(MUMBLE_INSERT_KEY)
-				|| sourceRef.startsWith(MUMBLE_UPDATE_KEY)
-				|| sourceRef.startsWith(MUMBLE_DELETE_KEY);
+		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INSERT_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_UPDATE_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2565,7 +2566,7 @@ public class SqlParseSymbolTreeHelper {
 			return new HashMap<String, Object>();
 		}
 
-		String definitionKey = sourceScopeKey.startsWith("def_") ? sourceScopeKey : "def_" + sourceScopeKey;
+		String definitionKey = toDefinitionScopeKey(sourceScopeKey);
 		Object sourceDefinitionObj = walker.symbolTable.get(definitionKey);
 
 		if (!(sourceDefinitionObj instanceof Map<?, ?>)) {
@@ -2689,13 +2690,7 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	public String normalizeSetOperationParticipantKey(String key) {
-		if (key == null) {
-			return null;
-		}
-		if (key.startsWith("def_")) {
-			return key.substring("def_".length());
-		}
-		return key;
+		return normalizeQuerySourceReference(key);
 	}
 
 	public int extractSetOperationParticipantKeyIndex(String key) {
@@ -2882,12 +2877,6 @@ public class SqlParseSymbolTreeHelper {
 		ArrayList<Map<String, Object>> participants = collectSetOperationParticipantsInOrder(setOperationDefinition);
 		if (participants.size() < 2) {
 			return;
-		}
-
-		for (Map<String, Object> participant : participants) {
-			if (isSetOperationDefinition(participant)) {
-				publishSetOperationInterfaceAtExit(participant);
-			}
 		}
 
 		Map<String, Object> firstParticipantInterface = extractScopeInterfaceMap(participants.get(0));
@@ -3132,21 +3121,21 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		String scopeRefKey = getSubqueryReferenceKey(symbols);
-		if (scopeRefKey == null || scopeRefKey.isBlank()) {
+		String subqueryRef = getSubqueryReferenceKey(symbols);
+		if (subqueryRef == null || subqueryRef.isBlank()) {
 			return;
 		}
+		String scopeRefKey = normalizeQuerySourceReference(subqueryRef);
+		String definitionKey = toDefinitionScopeKey(scopeRefKey);
 
-		if (!scopeRefKey.startsWith("def_")) {
-			Object scopeObj = symbols.remove(scopeRefKey);
+		if (!isDefinitionScopeKey(subqueryRef)) {
+			Object scopeObj = symbols.remove(subqueryRef);
 			if (scopeObj != null) {
-				symbols.put("def_" + scopeRefKey, scopeObj);
+				symbols.put(definitionKey, scopeObj);
 			}
-		} else {
-			scopeRefKey = scopeRefKey.substring("def_".length());
 		}
 
-		Object scopeDefinitionObj = symbols.get("def_" + scopeRefKey);
+		Object scopeDefinitionObj = symbols.get(definitionKey);
 		if (scopeDefinitionObj instanceof Map<?, ?> scopeDefinitionMapObj) {
 			Map<String, Object> scopeDefinition = (Map<String, Object>) scopeDefinitionMapObj;
 			if (isSetOperationDefinition(scopeDefinition)) {
@@ -3893,6 +3882,28 @@ public class SqlParseSymbolTreeHelper {
 			boolean insertSource) {
 		finalizeSetOperationAtExit(scopeSymbols, insertSource);
 		HashMap<String, Object> scopePayload = (HashMap<String, Object>) scopeSymbols;
+		HashMap<String, Object> scopedSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
+		HashMap<String, Object> scopedQuerySummaryKeysMap = removeScopedQuerySummaryKeysMap(scopePayload);
+		HashMap<String, Object> scopeSummary = walker.buildSetOperationInterfaceSummary(scopeKey, scopePayload);
+		if (scopeSummary != null && !scopeSummary.isEmpty()) {
+			ArrayList<String> lineageSummaryKeys = buildSetOperationParticipantLineageSummaryKeys(
+					scopePayload,
+					scopedSummaryMap,
+					scopedQuerySummaryKeysMap);
+			walker.putSetOperationParticipantLineageSummaryKeys(scopeSummary, lineageSummaryKeys);
+			scopedSummaryMap.put(scopeKey, scopeSummary);
+			scopePayload.put(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY, scopedSummaryMap);
+			if (!scopedQuerySummaryKeysMap.isEmpty()) {
+				scopePayload.put(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY, scopedQuerySummaryKeysMap);
+			}
+		} else {
+			if (!scopedSummaryMap.isEmpty()) {
+				scopePayload.put(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY, scopedSummaryMap);
+			}
+			if (!scopedQuerySummaryKeysMap.isEmpty()) {
+				scopePayload.put(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY, scopedQuerySummaryKeysMap);
+			}
+		}
 
 		HashMap<String, Object> liveDeferred = new HashMap<String, Object>();
 		Object liveUnresolved = walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
@@ -4320,9 +4331,21 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Canonical contract: payload-bearing symbol-table keys are always def_*;
+		// references (table_alias/table_ref/context/dependencies) remain live keys.
+		String liveScopeKey = toLiveScopeKey(scopeKey);
+		String definitionKey = toDefinitionScopeKey(scopeKey);
+		if (liveScopeKey == null || definitionKey == null) {
+			return;
+		}
+
+		HashMap<String, Object> scopeSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
+		HashMap<String, Object> scopedQuerySummaryKeysMap = removeScopedQuerySummaryKeysMap(scopePayload);
+
 		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
-			walker.queryColumnDictionaryMap.put(scopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
+			walker.queryColumnDictionaryMap.put(liveScopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
+			walker.queryColumnDictionaryMap.put(definitionKey, (HashMap<String, Object>) queryDictionaryMapObj);
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
@@ -4330,9 +4353,177 @@ public class SqlParseSymbolTreeHelper {
 		collectAndStripUnresolvedFromScopeTree(scopePayload, hoistedUnresolved);
 		stripUnresolvedFromScopePayload(scopePayload);
 		stripFrameLocalWalkTimeKeys(scopePayload);
-		walker.popSymbolTable(scopeKey, scopePayload);
+		walker.popSymbolTable(definitionKey, scopePayload);
+		walker.symbolTable.remove(liveScopeKey);
+		walker.mergeSetOperationInterfaceSummariesIntoCurrentScope(scopeSummaryMap);
+
+		if (liveScopeKey.startsWith(MUMBLE_QUERY_KEY) && scopeSummaryMap != null && !scopeSummaryMap.isEmpty()) {
+			HashMap<String, Object> queryToSummaryMap = new HashMap<String, Object>();
+			queryToSummaryMap.put(liveScopeKey, walker.extractSetOperationSummaryKeys(scopeSummaryMap));
+			walker.mergeQuerySetOperationSummaryKeysIntoCurrentScope(queryToSummaryMap);
+		}
+
+		walker.mergeQuerySetOperationSummaryKeysIntoCurrentScope(scopedQuerySummaryKeysMap);
 		mergeUnresolvedEntriesIntoCurrentScope(hoistedUnresolved);
 		walker.queryCount++;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> buildSetOperationParticipantLineageSummaryKeys(
+			Map<String, Object> scopePayload,
+			Map<String, Object> scopedSummaryMap,
+			Map<String, Object> scopedQuerySummaryKeysMap) {
+		ArrayList<String> lineageSummaryKeys = new ArrayList<String>();
+		if (scopePayload == null || scopePayload.isEmpty() || scopedSummaryMap == null || scopedSummaryMap.isEmpty()) {
+			return lineageSummaryKeys;
+		}
+
+		ArrayList<Map.Entry<String, Object>> participantEntries = new ArrayList<Map.Entry<String, Object>>();
+		for (Map.Entry<String, Object> entry : scopePayload.entrySet()) {
+			if (!isSetOperationParticipantKey(entry.getKey()) || !(entry.getValue() instanceof Map<?, ?>)) {
+				continue;
+			}
+			participantEntries.add(entry);
+		}
+
+		participantEntries.sort((left, right) -> {
+			int leftIndex = extractSetOperationParticipantKeyIndex(left.getKey());
+			int rightIndex = extractSetOperationParticipantKeyIndex(right.getKey());
+			int indexCompare = Integer.compare(leftIndex, rightIndex);
+			if (indexCompare != 0) {
+				return indexCompare;
+			}
+			return left.getKey().compareTo(right.getKey());
+		});
+
+		for (Map.Entry<String, Object> participantEntry : participantEntries) {
+			String participantKey = participantEntry.getKey();
+			if (participantKey == null) {
+				continue;
+			}
+
+			String liveParticipantKey = normalizeSetOperationParticipantKey(participantKey);
+
+			if (isSetOperationSourceReference(liveParticipantKey)
+					&& scopedSummaryMap.containsKey(liveParticipantKey)) {
+				appendUniqueSummaryKey(lineageSummaryKeys, liveParticipantKey);
+				continue;
+			}
+
+			if (!liveParticipantKey.startsWith(MUMBLE_QUERY_KEY)
+					|| scopedQuerySummaryKeysMap == null
+					|| scopedQuerySummaryKeysMap.isEmpty()) {
+				if (participantEntry.getValue() instanceof Map<?, ?> participantMapObj) {
+					collectSetOperationDefinitionSummaryKeysFromParticipantMap(
+							lineageSummaryKeys,
+							(Map<String, Object>) participantMapObj,
+							scopedSummaryMap);
+				}
+				continue;
+			}
+
+			Object summaryKeysObj = scopedQuerySummaryKeysMap.get(liveParticipantKey);
+			if (summaryKeysObj instanceof List<?> summaryKeysList) {
+				boolean appendedFromQuerySummaryMap = false;
+				for (Object summaryKeyObj : summaryKeysList) {
+					if (!(summaryKeyObj instanceof String summaryKey)
+							|| !scopedSummaryMap.containsKey(summaryKey)) {
+						continue;
+					}
+					appendUniqueSummaryKey(lineageSummaryKeys, summaryKey);
+					appendedFromQuerySummaryMap = true;
+				}
+				if (appendedFromQuerySummaryMap) {
+					continue;
+				}
+			}
+
+			if (participantEntry.getValue() instanceof Map<?, ?> participantMapObj) {
+				collectSetOperationDefinitionSummaryKeysFromParticipantMap(
+						lineageSummaryKeys,
+						(Map<String, Object>) participantMapObj,
+						scopedSummaryMap);
+			}
+		}
+
+		return lineageSummaryKeys;
+	}
+
+	private void collectSetOperationDefinitionSummaryKeysFromParticipantMap(
+			ArrayList<String> lineageSummaryKeys,
+			Map<String, Object> participantMap,
+			Map<String, Object> scopedSummaryMap) {
+		if (lineageSummaryKeys == null
+				|| participantMap == null
+				|| participantMap.isEmpty()
+				|| scopedSummaryMap == null
+				|| scopedSummaryMap.isEmpty()) {
+			return;
+		}
+
+		for (String nestedKey : participantMap.keySet()) {
+			if (nestedKey == null || nestedKey.isBlank()) {
+				continue;
+			}
+
+			String normalizedKey = nestedKey.startsWith("def_")
+					? nestedKey.substring("def_".length())
+					: nestedKey;
+			if (!(normalizedKey.startsWith(MUMBLE_UNION_KEY) || normalizedKey.startsWith(MUMBLE_INTERSECT_KEY))) {
+				continue;
+			}
+
+			if (!scopedSummaryMap.containsKey(normalizedKey)
+					&& participantMap.get(nestedKey) instanceof Map<?, ?> nestedSetMapObj) {
+				HashMap<String, Object> derivedSummary = walker.buildSetOperationInterfaceSummary(
+						normalizedKey,
+						(Map<String, Object>) nestedSetMapObj);
+				if (derivedSummary != null && !derivedSummary.isEmpty()) {
+					scopedSummaryMap.put(normalizedKey, derivedSummary);
+				}
+			}
+
+			if (!scopedSummaryMap.containsKey(normalizedKey)) {
+				continue;
+			}
+
+			appendUniqueSummaryKey(lineageSummaryKeys, normalizedKey);
+		}
+	}
+
+	private void appendUniqueSummaryKey(ArrayList<String> keys, String candidate) {
+		if (keys == null || candidate == null || candidate.isBlank() || keys.contains(candidate)) {
+			return;
+		}
+		keys.add(candidate);
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> removeScopedSetOperationSummaryMap(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null || scopePayload.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object scopedSummaryObj = scopePayload.remove(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
+		if (scopedSummaryObj instanceof HashMap<?, ?> scopedSummaryMapObj) {
+			return (HashMap<String, Object>) scopedSummaryMapObj;
+		}
+
+		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> removeScopedQuerySummaryKeysMap(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null || scopePayload.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object scopedSummaryKeysObj = scopePayload.remove(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
+		if (scopedSummaryKeysObj instanceof HashMap<?, ?> scopedSummaryKeysMapObj) {
+			return (HashMap<String, Object>) scopedSummaryKeysMapObj;
+		}
+
+		return new HashMap<String, Object>();
 	}
 
 	/**
@@ -5022,11 +5213,7 @@ public class SqlParseSymbolTreeHelper {
 					}
 				}
 				if (aliasTargetObj instanceof String aliasTarget) {
-					boolean aliasTargetsQuery = aliasTarget.startsWith(MUMBLE_QUERY_KEY)
-							|| aliasTarget.startsWith(MUMBLE_UNION_KEY)
-							|| aliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
-							|| aliasTarget.startsWith(MUMBLE_VALUES_KEY)
-							|| MUMBLE_VALUES_KEY.equals(aliasTarget);
+					boolean aliasTargetsQuery = isQueryOrSetOrValuesSourceReference(aliasTarget);
 					if (aliasTargetsQuery) {
 						promoteQualifiedWildcardIntoQuerySource(aliasTarget, entry.getValue());
 						resolvedKeys.add(unresolvedKey);
@@ -5257,7 +5444,7 @@ public class SqlParseSymbolTreeHelper {
 			return hasWildcardInQueryOutputInterface(aliasTarget);
 		}
 
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(aliasTarget);
+		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(aliasTarget);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
 				&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)) {
 			return true;
@@ -5664,11 +5851,7 @@ public class SqlParseSymbolTreeHelper {
 			Object existingAliasTargetObj = tableAliasMap.get(alias);
 			if (existingAliasTargetObj instanceof String existingAliasTarget
 					&& !existingAliasTarget.isBlank()
-					&& (existingAliasTarget.startsWith(MUMBLE_QUERY_KEY)
-							|| existingAliasTarget.startsWith(MUMBLE_UNION_KEY)
-							|| existingAliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
-							|| existingAliasTarget.startsWith(MUMBLE_VALUES_KEY)
-							|| MUMBLE_VALUES_KEY.equals(existingAliasTarget))) {
+					&& isQueryOrSetOrValuesSourceReference(existingAliasTarget)) {
 				inheritedScopeRef = existingAliasTarget;
 			}
 		}
@@ -6090,11 +6273,7 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			boolean aliasTargetsQuery = aliasTarget.startsWith(MUMBLE_QUERY_KEY)
-					|| aliasTarget.startsWith(MUMBLE_UNION_KEY)
-					|| aliasTarget.startsWith(MUMBLE_INTERSECT_KEY)
-					|| aliasTarget.startsWith(MUMBLE_VALUES_KEY)
-					|| MUMBLE_VALUES_KEY.equals(aliasTarget);
+			boolean aliasTargetsQuery = isQueryOrSetOrValuesSourceReference(aliasTarget);
 			if (!aliasTargetsQuery) {
 				continue;
 			}
@@ -6104,7 +6283,7 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
-			Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(aliasTarget);
+			Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(aliasTarget);
 			boolean foundInQueryInterface = queryDictionaryObj instanceof Map<?, ?> queryDictionary
 					&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName);
 			if (!foundInQueryInterface && hasColumnInQueryOutputInterface(aliasTarget, columnName)) {
@@ -6183,12 +6362,11 @@ public class SqlParseSymbolTreeHelper {
 			if (!(mappedSourceObj instanceof String mappedSource)) {
 				continue;
 			}
-			if (mappedSource.startsWith(MUMBLE_QUERY_KEY)
-					|| mappedSource.startsWith(MUMBLE_UNION_KEY)
-					|| mappedSource.startsWith(MUMBLE_INTERSECT_KEY)
-					|| mappedSource.startsWith(MUMBLE_VALUES_KEY)
-					|| MUMBLE_VALUES_KEY.equals(mappedSource)) {
-				queryBackedSources.add(mappedSource);
+			if (isQueryOrSetOrValuesSourceReference(mappedSource)) {
+				String normalizedSourceKey = normalizeQuerySourceReference(mappedSource);
+				if (normalizedSourceKey != null && !normalizedSourceKey.isBlank()) {
+					queryBackedSources.add(normalizedSourceKey);
+				}
 			}
 		}
 
@@ -6197,7 +6375,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		String sourceQueryKey = queryBackedSources.iterator().next();
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
+		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(sourceQueryKey);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
 			Map<String, Object> sourceQueryDictionary = (Map<String, Object>) queryDictionary;
 			if (sourceQueryDictionary.containsKey("*")) {
@@ -6646,7 +6824,10 @@ public class SqlParseSymbolTreeHelper {
 					continue;
 				}
 
-				String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, visibleQuerySourceCollection);
+				String resolvedNonTableSourceRef = resolveAliasToQuerySourceRefPreferDefinition(
+						tableRef,
+						localTableAliasMap,
+						visibleQuerySourceCollection);
 				String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
 				String querySourceRef = (resolvedNonTableSourceRef != null)
 						? resolvedNonTableSourceRef
@@ -6658,7 +6839,7 @@ public class SqlParseSymbolTreeHelper {
 					continue;
 				}
 
-				Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(querySourceRef);
+				Object sourceDictionaryObj = getQuerySourceDictionaryPreferDefinition(querySourceRef);
 				if (!(sourceDictionaryObj instanceof Map<?, ?> sourceDictionaryMapObj)) {
 					continue;
 				}
@@ -6709,8 +6890,11 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
-		String normalizedMapped = mappedSource.startsWith("def_") ? mappedSource.substring("def_".length()) : mappedSource;
-		String normalizedQuerySource = querySourceRef.startsWith("def_") ? querySourceRef.substring("def_".length()) : querySourceRef;
+		String normalizedMapped = normalizeQuerySourceReference(mappedSource);
+		String normalizedQuerySource = normalizeQuerySourceReference(querySourceRef);
+		if (normalizedMapped == null || normalizedQuerySource == null) {
+			return false;
+		}
 		return normalizedMapped.equalsIgnoreCase(normalizedQuerySource);
 	}
 
@@ -7255,12 +7439,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			String resolvedTableRef = walker.resolveAliasToTableName(explicitTableRef, visibleAliasMap);
-			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(
-					explicitTableRef, scopedQueryCollection);
-			if (resolvedNonTableSourceRef == null) {
-				resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(
-						explicitTableRef, visibleAliasMap);
-			}
+			String resolvedNonTableSourceRef = resolveAliasToQuerySourceRefPreferDefinition(
+					explicitTableRef,
+					visibleAliasMap,
+					scopedQueryCollection);
 			HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
 					resolvedTableRef,
 					visibleTableCollection);
@@ -7851,13 +8033,20 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			// If no local sources found, check query sources (for deferred columns from nested scopes)
-			ArrayList<String> querySourcesWithColumn = new ArrayList<String>();
+			// Keep only canonical live keys (queryN/unionN/...) so def_queryN does not create duplicates.
+			LinkedHashSet<String> querySourcesWithColumn = new LinkedHashSet<String>();
+			LinkedHashSet<String> checkedQuerySources = new LinkedHashSet<String>();
 			
 			// First check visible query sources
 			if (visibleQuerySourceCollection != null && !visibleQuerySourceCollection.isEmpty()) {
 				for (String queryRef : visibleQuerySourceCollection.keySet()) {
+					String canonicalQueryRef = normalizeQuerySourceReference(queryRef);
+					if (canonicalQueryRef == null || canonicalQueryRef.isBlank()) {
+						continue;
+					}
+					checkedQuerySources.add(canonicalQueryRef);
 					if (querySourceHasExactColumn(queryRef, columnName, null)) {
-						querySourcesWithColumn.add(queryRef);
+						addIgnoringCase(querySourcesWithColumn, canonicalQueryRef);
 					}
 				}
 			}
@@ -7868,19 +8057,24 @@ public class SqlParseSymbolTreeHelper {
 					&& walker.queryColumnDictionaryMap != null
 					&& !hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
 				for (String queryRef : walker.queryColumnDictionaryMap.keySet()) {
-					// Skip already-checked visible sources
-					if (visibleQuerySourceCollection != null && visibleQuerySourceCollection.containsKey(queryRef)) {
+					String canonicalQueryRef = normalizeQuerySourceReference(queryRef);
+					if (canonicalQueryRef == null || canonicalQueryRef.isBlank()) {
 						continue;
 					}
+					// Skip already-checked visible sources (canonicalized to live keys)
+					if (checkedQuerySources.contains(canonicalQueryRef)) {
+						continue;
+					}
+					checkedQuerySources.add(canonicalQueryRef);
 					if (querySourceHasExactColumn(queryRef, columnName, null)) {
-						querySourcesWithColumn.add(queryRef);
+						addIgnoringCase(querySourcesWithColumn, canonicalQueryRef);
 					}
 				}
 			}
 
 			// If exactly one query source has this column, bind the unresolved entry to it
 			if (querySourcesWithColumn.size() == 1) {
-				String resolvedSourceRef = normalizeTableRef(querySourcesWithColumn.get(0));
+				String resolvedSourceRef = normalizeTableRef(querySourcesWithColumn.iterator().next());
 				
 				// Update all tracked clause list locations with the resolved table reference
 				Set<ClauseRefLocation> locations = (unresolvedColumnLocations != null)
@@ -8201,13 +8395,25 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		String normalizedCandidate = normalizeQuerySourceReference(candidate);
+		if (normalizedCandidate == null || normalizedCandidate.isBlank()) {
+			normalizedCandidate = candidate;
+		}
+
 		for (String existing : bucket) {
-			if (existing != null && existing.equalsIgnoreCase(candidate)) {
+			if (existing == null) {
+				continue;
+			}
+			String normalizedExisting = normalizeQuerySourceReference(existing);
+			if (normalizedExisting == null || normalizedExisting.isBlank()) {
+				normalizedExisting = existing;
+			}
+			if (normalizedExisting.equalsIgnoreCase(normalizedCandidate)) {
 				return;
 			}
 		}
 
-		bucket.add(candidate);
+		bucket.add(normalizedCandidate);
 	}
 
 	public String resolveAliasToQuerySourceFromAliasMap(
@@ -8228,14 +8434,11 @@ public class SqlParseSymbolTreeHelper {
 				return null;
 			}
 
-			if (mappedSource.startsWith("def_")) {
-				return mappedSource.substring("def_".length());
-			}
-			return mappedSource;
+			return normalizeQuerySourceReference(mappedSource);
 		}
 
 		if (isQuerySourceReference(aliasRef)) {
-			return aliasRef.startsWith("def_") ? aliasRef.substring("def_".length()) : aliasRef;
+			return normalizeQuerySourceReference(aliasRef);
 		}
 
 		return null;
@@ -8402,19 +8605,13 @@ public class SqlParseSymbolTreeHelper {
 					continue;
 				}
 
-				Object querySourceObj = walker.symbolTable.get(mappedSource);
-				if (querySourceObj instanceof HashMap<?, ?>) {
-					visibleQuerySources.put(mappedSource, querySourceObj);
-					continue;
-				}
-
-				Object queryDefinitionObj = findInCurrentOrAncestorSymbolTables("def_" + mappedSource);
+				Object queryDefinitionObj = getQuerySourcePayloadPreferDefinition(mappedSource, null);
 				if (queryDefinitionObj instanceof HashMap<?, ?>) {
 					visibleQuerySources.put(mappedSource, queryDefinitionObj);
 					continue;
 				}
 
-				Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(mappedSource);
+				Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(mappedSource);
 				if (queryDictionaryObj instanceof HashMap<?, ?>) {
 					visibleQuerySources.put(mappedSource, queryDictionaryObj);
 				}
@@ -8430,24 +8627,19 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
-		String normalizedQueryRef = queryRef;
-		if (normalizedQueryRef.startsWith("def_")) {
-			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
-		}
-		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
-				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+		if (isSetOperationSourceReference(queryRef)) {
 			return hasWildcardInQueryOutputInterface(queryRef);
 		}
 
 		if (queryCollection != null) {
-			Object queryObj = queryCollection.get(queryRef);
+			Object queryObj = getQuerySourcePayloadPreferDefinition(queryRef, queryCollection);
 			if (queryObj instanceof Map<?, ?> queryMap
 					&& ((Map<String, Object>) queryMap).containsKey("*")) {
 				return true;
 			}
 		}
 
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(queryRef);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
 				&& ((Map<String, Object>) queryDictionary).containsKey("*")) {
 			return true;
@@ -8465,12 +8657,7 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
-		String normalizedQueryRef = queryRef;
-		if (normalizedQueryRef.startsWith("def_")) {
-			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
-		}
-		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
-				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+		if (isSetOperationSourceReference(queryRef)) {
 			// Set-operation sources expose only their published output interface.
 			return hasColumnInQueryOutputInterface(queryRef, columnName)
 					|| hasWildcardInQueryOutputInterface(queryRef);
@@ -8481,14 +8668,14 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (queryCollection != null) {
-			Object queryObj = queryCollection.get(queryRef);
+			Object queryObj = getQuerySourcePayloadPreferDefinition(queryRef, queryCollection);
 			if (queryObj instanceof Map<?, ?> queryMap
 					&& containsKeyIgnoreCase((Map<String, Object>) queryMap, columnName)) {
 				return true;
 			}
 		}
 
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(queryRef);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
 				&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)) {
 			return true;
@@ -8506,12 +8693,7 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
-		String normalizedQueryRef = queryRef;
-		if (normalizedQueryRef.startsWith("def_")) {
-			normalizedQueryRef = normalizedQueryRef.substring("def_".length());
-		}
-		if (normalizedQueryRef.startsWith(MUMBLE_UNION_KEY)
-				|| normalizedQueryRef.startsWith(MUMBLE_INTERSECT_KEY)) {
+		if (isSetOperationSourceReference(queryRef)) {
 			// Set-operation sources must resolve against set-operation output interface only.
 			return hasColumnInQueryOutputInterface(queryRef, columnName);
 		}
@@ -8521,14 +8703,14 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (queryCollection != null) {
-			Object queryObj = queryCollection.get(queryRef);
+			Object queryObj = getQuerySourcePayloadPreferDefinition(queryRef, queryCollection);
 			if (queryObj instanceof Map<?, ?> queryMap
 					&& containsKeyIgnoreCase((Map<String, Object>) queryMap, columnName)) {
 				return true;
 			}
 		}
 
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(queryRef);
 		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary
 				&& containsKeyIgnoreCase((Map<String, Object>) queryDictionary, columnName)) {
 			return true;
@@ -8537,14 +8719,142 @@ public class SqlParseSymbolTreeHelper {
 		return hasColumnInQueryOutputInterface(queryRef, columnName);
 	}
 
-	public boolean isQuerySourceReference(String sourceRef) {
+	public String resolveAliasToQuerySourceRefPreferDefinition(
+			String aliasRef,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> scopedQueryCollection) {
+		String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(aliasRef, scopedQueryCollection);
+		if (resolvedNonTableSourceRef == null) {
+			resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(aliasRef, tableAliasCollection);
+		}
+		return normalizeQuerySourceReference(resolvedNonTableSourceRef);
+	}
+
+	public String normalizeQuerySourceReference(String sourceRef) {
 		if (sourceRef == null || sourceRef.isBlank()) {
-			return false;
+			return null;
 		}
 		String normalizedSourceRef = sourceRef;
 		if (normalizedSourceRef.startsWith("def_")) {
 			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
+		return normalizedSourceRef;
+	}
+
+	public boolean isDefinitionScopeKey(String scopeKey) {
+		return scopeKey != null && scopeKey.startsWith("def_");
+	}
+
+	public String toLiveScopeKey(String scopeKey) {
+		return normalizeQuerySourceReference(scopeKey);
+	}
+
+	public String toDefinitionScopeKey(String scopeKey) {
+		String liveScopeKey = toLiveScopeKey(scopeKey);
+		if (liveScopeKey == null || liveScopeKey.isBlank()) {
+			return null;
+		}
+		return "def_" + liveScopeKey;
+	}
+
+	public boolean isSetOperationSourceReference(String sourceRef) {
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
+		if (normalizedSourceRef == null || normalizedSourceRef.isBlank()) {
+			return false;
+		}
+		return normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY);
+	}
+
+	public boolean isQueryOrSetOrValuesSourceReference(String sourceRef) {
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
+		if (normalizedSourceRef == null || normalizedSourceRef.isBlank()) {
+			return false;
+		}
+		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
+				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
+	}
+
+	public Object getQuerySourcePayloadPreferDefinition(String queryRef, HashMap<String, Object> queryCollection) {
+		String normalizedQueryRef = normalizeQuerySourceReference(queryRef);
+		if (normalizedQueryRef == null || !isQuerySourceReference(normalizedQueryRef)) {
+			return null;
+		}
+
+		String defQueryRef = toDefinitionScopeKey(normalizedQueryRef);
+
+		if (queryCollection != null && !queryCollection.isEmpty()) {
+			Object queryObj = queryCollection.get(defQueryRef);
+			if (queryObj instanceof Map<?, ?>) {
+				return queryObj;
+			}
+
+			queryObj = queryCollection.get(normalizedQueryRef);
+			if (queryObj instanceof Map<?, ?>) {
+				return queryObj;
+			}
+
+			if (queryRef != null && !queryRef.equals(normalizedQueryRef)) {
+				queryObj = queryCollection.get(queryRef);
+				if (queryObj instanceof Map<?, ?>) {
+					return queryObj;
+				}
+			}
+		}
+
+		Object queryObj = walker.symbolTable.get(defQueryRef);
+		if (queryObj instanceof Map<?, ?>) {
+			return queryObj;
+		}
+
+		queryObj = walker.symbolTable.get(normalizedQueryRef);
+		if (queryObj instanceof Map<?, ?>) {
+			return queryObj;
+		}
+
+		queryObj = findInCurrentOrAncestorSymbolTables(defQueryRef);
+		if (queryObj instanceof Map<?, ?>) {
+			return queryObj;
+		}
+
+		return findInCurrentOrAncestorSymbolTablesRecursive(defQueryRef);
+	}
+
+	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
+		String normalizedQueryRef = normalizeQuerySourceReference(queryRef);
+		if (normalizedQueryRef == null || !isQuerySourceReference(normalizedQueryRef)) {
+			return null;
+		}
+
+		String defQueryRef = toDefinitionScopeKey(normalizedQueryRef);
+		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(defQueryRef);
+		if (queryDictionaryObj instanceof Map<?, ?>) {
+			return queryDictionaryObj;
+		}
+
+		queryDictionaryObj = walker.queryColumnDictionaryMap.get(normalizedQueryRef);
+		if (queryDictionaryObj instanceof Map<?, ?>) {
+			return queryDictionaryObj;
+		}
+
+		if (queryRef != null && !queryRef.equals(normalizedQueryRef)) {
+			queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
+			if (queryDictionaryObj instanceof Map<?, ?>) {
+				return queryDictionaryObj;
+			}
+		}
+
+		return null;
+	}
+
+	public boolean isQuerySourceReference(String sourceRef) {
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return false;
+		}
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
 		return normalizedSourceRef.startsWith(MUMBLE_QUERY_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_UNION_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
@@ -8554,13 +8864,9 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	public boolean isValuesSourceReference(String sourceRef) {
-		if (sourceRef == null || sourceRef.isBlank()) {
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
+		if (normalizedSourceRef == null || normalizedSourceRef.isBlank()) {
 			return false;
-		}
-
-		String normalizedSourceRef = sourceRef;
-		if (normalizedSourceRef.startsWith("def_")) {
-			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
 
 		return normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
@@ -8568,13 +8874,9 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	public boolean isTableFunctionSourceReference(String sourceRef) {
-		if (sourceRef == null || sourceRef.isBlank()) {
+		String normalizedSourceRef = normalizeQuerySourceReference(sourceRef);
+		if (normalizedSourceRef == null || normalizedSourceRef.isBlank()) {
 			return false;
-		}
-
-		String normalizedSourceRef = sourceRef;
-		if (normalizedSourceRef.startsWith("def_")) {
-			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
 
 		return tableFunctionSourceRefs.contains(normalizedSourceRef.toLowerCase());
@@ -8754,10 +9056,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			String resolvedTableRef = walker.resolveAliasToTableName(tableRef, tableAliasCollection);
-			String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(tableRef, scopedQueryCollection);
-			if (resolvedNonTableSourceRef == null) {
-				resolvedNonTableSourceRef = resolveAliasToQuerySourceFromAliasMap(tableRef, tableAliasCollection);
-			}
+			String resolvedNonTableSourceRef = resolveAliasToQuerySourceRefPreferDefinition(
+					tableRef,
+					tableAliasCollection,
+					scopedQueryCollection);
 			boolean explicitQueryReference = resolvedNonTableSourceRef != null
 					|| walker.isNonTableQuerySourceReference(resolvedTableRef);
 			String allLocationsForEntry = walker.formatAllLocationsForEntry(unknownEntry.getValue());
@@ -8774,7 +9076,7 @@ public class SqlParseSymbolTreeHelper {
 					promoteQualifiedWildcardIntoQuerySource(querySourceRef, unknownEntry.getValue());
 					continue;
 				}
-				Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(querySourceRef);
+				Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(querySourceRef);
 				boolean foundInQueryInterface = queryDictionaryObj instanceof Map<?, ?>
 						&& containsKeyIgnoreCase((Map<String, Object>) queryDictionaryObj, columnName);
 				if (!foundInQueryInterface && hasColumnInQueryOutputInterface(querySourceRef, columnName)) {
@@ -9027,16 +9329,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		String sourceQueryKey = querySourceRef;
-		Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
-		if (sourceDictionaryObj == null && sourceQueryKey.startsWith("def_")) {
-			sourceQueryKey = sourceQueryKey.substring("def_".length());
-			sourceDictionaryObj = walker.queryColumnDictionaryMap.get(sourceQueryKey);
-		}
-		if (sourceDictionaryObj == null) {
-			String defSourceKey = sourceQueryKey.startsWith("def_") ? sourceQueryKey : "def_" + sourceQueryKey;
-			sourceDictionaryObj = walker.queryColumnDictionaryMap.get(defSourceKey);
-		}
+		Object sourceDictionaryObj = getQuerySourceDictionaryPreferDefinition(querySourceRef);
 		if (!(sourceDictionaryObj instanceof Map<?, ?> sourceDictionaryMapObj)) {
 			return;
 		}
@@ -9103,13 +9396,13 @@ public class SqlParseSymbolTreeHelper {
 		if (queryKey == null || queryKey.isBlank()) {
 			return null;
 		}
-		if (queryKey.startsWith("def_")) {
+		if (isDefinitionScopeKey(queryKey)) {
 			return queryKey;
 		}
 		if (!isQuerySourceReference(queryKey)) {
 			return null;
 		}
-		return "def_" + queryKey;
+		return toDefinitionScopeKey(queryKey);
 	}
 
 	public Object getQueryDefinitionSymbol(String queryKey) {
@@ -9134,7 +9427,7 @@ public class SqlParseSymbolTreeHelper {
 			return directObj;
 		}
 
-		if (queryKey.startsWith("def_")) {
+		if (isDefinitionScopeKey(queryKey)) {
 			if (directObj != null) {
 				return directObj;
 			}
@@ -9156,21 +9449,23 @@ public class SqlParseSymbolTreeHelper {
 				return cteScopeObj;
 			}
 
-			Object cteDefScopeObj = findInCurrentOrAncestorSymbolTables("def_" + cteScopeRef);
+			String cteDefinitionKey = toDefinitionScopeKey(cteScopeRef);
+			Object cteDefScopeObj = findInCurrentOrAncestorSymbolTables(cteDefinitionKey);
 			if (cteDefScopeObj == null) {
-				cteDefScopeObj = findInCurrentOrAncestorSymbolTablesRecursive("def_" + cteScopeRef);
+				cteDefScopeObj = findInCurrentOrAncestorSymbolTablesRecursive(cteDefinitionKey);
 			}
 			if (cteDefScopeObj != null) {
 				return cteDefScopeObj;
 			}
 		}
 
-		Object queryDefObj = findInCurrentOrAncestorSymbolTables("def_" + queryKey);
+		String queryDefinitionKey = toDefinitionScopeKey(queryKey);
+		Object queryDefObj = findInCurrentOrAncestorSymbolTables(queryDefinitionKey);
 		if (queryDefObj != null) {
 			return queryDefObj;
 		}
 
-		return findInCurrentOrAncestorSymbolTablesRecursive("def_" + queryKey);
+		return findInCurrentOrAncestorSymbolTablesRecursive(queryDefinitionKey);
 	}
 
 	/**
@@ -9565,9 +9860,14 @@ public class SqlParseSymbolTreeHelper {
 
 	public Boolean collectQuerySymbolTable(String hdr, String alias, Map<String, Object> definitionTarget) {
 		String queryName = hdr + (walker.queryCount - 1);
-		Map<String, Object> query = (Map<String, Object>)  walker.symbolTable.remove(queryName);
+		Map<String, Object> query = (Map<String, Object>) walker.symbolTable.remove(queryName);
+		if (query == null) {
+			String definitionQueryName = toDefinitionScopeKey(queryName);
+			query = (Map<String, Object>) walker.symbolTable.remove(definitionQueryName);
+		}
 		if (query != null) {
-			if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
+			boolean insertSourceFlow = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
+			if (insertSourceFlow) {
 				pruneInsertSourceSequenceFromNestedDefinitions(query);
 			} else {
 				query.remove(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
@@ -9577,13 +9877,17 @@ public class SqlParseSymbolTreeHelper {
 				walker.collectTableAlias(alias, queryName);
 				recordLocalFromRegisteredAlias(alias);
 			} else {
-				walker.symbolTable.put(queryName, new HashMap<String, Object>());
+				if (insertSourceFlow) {
+					walker.symbolTable.put(queryName, new HashMap<String, Object>());
+				}
 				upsertCurrentTableAliasMapping(queryName, queryName);
 				recordLocalFromRegisteredAlias(queryName);
 			}
 
 			// propagate interface to outer layer of query
-			Map<String, Object> hold = (Map<String, Object>)  walker.symbolTable.get(queryName);
+			Map<String, Object> hold = insertSourceFlow
+					? (Map<String, Object>) walker.symbolTable.get(queryName)
+					: null;
 			// Move unknowns to query
 			Map<String, Object> unk = (Map<String, Object>)  walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 			HashMap<String, Object> liveDeferred = new HashMap<String, Object>();
@@ -9759,7 +10063,17 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		for (String key : symbols.keySet()) {
-			if (isQuerySourceReference(key) && !key.startsWith("def_")) {
+			if (isQuerySourceReference(key) && !isDefinitionScopeKey(key)) {
+				return key;
+			}
+		}
+
+		for (String key : symbols.keySet()) {
+			if (!isDefinitionScopeKey(key)) {
+				continue;
+			}
+			String bareKey = toLiveScopeKey(key);
+			if (isQuerySourceReference(bareKey)) {
 				return key;
 			}
 		}
@@ -10042,7 +10356,7 @@ public class SqlParseSymbolTreeHelper {
 		for (Map.Entry<String, Object> entry : scopeNode.entrySet()) {
 			String key = entry.getKey();
 			if (key == null
-					|| !(key.startsWith("def_")
+					|| !(isDefinitionScopeKey(key)
 							|| key.startsWith(MUMBLE_QUERY_KEY)
 							|| key.startsWith(MUMBLE_UNION_KEY)
 							|| key.startsWith(MUMBLE_INTERSECT_KEY))) {
@@ -10162,17 +10476,18 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> pendingUnresolved =
 				consumePredicateFrameUnresolvedEntries(predicateFrameSymbols);
 		String queryRefKey = resolveSubqueryReferenceKeyFromPredicateFrame(predicateFrameSymbols, kind);
+		String liveQueryRefKey = normalizeQuerySourceReference(queryRefKey);
 		switch (kind) {
 			case PREDICAND -> recordDependentQueryReference(
-					predicateFrameSymbols, MUMBLE_PREDICAND_KEY, queryRefKey);
+					predicateFrameSymbols, MUMBLE_PREDICAND_KEY, liveQueryRefKey);
 			case EXISTS -> recordDependentQueryReference(
-					predicateFrameSymbols, MUMBLE_EXISTS_KEY, queryRefKey);
+					predicateFrameSymbols, MUMBLE_EXISTS_KEY, liveQueryRefKey);
 			case IN -> recordDependentQueryReference(
-					predicateFrameSymbols, MUMBLE_IN_LIST_KEY, queryRefKey);
+					predicateFrameSymbols, MUMBLE_IN_LIST_KEY, liveQueryRefKey);
 		}
 
-		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, queryRefKey);
-		HashMap<String, Object> defScopePayload = getDefQueryScopePayload(predicateFrameSymbols, queryRefKey);
+		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, liveQueryRefKey);
+		HashMap<String, Object> defScopePayload = getDefQueryScopePayload(predicateFrameSymbols, liveQueryRefKey);
 		HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
 		HashMap<String, Object> innerLocal = new HashMap<String, Object>();
 		partitionPredicateUnresolvedByScope(pendingUnresolved, defScopePayload, outerCorrelated, innerLocal);
@@ -10279,10 +10594,13 @@ public class SqlParseSymbolTreeHelper {
 	private void promotePublishedQueryScopeToDefPrefix(
 			HashMap<String, Object> predicateFrameSymbols,
 			String queryRefKey) {
-		if (queryRefKey == null || queryRefKey.startsWith("def_") || !isQuerySourceReference(queryRefKey)) {
+		if (queryRefKey == null || isDefinitionScopeKey(queryRefKey) || !isQuerySourceReference(queryRefKey)) {
 			return;
 		}
-		predicateFrameSymbols.put("def_" + queryRefKey, predicateFrameSymbols.remove(queryRefKey));
+		if (predicateFrameSymbols == null || !predicateFrameSymbols.containsKey(queryRefKey)) {
+			return;
+		}
+		predicateFrameSymbols.put(toDefinitionScopeKey(queryRefKey), predicateFrameSymbols.remove(queryRefKey));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -10292,7 +10610,7 @@ public class SqlParseSymbolTreeHelper {
 		if (queryRefKey == null || predicateFrameSymbols == null) {
 			return null;
 		}
-		String defKey = queryRefKey.startsWith("def_") ? queryRefKey : "def_" + queryRefKey;
+		String defKey = toDefinitionScopeKey(queryRefKey);
 		Object payloadObj = predicateFrameSymbols.get(defKey);
 		if (payloadObj instanceof HashMap<?, ?>) {
 			return (HashMap<String, Object>) payloadObj;
@@ -10460,6 +10778,8 @@ public class SqlParseSymbolTreeHelper {
 		stripFrameLocalWalkTimeKeys(scopePayload);
 		scopePayload.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
 		scopePayload.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
+		scopePayload.remove(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);

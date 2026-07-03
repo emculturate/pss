@@ -74,6 +74,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
 	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
+	private final ArrayDeque<Integer> setOperationWrapAnchorStackLevels;
+	private int tableSourcePrimaryNestingDepth;
 
 
 	// Constructors
@@ -85,8 +87,68 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		this.diagnosticService = new SqlParseDiagnosticService(this.walker);
 		this.symbolTreeHelper = new SqlParseSymbolTreeHelper(this.walker);
 		this.invalidVariableDiagnosticKeys = new HashSet<String>();
+		this.setOperationWrapAnchorStackLevels = new ArrayDeque<Integer>();
+		this.tableSourcePrimaryNestingDepth = 0;
 
 
+	}
+
+	@Override
+	public void enterTable_source_primary(SQLSelectParserParser.Table_source_primaryContext ctx) {
+		tableSourcePrimaryNestingDepth++;
+
+		if (!containsSetOperationSubquery(ctx)) {
+			return;
+		}
+
+		Integer stackLevel = walker.currentStackLevel(ctx.getRuleIndex());
+		if (stackLevel == null) {
+			return;
+		}
+
+		// Anchor wrapping only at the first table_source_primary nesting level.
+		if (tableSourcePrimaryNestingDepth == 1 && setOperationWrapAnchorStackLevels.isEmpty()) {
+			setOperationWrapAnchorStackLevels.push(stackLevel);
+		}
+	}
+
+	private boolean containsSetOperationSubquery(SQLSelectParserParser.Table_source_primaryContext ctx) {
+		if (ctx == null || ctx.subquery() == null) {
+			return false;
+		}
+
+		SQLSelectParserParser.Query_expressionContext queryExpression = ctx.subquery().query_expression();
+		if (queryExpression == null || queryExpression.intersected_query() == null) {
+			return false;
+		}
+
+		SQLSelectParserParser.Intersected_queryContext intersectedQuery = queryExpression.intersected_query();
+		if (intersectedQuery.intersect_clause() != null && !intersectedQuery.intersect_clause().isEmpty()) {
+			return true;
+		}
+
+		if (intersectedQuery.unionized_query() == null) {
+			return false;
+		}
+
+		for (SQLSelectParserParser.Unionized_queryContext unionizedQuery : intersectedQuery.unionized_query()) {
+			if (unionizedQuery != null
+					&& unionizedQuery.union_clause() != null
+					&& !unionizedQuery.union_clause().isEmpty()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private boolean shouldWrapSetOperationAtCurrentLevel(Integer stackLevel, Map<String, Object> reference) {
+		if (!isQueryLikeFromSource(reference) || stackLevel == null) {
+			return false;
+		}
+
+		return !setOperationWrapAnchorStackLevels.isEmpty()
+				&& stackLevel.equals(setOperationWrapAnchorStackLevels.peek());
 	}
 
 	private void emitInvalidVariableDiagnostic(Token startToken, String tokenText) {
@@ -263,8 +325,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		while (parent != null) {
 			if (parent instanceof SQLSelectParserParser.Unionized_queryContext unionizedCtx
-					&& child instanceof SQLSelectParserParser.Query_primaryContext queryPrimaryCtx) {
-				int unionMemberPosition = unionizedCtx.query_primary().indexOf(queryPrimaryCtx) + 1;
+					&& child instanceof SQLSelectParserParser.Set_operation_memberContext setOperationMemberCtx) {
+				int unionMemberPosition = unionizedCtx.set_operation_member().indexOf(setOperationMemberCtx) + 1;
 				if (unionMemberPosition > 1) {
 					setOperationType = "UNION";
 					memberPosition = unionMemberPosition;
@@ -711,7 +773,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	public HashMap<String, Object> getQueryColumnDictionaryMap() {
-		return walker.queryColumnDictionaryMap;
+		HashMap<String, Object> exposed = new HashMap<String, Object>();
+		if (walker.queryColumnDictionaryMap == null || walker.queryColumnDictionaryMap.isEmpty()) {
+			return exposed;
+		}
+		for (Map.Entry<String, Object> entry : walker.queryColumnDictionaryMap.entrySet()) {
+			String key = entry.getKey();
+			if (key == null || key.startsWith("def_")) {
+				continue;
+			}
+			exposed.put(key, entry.getValue());
+		}
+		return exposed;
 	}
 
 	public HashMap<String, Object> getSymbolTable() {
@@ -741,14 +814,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> queryMap = null;
 		int topQueryIndex = -1;
 		for (String key : walker.symbolTable.keySet()) {
-			if (!key.startsWith("query")) {
+			if (key == null) {
+				continue;
+			}
+			String normalizedQueryKey = null;
+			if (key.startsWith(MUMBLE_QUERY_KEY)) {
+				normalizedQueryKey = key;
+			} else if (key.startsWith("def_" + MUMBLE_QUERY_KEY)) {
+				normalizedQueryKey = key.substring("def_".length());
+			}
+			if (normalizedQueryKey == null) {
 				continue;
 			}
 			Object queryObject = walker.symbolTable.get(key);
 			if (!(queryObject instanceof HashMap<?, ?>)) {
 				continue;
 			}
-			String suffix = key.substring("query".length());
+			String suffix = normalizedQueryKey.substring(MUMBLE_QUERY_KEY.length());
 			int queryIndex;
 			try {
 				queryIndex = Integer.parseInt(suffix);
@@ -1219,11 +1301,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			ddlAst = subMap;
 		}
 		walker.asTree.put(SQLPARSER_DDL_TREE_KEY, ddlAst);
-
-		HashMap<String, Object> interfaceMap = walker.resolveSetOperationInterfaceMapFromSymbolTable();
-		if (interfaceMap != null) {
-			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
-		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 	}
 
@@ -1239,10 +1316,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		 walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
-		HashMap<String, Object> interfaceMap = walker.resolveSetOperationInterfaceMapFromSymbolTable();
-		if (interfaceMap != null) {
-			walker.validateSetOperationInterface(interfaceMap, ctx.getStart().toString());
-		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 
 	}
@@ -3292,6 +3365,38 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 
 	@Override
+	public void exitSet_operation_member( SQLSelectParserParser.Set_operation_memberContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Map<String, Object> source = (Map<String, Object>) subMap.remove("1");
+		walker.checkForSubstitutionVariable(source, "query");
+
+		if (subMap.isEmpty()) {
+			walker.collect(ruleIndex, stackLevel, source);
+			return;
+		}
+
+		if (subMap.size() == 1 && subMap.containsKey("2") && subMap.get("2") instanceof Map<?, ?> aliasMapObj) {
+			Map<String, Object> aliasMap = (Map<String, Object>) aliasMapObj;
+			Map<String, Object> aliasedSource = new HashMap<String, Object>();
+			if (source != null) {
+				aliasedSource.putAll(source);
+			}
+			aliasedSource.putAll(aliasMap);
+			walker.collect(ruleIndex, stackLevel, aliasedSource);
+			return;
+		}
+
+		walker.collect(ruleIndex, stackLevel, source);
+	}
+
+	@Override
 	public void exitQuery_primary( SQLSelectParserParser.Query_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -3759,6 +3864,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item;
 		String alias = null;
 
+		try {
 		if (ctx.getChildCount() == 1) {
 			item = (Map<String, Object>) subMap.remove("1");
 			if (item.keySet().contains(MUMBLE_TABLE_KEY)) {
@@ -3813,8 +3919,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 
 			} else {
-				subMap.putAll(item);
-				symbolTreeHelper.registerUnaliasedFromSource(item);
+				if (shouldWrapSetOperationAtCurrentLevel(stackLevel, item)) {
+					Map<String, Object> tableItem = new HashMap<String, Object>();
+					tableItem.put(MUMBLE_ALIAS_KEY, null);
+					tableItem.put(MUMBLE_QUERY_KEY, item);
+					subMap.put(MUMBLE_TABLE_KEY, tableItem);
+					registerQueryLikeFromSource(item, null);
+				} else {
+					subMap.putAll(item);
+					symbolTreeHelper.registerUnaliasedFromSource(item);
+				}
 			}
 
 		} else if (ctx.getChildCount() == 2) {
@@ -3855,25 +3969,53 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
 				item.put(MUMBLE_QUERY_KEY, reference);
-				// Add the query to the symbol table tree 
-				Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
-				if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
-				if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
-				if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
-				if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
-				if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
+				registerQueryLikeFromSource(reference, alias);
 			}
 
 			subMap.put(MUMBLE_TABLE_KEY, item);
 		} else {
 			// Wrong number of entries
 		}
+
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+		} finally {
+			if (!setOperationWrapAnchorStackLevels.isEmpty()
+					&& stackLevel != null
+					&& stackLevel.equals(setOperationWrapAnchorStackLevels.peek())) {
+				setOperationWrapAnchorStackLevels.pop();
+			}
+
+			if (tableSourcePrimaryNestingDepth > 0) {
+				tableSourcePrimaryNestingDepth--;
+			}
+		}
+	}
+
+	private boolean isQueryLikeFromSource(Map<String, Object> reference) {
+		if (reference == null || reference.isEmpty()) {
+			return false;
+		}
+
+		return  reference.containsKey(MUMBLE_UNION_KEY)
+				|| reference.containsKey(MUMBLE_INTERSECT_KEY);
+	}
+
+	private void registerQueryLikeFromSource(Map<String, Object> reference, String alias) {
+		if (reference == null || reference.isEmpty()) {
+			return;
+		}
+
+		Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
+		if (!done)
+			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
+		if (!done)
+			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
+		if (!done)
+			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
+		if (!done)
+			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
+		if (!done)
+			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 	}
 
 	// exitTable_primary: composes table_source_primary + optional table_relational_modifier + optional relation_as_clause.

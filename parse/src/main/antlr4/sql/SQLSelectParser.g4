@@ -677,7 +677,13 @@ intersect_operator
   ;
 
 unionized_query
-  : query_primary (union_clause query_primary)*
+  : set_operation_member (union_clause set_operation_member)*
+  ;
+
+set_operation_member
+  : subquery as_clause?
+  | query_specification
+  | variable_identifier
   ;
 
 union_clause
