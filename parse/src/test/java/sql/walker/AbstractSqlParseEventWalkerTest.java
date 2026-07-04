@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.RecognitionException;
@@ -342,6 +344,268 @@ public abstract class AbstractSqlParseEventWalkerTest {
 					"Expected parser error entry not found: " + expectedError,
 					actualErrors.contains(expectedError));
 		}
+	}
+
+	protected String readTestResource(String resourcePath) {
+		Assert.assertNotNull("Resource path must not be null", resourcePath);
+		try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
+			Assert.assertNotNull("Missing test resource: " + resourcePath, inputStream);
+			return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+		} catch (Exception exception) {
+			throw new RuntimeException("Failed to read test resource: " + resourcePath, exception);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	protected void assertSymbolTreePathEqualsFromGolden(
+			Map<String, Object> actualSymbolTree,
+			String jsonLikePath,
+			String goldenSymbolTree) {
+		Assert.assertNotNull("Actual symbol tree must not be null", actualSymbolTree);
+		Assert.assertNotNull("Path must not be null", jsonLikePath);
+		Assert.assertNotNull("Golden symbol tree must not be null", goldenSymbolTree);
+
+		String[] rawParts = jsonLikePath.split("\\.");
+		List<String> pathParts = new ArrayList<String>();
+		for (String rawPart : rawParts) {
+			String part = rawPart == null ? "" : rawPart.trim();
+			if (!part.isEmpty()) {
+				pathParts.add(part);
+			}
+		}
+		Assert.assertFalse("Path must include at least one segment", pathParts.isEmpty());
+
+		Object actualNode = actualSymbolTree;
+		for (String segment : pathParts) {
+			Assert.assertTrue(
+					"Path segment '" + segment + "' is not navigable in actual tree for path '" + jsonLikePath + "'",
+					actualNode instanceof Map<?, ?>);
+			Map<String, Object> currentMap = (Map<String, Object>) actualNode;
+			Assert.assertTrue(
+					"Path segment '" + segment + "' not found in actual tree for path '" + jsonLikePath + "'",
+					currentMap.containsKey(segment));
+			actualNode = currentMap.get(segment);
+		}
+
+		String expectedSubtree = extractMapStyleValueFromGoldenAtPath(goldenSymbolTree, pathParts, jsonLikePath);
+		String actualSubtree = String.valueOf(actualNode);
+		Assert.assertEquals(
+				"Symbol subtree mismatch at path '" + jsonLikePath + "'",
+				expectedSubtree,
+				actualSubtree);
+	}
+
+	@SuppressWarnings("unchecked")
+	protected void assertSymbolTreePathEquals(
+			Map<String, Object> actualSymbolTree,
+			String jsonLikePath,
+			String expectedSubtree) {
+		Assert.assertNotNull("Actual symbol tree must not be null", actualSymbolTree);
+		Assert.assertNotNull("Path must not be null", jsonLikePath);
+		Assert.assertNotNull("Expected subtree must not be null", expectedSubtree);
+
+		String[] rawParts = jsonLikePath.split("\\.");
+		List<String> pathParts = new ArrayList<String>();
+		for (String rawPart : rawParts) {
+			String part = rawPart == null ? "" : rawPart.trim();
+			if (!part.isEmpty()) {
+				pathParts.add(part);
+			}
+		}
+		Assert.assertFalse("Path must include at least one segment", pathParts.isEmpty());
+
+		Object actualNode = actualSymbolTree;
+		for (String segment : pathParts) {
+			Assert.assertTrue(
+					"Path segment '" + segment + "' is not navigable in actual tree for path '" + jsonLikePath + "'",
+					actualNode instanceof Map<?, ?>);
+			Map<String, Object> currentMap = (Map<String, Object>) actualNode;
+			Assert.assertTrue(
+					"Path segment '" + segment + "' not found in actual tree for path '" + jsonLikePath + "'",
+					currentMap.containsKey(segment));
+			actualNode = currentMap.get(segment);
+		}
+
+		Assert.assertEquals(
+				"Symbol subtree mismatch at path '" + jsonLikePath + "'",
+				expectedSubtree,
+				String.valueOf(actualNode));
+	}
+
+	@SuppressWarnings("unchecked")
+	protected void assertSymbolTreePathContainsKeys(
+			Map<String, Object> actualSymbolTree,
+			String jsonLikePath,
+			String... expectedKeys) {
+		Assert.assertNotNull("Actual symbol tree must not be null", actualSymbolTree);
+		Assert.assertNotNull("Path must not be null", jsonLikePath);
+		Assert.assertNotNull("Expected keys must not be null", expectedKeys);
+
+		String[] rawParts = jsonLikePath.split("\\.");
+		List<String> pathParts = new ArrayList<String>();
+		for (String rawPart : rawParts) {
+			String part = rawPart == null ? "" : rawPart.trim();
+			if (!part.isEmpty()) {
+				pathParts.add(part);
+			}
+		}
+		Assert.assertFalse("Path must include at least one segment", pathParts.isEmpty());
+
+		Object actualNode = actualSymbolTree;
+		for (String segment : pathParts) {
+			Assert.assertTrue(
+					"Path segment '" + segment + "' is not navigable in actual tree for path '" + jsonLikePath + "'",
+					actualNode instanceof Map<?, ?>);
+			Map<String, Object> currentMap = (Map<String, Object>) actualNode;
+			Assert.assertTrue(
+					"Path segment '" + segment + "' not found in actual tree for path '" + jsonLikePath + "'",
+					currentMap.containsKey(segment));
+			actualNode = currentMap.get(segment);
+		}
+
+		Assert.assertTrue(
+				"Path '" + jsonLikePath + "' does not resolve to a map node",
+				actualNode instanceof Map<?, ?>);
+		Map<String, Object> nodeMap = (Map<String, Object>) actualNode;
+		for (String expectedKey : expectedKeys) {
+			Assert.assertTrue(
+					"Expected key '" + expectedKey + "' not found at path '" + jsonLikePath + "'",
+					nodeMap.containsKey(expectedKey));
+		}
+	}
+
+	private String extractMapStyleValueFromGoldenAtPath(
+			String goldenSymbolTree,
+			List<String> pathParts,
+			String jsonLikePath) {
+		String cursor = goldenSymbolTree.trim();
+		if (cursor.startsWith("Symbol Tree:")) {
+			cursor = cursor.substring("Symbol Tree:".length()).trim();
+		}
+
+		for (String segment : pathParts) {
+			Assert.assertTrue(
+					"Golden tree is not map-shaped while resolving segment '" + segment + "' for path '" + jsonLikePath + "'",
+					cursor.startsWith("{") && cursor.endsWith("}"));
+			String next = extractTopLevelMapValueByKey(cursor, segment);
+			Assert.assertNotNull(
+					"Path segment '" + segment + "' not found in golden tree for path '" + jsonLikePath + "'",
+					next);
+			cursor = next;
+		}
+
+		return cursor;
+	}
+
+	private String extractTopLevelMapValueByKey(String mapText, String key) {
+		String trimmed = mapText.trim();
+		if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+			return null;
+		}
+
+		String body = trimmed.substring(1, trimmed.length() - 1);
+		for (String entry : splitTopLevelMapEntries(body)) {
+			int equalsIndex = findTopLevelEqualsIndex(entry);
+			if (equalsIndex < 0) {
+				continue;
+			}
+			String entryKey = entry.substring(0, equalsIndex).trim();
+			if (!key.equals(entryKey)) {
+				continue;
+			}
+			return entry.substring(equalsIndex + 1).trim();
+		}
+
+		return null;
+	}
+
+	private List<String> splitTopLevelMapEntries(String body) {
+		ArrayList<String> entries = new ArrayList<String>();
+		if (body == null || body.isEmpty()) {
+			return entries;
+		}
+
+		int curlyDepth = 0;
+		int squareDepth = 0;
+		int parenDepth = 0;
+		int tokenStart = 0;
+
+		for (int index = 0; index < body.length(); index++) {
+			char ch = body.charAt(index);
+			switch (ch) {
+			case '{':
+				curlyDepth++;
+				break;
+			case '}':
+				curlyDepth--;
+				break;
+			case '[':
+				squareDepth++;
+				break;
+			case ']':
+				squareDepth--;
+				break;
+			case '(':
+				parenDepth++;
+				break;
+			case ')':
+				parenDepth--;
+				break;
+			case ',':
+				if (curlyDepth == 0 && squareDepth == 0 && parenDepth == 0) {
+					entries.add(body.substring(tokenStart, index).trim());
+					tokenStart = index + 1;
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (tokenStart <= body.length()) {
+			entries.add(body.substring(tokenStart).trim());
+		}
+
+		return entries;
+	}
+
+	private int findTopLevelEqualsIndex(String entry) {
+		int curlyDepth = 0;
+		int squareDepth = 0;
+		int parenDepth = 0;
+
+		for (int index = 0; index < entry.length(); index++) {
+			char ch = entry.charAt(index);
+			switch (ch) {
+			case '{':
+				curlyDepth++;
+				break;
+			case '}':
+				curlyDepth--;
+				break;
+			case '[':
+				squareDepth++;
+				break;
+			case ']':
+				squareDepth--;
+				break;
+			case '(':
+				parenDepth++;
+				break;
+			case ')':
+				parenDepth--;
+				break;
+			case '=':
+				if (curlyDepth == 0 && squareDepth == 0 && parenDepth == 0) {
+					return index;
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		return -1;
 	}
 
 	// *****************

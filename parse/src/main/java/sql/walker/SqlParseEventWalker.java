@@ -812,6 +812,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Map<String, Object> queryMap = null;
+		String selectedNormalizedQueryKey = null;
 		int topQueryIndex = -1;
 		for (String key : walker.symbolTable.keySet()) {
 			if (key == null) {
@@ -839,20 +840,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			if (queryIndex > topQueryIndex) {
 				topQueryIndex = queryIndex;
+				selectedNormalizedQueryKey = normalizedQueryKey;
 				queryMap = (Map<String, Object>) queryObject;
 			}
 		}
 
+		if (queryMap != null) {
+			queryMap = resolveFinalQueryScope(queryMap, selectedNormalizedQueryKey);
+		}
+
 		if (queryMap == null) {
 			for (String key : walker.symbolTable.keySet()) {
-				if (!(key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY))) {
+				if (key == null) {
+					continue;
+				}
+
+				String normalizedSetOpKey = null;
+				if (key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY)) {
+					normalizedSetOpKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_UNION_KEY)
+						|| key.startsWith("def_" + MUMBLE_INTERSECT_KEY)) {
+					normalizedSetOpKey = key.substring("def_".length());
+				}
+
+				if (normalizedSetOpKey == null) {
 					continue;
 				}
 				Object scopedObject = walker.symbolTable.get(key);
 				if (!(scopedObject instanceof HashMap<?, ?>)) {
 					continue;
 				}
-				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				String numericSuffix = normalizedSetOpKey.replaceFirst("^[^0-9]+", "");
 				int scopeIndex;
 				try {
 					scopeIndex = Integer.parseInt(numericSuffix);
@@ -998,6 +1016,61 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		return interfac;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> resolveFinalQueryScope(Map<String, Object> queryMap, String normalizedQueryKey) {
+		if (queryMap == null) {
+			return null;
+		}
+
+		if (queryMap.get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?>) {
+			return queryMap;
+		}
+
+		if (normalizedQueryKey != null) {
+			Object exactChild = queryMap.get("def_" + normalizedQueryKey);
+			if (exactChild instanceof Map<?, ?> exactChildMap
+					&& ((Map<String, Object>) exactChildMap).get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?>) {
+				return (Map<String, Object>) exactChildMap;
+			}
+		}
+
+		Map<String, Object> bestQueryMap = null;
+		int bestIndex = -1;
+		for (Map.Entry<String, Object> entry : queryMap.entrySet()) {
+			String key = entry.getKey();
+			if (key == null || !key.startsWith("def_" + MUMBLE_QUERY_KEY)) {
+				continue;
+			}
+			if (!(entry.getValue() instanceof Map<?, ?> nestedMapRaw)) {
+				continue;
+			}
+
+			String suffix = key.substring(("def_" + MUMBLE_QUERY_KEY).length());
+			int idx;
+			try {
+				idx = Integer.parseInt(suffix);
+			} catch (NumberFormatException ex) {
+				continue;
+			}
+
+			Map<String, Object> nestedMap = (Map<String, Object>) nestedMapRaw;
+			if (!(nestedMap.get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?>)) {
+				continue;
+			}
+
+			if (idx > bestIndex) {
+				bestIndex = idx;
+				bestQueryMap = nestedMap;
+			}
+		}
+
+		if (bestQueryMap != null) {
+			return bestQueryMap;
+		}
+
+		return queryMap;
 	}
 
 	/**
@@ -2292,7 +2365,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashMap<String, Object> symbols = walker.symbolTable;
 		symbolTreeHelper.mergeCteListIntoQueryScope(currentQuerySymbolTable, symbols);
 		walker.symbolTable = new HashMap<String, Object>();
-		walker.symbolTable.put(queryName, currentQuerySymbolTable);
+		String publishedWithScopeKey = queryName.startsWith("def_") ? queryName : "def_" + queryName;
+		walker.symbolTable.put(publishedWithScopeKey, currentQuerySymbolTable);
 		currentQuerySymbolTable.putAll(symbols);
 		symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
 

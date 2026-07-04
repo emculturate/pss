@@ -81,3 +81,45 @@ bash tools/run-jacoco-with-previous.sh
 ```bash
 bash tools/run-jacoco-with-previous.sh verify -Dtest=sql.walker.SqlParseEventWalkerWithAccessObjectTest
 ```
+
+## Symbol-Path Assertion Generator
+
+Use this helper to generate generic path-based subtree assertions from parser output maps.
+
+What it does:
+
+- Runs SQL through the parser.
+- Selects a root map/object (`symbolTable`, `tableDictionary`, `queryDictionary`, `sqlTree`, `substitutionsMap`, or `arrayOutputCollectors`).
+- Walks all dotted subpaths under that root.
+- Filters emitted paths with a regex you provide.
+- Emits Java snippets:
+	- `final String expected... = "...";`
+	- `assertSymbolTreePathEquals(extractor.getSymbolTable(), "path", expected...);`
+
+Usage:
+
+```bash
+python3 tools/generate_symbol_path_assertions.py --sql-file /tmp/query.sql
+```
+
+Example filtering to only `def_` symbol-table paths:
+
+```bash
+python3 tools/generate_symbol_path_assertions.py \
+	--sql-file /tmp/query.sql \
+	--root symbolTable \
+	--path-regex '.*def_.*'
+```
+
+Optional arguments:
+
+- `--assertion-method` (default: `assertSymbolTreePathEquals`)
+- `--root` (default: `symbolTable`)
+- `--path-regex` (default: `.*`)
+- `--variable-prefix` (default: `expected`)
+- `--skip-build` to skip Maven `test-compile` if classes are already built
+
+Notes:
+
+- The Java generator class is `cli.SymbolTreeAssertionGenerator`.
+- Output is intended to be pasted into JUnit test methods where you want explicit path+golden assertions.
