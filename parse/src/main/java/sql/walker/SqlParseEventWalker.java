@@ -886,14 +886,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (queryMap == null) {
 			for (String key : walker.symbolTable.keySet()) {
-				if (key == null || !key.startsWith(MUMBLE_UPDATE_KEY)) {
+				if (key == null) {
 					continue;
 				}
+
+				String normalizedUpdateKey = null;
+				if (key.startsWith(MUMBLE_UPDATE_KEY)) {
+					normalizedUpdateKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_UPDATE_KEY)) {
+					normalizedUpdateKey = key.substring("def_".length());
+				}
+				if (normalizedUpdateKey == null) {
+					continue;
+				}
+
 				Object scopedObject = walker.symbolTable.get(key);
 				if (!(scopedObject instanceof HashMap<?, ?>)) {
 					continue;
 				}
-				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				String numericSuffix = normalizedUpdateKey.replaceFirst("^[^0-9]+", "");
 				int scopeIndex;
 				try {
 					scopeIndex = Integer.parseInt(numericSuffix);
@@ -909,14 +920,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (queryMap == null) {
 			for (String key : walker.symbolTable.keySet()) {
-				if (key == null || !key.startsWith(MUMBLE_INSERT_KEY)) {
+				if (key == null) {
 					continue;
 				}
+
+				String normalizedInsertKey = null;
+				if (key.startsWith(MUMBLE_INSERT_KEY)) {
+					normalizedInsertKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_INSERT_KEY)) {
+					normalizedInsertKey = key.substring("def_".length());
+				}
+				if (normalizedInsertKey == null) {
+					continue;
+				}
+
 				Object scopedObject = walker.symbolTable.get(key);
 				if (!(scopedObject instanceof HashMap<?, ?>)) {
 					continue;
 				}
-				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				String numericSuffix = normalizedInsertKey.replaceFirst("^[^0-9]+", "");
 				int scopeIndex;
 				try {
 					scopeIndex = Integer.parseInt(numericSuffix);
@@ -932,14 +954,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (queryMap == null) {
 			for (String key : walker.symbolTable.keySet()) {
-				if (key == null || !key.startsWith(MUMBLE_DELETE_KEY)) {
+				if (key == null) {
 					continue;
 				}
+
+				String normalizedDeleteKey = null;
+				if (key.startsWith(MUMBLE_DELETE_KEY)) {
+					normalizedDeleteKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_DELETE_KEY)) {
+					normalizedDeleteKey = key.substring("def_".length());
+				}
+				if (normalizedDeleteKey == null) {
+					continue;
+				}
+
 				Object scopedObject = walker.symbolTable.get(key);
 				if (!(scopedObject instanceof HashMap<?, ?>)) {
 					continue;
 				}
-				String numericSuffix = key.replaceFirst("^[^0-9]+", "");
+				String numericSuffix = normalizedDeleteKey.replaceFirst("^[^0-9]+", "");
 				int scopeIndex;
 				try {
 					scopeIndex = Integer.parseInt(numericSuffix);
@@ -3297,6 +3330,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitIntersect_clause( SQLSelectParserParser.Intersect_clauseContext ctx) {
+		if (walker.firstIntersectClause && ctx != null && ctx.getStart() != null) {
+			walker.setCurrentSetOperationOperatorAnchor(ctx.getStart());
+		}
+
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -3391,6 +3428,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitUnion_clause( SQLSelectParserParser.Union_clauseContext ctx) {
+		if (walker.firstUnionClause && ctx != null && ctx.getStart() != null) {
+			walker.setCurrentSetOperationOperatorAnchor(ctx.getStart());
+		}
+
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);

@@ -113,6 +113,13 @@
 
 ## Consolidation Status (As Of 2026-07-03)
 
+## Phase 5 Direction Lock (2026-07-04)
+
+- Definition payload lookup is now strict `def_*` only.
+- No fallback path should read live keys (`queryN`/`unionN`/`intersectN`/`valuesN`) when resolving published scope payload maps.
+- Alias/reference flow remains live-key based, but must translate to `def_*` before payload retrieval.
+- Any drift from this change should be reviewed as intentional contract tightening first, then either accepted (golden update) or corrected in logic.
+
 This section summarizes where we are after the def-key canonicalization follow-on work and what remains to complete the consolidation.
 
 ### Done Since Phases 1-4

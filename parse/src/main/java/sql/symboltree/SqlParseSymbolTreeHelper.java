@@ -49,6 +49,10 @@ public class SqlParseSymbolTreeHelper {
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY;
 	private static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY =
 			SqlASTWalkerHelper.TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY;
+	private static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY =
+			SqlASTWalkerHelper.TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY;
+	private static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY =
+			SqlASTWalkerHelper.TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY;
 	public static final String RELATIONAL_MODIFIER_OPERATOR_KEY = "operator";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
@@ -2224,7 +2228,10 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Object insertScopeObj = walker.symbolTable.get(insertScopeKey);
+		// publishQueryLikeScope stores the payload under def_<key> and removes the live key,
+		// so we must look up the definition key here.
+		String insertDefinitionScopeKey = toDefinitionScopeKey(insertScopeKey);
+		Object insertScopeObj = walker.symbolTable.get(insertDefinitionScopeKey);
 		if (!(insertScopeObj instanceof Map<?, ?> insertScopeMapObj)) {
 			return;
 		}
@@ -2275,8 +2282,8 @@ public class SqlParseSymbolTreeHelper {
 		if (insertScopeKey == null || insertScopeKey.isBlank()) {
 			return;
 		}
-
-		Object insertScopeObj = walker.symbolTable.get(insertScopeKey);
+		String insertDefinitionScopeKey = toDefinitionScopeKey(insertScopeKey);
+		Object insertScopeObj = walker.symbolTable.get(insertDefinitionScopeKey);
 		if (!(insertScopeObj instanceof Map<?, ?> insertScopeMapObj)) {
 			return;
 		}
@@ -2311,7 +2318,8 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		walker.queryColumnDictionaryMap.put(insertScopeKey, queryDictionary);
+		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(insertDefinitionScopeKey), queryDictionary);
+		mergeIntoGlobalQueryColumnDictionary(insertDefinitionScopeKey, queryDictionary);
 		insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
 	}
 
@@ -2320,7 +2328,8 @@ public class SqlParseSymbolTreeHelper {
 		if (updateScopeKey == null || updateScopeKey.isBlank()) {
 			return;
 		}
-		Object updateScopeObj = walker.symbolTable.get(updateScopeKey);
+		String updateDefinitionScopeKey = toDefinitionScopeKey(updateScopeKey);
+		Object updateScopeObj = walker.symbolTable.get(updateDefinitionScopeKey);
 		if (!(updateScopeObj instanceof Map<?, ?> updateScopeMapObj)) {
 			return;
 		}
@@ -2334,7 +2343,8 @@ public class SqlParseSymbolTreeHelper {
 		if (queryDictionary.isEmpty()) {
 			return;
 		}
-		walker.queryColumnDictionaryMap.put(updateScopeKey, queryDictionary);
+		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(updateDefinitionScopeKey), queryDictionary);
+		mergeIntoGlobalQueryColumnDictionary(updateDefinitionScopeKey, queryDictionary);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3722,7 +3732,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-		walker.queryColumnDictionaryMap.put(scopeKey, localCurrentQueryDictionary);
+		mergeIntoGlobalQueryColumnDictionary(scopeKey, localCurrentQueryDictionary);
 		scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
 		if (projectSelectIntoTarget && querySpecificationSubMap != null) {
 			projectSelectIntoTargetFromInterface(querySpecificationSubMap, scopeSymbols, localCurrentQueryDictionary);
@@ -3885,6 +3895,8 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> scopedSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
 		HashMap<String, Object> scopedQuerySummaryKeysMap = removeScopedQuerySummaryKeysMap(scopePayload);
 		HashMap<String, Object> scopeSummary = walker.buildSetOperationInterfaceSummary(scopeKey, scopePayload);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
 		if (scopeSummary != null && !scopeSummary.isEmpty()) {
 			ArrayList<String> lineageSummaryKeys = buildSetOperationParticipantLineageSummaryKeys(
 					scopePayload,
@@ -3928,7 +3940,7 @@ public class SqlParseSymbolTreeHelper {
 
 		String updateScopeKey = MUMBLE_UPDATE_KEY + walker.queryCount;
 		stripUnresolvedFromScopePayload(walker.symbolTable);
-		publishScopeSymbolTable(updateScopeKey, walker.symbolTable);
+		publishQueryLikeScope(updateScopeKey, walker.symbolTable);
 		publishUpdateScopeQueryDictionary(updateScopeKey);
 	}
 
@@ -4071,6 +4083,7 @@ public class SqlParseSymbolTreeHelper {
 		convertSymbolTableToTableDictionary(false, false, null);
 
 		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
+		String deleteDefinitionScopeKey = toDefinitionScopeKey(deleteScopeKey);
 		HashMap<String, Object> scopeSymbols = walker.symbolTable;
 		if (publishReturningQueryDictionary) {
 			HashMap<String, Object> localCurrentQueryDictionary =
@@ -4079,7 +4092,8 @@ public class SqlParseSymbolTreeHelper {
 				localCurrentQueryDictionary = new HashMap<String, Object>();
 			}
 			sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-			walker.queryColumnDictionaryMap.put(deleteScopeKey, localCurrentQueryDictionary);
+			mergeIntoGlobalQueryColumnDictionary(deleteScopeKey, localCurrentQueryDictionary);
+			mergeIntoGlobalQueryColumnDictionary(deleteDefinitionScopeKey, localCurrentQueryDictionary);
 			scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
 		}
 
@@ -4088,7 +4102,7 @@ public class SqlParseSymbolTreeHelper {
 				deleteTargetTableRef,
 				deleteTargetAlias);
 
-		publishScopeSymbolTable(deleteScopeKey, scopeSymbols);
+		publishQueryLikeScope(deleteScopeKey, scopeSymbols);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4302,7 +4316,7 @@ public class SqlParseSymbolTreeHelper {
 		finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
 
 		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
-		publishScopeSymbolTable(insertScopeKey, walker.symbolTable);
+		publishQueryLikeScope(insertScopeKey, walker.symbolTable);
 		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
 		publishInsertScopeQueryDictionary(insertScopeKey);
 	}
@@ -4344,8 +4358,8 @@ public class SqlParseSymbolTreeHelper {
 
 		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
-			walker.queryColumnDictionaryMap.put(liveScopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
-			walker.queryColumnDictionaryMap.put(definitionKey, (HashMap<String, Object>) queryDictionaryMapObj);
+			mergeIntoGlobalQueryColumnDictionary(liveScopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
+			mergeIntoGlobalQueryColumnDictionary(definitionKey, (HashMap<String, Object>) queryDictionaryMapObj);
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
@@ -8741,6 +8755,38 @@ public class SqlParseSymbolTreeHelper {
 		return normalizedSourceRef;
 	}
 
+	@SuppressWarnings("unchecked")
+	private void mergeIntoGlobalQueryColumnDictionary(String queryScopeKey, HashMap<String, Object> queryDictionary) {
+		if (queryScopeKey == null || queryScopeKey.isBlank() || queryDictionary == null || queryDictionary.isEmpty()) {
+			return;
+		}
+
+		String normalizedScopeKey = normalizeQuerySourceReference(queryScopeKey);
+		if (normalizedScopeKey == null || normalizedScopeKey.isBlank()) {
+			return;
+		}
+
+		Object existingObj = walker.queryColumnDictionaryMap.get(normalizedScopeKey);
+		if (!(existingObj instanceof HashMap<?, ?> existingMapObj)) {
+			walker.queryColumnDictionaryMap.put(normalizedScopeKey, new HashMap<String, Object>(queryDictionary));
+			return;
+		}
+
+		HashMap<String, Object> existingMap = (HashMap<String, Object>) existingMapObj;
+		for (Map.Entry<String, Object> entry : queryDictionary.entrySet()) {
+			String columnName = entry.getKey();
+			if (columnName == null) {
+				continue;
+			}
+			Object existingRefs = existingMap.get(columnName);
+			if (existingRefs == null) {
+				existingMap.put(columnName, entry.getValue());
+				continue;
+			}
+			existingMap.put(columnName, mergeReferenceCollections(existingRefs, entry.getValue()));
+		}
+	}
+
 	public boolean isDefinitionScopeKey(String scopeKey) {
 		return scopeKey != null && scopeKey.startsWith("def_");
 	}
@@ -8791,36 +8837,14 @@ public class SqlParseSymbolTreeHelper {
 			if (queryObj instanceof Map<?, ?>) {
 				return queryObj;
 			}
-
-			queryObj = queryCollection.get(normalizedQueryRef);
-			if (queryObj instanceof Map<?, ?>) {
-				return queryObj;
-			}
-
-			if (queryRef != null && !queryRef.equals(normalizedQueryRef)) {
-				queryObj = queryCollection.get(queryRef);
-				if (queryObj instanceof Map<?, ?>) {
-					return queryObj;
-				}
-			}
 		}
 
-		Object queryObj = walker.symbolTable.get(defQueryRef);
+		Object queryObj = findDefinitionSymbolInVisibleScopes(defQueryRef);
 		if (queryObj instanceof Map<?, ?>) {
 			return queryObj;
 		}
 
-		queryObj = walker.symbolTable.get(normalizedQueryRef);
-		if (queryObj instanceof Map<?, ?>) {
-			return queryObj;
-		}
-
-		queryObj = findInCurrentOrAncestorSymbolTables(defQueryRef);
-		if (queryObj instanceof Map<?, ?>) {
-			return queryObj;
-		}
-
-		return findInCurrentOrAncestorSymbolTablesRecursive(defQueryRef);
+		return null;
 	}
 
 	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
@@ -8833,18 +8857,6 @@ public class SqlParseSymbolTreeHelper {
 		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(defQueryRef);
 		if (queryDictionaryObj instanceof Map<?, ?>) {
 			return queryDictionaryObj;
-		}
-
-		queryDictionaryObj = walker.queryColumnDictionaryMap.get(normalizedQueryRef);
-		if (queryDictionaryObj instanceof Map<?, ?>) {
-			return queryDictionaryObj;
-		}
-
-		if (queryRef != null && !queryRef.equals(normalizedQueryRef)) {
-			queryDictionaryObj = walker.queryColumnDictionaryMap.get(queryRef);
-			if (queryDictionaryObj instanceof Map<?, ?>) {
-				return queryDictionaryObj;
-			}
 		}
 
 		return null;
@@ -9405,6 +9417,13 @@ public class SqlParseSymbolTreeHelper {
 		return toDefinitionScopeKey(queryKey);
 	}
 
+	private Object findDefinitionSymbolInVisibleScopes(String definitionKey) {
+		if (definitionKey == null || definitionKey.isBlank()) {
+			return null;
+		}
+		return findInCurrentOrAncestorSymbolTables(definitionKey);
+	}
+
 	public Object getQueryDefinitionSymbol(String queryKey) {
 		if (queryKey == null || queryKey.isBlank()) {
 			return null;
@@ -9412,60 +9431,22 @@ public class SqlParseSymbolTreeHelper {
 
 		String definitionKey = normalizeQueryScopeDefinitionKey(queryKey);
 		if (definitionKey != null) {
-			Object normalizedDefObj = findInCurrentOrAncestorSymbolTables(definitionKey);
-			if (normalizedDefObj == null) {
-				normalizedDefObj = findInCurrentOrAncestorSymbolTablesRecursive(definitionKey);
-			}
+			Object normalizedDefObj = findDefinitionSymbolInVisibleScopes(definitionKey);
 			if (normalizedDefObj != null) {
 				return normalizedDefObj;
 			}
 		}
 
-		Object directObj = walker.symbolTable.get(queryKey);
-		if (directObj instanceof Map<?, ?> directMap
-				&& ((Map<?, ?>) directMap).containsKey(MUMBLE_INTERFACE_KEY)) {
-			return directObj;
-		}
-
-		if (isDefinitionScopeKey(queryKey)) {
-			if (directObj != null) {
-				return directObj;
-			}
-			Object scopedDefObj = findInCurrentOrAncestorSymbolTables(queryKey);
-			if (scopedDefObj != null) {
-				return scopedDefObj;
-			}
-			return findInCurrentOrAncestorSymbolTablesRecursive(queryKey);
-		}
-
 		String cteScopeRef = resolveCteScopeReference(queryKey, null);
 		if (cteScopeRef != null && !cteScopeRef.isBlank()) {
-			Object cteScopeObj = findInCurrentOrAncestorSymbolTables(cteScopeRef);
-			if (cteScopeObj == null) {
-				cteScopeObj = findInCurrentOrAncestorSymbolTablesRecursive(cteScopeRef);
-			}
-			if (cteScopeObj instanceof Map<?, ?> cteScopeMap
-					&& ((Map<?, ?>) cteScopeMap).containsKey(MUMBLE_INTERFACE_KEY)) {
-				return cteScopeObj;
-			}
-
 			String cteDefinitionKey = toDefinitionScopeKey(cteScopeRef);
-			Object cteDefScopeObj = findInCurrentOrAncestorSymbolTables(cteDefinitionKey);
-			if (cteDefScopeObj == null) {
-				cteDefScopeObj = findInCurrentOrAncestorSymbolTablesRecursive(cteDefinitionKey);
-			}
+			Object cteDefScopeObj = findDefinitionSymbolInVisibleScopes(cteDefinitionKey);
 			if (cteDefScopeObj != null) {
 				return cteDefScopeObj;
 			}
 		}
 
-		String queryDefinitionKey = toDefinitionScopeKey(queryKey);
-		Object queryDefObj = findInCurrentOrAncestorSymbolTables(queryDefinitionKey);
-		if (queryDefObj != null) {
-			return queryDefObj;
-		}
-
-		return findInCurrentOrAncestorSymbolTablesRecursive(queryDefinitionKey);
+		return null;
 	}
 
 	/**
@@ -10769,6 +10750,8 @@ public class SqlParseSymbolTreeHelper {
 		}
 		scopePayload.remove(MUMBLE_INHERITED_VISIBLE_ALIASES_KEY);
 		scopePayload.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
 	}
 
 	private void stripWalkTimeKeysFromScopePayload(HashMap<String, Object> scopePayload) {
@@ -10780,6 +10763,8 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
 		scopePayload.remove(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
 		scopePayload.remove(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);

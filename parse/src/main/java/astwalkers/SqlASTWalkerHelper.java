@@ -31,6 +31,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED = "SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
+		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
+		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY = "_tmp_set_operation_operator_anchor_char";
 
 		
     /*************************************
@@ -1202,6 +1204,19 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
+		// Collect set-operation keys that are JOIN-subquery alias targets — these are
+		// independent subquery sources (accessed via table alias) and must NOT be treated
+		// as set-operation siblings of each other.
+		HashSet<String> joinAliasTargets = new HashSet<>();
+		Object tableAliasObj = symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof Map<?, ?> tableAliasMap) {
+			for (Object aliasTarget : tableAliasMap.values()) {
+				if (aliasTarget instanceof String s) {
+					joinAliasTargets.add(s);
+				}
+			}
+		}
+
 		ArrayList<Map.Entry<String, HashMap<String, Object>>> setOperationEntries =
 				new ArrayList<Map.Entry<String, HashMap<String, Object>>>();
 		for (Map.Entry<String, Object> symbolEntry : symbolTable.entrySet()) {
@@ -1213,6 +1228,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				continue;
 			}
 			String liveKey = normalizeSetOperationScopeKey(key);
+			// Skip set-operations that are referenced as JOIN subquery aliases — they are
+			// not set-operation participants of one another.
+			if (joinAliasTargets.contains(liveKey)) {
+				continue;
+			}
 			setOperationEntries.add(Map.entry(liveKey, (HashMap<String, Object>) entryMap));
 		}
 
@@ -1323,6 +1343,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		String baselineKey = topLevelSetOperationKeys.get(0);
+		String topLevelMismatchType = resolveTopLevelSiblingGroupMismatchType(topLevelSetOperationKeys);
 		Map<String, Object> baselineSetOperationMap = entryMapByKey.get(baselineKey);
 		if (baselineSetOperationMap == null) {
 			return;
@@ -1373,7 +1394,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 			String diagMessage = (diagTemplate == null)
 					? String.format(
-							"SET_OPERATION has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
+							"%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
+							topLevelMismatchType,
 							expectedCount,
 							expectedSummary.columnNamesCsv(),
 							expectedLineText,
@@ -1384,7 +1406,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualCharText)
 					: String.format(
 							diagTemplate,
-							"SET_OPERATION",
+							topLevelMismatchType,
 							expectedCount,
 							expectedSummary.columnNamesCsv(),
 							expectedLineText,
@@ -1395,7 +1417,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualCharText);
 
 			emitSetOperationMismatchFatalIfNew(
-					"SET_OPERATION",
+					topLevelMismatchType,
 					diagCode,
 					diagMessage,
 					actualLine,
@@ -1499,6 +1521,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
 		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
+		String topLevelMismatchType = resolveSetOperationMismatchType(topSetOperationKey);
 
 		for (int i = 1; i < orderedParticipantSummaryKeys.size(); i++) {
 			String actualSummaryKey = orderedParticipantSummaryKeys.get(i);
@@ -1525,7 +1548,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 			String diagMessage = (diagTemplate == null)
 					? String.format(
-							"SET_OPERATION has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
+							"%s has different column counts. Expected %s columns (%s) at (l:%s c:%s) but there were %s (%s) at (l:%s c:%s).",
+							topLevelMismatchType,
 							expectedCount,
 							expectedColumns,
 							expectedLineText,
@@ -1536,7 +1560,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualCharText)
 					: String.format(
 							diagTemplate,
-							"SET_OPERATION",
+							topLevelMismatchType,
 							expectedCount,
 							expectedColumns,
 							expectedLineText,
@@ -1547,7 +1571,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							actualCharText);
 
 			emitSetOperationMismatchFatalIfNew(
-					"SET_OPERATION",
+					topLevelMismatchType,
 					diagCode,
 					diagMessage,
 					actualLine,
@@ -1562,6 +1586,45 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					actualLine,
 					actualChar);
 		}
+	}
+
+	private String resolveSetOperationMismatchType(String setOperationKey) {
+		String normalizedKey = normalizeSetOperationScopeKey(setOperationKey);
+		if (normalizedKey == null || normalizedKey.isBlank()) {
+			return "SET_OPERATION";
+		}
+		if (normalizedKey.startsWith(MUMBLE_INTERSECT_KEY)) {
+			return "INTERSECTION";
+		}
+		if (normalizedKey.startsWith(MUMBLE_UNION_KEY)) {
+			return "UNION";
+		}
+		return "SET_OPERATION";
+	}
+
+	private String resolveTopLevelSiblingGroupMismatchType(List<String> topLevelSetOperationKeys) {
+		if (topLevelSetOperationKeys == null || topLevelSetOperationKeys.isEmpty()) {
+			return "SET_OPERATION";
+		}
+
+		boolean allIntersect = true;
+		boolean allUnion = true;
+		for (String setOperationKey : topLevelSetOperationKeys) {
+			String normalizedKey = normalizeSetOperationScopeKey(setOperationKey);
+			boolean isIntersect = normalizedKey != null && normalizedKey.startsWith(MUMBLE_INTERSECT_KEY);
+			boolean isUnion = normalizedKey != null && normalizedKey.startsWith(MUMBLE_UNION_KEY);
+			allIntersect = allIntersect && isIntersect;
+			allUnion = allUnion && isUnion;
+		}
+
+		if (allIntersect) {
+			return "UNION";
+		}
+		if (allUnion) {
+			return "INTERSECTION";
+		}
+
+		return resolveSetOperationMismatchType(topLevelSetOperationKeys.get(0));
 	}
 
 	private void emitSetOperationMismatchFatalIfNew(
@@ -1824,6 +1887,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return new HashMap<String, Object>();
 	}
 
+	public void setCurrentSetOperationOperatorAnchor(Token operatorToken) {
+		if (operatorToken == null) {
+			return;
+		}
+
+		symbolTable.put(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY, operatorToken.getLine());
+		symbolTable.put(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY, operatorToken.getCharPositionInLine());
+	}
+
 	public HashMap<String, Object> buildSetOperationInterfaceSummary(
 			String setOperationKey,
 			Map<String, Object> scopeDefinition) {
@@ -1846,6 +1918,15 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		ColumnListSummary summary = withSetOperationAnchorFallback(
 				buildColumnListSummary(interfaceMap, queryDictionary),
 				scopeDefinition);
+		Integer explicitAnchorLine = getSetOperationSummaryInteger(
+				scopeDefinition,
+				TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
+		Integer explicitAnchorChar = getSetOperationSummaryInteger(
+				scopeDefinition,
+				TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
+		if (explicitAnchorLine != null && explicitAnchorChar != null) {
+			summary = new ColumnListSummary(summary.columnNamesCsv(), explicitAnchorLine, explicitAnchorChar);
+		}
 
 		HashMap<String, Object> summaryMap = new HashMap<String, Object>();
 		summaryMap.put(SET_OPERATION_SUMMARY_KEY, setOperationKey);
@@ -1888,6 +1969,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (setOperationMap == null || setOperationMap.isEmpty()) {
 			return;
 		}
+
+		Map<String, Object> summaryBySetOperationKey = getCurrentSetOperationSummaryMap();
 
 		String normalizedSetOperationKey = normalizeSetOperationScopeKey(setOperationKey);
 		String setOperationType = normalizedSetOperationKey != null
@@ -1945,6 +2028,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		ColumnListSummary expectedSummary = withSetOperationAnchorFallback(
 				buildColumnListSummary(baselineInterface, baselineQueryDictionary),
 				setOperationMap);
+		expectedSummary = withSetOperationSummaryAnchorFallback(
+				expectedSummary,
+				summaryBySetOperationKey,
+				normalizeSetOperationScopeKey(baselineKey));
 
 		String diagCode = getDiagnosticCode(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
 		String diagTemplate = getDiagnosticMessage(DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH);
@@ -1955,6 +2042,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (queryMap == null || queryInterfaceMap == null) {
 				continue;
 			}
+
+			String normalizedParticipantKey = normalizeSetOperationScopeKey(setEntryKey);
 
 			int actualCount = queryInterfaceMap.size();
 			if (actualCount == expectedCount) {
@@ -1967,6 +2056,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 							queryInterfaceMap,
 							queryDictionary),
 					setOperationMap);
+			actualSummary = withSetOperationSummaryAnchorFallback(
+					actualSummary,
+					summaryBySetOperationKey,
+					normalizedParticipantKey);
 			ColumnListSummary effectiveExpectedSummary = buildExpectedSetOperationColumnSummary(
 					setOperationMap,
 					baselineInterface,
@@ -1976,6 +2069,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				effectiveExpectedSummary = expectedSummary;
 			}
 			effectiveExpectedSummary = withSetOperationAnchorFallback(effectiveExpectedSummary, setOperationMap);
+			effectiveExpectedSummary = withSetOperationSummaryAnchorFallback(
+					effectiveExpectedSummary,
+					summaryBySetOperationKey,
+					normalizeSetOperationScopeKey(baselineKey));
 
 			Integer expectedLine = effectiveExpectedSummary.anchorLine();
 			Integer expectedChar = effectiveExpectedSummary.anchorChar();
@@ -2026,6 +2123,44 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					actualLine,
 					actualChar);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> getCurrentSetOperationSummaryMap() {
+		Object summaryObj = symbolTable.get(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
+		if (!(summaryObj instanceof Map<?, ?> summaryMapObj)) {
+			return new HashMap<String, Object>();
+		}
+		return (Map<String, Object>) summaryMapObj;
+	}
+
+	private ColumnListSummary withSetOperationSummaryAnchorFallback(
+			ColumnListSummary summary,
+			Map<String, Object> summaryBySetOperationKey,
+			String summaryKey) {
+		if (summary == null) {
+			return new ColumnListSummary("", null, null);
+		}
+		if (summary.anchorLine() != null && summary.anchorChar() != null) {
+			return summary;
+		}
+		if (summaryBySetOperationKey == null || summaryBySetOperationKey.isEmpty() || summaryKey == null) {
+			return summary;
+		}
+
+		String normalizedSummaryKey = normalizeSetOperationScopeKey(summaryKey);
+		Map<String, Object> summaryMap = asSetOperationSummary(summaryBySetOperationKey.get(normalizedSummaryKey));
+		if (summaryMap == null || summaryMap.isEmpty()) {
+			return summary;
+		}
+
+		Integer anchorLine = getSetOperationSummaryInteger(summaryMap, SET_OPERATION_SUMMARY_LINE_KEY);
+		Integer anchorChar = getSetOperationSummaryInteger(summaryMap, SET_OPERATION_SUMMARY_CHAR_KEY);
+		if (anchorLine == null || anchorChar == null) {
+			return summary;
+		}
+
+		return new ColumnListSummary(summary.columnNamesCsv(), anchorLine, anchorChar);
 	}
 
 
@@ -2145,6 +2280,16 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 		if (summary.anchorLine() != null && summary.anchorChar() != null) {
 			return summary;
+		}
+
+		Integer explicitAnchorLine = getSetOperationSummaryInteger(
+				setOperationMap,
+				TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
+		Integer explicitAnchorChar = getSetOperationSummaryInteger(
+				setOperationMap,
+				TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
+		if (explicitAnchorLine != null && explicitAnchorChar != null) {
+			return new ColumnListSummary(summary.columnNamesCsv(), explicitAnchorLine, explicitAnchorChar);
 		}
 
 		Integer[] fallback = resolveSetOperationAnchorFromChildren(setOperationMap);

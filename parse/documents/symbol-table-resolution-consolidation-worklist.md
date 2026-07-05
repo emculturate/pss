@@ -128,6 +128,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 | Resolve V1 `table_ref` delta | Correlated outer ref in nested set-op filter list |
 | Expand verification | Same narrow pair → nearby unaliased-derived V2–V16, union/intersect FROM shapes |
 | Document `queryN` vs `def_queryN` contract | When live handle vs published definition; what consumers must use |
+| Enforce strict payload lookup | No live-key fallback when reading published scope payloads; translate alias/live refs to `def_*` then resolve |
 
 **Gate:** V1/V7 (or agreed subset) pass without regressions on anonymous FROM registration.
 
