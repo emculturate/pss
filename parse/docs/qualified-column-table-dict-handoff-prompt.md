@@ -165,4 +165,9 @@ Read parse/docs/qualified-column-table-dict-handoff-prompt.md for full context.
 Summary: nestedQueryDemoTest must have exactly 2 fatals (tab2.e3, gg.y) and tab1 table dict entries for t, <y_col>, a, x, <z_col>, <w_col>. Diagnostics deferral via FROM-stack is done. A minimal retryResolvableQualifiedUnresolvedInCurrentScope helper exists (exitFrom_clause + publishQueryLikeScope). The egress layer was reverted — do not rebuild it.
 
 Next: make tab1 table dictionary complete using existing unresolved_column carry-up and the retry helper only. No new abstractions. Do not update test goldens.
+
+Use SqlEventWalkerSubqueriesAndClauseSemanticsTests as the primary development driver for cross-subclause resolution unification, starting at the block:
+"UNALIASED DERIVED TABLE IN FROM/JOIN TESTS".
+Follow and preserve the V1-V16 sequence in that block as the canonical progression for SELECT/JOIN/WHERE/EXISTS/GROUP BY/HAVING/QUALIFY/ORDER BY behavior.
+When changing resolution logic, validate against V1-V16 first before widening to other suites.
 ```

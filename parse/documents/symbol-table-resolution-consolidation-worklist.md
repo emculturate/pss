@@ -357,6 +357,10 @@ Primary objective:
 - Stop descending into nested child payloads to recover missing data; use immediate current-level published surfaces.
 
 Validation focus:
+- Use `SqlEventWalkerSubqueriesAndClauseSemanticsTests` as the primary development driver for cross-subclause resolution unification, starting at the block:
+   "UNALIASED DERIVED TABLE IN FROM/JOIN TESTS".
+- Follow and preserve the V1-V16 sequence in that block as the canonical progression for SELECT/JOIN/WHERE/EXISTS/GROUP BY/HAVING/QUALIFY/ORDER BY behavior.
+- When changing resolution logic, validate against V1-V16 first before widening to other suites.
 - Lock V4 fatal set to the intended four diagnostics.
 - Re-check V2/V4 set-op mismatch count/label parity.
 
