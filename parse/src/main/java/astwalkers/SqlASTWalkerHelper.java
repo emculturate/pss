@@ -4177,7 +4177,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		} else if ("*".equals(targetColumnKey)) {
 			return;
 		} else if (existingRefs instanceof ArrayList<?> existingList && normalizedColumnRefs instanceof ArrayList<?> incomingList) {
-			((ArrayList<Object>) existingList).addAll((ArrayList<Object>) incomingList);
+			ArrayList<Object> mutableExisting = (ArrayList<Object>) existingList;
+			for (Object incomingToken : incomingList) {
+				if (incomingToken != null && !mutableExisting.contains(incomingToken)) {
+					mutableExisting.add(incomingToken);
+				}
+			}
 		} else {
 			dictionary.put(targetColumnKey, normalizedColumnRefs);
 		}

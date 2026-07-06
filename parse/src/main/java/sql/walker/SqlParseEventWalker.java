@@ -3691,6 +3691,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		interfaceReference.putAll(item);
 
 		// derive an alias for the item if it does not have one, and add the alias to the item if it does not have one
+		boolean explicitOutputAlias = false;
 		if (subMap.size() == 0) {
 			// Select Item did not have an Alias, construct one from options
 			aliasToken = ctx.getStop().toString();
@@ -3713,6 +3714,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 
 		} else {
+			explicitOutputAlias = true;
 			// Select Item has an alias, extract it and add it back into the item map for use in the SQL Tree and Symbol Table construction
 			aliasToken = ctx.getStop().toString();	
 
@@ -3753,8 +3755,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			symbolTreeHelper.addCurrentQueryScalarSubqueryAlias(interfaceAlias);
 		}
 
-		// Add item alias into the Current Query Column Dictionary
-		symbolTreeHelper.addAliasTokensObject(interfaceAlias, aliasToken);
+		// Record alias tokens only for explicit output names (AS alias) or generated
+		// predicand placeholders. Bare column/predicand refs are already captured in
+		// unresolved_column at column_reference exit and materialize once at scope exit.
+		boolean generatedPredicandAlias = interfaceAlias != null && interfaceAlias.startsWith("unnamed_");
+		if (explicitOutputAlias || generatedPredicandAlias) {
+			symbolTreeHelper.addAliasTokensObject(interfaceAlias, aliasToken);
+		}
 		
 	}
 

@@ -1463,6 +1463,14 @@ public class SqlParseSymbolTreeHelper {
 						if (preferredDeleteTargetRef != null) {
 							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							materializeInterfaceUnqualifiedReferenceIfDeferredScope(
+									deferCorrelatedValueSubqueryQualifiedUnknowns,
+									localUnresolvedColumnMap,
+									localFromTableCollection,
+									localTableAliasMap,
+									localCurrentQueryDictionary,
+									resolvedSourceRef,
+									columnName);
 							continue;
 						}
 
@@ -1490,6 +1498,14 @@ public class SqlParseSymbolTreeHelper {
 								if (unpivotGeneratedSourceRef != null && !unpivotGeneratedSourceRef.isBlank()) {
 									String resolvedSourceRef = normalizeTableRef(unpivotGeneratedSourceRef);
 									refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+									materializeInterfaceUnqualifiedReferenceIfDeferredScope(
+											deferCorrelatedValueSubqueryQualifiedUnknowns,
+											localUnresolvedColumnMap,
+											localFromTableCollection,
+											localTableAliasMap,
+											localCurrentQueryDictionary,
+											resolvedSourceRef,
+											columnName);
 									continue;
 								}
 								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
@@ -1535,6 +1551,14 @@ public class SqlParseSymbolTreeHelper {
 							// so all clause occurrences remain in the working unresolved map.
 							String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
+							materializeInterfaceUnqualifiedReferenceIfDeferredScope(
+									deferCorrelatedValueSubqueryQualifiedUnknowns,
+									localUnresolvedColumnMap,
+									localFromTableCollection,
+									localTableAliasMap,
+									localCurrentQueryDictionary,
+									resolvedSourceRef,
+									columnName);
 						}
 					}
 				}
@@ -1675,6 +1699,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
+
+		backfillQueryDictionaryFromResolvedInterfaceSources(
+				localInterface,
+				localCurrentQueryDictionary,
+				localTableCollection,
+				localTableAliasMap);
 
 		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
 		 walker.validateFilterReferences(filtersList, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
@@ -7506,6 +7536,104 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Nested scopes that defer unified resolution still need select-list tokens
+	 * materialized at interface validation time; top-level scopes defer to the
+	 * unified scope-exit pass so clause tokens stay in the working map.
+	 */
+	/**
+	 * When single-table relocation moved select-list tokens into {@code table_dictionary}
+	 * before scope-exit materialization, copy interface output columns into the scope
+	 * query dictionary from their resolved physical sources.
+	 */
+	@SuppressWarnings("unchecked")
+	private void backfillQueryDictionaryFromResolvedInterfaceSources(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localInterface == null || localInterface.isEmpty()
+				|| localCurrentQueryDictionary == null) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+			String outputCol = interfaceEntry.getKey();
+			String matchedOutputKey = findKeyIgnoreCase(localCurrentQueryDictionary, outputCol);
+			Object existingTokens = matchedOutputKey == null
+					? null
+					: localCurrentQueryDictionary.get(matchedOutputKey);
+			if (existingTokens instanceof ArrayList<?> existingList && !existingList.isEmpty()) {
+				continue;
+			}
+
+			Object refsObj = interfaceEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+				continue;
+			}
+
+			for (Object refObj : refs) {
+				String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+				if (columnName == null || columnName.isBlank()
+						|| tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
+					continue;
+				}
+
+				String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+				if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
+					resolvedTableRef = normalizeTableRef(tableRef);
+				}
+				if (isQuerySourceReference(resolvedTableRef)
+						|| walker.isNonTableQuerySourceReference(resolvedTableRef)
+						|| isTableFunctionSourceReference(resolvedTableRef)) {
+					continue;
+				}
+
+				HashMap<String, Object> tableDictionary = walker.getTableDictionaryForReference(
+						resolvedTableRef,
+						localTableCollection);
+				if (tableDictionary == null) {
+					continue;
+				}
+
+				String sourceColumnKey = findKeyIgnoreCase(tableDictionary, columnName);
+				if (sourceColumnKey == null) {
+					continue;
+				}
+
+				Object sourceTokens = tableDictionary.get(sourceColumnKey);
+				if (sourceTokens != null) {
+					walker.mergeResolvedColumnIntoDictionary(
+							localCurrentQueryDictionary,
+							outputCol,
+							sourceTokens);
+				}
+				break;
+			}
+		}
+	}
+
+	private void materializeInterfaceUnqualifiedReferenceIfDeferredScope(
+			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			String resolvedSourceRef,
+			String columnName) {
+		if (!deferCorrelatedValueSubqueryQualifiedUnknowns) {
+			return;
+		}
+		materializeResolvedUnqualifiedReference(
+				unresolvedColumnMap,
+				tableCollection,
+				tableAliasCollection,
+				localCurrentQueryDictionary,
+				resolvedSourceRef,
+				columnName);
+	}
+
 	@SuppressWarnings("unchecked")
 	public void materializeResolvedUnqualifiedReference(
 			HashMap<String, Object> unresolvedColumnMap,
@@ -7541,13 +7669,14 @@ public class SqlParseSymbolTreeHelper {
 		boolean queryBackedSource = queryAliasSourceRef != null
 				|| walker.isNonTableQuerySourceReference(canonicalSourceRef)
 				|| isTableFunctionSourceReference(canonicalSourceRef);
+
+		if (localCurrentQueryDictionary != null) {
+			walker.mergeResolvedColumnIntoDictionary(
+					localCurrentQueryDictionary,
+					columnName,
+					unresolvedEntry);
+		}
 		if (queryBackedSource) {
-			if (localCurrentQueryDictionary != null) {
-				walker.mergeResolvedColumnIntoDictionary(
-						localCurrentQueryDictionary,
-						columnName,
-						unresolvedEntry);
-			}
 			return;
 		}
 

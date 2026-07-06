@@ -1,5 +1,13 @@
 {
   "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "mavenTestSelector",
+      "type": "promptString",
+      "description": "Maven test selector (Class or Class#method)",
+      "default": "SqlEventWalkerSubqueriesAndClauseSemanticsTests#unaliasedDerivedSimpleAllOuterClausesV1Test"
+    }
+  ],
   "tasks": [
     {
       "label": "Prime Parse Build Model",
@@ -71,6 +79,25 @@
         "reveal": "always",
         "panel": "dedicated",
         "clear": true
+      }
+    },
+    {
+      "label": "Run Single Test (Maven, Verbose)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-f",
+        "parse/pom.xml",
+        "-Dpss.walker.test.verbose=true",
+        "-Dtest=${input:mavenTestSelector}",
+        "test"
+      ],
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
       }
     },
     {

@@ -12,13 +12,30 @@
   "java.import.maven.offline.enabled": false,
   "java.import.maven.downloadSources": true,
   "java.import.gradle.enabled": false,
+  "debug.internalConsoleOptions": "openOnSessionStart",
+  "debug.console.closeOnEnd": false,
+  "jdk.test.editor.enableShortcuts": true,
   "java.debug.settings.console": "internalConsole",
-  "java.test.defaultConfig": "pss-verbose",
+  "java.debug.settings.vmArgs": "-Dpss.walker.test.verbose=true -Xmx2g -Xms256m",
+  "java.test.log.level": "verbose",
+  "java.test.editor.enableShortcuts": true,
+  "java.test.editor.revealOutput": "onTestStart",
+  "java.test.defaultConfig": "default",
   "java.test.config": [
     {
+      "name": "default",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": "-Dpss.walker.test.verbose=true -Xmx2g -Xms256m"
+    },
+    {
       "name": "pss-verbose",
-      "workingDirectory": "${workspaceFolder}",
-      "vmArgs": ["-Dpss.walker.test.verbose=true", "-Xmx2g", "-Xms256m"]
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": "-Dpss.walker.test.verbose=true -Xmx2g -Xms256m"
+    },
+    {
+      "name": "pss-quiet",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": "-Dpss.walker.test.verbose=false -Xmx2g -Xms256m"
     }
   ]
 }

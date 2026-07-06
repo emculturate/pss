@@ -7,7 +7,65 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-02
+**Last updated:** 2026-07-06
+
+---
+
+## Published scope vs global dictionary — detailed rules
+
+These rules govern acceptable variance between **live global maps** (`queryColumnDictionaryMap` / live `queryN` keys) and **published symbol-tree payloads** (`def_queryN` submaps). Canonical examples: `unaliasedDerivedSimpleAllOuterClausesV1Test` (`def_query5`, `def_query2`, `def_query3`).
+
+### Two artifacts, two roles
+
+| Artifact | When written | Role |
+|----------|--------------|------|
+| **Global `queryN`** in `queryColumnDictionaryMap` | Accumulated during the walk; merges at scope export | Live working index of column-name → token strings; may grow after a child `def_queryN` is published |
+| **`def_queryN` payload** in the symbol tree | Once, at that scope's finalize/publish | Immutable snapshot of that grammar frame at exit: `query_dictionary`, `interface`, clause lists (`filters`, `grouped_by`, `ordered_by`), nested `def_*` children, `table_alias`, etc. |
+
+**Rule:** Do not treat mismatches between global `queryN` and embedded `def_queryN.query_dictionary` as bugs requiring backpatch of finalized child payloads.
+
+### No backpatch into finalized child scopes
+
+**Rule:** After a nested query scope is finalized and published as `def_queryN`, **never** recursively drill back into that child payload to update:
+
+- `table_ref` on entries in `filters`, `grouped_by`, `ordered_by`, or `interface`
+- `query_dictionary` token lists
+- Any other archived clause collector on the child
+
+Resolution that becomes possible only after a **parent** scope finishes (correlated outer columns, EXISTS wrappers, etc.) is recorded in the **parent's** published payload — not by rewriting children.
+
+**Example (V1):** `def_query3.filters` includes `{name=col1, table_ref=null}` for the correlated outer reference in `WHERE x.ex1 = col1`. That is correct in the child snapshot. The parent resolves `col1` → `query0` in `def_query5.filters` / `grouped_by` / `ordered_by`. **Do not** retroactively set `def_query3.filters.col1.table_ref` to `query0`.
+
+### Grammar scope owns token and clause attribution
+
+**Rule:** A column reference belongs to the **symbol-table context active at the parse event** (grammar sequence / DFS walk), not necessarily to the inner subquery that **semantically** supplies the aliased source.
+
+**Example (V1):** In `EXISTS (SELECT ex1 FROM (SELECT ex1 FROM tab3) x WHERE x.ex1 = col1)`, the token for alias `x` at line 5 column 61 lies in the **wrapping predicate / `query3` frame**, not in grammatically recognized `query2` scope — even though `x` maps to `query2`.
+
+Clause lists and `table_ref` updates on a published child reflect only what that child's frame resolved at its own exit.
+
+### Qualified refs: global push-down to source query is allowed
+
+**Rule:** When a **qualified** reference `alias.column` (or equivalent) clearly resolves to a known query-backed source (`query2`, etc.), it is acceptable — and often desirable — to merge the **token string** into that source's entry in the **global** `queryColumnDictionaryMap`. This is forward materialization of an obvious, locally accessible binding, not backtracking.
+
+**Example (V1):** Global `query2` may include both:
+
+- `ex1` @ line 5 col 38 (from `query2`'s own SELECT, also in `def_query2.query_dictionary`)
+- `x` @ line 5 col 61 (from `x.ex1` in the EXISTS WHERE, grammatically outside `query2`'s published frame)
+
+**`def_query2.query_dictionary`** correctly contains only the SELECT-list `ex1` token — the scope snapshot taken at `query2` finalize. The extra `x` token in global `query2` does **not** require updating `def_query2`.
+
+### Current-scope `query_dictionary` includes clause tokens (outer query)
+
+**Rule:** For the scope being finalized, `query_dictionary` should accumulate token strings for column names referenced in **all clauses of that query** (SELECT, JOIN/ON, WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY), not only the select list — via the working `unresolved_column` map and unified scope-exit materialization. That applies to the **current** scope's export; it does not imply patching nested `def_*` children.
+
+**Example (V1):** `def_query5.query_dictionary` lists tokens for `col1`/`col2`/`col3` across outer clauses; `def_query0.query_dictionary` lists only inner SELECT tokens.
+
+### Test / golden expectations
+
+- Child clause entries with `table_ref=null` for deferred correlated refs: **expected** in published child payloads; not a failure to fix by backpatch.
+- Global `queryN` richer than `def_queryN.query_dictionary`: **expected** when qualified push-down or later-frame tokens target the live global index.
+- When updating goldens, align `def_queryN` snapshots and global maps with these rules — do not force them to be identical.
 
 ---
 
@@ -98,6 +156,8 @@ Instead of merging qualified and unqualified refs into **one working set** durin
 
 9. **Do not reconstruct lost sequencing context:** when data is absent at a consuming rule, treat it as a scope-finalization/publication bug to fix at source; do not compensate by reading nested child artifacts after the fact.
 
+10. **Published vs global dictionaries:** frozen `def_queryN` snapshots vs live global `queryN` maps follow the rules in **Published scope vs global dictionary — detailed rules** (no child backpatch; grammar-owned token scope; qualified global push-down allowed).
+
 ---
 
 ## Phase checklist
@@ -113,7 +173,7 @@ Commit reference: `b59688c` — *canonical symbol table query references, steps 
 | **3** | ✅ | Keep unaliased query handle registration stable (`queryN` map + alias self-mapping) |
 | **4** | ✅ | Preserve unresolved transfer compatibility on `queryN` while publishing canonical `def_queryN` payload |
 
-**Known follow-up from Phase 4 verification:** `unaliasedDerivedSimpleAllOuterClausesV1Test` — in `def_query3` filters, expected `table_ref=query0` vs actual `table_ref=null` for correlated `col1`. Decide intended behavior before Phase 5.
+**Phase 4 follow-up (resolved):** `def_query3.filters` correlated `col1` stays `table_ref=null` in the published child snapshot; parent `def_query5` carries resolved `col1→query0`. No backpatch into `def_query3`. See **Published scope vs global dictionary — detailed rules** above.
 
 Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`.
 
@@ -196,7 +256,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md`
 | `probeArchivedScopeClauseColumns` at scope exit | For refs that never entered live `unresolved_column` |
 | Retire stacked skip guards | Replace sprawl from clause-probe experiments with one tree |
 
-**Do not:** merge clause tokens into `query_dictionary` (by design); `filters` remains the clause signal.
+**Note:** Outer/current-scope `query_dictionary` **does** include clause token strings (Phase 5+); nested published `def_*` children are not retroactively updated. `filters` / `grouped_by` / `ordered_by` remain the semantic `table_ref` signal per scope.
 
 **Gate:** Predicand four-scenario tests, plain-union branch outer fatal, correlated scalar + CTE GROUP BY tests.
 
@@ -355,6 +415,7 @@ Implementation guardrails:
 
 Primary objective:
 - Stop descending into nested child payloads to recover missing data; use immediate current-level published surfaces.
+- Do not backpatch finalized def_queryN payloads when parent scopes resolve correlated refs (see "Published scope vs global dictionary — detailed rules").
 
 Validation focus:
 - Use `SqlEventWalkerSubqueriesAndClauseSemanticsTests` as the primary development driver for cross-subclause resolution unification, starting at the block:
