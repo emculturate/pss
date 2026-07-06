@@ -2319,7 +2319,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(insertDefinitionScopeKey), queryDictionary);
-		mergeIntoGlobalQueryColumnDictionary(insertDefinitionScopeKey, queryDictionary);
 		insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
 	}
 
@@ -2344,7 +2343,6 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(updateDefinitionScopeKey), queryDictionary);
-		mergeIntoGlobalQueryColumnDictionary(updateDefinitionScopeKey, queryDictionary);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4093,7 +4091,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 			sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
 			mergeIntoGlobalQueryColumnDictionary(deleteScopeKey, localCurrentQueryDictionary);
-			mergeIntoGlobalQueryColumnDictionary(deleteDefinitionScopeKey, localCurrentQueryDictionary);
 			scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
 		}
 
@@ -4359,7 +4356,6 @@ public class SqlParseSymbolTreeHelper {
 		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
 			mergeIntoGlobalQueryColumnDictionary(liveScopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
-			mergeIntoGlobalQueryColumnDictionary(definitionKey, (HashMap<String, Object>) queryDictionaryMapObj);
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
@@ -8761,6 +8757,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Global query-column map uses live source refs only (queryN, unionN, …).
 		String normalizedScopeKey = normalizeQuerySourceReference(queryScopeKey);
 		if (normalizedScopeKey == null || normalizedScopeKey.isBlank()) {
 			return;
@@ -8847,14 +8844,19 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Reads a scope's column-token map from {@link SqlASTWalkerHelper#queryColumnDictionaryMap}.
+	 * That global map is keyed by live source refs ({@code queryN}, {@code unionN}, etc.), not
+	 * {@code def_*}. Nested scope payloads live under {@code def_queryN} in the symbol table;
+	 * use {@link #getQueryDefinitionSymbol} for those.
+	 */
 	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
-		String normalizedQueryRef = normalizeQuerySourceReference(queryRef);
-		if (normalizedQueryRef == null || !isQuerySourceReference(normalizedQueryRef)) {
+		String liveQueryRef = normalizeQuerySourceReference(queryRef);
+		if (liveQueryRef == null || !isQuerySourceReference(liveQueryRef)) {
 			return null;
 		}
 
-		String defQueryRef = toDefinitionScopeKey(normalizedQueryRef);
-		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(defQueryRef);
+		Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(liveQueryRef);
 		if (queryDictionaryObj instanceof Map<?, ?>) {
 			return queryDictionaryObj;
 		}
