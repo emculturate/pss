@@ -6305,13 +6305,17 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@27,100:108='match_col',<381>,3:21]]}, query2={ex1=[[@47,194:196='ex1',<381>,5:38], [@53,217:217='x',<381>,5:61]]}, query3={ex1=[[@43,177:179='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable1 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V1",
-				symbolTable1.contains("query5={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V1",
-				symbolTable1.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V1",
-				symbolTable1.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		final String expectedDefQuery5V1 = "{query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}, table_alias={query0=query0}}, def_query1={query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[{name=col3, table_ref=null}], interface={total=[{name=col3, table_ref=null}], col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, def_query3={query_dictionary={ex1=[[@43,177:179='ex1',<381>,5:21]]}, def_query2={query_dictionary={ex1=[[@47,194:196='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@47,194:196='ex1',<381>,5:38]]}}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=null}]}, table_alias={x=query2}}, interface={ex1=[{name=ex1, table_ref=null}]}, table_alias={x=query2}}, table_alias={query0=query0, query1=query1}}";
+		final String expectedDefQuery0V1 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}, table_alias={query0=query0}}";
+		final String expectedDefQuery1V1 = "{query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		final String expectedDefQuery3V1 = "{query_dictionary={ex1=[[@43,177:179='ex1',<381>,5:21]]}, def_query2={query_dictionary={ex1=[[@47,194:196='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@47,194:196='ex1',<381>,5:38]]}}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=null}]}, table_alias={x=query2}}, interface={ex1=[{name=ex1, table_ref=null}]}, table_alias={x=query2}}";
+		final String expectedDefQuery2V1 = "{query_dictionary={ex1=[[@47,194:196='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@47,194:196='ex1',<381>,5:38]]}}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=null}]}, table_alias={x=query2}}";
+
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5", expectedDefQuery5V1);
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0", expectedDefQuery0V1);
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedDefQuery1V1);
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedDefQuery3V1);
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedDefQuery2V1);
 	}
 
 	@Test
@@ -6343,13 +6347,32 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@31,115:123='match_col',<381>,3:21]]}, query2={ex1=[[@51,209:211='ex1',<381>,5:38], [@57,232:232='x',<381>,5:61]]}, query3={ex1=[[@47,192:194='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable2 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V2",
-				symbolTable2.contains("query5={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V2",
-				symbolTable2.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V2",
-				symbolTable2.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0.query_dictionary",
+				"{col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1.query_dictionary",
+				"{match_col=[[@31,115:123='match_col',<381>,3:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.query_dictionary",
+				"{ex1=[[@47,192:194='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2.query_dictionary",
+				"{ex1=[[@51,209:211='ex1',<381>,5:38]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery1_1 = "{query_dictionary={match_col=[[@31,115:123='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@29,107:110='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery1_1);
+		
+		final String expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery0_2 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13], [@22,84:87='col1',<381>,2:46]]}}, filters=[{name=col1, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0", expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery0_2);
+		
+		final String expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@47,192:194='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@51,209:211='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@51,209:211='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@51,209:211='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@51,209:211='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedDerivedSimpleFilteredInnerV2DefQuery5DefQuery3DefQuery2_4);
+
 	}
 
 	@Test
@@ -6380,13 +6403,27 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={ex1=[[@34,130:132='ex1',<381>,4:36], [@40,153:153='x',<381>,4:59]]}, query2={unnamed_0=[[@30,115:115='1',<300>,4:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable3 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V3",
-				symbolTable3.contains("query4={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V3",
-				symbolTable3.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V3",
-				symbolTable3.contains("dependent_queries={exists3={query=query2, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query0.query_dictionary",
+				"{col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2.query_dictionary",
+				"{unnamed_0=[[@30,115:115='1',<300>,4:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2.def_query1.query_dictionary",
+				"{ex1=[[@34,130:132='ex1',<381>,4:36]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.dependent_queries",
+				"{exists3={query=query2, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery0_1 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab2={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query0", expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery0_1);
+		
+		final String expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery2_2 = "{query_dictionary={unnamed_0=[[@30,115:115='1',<300>,4:21]]}, def_query1={query_dictionary={ex1=[[@34,130:132='ex1',<381>,4:36]]}, table_dictionary={tab3={ex1=[[@34,130:132='ex1',<381>,4:36]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={unnamed_0=[]}, table_alias={x=query1}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2", expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery2_2);
+		
+		final String expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery2DefQuery1_3 = "{query_dictionary={ex1=[[@34,130:132='ex1',<381>,4:36]]}, table_dictionary={tab3={ex1=[[@34,130:132='ex1',<381>,4:36]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2.def_query1", expectedunaliasedDerivedSimpleInnerFromTab2V3DefQuery4DefQuery2DefQuery1_3);
+
 	}
 
 	@Test
@@ -6418,13 +6455,22 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@27,100:108='match_col',<381>,3:21]]}, query2={ex1=[[@47,194:196='ex1',<381>,5:38], [@53,217:217='x',<381>,5:61]]}, query3={ex1=[[@43,177:179='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable4 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V4",
-				symbolTable4.contains("query5={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V4",
-				symbolTable4.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V4",
-				symbolTable4.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery1_1 = "{query_dictionary={match_col=[[@27,100:108='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@25,92:95='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery1_1);
+		
+		final String expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery0_2 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab3={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0", expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery0_2);
+		
+		final String expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@43,177:179='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@47,194:196='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@47,194:196='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@47,194:196='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@47,194:196='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedDerivedSimpleInnerFromTab3V4DefQuery5DefQuery3DefQuery2_4);
+
 	}
 
 	@Test
@@ -6456,13 +6502,22 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@32,123:131='match_col',<381>,3:21]]}, query2={ex1=[[@52,217:219='ex1',<381>,5:38], [@58,240:240='x',<381>,5:61]]}, query3={ex1=[[@48,200:202='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable5 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V5",
-				symbolTable5.contains("query5={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V5",
-				symbolTable5.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V5",
-				symbolTable5.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery1_1 = "{query_dictionary={match_col=[[@32,123:131='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@30,115:118='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery1_1);
+		
+		final String expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery0_2 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25], [@22,84:87='col3',<381>,2:46]], col1=[[@14,51:54='col1',<381>,2:13]]}}, filters=[{name=col3, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0", expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery0_2);
+		
+		final String expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@48,200:202='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@52,217:219='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@52,217:219='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@52,217:219='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@52,217:219='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedDerivedSimpleInnerNotNullFilterV5DefQuery5DefQuery3DefQuery2_4);
+
 	}
 
 	@Test
@@ -6494,13 +6549,31 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={match_col=[[@34,126:134='match_col',<381>,3:21]]}, query2={ex1=[[@54,220:222='ex1',<381>,5:38], [@60,243:243='x',<381>,5:61]]}, query3={ex1=[[@50,203:205='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV6 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V6",
-				symbolTableV6.contains("query5={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V6",
-				symbolTableV6.contains("def_query3={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V6",
-				symbolTableV6.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0.query_dictionary",
+				"{col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1.query_dictionary",
+				"{match_col=[[@34,126:134='match_col',<381>,3:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.query_dictionary",
+				"{ex1=[[@50,203:205='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2.query_dictionary",
+				"{ex1=[[@54,220:222='ex1',<381>,5:38]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery1_1 = "{query_dictionary={match_col=[[@34,126:134='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@32,118:121='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery1_1);
+		
+		final String expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery0_2 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19], [@25,93:96='col2',<381>,2:55]], col3=[[@18,63:66='col3',<381>,2:25], [@27,99:102='col3',<381>,2:61]], col1=[[@14,51:54='col1',<381>,2:13], [@23,87:90='col1',<381>,2:49]]}}, grouped_by=[{name=col1, table_ref=tab1}, {name=col2, table_ref=tab1}, {name=col3, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query0", expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery0_2);
+		
+		final String expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@50,203:205='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@54,220:222='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@54,220:222='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@54,220:222='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@54,220:222='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedDerivedSimpleInnerGroupedV6DefQuery5DefQuery3DefQuery2_4);
 
 	}
 
@@ -6536,6 +6609,26 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query7={def_union2={query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}, query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@34,132:135='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}}, grouped_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], ordered_by=[{name=col1, table_ref=union2}, {name=col2, table_ref=union2}], filters=[{name=col1, table_ref=union2}, {name=match_col, table_ref=query3}, {name=col3, table_ref=union2}, {name=col2, table_ref=union2}], def_query5={query_dictionary={ex1=[[@52,217:219='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@56,234:236='ex1',<381>,5:38], [@62,257:257='x',<381>,5:61]]}, table_dictionary={tab3={ex1=[[@56,234:236='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}, interface={total=[{name=col3, table_ref=union2}], col2=[{name=col2, table_ref=union2}], col1=[{name=col1, table_ref=union2}]}, def_query3={query_dictionary={match_col=[[@36,140:148='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,132:135='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}, query_dictionary={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, dependent_queries={exists6={query=query5, type=filters}}, table_alias={union2=union2, query3=query3}}}",
 				extractor.getSymbolTable().toString());
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2_1 = "{def_query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@34,132:135='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2_1);
+		
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2DefQuery1_2 = "{query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@34,132:135='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query1", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2DefQuery1_2);
+		
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2DefQuery0_3 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query0", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefUnion2DefQuery0_3);
+		
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery5_4 = "{query_dictionary={ex1=[[@52,217:219='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@56,234:236='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,234:236='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery5_4);
+		
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery5DefQuery4_5 = "{query_dictionary={ex1=[[@56,234:236='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,234:236='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.def_query4", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery5DefQuery4_5);
+		
+		final String expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery3_6 = "{query_dictionary={match_col=[[@36,140:148='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,132:135='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query3", expectedunaliasedDerivedUnionAllOuterClausesV7DefQuery7DefQuery3_6);
+
 	}
 
 	@Test
@@ -6567,13 +6660,31 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@57,238:240='ex1',<381>,5:38], [@63,261:261='x',<381>,5:61]]}, query5={ex1=[[@53,221:223='ex1',<381>,5:21]]}, query7={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@26,101:104='col2',<381>,2:63]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}, query3={match_col=[[@37,144:152='match_col',<381>,3:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV8 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V8",
-				symbolTableV8.contains("query7={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V8",
-				symbolTableV8.contains("def_query5={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V8",
-				symbolTableV8.contains("dependent_queries={exists6={query=query5, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.query_dictionary",
+				"{ex1=[[@53,221:223='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.dependent_queries",
+				"{exists6={query=query5, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2_1 = "{def_query1={query_dictionary={col2=[[@26,101:104='col2',<381>,2:63]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@26,101:104='col2',<381>,2:63], [@35,136:139='col2',<381>,3:13]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2_1);
+		
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2DefQuery1_2 = "{query_dictionary={col2=[[@26,101:104='col2',<381>,2:63]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@26,101:104='col2',<381>,2:63], [@35,136:139='col2',<381>,3:13]], col3=[[@28,107:110='col3',<381>,2:69]], col1=[[@24,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query1", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2DefQuery1_2);
+		
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2DefQuery0_3 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query0", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefUnion2DefQuery0_3);
+		
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery5_4 = "{query_dictionary={ex1=[[@53,221:223='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@57,238:240='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@57,238:240='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery5_4);
+		
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery5DefQuery4_5 = "{query_dictionary={ex1=[[@57,238:240='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@57,238:240='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.def_query4", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery5DefQuery4_5);
+		
+		final String expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery3_6 = "{query_dictionary={match_col=[[@37,144:152='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@35,136:139='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query3", expectedunaliasedDerivedUnionAllInnerAllOuterClausesV8DefQuery7DefQuery3_6);
 
 	}
 
@@ -6606,13 +6717,31 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@56,238:240='ex1',<381>,5:38], [@62,261:261='x',<381>,5:61]]}, query5={ex1=[[@52,221:223='ex1',<381>,5:21]]}, query7={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,101:104='col2',<381>,2:63]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}, query3={match_col=[[@36,144:152='match_col',<381>,3:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV9 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V9",
-				symbolTableV9.contains("query7={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V9",
-				symbolTableV9.contains("def_query5={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V9",
-				symbolTableV9.contains("dependent_queries={exists6={query=query5, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.query_dictionary",
+				"{ex1=[[@52,221:223='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.dependent_queries",
+				"{exists6={query=query5, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2_1 = "{def_query1={query_dictionary={col2=[[@25,101:104='col2',<381>,2:63]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@25,101:104='col2',<381>,2:63], [@34,136:139='col2',<381>,3:13]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_intersect2", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2_1);
+		
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2DefQuery1_2 = "{query_dictionary={col2=[[@25,101:104='col2',<381>,2:63]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}, table_dictionary={tab2={col2=[[@25,101:104='col2',<381>,2:63], [@34,136:139='col2',<381>,3:13]], col3=[[@27,107:110='col3',<381>,2:69]], col1=[[@23,95:98='col1',<381>,2:57]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_intersect2.def_query1", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2DefQuery1_2);
+		
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2DefQuery0_3 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_intersect2.def_query0", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefIntersect2DefQuery0_3);
+		
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery5_4 = "{query_dictionary={ex1=[[@52,221:223='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@56,238:240='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,238:240='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery5_4);
+		
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery5DefQuery4_5 = "{query_dictionary={ex1=[[@56,238:240='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,238:240='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.def_query4", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery5DefQuery4_5);
+		
+		final String expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery3_6 = "{query_dictionary={match_col=[[@36,144:152='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,136:139='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query3", expectedunaliasedDerivedIntersectAllOuterClausesV9DefQuery7DefQuery3_6);
 
 	}
 
@@ -6645,13 +6774,31 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@56,235:237='ex1',<381>,5:38], [@62,258:258='x',<381>,5:61]]}, query5={ex1=[[@52,218:220='ex1',<381>,5:21]]}, query7={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,98:101='col2',<381>,2:60]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}, query3={match_col=[[@36,141:149='match_col',<381>,3:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV10 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V10",
-				symbolTableV10.contains("query7={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V10",
-				symbolTableV10.contains("def_query5={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V10",
-				symbolTableV10.contains("dependent_queries={exists6={query=query5, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.query_dictionary",
+				"{ex1=[[@52,218:220='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.dependent_queries",
+				"{exists6={query=query5, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2_1 = "{def_query1={query_dictionary={col2=[[@25,98:101='col2',<381>,2:60]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}, table_dictionary={tab2={col2=[[@25,98:101='col2',<381>,2:60], [@34,133:136='col2',<381>,3:13]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2_1);
+		
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2DefQuery1_2 = "{query_dictionary={col2=[[@25,98:101='col2',<381>,2:60]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}, table_dictionary={tab2={col2=[[@25,98:101='col2',<381>,2:60], [@34,133:136='col2',<381>,3:13]], col3=[[@27,104:107='col3',<381>,2:66]], col1=[[@23,92:95='col1',<381>,2:54]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query1", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2DefQuery1_2);
+		
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2DefQuery0_3 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query0", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefUnion2DefQuery0_3);
+		
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery5_4 = "{query_dictionary={ex1=[[@52,218:220='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@56,235:237='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,235:237='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery5_4);
+		
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery5DefQuery4_5 = "{query_dictionary={ex1=[[@56,235:237='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@56,235:237='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.def_query4", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery5DefQuery4_5);
+		
+		final String expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery3_6 = "{query_dictionary={match_col=[[@36,141:149='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@34,133:136='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query3", expectedunaliasedDerivedExceptAllOuterClausesV10DefQuery7DefQuery3_6);
 
 	}
 
@@ -6684,13 +6831,37 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query9={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query5={match_col=[[@45,184:192='match_col',<381>,3:21]]}, query6={ex1=[[@65,278:280='ex1',<381>,5:38], [@71,301:301='x',<381>,5:61]]}, query7={ex1=[[@61,261:263='ex1',<381>,5:21]]}, query0={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, query1={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, query3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV11 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V11",
-				symbolTableV11.contains("query9={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V11",
-				symbolTableV11.contains("def_query7={"));
-		Assert.assertTrue("Symbol Table should resolve inner EXISTS alias to canonical query target for V11",
-				symbolTableV11.contains("table_alias={x=query6}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_query7.query_dictionary",
+				"{ex1=[[@61,261:263='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_query7.table_alias",
+				"{x=query6}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery7_1 = "{def_query6={query_dictionary={ex1=[[@65,278:280='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@65,278:280='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, query_dictionary={ex1=[[@61,261:263='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query6}]}, table_alias={x=query6}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_query7", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery7_1);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery7DefQuery6_2 = "{query_dictionary={ex1=[[@65,278:280='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@65,278:280='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_query7.def_query6", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery7DefQuery6_2);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4_3 = "{def_union2={def_query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@43,176:179='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}, {name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}, {name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}, {name=col1, table_ref=tab3}]}, def_query3={query_dictionary={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}, table_dictionary={tab3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}}, interface={col2=[{name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_intersect4", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4_3);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2_4 = "{def_query1={query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@43,176:179='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, interface={col2=[{name=col2, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_intersect4.def_union2", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2_4);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2DefQuery1_5 = "{query_dictionary={col2=[[@25,97:100='col2',<381>,2:59]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}, table_dictionary={tab2={col2=[[@25,97:100='col2',<381>,2:59], [@43,176:179='col2',<381>,3:13]], col3=[[@27,103:106='col3',<381>,2:65]], col1=[[@23,91:94='col1',<381>,2:53]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_intersect4.def_union2.def_query1", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2DefQuery1_5);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2DefQuery0_6 = "{query_dictionary={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}, table_dictionary={tab1={col2=[[@16,57:60='col2',<381>,2:19]], col3=[[@18,63:66='col3',<381>,2:25]], col1=[[@14,51:54='col1',<381>,2:13]]}}, interface={col2=[{name=col2, table_ref=tab1}], col3=[{name=col3, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_intersect4.def_union2.def_query0", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefUnion2DefQuery0_6);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefQuery3_7 = "{query_dictionary={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}, table_dictionary={tab3={col2=[[@34,141:144='col2',<381>,2:103]], col3=[[@36,147:150='col3',<381>,2:109]], col1=[[@32,135:138='col1',<381>,2:97]]}}, interface={col2=[{name=col2, table_ref=tab3}], col3=[{name=col3, table_ref=tab3}], col1=[{name=col1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_intersect4.def_query3", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefIntersect4DefQuery3_7);
+		
+		final String expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery5_8 = "{query_dictionary={match_col=[[@45,184:192='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@43,176:179='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query9.def_query5", expectedunaliasedDerivedUnionIntersectAllOuterClausesV11DefQuery9DefQuery5_8);
 
 	}
 
@@ -6723,13 +6894,31 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@62,249:251='ex1',<381>,5:38], [@68,272:272='x',<381>,5:61]]}, query5={ex1=[[@58,232:234='ex1',<381>,5:21]]}, query7={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@20,67:70='col2',<381>,2:29]], col3=[[@24,78:81='col3',<381>,2:40]], col1=[[@16,56:59='col1',<381>,2:18]]}, query1={col2=[[@31,112:115='col2',<381>,2:74]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}, query3={match_col=[[@42,155:163='match_col',<381>,3:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV12 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V12",
-				symbolTableV12.contains("query7={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V12",
-				symbolTableV12.contains("def_query5={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V12",
-				symbolTableV12.contains("dependent_queries={exists6={query=query5, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.query_dictionary",
+				"{ex1=[[@58,232:234='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.dependent_queries",
+				"{exists6={query=query5, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2_1 = "{def_query1={query_dictionary={col2=[[@31,112:115='col2',<381>,2:74]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}, table_dictionary={tab2={col2=[[@31,112:115='col2',<381>,2:74], [@40,147:150='col2',<381>,3:13]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}, def_query0={query_dictionary={col2=[[@20,67:70='col2',<381>,2:29]], col3=[[@24,78:81='col3',<381>,2:40]], col1=[[@16,56:59='col1',<381>,2:18]]}, table_dictionary={tab1={a=[[@14,51:51='a',<381>,2:13]], b=[[@18,62:62='b',<381>,2:24]], c=[[@22,73:73='c',<381>,2:35]]}}, interface={col2=[{name=b, table_ref=tab1}], col3=[{name=c, table_ref=tab1}], col1=[{name=a, table_ref=tab1}]}}, interface={col2=[{name=b, table_ref=tab1}, {name=col2, table_ref=tab2}], col3=[{name=c, table_ref=tab1}, {name=col3, table_ref=tab2}], col1=[{name=a, table_ref=tab1}, {name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2_1);
+		
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2DefQuery1_2 = "{query_dictionary={col2=[[@31,112:115='col2',<381>,2:74]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}, table_dictionary={tab2={col2=[[@31,112:115='col2',<381>,2:74], [@40,147:150='col2',<381>,3:13]], col3=[[@33,118:121='col3',<381>,2:80]], col1=[[@29,106:109='col1',<381>,2:68]]}}, interface={col2=[{name=col2, table_ref=tab2}], col3=[{name=col3, table_ref=tab2}], col1=[{name=col1, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query1", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2DefQuery1_2);
+		
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2DefQuery0_3 = "{query_dictionary={col2=[[@20,67:70='col2',<381>,2:29]], col3=[[@24,78:81='col3',<381>,2:40]], col1=[[@16,56:59='col1',<381>,2:18]]}, table_dictionary={tab1={a=[[@14,51:51='a',<381>,2:13]], b=[[@18,62:62='b',<381>,2:24]], c=[[@22,73:73='c',<381>,2:35]]}}, interface={col2=[{name=b, table_ref=tab1}], col3=[{name=c, table_ref=tab1}], col1=[{name=a, table_ref=tab1}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_union2.def_query0", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefUnion2DefQuery0_3);
+		
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery5_4 = "{query_dictionary={ex1=[[@58,232:234='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query4}]}, def_query4={query_dictionary={ex1=[[@62,249:251='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@62,249:251='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}, table_alias={x=query4}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery5_4);
+		
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery5DefQuery4_5 = "{query_dictionary={ex1=[[@62,249:251='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@62,249:251='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query5.def_query4", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery5DefQuery4_5);
+		
+		final String expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery3_6 = "{query_dictionary={match_col=[[@42,155:163='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@40,147:150='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query7.def_query3", expectedunaliasedDerivedUnionMixedColumnNamesV12DefQuery7DefQuery3_6);
 
 	}
 
@@ -6761,17 +6950,30 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@35,94:102='match_col',<381>,3:21]]}, query2={ex1=[[@55,188:190='ex1',<381>,5:38], [@61,211:211='x',<381>,5:61]]}, query3={ex1=[[@51,171:173='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV13 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V13",
-				symbolTableV13.contains("query5={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V13",
-				symbolTableV13.contains("def_query3={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V13",
-				symbolTableV13.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.query_dictionary",
+				"{ex1=[[@51,171:173='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
 
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col1", 1);
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col2", 1);
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col3", 1);
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefValues0_1 = "{query_dictionary={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, interface={$1=[], $2=[], $3=[]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_values0", expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefValues0_1);
+		
+		final String expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery1_2 = "{query_dictionary={match_col=[[@35,94:102='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@33,86:89='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery1_2);
+		
+		final String expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@51,171:173='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@55,188:190='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@55,188:190='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@55,188:190='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@55,188:190='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedValuesPositionalAllOuterClausesV13DefQuery5DefQuery3DefQuery2_4);
+
 	}
 
 	@Test
@@ -6802,17 +7004,30 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, query5={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@37,101:109='match_col',<381>,3:21]]}, query2={ex1=[[@57,195:197='ex1',<381>,5:38], [@63,218:218='x',<381>,5:61]]}, query3={ex1=[[@53,178:180='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV14 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V14",
-				symbolTableV14.contains("query5={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V14",
-				symbolTableV14.contains("def_query3={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V14",
-				symbolTableV14.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.query_dictionary",
+				"{ex1=[[@53,178:180='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
 
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col1", 1);
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col2", 1);
 		assertFatalDiagnosticCount(extractor.getSnippet(), "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES", null, "col3", 1);
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefValues0_1 = "{query_dictionary={$1=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $2=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]], $3=[[@14,51:51='(',<287>,2:13], [@22,62:62='(',<287>,2:24]]}, interface={$1=[], $2=[], $3=[]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_values0", expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefValues0_1);
+		
+		final String expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery1_2 = "{query_dictionary={match_col=[[@37,101:109='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@35,93:96='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery1_2);
+		
+		final String expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@53,178:180='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@57,195:197='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@57,195:197='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@57,195:197='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@57,195:197='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedValuesAliasOnlyAllOuterClausesV14DefQuery5DefQuery3DefQuery2_4);
+
 	}
 
 	@Test
@@ -6844,13 +7059,25 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@35,87:90='col2',<381>,2:49]], col3=[[@37,93:96='col3',<381>,2:55]], col1=[[@33,81:84='col1',<381>,2:43]]}, query5={values0={src=values0, col2=[[@3,13:16='col2',<381>,1:13], [@80,266:269='col2',<381>,6:15], [@99,347:350='col2',<381>,8:54], [@107,372:375='col2',<381>,9:15]], col3=[[@7,23:26='col3',<381>,1:23], [@53,167:170='col3',<381>,4:6], [@84,282:285='col3',<381>,7:11]], col1=[[@1,7:10='col1',<381>,1:7], [@49,144:147='col1',<381>,3:45], [@74,245:248='col1',<381>,5:69], [@78,260:263='col1',<381>,6:9], [@96,333:336='col1',<381>,8:40], [@105,366:369='col1',<381>,9:9]]}, total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query1={match_col=[[@44,120:128='match_col',<381>,3:21]]}, query2={ex1=[[@64,214:216='ex1',<381>,5:38], [@70,237:237='x',<381>,5:61]]}, query3={ex1=[[@60,197:199='ex1',<381>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-				String symbolTableV15 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V15",
-				symbolTableV15.contains("query5={"));
-		Assert.assertTrue("Symbol Table should keep canonical EXISTS def-query chain for V15",
-				symbolTableV15.contains("def_query3={query_dictionary={ex1="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V15",
-				symbolTableV15.contains("dependent_queries={exists4={query=query3, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.query_dictionary",
+				"{ex1=[[@60,197:199='ex1',<381>,5:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.dependent_queries",
+				"{exists4={query=query3, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefValues0_1 = "{query_dictionary={col2=[[@35,87:90='col2',<381>,2:49]], col3=[[@37,93:96='col3',<381>,2:55]], col1=[[@33,81:84='col1',<381>,2:43]]}, interface={col2=[], col3=[], col1=[]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_values0", expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefValues0_1);
+		
+		final String expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery1_2 = "{query_dictionary={match_col=[[@44,120:128='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@42,112:115='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query1", expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery1_2);
+		
+		final String expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery3_3 = "{query_dictionary={ex1=[[@60,197:199='ex1',<381>,5:21]]}, filters=[{name=ex1, table_ref=x}, {name=col1, table_ref=null}], interface={ex1=[{name=ex1, table_ref=query2}]}, table_alias={x=query2}, def_query2={query_dictionary={ex1=[[@64,214:216='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@64,214:216='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3", expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery3_3);
+		
+		final String expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery3DefQuery2_4 = "{query_dictionary={ex1=[[@64,214:216='ex1',<381>,5:38]]}, table_dictionary={tab3={ex1=[[@64,214:216='ex1',<381>,5:38]]}}, interface={ex1=[{name=ex1, table_ref=tab3}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query5.def_query3.def_query2", expectedunaliasedValuesNamedColumnsAllOuterClausesV15DefQuery5DefQuery3DefQuery2_4);
 
 	}
 
@@ -6883,13 +7110,23 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, query0={col2=[[@24,76:79='col2',<381>,2:38]], col3=[[@30,93:96='col3',<381>,2:55]], col1=[[@18,59:62='col1',<381>,2:21]]}, query1={match_col=[[@51,169:177='match_col',<381>,3:21]]}, query2={unnamed_0=[[@67,246:246='1',<300>,5:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		String symbolTable16 = extractor.getSymbolTable().toString();
-		Assert.assertTrue("Symbol Table should use canonical top-level query id for V16",
-				symbolTable16.contains("query4={"));
-		Assert.assertTrue("Symbol Table should publish inner derived source under definition key for V16",
-				symbolTable16.contains("def_query0={query_dictionary={col2="));
-		Assert.assertTrue("Symbol Table should keep EXISTS dependency wiring for V16",
-				symbolTable16.contains("dependent_queries={exists3={query=query2, type=filters}}"));
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.query_dictionary",
+				"{total=[[@10,32:36='total',<381>,1:32]], col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query0.query_dictionary",
+				"{col2=[[@24,76:79='col2',<381>,2:38]], col3=[[@30,93:96='col3',<381>,2:55]], col1=[[@18,59:62='col1',<381>,2:21]]}");
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.dependent_queries",
+				"{exists3={query=query2, type=filters}}");
+
+		// Generated nested symbol-table assertions
+		final String expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery1_1 = "{query_dictionary={match_col=[[@51,169:177='match_col',<381>,3:21]]}, table_dictionary={tab2={col2=[[@49,161:164='col2',<381>,3:13]]}}, interface={match_col=[{name=col2, table_ref=tab2}]}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query1", expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery1_1);
+		
+		final String expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery0_2 = "{query_dictionary={col2=[[@24,76:79='col2',<381>,2:38]], col3=[[@30,93:96='col3',<381>,2:55]], col1=[[@18,59:62='col1',<381>,2:21]]}, table_dictionary={tab1={id=[[@14,51:51='t',<381>,2:13]], items=[[@40,136:136='t',<381>,2:98]]}, flatten0={value=[[@20,65:65='f',<381>,2:27], [@26,82:82='f',<381>,2:44]]}}, interface={col2=[{name=value, table_ref=f}], col3=[{name=value, table_ref=f}], col1=[{name=id, table_ref=t}]}, table_alias={t=tab1, f=flatten0}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query0", expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery0_2);
+		
+		final String expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery2_3 = "{query_dictionary={unnamed_0=[[@67,246:246='1',<300>,5:21]]}, table_dictionary={tab3={col1=[[@76,275:278='col1',<381>,5:50], [@72,266:266='x',<381>,5:41]]}}, filters=[{name=col1, table_ref=x}, {name=col1, table_ref=null}], interface={unnamed_0=[]}, table_alias={x=tab3}}";
+		assertSymbolTreePathEquals(extractor.getSymbolTable(), "def_query4.def_query2", expectedunaliasedDerivedFlattenInnerSelectAllOuterClausesV16DefQuery4DefQuery2_3);
+
 	}
 
 }
