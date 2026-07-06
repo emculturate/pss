@@ -22,6 +22,7 @@
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     <maven.clean.plugin.version>3.3.2</maven.clean.plugin.version>
     <jacoco.version>0.8.12</jacoco.version>
+    <pss.walker.test.verbose>false</pss.walker.test.verbose>
   </properties>
 
   <dependencies>
@@ -153,6 +154,9 @@
               <excludes>
                   <exclude>**/PUML3ParserTest.java</exclude>
               </excludes>
+              <systemPropertyVariables>
+                  <pss.walker.test.verbose>${pss.walker.test.verbose}</pss.walker.test.verbose>
+              </systemPropertyVariables>
             </configuration>
      </plugin>
 
@@ -197,4 +201,34 @@
       </plugin>
     </plugins>
   </build>
+
+  <!-- Oracle Java extension (and mvn -Dtest=...) run single tests via Surefire with -Dtest set.
+       Auto-enable walker symbol-tree dumps for those runs; full "mvn test" stays quiet. -->
+  <profiles>
+    <profile>
+      <id>single-test-verbose-walker</id>
+      <activation>
+        <property>
+          <name>test</name>
+        </property>
+      </activation>
+      <properties>
+        <pss.walker.test.verbose>true</pss.walker.test.verbose>
+      </properties>
+    </profile>
+    <profile>
+      <id>symbol-table-resolution-consolidation</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <test>sql.walker.SymbolTableResolutionConsolidationTestSuite</test>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

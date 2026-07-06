@@ -1463,12 +1463,6 @@ public class SqlParseSymbolTreeHelper {
 						if (preferredDeleteTargetRef != null) {
 							String resolvedSourceRef = normalizeTableRef(preferredDeleteTargetRef);
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-							materializeResolvedUnqualifiedReference(
-									localUnresolvedColumnMap,
-									localFromTableCollection,
-									localTableAliasMap,
-									resolvedSourceRef,
-									columnName);
 							continue;
 						}
 
@@ -1496,12 +1490,6 @@ public class SqlParseSymbolTreeHelper {
 								if (unpivotGeneratedSourceRef != null && !unpivotGeneratedSourceRef.isBlank()) {
 									String resolvedSourceRef = normalizeTableRef(unpivotGeneratedSourceRef);
 									refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-									materializeResolvedUnqualifiedReference(
-											localUnresolvedColumnMap,
-											localFromTableCollection,
-											localTableAliasMap,
-											resolvedSourceRef,
-											columnName);
 									continue;
 								}
 								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
@@ -1543,14 +1531,10 @@ public class SqlParseSymbolTreeHelper {
 						} else {
 							// Resolve an implicit column with a single source by updating only
 							// the interface entry copy (do not mutate shared AST map objects).
+							// Token materialization is deferred to the unified scope-exit pass
+							// so all clause occurrences remain in the working unresolved map.
 							String resolvedSourceRef = normalizeTableRef(sourceRefs.get(0));
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, resolvedSourceRef));
-							materializeResolvedUnqualifiedReference(
-									localUnresolvedColumnMap,
-									localFromTableCollection,
-									localTableAliasMap,
-									resolvedSourceRef,
-									columnName);
 						}
 					}
 				}
@@ -1646,6 +1630,7 @@ public class SqlParseSymbolTreeHelper {
 					localFromTableCollection,
 					visibleQuerySourceCollection,
 					localTableAliasMap,
+					localCurrentQueryDictionary,
 					deleteTargetTableRef);
 		}
 
@@ -7526,6 +7511,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> unresolvedColumnMap,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> localCurrentQueryDictionary,
 			String resolvedSourceRef,
 			String columnName) {
 		if (columnName == null || columnName.isBlank()) {
@@ -7549,20 +7535,19 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		// Extract the actual columnRefObj if stored in tracking wrapper
-		Object columnRefObj = unresolvedEntry;
-		if (unresolvedEntry instanceof UnresolvedColumnTracking tracking) {
-			columnRefObj = tracking.columnRefObj;
-		}
-
 		String queryAliasSourceRef = resolveAliasToQuerySourceFromAliasMap(
 				canonicalSourceRef,
 				tableAliasCollection);
-		if (queryAliasSourceRef != null) {
-			return;
-		}
-		if (walker.isNonTableQuerySourceReference(canonicalSourceRef)
-				|| isTableFunctionSourceReference(canonicalSourceRef)) {
+		boolean queryBackedSource = queryAliasSourceRef != null
+				|| walker.isNonTableQuerySourceReference(canonicalSourceRef)
+				|| isTableFunctionSourceReference(canonicalSourceRef);
+		if (queryBackedSource) {
+			if (localCurrentQueryDictionary != null) {
+				walker.mergeResolvedColumnIntoDictionary(
+						localCurrentQueryDictionary,
+						columnName,
+						unresolvedEntry);
+			}
 			return;
 		}
 
@@ -7583,7 +7568,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, columnRefObj);
+		walker.mergeResolvedColumnIntoDictionary(indicatedTableDictionary, columnName, unresolvedEntry);
 	}
 
 	public Object consumeUnqualifiedUnknownEntry(
@@ -7912,6 +7897,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableCollection,
 			HashMap<String, Object> visibleQuerySourceCollection,
 			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> localCurrentQueryDictionary,
 			String deleteTargetTableRef) {
 		// Check if we're in UPDATE with no FROM clause - if so, resolve against UPDATE target first
 		String updateTargetTableRef = (String) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_KEY);
@@ -7977,6 +7963,7 @@ public class SqlParseSymbolTreeHelper {
 						unresolvedColumnMap,
 						localTableCollection,
 						localTableAliasMap,
+						localCurrentQueryDictionary,
 						resolvedSourceRef,
 						columnName);
 				continue;
@@ -7997,6 +7984,7 @@ public class SqlParseSymbolTreeHelper {
 						unresolvedColumnMap,
 						localTableCollection,
 						localTableAliasMap,
+						localCurrentQueryDictionary,
 						resolvedSourceRef,
 						columnName);
 				continue;
@@ -8098,6 +8086,7 @@ public class SqlParseSymbolTreeHelper {
 						unresolvedColumnMap,
 						localTableCollection,
 						localTableAliasMap,
+						localCurrentQueryDictionary,
 						resolvedSourceRef,
 						columnName);
 			} else if (querySourcesWithColumn.size() > 1) {
