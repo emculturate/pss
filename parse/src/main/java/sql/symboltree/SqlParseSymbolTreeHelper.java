@@ -1221,12 +1221,16 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Create Dictionary from Symbol Table
-	 * Validate and assign all columns to a specific source table or query
-	 * Perform quality diagnostics for any unresolved columns, and if emitFinalUnresolvedUnknownFatal is true,
-	 * then add fatal diagnostics to parser resultfor any remaining unresolved columns after this process
-	 * 
-	 * @return
+	 * Canonical scope-exit column resolution for the active symbol-table frame.
+	 * <p>
+	 * <b>Intentional call sites</b> (grep {@code convertSymbolTableToTableDictionary} to audit):
+	 * <ul>
+	 *   <li>{@link #finalizeQueryScopeSymbolTable} — SELECT / CTE-body / insert-source scope publish</li>
+	 *   <li>{@link #finalizeUpdateScopeSymbolTable} — UPDATE scope publish</li>
+	 *   <li>{@link #finalizeDeleteScopeSymbolTable} — DELETE scope publish</li>
+	 *   <li>{@link #reconcileJoinExtensionSymbolTable} — mid-FROM partial reconcile only (not publish)</li>
+	 * </ul>
+	 * There is no walker-owned duplicate; all paths delegate here.
 	 */
 	public HashMap<String, Object> convertSymbolTableToTableDictionary(
 			boolean emitFinalUnresolvedUnknownFatal,
@@ -1395,8 +1399,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 			emitExplicitQualifiedUnknownDiagnostics(
 					explicitQualifiedUnknownEntries,
-					localInterface,
-					filtersList,
 					effectiveAliasMap,
 					effectiveTableCollection,
 					visibleQuerySourceCollection,
@@ -1847,6 +1849,21 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return walker.symbolTable;
+	}
+
+	/**
+	 * Mid-FROM reconcile after {@code join_extension_primary} (PIVOT / UNPIVOT / lateral extensions).
+	 * <p>
+	 * This is <b>not</b> a scope publish: it runs while the query_specification is still open so
+	 * relational-modifier aliases and partial {@code table_dictionary} state stay aligned before
+	 * the next FROM/JOIN fragment. Scope finalization still happens in
+	 * {@link #finalizeQueryScopeSymbolTable} at {@code exitQuery_specification}.
+	 * <p>
+	 * Delegates to {@link #convertSymbolTableToTableDictionary} with no UPDATE target and no
+	 * statement-boundary fatals ({@code emitFinalUnresolvedUnknownFatal=false}).
+	 */
+	public void reconcileJoinExtensionSymbolTable() {
+		convertSymbolTableToTableDictionary(false, false, null);
 	}
 
 	// =========================================================================
@@ -9744,8 +9761,6 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void emitExplicitQualifiedUnknownDiagnostics(
 			HashMap<String, Object> explicitQualifiedUnknownEntries,
-			HashMap<String, Object> localInterface,
-			Object filtersList,
 			HashMap<String, Object> tableAliasCollection,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> scopedQueryCollection,
@@ -9757,37 +9772,6 @@ public class SqlParseSymbolTreeHelper {
 			ArrayList<Object> relationalModifierInterfaceHints) {
 		if (explicitQualifiedUnknownEntries == null || explicitQualifiedUnknownEntries.isEmpty()) {
 			return;
-		}
-
-		HashMap<String, String> explicitTableRefByColumn = new HashMap<String, String>();
-		if (localInterface != null) {
-			for (Object refsObj : localInterface.values()) {
-				if (!(refsObj instanceof ArrayList<?> refs)) {
-					continue;
-				}
-				for (Object refObj : refs) {
-					String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
-					String refTable = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
-					if (refName != null && refTable != null && !"*".equals(refTable)) {
-						explicitTableRefByColumn.putIfAbsent(refName, refTable);
-					}
-				}
-			}
-		}
-
-		if (filtersList instanceof ArrayList<?> filters) {
-			for (Object filterObj : filters) {
-				if (!(filterObj instanceof Map<?, ?> filterMap)) {
-					continue;
-				}
-				String filterName = walker.extractReferenceNameFromInterfaceEntry(filterMap);
-				String filterTableRef = walker.extractReferenceTableRefFromInterfaceEntry(filterMap);
-				if (filterName != null
-						&& filterTableRef != null
-						&& !"*".equals(filterTableRef)) {
-					explicitTableRefByColumn.putIfAbsent(filterName, filterTableRef);
-				}
-			}
 		}
 
 		for (Map.Entry<String, Object> unknownEntry : explicitQualifiedUnknownEntries.entrySet()) {

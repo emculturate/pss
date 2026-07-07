@@ -3933,7 +3933,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		normalizeLateralModifierEntries(subMap);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		symbolTreeHelper.convertSymbolTableToTableDictionary(false, false, null);
+		symbolTreeHelper.reconcileJoinExtensionSymbolTable();
 	}
 
 	private void normalizeLateralModifierEntries(Map<String, Object> subMap) {

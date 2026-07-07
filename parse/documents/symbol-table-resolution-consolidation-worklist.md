@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-07 (commit `2833a2f` — derived-column unified resolver; scope visibility; canaries green)
+**Last updated:** 2026-07-07 (Phase 6 audit complete; `reconcileJoinExtensionSymbolTable`)
 
 ---
 
@@ -17,7 +17,7 @@ Use this document as the single handoff for consolidating column resolution in t
 |-------|--------|---|--------------|
 | **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
 | **5** def_query read-path gaps | ⚠️ In progress | ~40% | V1/V2/V3 pass; V4–V16 mostly **stale query-dict goldens** (richer alias tokens from restored merge hook), not necessarily behavior regressions |
-| **6** one `convertSymbolTableToTableDictionary` | ⚠️ Near done | ~90% | Walker delegates to helper; dead-path audit + join-extension rename remain |
+| **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ⚠️ Near done | ~85% | `finalizeQueryScopeSymbolTable` / set-op / VALUES aligned; CTE-body inline-fork audit open |
 | **8** unified egress helper | ⚠️ Near done | ~90% | Canaries green; derived columns folded into `resolveQualifiedColumnAgainstVisibleScope`; query-dict diagnostic shortcut retired; late-pass helpers still to audit/retire |
 | **9** clause-list validation (no parallel pipelines) | ❌ Not started | 0% | Depends on Phase 8 close |
@@ -39,7 +39,7 @@ Use this document as the single handoff for consolidating column resolution in t
 2. Phase 8 late-pass helper audit (`materializeResolvableGlobalQualifiedUnresolvedLocations`, `backfillQueryDictionaryFromResolvedInterfaceSources`, early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` stripping passes — candidates to consolidate now that unified resolver handles derived proof)
 3. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
 
-**Suggested next focus:** Phase 6 close (audit only) → mechanical deprecated-wrapper removal → Phase 8 late-pass helper retirement → Phase 9 start.
+**Suggested next focus:** Mechanical deprecated-wrapper removal → Phase 8 late-pass helper retirement → Phase 9 start.
 
 ---
 
@@ -248,7 +248,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 6 — One canonical `convertSymbolTableToTableDictionary` (~90% done)
+### Phase 6 — One canonical `convertSymbolTableToTableDictionary` ✅ DONE (Jul 2026)
 
 **Goal:** Single implementation in `SqlParseSymbolTreeHelper`; all exit handlers delegate.
 
@@ -256,16 +256,39 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 |------|--------|-------|
 | Move walker copy → helper | ✅ | Walker no longer owns a duplicate block; all call sites go through helper |
 | Parameterize DML differences | ✅ | UPDATE `updateTargetTableRef`, DELETE target preference — flags on shared convert |
-| `exitJoin_extension_primary` | ⚠️ | Still calls `convertSymbolTableToTableDictionary` directly for mid-FROM lateral/PIVOT reconcile — intentional, not a scope publish; rename/document as `reconcileJoinExtensionSymbolTable` |
-| Dead-path audit | ❌ | Confirm no orphaned convert logic or parallel resolution forks remain in walker |
+| `exitJoin_extension_primary` | ✅ | Renamed to `reconcileJoinExtensionSymbolTable()` — mid-FROM partial reconcile, **not** scope publish |
+| Dead-path audit | ✅ | See **Phase 6 audit (Jul 2026)** below |
 
-**Close Phase 6 when:**
+**Gate:** ✅ Full parse test suite minus known skip list (15 PIVOT AST + 1 donor-email sample); no new golden churn from Phase 6 close.
 
-1. `grep convertSymbolTableToTableDictionary` shows only helper definition + intentional call sites (finalize paths, join-extension reconcile, DML finalize).
-2. Join-extension reconcile is named/documented so it is clearly **not** a second scope-publish path.
-3. Full parse suite minus known skip list passes with **no new** golden churn beyond already-reviewed consolidation output.
+#### Phase 6 audit (Jul 2026)
 
-**Gate:** Full parse test suite minus known skip list (15 PIVOT AST + 1 donor-email sample); no intentional golden churn.
+**`convertSymbolTableToTableDictionary` call sites** (grep confirms no walker duplicate):
+
+| Call site | Purpose | Scope publish? |
+|-----------|---------|----------------|
+| `finalizeQueryScopeSymbolTable` | SELECT / CTE-body / insert-source exit | Yes |
+| `finalizeUpdateScopeSymbolTable` | UPDATE exit | Yes |
+| `finalizeDeleteScopeSymbolTable` | DELETE exit | Yes |
+| `reconcileJoinExtensionSymbolTable` | `exitJoin_extension_primary` — PIVOT/UNPIVOT/lateral mid-FROM | **No** — partial reconcile while `query_specification` still open |
+
+**Not parallel convert forks** (walk-time hooks that delegate to helper or run before scope exit):
+
+| Location | Role |
+|----------|------|
+| `SqlParseEventWalker.resolveUnpivotGeneratedColumnsFromUnresolvedMap` | PIVOT/UNPIVOT walk-time unresolved stripping — calls helper |
+| `SqlParseEventWalker.sourceHasDependencyColumn` | PIVOT hint validation at modifier exit — table-dict probe only, not egress |
+| `finalizeQueryScopeSymbolTable` post-convert passes | Qualified batch exit + `materializeResolvableGlobalQualifiedUnresolvedLocations` — Phase 8 retirement candidates, not second convert impl |
+
+**Dead code removed:**
+
+- `emitExplicitQualifiedUnknownDiagnostics`: unused `explicitTableRefByColumn` map (built from interface/filters, never read after query-dict shortcut retirement); dropped unused `localInterface` / `filtersList` parameters.
+
+**Still intentional multi-path resolution inside helper** (Phase 8 retirement, not Phase 6 duplicates):
+
+- `convertSymbolTableToTableDictionary` internal egress
+- `resolveQualifiedUnresolvedAtQueryScopeExit` after finalize
+- `materializeResolvableGlobalQualifiedUnresolvedLocations` at statement-top query exit
 
 ---
 
@@ -464,12 +487,12 @@ These four `@Deprecated` methods in `SqlParseSymbolTreeHelper` are thin aliases;
 Goal: start deleting redundant code **without** breaking V9/V13 or widening golden churn.
 
 ```
-Step 1 — Phase 6 close (audit only, ~1 session)                    ← NEXT
-  grep convertSymbolTableToTableDictionary / parallel resolution forks in walker
-  rename/document exitJoin_extension_primary reconcile (not a scope publish)
-  delete any confirmed-unreachable private helpers found by audit
+Step 1 — Phase 6 close (audit only, ~1 session)                    ✅ DONE (Jul 2026)
+  grep convertSymbolTableToTableDictionary — 4 intentional call sites, no walker duplicate
+  reconcileJoinExtensionSymbolTable() documents mid-FROM reconcile (not publish)
+  removed dead explicitTableRefByColumn block in emitExplicitQualifiedUnknownDiagnostics
 
-Step 2 — Mechanical deprecated cleanup (~30 min)
+Step 2 — Mechanical deprecated cleanup (~30 min)                   ← NEXT
   rename CTE → context_list call sites (4 wrappers above)
   delete the @Deprecated wrapper methods
 
@@ -599,8 +622,8 @@ Read parse/documents/symbol-table-resolution-consolidation-worklist.md first —
 - Published scope vs global dictionary rules
 - Phase 8 unified resolver (RESOLVED_DERIVED_COLUMN, isPhysicalTableRefVisibleInScope)
 
-Current state (commit 2833a2f on Spring-2026-Extensions):
-- Phases 1–4 done; Phases 6–8 ~90%; Phase 11 started (V9/V13 DML canaries pass).
+Current state (commit 2833a2f+ on Spring-2026-Extensions):
+- Phases 1–4 done; **Phase 6 done**; Phases 7–8 ~90%; Phase 11 started (V9/V13 DML canaries pass).
 - Phase 8 canaries GREEN: nestedQueryDemoTest (3 fatals), nestedQueryDemoWithCteTest, V9, V13.
 - Unified qualified resolver now handles PIVOT/UNPIVOT derived columns (RESOLVED_DERIVED_COLUMN).
 - Retired emitExplicitQualifiedUnknownDiagnostics query-dict containsKey(columnName) shortcut.
@@ -610,10 +633,9 @@ Current state (commit 2833a2f on Spring-2026-Extensions):
 
 Your mission this session — follow "Shortest path to dead-code removal" in order:
 
-1. Phase 6 close (audit only): grep for parallel convert/resolution forks; rename/document join-extension reconcile; delete confirmed-dead private helpers only.
-2. Mechanical cleanup: rename CTE→context_list call sites; delete 4 @Deprecated wrapper methods.
-3. Phase 8 late-pass retirement: audit materializeResolvableGlobalQualifiedUnresolvedLocations — delete if subsumed by unified egress; same for backfillQueryDictionaryFromResolvedInterfaceSources; evaluate consolidating early derived-column stripping passes now that unified resolver handles derived proof.
-4. Re-run UPDATE CTE spot checks (U3/U4/U5/U7/U9) after helper deletions.
+1. Mechanical cleanup: rename CTE→context_list call sites; delete 4 @Deprecated wrapper methods.
+2. Phase 8 late-pass retirement: audit materializeResolvableGlobalQualifiedUnresolvedLocations — delete if subsumed by unified egress; same for backfillQueryDictionaryFromResolvedInterfaceSources; evaluate consolidating early derived-column stripping passes now that unified resolver handles derived proof.
+3. Re-run UPDATE CTE spot checks (U3/U4/U5/U7/U9) after helper deletions.
 
 Contract to preserve:
 - Embedded scope payloads are canonicalized as def_*.
