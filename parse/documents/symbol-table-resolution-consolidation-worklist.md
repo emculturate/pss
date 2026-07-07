@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-06 (Phase 8 canary fatal counts; Phase 6–8 closure criteria)
 
 ---
 
@@ -194,52 +194,82 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 6 — One canonical `convertSymbolTableToTableDictionary`
+### Phase 6 — One canonical `convertSymbolTableToTableDictionary` (~90% done)
 
 **Goal:** Single implementation in `SqlParseSymbolTreeHelper`; all exit handlers delegate.
 
-| Task | Notes |
-|------|-------|
-| Move walker copy → helper (or delete dead helper copy) | Walker currently owns live ~500-line block; helper duplicate has zero call sites |
-| Parameterize DML differences | UPDATE `updateTargetTableRef`, DELETE target preference — flags, not forks |
-| `exitJoin_extension_primary` | Mid-FROM re-resolution after lateral/PIVOT join — name/document (`reconcileJoinExtensionSymbolTable`), not a scope publish |
+| Task | Status | Notes |
+|------|--------|-------|
+| Move walker copy → helper | ✅ | Walker no longer owns a duplicate block; all call sites go through helper |
+| Parameterize DML differences | ✅ | UPDATE `updateTargetTableRef`, DELETE target preference — flags on shared convert |
+| `exitJoin_extension_primary` | ⚠️ | Still calls `convertSymbolTableToTableDictionary` directly for mid-FROM lateral/PIVOT reconcile — intentional, not a scope publish; rename/document as `reconcileJoinExtensionSymbolTable` |
+| Dead-path audit | ❌ | Confirm no orphaned convert logic or parallel resolution forks remain in walker |
+
+**Close Phase 6 when:**
+
+1. `grep convertSymbolTableToTableDictionary` shows only helper definition + intentional call sites (finalize paths, join-extension reconcile, DML finalize).
+2. Join-extension reconcile is named/documented so it is clearly **not** a second scope-publish path.
+3. Full parse suite minus known skip list passes with **no new** golden churn beyond already-reviewed consolidation output.
 
 **Gate:** Full parse test suite minus known skip list (15 PIVOT AST + 1 donor-email sample); no intentional golden churn.
 
 ---
 
-### Phase 7 — Uniform query scope finalization (`exitQuery_specification`)
+### Phase 7 — Uniform query scope finalization (`exitQuery_specification`) (~85% done)
 
 **Goal:** Leaf SELECT / CTE body / insert-source SELECT use the same exit shape as VALUES.
 
-| Task | Notes |
-|------|-------|
-| `finalizeQueryScopeSymbolTable` | Already partially landed — ensure it owns convert + export + publish |
-| Replace inline logic in `exitQuery_specification` | Bubble/defer flags as parameters, not inline special cases |
-| Align UNION/INTERSECT | `finalizeSetOperationScopeSymbolTable` already parallel to VALUES |
+| Task | Status | Notes |
+|------|--------|-------|
+| `finalizeQueryScopeSymbolTable` | ✅ | Owns convert + export + publish; walker `exitQuery_specification` delegates |
+| Replace inline logic in `exitQuery_specification` | ✅ | Walker only assembles clause submaps, then delegates |
+| Align UNION/INTERSECT | ✅ | `finalizeSetOperationScopeSymbolTable` parallel to VALUES |
+| CTE body / insert-source SELECT audit | ❌ | Confirm every leaf SELECT path uses the same finalizer (no inline publish forks) |
+| Predicate frames | ⏸️ | IN/EXISTS/predicand stay on `exitPredicateSubqueryFrame` merge/lift — **not** full finalize (Phase 10) |
+
+**Close Phase 7 when:**
+
+1. Every non-predicate leaf SELECT exit routes through `finalizeQueryScopeSymbolTable` (or set-op/VALUES equivalent).
+2. No inline convert+publish blocks remain outside helper finalizers.
+3. Subquery + CTE spot tests reviewed; symbol-table golden updates case-by-case only.
 
 **Gate:** Subquery and CTE test classes; expect symbol-table golden drift — review before bulk update.
 
 ---
 
-### Phase 8 — Unified qualified/unqualified egress helper
+### Phase 8 — Unified qualified/unqualified egress helper (~75% done)
 
 **Goal:** One `resolveQualifiedUnresolvedEntries` (or equivalent) used everywhere egress runs.
 
-| Step | Description |
-|------|-------------|
-| Extract helper | defer / materialize-to-**global** dict / fatal |
-| Refactor `retryResolvableQualifiedUnresolvedEntries` | Delegate first |
-| Align `emitQualifiedSourceNotFoundFatals(InScope)` | Remove “column must already exist in physical table dict” gate |
-| Wire hooks | `exitFrom_clause`, `publishQueryLikeScope`, `exitPredicateSubqueryFrame`, top-level `finalizeQueryScopeSymbolTable` |
-| Select-list qualified refs | In convert path: materialize `tab1.col` when table visible, not validate-only |
+| Step | Status | Description |
+|------|--------|-------------|
+| Extract unified egress helpers | ✅ | `resolveUnqualifiedColumnAgainstVisibleScope`, `resolveQualifiedColumnAgainstVisibleScope`, `applyQualifiedScopeResolutionAtBatchExit` |
+| Retire `retryResolvableQualifiedUnresolvedEntries` | ✅ | Replaced by unified batch exit path |
+| Align `emitQualifiedSourceNotFoundFatals` | ✅ | CTE handled in batch exit; consolidated fatal emit helpers |
+| Wire hooks | ⚠️ | `finalizeQueryScopeSymbolTable`, `exitPredicateSubqueryFrame`, convert path — audit remaining ad-hoc egress |
+| Select-list qualified refs | ⚠️ | Convert path materializes when visible; confirm no validate-only regressions |
+| Retire redundant late-pass helpers | ❌ | Review `materializeResolvableGlobalQualifiedUnresolvedLocations` and explicit-unknown merge paths |
 
 **Canary:** `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest`
 
-- Exactly **2 fatals:** `tab2.e3` (line 6 col 61), `gg.y` (line 7 col 23)
-- Global **`tab1`** dict: `t`, `<y_col>`, `a`, `x`, `<z_col>`, `<w_col>` with correct token line/col
+- Exactly **3 fatals:**
+  1. `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` — `tab2.e3` (l:6 c:61)
+  2. `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` — `gg.y` (l:7 c:23)
+  3. `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` — `tt.f` (l:5 c:53)
+- Outer WHERE unqualified `c` resolves to joined **`tab1`** (l:7 c:7) — not a fatal
+- Global **`tab1`** dict: `t`, `<y_col>`, `a`, `x`, `<z_col>`, `<w_col>`, `c` with correct token line/col
+- Symbol table published under **`def_query11`** (not live `query11` key)
 
-Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md`
+**CTE variant:** `nestedQueryDemoWithCteTest` — exactly **3 fatals** (same set minus `gg.y`; `gg.y` resolves via CTE `context_list`).
+
+Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note: handoff doc still describes the pre-`c`-fatal 2-fatal baseline; treat this worklist as authoritative).
+
+**Close Phase 8 when:**
+
+1. Nested demo canaries pass **both** fatal assertions and symbol-table goldens (reviewed, not bulk-updated).
+2. UPDATE CTE spot checks pass: `updateComplexSubstitutionU3/U4/U5/U7/U9` in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`.
+3. V1–V3 consolidation canaries stay green; no new fallback readers added.
+4. Remaining late-pass helpers either retired or documented as load-bearing with explicit rationale.
 
 **Gate:** Canary + UPDATE CTE spot checks (U3/U4/U5/U7/U9) + union-branch correlated tests.
 
@@ -294,6 +324,40 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md`
 
 **Gate:** DML test class + `insertValues*` + orphan parity tests; full suite minus PIVOT/donor skip list.
 
+#### V13 canary — nested UPDATE FROM correlated substitution columns
+
+Primary test: `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`
+
+Baseline goldens: commit `5125b02` (adapt `update2` → `def_update2` prefix).
+
+| Gap (vs `5125b02`) | Root cause | Fix status |
+|--------------------|------------|------------|
+| UPDATE LHS `<agg_score>` missing from update-scope `table_dictionary` / global `employees` | `makeQualifiedColumnReferenceKey` / `extractLhsColumnName` ignored substitution-in-column-map shape | Fixed — `extractColumnNameFromColumnReferenceMap` |
+| Correlated `e.<dept_id>` missing from inner `def_query0.table_dictionary.employees` | Outer physical alias resolvable before table-dict row exists; materialization skipped | Fixed — `canMaterializeQualifiedToKnownPhysicalSource` + `materializeQualifiedUnresolvedEntry` + `RESOLVED_PHYSICAL_SOURCE` egress |
+| Sparse `query_column_dictionary` / published `query_dictionary` (missing alias + substitution spellings) | Phase 8 removed merge hook; partial restore adds alias tokens only | **Accepted (Jul 2026)** — query dict uses alias tokens (`'a'`, `'e'`, `'inner_sq'`, `<381>`); `<327>` substitution spellings from `5125b02` are not required. Dual capture deferred. |
+| Symbol-tree `filters`/`interface` substitution spellings | Already captured at walk time — goldens were copy-pasted from V10 | Goldens restored from `5125b02` |
+
+Remaining consolidation backlog (not V13-specific):
+
+- `resolveVisibleOuterDeferredUnresolved` is still identity — predicate outer-correlated partition defers to parent unresolved merge; FROM-subquery correlated refs should materialize locally (above fixes cover V13 path).
+- Interface validation loop still skips column-type substitutions (`~1460`) — intentional for select-list fatals; clause tokens come from unresolved/materialization paths instead.
+- `collectClauseColumnsIntoUnresolved` skips substitutions (`~8686`) — qualified filter refs use explicit-qualified egress instead.
+
+#### Stale golden backlog (accepted alias-token query dict)
+
+V9/V13 canaries are updated and passing. The rest of `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (~82/95 cases as of Jul 2026) still expect pre-consolidation output:
+
+| Stale pattern | Example expected → actual |
+|---------------|---------------------------|
+| Query dict column tokens | `emp_id=<381>` literal → `'a'`, `'e'`, `'src'` alias tokens |
+| Query dict key ordering | Fixed key order → walk-order / merge-order |
+| Symbol table scope keys | `insert1=` / `delete1=` → `def_insert1=` / `def_delete1=` with nested `def_queryN` |
+| Symbol tree scope keys | Same `def_` prefix drift on published symbol tree |
+| Interface lists | Substitution variable names → resolved physical column names |
+| Table dict ordering | Column key order within table entries |
+
+Refresh strategy: case-by-case as each DML variant is reviewed (same approach as V9/V13); do not bulk-update until the variant's behavior is confirmed. Core select tests with `<327>` in query dict (`SqlEventWalkerCoreSelectFromAliasingTests`, substitution predicate tests) may also drift when those paths are exercised under the restored merge hook.
+
 ---
 
 ## Fallback retirement tracker (Phase 11+)
@@ -302,7 +366,7 @@ Retire only after Phases 6–8 make scope exits self-contained:
 
 | Fallback | Why it exists | Retire when |
 |----------|---------------|-------------|
-| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Post-hoc select-list merge | Clause refs captured correctly at scope exit |
+| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Post-hoc select-list merge into source `queryN` dict | **Restored for V13** (Jul 2026) — re-evaluate retire after clause egress emits alias+substitution tokens natively |
 | `materializeResolvedUnqualifiedReference` query-backed early return | Wrong dictionary target | Resolution writes correct scope key in one pass |
 | `moveEntriesToSingleTableIfSingleTarget` | Last-chance single-table relocation | Single-source scopes resolve at exit |
 | Second `assignTableRefsForColumnReferenceList` on filters/groupby/orderby | Clauses collected early, resolved late | Same pass as interface validation at exit |
@@ -338,6 +402,15 @@ convertSymbolTable → export query_dictionary → publishScopeSymbolTable
 cd parse
 mvn test -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest
 mvn test -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoWithCteTest
+```
+
+Expected fatals: **3** (`nestedQueryDemoTest`), **2** (`nestedQueryDemoWithCteTest` — same minus `gg.y`). Outer WHERE `c` must resolve to joined `tab1`, not emit a query-alias fatal.
+
+### Phase 8 UPDATE CTE spot checks
+
+```bash
+cd parse
+mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU3WithCteIntersectOrderBySubstitution,updateComplexSubstitutionU4NestedWithInCteBody,updateComplexSubstitutionU5WithCteQualifyWindowSubstitution,updateComplexSubstitutionU7ChainedCteReferences,updateComplexSubstitutionU9WithCteSelfUnionBranches
 ```
 
 ### Unaliased derived table regression (Phases 1–5)

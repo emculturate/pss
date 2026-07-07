@@ -2990,7 +2990,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			String assignmentKey = symbolTreeHelper.extractAssignmentLhsName(left);
 			if (assignmentKey != null && !assignmentKey.isBlank()) {
-				symbolTreeHelper.addUpdateAssignmentSymbolReference(assignmentKey, right, symbolTreeHelper.resolveAssignmentLhsTokenString(ctx));
+				symbolTreeHelper.addUpdateAssignmentSymbolReference(
+						assignmentKey,
+						right,
+						symbolTreeHelper.resolveAssignmentLhsTokenString(ctx),
+						symbolTreeHelper.resolveAssignmentRhsToken(ctx));
 				symbolTreeHelper.moveAssignmentLhsToLhsUnresolvedColumns(left);
 			}
 
@@ -6255,7 +6259,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.clear();
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
-			// Capture  walker.symbolTable entry
+			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
 		}
 	}
@@ -6313,7 +6317,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.clear();
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
-			// Capture  walker.symbolTable entry
+			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
 		}
 	}
