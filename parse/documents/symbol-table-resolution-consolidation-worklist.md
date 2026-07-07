@@ -7,7 +7,36 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-06 (Phase 8 canary fatal counts; Phase 6–8 closure criteria)
+**Last updated:** 2026-07-07 (progress dashboard; V9/V13 DML canaries; dead-code removal path)
+
+---
+
+## Progress dashboard (Jul 2026)
+
+| Phase | Status | % | Gate / notes |
+|-------|--------|---|--------------|
+| **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
+| **5** def_query read-path gaps | ⚠️ In progress | ~40% | V1/V2/V3 pass; V4–V16 mostly **stale query-dict goldens** (richer alias tokens from restored merge hook), not necessarily behavior regressions |
+| **6** one `convertSymbolTableToTableDictionary` | ⚠️ Near done | ~90% | Walker delegates to helper; dead-path audit + join-extension rename remain |
+| **7** uniform query scope finalization | ⚠️ Near done | ~85% | `finalizeQueryScopeSymbolTable` / set-op / VALUES aligned; CTE-body inline-fork audit open |
+| **8** unified egress helper | ⚠️ In progress | ~80% | Helpers landed; canary green; `materializeResolvableGlobalQualifiedUnresolvedLocations` still to retire |
+| **9** clause-list validation (no parallel pipelines) | ❌ Not started | 0% | Depends on Phase 8 close |
+| **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity |
+| **11** DML parity + fallback retirement | ⚠️ Started | ~25% | **V9 + V13 canaries pass**; `finalizeInsertScopeSymbolTable` exists; ~82/95 DML tests have stale goldens |
+
+**Recent wins (Jul 2026):**
+
+- V13 nested UPDATE FROM correlated substitution columns — table dict + query dict + symbol tree green
+- V9 UPDATE FROM join-on orphan RHS — goldens aligned
+- Query column dictionary alias tokens (`'a'`, `'e'`, `'inner_sq'`) accepted as canonical (not `<327>` substitution spellings)
+
+**Active blockers before fallback retirement:**
+
+1. ~~Phase 8 canary fatal set (`nestedQueryDemoTest` / `nestedQueryDemoWithCteTest`)~~ — fixed Jul 2026 via `isPhysicalTableRefVisibleInScope` (no global-dict fallback materialization)
+2. Phase 6 dead-path audit (confirm no parallel resolution forks)
+3. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case
+
+**Suggested next focus:** Phase 6 close (audit only) → Phase 8 canary fix → mechanical deprecated-wrapper removal → Phase 9 start.
 
 ---
 
@@ -179,18 +208,18 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 5 — Close def_query canonicalization gaps
+### Phase 5 — Close def_query canonicalization gaps (~40% done)
 
 **Goal:** Finish the read-path and snapshot behavior started in Phases 1–4 before larger refactors.
 
-| Task | Notes |
-|------|-------|
-| Resolve V1 `table_ref` delta | Correlated outer ref in nested set-op filter list |
-| Expand verification | Same narrow pair → nearby unaliased-derived V2–V16, union/intersect FROM shapes |
-| Document `queryN` vs `def_queryN` contract | When live handle vs published definition; what consumers must use |
-| Enforce strict payload lookup | No live-key fallback when reading published scope payloads; translate alias/live refs to `def_*` then resolve |
+| Task | Status | Notes |
+|------|--------|-------|
+| Resolve V1 `table_ref` delta | ✅ | Correlated outer ref stays `table_ref=null` in child; parent carries resolution |
+| Expand verification | ⚠️ | V1/V2/V3 pass; V4–V16 fail mostly on **query-dict golden drift** (richer tokens), not fatals |
+| Document `queryN` vs `def_queryN` contract | ✅ | See **Published scope vs global dictionary** above |
+| Enforce strict payload lookup | ⚠️ | Partial — recursive descendant fallbacks still under narrow-pass audit |
 
-**Gate:** V1/V7 (or agreed subset) pass without regressions on anonymous FROM registration.
+**Gate:** V1/V7 (or agreed subset) pass without regressions on anonymous FROM registration. V7 currently fails query-dict golden only — review before bulk update.
 
 ---
 
@@ -237,7 +266,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 8 — Unified qualified/unqualified egress helper (~75% done)
+### Phase 8 — Unified qualified/unqualified egress helper (~70% done)
 
 **Goal:** One `resolveQualifiedUnresolvedEntries` (or equivalent) used everywhere egress runs.
 
@@ -247,8 +276,9 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 | Retire `retryResolvableQualifiedUnresolvedEntries` | ✅ | Replaced by unified batch exit path |
 | Align `emitQualifiedSourceNotFoundFatals` | ✅ | CTE handled in batch exit; consolidated fatal emit helpers |
 | Wire hooks | ⚠️ | `finalizeQueryScopeSymbolTable`, `exitPredicateSubqueryFrame`, convert path — audit remaining ad-hoc egress |
-| Select-list qualified refs | ⚠️ | Convert path materializes when visible; confirm no validate-only regressions |
-| Retire redundant late-pass helpers | ❌ | Review `materializeResolvableGlobalQualifiedUnresolvedLocations` and explicit-unknown merge paths |
+| Select-list qualified refs | ⚠️ | `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` restored for V13; native clause egress still TODO |
+| Retire redundant late-pass helpers | ❌ | **`materializeResolvableGlobalQualifiedUnresolvedLocations`** still called from convert (~4011); **`backfillQueryDictionaryFromResolvedInterfaceSources`** still load-bearing |
+| Canary green | ✅ | 3 fatals (`tab2.e3`, `gg.y`, `tt.f`); outer `tt.f` does not materialize into global `tt` |
 
 **Canary:** `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest`
 
@@ -308,17 +338,19 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 ---
 
-### Phase 11 — DML parity and late-pass retirement
+### Phase 11 — DML parity and late-pass retirement (~25% done)
 
 **Goal:** UPDATE / DELETE / INSERT use the same ingress + egress + publish patterns; delete redundant fallbacks.
 
-| Task | Notes |
-|------|-------|
-| `finalizeUpdateScopeSymbolTable` / `finalizeDeleteScopeSymbolTable` | Already aligned — audit against Phase 8–9 helpers |
-| `finalizeInsertScopeSymbolTable` | Last major scope still inline in `exitInsert_expression` |
-| DML clause probe | Target-table rules only where semantically required (UPDATE LHS, DELETE preference) |
-| Retire late-pass fallbacks (as scopes self-contain) | See table below |
-| Donor-email forward alias (TODO B) | Unqualified ref in `PARTITION BY` binds to earlier select-list alias — orthogonal track |
+| Task | Status | Notes |
+|------|--------|-------|
+| `finalizeUpdateScopeSymbolTable` / `finalizeDeleteScopeSymbolTable` | ✅ | Aligned — audit against Phase 8–9 helpers remains |
+| `finalizeInsertScopeSymbolTable` | ✅ | Exists; `exitInsert_expression` delegates — audit parity with UPDATE/DELETE finalize |
+| DML canaries V9/V13 | ✅ | Passing with alias-token query dict |
+| DML golden refresh | ⚠️ | ~82/95 cases stale (see backlog below) |
+| DML clause probe | ❌ | Target-table rules only where semantically required (UPDATE LHS, DELETE preference) |
+| Retire late-pass fallbacks (as scopes self-contain) | ❌ | See table below — blocked on Phase 8 close |
+| Donor-email forward alias (TODO B) | ⏸️ | Unqualified ref in `PARTITION BY` binds to earlier select-list alias — orthogonal track |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
 
@@ -373,6 +405,65 @@ Retire only after Phases 6–8 make scope exits self-contained:
 | `resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable` | INSERT orphan hack | **Removed** — do not reintroduce |
 | Predicate `embedDeferredUnresolvedInDefQueryScope` | Upward archive | Replaced by downward `context_list` + lift at predicate exit |
 
+### Deprecated wrappers safe to delete first (mechanical, zero behavior change)
+
+These four `@Deprecated` methods in `SqlParseSymbolTreeHelper` are thin aliases; callers still use the old CTE names:
+
+| Deprecated wrapper | Replacement | Call sites to rename |
+|--------------------|-------------|----------------------|
+| `mergeCteListIntoQueryScope` | `mergeContextListIntoQueryScope` | `SqlParseEventWalker` (~2399) |
+| `ensureCteListSymbolMap` | `ensureContextListSymbolMap` | Walker (~2536), helper internals |
+| `getCteListSymbolMap` | `getContextListSymbolMap` | Walker (~2437), helper internals |
+| `pushSymbolTableWithParentCteList` | `pushSymbolTableWithParentVisibleScope` | grep for callers |
+
+**Action:** rename call sites → delete wrappers. No test behavior change expected.
+
+### Load-bearing fallbacks — do NOT delete until Phase 8–9 close
+
+| Method | Why still needed | Retire trigger |
+|--------|------------------|----------------|
+| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Query dict alias tokens for qualified select-list refs | Clause egress emits tokens natively at walk time |
+| `backfillQueryDictionaryFromResolvedInterfaceSources` | Interface-resolved columns → query dict | Same as above |
+| `materializeResolvableGlobalQualifiedUnresolvedLocations` | Late global qualified materialization in convert | Unified egress covers all convert exit paths |
+| `moveEntriesToSingleTableIfSingleTarget` | Single-source unqualified relocation | Scope exit resolves all unqualified in one pass |
+| `resolveVisibleOuterDeferredUnresolved` | Identity placeholder | Phase 10 implements downward resolution |
+
+---
+
+## Shortest path to dead-code removal
+
+Goal: start deleting redundant code **without** breaking V9/V13 or widening golden churn.
+
+```
+Step 1 — Phase 6 close (audit only, ~1 session)
+  grep convertSymbolTableToTableDictionary / parallel resolution forks in walker
+  rename/document exitJoin_extension_primary reconcile (not a scope publish)
+  delete any confirmed-unreachable private helpers found by audit
+
+Step 2 — Mechanical deprecated cleanup (~30 min)
+  rename CTE → context_list call sites (4 wrappers above)
+  delete the @Deprecated wrapper methods
+
+Step 3 — Phase 8 canary fix (~1 session)
+  fix nestedQueryDemoTest: restore 3rd fatal tt.f (l:5 c:53)
+  re-run nestedQueryDemoWithCteTest + UPDATE CTE spot checks (U3/U4/U5/U7/U9)
+
+Step 4 — Late-pass helper retirement (~1–2 sessions)
+  trace materializeResolvableGlobalQualifiedUnresolvedLocations call graph
+  if unified egress (applyQualifiedScopeResolutionAtBatchExit) subsumes it → delete
+  same audit for backfillQueryDictionaryFromResolvedInterfaceSources vs mergeSelectList hook
+  run V1–V3 + nestedQueryDemo + V9/V13 after each deletion
+
+Step 5 — Phase 9 start (enables more retirement)
+  single validateArchivedClauseColumnRef tree at scope exit
+  retire second assignTableRefsForColumnReferenceList pass on filters/groupby/orderby
+
+Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
+resolveVisibleOuterDeferredUnresolved (Phase 10), DML golden bulk refresh.
+```
+
+**Do not start with:** DML golden bulk update, CTE redesign, or removing `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` (V13 depends on it).
+
 ---
 
 ## Scope finalization map (target end state)
@@ -388,7 +479,7 @@ convertSymbolTable → export query_dictionary → publishScopeSymbolTable
 | UNION / INTERSECT | `finalizeSetOperationScopeSymbolTable` | ✅ |
 | UPDATE | `finalizeUpdateScopeSymbolTable` | ✅ |
 | DELETE | `finalizeDeleteScopeSymbolTable` | ✅ |
-| INSERT wrap | `finalizeInsertScopeSymbolTable` | ❌ Phase 11 |
+| INSERT wrap | `finalizeInsertScopeSymbolTable` | ✅ exists — audit parity (Phase 11) |
 | Predicate (IN/EXISTS/predicand) | Merge frame + lift unresolved; **not** full finalize | Phase 10 |
 | DDL | Bare pop + counter | OK — no column resolution |
 
@@ -471,34 +562,42 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 ```
 We are continuing symbol-table resolution consolidation for the SQL parse walker.
 
-Read parse/documents/symbol-table-resolution-consolidation-worklist.md (this file), then execute the
-"Current narrowed execution plan (next implementation pass)" first.
+Read parse/documents/symbol-table-resolution-consolidation-worklist.md first — especially:
+- Progress dashboard (Jul 2026)
+- Shortest path to dead-code removal
+- Published scope vs global dictionary rules
 
-Scope for this pass:
-- In scope: non-DML SQL statement resolution cleanup and recursive fallback removal.
-- Out of scope: CTE refactor, PIVOT/UNPIVOT refactor, and DML behavior changes.
+Current state:
+- Phases 1–4 done; Phase 6–8 near done; Phase 11 started (V9/V13 DML canaries pass).
+- nestedQueryDemoTest is FAILING (2 fatals, missing tt.f l:5 c:53) — must fix before retiring late-pass helpers.
+- ~82/95 DML tests + V4–V16 unaliased-derived tests have stale goldens (alias-token query dict); do NOT bulk-update.
+- Query column dictionary alias tokens ('a', 'e', 'inner_sq') are accepted canonical form.
+
+Your mission this session — follow "Shortest path to dead-code removal" in order:
+
+1. Phase 6 close (audit only): grep for parallel convert/resolution forks; rename/document join-extension reconcile; delete confirmed-dead private helpers only.
+2. Mechanical cleanup: rename CTE→context_list call sites; delete 4 @Deprecated wrapper methods (mergeCteListIntoQueryScope, ensureCteListSymbolMap, getCteListSymbolMap, pushSymbolTableWithParentCteList).
+3. Fix Phase 8 canary: nestedQueryDemoTest must emit exactly 3 QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE fatals (tab2.e3, gg.y, tt.f); outer WHERE c must resolve to tab1.
+4. If canary green: audit materializeResolvableGlobalQualifiedUnresolvedLocations — delete if subsumed by unified egress.
 
 Contract to preserve:
 - Embedded scope payloads are canonicalized as def_*.
 - Local alias maps and unaliased source refs remain queryN/valuesN/unionN/intersectN (or real alias/table names), not def_*.
+- AST stays syntactic (table_ref=null for unqualified/unreferenced columns); resolution only in symbol table/dictionaries.
+- Never backpatch finalized def_queryN child payloads.
+- Never add new fallback/recovery readers without explicit user approval.
 
-Implementation guardrails:
-- Never add new fallback logic without explicit conversation and approval.
-- Prefer grammar-event-scoped submaps to carry data between rule exits instead of post-hoc readers.
+Validation (run after each step):
+  cd parse
+  mvn test -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest
+  mvn test -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoWithCteTest
+  mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13,SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateDictionaryHandlingJoinOnInSubqueryWithTargetTableRefAndOrphanRhsV9
+  mvn test -Dtest=SqlEventWalkerSubqueriesAndClauseSemanticsTests#unaliasedDerivedSimpleAllOuterClausesV1Test
 
-Primary objective:
-- Stop descending into nested child payloads to recover missing data; use immediate current-level published surfaces.
-- Do not backpatch finalized def_queryN payloads when parent scopes resolve correlated refs (see "Published scope vs global dictionary — detailed rules").
+Out of scope this session:
+- CTE behavior redesign, PIVOT/UNPIVOT, DML golden bulk refresh, removing mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary.
 
-Validation focus:
-- Use `SqlEventWalkerSubqueriesAndClauseSemanticsTests` as the primary development driver for cross-subclause resolution unification, starting at the block:
-   "UNALIASED DERIVED TABLE IN FROM/JOIN TESTS".
-- Follow and preserve the V1-V16 sequence in that block as the canonical progression for SELECT/JOIN/WHERE/EXISTS/GROUP BY/HAVING/QUALIFY/ORDER BY behavior.
-- When changing resolution logic, validate against V1-V16 first before widening to other suites.
-- Lock V4 fatal set to the intended four diagnostics.
-- Re-check V2/V4 set-op mismatch count/label parity.
-
-Do not bulk-update unrelated goldens. Keep diffs minimal and focused.
+Keep diffs minimal. One logical change per commit if committing.
 ```
 
 ---
