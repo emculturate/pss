@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-08 (quality gate expanded to 50 tests; correlated scalar predicand canaries added)
+**Last updated:** 2026-07-08 (quality gate expanded to 75 tests; CTE unqualified-ref canaries CTEV1/2/3/5/7/8/12 added)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**65 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**75 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -25,12 +25,13 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Group | Count | Class | Methods |
 |-------|-------|-------|---------|
 | Nested demo queries | 2 | `SqlEventWalkerCoreSelectFromAliasingTests` | `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest` |
-| Correlated scalar predicand | 13 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedScalarPredicandNestedJoinSubqueryTest` … `correlatedScalarPredicandWithNestedExistsSubqueryTest`, `correlatedScalarPredicandFirstCteStandaloneTest`, `correlatedScalarPredicandNestedCteWithOuterRefTest` (includes 4 with expected fatals: local-alias missing, CTE four-scenario, nested CTE four-scenario, union-body four-scenario) |
+| Correlated scalar predicand | 16 | `SqlEventWalkerCoreSelectFromAliasingTests` | … plus middle-CTE trio: `correlatedScalarPredicandMiddleCteReferencesFirstCteTest` (resolve), `correlatedScalarPredicandMiddleCteUnqualifiedColumnDiagnosticLocationTest`, `correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest` |
 | Correlated IN subquery | 8 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedInSubqueryNestedJoinSubqueryTest` … `correlatedInSubqueryNestedCteWithOuterRefTest` |
 | Correlated EXISTS subquery | 5 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedExistsSubqueryNestedJoinSubqueryTest` … `correlatedExistsSubqueryFinalQueryReferencesCteChainTest` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
+| CTE unqualified column refs | 7 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWithMultipleSimpleUnqualifiedReferencesCTEV1`, CTEV2, `queryAndUnionUnqualifiedReferencesCTEV3`, `queryAndIntersectUnqualifiedReferencesCTEV5`, `unionAndIntersectUnqualifiedReferencesCTEV7`, `intersectAndUnionUnqualifiedReferencesCTEV8`, `queryAndSubstitutionUnqualifiedReferencesCTEV12` |
 
 **Nested demo fatal expectations (unchanged):**
 
@@ -41,11 +42,81 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 
 - `insertDictionaryHandling*` V1–V7 (parallel to UPDATE dictionary-handling series; query-dict / symbol-tree goldens stale)
 - Remaining DML tests beyond UPDATE V1–V14 and INSERT VALUES V1–V7
+- UPDATE CTE substitution spot checks U3/U4/U5/U7/U9 (stale interface / fatal expectations)
+- CTE unqualified column refs CTEV4, CTEV6, CTEV9–11, CTEV13–14 (golden drift — external CTE/query-scope tokens)
 - Set-operation interface validation V1–V5 (formerly in consolidation suite)
 - PIVOT/UNPIVOT tests (see skip list)
-- Remaining `correlated*` tests **not in gate** (10 as of Jul 2026): CTE-chain / middle-CTE / last-CTE cases that document expected `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` fatals pending Phase 10 `context_list` resolution
+- Remaining `correlated*` tests **not in gate** (7 as of Jul 2026): last-CTE / final-query / IN-EXISTS middle-CTE chain cases still pending Phase 10 `context_list` review
+- `SqlEventWalkerCoreSelectFromAliasingTests` beyond gate canaries (~61 stale goldens — see Phase 7 backlog table below)
 
-**Gate status (Jul 2026):** **65/65 passing** as of last verification.
+**Gate status (Jul 2026):** **75/75 passing** as of last verification.
+
+---
+
+## Phase 7 golden backlog (review before next code step)
+
+Tests from the Phase 7 inventory that **fail** today. Review case-by-case; update goldens when behavior is confirmed — no bulk refresh.
+
+### CTE unqualified refs (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — 7 failing
+
+| Test | Assertion | What's wrong |
+|------|-----------|--------------|
+| `unionAndQueryUnqualifiedReferencesCTEV4` | Table Dictionary | Missing external join-alias token `bbb` on `tab2.col2` (query-scope only now) |
+| `intersectAndQueryUnqualifiedReferencesCTEV6` | Table Dictionary | Same — missing `bbb` token on physical `tab2.col2` |
+| `unionAndValuesUnqualifiedReferencesCTEV9` | Query Column Dictionary | Outer `query4.col1` missing; extra `union2.col1` with `aaa` alias token |
+| `valuesAndIntersectUnqualifiedReferencesCTEV10` | Query Column Dictionary | Outer `query4.col2` missing; extra `intersect3.col2` with `bbb` token |
+| `valuesAndValuesUnqualifiedReferencesCTEV11` | Query Column Dictionary | Outer `query2` block empty |
+| `substitutionAndQueryUnqualifiedReferencesCTEV13` | Table Dictionary | Missing `bbb` alias token on physical `tab2.col2` |
+| `substitutionAndSubstitutionUnqualifiedReferencesCTEV14` | Query Column Dictionary | Outer `query2` block empty |
+
+### UPDATE CTE substitution spot checks (`SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`) — 5 failing
+
+| Test | Assertion | What's wrong |
+|------|-----------|--------------|
+| `updateComplexSubstitutionU3WithCteIntersectOrderBySubstitution` | Interface | Expected `[score]`; actual `[]` |
+| `updateComplexSubstitutionU4NestedWithInCteBody` | Diagnostics | 2 unexpected fatals: `o.emp_id`, `o.metric_val` not in alias `o` interface |
+| `updateComplexSubstitutionU5WithCteQualifyWindowSubstitution` | Interface | Expected `[score]`; actual `[rn, score_val, emp_id]` |
+| `updateComplexSubstitutionU7ChainedCteReferences` | Interface | Expected `[score]`; actual `[raw_val, emp_id]` |
+| `updateComplexSubstitutionU9WithCteSelfUnionBranches` | Interface | Expected `[score]`; actual `[]` |
+
+### Correlated IN/EXISTS middle-CTE chain (`SqlEventWalkerCoreSelectFromAliasingTests`) — 7 failing (Phase 10)
+
+All fail: expected `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` fatal not found at golden position.
+
+| Test |
+|------|
+| `correlatedInSubqueryMiddleCteReferencesFirstCteTest` |
+| `correlatedInSubqueryLastCteReferencesPriorCtesTest` |
+| `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest` |
+| `correlatedExistsSubqueryLastCteReferencesPriorCtesTest` |
+| `correlatedExistsSubqueryUnionContextTest` |
+| `correlatedExistsSubqueryIntersectContextTest` |
+| `correlatedExistsSubqueryNestedCteWithOuterRefTest` |
+
+### CTE substitution column-variable (`SqlEventWalkerCoreSelectFromAliasingTests`) — 18 failing
+
+External CTE tokens moved from physical `table_dictionary` to `query_dictionary`; symbol tree uses `def_queryN` wrapper.
+
+| Test | Assertion |
+|------|-----------|
+| `getSubstitutionColumnVariableV1Test` … `V8` | Query Column Dictionary empty or missing `<select column>` |
+| `getSubstitutionColumnVariableV6SecondJoinOnQualifiedColumnReferencesTest` | Table Dictionary missing `cec2` join-alias tokens |
+| `getSubstitutionColumnVariableV9CteWrappedWhereVariantWithJoinOnSelectColumnTest` … `V16` | Symbol Tree — CTE external `cec` tokens, `def_query1` nesting |
+| `variation2ColumnVariableTest`, `variation3ColumnVariableTest` | Symbol Tree — CTE query-dict-only + `def_queryN` shape |
+
+### Basic SELECT / symbol-tree shape — 15 failing
+
+Empty global `queryColumnDictionaryMap` and/or bare `query0` vs `def_query0` wrapper: `basicSelectList1Test`, `basicSelectTableNameV1/V2/V3Test`, `basicSelectQuotedTableNameV1Test`, `basicSelectList2/3Test`, `basicSelectListAliasing1Test`, `basicSelectListNumericPrefixAliasingTest`, `basicSelectDistinctQualifierListTest`, `concatenationFormulaTest`, `informaticaINFunctionStatementTest`, `ascAsColumnTest`, `descAsColumnTest`, `rankAsColumnTest`.
+
+### Substitution / extended variable names — 13 failing
+
+Empty global query dict or alias token where column token expected: `simpleVariableName1Test`, `simpleVariableNameWithDotTest`, `simpleVariableNameWithDashTest`, `getSimpleColumnVariableTest`, `extendedVariableName1Test`, `extendedVariableNameWithDashTest`, `extendedVariableNameWithDots2Test`, `extendedVariableNamePopulationSubnamerTest`, `extendedVariableNamePopulationQualifierTest`, `entityVariableNamePopulationSubnameTest`, `entityVariableNamePopulationQualifierTest`, `informaticaINFunctionConditionStatement1/2Test`.
+
+### Real-world / DISTINCT / Jinja — 8 failing
+
+`basicSelectDistinctListWithEmbeddedAllListQualifierTest`, `basicSelectListQuotedNumericPrefixColumnTest` (key order), `real1`–`real4SelectListNumericPrefixAliasingTest`, `jinjaTupleSingleSourceUnqualifiedContactKeyTest`, `jinjaTupleWithAliasTest`.
+
+**Total backlog: 73 failing tests.**
 
 ---
 
@@ -706,7 +777,7 @@ Validation (run after each step — full quality gate):
   cd parse
   mvn -Psymbol-table-resolution-consolidation test
 
-Gate = 65 tests: nested demo (2), correlated scalar predicand (13), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16).
+Gate = 75 tests: nested demo (2), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1/2/3/5/7/8/12 (7).
 See "Quality gate" section at top of worklist for method names.
 
 Out of scope this session:

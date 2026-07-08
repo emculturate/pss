@@ -1998,26 +1998,20 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{def_query3={context_list={c1a=query2}, table_alias={c1a=query0}, def_query3={context_list={c1a=query2}, query_dictionary={}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}}, def_query2={query_dictionary={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@24,84:84=')',<288>,3:37]]}, table_dictionary={tab2={t2c1=[[@21,77:78='tb',<381>,3:30]]}}, interface={unnamed_0=[{name=t2c1, table_ref=tb}]}, table_alias={tb=tab2}}, filters=[{name=t1c1, table_ref=ta}], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
 				extractor.getSymbolTable().toString());
 	}
+
 	@Test
 	public void correlatedScalarPredicandMiddleCteReferencesFirstCteTest() {
 		final String query = "WITH w1 AS (SELECT aa.a1, aa.a2 FROM tab_a AS aa),"
 		    + "\nw2 AS (SELECT bb.b1 FROM tab_b AS bb"
 		    + "\n       WHERE bb.b1 = (SELECT max(ww.a1) FROM w1 AS ww"
 		    + "\n                      WHERE ww.a2 = bb.b2))"
-		    + "\nSELECT w2.b1 FROM w2";
+			+"\nSELECT w2.b1 FROM w2";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-
-		assertFatalDiagnosticAtPosition(
-				snippet,
-				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
-				"Unqualified column 'b2' at (l:3 c:38) was not found in output interface of any visible query alias [ww, w1].",
-				"b2",
-				3,
-				38);
-		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		
+		assertNoFatalErrors(extractor);
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, table=tab_b}}, where={condition={left={column={name=b1, table_ref=bb}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=a1, table_ref=ww}}}}}, from={table={alias=ww, table=w1}}, where={condition={left={column={name=a2, table_ref=ww}}, right={column={name=b2, table_ref=bb}}, operator==}}}, operator==}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[b1]", 
@@ -2032,6 +2026,76 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{def_query4={context_list={w1=query0, w2=query3}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query4={context_list={w1=query0, w2=query3}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}}, table_alias={w1=query0, w2=query1}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}, table_dictionary={tab_b={b2=[[@51,178:179='bb',<381>,4:36]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@41,126:126=')',<288>,3:38]]}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={unnamed_0=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}, dependent_queries={predicand2={query=query1, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void correlatedScalarPredicandMiddleCteUnqualifiedColumnDiagnosticLocationTest() {
+		final String query = "WITH w1 AS (SELECT aa.a1, aa.a2 FROM tab_a AS aa),"
+		    + "\nw2 AS (SELECT bb.b1 FROM (select b1 from tab_b) AS bb"
+		    + "\n       WHERE bb.b1 = (SELECT max(ww.a1) FROM w1 AS ww"
+		    + "\n                      WHERE ww.a2 = b2))"
+		    + "\nSELECT w2.b1 FROM w2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'b2' at (l:4 c:36) was not found in output interface of any visible query alias [bb, w1].",
+				"b2",
+				4,
+				36);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, query={select={1={column={name=b1, table_ref=null}}}, from={table={alias=null, table=tab_b}}}}}, where={condition={left={column={name=b1, table_ref=bb}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=a1, table_ref=ww}}}}}, from={table={alias=ww, table=w1}}, where={condition={left={column={name=a2, table_ref=ww}}, right={column={name=b2, table_ref=null}}, operator==}}}, operator==}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[b1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, tab_b={b1=[[@28,84:85='b1',<381>,2:33]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={b1=[[@60,207:208='w2',<381>,5:7]]}, query0={a1=[[@5,19:20='aa',<381>,1:19], [@43,138:139='ww',<381>,3:33]], a2=[[@9,26:27='aa',<381>,1:26], [@52,187:188='ww',<381>,4:28]]}, query1={b1=[[@28,84:85='b1',<381>,2:33], [@22,65:66='bb',<381>,2:14], [@35,118:119='bb',<381>,3:13]]}, query2={unnamed_0=[[@46,143:143=')',<288>,3:38]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query5={context_list={w1=query0, w2=query4}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query5={context_list={w1=query0, w2=query4}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query4}}, def_query4={context_list={w1=query0}, query_dictionary={}, def_query1={context_list={w1=query0}, query_dictionary={b1=[[@28,84:85='b1',<381>,2:33]]}, table_dictionary={tab_b={b1=[[@28,84:85='b1',<381>,2:33]]}}, interface={b1=[{name=b1, table_ref=tab_b}]}, table_alias={w1=query0}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=query1, w1=query0}, def_query2={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@46,143:143=')',<288>,3:38]]}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=null}], interface={unnamed_0=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}}, table_alias={w1=query0, w2=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest() {
+		final String query = "WITH w1 AS (SELECT aa.a1, aa.a2 FROM tab_a AS aa),"
+		    + "\nw2 AS (SELECT bb.b1 FROM (select b1 from tab_b) AS bb"
+		    + "\n       WHERE bb.b1 = (SELECT max(ww.a1) FROM w1 AS ww"
+		    + "\n                      WHERE ww.a2 = bb.missing))"
+		    + "\nSELECT w2.b1 FROM w2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
+				"Qualified column 'missing' at (l:4 c:36) was not found in output interface of query alias 'bb'.",
+				"missing",
+				4,
+				36);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, query={select={1={column={name=b1, table_ref=null}}}, from={table={alias=null, table=tab_b}}}}}, where={condition={left={column={name=b1, table_ref=bb}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=a1, table_ref=ww}}}}}, from={table={alias=ww, table=w1}}, where={condition={left={column={name=a2, table_ref=ww}}, right={column={name=missing, table_ref=bb}}, operator==}}}, operator==}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[b1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, tab_b={b1=[[@28,84:85='b1',<381>,2:33]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={b1=[[@62,215:216='w2',<381>,5:7]]}, query0={a1=[[@5,19:20='aa',<381>,1:19], [@43,138:139='ww',<381>,3:33]], a2=[[@9,26:27='aa',<381>,1:26], [@52,187:188='ww',<381>,4:28]]}, query1={b1=[[@28,84:85='b1',<381>,2:33], [@22,65:66='bb',<381>,2:14], [@35,118:119='bb',<381>,3:13]]}, query2={unnamed_0=[[@46,143:143=')',<288>,3:38]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query5={context_list={w1=query0, w2=query4}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query5={context_list={w1=query0, w2=query4}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query4}}, def_query4={context_list={w1=query0}, query_dictionary={}, def_query1={context_list={w1=query0}, query_dictionary={b1=[[@28,84:85='b1',<381>,2:33]]}, table_dictionary={tab_b={b1=[[@28,84:85='b1',<381>,2:33]]}}, interface={b1=[{name=b1, table_ref=tab_b}]}, table_alias={w1=query0}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=query1, w1=query0}, def_query2={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@46,143:143=')',<288>,3:38]]}, filters=[{name=a2, table_ref=ww}, {name=missing, table_ref=bb}], interface={unnamed_0=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}}, table_alias={w1=query0, w2=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 	@Test
 	public void correlatedScalarPredicandLastCteReferencesPriorCtesTest() {
 		final String query = "WITH ca AS (SELECT xa.x1, xa.x2 FROM tab_x AS xa),"
@@ -2045,14 +2109,9 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
 
-		assertFatalDiagnosticAtPosition(
-				snippet,
-				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
-				"Unqualified column 'z3' at (l:1 c:1) was not found in output interface of any visible query alias [ca, cb].",
-				"z3",
-				1,
-				1);
-		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=x1, table_ref=xa}}, 2={column={name=x2, table_ref=xa}}}, from={table={alias=xa, table=tab_x}}}, alias=ca}, 2={cte={select={1={column={name=y1, table_ref=yb}}}, from={table={alias=yb, table=tab_y}}}, alias=cb}, 3={cte={select={1={column={name=z1, table_ref=zc}}}, from={table={alias=zc, table=tab_z}}, where={condition={left={column={name=z2, table_ref=zc}}, right={select={1={column={name=x1, table_ref=ca}}}, from={table={alias=null, table=ca}}, where={condition={left={column={name=x2, table_ref=ca}}, right={column={name=z3, table_ref=zc}}, operator==}}}, operator==}}}, alias=cc}}, query={select={1={column={name=z1, table_ref=cc}}}, from={table={alias=null, table=cc}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[z1]", 
@@ -2067,6 +2126,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{def_query5={context_list={ca=query0, cb=query1, cc=query4}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@22,65:66='yb',<381>,2:14]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, def_query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={}, interface={z1=[{name=z1, table_ref=cc}]}, table_alias={cc=query4, ca=query0, cb=query1}}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@35,104:105='zc',<381>,3:14]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,206:207='zc',<381>,5:36]]}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=z2, table_ref=zc}], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}], interface={x1=[{name=x1, table_ref=ca}]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query2, ca=query0, cb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
+
 	@Test
 	public void correlatedScalarPredicandFinalQueryReferencesCteChainTest() {
 		final String query = "WITH fa AS (SELECT pa.p1, pa.p2 FROM tab_p AS pa),"
@@ -2080,14 +2140,8 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
 
-		assertFatalDiagnosticAtPosition(
-				snippet,
-				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
-				"Unqualified column 'p1' at (l:4 c:24) was not found in output interface of any visible query alias [ff, fa, fb].",
-				"p1",
-				4,
-				24);
-		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=p1, table_ref=pa}}, 2={column={name=p2, table_ref=pa}}}, from={table={alias=pa, table=tab_p}}}, alias=fa}, 2={cte={select={1={column={name=q1, table_ref=qb}}}, from={table={alias=qb, table=tab_q}}}, alias=fb}}, query={select={1={column={name=p1, table_ref=pa}}, 2={lookup={from={table={alias=ff, table=fa}}, where={condition={left={column={name=p1, table_ref=ff}}, right={column={name=p1, table_ref=pa}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=p2, table_ref=ff}}}}}}, alias=p2_max}}, from={join={1={table={alias=pa, table=fa}}, 2={join=JOIN, on={condition={left={column={name=p1, table_ref=pa}}, right={column={name=q1, table_ref=fb}}, operator==}}}, 3={table={alias=null, table=fb}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[p1, p2_max]", 

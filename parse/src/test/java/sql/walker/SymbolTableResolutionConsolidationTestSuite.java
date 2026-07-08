@@ -11,13 +11,14 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (65 tests):
+ * Gate composition (75 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
- *   <li>Correlated subquery canaries (26): scalar predicand (13), IN-list (8), EXISTS (5) — no expected fatals except where noted in scalar block</li>
+ *   <li>Correlated subquery canaries (29): scalar predicand (16), IN-list (8), EXISTS (5) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V7 (7): {@code insertValues*} V1–V7</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
+ *   <li>CTE unqualified column refs (7): {@code selectWithMultipleSimpleUnqualifiedReferencesCTEV1}, CTEV2, {@code queryAndUnionUnqualifiedReferencesCTEV3}, {@code queryAndIntersectUnqualifiedReferencesCTEV5}, {@code unionAndIntersectUnqualifiedReferencesCTEV7}, {@code intersectAndUnionUnqualifiedReferencesCTEV8}, {@code queryAndSubstitutionUnqualifiedReferencesCTEV12}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
@@ -108,6 +109,21 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void correlatedScalarPredicandNestedCteWithOuterRefTest() {
 		coreSelectTests.correlatedScalarPredicandNestedCteWithOuterRefTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandMiddleCteReferencesFirstCteTest() {
+		coreSelectTests.correlatedScalarPredicandMiddleCteReferencesFirstCteTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandMiddleCteUnqualifiedColumnDiagnosticLocationTest() {
+		coreSelectTests.correlatedScalarPredicandMiddleCteUnqualifiedColumnDiagnosticLocationTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest() {
+		coreSelectTests.correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest();
 	}
 
 	// --- Correlated IN-subquery canaries (8) ---
@@ -368,5 +384,42 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test() {
 		unaliasedTests.unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test();
+	}
+
+	// --- CTE unqualified column refs (7) ---
+
+	@Test
+	public void selectWithMultipleSimpleUnqualifiedReferencesCTEV1() {
+		unaliasedTests.selectWithMultipleSimpleUnqualifiedReferencesCTEV1();
+	}
+
+	@Test
+	public void selectWithMultipleSimpleUnqualifiedReferencesCTEV2() {
+		unaliasedTests.selectWithMultipleSimpleUnqualifiedReferencesCTEV2();
+	}
+
+	@Test
+	public void queryAndUnionUnqualifiedReferencesCTEV3() {
+		unaliasedTests.queryAndUnionUnqualifiedReferencesCTEV3();
+	}
+
+	@Test
+	public void queryAndIntersectUnqualifiedReferencesCTEV5() {
+		unaliasedTests.queryAndIntersectUnqualifiedReferencesCTEV5();
+	}
+
+	@Test
+	public void unionAndIntersectUnqualifiedReferencesCTEV7() {
+		unaliasedTests.unionAndIntersectUnqualifiedReferencesCTEV7();
+	}
+
+	@Test
+	public void intersectAndUnionUnqualifiedReferencesCTEV8() {
+		unaliasedTests.intersectAndUnionUnqualifiedReferencesCTEV8();
+	}
+
+	@Test
+	public void queryAndSubstitutionUnqualifiedReferencesCTEV12() {
+		unaliasedTests.queryAndSubstitutionUnqualifiedReferencesCTEV12();
 	}
 }

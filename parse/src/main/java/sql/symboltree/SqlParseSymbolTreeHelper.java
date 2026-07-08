@@ -7957,10 +7957,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		if (localCurrentQueryDictionary != null) {
-			return walker.getFirstEntryLineAndCharacter(localCurrentQueryDictionary);
-		}
-
 		return new Integer[] { null, null };
 	}
 
@@ -9350,6 +9346,18 @@ public class SqlParseSymbolTreeHelper {
 						result.ambiguousSourcesLabel);
 			}
 			case UNRESOLVED -> {
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnRefObj);
+				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
+					// Qualified refs unresolved in this nested scope are resolved at the
+					// enclosing query/CTE finalization — not as unqualified columns here.
+					return;
+				}
+				if (!probeContext.materializeResolved) {
+					// Unqualified refs archived on inner query-only scopes (e.g. scalar
+					// predicand filters) bubble to the parent for single-table or other
+					// enclosing resolution — do not diagnose here.
+					return;
+				}
 				if (!hasOnlyQueryBackedAliasSources(probeContext.localTableAliasMap)
 						|| hasLocalPhysicalFromTables(probeContext.localFromTableCollection)) {
 					return;
