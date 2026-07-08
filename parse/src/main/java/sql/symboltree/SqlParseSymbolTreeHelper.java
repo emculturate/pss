@@ -1567,7 +1567,13 @@ public class SqlParseSymbolTreeHelper {
 								}
 							}
 							case RESOLVED_PHYSICAL_SOURCE -> {
-								// Explicit table references: table/alias existence is sufficient.
+								backfillQueryDictionaryFromResolvedInterfaceSources(
+										outputCol,
+										columnName,
+										tableRef,
+										localCurrentQueryDictionary,
+										localTableCollection,
+										localTableAliasMap);
 							}
 							case DEFERRED -> {
 								continue;
@@ -1751,12 +1757,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		// Remove relational-modifier generated columns from unresolved map so they
-		// resolve from the derived_columns map before generic unresolved validation.
-		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localDerivedColumns,
-				localUnresolvedColumnMap);
 		registerUnpivotGeneratedColumnAmbiguitySuppressions(
 				localRelationalModifierInterfaceHints,
 				localCurrentQueryDictionary);
@@ -1779,7 +1779,7 @@ public class SqlParseSymbolTreeHelper {
 
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
-		backfillQueryDictionaryFromResolvedInterfaceSources(
+		sweepBackfillQueryDictionaryFromResolvedInterfaceSources(
 				localInterface,
 				localCurrentQueryDictionary,
 				localTableCollection,
@@ -4023,9 +4023,11 @@ public class SqlParseSymbolTreeHelper {
 								: new HashMap<String, Object>();
 				HashMap<String, Object> visibleAliasMap = buildEffectiveVisibleAliasMap(tableAliasMap);
 				mergePublishedScopeContextListIntoAliasMap(visibleAliasMap);
-				materializeResolvableGlobalQualifiedUnresolvedLocations(
+				resolveQualifiedUnresolvedEntries(
+						walker.globalQualifiedUnresolvedLocations,
 						visibleAliasMap,
-						buildEffectiveVisibleTableCollection(tableCollection));
+						buildEffectiveVisibleTableCollection(tableCollection),
+						false);
 			}
 		}
 
@@ -5714,39 +5716,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 		return targetDictionary.containsKey(columnName)
 				|| containsKeyIgnoreCase(targetDictionary, columnName);
-	}
-
-	/** Materialize resolvable qualified refs captured at parse ingress into the global table dictionary. */
-	@SuppressWarnings("unchecked")
-	private void materializeResolvableGlobalQualifiedUnresolvedLocations(
-			HashMap<String, Object> visibleAliasMap,
-			HashMap<String, Object> visibleTableDictionary) {
-		HashMap<String, Object> globalLocations = walker.globalQualifiedUnresolvedLocations;
-		if (globalLocations == null || globalLocations.isEmpty()) {
-			return;
-		}
-
-		HashMap<String, Object> tableDictionaryView =
-				buildQualifiedResolutionTableDictionaryView(visibleTableDictionary);
-		for (Map.Entry<String, Object> entry : new ArrayList<>(globalLocations.entrySet())) {
-			String unresolvedKey = entry.getKey();
-			if (unresolvedKey == null || unresolvedKey.isBlank() || !unresolvedKey.contains(".")) {
-				continue;
-			}
-			if (tryResolveQualifiedEntryViaCteContext(unresolvedKey, entry.getValue(), visibleAliasMap)) {
-				continue;
-			}
-			if (walker.canResolveQualifiedUnknownInScope(
-					unresolvedKey,
-					visibleAliasMap,
-					tableDictionaryView,
-					walker.queryColumnDictionaryMap)) {
-				materializeQualifiedUnresolvedEntry(
-						unresolvedKey,
-						entry.getValue(),
-						visibleAliasMap);
-			}
-		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -7602,17 +7571,70 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Nested scopes that defer unified resolution still need select-list tokens
-	 * materialized at interface validation time; top-level scopes defer to the
-	 * unified scope-exit pass so clause tokens stay in the working map.
-	 */
-	/**
 	 * When single-table relocation moved select-list tokens into {@code table_dictionary}
-	 * before scope-exit materialization, copy interface output columns into the scope
-	 * query dictionary from their resolved physical sources.
+	 * before scope-exit materialization, copy one interface output column into the scope
+	 * query dictionary from its resolved physical source.
 	 */
 	@SuppressWarnings("unchecked")
 	private void backfillQueryDictionaryFromResolvedInterfaceSources(
+			String outputCol,
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		if (outputCol == null || outputCol.isBlank()
+				|| localCurrentQueryDictionary == null
+				|| columnName == null || columnName.isBlank()
+				|| tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
+			return;
+		}
+
+		String matchedOutputKey = findKeyIgnoreCase(localCurrentQueryDictionary, outputCol);
+		Object existingTokens = matchedOutputKey == null
+				? null
+				: localCurrentQueryDictionary.get(matchedOutputKey);
+		if (existingTokens instanceof ArrayList<?> existingList && !existingList.isEmpty()) {
+			return;
+		}
+
+		String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+		if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
+			resolvedTableRef = normalizeTableRef(tableRef);
+		}
+		if (isQuerySourceReference(resolvedTableRef)
+				|| walker.isNonTableQuerySourceReference(resolvedTableRef)
+				|| isTableFunctionSourceReference(resolvedTableRef)) {
+			return;
+		}
+
+		HashMap<String, Object> tableDictionary = walker.getTableDictionaryForReference(
+				resolvedTableRef,
+				localTableCollection);
+		if (tableDictionary == null) {
+			return;
+		}
+
+		String sourceColumnKey = findKeyIgnoreCase(tableDictionary, columnName);
+		if (sourceColumnKey == null) {
+			return;
+		}
+
+		Object sourceTokens = tableDictionary.get(sourceColumnKey);
+		if (sourceTokens != null) {
+			walker.mergeResolvedColumnIntoDictionary(
+					localCurrentQueryDictionary,
+					outputCol,
+					sourceTokens);
+		}
+	}
+
+	/**
+	 * Final sweep after late scope-exit materialization: backfill any interface output
+	 * columns that still lack query-dictionary tokens from resolved physical sources.
+	 */
+	@SuppressWarnings("unchecked")
+	private void sweepBackfillQueryDictionaryFromResolvedInterfaceSources(
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localTableCollection,
@@ -7646,40 +7668,13 @@ public class SqlParseSymbolTreeHelper {
 								|| MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
 					continue;
 				}
-				if (columnName == null || columnName.isBlank()
-						|| tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
-					continue;
-				}
-
-				String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
-				if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
-					resolvedTableRef = normalizeTableRef(tableRef);
-				}
-				if (isQuerySourceReference(resolvedTableRef)
-						|| walker.isNonTableQuerySourceReference(resolvedTableRef)
-						|| isTableFunctionSourceReference(resolvedTableRef)) {
-					continue;
-				}
-
-				HashMap<String, Object> tableDictionary = walker.getTableDictionaryForReference(
-						resolvedTableRef,
-						localTableCollection);
-				if (tableDictionary == null) {
-					continue;
-				}
-
-				String sourceColumnKey = findKeyIgnoreCase(tableDictionary, columnName);
-				if (sourceColumnKey == null) {
-					continue;
-				}
-
-				Object sourceTokens = tableDictionary.get(sourceColumnKey);
-				if (sourceTokens != null) {
-					walker.mergeResolvedColumnIntoDictionary(
-							localCurrentQueryDictionary,
-							outputCol,
-							sourceTokens);
-				}
+				backfillQueryDictionaryFromResolvedInterfaceSources(
+						outputCol,
+						columnName,
+						tableRef,
+						localCurrentQueryDictionary,
+						localTableCollection,
+						localTableAliasMap);
 				break;
 			}
 		}
