@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-07 (Phase 6 audit complete; `reconcileJoinExtensionSymbolTable`)
+**Last updated:** 2026-07-07 (Phase 6 done; CTE→context_list deprecated wrappers removed)
 
 ---
 
@@ -39,7 +39,7 @@ Use this document as the single handoff for consolidating column resolution in t
 2. Phase 8 late-pass helper audit (`materializeResolvableGlobalQualifiedUnresolvedLocations`, `backfillQueryDictionaryFromResolvedInterfaceSources`, early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` stripping passes — candidates to consolidate now that unified resolver handles derived proof)
 3. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
 
-**Suggested next focus:** Mechanical deprecated-wrapper removal → Phase 8 late-pass helper retirement → Phase 9 start.
+**Suggested next focus:** Phase 8 late-pass helper retirement → Phase 9 start.
 
 ---
 
@@ -457,18 +457,16 @@ Retire only after Phases 6–8 make scope exits self-contained:
 | `resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable` | INSERT orphan hack | **Removed** — do not reintroduce |
 | Predicate `embedDeferredUnresolvedInDefQueryScope` | Upward archive | Replaced by downward `context_list` + lift at predicate exit |
 
-### Deprecated wrappers safe to delete first (mechanical, zero behavior change)
+### Deprecated wrappers — removed (Jul 2026)
 
-These four `@Deprecated` methods in `SqlParseSymbolTreeHelper` are thin aliases; callers still use the old CTE names:
+The four `@Deprecated` CTE-named aliases were deleted after call sites were renamed:
 
-| Deprecated wrapper | Replacement | Call sites to rename |
-|--------------------|-------------|----------------------|
-| `mergeCteListIntoQueryScope` | `mergeContextListIntoQueryScope` | `SqlParseEventWalker` (~2399) |
-| `ensureCteListSymbolMap` | `ensureContextListSymbolMap` | Walker (~2536), helper internals |
-| `getCteListSymbolMap` | `getContextListSymbolMap` | Walker (~2437), helper internals |
-| `pushSymbolTableWithParentCteList` | `pushSymbolTableWithParentVisibleScope` | grep for callers |
-
-**Action:** rename call sites → delete wrappers. No test behavior change expected.
+| Removed wrapper | Canonical replacement |
+|-----------------|----------------------|
+| ~~`mergeCteListIntoQueryScope`~~ | `mergeContextListIntoQueryScope` |
+| ~~`ensureCteListSymbolMap`~~ | `ensureContextListSymbolMap` |
+| ~~`getCteListSymbolMap`~~ | `getContextListSymbolMap` |
+| ~~`pushSymbolTableWithParentCteList`~~ | `pushSymbolTableWithParentVisibleScope` (walker already used canonical name) |
 
 ### Load-bearing fallbacks — do NOT delete until Phase 8–9 close
 
@@ -492,16 +490,16 @@ Step 1 — Phase 6 close (audit only, ~1 session)                    ✅ DONE (J
   reconcileJoinExtensionSymbolTable() documents mid-FROM reconcile (not publish)
   removed dead explicitTableRefByColumn block in emitExplicitQualifiedUnknownDiagnostics
 
-Step 2 — Mechanical deprecated cleanup (~30 min)                   ← NEXT
-  rename CTE → context_list call sites (4 wrappers above)
-  delete the @Deprecated wrapper methods
+Step 2 — Mechanical deprecated cleanup (~30 min)                   ✅ DONE (Jul 2026)
+  renamed CTE→context_list call sites in walker + helper internals
+  deleted mergeCteListIntoQueryScope, ensureCteListSymbolMap, getCteListSymbolMap, pushSymbolTableWithParentCteList
 
 Step 3 — Phase 8 canary fix (~1 session)                           ✅ DONE (2833a2f)
   nestedQueryDemoTest: 3 fatals (tab2.e3, gg.y, tt.f); goldens updated
   derived columns in unified resolver; query-dict shortcut retired
   canaries: nestedQueryDemoTest, nestedQueryDemoWithCteTest, V9, V13
 
-Step 4 — Late-pass helper retirement (~1–2 sessions)               ← AFTER Step 1–2
+Step 4 — Late-pass helper retirement (~1–2 sessions)               ← NEXT
   trace materializeResolvableGlobalQualifiedUnresolvedLocations call graph
   if unified egress subsumes it → delete
   same audit for backfillQueryDictionaryFromResolvedInterfaceSources vs mergeSelectList hook
@@ -633,9 +631,8 @@ Current state (commit 2833a2f+ on Spring-2026-Extensions):
 
 Your mission this session — follow "Shortest path to dead-code removal" in order:
 
-1. Mechanical cleanup: rename CTE→context_list call sites; delete 4 @Deprecated wrapper methods.
-2. Phase 8 late-pass retirement: audit materializeResolvableGlobalQualifiedUnresolvedLocations — delete if subsumed by unified egress; same for backfillQueryDictionaryFromResolvedInterfaceSources; evaluate consolidating early derived-column stripping passes now that unified resolver handles derived proof.
-3. Re-run UPDATE CTE spot checks (U3/U4/U5/U7/U9) after helper deletions.
+1. Phase 8 late-pass retirement: audit materializeResolvableGlobalQualifiedUnresolvedLocations — delete if subsumed by unified egress; same for backfillQueryDictionaryFromResolvedInterfaceSources; evaluate consolidating early derived-column stripping passes now that unified resolver handles derived proof.
+2. Re-run UPDATE CTE spot checks (U3/U4/U5/U7/U9) after helper deletions.
 
 Contract to preserve:
 - Embedded scope payloads are canonicalized as def_*.

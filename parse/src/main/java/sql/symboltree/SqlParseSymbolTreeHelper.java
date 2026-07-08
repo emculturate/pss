@@ -2180,12 +2180,6 @@ public class SqlParseSymbolTreeHelper {
 		withSymbols.remove(MUMBLE_CONTEXT_LIST_KEY);
 	}
 
-	/** @deprecated use {@link #mergeContextListIntoQueryScope(Map, Map)} */
-	@Deprecated
-	public void mergeCteListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
-		mergeContextListIntoQueryScope(querySymbols, withSymbols);
-	}
-
 	@SuppressWarnings("unchecked")
 	public boolean isTupleWithSubstitution(Map<String, Object> aliasMap) {
 		if (aliasMap == null) {
@@ -2287,12 +2281,6 @@ public class SqlParseSymbolTreeHelper {
 		Map<String, Object> contextListMap = new LinkedHashMap<String, Object>();
 		walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, contextListMap);
 		return contextListMap;
-	}
-
-	/** @deprecated use {@link #ensureContextListSymbolMap()} */
-	@Deprecated
-	public Map<String, Object> ensureCteListSymbolMap() {
-		return ensureContextListSymbolMap();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -5070,10 +5058,10 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Map<String, Object> visibleCteList = getCteListSymbolMap(walker.symbolTable);
+		Map<String, Object> visibleCteList = getContextListSymbolMap(walker.symbolTable);
 		if (visibleCteList == null || visibleCteList.isEmpty()) {
 			for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-				Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
+				Map<String, Object> ancestorCteList = getContextListSymbolMap(ancestorSymbols);
 				if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
 					visibleCteList = ancestorCteList;
 					break;
@@ -5090,7 +5078,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Map<String, Object> activeCteList = ensureCteListSymbolMap();
+		Map<String, Object> activeCteList = ensureContextListSymbolMap();
 		activeCteList.put(alias, cteScopeRef);
 	}
 
@@ -5872,13 +5860,13 @@ public class SqlParseSymbolTreeHelper {
 			return true;
 		}
 
-		Map<String, Object> currentCteList = getCteListSymbolMap(walker.symbolTable);
+		Map<String, Object> currentCteList = getContextListSymbolMap(walker.symbolTable);
 		if (currentCteList != null && !currentCteList.isEmpty()) {
 			return true;
 		}
 
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-			Map<String, Object> ancestorCteList = getCteListSymbolMap(ancestorSymbols);
+			Map<String, Object> ancestorCteList = getContextListSymbolMap(ancestorSymbols);
 			if (ancestorCteList != null && !ancestorCteList.isEmpty()) {
 				return true;
 			}
@@ -6041,12 +6029,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
-	/** @deprecated use {@link #pushSymbolTableWithParentVisibleScope()} */
-	@Deprecated
-	public void pushSymbolTableWithParentCteList() {
-		pushSymbolTableWithParentVisibleScope();
-	}
-
 	@SuppressWarnings("unchecked")
 	private static final class OuterVisibleScope {
 		private final LinkedHashMap<String, Object> contextList = new LinkedHashMap<String, Object>();
@@ -6178,12 +6160,6 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
-	/** @deprecated use {@link #getContextListSymbolMap(Map)} */
-	@Deprecated
-	public Map<String, Object> getCteListSymbolMap(Map<String, Object> symbols) {
-		return getContextListSymbolMap(symbols);
-	}
-
 	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> getTableAliasMap(Map<String, Object> symbols) {
 		if (symbols == null) {
@@ -6204,7 +6180,7 @@ public class SqlParseSymbolTreeHelper {
 			String sourceRef,
 			HashMap<String, Object> tableAliasMap,
 			Map<String, Object> symbols) {
-		Map<String, Object> cteListMap = getCteListSymbolMap(symbols);
+		Map<String, Object> cteListMap = getContextListSymbolMap(symbols);
 		return resolveCteScopeReferenceInContextList(sourceRef, tableAliasMap, cteListMap);
 	}
 
@@ -10902,12 +10878,12 @@ public class SqlParseSymbolTreeHelper {
 	 * Returns the nearest visible {@code cte_list} from the current frame or an ancestor scope.
 	 */
 	public Map<String, Object> getVisiblePriorNamedScopeRefs() {
-		Map<String, Object> cteList = getCteListSymbolMap(walker.symbolTable);
+		Map<String, Object> cteList = getContextListSymbolMap(walker.symbolTable);
 		if (cteList != null && !cteList.isEmpty()) {
 			return cteList;
 		}
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-			cteList = getCteListSymbolMap(ancestorSymbols);
+			cteList = getContextListSymbolMap(ancestorSymbols);
 			if (cteList != null && !cteList.isEmpty()) {
 				return cteList;
 			}

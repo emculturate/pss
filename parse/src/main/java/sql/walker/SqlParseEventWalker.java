@@ -2396,7 +2396,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			currentQuerySymbolTable = new HashMap<String, Object>();
 		}
 		HashMap<String, Object> symbols = walker.symbolTable;
-		symbolTreeHelper.mergeCteListIntoQueryScope(currentQuerySymbolTable, symbols);
+		symbolTreeHelper.mergeContextListIntoQueryScope(currentQuerySymbolTable, symbols);
 		walker.symbolTable = new HashMap<String, Object>();
 		String publishedWithScopeKey = queryName.startsWith("def_") ? queryName : "def_" + queryName;
 		walker.symbolTable.put(publishedWithScopeKey, currentQuerySymbolTable);
@@ -2434,7 +2434,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// WITH clause's in-progress cte_list sits in the SAME symbol table frame
 		// (no push has occurred yet). We save it under MUMBLE_OUTER_CONTEXT_LIST_KEY so
 		// exitWith_query can restore it once the nested scope collapses back.
-		Map<String, Object> existingCteList = symbolTreeHelper.getCteListSymbolMap(walker.symbolTable);
+		Map<String, Object> existingCteList = symbolTreeHelper.getContextListSymbolMap(walker.symbolTable);
 		if (existingCteList != null && !existingCteList.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_OUTER_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(existingCteList));
 		}
@@ -2533,7 +2533,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			// HashMap<String, Object> currentQuerySymbolTable = (HashMap<String, Object>) walker.symbolTable.remove(currentQueryName);
 			// Pop the symbol table for this level and add it to the parent level with a unique key.
-			Map<String, Object> cteListSymbols = symbolTreeHelper.ensureCteListSymbolMap();
+			Map<String, Object> cteListSymbols = symbolTreeHelper.ensureContextListSymbolMap();
 			symbolTreeHelper.emitShadowedParentCteNameWarningIfNeeded(alias, cteListSymbols, ctx);
 			walker.collectTableAlias(alias, currentQueryName);
 
