@@ -54,7 +54,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ⚠️ Near done | ~85% | `finalizeQueryScopeSymbolTable` / set-op / VALUES aligned; CTE-body inline-fork audit open |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
-| **9** clause-list validation (no parallel pipelines) | ❌ Not started | 0% | Unblocked — Phase 8 closed |
+| **9** clause-list validation (no parallel pipelines) | ⚠️ Started | ~60% | `validateArchivedClauseColumnRef` + `probeArchivedScopeClauseColumns`; retired `assignTableRefsForColumnReferenceList` / `validateFilterReferences` second pass |
 | **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity |
 | **11** DML parity + fallback retirement | ⚠️ Started | ~25% | **V9 + V13 canaries pass**; `finalizeInsertScopeSymbolTable` exists; ~82/95 DML tests have stale goldens |
 
@@ -75,7 +75,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 1. ~~Phase 8 late-pass helper audit~~ ✅ Done (Jul 2026)
 2. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
 
-**Suggested next focus:** Phase 9 start (clause-list validation without separate resolution pipelines).
+**Suggested next focus:** Phase 9 close (GROUP/ORDER edge cases, DML clause probe audit) → Phase 10 `context_list`.
 
 ---
 
@@ -545,9 +545,10 @@ Step 4 — Late-pass helper retirement (~1–2 sessions)               ✅ DONE 
   derived-column stripping 3→2 (retired post-late-resolution pass)
   canaries green; UPDATE CTE spot checks same stale-golden failures as pre-retirement baseline
 
-Step 5 — Phase 9 start (enables more retirement)                   ← NEXT
+Step 5 — Phase 9 start (enables more retirement)                   ⚠️ IN PROGRESS (Jul 2026)
   single validateArchivedClauseColumnRef tree at scope exit
   retire second assignTableRefsForColumnReferenceList pass on filters/groupby/orderby
+  probeArchivedScopeClauseColumns replaces validateFilterReferences + clause location tracking
 
 Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
 resolveVisibleOuterDeferredUnresolved (Phase 10), DML golden bulk refresh.
