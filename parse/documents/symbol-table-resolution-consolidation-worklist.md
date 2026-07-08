@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-08 (quality gate expanded; unaliased V1–V16 symbol-tree goldens aligned)
+**Last updated:** 2026-07-08 (quality gate expanded to 50 tests; correlated scalar predicand canaries added)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**39 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**65 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -25,6 +25,9 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Group | Count | Class | Methods |
 |-------|-------|-------|---------|
 | Nested demo queries | 2 | `SqlEventWalkerCoreSelectFromAliasingTests` | `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest` |
+| Correlated scalar predicand | 13 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedScalarPredicandNestedJoinSubqueryTest` … `correlatedScalarPredicandWithNestedExistsSubqueryTest`, `correlatedScalarPredicandFirstCteStandaloneTest`, `correlatedScalarPredicandNestedCteWithOuterRefTest` (includes 4 with expected fatals: local-alias missing, CTE four-scenario, nested CTE four-scenario, union-body four-scenario) |
+| Correlated IN subquery | 8 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedInSubqueryNestedJoinSubqueryTest` … `correlatedInSubqueryNestedCteWithOuterRefTest` |
+| Correlated EXISTS subquery | 5 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedExistsSubqueryNestedJoinSubqueryTest` … `correlatedExistsSubqueryFinalQueryReferencesCteChainTest` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
@@ -40,8 +43,9 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - Remaining DML tests beyond UPDATE V1–V14 and INSERT VALUES V1–V7
 - Set-operation interface validation V1–V5 (formerly in consolidation suite)
 - PIVOT/UNPIVOT tests (see skip list)
+- Remaining `correlated*` tests **not in gate** (10 as of Jul 2026): CTE-chain / middle-CTE / last-CTE cases that document expected `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` fatals pending Phase 10 `context_list` resolution
 
-**Gate status (Jul 2026):** **39/39 passing** as of last verification.
+**Gate status (Jul 2026):** **65/65 passing** as of last verification.
 
 ---
 
@@ -54,8 +58,8 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ⚠️ Near done | ~85% | `finalizeQueryScopeSymbolTable` / set-op / VALUES aligned; CTE-body inline-fork audit open |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
-| **9** clause-list validation (no parallel pipelines) | ⚠️ Started | ~60% | `validateArchivedClauseColumnRef` + `probeArchivedScopeClauseColumns`; retired `assignTableRefsForColumnReferenceList` / `validateFilterReferences` second pass |
-| **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity |
+| **9** clause-list validation (no parallel pipelines) | ⚠️ Near done | ~85% | `validateArchivedClauseColumnRef` + convert + archived-scope-tree probes; retired `collectClauseColumnsIntoUnresolved` ingress path |
+| **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
 | **11** DML parity + fallback retirement | ⚠️ Started | ~25% | **V9 + V13 canaries pass**; `finalizeInsertScopeSymbolTable` exists; ~82/95 DML tests have stale goldens |
 
 **Recent wins (Jul 2026):**
@@ -75,7 +79,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 1. ~~Phase 8 late-pass helper audit~~ ✅ Done (Jul 2026)
 2. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
 
-**Suggested next focus:** Phase 9 close (GROUP/ORDER edge cases, DML clause probe audit) → Phase 10 `context_list`.
+**Suggested next focus:** Phase 9 close → Phase 10 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
 
 ---
 
@@ -395,16 +399,20 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 ---
 
-### Phase 9 — Clause-list validation without separate resolution pipelines
+### Phase 9 — Clause-list validation without separate resolution pipelines (~85% done)
 
 **Goal:** `filters`, `grouped_by`, `ordered_by` validated through the same visible-scope rules at scope exit — not early per-clause resolution.
 
-| Task | Notes |
-|------|-------|
-| `SCOPE_CLAUSE_COLUMN_LIST_KEYS` | `filters`, `grouped_by`, `ordered_by` |
-| Single `validateArchivedClauseColumnRef` decision tree | Skip query-alias refs; GROUP/ORDER require output-column proof; filters allow physical-table dict keys |
-| `probeArchivedScopeClauseColumns` at scope exit | For refs that never entered live `unresolved_column` |
-| Retire stacked skip guards | Replace sprawl from clause-probe experiments with one tree |
+| Task | Status | Notes |
+|------|--------|-------|
+| `SCOPE_CLAUSE_COLUMN_LIST_KEYS` | ✅ | `filters`, `grouped_by`, `ordered_by` |
+| Single `validateArchivedClauseColumnRef` decision tree | ✅ | Skip query-alias refs; GROUP/ORDER require output-column proof; filters allow physical-table dict keys |
+| `probeArchivedScopeClauseColumns` at convert exit | ✅ | Materializes + binds `table_ref`; UPDATE assignment RHS uses filters policy |
+| `probeArchivedScopeClauseColumnsOnScopeTree` | ✅ | Wired into `finalizeScopeDeferredUnresolved` with `materializeResolved=false` |
+| Retire stacked skip guards | ✅ | `isExistingArchivedClauseColumnRefSatisfied` short-circuits already-bound refs — **re-assess retire in Phase 10** (idempotency for dual probe; may become dead) |
+| Retire `collectClauseColumnsIntoUnresolved` ingress | ✅ | Deleted — clause lists no longer collected into `unresolved_column` |
+| DML clause probe audit | ✅ | UPDATE/DELETE/SELECT all route through `convertSymbolTableToTableDictionary` probe |
+| Supplementary gate goldens | ⏸️ | Predicand/union tests still expect `queryN` keys — stale `def_queryN` prefix backlog (not behavior) |
 
 **Note:** Outer/current-scope `query_dictionary` **does** include clause token strings (Phase 5+); nested published `def_*` children are not retroactively updated. `filters` / `grouped_by` / `ordered_by` remain the semantic `table_ref` signal per scope.
 
@@ -423,6 +431,16 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | Remove outer-correlated bubble path | `bubbleOuterCorrelatedUnresolvedToParentScope` for refs parent already knows |
 | Strip stale `unresolved_column` from published `def_queryN` | Align with VALUES — no archived submaps on published payloads |
 | Roll back clause-probe deferral patches | Symptom fixes from bubble model |
+| **Re-assess Phase 9 dual clause probe** | After `context_list` lands — see **Close Phase 10 when** § below |
+
+**Close Phase 10 when** (in addition to gate tests green):
+
+1. Downward visible scope replaces upward bubble for outer-correlated refs.
+2. **Single-probe reassessment (Phase 9 simplification):** Revisit whether `isExistingArchivedClauseColumnRefSatisfied`, `probeArchivedScopeClauseColumnsOnScopeTree`, and `materializeResolved` are still needed. Today they exist because clause lists can be probed twice (convert exit with `materializeResolved=true`, then scope-tree finalize with `materializeResolved=false` after deferred-unresolved work). After Phase 10, aim for **exactly one probe per scope** by one of:
+   - **Option A:** Scope-tree pass probes **only** `table_ref=null` entries (annotation-only, no re-validation of already-bound refs).
+   - **Option B:** Deferred resolution completes **before** the single convert probe so `finalizeScopeDeferredUnresolved` no longer needs a second clause pass.
+   - **Option C:** Retire scope-tree clause probe entirely if `context_list` makes the convert-time probe sufficient at first finalize.
+3. If reassessment succeeds: delete `isExistingArchivedClauseColumnRefSatisfied` and collapse `ArchivedClauseProbeContext.materializeResolved` (or remove the scope-tree probe caller). Re-run Phase 9 gate + predicand/union supplementary tests.
 
 **Gate:** `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest`, correlated predicand + union/`ua` tests, `subqueryParseTest` (siloed fatals must fire at statement boundary when appropriate).
 
@@ -463,7 +481,7 @@ Remaining consolidation backlog (not V13-specific):
 
 - `resolveVisibleOuterDeferredUnresolved` is still identity — predicate outer-correlated partition defers to parent unresolved merge; FROM-subquery correlated refs should materialize locally (above fixes cover V13 path).
 - Interface validation loop still skips column-type substitutions (`~1460`) — intentional for select-list fatals; clause tokens come from unresolved/materialization paths instead.
-- `collectClauseColumnsIntoUnresolved` skips substitutions (`~8686`) — qualified filter refs use explicit-qualified egress instead.
+- ~~`collectClauseColumnsIntoUnresolved` skips substitutions~~ — **retired Phase 9**; clause lists validated via `validateArchivedClauseColumnRef` at scope exit instead
 
 #### Stale golden backlog (accepted alias-token query dict)
 
@@ -516,6 +534,7 @@ The four `@Deprecated` CTE-named aliases were deleted after call sites were rena
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Pre-wildcard + post-UPDATE-rhs derived-column stripping | Unified ingress skips derived before wildcard/single-table paths |
 | `moveEntriesToSingleTableIfSingleTarget` | Single-source unqualified relocation | Scope exit resolves all unqualified in one pass |
 | `resolveVisibleOuterDeferredUnresolved` | Identity placeholder | Phase 10 implements downward resolution |
+| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Idempotency for convert + scope-tree passes (Phase 9) | Phase 10 single-probe reassessment — see Phase 10 close criteria |
 
 ---
 
@@ -545,10 +564,19 @@ Step 4 — Late-pass helper retirement (~1–2 sessions)               ✅ DONE 
   derived-column stripping 3→2 (retired post-late-resolution pass)
   canaries green; UPDATE CTE spot checks same stale-golden failures as pre-retirement baseline
 
-Step 5 — Phase 9 start (enables more retirement)                   ⚠️ IN PROGRESS (Jul 2026)
+Step 5 — Phase 9 start (enables more retirement)                   ⚠️ ~85% (Jul 2026)
   single validateArchivedClauseColumnRef tree at scope exit
   retire second assignTableRefsForColumnReferenceList pass on filters/groupby/orderby
   probeArchivedScopeClauseColumns replaces validateFilterReferences + clause location tracking
+  archived-scope-tree probe in finalizeScopeDeferredUnresolved (CTE/UNION/INTERSECT)
+  retired collectClauseColumnsIntoUnresolved ingress path
+
+Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ❌ NOT STARTED
+  context_list downward resolution (primary Phase 10 work)
+  re-assess: isExistingArchivedClauseColumnRefSatisfied still needed?
+  target: one probe per scope — scope-tree pass only table_ref=null OR defer before convert probe
+  candidate deletes: isExistingArchivedClauseColumnRefSatisfied, materializeResolved flag,
+    possibly probeArchivedScopeClauseColumnsOnScopeTree if convert probe becomes sufficient
 
 Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
 resolveVisibleOuterDeferredUnresolved (Phase 10), DML golden bulk refresh.
@@ -678,7 +706,7 @@ Validation (run after each step — full quality gate):
   cd parse
   mvn -Psymbol-table-resolution-consolidation test
 
-Gate = 39 tests: nested demo (2), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16).
+Gate = 65 tests: nested demo (2), correlated scalar predicand (13), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16).
 See "Quality gate" section at top of worklist for method names.
 
 Out of scope this session:

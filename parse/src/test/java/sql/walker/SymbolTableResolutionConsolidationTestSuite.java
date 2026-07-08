@@ -11,9 +11,10 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (39 tests):
+ * Gate composition (65 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
+ *   <li>Correlated subquery canaries (26): scalar predicand (13), IN-list (8), EXISTS (5) — no expected fatals except where noted in scalar block</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V7 (7): {@code insertValues*} V1–V7</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
@@ -40,6 +41,142 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void nestedQueryDemoWithCteTest() {
 		coreSelectTests.nestedQueryDemoWithCteTest();
+	}
+
+	// --- Correlated scalar predicand canaries (13) ---
+
+	@Test
+	public void correlatedScalarPredicandNestedJoinSubqueryTest() {
+		coreSelectTests.correlatedScalarPredicandNestedJoinSubqueryTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandLocalQueryAliasMissingColumnTest() {
+		coreSelectTests.correlatedScalarPredicandLocalQueryAliasMissingColumnTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandCteFourScenarioResolveAndFatalTest() {
+		coreSelectTests.correlatedScalarPredicandCteFourScenarioResolveAndFatalTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandNestedCteFourScenarioResolveAndFatalTest() {
+		coreSelectTests.correlatedScalarPredicandNestedCteFourScenarioResolveAndFatalTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandCteUnionBodyFourScenarioResolveAndFatalTest() {
+		coreSelectTests.correlatedScalarPredicandCteUnionBodyFourScenarioResolveAndFatalTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandCteGroupByOuterFatalTest() {
+		coreSelectTests.correlatedScalarPredicandCteGroupByOuterFatalTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandPlainUnionBranchOuterFatalTest() {
+		coreSelectTests.correlatedScalarPredicandPlainUnionBranchOuterFatalTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandUnionContextSubqueryTest() {
+		coreSelectTests.correlatedScalarPredicandUnionContextSubqueryTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandIntersectContextSubqueryTest() {
+		coreSelectTests.correlatedScalarPredicandIntersectContextSubqueryTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandWithNestedInSubqueryTest() {
+		coreSelectTests.correlatedScalarPredicandWithNestedInSubqueryTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandWithNestedExistsSubqueryTest() {
+		coreSelectTests.correlatedScalarPredicandWithNestedExistsSubqueryTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandFirstCteStandaloneTest() {
+		coreSelectTests.correlatedScalarPredicandFirstCteStandaloneTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandNestedCteWithOuterRefTest() {
+		coreSelectTests.correlatedScalarPredicandNestedCteWithOuterRefTest();
+	}
+
+	// --- Correlated IN-subquery canaries (8) ---
+
+	@Test
+	public void correlatedInSubqueryNestedJoinSubqueryTest() {
+		coreSelectTests.correlatedInSubqueryNestedJoinSubqueryTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryUnionContextTest() {
+		coreSelectTests.correlatedInSubqueryUnionContextTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryIntersectContextTest() {
+		coreSelectTests.correlatedInSubqueryIntersectContextTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryWithNestedScalarPredicandTest() {
+		coreSelectTests.correlatedInSubqueryWithNestedScalarPredicandTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryWithNestedExistsTest() {
+		coreSelectTests.correlatedInSubqueryWithNestedExistsTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryFirstCteStandaloneTest() {
+		coreSelectTests.correlatedInSubqueryFirstCteStandaloneTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryFinalQueryReferencesCteChainTest() {
+		coreSelectTests.correlatedInSubqueryFinalQueryReferencesCteChainTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryNestedCteWithOuterRefTest() {
+		coreSelectTests.correlatedInSubqueryNestedCteWithOuterRefTest();
+	}
+
+	// --- Correlated EXISTS-subquery canaries (5) ---
+
+	@Test
+	public void correlatedExistsSubqueryNestedJoinSubqueryTest() {
+		coreSelectTests.correlatedExistsSubqueryNestedJoinSubqueryTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryWithNestedScalarPredicandTest() {
+		coreSelectTests.correlatedExistsSubqueryWithNestedScalarPredicandTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryWithNestedInSubqueryTest() {
+		coreSelectTests.correlatedExistsSubqueryWithNestedInSubqueryTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryFirstCteStandaloneTest() {
+		coreSelectTests.correlatedExistsSubqueryFirstCteStandaloneTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryFinalQueryReferencesCteChainTest() {
+		coreSelectTests.correlatedExistsSubqueryFinalQueryReferencesCteChainTest();
 	}
 
 	// --- DML UPDATE V1–V14 (14) ---

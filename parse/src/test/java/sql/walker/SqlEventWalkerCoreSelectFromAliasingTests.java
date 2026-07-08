@@ -1984,20 +1984,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=t1c1, table_ref=ta}}}, from={table={alias=ta, table=tab1}}, where={condition={left={column={name=t1c1, table_ref=ta}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=t2c1, table_ref=tb}}}}}, from={table={alias=tb, table=tab2}}}, operator==}}}, alias=c1a}}, query={select={1={column={name=t1c1, table_ref=c1a}}}, from={table={alias=null, table=c1a}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1c1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}, tab2={t2c1=[[@21,77:78='tb',<381>,3:30]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@24,84:84=')',<288>,3:37]]}, query2={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8], [@32,112:114='c1a',<381>,5:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query3={context_list={c1a=query2}, query_dictionary={t1c1=[[@34,116:119='t1c1',<381>,5:11]]}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}, def_query2={query_dictionary={t1c1=[[@7,26:29='t1c1',<381>,2:12], [@32,112:114='c1a',<381>,5:7]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8], [@32,112:114='c1a',<381>,5:7]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@24,84:84=')',<288>,3:37]]}, table_dictionary={tab2={t2c1=[[@21,77:78='tb',<381>,3:30]]}}, interface={unnamed_0=[{name=t2c1, table_ref=tb}]}, table_alias={tb=tab2}}, filters=[{name=t1c1, table_ref=ta}], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
+				"{def_query3={context_list={c1a=query2}, table_alias={c1a=query0}, def_query3={context_list={c1a=query2}, query_dictionary={}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}}, def_query2={query_dictionary={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@24,84:84=')',<288>,3:37]]}, table_dictionary={tab2={t2c1=[[@21,77:78='tb',<381>,3:30]]}}, interface={unnamed_0=[{name=t2c1, table_ref=tb}]}, table_alias={tb=tab2}}, filters=[{name=t1c1, table_ref=ta}], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2010,22 +2008,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'b2' at (l:3 c:38) was not found in output interface of any visible query alias [ww, w1].",
+				"b2",
+				3,
+				38);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, table=tab_b}}, where={condition={left={column={name=b1, table_ref=bb}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=a1, table_ref=ww}}}}}, from={table={alias=ww, table=w1}}, where={condition={left={column={name=a2, table_ref=ww}}, right={column={name=b2, table_ref=bb}}, operator==}}}, operator==}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[b1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, tab_b={b2=[[@51,178:179='bb',<381>,4:36]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a1=[[@5,19:20='aa',<381>,1:19], [@38,121:122='ww',<381>,3:33]], a2=[[@9,26:27='aa',<381>,1:26], [@47,170:171='ww',<381>,4:28]]}, query1={unnamed_0=[[@41,126:126=')',<288>,3:38]]}, query3={b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13], [@57,193:194='w2',<381>,5:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={w1=query0, w2=query3}, query_dictionary={b1=[[@59,196:197='b1',<381>,5:10]]}, def_query0={query_dictionary={a1=[[@7,22:23='a1',<381>,1:22], [@38,121:122='ww',<381>,3:33]], a2=[[@11,29:30='a2',<381>,1:29], [@47,170:171='ww',<381>,4:28]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19], [@38,121:122='ww',<381>,3:33]], a2=[[@9,26:27='aa',<381>,1:26], [@47,170:171='ww',<381>,4:28]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@24,68:69='b1',<381>,2:17], [@57,193:194='w2',<381>,5:7]]}, table_dictionary={tab_b={b2=[[@51,178:179='bb',<381>,4:36]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13], [@57,193:194='w2',<381>,5:7]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@41,126:126=')',<288>,3:38]]}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={unnamed_0=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}, dependent_queries={predicand2={query=query1, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
+				"{def_query4={context_list={w1=query0, w2=query3}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query4={context_list={w1=query0, w2=query3}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}}, table_alias={w1=query0, w2=query1}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}, table_dictionary={tab_b={b2=[[@51,178:179='bb',<381>,4:36]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@41,126:126=')',<288>,3:38]]}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={unnamed_0=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}, dependent_queries={predicand2={query=query1, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2039,22 +2043,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'z3' at (l:1 c:1) was not found in output interface of any visible query alias [ca, cb].",
+				"z3",
+				1,
+				1);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=x1, table_ref=xa}}, 2={column={name=x2, table_ref=xa}}}, from={table={alias=xa, table=tab_x}}}, alias=ca}, 2={cte={select={1={column={name=y1, table_ref=yb}}}, from={table={alias=yb, table=tab_y}}}, alias=cb}, 3={cte={select={1={column={name=z1, table_ref=zc}}}, from={table={alias=zc, table=tab_z}}, where={condition={left={column={name=z2, table_ref=zc}}, right={select={1={column={name=x1, table_ref=ca}}}, from={table={alias=null, table=ca}}, where={condition={left={column={name=x2, table_ref=ca}}, right={column={name=z3, table_ref=zc}}, operator==}}}, operator==}}}, alias=cc}}, query={select={1={column={name=z1, table_ref=cc}}}, from={table={alias=null, table=cc}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[z1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,206:207='zc',<381>,5:36]]}, tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={z1=[[@35,104:105='zc',<381>,3:14], [@65,221:222='cc',<381>,6:7]]}, query0={x1=[[@5,19:20='xa',<381>,1:19], [@49,156:157='ca',<381>,4:29]], x2=[[@9,26:27='xa',<381>,1:26], [@55,198:199='ca',<381>,5:28]]}, query1={y1=[[@22,65:66='yb',<381>,2:14]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={z1=[[@67,224:225='z1',<381>,6:10]]}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@24,68:69='y1',<381>,2:17]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@7,22:23='x1',<381>,1:22], [@49,156:157='ca',<381>,4:29]], x2=[[@11,29:30='x2',<381>,1:29], [@55,198:199='ca',<381>,5:28]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19], [@49,156:157='ca',<381>,4:29]], x2=[[@9,26:27='xa',<381>,1:26], [@55,198:199='ca',<381>,5:28]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, interface={z1=[{name=z1, table_ref=cc}]}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@37,107:108='z1',<381>,3:17], [@65,221:222='cc',<381>,6:7]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14], [@65,221:222='cc',<381>,6:7]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,206:207='zc',<381>,5:36]]}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=z2, table_ref=zc}], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={x1=[[@51,159:160='x1',<381>,4:32]]}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}], interface={x1=[{name=x1, table_ref=ca}]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query4, ca=query0, cb=query1}}}",
+				"{def_query5={context_list={ca=query0, cb=query1, cc=query4}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@22,65:66='yb',<381>,2:14]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, def_query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={}, interface={z1=[{name=z1, table_ref=cc}]}, table_alias={cc=query4, ca=query0, cb=query1}}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@35,104:105='zc',<381>,3:14]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,206:207='zc',<381>,5:36]]}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=z2, table_ref=zc}], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}], interface={x1=[{name=x1, table_ref=ca}]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query2, ca=query0, cb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2068,22 +2078,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'p1' at (l:4 c:24) was not found in output interface of any visible query alias [ff, fa, fb].",
+				"p1",
+				4,
+				24);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=p1, table_ref=pa}}, 2={column={name=p2, table_ref=pa}}}, from={table={alias=pa, table=tab_p}}}, alias=fa}, 2={cte={select={1={column={name=q1, table_ref=qb}}}, from={table={alias=qb, table=tab_q}}}, alias=fb}}, query={select={1={column={name=p1, table_ref=pa}}, 2={lookup={from={table={alias=ff, table=fa}}, where={condition={left={column={name=p1, table_ref=ff}}, right={column={name=p1, table_ref=pa}}, operator==}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=p2, table_ref=ff}}}}}}, alias=p2_max}}, from={join={1={table={alias=pa, table=fa}}, 2={join=JOIN, on={condition={left={column={name=p1, table_ref=pa}}, right={column={name=q1, table_ref=fb}}, operator==}}}, 3={table={alias=null, table=fb}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[p1, p2_max]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={p2_max=[[@57,175:180='p2_max',<381>,5:32]]}, query0={p1=[[@5,19:20='pa',<381>,1:19], [@48,157:158='ff',<381>,5:14], [@31,96:97='pa',<381>,3:7], [@52,165:166='pa',<381>,5:22], [@65,207:208='pa',<381>,6:25]], p2=[[@9,26:27='pa',<381>,1:26], [@39,122:123='ff',<381>,4:19]]}, query1={q1=[[@22,65:66='qb',<381>,2:14], [@69,215:216='fb',<381>,6:33]]}, query2={unnamed_0=[[@42,127:127=')',<288>,4:24]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={p1=[[@33,99:100='p1',<381>,3:10]], p2_max=[[@57,175:180='p2_max',<381>,5:32]]}, dependent_queries={predicand3={query=query2, type=interface}}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@24,68:69='q1',<381>,2:17], [@69,215:216='fb',<381>,6:33]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14], [@69,215:216='fb',<381>,6:33]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@7,22:23='p1',<381>,1:22], [@48,157:158='ff',<381>,5:14], [@31,96:97='pa',<381>,3:7], [@52,165:166='pa',<381>,5:22], [@65,207:208='pa',<381>,6:25]], p2=[[@11,29:30='p2',<381>,1:29], [@39,122:123='ff',<381>,4:19]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19], [@48,157:158='ff',<381>,5:14], [@31,96:97='pa',<381>,3:7], [@52,165:166='pa',<381>,5:22], [@65,207:208='pa',<381>,6:25]], p2=[[@9,26:27='pa',<381>,1:26], [@39,122:123='ff',<381>,4:19]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}], interface={p1=[{name=p1, table_ref=pa}], p2_max=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}, {name=p2, table_ref=ff}]}, table_alias={fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={unnamed_0=[[@42,127:127=')',<288>,4:24]]}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}], interface={unnamed_0=[{name=p2, table_ref=ff}]}, table_alias={ff=query0, fa=query0, fb=query1}}}}",
+				"{def_query4={context_list={fa=query0, fb=query1}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@22,65:66='qb',<381>,2:14]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, def_query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={p2_max=[[@57,175:180='p2_max',<381>,5:32]]}, dependent_queries={predicand3={query=query2, type=interface}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}], interface={p1=[{name=p1, table_ref=pa}], p2_max=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}, {name=p2, table_ref=ff}]}, table_alias={pa=query0, fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={unnamed_0=[[@42,127:127=')',<288>,4:24]]}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}], interface={unnamed_0=[{name=p2, table_ref=ff}]}, table_alias={ff=query0, fa=query0, fb=query1}}}, table_alias={fa=query0, fb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2099,20 +2115,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=r1, table_ref=ra}}}, from={table={alias=ra, table=tab_r}}}, alias=oa}, 2={cte={with={1={cte={select={1={column={name=s1, table_ref=sb}}}, from={table={alias=sb, table=tab_s}}}, alias=ib}}, query={select={1={column={name=t1, table_ref=tb}}}, from={table={alias=tb, table=tab_t}}, where={condition={left={column={name=t2, table_ref=tb}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=s1, table_ref=ib}}}}}, from={table={alias=null, table=ib}}, where={condition={left={column={name=s1, table_ref=ib}}, right={column={name=r1, table_ref=oa}}, operator==}}}, operator==}}}}, alias=ob}}, query={select={1={column={name=t1, table_ref=ob}}}, from={join={1={table={alias=null, table=ob}}, 2={join=JOIN, on={condition={left={column={name=r1, table_ref=oa}}, right={column={name=t1, table_ref=ob}}, operator==}}}, 3={table={alias=null, table=oa}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}, tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}, tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@39,144:145='tb',<381>,4:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={t1=[[@31,108:109='tb',<381>,3:14], [@64,230:231='ob',<381>,6:7], [@76,263:264='ob',<381>,6:40]]}, query0={r1=[[@5,19:20='ra',<381>,1:19], [@58,215:216='oa',<381>,5:36], [@72,255:256='oa',<381>,6:32]]}, query1={s1=[[@22,70:71='sb',<381>,2:26], [@47,164:165='ib',<381>,4:33], [@54,207:208='ib',<381>,5:28]]}, query2={unnamed_0=[[@50,169:169=')',<288>,4:38]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ob=query4}, query_dictionary={t1=[[@66,233:234='t1',<381>,6:10]]}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, def_query4={context_list={oa=query0, ib=query1}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14], [@64,230:231='ob',<381>,6:7], [@76,263:264='ob',<381>,6:40]], t2=[[@39,144:145='tb',<381>,4:13]]}}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@24,73:74='s1',<381>,2:29], [@47,164:165='ib',<381>,4:33], [@54,207:208='ib',<381>,5:28]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26], [@47,164:165='ib',<381>,4:33], [@54,207:208='ib',<381>,5:28]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@7,22:23='r1',<381>,1:22], [@58,215:216='oa',<381>,5:36], [@72,255:256='oa',<381>,6:32]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19], [@58,215:216='oa',<381>,5:36]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, filters=[{name=t2, table_ref=tb}], interface={t1=[{name=t1, table_ref=tb}]}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={unnamed_0=[[@50,169:169=')',<288>,4:38]]}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}], interface={unnamed_0=[{name=s1, table_ref=ib}]}, table_alias={oa=query0, ib=query1}}, query_dictionary={t1=[[@33,111:112='t1',<381>,3:17], [@64,230:231='ob',<381>,6:7], [@76,263:264='ob',<381>,6:40]]}, dependent_queries={predicand3={query=query2, type=filters}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query4}}}",
+				"{def_query5={context_list={ob=query4}, def_query5={context_list={ob=query4}, query_dictionary={}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, table_alias={oa=query0, ob=query4}}, def_query4={context_list={oa=query0, ib=query1}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@22,70:71='sb',<381>,2:26]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@5,19:20='ra',<381>,1:19]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, def_query4={context_list={oa=query0, ib=query1}, query_dictionary={t1=[[@31,108:109='tb',<381>,3:14]]}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@39,144:145='tb',<381>,4:13]]}}, dependent_queries={predicand3={query=query2, type=filters}}, filters=[{name=t2, table_ref=tb}], interface={t1=[{name=t1, table_ref=tb}]}, table_alias={oa=query0, ib=query1, tb=tab_t}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={unnamed_0=[[@50,169:169=')',<288>,4:38]]}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}], interface={unnamed_0=[{name=s1, table_ref=ib}]}, table_alias={oa=query0, ib=query1}}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2127,20 +2141,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=in1, table_ref=oa}}}, from={table={alias=oa, table=tab_a}}, where={in={item={column={name=in2, table_ref=oa}}, in_list={select={1={column={name=in9, table_ref=ib}}}, from={join={1={table={alias=ib, table=tab_b}}, 2={join=JOIN, on={condition={left={column={name=in7, table_ref=ix}}, right={column={name=in6, table_ref=ib}}, operator==}}}, 3={table={alias=ix, query={select={1={column={name=in7, table_ref=ic}}}, from={table={alias=ic, table=tab_c}}, where={condition={left={column={name=in8, table_ref=ic}}, right={column={name=in1, table_ref=oa}}, operator==}}}}}}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[in1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={in2=[[@9,37:38='oa',<381>,2:6]], in1=[[@37,139:140='oa',<381>,4:23], [@1,7:8='oa',<381>,1:7]]}, tab_b={in6=[[@48,173:174='ib',<381>,5:20]], in9=[[@15,55:56='ib',<381>,2:24]]}, tab_c={in8=[[@33,130:131='ic',<381>,4:14]], in7=[[@25,92:93='ic',<381>,3:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={in7=[[@25,92:93='ic',<381>,3:13], [@44,164:165='ix',<381>,5:11]]}, query1={in9=[[@15,55:56='ib',<381>,2:24]]}, query3={in1=[[@1,7:8='oa',<381>,1:7], [@37,139:140='oa',<381>,4:23]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query3={query_dictionary={in1=[[@3,10:12='in1',<381>,1:10]]}, table_dictionary={tab_a={in2=[[@9,37:38='oa',<381>,2:6]], in1=[[@1,7:8='oa',<381>,1:7], [@37,139:140='oa',<381>,4:23]]}}, def_query1={query_dictionary={in9=[[@17,58:60='in9',<381>,2:27]]}, table_dictionary={tab_b={in6=[[@48,173:174='ib',<381>,5:20]], in9=[[@15,55:56='ib',<381>,2:24]]}}, def_query0={query_dictionary={in7=[[@27,95:97='in7',<381>,3:16], [@44,164:165='ix',<381>,5:11]]}, table_dictionary={tab_c={in8=[[@33,130:131='ic',<381>,4:14]], in7=[[@25,92:93='ic',<381>,3:13]]}}, filters=[{name=in8, table_ref=ic}, {name=in1, table_ref=oa}], interface={in7=[{name=in7, table_ref=ic}]}, table_alias={ic=tab_c}}, filters=[{name=in7, table_ref=ix}, {name=in6, table_ref=ib}], interface={in9=[{name=in9, table_ref=ib}]}, table_alias={ib=tab_b, ix=query0}}, dependent_queries={in_list2={query=query1, type=filters}}, filters=[{name=in2, table_ref=oa}], interface={in1=[{name=in1, table_ref=oa}]}, table_alias={oa=tab_a}}}",
+				"{def_query3={query_dictionary={in1=[[@1,7:8='oa',<381>,1:7], [@37,139:140='oa',<381>,4:23]]}, table_dictionary={tab_a={in2=[[@9,37:38='oa',<381>,2:6]], in1=[[@1,7:8='oa',<381>,1:7], [@37,139:140='oa',<381>,4:23]]}}, def_query1={query_dictionary={in9=[[@15,55:56='ib',<381>,2:24]]}, table_dictionary={tab_b={in6=[[@48,173:174='ib',<381>,5:20]], in9=[[@15,55:56='ib',<381>,2:24]]}}, def_query0={query_dictionary={in7=[[@25,92:93='ic',<381>,3:13]]}, table_dictionary={tab_a={in1=[[@37,139:140='oa',<381>,4:23], [@1,7:8='oa',<381>,1:7]]}, tab_c={in8=[[@33,130:131='ic',<381>,4:14]], in7=[[@25,92:93='ic',<381>,3:13]]}}, filters=[{name=in8, table_ref=ic}, {name=in1, table_ref=oa}], interface={in7=[{name=in7, table_ref=ic}]}, table_alias={ic=tab_c}}, filters=[{name=in7, table_ref=ix}, {name=in6, table_ref=ib}], interface={in9=[{name=in9, table_ref=ib}]}, table_alias={ib=tab_b, ix=query0}}, dependent_queries={in_list2={query=query1, type=filters}}, filters=[{name=in2, table_ref=oa}], interface={in1=[{name=in1, table_ref=oa}]}, table_alias={oa=tab_a}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2156,20 +2168,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=iu1, table_ref=ua}}}, from={table={alias=ua, table=tab_a}}, where={in={item={column={name=iu2, table_ref=ua}}, in_list={select={1={column={name=iu4, table_ref=sub}}}, from={table={alias=sub, query={union={1={select={1={column={name=iu4, table_ref=ub}}}, from={table={alias=ub, table=tab_b}}, where={condition={left={column={name=iu5, table_ref=ub}}, right={column={name=iu1, table_ref=ua}}, operator==}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=iu4, table_ref=uc}}}, from={table={alias=uc, table=tab_c}}, where={condition={left={column={name=iu6, table_ref=uc}}, right={column={name=iu3, table_ref=ua}}, operator==}}}}}}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[iu1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={iu1=[[@33,124:125='ua',<381>,4:23], [@1,7:8='ua',<381>,1:7]], iu3=[[@50,191:192='ua',<381>,6:23]], iu2=[[@9,37:38='ua',<381>,2:6]]}, tab_b={iu5=[[@29,115:116='ub',<381>,4:14]], iu4=[[@21,77:78='ub',<381>,3:7]]}, tab_c={iu4=[[@38,144:145='uc',<381>,5:13]], iu6=[[@46,182:183='uc',<381>,6:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={iu4=[[@15,55:57='sub',<381>,2:24]]}, query5={iu1=[[@1,7:8='ua',<381>,1:7], [@33,124:125='ua',<381>,4:23]]}, query0={iu4=[[@21,77:78='ub',<381>,3:7]]}, query1={iu4=[[@38,144:145='uc',<381>,5:13]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={query_dictionary={iu1=[[@3,10:12='iu1',<381>,1:10]]}, table_dictionary={tab_a={iu1=[[@1,7:8='ua',<381>,1:7], [@33,124:125='ua',<381>,4:23]], iu3=[[@50,191:192='ua',<381>,6:23]], iu2=[[@9,37:38='ua',<381>,2:6]]}}, dependent_queries={in_list4={query=query3, type=filters}}, filters=[{name=iu2, table_ref=ua}], interface={iu1=[{name=iu1, table_ref=ua}]}, def_query3={def_union2={query0={query_dictionary={iu4=[[@23,80:82='iu4',<381>,3:10]]}, table_dictionary={tab_b={iu5=[[@29,115:116='ub',<381>,4:14]], iu4=[[@21,77:78='ub',<381>,3:7]]}}, filters=[{name=iu5, table_ref=ub}, {name=iu1, table_ref=ua}], interface={iu4=[{name=iu4, table_ref=ub}]}, table_alias={ub=tab_b}}, interface={iu4=[{name=iu4, table_ref=ub}, {name=iu4, table_ref=uc}]}, query1={query_dictionary={iu4=[[@40,147:149='iu4',<381>,5:16]]}, table_dictionary={tab_c={iu4=[[@38,144:145='uc',<381>,5:13]], iu6=[[@46,182:183='uc',<381>,6:14]]}}, filters=[{name=iu6, table_ref=uc}, {name=iu3, table_ref=ua}], interface={iu4=[{name=iu4, table_ref=uc}]}, table_alias={uc=tab_c}}}, query_dictionary={iu4=[[@17,59:61='iu4',<381>,2:28]]}, interface={iu4=[{name=iu4, table_ref=sub}]}, table_alias={sub=union2}}, table_alias={ua=tab_a}}}",
+				"{def_query5={query_dictionary={iu1=[[@1,7:8='ua',<381>,1:7], [@33,124:125='ua',<381>,4:23]]}, table_dictionary={tab_a={iu1=[[@1,7:8='ua',<381>,1:7], [@33,124:125='ua',<381>,4:23]], iu2=[[@9,37:38='ua',<381>,2:6]]}}, dependent_queries={in_list4={query=query3, type=filters}}, filters=[{name=iu2, table_ref=ua}], interface={iu1=[{name=iu1, table_ref=ua}]}, def_query3={def_union2={def_query1={query_dictionary={iu4=[[@38,144:145='uc',<381>,5:13]]}, table_dictionary={tab_a={iu3=[[@50,191:192='ua',<381>,6:23]]}, tab_c={iu4=[[@38,144:145='uc',<381>,5:13]], iu6=[[@46,182:183='uc',<381>,6:14]]}}, filters=[{name=iu6, table_ref=uc}, {name=iu3, table_ref=ua}], interface={iu4=[{name=iu4, table_ref=uc}]}, table_alias={uc=tab_c}}, def_query0={query_dictionary={iu4=[[@21,77:78='ub',<381>,3:7]]}, table_dictionary={tab_a={iu1=[[@33,124:125='ua',<381>,4:23], [@1,7:8='ua',<381>,1:7]]}, tab_b={iu5=[[@29,115:116='ub',<381>,4:14]], iu4=[[@21,77:78='ub',<381>,3:7]]}}, filters=[{name=iu5, table_ref=ub}, {name=iu1, table_ref=ua}], interface={iu4=[{name=iu4, table_ref=ub}]}, table_alias={ub=tab_b}}, interface={iu4=[{name=iu4, table_ref=ub}, {name=iu4, table_ref=uc}]}}, query_dictionary={}, interface={iu4=[{name=iu4, table_ref=sub}]}, table_alias={sub=union2}}, table_alias={ua=tab_a}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2185,20 +2195,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ix1, table_ref=oi}}}, from={table={alias=oi, table=tab_o}}, where={in={item={column={name=ix2, table_ref=oi}}, in_list={select={1={column={name=ix9, table_ref=ii}}}, from={table={alias=ii, query={intersect={1={select={1={column={name=ix9, table_ref=id}}}, from={table={alias=id, table=tab_d}}, where={condition={left={column={name=ix3, table_ref=id}}, right={column={name=ix1, table_ref=oi}}, operator==}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=ix9, table_ref=ie}}}, from={table={alias=ie, table=tab_e}}, where={condition={left={column={name=ix4, table_ref=ie}}, right={column={name=ix2, table_ref=oi}}, operator==}}}}}}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[ix1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_o={ix2=[[@50,194:195='oi',<381>,6:23], [@9,37:38='oi',<381>,2:6]], ix1=[[@33,123:124='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ix3=[[@29,114:115='id',<381>,4:14]], ix9=[[@21,76:77='id',<381>,3:7]]}, tab_e={ix4=[[@46,185:186='ie',<381>,6:14]], ix9=[[@38,147:148='ie',<381>,5:17]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={ix9=[[@15,55:56='ii',<381>,2:24]]}, query5={ix1=[[@1,7:8='oi',<381>,1:7], [@33,123:124='oi',<381>,4:23]]}, query0={ix9=[[@21,76:77='id',<381>,3:7]]}, query1={ix9=[[@38,147:148='ie',<381>,5:17]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={query_dictionary={ix1=[[@3,10:12='ix1',<381>,1:10]]}, table_dictionary={tab_o={ix2=[[@9,37:38='oi',<381>,2:6], [@50,194:195='oi',<381>,6:23]], ix1=[[@1,7:8='oi',<381>,1:7], [@33,123:124='oi',<381>,4:23]]}}, dependent_queries={in_list4={query=query3, type=filters}}, filters=[{name=ix2, table_ref=oi}], interface={ix1=[{name=ix1, table_ref=oi}]}, def_query3={query_dictionary={ix9=[[@17,58:60='ix9',<381>,2:27]]}, def_intersect2={query0={query_dictionary={ix9=[[@23,79:81='ix9',<381>,3:10]]}, table_dictionary={tab_d={ix3=[[@29,114:115='id',<381>,4:14]], ix9=[[@21,76:77='id',<381>,3:7]]}}, filters=[{name=ix3, table_ref=id}, {name=ix1, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ix9=[{name=ix9, table_ref=id}, {name=ix9, table_ref=ie}]}, query1={query_dictionary={ix9=[[@40,150:152='ix9',<381>,5:20]]}, table_dictionary={tab_e={ix4=[[@46,185:186='ie',<381>,6:14]], ix9=[[@38,147:148='ie',<381>,5:17]]}}, filters=[{name=ix4, table_ref=ie}, {name=ix2, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=ie}]}, table_alias={ie=tab_e}}}, interface={ix9=[{name=ix9, table_ref=ii}]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
+				"{def_query5={query_dictionary={ix1=[[@1,7:8='oi',<381>,1:7], [@33,123:124='oi',<381>,4:23]]}, table_dictionary={tab_o={ix2=[[@9,37:38='oi',<381>,2:6], [@50,194:195='oi',<381>,6:23]], ix1=[[@1,7:8='oi',<381>,1:7], [@33,123:124='oi',<381>,4:23]]}}, dependent_queries={in_list4={query=query3, type=filters}}, filters=[{name=ix2, table_ref=oi}], interface={ix1=[{name=ix1, table_ref=oi}]}, def_query3={query_dictionary={}, def_intersect2={def_query1={query_dictionary={ix9=[[@38,147:148='ie',<381>,5:17]]}, table_dictionary={tab_o={ix2=[[@50,194:195='oi',<381>,6:23], [@9,37:38='oi',<381>,2:6]]}, tab_e={ix4=[[@46,185:186='ie',<381>,6:14]], ix9=[[@38,147:148='ie',<381>,5:17]]}}, filters=[{name=ix4, table_ref=ie}, {name=ix2, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={ix9=[[@21,76:77='id',<381>,3:7]]}, table_dictionary={tab_o={ix1=[[@33,123:124='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ix3=[[@29,114:115='id',<381>,4:14]], ix9=[[@21,76:77='id',<381>,3:7]]}}, filters=[{name=ix3, table_ref=id}, {name=ix1, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ix9=[{name=ix9, table_ref=id}, {name=ix9, table_ref=ie}]}}, interface={ix9=[{name=ix9, table_ref=ii}]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2213,20 +2221,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=in1, table_ref=sa}}}, from={table={alias=sa, table=tab_s}}, where={in={item={column={name=in2, table_ref=sa}}, in_list={select={1={column={name=in9, table_ref=ia}}}, from={table={alias=ia, table=tab_i}}, where={condition={left={column={name=in3, table_ref=ia}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=jx1, table_ref=jb}}}}}, from={table={alias=jb, table=tab_j}}, where={condition={left={column={name=jx2, table_ref=jb}}, right={column={name=in1, table_ref=sa}}, operator==}}}, operator==}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[in1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_j={jx1=[[@31,124:125='jb',<381>,4:11]], jx2=[[@40,172:173='jb',<381>,5:23]]}, tab_s={in2=[[@9,37:38='sa',<381>,2:6]], in1=[[@1,7:8='sa',<381>,1:7], [@44,181:182='sa',<381>,5:32]]}, tab_i={in9=[[@15,55:56='ia',<381>,2:24]], in3=[[@23,102:103='ia',<381>,3:23]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={in1=[[@1,7:8='sa',<381>,1:7], [@44,181:182='sa',<381>,5:32]]}, query0={unnamed_0=[[@34,130:130=')',<288>,4:17]]}, query2={in9=[[@15,55:56='ia',<381>,2:24]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={query_dictionary={in1=[[@3,10:12='in1',<381>,1:10]]}, table_dictionary={tab_s={in2=[[@9,37:38='sa',<381>,2:6]], in1=[[@1,7:8='sa',<381>,1:7], [@44,181:182='sa',<381>,5:32]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=in2, table_ref=sa}], interface={in1=[{name=in1, table_ref=sa}]}, table_alias={sa=tab_s}, def_query2={query_dictionary={in9=[[@17,58:60='in9',<381>,2:27]]}, table_dictionary={tab_i={in9=[[@15,55:56='ia',<381>,2:24]], in3=[[@23,102:103='ia',<381>,3:23]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@34,130:130=')',<288>,4:17]]}, table_dictionary={tab_j={jx1=[[@31,124:125='jb',<381>,4:11]], jx2=[[@40,172:173='jb',<381>,5:23]]}}, filters=[{name=jx2, table_ref=jb}, {name=in1, table_ref=sa}], interface={unnamed_0=[{name=jx1, table_ref=jb}]}, table_alias={jb=tab_j}}, filters=[{name=in3, table_ref=ia}], interface={in9=[{name=in9, table_ref=ia}]}, table_alias={ia=tab_i}}}}",
+				"{def_query4={query_dictionary={in1=[[@1,7:8='sa',<381>,1:7], [@44,181:182='sa',<381>,5:32]]}, table_dictionary={tab_s={in2=[[@9,37:38='sa',<381>,2:6]], in1=[[@1,7:8='sa',<381>,1:7], [@44,181:182='sa',<381>,5:32]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=in2, table_ref=sa}], interface={in1=[{name=in1, table_ref=sa}]}, table_alias={sa=tab_s}, def_query2={query_dictionary={in9=[[@15,55:56='ia',<381>,2:24]]}, table_dictionary={tab_i={in9=[[@15,55:56='ia',<381>,2:24]], in3=[[@23,102:103='ia',<381>,3:23]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@34,130:130=')',<288>,4:17]]}, table_dictionary={tab_j={jx1=[[@31,124:125='jb',<381>,4:11]], jx2=[[@40,172:173='jb',<381>,5:23]]}}, filters=[{name=jx2, table_ref=jb}, {name=in1, table_ref=sa}], interface={unnamed_0=[{name=jx1, table_ref=jb}]}, table_alias={jb=tab_j}}, filters=[{name=in3, table_ref=ia}], interface={in9=[{name=in9, table_ref=ia}]}, table_alias={ia=tab_i}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2242,20 +2248,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=in1, table_ref=ea}}}, from={table={alias=ea, table=tab_e}}, where={in={item={column={name=in2, table_ref=ea}}, in_list={select={1={column={name=in9, table_ref=ex}}}, from={table={alias=ex, table=tab_x}}, where={exists={select={1={literal=1}}, from={table={alias=ey, table=tab_y}}, where={and={1={condition={left={column={name=ey1, table_ref=ey}}, right={column={name=in8, table_ref=ex}}, operator==}}, 2={condition={left={column={name=ey2, table_ref=ey}}, right={column={name=in1, table_ref=ea}}, operator==}}}}, operator=EXISTS}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[in1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_e={in2=[[@9,37:38='ea',<381>,2:6]], in1=[[@1,7:8='ea',<381>,1:7], [@44,208:209='ea',<381>,6:32]]}, tab_x={in8=[[@36,169:170='ex',<381>,5:32]], in9=[[@15,55:56='ex',<381>,2:24]]}, tab_y={ey1=[[@32,160:161='ey',<381>,5:23]], ey2=[[@40,199:200='ey',<381>,6:23]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={in1=[[@1,7:8='ea',<381>,1:7], [@44,208:209='ea',<381>,6:32]]}, query0={unnamed_0=[[@26,118:118='1',<300>,4:7]]}, query2={in9=[[@15,55:56='ex',<381>,2:24]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={query_dictionary={in1=[[@3,10:12='in1',<381>,1:10]]}, table_dictionary={tab_e={in2=[[@9,37:38='ea',<381>,2:6]], in1=[[@1,7:8='ea',<381>,1:7], [@44,208:209='ea',<381>,6:32]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=in2, table_ref=ea}], interface={in1=[{name=in1, table_ref=ea}]}, table_alias={ea=tab_e}, def_query2={query_dictionary={in9=[[@17,58:60='in9',<381>,2:27]]}, table_dictionary={tab_x={in8=[[@36,169:170='ex',<381>,5:32]], in9=[[@15,55:56='ex',<381>,2:24]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@26,118:118='1',<300>,4:7]]}, table_dictionary={tab_y={ey1=[[@32,160:161='ey',<381>,5:23]], ey2=[[@40,199:200='ey',<381>,6:23]]}}, filters=[{name=ey1, table_ref=ey}, {name=in8, table_ref=ex}, {name=ey2, table_ref=ey}, {name=in1, table_ref=ea}], interface={unnamed_0=[]}, table_alias={ey=tab_y}}, filters=[], interface={in9=[{name=in9, table_ref=ex}]}, table_alias={ex=tab_x}}}}",
+				"{def_query4={query_dictionary={in1=[[@1,7:8='ea',<381>,1:7], [@44,208:209='ea',<381>,6:32]]}, table_dictionary={tab_e={in2=[[@9,37:38='ea',<381>,2:6]], in1=[[@1,7:8='ea',<381>,1:7], [@44,208:209='ea',<381>,6:32]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=in2, table_ref=ea}], interface={in1=[{name=in1, table_ref=ea}]}, table_alias={ea=tab_e}, def_query2={query_dictionary={in9=[[@15,55:56='ex',<381>,2:24]]}, table_dictionary={tab_x={in8=[[@36,169:170='ex',<381>,5:32]], in9=[[@15,55:56='ex',<381>,2:24]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@26,118:118='1',<300>,4:7]]}, table_dictionary={tab_y={ey1=[[@32,160:161='ey',<381>,5:23]], ey2=[[@40,199:200='ey',<381>,6:23]]}}, filters=[{name=ey1, table_ref=ey}, {name=in8, table_ref=ex}, {name=ey2, table_ref=ey}, {name=in1, table_ref=ea}], interface={unnamed_0=[]}, table_alias={ey=tab_y}}, filters=[], interface={in9=[{name=in9, table_ref=ex}]}, table_alias={ex=tab_x}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2270,20 +2274,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=t1c1, table_ref=ta}}}, from={table={alias=ta, table=tab1}}, where={in={item={column={name=t1c1, table_ref=ta}}, in_list={select={1={column={name=t2c1, table_ref=tb}}}, from={table={alias=tb, table=tab2}}}}}}, alias=c1a}}, query={select={1={column={name=t1c1, table_ref=c1a}}}, from={table={alias=null, table=c1a}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1c1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}, tab2={t2c1=[[@19,74:75='tb',<381>,3:27]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={t2c1=[[@19,74:75='tb',<381>,3:27]]}, query2={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8], [@29,108:110='c1a',<381>,5:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query3={context_list={c1a=query2}, query_dictionary={t1c1=[[@31,112:115='t1c1',<381>,5:11]]}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}, def_query2={query_dictionary={t1c1=[[@7,26:29='t1c1',<381>,2:12], [@29,108:110='c1a',<381>,5:7]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8], [@29,108:110='c1a',<381>,5:7]]}}, dependent_queries={in_list1={query=query0, type=filters}}, def_query0={query_dictionary={t2c1=[[@21,77:80='t2c1',<381>,3:30]]}, table_dictionary={tab2={t2c1=[[@19,74:75='tb',<381>,3:27]]}}, interface={t2c1=[{name=t2c1, table_ref=tb}]}, table_alias={tb=tab2}}, filters=[{name=t1c1, table_ref=ta}], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
+				"{def_query3={context_list={c1a=query2}, table_alias={c1a=query0}, def_query3={context_list={c1a=query2}, query_dictionary={}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}}, def_query2={query_dictionary={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@13,55:56='ta',<381>,3:8]]}}, dependent_queries={in_list1={query=query0, type=filters}}, def_query0={query_dictionary={t2c1=[[@19,74:75='tb',<381>,3:27]]}, table_dictionary={tab2={t2c1=[[@19,74:75='tb',<381>,3:27]]}}, interface={t2c1=[{name=t2c1, table_ref=tb}]}, table_alias={tb=tab2}}, filters=[{name=t1c1, table_ref=ta}], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2296,22 +2298,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'b2' at (l:1 c:1) was not found in output interface of any visible query alias [ww, w1].",
+				"b2",
+				1,
+				1);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, table=tab_b}}, where={in={item={column={name=b1, table_ref=bb}}, in_list={select={1={column={name=a1, table_ref=ww}}}, from={table={alias=ww, table=w1}}, where={condition={left={column={name=a2, table_ref=ww}}, right={column={name=b2, table_ref=bb}}, operator==}}}}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[b1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, tab_b={b2=[[@48,175:176='bb',<381>,4:37]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a1=[[@5,19:20='aa',<381>,1:19], [@36,118:119='ww',<381>,3:30]], a2=[[@9,26:27='aa',<381>,1:26], [@44,167:168='ww',<381>,4:29]]}, query3={b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13], [@54,190:191='w2',<381>,5:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={w1=query0, w2=query3}, query_dictionary={b1=[[@56,193:194='b1',<381>,5:10]]}, def_query0={query_dictionary={a1=[[@7,22:23='a1',<381>,1:22], [@36,118:119='ww',<381>,3:30]], a2=[[@11,29:30='a2',<381>,1:29], [@44,167:168='ww',<381>,4:29]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19], [@36,118:119='ww',<381>,3:30]], a2=[[@9,26:27='aa',<381>,1:26], [@44,167:168='ww',<381>,4:29]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@24,68:69='b1',<381>,2:17], [@54,190:191='w2',<381>,5:7]]}, table_dictionary={tab_b={b2=[[@48,175:176='bb',<381>,4:37]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13], [@54,190:191='w2',<381>,5:7]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={a1=[[@38,121:122='a1',<381>,3:33]]}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={a1=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}, dependent_queries={in_list2={query=query1, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
+				"{def_query4={context_list={w1=query0, w2=query3}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query4={context_list={w1=query0, w2=query3}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}}, table_alias={w1=query0, w2=query1}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}, table_dictionary={tab_b={b2=[[@48,175:176='bb',<381>,4:37]], b1=[[@22,65:66='bb',<381>,2:14], [@30,101:102='bb',<381>,3:13]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={}, filters=[{name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={a1=[{name=a1, table_ref=ww}]}, table_alias={ww=query0, w1=query0}}, dependent_queries={in_list2={query=query1, type=filters}}, filters=[{name=b1, table_ref=bb}], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2325,22 +2333,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'z3' at (l:1 c:1) was not found in output interface of any visible query alias [ca, cb].",
+				"z3",
+				1,
+				1);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=x1, table_ref=xa}}, 2={column={name=x2, table_ref=xa}}}, from={table={alias=xa, table=tab_x}}}, alias=ca}, 2={cte={select={1={column={name=y1, table_ref=yb}}}, from={table={alias=yb, table=tab_y}}}, alias=cb}, 3={cte={select={1={column={name=z1, table_ref=zc}}}, from={table={alias=zc, table=tab_z}}, where={in={item={column={name=z2, table_ref=zc}}, in_list={select={1={column={name=x1, table_ref=ca}}}, from={table={alias=null, table=ca}}, where={condition={left={column={name=x2, table_ref=ca}}, right={column={name=z3, table_ref=zc}}, operator==}}}}}}, alias=cc}}, query={select={1={column={name=z1, table_ref=cc}}}, from={table={alias=null, table=cc}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[z1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,208:209='zc',<381>,5:37]]}, tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={z1=[[@35,104:105='zc',<381>,3:14], [@65,223:224='cc',<381>,6:7]]}, query0={x1=[[@5,19:20='xa',<381>,1:19], [@49,157:158='ca',<381>,4:30]], x2=[[@9,26:27='xa',<381>,1:26], [@55,200:201='ca',<381>,5:29]]}, query1={y1=[[@22,65:66='yb',<381>,2:14]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={z1=[[@67,226:227='z1',<381>,6:10]]}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@24,68:69='y1',<381>,2:17]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@7,22:23='x1',<381>,1:22], [@49,157:158='ca',<381>,4:30]], x2=[[@11,29:30='x2',<381>,1:29], [@55,200:201='ca',<381>,5:29]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19], [@49,157:158='ca',<381>,4:30]], x2=[[@9,26:27='xa',<381>,1:26], [@55,200:201='ca',<381>,5:29]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, interface={z1=[{name=z1, table_ref=cc}]}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@37,107:108='z1',<381>,3:17], [@65,223:224='cc',<381>,6:7]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14], [@65,223:224='cc',<381>,6:7]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,208:209='zc',<381>,5:37]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=z2, table_ref=zc}], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={x1=[[@51,160:161='x1',<381>,4:33]]}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}], interface={x1=[{name=x1, table_ref=ca}]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query4, ca=query0, cb=query1}}}",
+				"{def_query5={context_list={ca=query0, cb=query1, cc=query4}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@22,65:66='yb',<381>,2:14]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, def_query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={}, interface={z1=[{name=z1, table_ref=cc}]}, table_alias={cc=query4, ca=query0, cb=query1}}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@35,104:105='zc',<381>,3:14]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@43,140:141='zc',<381>,4:13]], z3=[[@59,208:209='zc',<381>,5:37]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=z2, table_ref=zc}], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}], interface={x1=[{name=x1, table_ref=ca}]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query2, ca=query0, cb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2355,20 +2369,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=p1, table_ref=pa}}, 2={column={name=p2, table_ref=pa}}}, from={table={alias=pa, table=tab_p}}}, alias=fa}, 2={cte={select={1={column={name=q1, table_ref=qb}}}, from={table={alias=qb, table=tab_q}}}, alias=fb}}, query={select={1={column={name=p1, table_ref=pa}}}, from={join={1={table={alias=pa, table=fa}}, 2={join=JOIN, on={condition={left={column={name=p1, table_ref=pa}}, right={column={name=q1, table_ref=fb}}, operator==}}}, 3={table={alias=null, table=fb}}}}, where={in={item={column={name=p2, table_ref=pa}}, in_list={select={1={column={name=p2, table_ref=ff}}}, from={table={alias=ff, table=fa}}, where={condition={left={column={name=p1, table_ref=ff}}, right={column={name=p1, table_ref=pa}}, operator==}}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[p1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p1=[[@5,19:20='pa',<381>,1:19], [@63,206:207='ff',<381>,5:22], [@67,214:215='pa',<381>,5:30], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38]], p2=[[@9,26:27='pa',<381>,1:26], [@55,164:165='ff',<381>,4:23], [@49,147:148='pa',<381>,4:6]]}, query1={q1=[[@22,65:66='qb',<381>,2:14], [@45,135:136='fb',<381>,3:46]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={p1=[[@33,99:100='p1',<381>,3:10]]}, dependent_queries={in_list3={query=query2, type=filters}}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@24,68:69='q1',<381>,2:17], [@45,135:136='fb',<381>,3:46]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14], [@45,135:136='fb',<381>,3:46]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@7,22:23='p1',<381>,1:22], [@63,206:207='ff',<381>,5:22], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38], [@67,214:215='pa',<381>,5:30]], p2=[[@11,29:30='p2',<381>,1:29], [@55,164:165='ff',<381>,4:23], [@49,147:148='pa',<381>,4:6]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19], [@63,206:207='ff',<381>,5:22], [@67,214:215='pa',<381>,5:30], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38], [@67,214:215='pa',<381>,5:30]], p2=[[@9,26:27='pa',<381>,1:26], [@55,164:165='ff',<381>,4:23], [@49,147:148='pa',<381>,4:6]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}, {name=p2, table_ref=pa}], interface={p1=[{name=p1, table_ref=pa}]}, table_alias={fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={p2=[[@57,167:168='p2',<381>,4:26]]}, table_dictionary={tab_p={p1=[[@67,214:215='pa',<381>,5:30]]}}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}], interface={p2=[{name=p2, table_ref=ff}]}, table_alias={ff=query0, fa=query0, fb=query1}}}}",
+				"{def_query4={context_list={fa=query0, fb=query1}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@22,65:66='qb',<381>,2:14]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, def_query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}, {name=p2, table_ref=pa}], interface={p1=[{name=p1, table_ref=pa}]}, table_alias={pa=query0, fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}], interface={p2=[{name=p2, table_ref=ff}]}, table_alias={ff=query0, fa=query0, fb=query1}}}, table_alias={fa=query0, fb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2384,20 +2396,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=r1, table_ref=ra}}}, from={table={alias=ra, table=tab_r}}}, alias=oa}, 2={cte={with={1={cte={select={1={column={name=s1, table_ref=sb}}}, from={table={alias=sb, table=tab_s}}}, alias=ib}}, query={select={1={column={name=t1, table_ref=tb}}}, from={table={alias=tb, table=tab_t}}, where={in={item={column={name=t2, table_ref=tb}}, in_list={select={1={column={name=s1, table_ref=ib}}}, from={table={alias=null, table=ib}}, where={condition={left={column={name=s1, table_ref=ib}}, right={column={name=r1, table_ref=oa}}, operator==}}}}}}}, alias=ob}}, query={select={1={column={name=t1, table_ref=ob}}}, from={join={1={table={alias=null, table=ob}}, 2={join=JOIN, on={condition={left={column={name=r1, table_ref=oa}}, right={column={name=t1, table_ref=ob}}, operator==}}}, 3={table={alias=null, table=oa}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}, tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}, tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@39,144:145='tb',<381>,4:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={t1=[[@31,108:109='tb',<381>,3:14], [@61,227:228='ob',<381>,6:7], [@73,260:261='ob',<381>,6:40]]}, query0={r1=[[@5,19:20='ra',<381>,1:19], [@55,212:213='oa',<381>,5:37], [@69,252:253='oa',<381>,6:32]]}, query1={s1=[[@22,70:71='sb',<381>,2:26], [@45,161:162='ib',<381>,4:30], [@51,204:205='ib',<381>,5:29]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ob=query4}, query_dictionary={t1=[[@63,230:231='t1',<381>,6:10]]}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, def_query4={context_list={oa=query0, ib=query1}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14], [@61,227:228='ob',<381>,6:7], [@73,260:261='ob',<381>,6:40]], t2=[[@39,144:145='tb',<381>,4:13]]}}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@24,73:74='s1',<381>,2:29], [@45,161:162='ib',<381>,4:30], [@51,204:205='ib',<381>,5:29]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26], [@45,161:162='ib',<381>,4:30], [@51,204:205='ib',<381>,5:29]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@7,22:23='r1',<381>,1:22], [@55,212:213='oa',<381>,5:37], [@69,252:253='oa',<381>,6:32]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19], [@55,212:213='oa',<381>,5:37]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, filters=[{name=t2, table_ref=tb}], interface={t1=[{name=t1, table_ref=tb}]}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={s1=[[@47,164:165='s1',<381>,4:33]]}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}], interface={s1=[{name=s1, table_ref=ib}]}, table_alias={oa=query0, ib=query1}}, query_dictionary={t1=[[@33,111:112='t1',<381>,3:17], [@61,227:228='ob',<381>,6:7], [@73,260:261='ob',<381>,6:40]]}, dependent_queries={in_list3={query=query2, type=filters}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query4}}}",
+				"{def_query5={context_list={ob=query4}, def_query5={context_list={ob=query4}, query_dictionary={}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, table_alias={oa=query0, ob=query4}}, def_query4={context_list={oa=query0, ib=query1}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@22,70:71='sb',<381>,2:26]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@5,19:20='ra',<381>,1:19]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, def_query4={context_list={oa=query0, ib=query1}, query_dictionary={t1=[[@31,108:109='tb',<381>,3:14]]}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@39,144:145='tb',<381>,4:13]]}}, dependent_queries={in_list3={query=query2, type=filters}}, filters=[{name=t2, table_ref=tb}], interface={t1=[{name=t1, table_ref=tb}]}, table_alias={oa=query0, ib=query1, tb=tab_t}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}], interface={s1=[{name=s1, table_ref=ib}]}, table_alias={oa=query0, ib=query1}}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2412,20 +2422,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ex1, table_ref=oa}}}, from={table={alias=oa, table=tab_a}}, where={exists={select={1={literal=1}}, from={join={1={table={alias=ib, table=tab_b}}, 2={join=JOIN, on={condition={left={column={name=ex7, table_ref=ix}}, right={column={name=ex6, table_ref=ib}}, operator==}}}, 3={table={alias=ix, query={select={1={column={name=ex7, table_ref=ic}}}, from={table={alias=ic, table=tab_c}}, where={condition={left={column={name=ex8, table_ref=ic}}, right={column={name=ex2, table_ref=oa}}, operator==}}}}}}}, operator=EXISTS}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[ex1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={ex2=[[@32,131:132='oa',<381>,4:23]], ex1=[[@1,7:8='oa',<381>,1:7]]}, tab_b={ex6=[[@43,165:166='ib',<381>,5:20]]}, tab_c={ex8=[[@28,122:123='ic',<381>,4:14]], ex7=[[@20,84:85='ic',<381>,3:13]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={ex7=[[@20,84:85='ic',<381>,3:13], [@39,156:157='ix',<381>,5:11]]}, query1={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, query3={ex1=[[@1,7:8='oa',<381>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query3={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_a={ex2=[[@32,131:132='oa',<381>,4:23]], ex1=[[@1,7:8='oa',<381>,1:7]]}}, def_query1={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_b={ex6=[[@43,165:166='ib',<381>,5:20]]}}, def_query0={query_dictionary={ex7=[[@22,87:89='ex7',<381>,3:16], [@39,156:157='ix',<381>,5:11]]}, table_dictionary={tab_c={ex8=[[@28,122:123='ic',<381>,4:14]], ex7=[[@20,84:85='ic',<381>,3:13]]}}, filters=[{name=ex8, table_ref=ic}, {name=ex2, table_ref=oa}], interface={ex7=[{name=ex7, table_ref=ic}]}, table_alias={ic=tab_c}}, filters=[{name=ex7, table_ref=ix}, {name=ex6, table_ref=ib}], interface={unnamed_0=[]}, table_alias={ib=tab_b, ix=query0}}, dependent_queries={exists2={query=query1, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oa}]}, table_alias={oa=tab_a}}}",
+				"{def_query3={query_dictionary={ex1=[[@1,7:8='oa',<381>,1:7]]}, table_dictionary={tab_a={ex1=[[@1,7:8='oa',<381>,1:7]]}}, def_query1={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_b={ex6=[[@43,165:166='ib',<381>,5:20]]}}, def_query0={query_dictionary={ex7=[[@20,84:85='ic',<381>,3:13]]}, table_dictionary={tab_a={ex2=[[@32,131:132='oa',<381>,4:23]]}, tab_c={ex8=[[@28,122:123='ic',<381>,4:14]], ex7=[[@20,84:85='ic',<381>,3:13]]}}, filters=[{name=ex8, table_ref=ic}, {name=ex2, table_ref=oa}], interface={ex7=[{name=ex7, table_ref=ic}]}, table_alias={ic=tab_c}}, filters=[{name=ex7, table_ref=ix}, {name=ex6, table_ref=ib}], interface={unnamed_0=[]}, table_alias={ib=tab_b, ix=query0}}, dependent_queries={exists2={query=query1, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oa}]}, table_alias={oa=tab_a}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2440,22 +2448,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'eu3' at (l:2 c:21) was not found in output interface of any visible query alias [sub].",
+				"eu3",
+				2,
+				21);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=eu1, table_ref=ua}}}, from={table={alias=ua, table=tab_a}}, where={exists={select={1={literal=1}}, from={table={alias=sub, query={union={1={select={1={column={name=eu4, table_ref=ub}}}, from={table={alias=ub, table=tab_b}}, where={condition={left={column={name=eu5, table_ref=ub}}, right={column={name=eu1, table_ref=ua}}, operator==}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=eu4, table_ref=uc}}}, from={table={alias=uc, table=tab_c}}, where={condition={left={column={name=eu6, table_ref=uc}}, right={column={name=eu2, table_ref=ua}}, operator==}}}}}}}, where={condition={left={column={name=eu4, table_ref=sub}}, right={column={name=eu3, table_ref=ua}}, operator==}}, operator=EXISTS}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[eu1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={eu1=[[@28,115:116='ua',<381>,4:23], [@1,7:8='ua',<381>,1:7]], eu3=[[@56,221:222='ua',<381>,7:24]], eu2=[[@45,182:183='ua',<381>,6:23]]}, tab_b={eu5=[[@24,106:107='ub',<381>,4:14]], eu4=[[@16,68:69='ub',<381>,3:7]]}, tab_c={eu4=[[@33,135:136='uc',<381>,5:13]], eu6=[[@41,173:174='uc',<381>,6:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={eu4=[[@52,211:213='sub',<381>,7:14]]}, query5={eu1=[[@1,7:8='ua',<381>,1:7], [@28,115:116='ua',<381>,4:23]]}, query0={eu4=[[@16,68:69='ub',<381>,3:7]]}, query1={eu4=[[@33,135:136='uc',<381>,5:13]]}, query3={unnamed_0=[[@12,52:52='1',<300>,2:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={query_dictionary={eu1=[[@3,10:12='eu1',<381>,1:10]]}, table_dictionary={tab_a={eu1=[[@1,7:8='ua',<381>,1:7], [@28,115:116='ua',<381>,4:23]], eu3=[[@56,221:222='ua',<381>,7:24]], eu2=[[@45,182:183='ua',<381>,6:23]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={eu1=[{name=eu1, table_ref=ua}]}, def_query3={def_union2={query0={query_dictionary={eu4=[[@18,71:73='eu4',<381>,3:10]]}, table_dictionary={tab_b={eu5=[[@24,106:107='ub',<381>,4:14]], eu4=[[@16,68:69='ub',<381>,3:7]]}}, filters=[{name=eu5, table_ref=ub}, {name=eu1, table_ref=ua}], interface={eu4=[{name=eu4, table_ref=ub}]}, table_alias={ub=tab_b}}, interface={eu4=[{name=eu4, table_ref=ub}, {name=eu4, table_ref=uc}]}, query1={query_dictionary={eu4=[[@35,138:140='eu4',<381>,5:16]]}, table_dictionary={tab_c={eu4=[[@33,135:136='uc',<381>,5:13]], eu6=[[@41,173:174='uc',<381>,6:14]]}}, filters=[{name=eu6, table_ref=uc}, {name=eu2, table_ref=ua}], interface={eu4=[{name=eu4, table_ref=uc}]}, table_alias={uc=tab_c}}}, query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, filters=[{name=eu4, table_ref=sub}, {name=eu3, table_ref=ua}], interface={unnamed_0=[]}, table_alias={sub=union2}}, table_alias={ua=tab_a}}}",
+				"{def_query5={query_dictionary={eu1=[[@1,7:8='ua',<381>,1:7], [@28,115:116='ua',<381>,4:23]]}, table_dictionary={tab_a={eu1=[[@1,7:8='ua',<381>,1:7], [@28,115:116='ua',<381>,4:23]], eu3=[[@56,221:222='ua',<381>,7:24]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={eu1=[{name=eu1, table_ref=ua}]}, def_query3={def_union2={def_query1={query_dictionary={eu4=[[@33,135:136='uc',<381>,5:13]]}, table_dictionary={tab_a={eu2=[[@45,182:183='ua',<381>,6:23]]}, tab_c={eu4=[[@33,135:136='uc',<381>,5:13]], eu6=[[@41,173:174='uc',<381>,6:14]]}}, filters=[{name=eu6, table_ref=uc}, {name=eu2, table_ref=ua}], interface={eu4=[{name=eu4, table_ref=uc}]}, table_alias={uc=tab_c}}, def_query0={query_dictionary={eu4=[[@16,68:69='ub',<381>,3:7]]}, table_dictionary={tab_a={eu1=[[@28,115:116='ua',<381>,4:23], [@1,7:8='ua',<381>,1:7]]}, tab_b={eu5=[[@24,106:107='ub',<381>,4:14]], eu4=[[@16,68:69='ub',<381>,3:7]]}}, filters=[{name=eu5, table_ref=ub}, {name=eu1, table_ref=ua}], interface={eu4=[{name=eu4, table_ref=ub}]}, table_alias={ub=tab_b}}, interface={eu4=[{name=eu4, table_ref=ub}, {name=eu4, table_ref=uc}]}}, query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, filters=[{name=eu4, table_ref=sub}, {name=eu3, table_ref=ua}], interface={unnamed_0=[]}, table_alias={sub=union2}}, table_alias={ua=tab_a}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2470,22 +2484,28 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'ex3' at (l:2 c:21) was not found in output interface of any visible query alias [ii].",
+				"ex3",
+				2,
+				21);
+		assertFatalDiagnosticCount(snippet, null, null, null, 1);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ex1, table_ref=oi}}}, from={table={alias=oi, table=tab_o}}, where={exists={select={1={literal=1}}, from={table={alias=ii, query={intersect={1={select={1={column={name=ex9, table_ref=id}}}, from={table={alias=id, table=tab_d}}, where={condition={left={column={name=ex3, table_ref=id}}, right={column={name=ex1, table_ref=oi}}, operator==}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=ex9, table_ref=ie}}}, from={table={alias=ie, table=tab_e}}, where={condition={left={column={name=ex4, table_ref=ie}}, right={column={name=ex2, table_ref=oi}}, operator==}}}}}}}, where={condition={left={column={name=ex9, table_ref=ii}}, right={column={name=ex3, table_ref=oi}}, operator==}}, operator=EXISTS}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[ex1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex2=[[@45,186:187='oi',<381>,6:23]], ex1=[[@28,115:116='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}, tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={ex9=[[@52,214:215='ii',<381>,7:14]]}, query5={ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}, query0={ex9=[[@16,68:69='id',<381>,3:7]]}, query1={ex9=[[@33,139:140='ie',<381>,5:17]]}, query3={unnamed_0=[[@12,52:52='1',<300>,2:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex2=[[@45,186:187='oi',<381>,6:23]], ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oi}]}, def_query3={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, def_intersect2={query0={query_dictionary={ex9=[[@18,71:73='ex9',<381>,3:10]]}, table_dictionary={tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}}, filters=[{name=ex3, table_ref=id}, {name=ex1, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ex9=[{name=ex9, table_ref=id}, {name=ex9, table_ref=ie}]}, query1={query_dictionary={ex9=[[@35,142:144='ex9',<381>,5:20]]}, table_dictionary={tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}, filters=[{name=ex4, table_ref=ie}, {name=ex2, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=ie}]}, table_alias={ie=tab_e}}}, filters=[{name=ex9, table_ref=ii}, {name=ex3, table_ref=oi}], interface={unnamed_0=[]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
+				"{def_query5={query_dictionary={ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}, table_dictionary={tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oi}]}, def_query3={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, def_intersect2={def_query1={query_dictionary={ex9=[[@33,139:140='ie',<381>,5:17]]}, table_dictionary={tab_o={ex2=[[@45,186:187='oi',<381>,6:23]]}, tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}, filters=[{name=ex4, table_ref=ie}, {name=ex2, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={ex9=[[@16,68:69='id',<381>,3:7]]}, table_dictionary={tab_o={ex1=[[@28,115:116='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}}, filters=[{name=ex3, table_ref=id}, {name=ex1, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ex9=[{name=ex9, table_ref=id}, {name=ex9, table_ref=ie}]}}, filters=[{name=ex9, table_ref=ii}, {name=ex3, table_ref=oi}], interface={unnamed_0=[]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2500,20 +2520,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ex1, table_ref=sa}}}, from={table={alias=sa, table=tab_s}}, where={exists={select={1={literal=1}}, from={table={alias=ia, table=tab_i}}, where={condition={left={column={name=ex9, table_ref=ia}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=jx1, table_ref=jb}}}}}, from={table={alias=jb, table=tab_j}}, where={condition={left={column={name=jx2, table_ref=jb}}, right={column={name=ex2, table_ref=sa}}, operator==}}}, operator==}}, operator=EXISTS}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[ex1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_j={jx1=[[@26,113:114='jb',<381>,4:11]], jx2=[[@35,158:159='jb',<381>,5:20]]}, tab_s={ex2=[[@39,167:168='sa',<381>,5:29]], ex1=[[@1,7:8='sa',<381>,1:7]]}, tab_i={ex9=[[@18,91:92='ia',<381>,3:20]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@1,7:8='sa',<381>,1:7]]}, query0={unnamed_1=[[@29,119:119=')',<288>,4:17]]}, query2={unnamed_0=[[@12,52:52='1',<300>,2:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_s={ex2=[[@39,167:168='sa',<381>,5:29]], ex1=[[@1,7:8='sa',<381>,1:7]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=sa}]}, table_alias={sa=tab_s}, def_query2={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_i={ex9=[[@18,91:92='ia',<381>,3:20]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_1=[[@29,119:119=')',<288>,4:17]]}, table_dictionary={tab_j={jx1=[[@26,113:114='jb',<381>,4:11]], jx2=[[@35,158:159='jb',<381>,5:20]]}}, filters=[{name=jx2, table_ref=jb}, {name=ex2, table_ref=sa}], interface={unnamed_1=[{name=jx1, table_ref=jb}]}, table_alias={jb=tab_j}}, filters=[{name=ex9, table_ref=ia}], interface={unnamed_0=[]}, table_alias={ia=tab_i}}}}",
+				"{def_query4={query_dictionary={ex1=[[@1,7:8='sa',<381>,1:7]]}, table_dictionary={tab_s={ex2=[[@39,167:168='sa',<381>,5:29]], ex1=[[@1,7:8='sa',<381>,1:7]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=sa}]}, table_alias={sa=tab_s}, def_query2={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_i={ex9=[[@18,91:92='ia',<381>,3:20]]}}, dependent_queries={predicand1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_1=[[@29,119:119=')',<288>,4:17]]}, table_dictionary={tab_j={jx1=[[@26,113:114='jb',<381>,4:11]], jx2=[[@35,158:159='jb',<381>,5:20]]}}, filters=[{name=jx2, table_ref=jb}, {name=ex2, table_ref=sa}], interface={unnamed_1=[{name=jx1, table_ref=jb}]}, table_alias={jb=tab_j}}, filters=[{name=ex9, table_ref=ia}], interface={unnamed_0=[]}, table_alias={ia=tab_i}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2528,20 +2546,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ex1, table_ref=ea}}}, from={table={alias=ea, table=tab_e}}, where={exists={select={1={literal=1}}, from={table={alias=ex, table=tab_x}}, where={in={item={column={name=ex8, table_ref=ex}}, in_list={select={1={column={name=ey1, table_ref=ey}}}, from={table={alias=ey, table=tab_y}}, where={condition={left={column={name=ey2, table_ref=ey}}, right={column={name=ex1, table_ref=ea}}, operator==}}}}}, operator=EXISTS}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[ex1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_e={ex1=[[@1,7:8='ea',<381>,1:7], [@36,163:164='ea',<381>,5:29]]}, tab_x={ex8=[[@18,91:92='ex',<381>,3:20]]}, tab_y={ey1=[[@24,110:111='ey',<381>,4:7]], ey2=[[@32,154:155='ey',<381>,5:20]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={ex1=[[@1,7:8='ea',<381>,1:7], [@36,163:164='ea',<381>,5:29]]}, query0={ey1=[[@24,110:111='ey',<381>,4:7]]}, query2={unnamed_0=[[@12,52:52='1',<300>,2:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_e={ex1=[[@1,7:8='ea',<381>,1:7], [@36,163:164='ea',<381>,5:29]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=ea}]}, table_alias={ea=tab_e}, def_query2={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_x={ex8=[[@18,91:92='ex',<381>,3:20]]}}, dependent_queries={in_list1={query=query0, type=filters}}, def_query0={query_dictionary={ey1=[[@26,113:115='ey1',<381>,4:10]]}, table_dictionary={tab_y={ey1=[[@24,110:111='ey',<381>,4:7]], ey2=[[@32,154:155='ey',<381>,5:20]]}}, filters=[{name=ey2, table_ref=ey}, {name=ex1, table_ref=ea}], interface={ey1=[{name=ey1, table_ref=ey}]}, table_alias={ey=tab_y}}, filters=[{name=ex8, table_ref=ex}], interface={unnamed_0=[]}, table_alias={ex=tab_x}}}}",
+				"{def_query4={query_dictionary={ex1=[[@1,7:8='ea',<381>,1:7], [@36,163:164='ea',<381>,5:29]]}, table_dictionary={tab_e={ex1=[[@1,7:8='ea',<381>,1:7], [@36,163:164='ea',<381>,5:29]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=ea}]}, table_alias={ea=tab_e}, def_query2={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, table_dictionary={tab_x={ex8=[[@18,91:92='ex',<381>,3:20]]}}, dependent_queries={in_list1={query=query0, type=filters}}, def_query0={query_dictionary={ey1=[[@24,110:111='ey',<381>,4:7]]}, table_dictionary={tab_y={ey1=[[@24,110:111='ey',<381>,4:7]], ey2=[[@32,154:155='ey',<381>,5:20]]}}, filters=[{name=ey2, table_ref=ey}, {name=ex1, table_ref=ea}], interface={ey1=[{name=ey1, table_ref=ey}]}, table_alias={ey=tab_y}}, filters=[{name=ex8, table_ref=ex}], interface={unnamed_0=[]}, table_alias={ex=tab_x}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2558,20 +2574,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=t1c1, table_ref=ta}}}, from={table={alias=ta, table=tab1}}, where={exists={select={1={literal=1}}, from={table={alias=tb, table=tab2}}, where={condition={left={column={name=t2c1, table_ref=tb}}, right={column={name=t1c1, table_ref=ta}}, operator==}}, operator=EXISTS}}}, alias=c1a}}, query={select={1={column={name=t1c1, table_ref=c1a}}}, from={table={alias=null, table=c1a}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1c1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@26,120:121='ta',<381>,4:32]]}, tab2={t2c1=[[@22,110:111='tb',<381>,4:22]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@16,70:70='1',<300>,3:23]]}, query2={t1c1=[[@5,23:24='ta',<381>,2:9], [@26,120:121='ta',<381>,4:32], [@32,138:140='c1a',<381>,6:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query3={context_list={c1a=query2}, query_dictionary={t1c1=[[@34,142:145='t1c1',<381>,6:11]]}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}, def_query2={query_dictionary={t1c1=[[@7,26:29='t1c1',<381>,2:12], [@32,138:140='c1a',<381>,6:7]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@26,120:121='ta',<381>,4:32], [@32,138:140='c1a',<381>,6:7]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@16,70:70='1',<300>,3:23]]}, table_dictionary={tab2={t2c1=[[@22,110:111='tb',<381>,4:22]]}}, filters=[{name=t2c1, table_ref=tb}, {name=t1c1, table_ref=ta}], interface={unnamed_0=[]}, table_alias={tb=tab2}}, filters=[], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
+				"{def_query3={context_list={c1a=query2}, table_alias={c1a=query0}, def_query3={context_list={c1a=query2}, query_dictionary={}, interface={t1c1=[{name=t1c1, table_ref=c1a}]}, table_alias={c1a=query2}}, def_query2={query_dictionary={t1c1=[[@5,23:24='ta',<381>,2:9], [@26,120:121='ta',<381>,4:32]]}, table_dictionary={tab1={t1c1=[[@5,23:24='ta',<381>,2:9], [@26,120:121='ta',<381>,4:32]]}}, dependent_queries={exists1={query=query0, type=filters}}, def_query0={query_dictionary={unnamed_0=[[@16,70:70='1',<300>,3:23]]}, table_dictionary={tab2={t2c1=[[@22,110:111='tb',<381>,4:22]]}}, filters=[{name=t2c1, table_ref=tb}, {name=t1c1, table_ref=ta}], interface={unnamed_0=[]}, table_alias={tb=tab2}}, filters=[], interface={t1c1=[{name=t1c1, table_ref=ta}]}, table_alias={ta=tab1}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2586,22 +2600,35 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'b1' at (l:3 c:28) was not found in output interface of any visible query alias [ww, w1].",
+				"b1",
+				3,
+				28);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'b2' at (l:3 c:28) was not found in output interface of any visible query alias [ww, w1].",
+				"b2",
+				3,
+				28);
+		assertFatalDiagnosticCount(snippet, null, null, null, 2);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=a1, table_ref=aa}}, 2={column={name=a2, table_ref=aa}}}, from={table={alias=aa, table=tab_a}}}, alias=w1}, 2={cte={select={1={column={name=b1, table_ref=bb}}}, from={table={alias=bb, table=tab_b}}, where={exists={select={1={literal=1}}, from={table={alias=ww, table=w1}}, where={and={1={condition={left={column={name=a1, table_ref=ww}}, right={column={name=b1, table_ref=bb}}, operator==}}, 2={condition={left={column={name=a2, table_ref=ww}}, right={column={name=b2, table_ref=bb}}, operator==}}}}, operator=EXISTS}}}, alias=w2}}, query={select={1={column={name=b1, table_ref=w2}}}, from={table={alias=null, table=w2}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[b1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, tab_b={b2=[[@51,208:209='bb',<381>,5:35]], b1=[[@22,65:66='bb',<381>,2:14], [@43,167:168='bb',<381>,4:35]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a1=[[@5,19:20='aa',<381>,1:19], [@39,159:160='ww',<381>,4:27]], a2=[[@9,26:27='aa',<381>,1:26], [@47,200:201='ww',<381>,5:27]]}, query1={unnamed_0=[[@33,116:116='1',<300>,3:28]]}, query3={b1=[[@22,65:66='bb',<381>,2:14], [@43,167:168='bb',<381>,4:35], [@57,223:224='w2',<381>,6:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={w1=query0, w2=query3}, query_dictionary={b1=[[@59,226:227='b1',<381>,6:10]]}, def_query0={query_dictionary={a1=[[@7,22:23='a1',<381>,1:22], [@39,159:160='ww',<381>,4:27]], a2=[[@11,29:30='a2',<381>,1:29], [@47,200:201='ww',<381>,5:27]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19], [@39,159:160='ww',<381>,4:27]], a2=[[@9,26:27='aa',<381>,1:26], [@47,200:201='ww',<381>,5:27]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@24,68:69='b1',<381>,2:17], [@57,223:224='w2',<381>,6:7]]}, table_dictionary={tab_b={b2=[[@51,208:209='bb',<381>,5:35]], b1=[[@22,65:66='bb',<381>,2:14], [@43,167:168='bb',<381>,4:35], [@57,223:224='w2',<381>,6:7]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@33,116:116='1',<300>,3:28]]}, filters=[{name=a1, table_ref=ww}, {name=b1, table_ref=bb}, {name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={unnamed_0=[]}, table_alias={ww=query0, w1=query0}}, dependent_queries={exists2={query=query1, type=filters}}, filters=[], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
+				"{def_query4={context_list={w1=query0, w2=query3}, def_query0={query_dictionary={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}, table_dictionary={tab_a={a1=[[@5,19:20='aa',<381>,1:19]], a2=[[@9,26:27='aa',<381>,1:26]]}}, interface={a1=[{name=a1, table_ref=aa}], a2=[{name=a2, table_ref=aa}]}, table_alias={aa=tab_a}}, def_query4={context_list={w1=query0, w2=query3}, query_dictionary={}, interface={b1=[{name=b1, table_ref=w2}]}, table_alias={w1=query0, w2=query3}}, table_alias={w1=query0, w2=query1}, def_query3={context_list={w1=query0}, query_dictionary={b1=[[@22,65:66='bb',<381>,2:14], [@43,167:168='bb',<381>,4:35]]}, table_dictionary={tab_b={b2=[[@51,208:209='bb',<381>,5:35]], b1=[[@22,65:66='bb',<381>,2:14], [@43,167:168='bb',<381>,4:35]]}}, def_query1={context_list={w1=query0, ww=query0}, query_dictionary={unnamed_0=[[@33,116:116='1',<300>,3:28]]}, filters=[{name=a1, table_ref=ww}, {name=b1, table_ref=bb}, {name=a2, table_ref=ww}, {name=b2, table_ref=bb}], interface={unnamed_0=[]}, table_alias={ww=query0, w1=query0}}, dependent_queries={exists2={query=query1, type=filters}}, filters=[], interface={b1=[{name=b1, table_ref=bb}]}, table_alias={bb=tab_b, w1=query0}}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2616,22 +2643,35 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'z3' at (l:4 c:28) was not found in output interface of any visible query alias [ca, cb].",
+				"z3",
+				4,
+				28);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'z2' at (l:4 c:28) was not found in output interface of any visible query alias [ca, cb].",
+				"z2",
+				4,
+				28);
+		assertFatalDiagnosticCount(snippet, null, null, null, 2);
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=x1, table_ref=xa}}, 2={column={name=x2, table_ref=xa}}}, from={table={alias=xa, table=tab_x}}}, alias=ca}, 2={cte={select={1={column={name=y1, table_ref=yb}}}, from={table={alias=yb, table=tab_y}}}, alias=cb}, 3={cte={select={1={column={name=z1, table_ref=zc}}}, from={table={alias=zc, table=tab_z}}, where={exists={select={1={literal=1}}, from={table={alias=null, table=ca}}, where={and={1={condition={left={column={name=x2, table_ref=ca}}, right={column={name=z3, table_ref=zc}}, operator==}}, 2={condition={left={column={name=x1, table_ref=ca}}, right={column={name=z2, table_ref=zc}}, operator==}}}}, operator=EXISTS}}}, alias=cc}}, query={select={1={column={name=z1, table_ref=cc}}}, from={table={alias=null, table=cc}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[z1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@62,241:242='zc',<381>,6:35]], z3=[[@54,200:201='zc',<381>,5:35]]}, tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={z1=[[@35,104:105='zc',<381>,3:14], [@68,256:257='cc',<381>,7:7]]}, query0={x1=[[@5,19:20='xa',<381>,1:19], [@58,233:234='ca',<381>,6:27]], x2=[[@9,26:27='xa',<381>,1:26], [@50,192:193='ca',<381>,5:27]]}, query1={y1=[[@22,65:66='yb',<381>,2:14]]}, query2={unnamed_0=[[@46,155:155='1',<300>,4:28]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={z1=[[@70,259:260='z1',<381>,7:10]]}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@24,68:69='y1',<381>,2:17]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@7,22:23='x1',<381>,1:22], [@58,233:234='ca',<381>,6:27]], x2=[[@11,29:30='x2',<381>,1:29], [@50,192:193='ca',<381>,5:27]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19], [@58,233:234='ca',<381>,6:27]], x2=[[@9,26:27='xa',<381>,1:26], [@50,192:193='ca',<381>,5:27]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, interface={z1=[{name=z1, table_ref=cc}]}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@37,107:108='z1',<381>,3:17], [@68,256:257='cc',<381>,7:7]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14], [@68,256:257='cc',<381>,7:7]], z2=[[@62,241:242='zc',<381>,6:35]], z3=[[@54,200:201='zc',<381>,5:35]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={unnamed_0=[[@46,155:155='1',<300>,4:28]]}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}, {name=x1, table_ref=ca}, {name=z2, table_ref=zc}], interface={unnamed_0=[]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query4, ca=query0, cb=query1}}}",
+				"{def_query5={context_list={ca=query0, cb=query1, cc=query4}, def_query1={context_list={ca=query0}, query_dictionary={y1=[[@22,65:66='yb',<381>,2:14]]}, table_dictionary={tab_y={y1=[[@22,65:66='yb',<381>,2:14]]}}, interface={y1=[{name=y1, table_ref=yb}]}, table_alias={yb=tab_y, ca=query0}}, def_query0={query_dictionary={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}, table_dictionary={tab_x={x1=[[@5,19:20='xa',<381>,1:19]], x2=[[@9,26:27='xa',<381>,1:26]]}}, interface={x1=[{name=x1, table_ref=xa}], x2=[{name=x2, table_ref=xa}]}, table_alias={xa=tab_x}}, def_query5={context_list={ca=query0, cb=query1, cc=query4}, query_dictionary={}, interface={z1=[{name=z1, table_ref=cc}]}, table_alias={cc=query4, ca=query0, cb=query1}}, def_query4={context_list={ca=query0, cb=query1}, query_dictionary={z1=[[@35,104:105='zc',<381>,3:14]]}, table_dictionary={tab_z={z1=[[@35,104:105='zc',<381>,3:14]], z2=[[@62,241:242='zc',<381>,6:35]], z3=[[@54,200:201='zc',<381>,5:35]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={z1=[{name=z1, table_ref=zc}]}, table_alias={zc=tab_z, ca=query0, cb=query1}, def_query2={context_list={ca=query0, cb=query1}, query_dictionary={unnamed_0=[[@46,155:155='1',<300>,4:28]]}, filters=[{name=x2, table_ref=ca}, {name=z3, table_ref=zc}, {name=x1, table_ref=ca}, {name=z2, table_ref=zc}], interface={unnamed_0=[]}, table_alias={ca=query0, cb=query1}}}, table_alias={cc=query2, ca=query0, cb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2646,20 +2686,18 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
-
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=p1, table_ref=pa}}, 2={column={name=p2, table_ref=pa}}}, from={table={alias=pa, table=tab_p}}}, alias=fa}, 2={cte={select={1={column={name=q1, table_ref=qb}}}, from={table={alias=qb, table=tab_q}}}, alias=fb}}, query={select={1={column={name=p1, table_ref=pa}}}, from={join={1={table={alias=pa, table=fa}}, 2={join=JOIN, on={condition={left={column={name=p1, table_ref=pa}}, right={column={name=q1, table_ref=fb}}, operator==}}}, 3={table={alias=null, table=fb}}}}, where={exists={select={1={literal=1}}, from={table={alias=ff, table=fa}}, where={and={1={condition={left={column={name=p1, table_ref=ff}}, right={column={name=p1, table_ref=pa}}, operator==}}, 2={condition={left={column={name=p2, table_ref=ff}}, right={column={name=p2, table_ref=pa}}, operator==}}}}, operator=EXISTS}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[p1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={p1=[[@5,19:20='pa',<381>,1:19], [@58,198:199='ff',<381>,5:20], [@62,206:207='pa',<381>,5:28], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38]], p2=[[@9,26:27='pa',<381>,1:26], [@66,216:217='ff',<381>,5:38], [@70,224:225='pa',<381>,5:46]]}, query1={q1=[[@22,65:66='qb',<381>,2:14], [@45,135:136='fb',<381>,3:46]]}, query2={unnamed_0=[[@52,162:162='1',<300>,4:21]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={p1=[[@33,99:100='p1',<381>,3:10]]}, dependent_queries={exists3={query=query2, type=filters}}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@24,68:69='q1',<381>,2:17], [@45,135:136='fb',<381>,3:46]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14], [@45,135:136='fb',<381>,3:46]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@7,22:23='p1',<381>,1:22], [@58,198:199='ff',<381>,5:20], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38], [@62,206:207='pa',<381>,5:28]], p2=[[@11,29:30='p2',<381>,1:29], [@66,216:217='ff',<381>,5:38]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19], [@58,198:199='ff',<381>,5:20], [@62,206:207='pa',<381>,5:28], [@31,96:97='pa',<381>,3:7], [@41,127:128='pa',<381>,3:38], [@62,206:207='pa',<381>,5:28]], p2=[[@9,26:27='pa',<381>,1:26], [@66,216:217='ff',<381>,5:38], [@70,224:225='pa',<381>,5:46]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}], interface={p1=[{name=p1, table_ref=pa}]}, table_alias={fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={unnamed_0=[[@52,162:162='1',<300>,4:21]]}, table_dictionary={tab_p={p1=[[@62,206:207='pa',<381>,5:28]], p2=[[@70,224:225='pa',<381>,5:46]]}}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}, {name=p2, table_ref=ff}, {name=p2, table_ref=pa}], interface={unnamed_0=[]}, table_alias={ff=query0, fa=query0, fb=query1}}}}",
+				"{def_query4={context_list={fa=query0, fb=query1}, def_query1={context_list={fa=query0}, query_dictionary={q1=[[@22,65:66='qb',<381>,2:14]]}, table_dictionary={tab_q={q1=[[@22,65:66='qb',<381>,2:14]]}}, interface={q1=[{name=q1, table_ref=qb}]}, table_alias={qb=tab_q, fa=query0}}, def_query0={query_dictionary={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}, table_dictionary={tab_p={p1=[[@5,19:20='pa',<381>,1:19]], p2=[[@9,26:27='pa',<381>,1:26]]}}, interface={p1=[{name=p1, table_ref=pa}], p2=[{name=p2, table_ref=pa}]}, table_alias={pa=tab_p}}, def_query4={context_list={fa=query0, fb=query1, pa=query0}, query_dictionary={}, dependent_queries={exists3={query=query2, type=filters}}, filters=[{name=p1, table_ref=pa}, {name=q1, table_ref=fb}], interface={p1=[{name=p1, table_ref=pa}]}, table_alias={pa=query0, fa=query0, fb=query1}, def_query2={context_list={fa=query0, fb=query1, ff=query0}, query_dictionary={unnamed_0=[[@52,162:162='1',<300>,4:21]]}, filters=[{name=p1, table_ref=ff}, {name=p1, table_ref=pa}, {name=p2, table_ref=ff}, {name=p2, table_ref=pa}], interface={unnamed_0=[]}, table_alias={ff=query0, fa=query0, fb=query1}}}, table_alias={fa=query0, fb=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 	@Test
@@ -2674,22 +2712,31 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
-		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=dual}}, where={in={item={function={parameters={1={column={name=property, table_ref=null}}, 2={column={name=property, table_ref=null}}}, function_name=in}}, in_list={list={1={literal=0}, 2={literal=1}}}}}}}",
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 't2' at (l:4 c:28) was not found in output interface of any visible query alias",
+				"t2",
+				4,
+				28);
+		assertFatalDiagnosticCount(snippet, null, null, null, 2);
+		java.util.List<String> t2Fatals = snippet.getFatalErrorStringList();
+		Assert.assertTrue(t2Fatals.stream().anyMatch(m -> m.contains("[oa, ib]")));
+		Assert.assertTrue(t2Fatals.stream().anyMatch(m -> m.contains("[ib, oa]")));
+		Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={select={1={column={name=r1, table_ref=ra}}}, from={table={alias=ra, table=tab_r}}}, alias=oa}, 2={cte={with={1={cte={select={1={column={name=s1, table_ref=sb}}}, from={table={alias=sb, table=tab_s}}}, alias=ib}}, query={select={1={column={name=t1, table_ref=tb}}}, from={table={alias=tb, table=tab_t}}, where={exists={select={1={literal=1}}, from={table={alias=null, table=ib}}, where={and={1={condition={left={column={name=s1, table_ref=ib}}, right={column={name=r1, table_ref=oa}}, operator==}}, 2={condition={left={column={name=s1, table_ref=ib}}, right={column={name=t2, table_ref=tb}}, operator==}}}}, operator=EXISTS}}}}, alias=ob}}, query={select={1={column={name=t1, table_ref=ob}}}, from={join={1={table={alias=null, table=ob}}, 2={join=JOIN, on={condition={left={column={name=r1, table_ref=oa}}, right={column={name=t1, table_ref=ob}}, operator==}}}, 3={table={alias=null, table=oa}}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[*]", 
+		Assert.assertEquals("Interface is wrong", "[t1]", 
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{dual={property=[[@7,28:35='property',<381>,1:28], [@9,37:44='property',<381>,1:37]], *=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}, tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}, tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@58,245:246='tb',<381>,6:35]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={t1=[[@31,108:109='tb',<381>,3:14], [@64,260:261='ob',<381>,7:7], [@76,293:294='ob',<381>,7:40]]}, query0={r1=[[@5,19:20='ra',<381>,1:19], [@50,204:205='oa',<381>,5:35], [@72,285:286='oa',<381>,7:32]]}, query1={s1=[[@22,70:71='sb',<381>,2:26], [@46,196:197='ib',<381>,5:27], [@54,237:238='ib',<381>,6:27]]}, query2={unnamed_0=[[@42,159:159='1',<300>,4:28]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{query5={context_list={ob=query4}, query_dictionary={t1=[[@66,263:264='t1',<381>,7:10]]}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, def_query4={context_list={oa=query0, ib=query1}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14], [@64,260:261='ob',<381>,7:7], [@76,293:294='ob',<381>,7:40]], t2=[[@58,245:246='tb',<381>,6:35]]}}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@24,73:74='s1',<381>,2:29], [@46,196:197='ib',<381>,5:27], [@54,237:238='ib',<381>,6:27]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26], [@46,196:197='ib',<381>,5:27], [@54,237:238='ib',<381>,6:27]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@7,22:23='r1',<381>,1:22], [@50,204:205='oa',<381>,5:35], [@72,285:286='oa',<381>,7:32]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19], [@50,204:205='oa',<381>,5:35]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, filters=[], interface={t1=[{name=t1, table_ref=tb}]}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={unnamed_0=[[@42,159:159='1',<300>,4:28]]}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}, {name=t2, table_ref=tb}], interface={unnamed_0=[]}, table_alias={oa=query0, ib=query1}}, query_dictionary={t1=[[@33,111:112='t1',<381>,3:17], [@64,260:261='ob',<381>,7:7], [@76,293:294='ob',<381>,7:40]]}, dependent_queries={exists3={query=query2, type=filters}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query4}}}",
+				"{def_query5={context_list={ob=query4}, def_query5={context_list={ob=query4}, query_dictionary={}, filters=[{name=r1, table_ref=oa}, {name=t1, table_ref=ob}], interface={t1=[{name=t1, table_ref=ob}]}, table_alias={oa=query0, ob=query4}}, def_query4={context_list={oa=query0, ib=query1}, def_query1={context_list={oa=query0}, query_dictionary={s1=[[@22,70:71='sb',<381>,2:26]]}, table_dictionary={tab_s={s1=[[@22,70:71='sb',<381>,2:26]]}}, interface={s1=[{name=s1, table_ref=sb}]}, table_alias={oa=query0, sb=tab_s}}, def_query0={query_dictionary={r1=[[@5,19:20='ra',<381>,1:19]]}, table_dictionary={tab_r={r1=[[@5,19:20='ra',<381>,1:19]]}}, interface={r1=[{name=r1, table_ref=ra}]}, table_alias={ra=tab_r}}, def_query4={context_list={oa=query0, ib=query1}, query_dictionary={t1=[[@31,108:109='tb',<381>,3:14]]}, table_dictionary={tab_t={t1=[[@31,108:109='tb',<381>,3:14]], t2=[[@58,245:246='tb',<381>,6:35]]}}, dependent_queries={exists3={query=query2, type=filters}}, filters=[], interface={t1=[{name=t1, table_ref=tb}]}, table_alias={oa=query0, ib=query1, tb=tab_t}, def_query2={context_list={oa=query0, ib=query1}, query_dictionary={unnamed_0=[[@42,159:159='1',<300>,4:28]]}, filters=[{name=s1, table_ref=ib}, {name=r1, table_ref=oa}, {name=t2, table_ref=tb}], interface={unnamed_0=[]}, table_alias={oa=query0, ib=query1}}}, table_alias={oa=query0, ib=query1}}, table_alias={ob=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 }
