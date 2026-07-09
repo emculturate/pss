@@ -790,6 +790,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public HashMap<String, Object> getSymbolTable() {
 		if (walker.symbolTable != null) {
 			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
+			symbolTreeHelper.syncPublishedScopeQueryDictionariesFromGlobal(walker.symbolTable);
 		}
 		return walker.symbolTable;
 	}
@@ -801,6 +802,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void finalizeHandoffSymbolTable() {
 		if (walker.symbolTable != null) {
 			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
+			symbolTreeHelper.syncPublishedScopeQueryDictionariesFromGlobal(walker.symbolTable);
 		}
 	}
 
@@ -2372,59 +2374,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Wrong number of entries for WITH query context: ctx.getText()
 		}
 
-		// Add query to parent symbol table. Use the alias and current query number and put that in the table_alias submap.
-		// Then take the current query's symbol table and put that in the parent symbol table with a "def_" prefix.
-		// The body of a WITH query may be a SELECT (query), UPDATE, INSERT, DELETE, UNION, INTERSECT, or VALUES statement,
-		// each of which registers in the symbol table under a different prefix. Search all known prefixes.
-		int scopeIndex = walker.queryCount - 1;
-		String[] knownPrefixes = new String[] {
-				MUMBLE_VALUES_KEY, MUMBLE_INTERSECT_KEY, MUMBLE_UNION_KEY,
-				MUMBLE_INSERT_KEY, MUMBLE_UPDATE_KEY, MUMBLE_DELETE_KEY, MUMBLE_QUERY_KEY
-		};
-		String queryName = MUMBLE_QUERY_KEY + scopeIndex;
-		for (String prefix : knownPrefixes) {
-			String candidate = prefix + scopeIndex;
-			if (walker.symbolTable.containsKey(candidate)) {
-				queryName = candidate;
-				break;
+		HashMap<String, Object> currentQuerySymbolTable = null;
+		if (subMap.containsKey(MUMBLE_WITH_KEY)) {
+			int scopeIndex = walker.queryCount - 1;
+			currentQuerySymbolTable = symbolTreeHelper.promoteWithQueryMainBodyScope(scopeIndex);
+			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
+
+			// If this was a nested WITH, enterWith_clause saved the outer WITH clause's
+			// in-progress cte_list under MUMBLE_OUTER_CONTEXT_LIST_KEY. It was absorbed into
+			// currentQuerySymbolTable during promotion. Restore it to the new outer
+			// symbol table so the outer WITH clause can continue adding its own CTEs.
+			Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
+			if (outerCteListObj instanceof Map<?, ?> outerCteListMapObj) {
+				walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
 			}
-		}
-
-		// get current query symbol table and put it in parent symbol table with "def_" prefix
-		HashMap<String, Object> currentQuerySymbolTable = (HashMap<String, Object>) walker.symbolTable.remove(queryName);
-		if (currentQuerySymbolTable == null) {
-			currentQuerySymbolTable = new HashMap<String, Object>();
-		}
-		HashMap<String, Object> symbols = walker.symbolTable;
-		symbolTreeHelper.mergeContextListIntoQueryScope(currentQuerySymbolTable, symbols);
-		walker.symbolTable = new HashMap<String, Object>();
-		String publishedWithScopeKey = queryName.startsWith("def_") ? queryName : "def_" + queryName;
-		walker.symbolTable.put(publishedWithScopeKey, currentQuerySymbolTable);
-		currentQuerySymbolTable.putAll(symbols);
-		symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
-
-		// If this was a nested WITH, enterWith_clause saved the outer WITH clause's
-		// in-progress cte_list under MUMBLE_OUTER_CONTEXT_LIST_KEY. It was absorbed into
-		// currentQuerySymbolTable by putAll(symbols) above. Restore it to the new outer
-		// symbol table so the outer WITH clause can continue adding its own CTEs.
-		Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
-		if (outerCteListObj instanceof Map<?, ?> outerCteListMapObj) {
-			walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
-		}
-		// Similarly restore any outer def_* entries (e.g. def_delete0) that were saved
-		// in enterWith_clause and absorbed here. Without this, getQueryDefinitionSymbol
-		// cannot find them and CTE interface resolution fails for non-SELECT outer CTEs.
-		Object outerDefEntriesObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
-		if (outerDefEntriesObj instanceof Map<?, ?> outerDefEntriesMap) {
-			for (Map.Entry<?, ?> defEntry : outerDefEntriesMap.entrySet()) {
-				if (defEntry.getKey() instanceof String defKey) {
-					walker.symbolTable.put(defKey, defEntry.getValue());
+			// Similarly restore any outer def_* entries (e.g. def_delete0) that were saved
+			// in enterWith_clause and absorbed during promotion. Without this, getQueryDefinitionSymbol
+			// cannot find them and CTE interface resolution fails for non-SELECT outer CTEs.
+			Object outerDefEntriesObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
+			if (outerDefEntriesObj instanceof Map<?, ?> outerDefEntriesMap) {
+				for (Map.Entry<?, ?> defEntry : outerDefEntriesMap.entrySet()) {
+					if (defEntry.getKey() instanceof String defKey) {
+						walker.symbolTable.put(defKey, defEntry.getValue());
+					}
 				}
 			}
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-		symbolTreeHelper.hoistMainBodyDeferredUnresolvedFromWithQueryScope(currentQuerySymbolTable);
+		if (currentQuerySymbolTable != null) {
+			symbolTreeHelper.hoistMainBodyDeferredUnresolvedFromWithQueryScope(currentQuerySymbolTable);
+		}
 	}
 
 
@@ -3759,11 +3739,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			symbolTreeHelper.addCurrentQueryScalarSubqueryAlias(interfaceAlias);
 		}
 
-		// Record alias tokens only for explicit output names (AS alias) or generated
-		// predicand placeholders. Bare column/predicand refs are already captured in
-		// unresolved_column at column_reference exit and materialize once at scope exit.
-		boolean generatedPredicandAlias = interfaceAlias != null && interfaceAlias.startsWith("unnamed_");
-		if (explicitOutputAlias || generatedPredicandAlias) {
+		// Phase 1 (output origins): every interface column name gets its defining token on this
+		// scope's query_dictionary before scope exit. Phase 2 (at convert/finalize) records
+		// external qualified usages on the source scope's query_dictionary (or table_dictionary
+		// for physical sources) so every reference location is accounted for.
+		if (aliasToken != null && interfaceAlias != null) {
 			symbolTreeHelper.addAliasTokensObject(interfaceAlias, aliasToken);
 		}
 		

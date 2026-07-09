@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-09 (quality gate expanded to 104 tests; full scalar subquery V1–V9 matrix + subquery semantics probes in gate)
+**Last updated:** 2026-07-09 (Phase 7 WITH main-body promotion Fix A in progress; gate 104 tests)
 
 ---
 
@@ -422,7 +422,82 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 | Replace inline logic in `exitQuery_specification` | ✅ | Walker only assembles clause submaps, then delegates |
 | Align UNION/INTERSECT | ✅ | `finalizeSetOperationScopeSymbolTable` parallel to VALUES |
 | CTE body / insert-source SELECT audit | ✅ | Static audit Jul 2026 — see **Phase 7 static audit** below |
+| **WITH main-body promotion (Fix A, universal)** | 🔄 | Code landed Jul 2026 — validation in progress; see **Phase 7 WITH promotion step** below |
 | Predicate frames | ⏸️ | IN/EXISTS/predicand stay on `exitPredicateSubqueryFrame` merge/lift — **not** full finalize (Phase 10) |
+
+#### Phase 7 WITH promotion step (Fix A — universal, Jul 2026)
+
+**Problem:** `exitWith_query` runs after `publishQueryLikeScope` has already removed the live `queryN` / `updateN` key and published `def_*`. The old collapse path created an **empty shell** and `putAll(symbols)`, nesting the real published scope as a duplicate child (`def_queryN.def_queryN`). That breaks `getQueryDefinitionSymbol` / `hasColumnInQueryOutputInterface`, drops global `queryN` dictionary keys, and emits false fatals (e.g. `updateComplexSubstitutionU4NestedWithInCteBody` on `o.emp_id` / `o.metric_val`).
+
+**Rule (all `with_query` exits with a WITH list + main body):** The WITH product is the **main body's already-published `def_*` scope**, with CTE sibling `def_*` payloads nested as children — never a second wrapper around an already-published scope.
+
+**Implementation checklist:**
+
+| Step | Action | Status |
+|------|--------|--------|
+| 1 | Add `promoteWithQueryMainBodyScope` in `SqlParseSymbolTreeHelper`; delegate from `exitWith_query` (skip when `with_query` has no WITH clause — `subMap.size()==1`) | ✅ |
+| 2 | Resolve main-body key at `queryCount - 1` across `values` / `union` / `intersect` / `insert` / `update` / `delete` / `query` (live **or** `def_*`) | ✅ |
+| 3 | Recover published main-body payload when live key is already gone | ✅ |
+| 4 | Merge `context_list` with CTE-authoritative `putIfAbsent`; nest remaining CTE sibling `def_*` maps under promoted scope | ✅ |
+| 5 | Merge `table_alias` / deferred `unresolved_column` from frame into promoted scope (no frame-wide `putAll`) | ✅ |
+| 6 | Keep nested-WITH restore of `outer_context_list_backup` / `outer_def_entries_backup` unchanged | ✅ |
+| 7 | Run `hoistMainBodyDeferredUnresolvedFromWithQueryScope` on promoted scope | ✅ |
+| 8 | Spot-check U4/I4 diagnostics + U5/U7 controls + full gate | 🔄 |
+
+**Validation results (Jul 2026, post steps 1–7):**
+
+| Check | Result |
+|-------|--------|
+| `updateComplexSubstitutionU4NestedWithInCteBody` fatals | ✅ **0 fatals** (was 2 on `o.emp_id` / `o.metric_val`) |
+| U4 global `query1` | ✅ Present (`o.*` tokens materialized) |
+| U4 symbol tree | ✅ Flat `def_update2` → `def_query1` → `def_query0` (no `def_query1.def_query1`) |
+| U4 goldens | ⚠️ Table Dictionary golden drift only (`i` token on physical tuple — query1/query dict now match golden) |
+| `mvn -Psymbol-table-resolution-consolidation test` | ⚠️ **74/104** — 30 failures, all **Symbol Table shape** (goldens expected old `def_queryN.def_queryN` wrapper); spot-checks show **0 new Walker fatals** |
+| Gate failure pattern | Removed inner duplicate `def_queryN` shell; promoted main-body fields now at top level of `def_queryN` |
+
+**Root cause (query1 SELECT-list tokens, Jul 2026):** Bare SELECT-list items (`i.emp_id`, `i.metric_val`) skipped `addAliasTokensObject`; scope exit only routed alias-side refs to the **source** query (`query0`), not output-column origin tokens on the **owning** scope (`query1`). Fix A promotion did not replace them — they were never recorded. **Fix:** record output-column name tokens for all select items; sync global `queryColumnDictionaryMap` back into published `def_queryN.query_dictionary` at handoff (UPDATE `o.*` refs land on global after publish).
+
+**Next to reach error-free solution:**
+
+1. Refresh symbol-tree goldens for the 30 gate tests (flattened WITH shape — case-by-case or scripted diff review; no bulk blind update).
+2. Refresh substitution U4 (and I4/D4) goldens: Table Dictionary + Symbol Table aligned to promoted shape.
+3. Re-run full gate → target **104/104**.
+4. Optional: add U4/I4 to quality gate once goldens green.
+
+**Conflict policy:**
+
+- `context_list`: CTE registrations win; `putIfAbsent` only; FROM aliases stay in `table_alias`, not `context_list`.
+- `table_alias`: merge with `putIfAbsent`; CTE names and FROM aliases both retained for traceability.
+- `def_*` children: CTE bodies only — never nest a `def_*` key inside itself.
+
+**Validation (run in order after step 1 lands):**
+
+```bash
+cd parse
+# Spot checks — nested WITH in CTE body (false fatals + missing query1)
+mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU4NestedWithInCteBody
+mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertComplexSubstitutionI4NestedWithInCteBody
+# Flat chained CTE control (must stay green)
+mvn test -Dtest=DmlSubstitutionGoldenProbe#probeupdateComplexSubstitutionU7ChainedCteReferences
+mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU5WithCteQualifyWindowSubstitution
+# Full gate
+mvn -Psymbol-table-resolution-consolidation test
+```
+
+**Expected outcomes after Fix A:**
+
+- No fatals on `o.emp_id` / `o.metric_val` (U4) and `o.*` (I4).
+- Global `queryColumnDictionaryMap` contains `query1` (at minimum from outer-statement `o.*` materialization).
+- Flat `def_query1` / `def_updateN` with top-level `interface` — no `def_queryN.def_queryN`.
+- Gate (104 tests): **74/104** after Fix A — 30 symbol-tree golden failures from flattened `def_queryN` (expected); re-run after golden refresh → target 104/104.
+- Substitution U3/U5/U7/U9 may need golden refresh only if token placement shifts (`i.*` on `query0`, `o.*` on `query1` per U7 precedent).
+
+**Follow-up (only if spot checks show gaps after Fix A):**
+
+- Golden refresh for substitution U/I/D nested-WITH cases (U4, I4, D4, …) — case-by-case, no bulk.
+- Optional egress tweak if SELECT-list output tokens must always land on owning scope global key (U7 puts prior-CTE alias tokens on `query0`; may not need code change).
+
+**Close when:** Step 8 validation passes (104/104 gate + U4/I4 goldens); U4 + I4 diagnostics green; worklist spot-check rows for UPDATE CTE U4 and nested INSERT I4 marked done.
 
 **Close Phase 7 when:**
 

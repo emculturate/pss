@@ -10425,6 +10425,13 @@ public class SqlParseSymbolTreeHelper {
 		return true;
 	}
 
+	/**
+	 * Phase 2 of query-dictionary population: after output interface names are on the owning
+	 * scope (phase 1 at {@code exitSelect_item} / statement-specific seeds), record qualified
+	 * reference locations on the <em>source</em> query's global dictionary. This proves each
+	 * outer use of a subordinate interface column (WHERE, qualified select list, etc.) was
+	 * resolved without adding new symbol-table structure.
+	 */
 	@SuppressWarnings("unchecked")
 	public void mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
 			HashMap<String, Object> localInterface,
@@ -11350,8 +11357,240 @@ public class SqlParseSymbolTreeHelper {
 		finalizeScopeDeferredUnresolved(cteScopePayload, liveDeferred, priorCteList);
 	}
 
+	private static final String[] WITH_MAIN_BODY_SCOPE_PREFIXES = new String[] {
+			MUMBLE_VALUES_KEY,
+			MUMBLE_INTERSECT_KEY,
+			MUMBLE_UNION_KEY,
+			MUMBLE_INSERT_KEY,
+			MUMBLE_UPDATE_KEY,
+			MUMBLE_DELETE_KEY,
+			MUMBLE_QUERY_KEY
+	};
+
 	/**
-	 * After {@code exitWith_query} nests the main body under {@code queryN}, resolves any remaining
+	 * Resolves the live scope key for the main body of a {@code with_query} at {@code scopeIndex}.
+	 * Checks both live keys and already-published {@code def_*} payloads (post-{@link #publishQueryLikeScope}).
+	 */
+	public String resolveWithMainBodyLiveScopeKey(int scopeIndex) {
+		for (String prefix : WITH_MAIN_BODY_SCOPE_PREFIXES) {
+			String liveKey = prefix + scopeIndex;
+			if (walker.symbolTable.containsKey(liveKey)) {
+				return liveKey;
+			}
+			String definitionKey = toDefinitionScopeKey(liveKey);
+			if (definitionKey != null && walker.symbolTable.containsKey(definitionKey)) {
+				return liveKey;
+			}
+		}
+		return MUMBLE_QUERY_KEY + scopeIndex;
+	}
+
+	/**
+	 * Promotes the WITH main body's already-published scope instead of wrapping it in a duplicate
+	 * {@code def_*} shell. CTE sibling {@code def_*} payloads from the WITH frame are nested as children.
+	 * Applies to every {@code with_query} that has a WITH list (nested or statement-top).
+	 *
+	 * @return the promoted scope payload (also installed on {@code walker.symbolTable} under {@code def_<liveKey>})
+	 */
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> promoteWithQueryMainBodyScope(int scopeIndex) {
+		String liveScopeKey = resolveWithMainBodyLiveScopeKey(scopeIndex);
+		String definitionScopeKey = toDefinitionScopeKey(liveScopeKey);
+
+		HashMap<String, Object> promotedScope = (HashMap<String, Object>) walker.symbolTable.remove(liveScopeKey);
+		if (promotedScope == null && definitionScopeKey != null) {
+			promotedScope = (HashMap<String, Object>) walker.symbolTable.remove(definitionScopeKey);
+		}
+		if (promotedScope == null) {
+			promotedScope = new HashMap<String, Object>();
+		}
+
+		HashMap<String, Object> withFrameSymbols = walker.symbolTable;
+		mergeContextListIntoQueryScope(promotedScope, withFrameSymbols);
+		nestCteSiblingDefinitionsFromWithFrame(promotedScope, definitionScopeKey, withFrameSymbols);
+		mergeTableAliasMapsFromWithFrame(promotedScope, withFrameSymbols);
+		mergeUnresolvedColumnMapsFromWithFrame(promotedScope, withFrameSymbols);
+
+		walker.symbolTable = new HashMap<String, Object>();
+		if (definitionScopeKey != null) {
+			walker.symbolTable.put(definitionScopeKey, promotedScope);
+		}
+
+		return promotedScope;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void nestCteSiblingDefinitionsFromWithFrame(
+			HashMap<String, Object> promotedScope,
+			String mainBodyDefinitionKey,
+			HashMap<String, Object> withFrameSymbols) {
+		if (withFrameSymbols == null || withFrameSymbols.isEmpty()) {
+			return;
+		}
+
+		ArrayList<String> siblingDefinitionKeys = new ArrayList<String>();
+		for (String frameKey : withFrameSymbols.keySet()) {
+			if (frameKey == null || !frameKey.startsWith("def_")) {
+				continue;
+			}
+			if (frameKey.equals(mainBodyDefinitionKey)) {
+				continue;
+			}
+			if (!(withFrameSymbols.get(frameKey) instanceof Map<?, ?>)) {
+				continue;
+			}
+			siblingDefinitionKeys.add(frameKey);
+		}
+
+		for (String siblingKey : siblingDefinitionKeys) {
+			Object siblingScopeObj = withFrameSymbols.remove(siblingKey);
+			if (siblingScopeObj == null) {
+				continue;
+			}
+			promotedScope.putIfAbsent(siblingKey, siblingScopeObj);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeTableAliasMapsFromWithFrame(
+			HashMap<String, Object> promotedScope,
+			HashMap<String, Object> withFrameSymbols) {
+		if (withFrameSymbols == null || withFrameSymbols.isEmpty()) {
+			return;
+		}
+
+		Object frameAliasObj = withFrameSymbols.remove(MUMBLE_TABLE_ALIAS_KEY);
+		if (!(frameAliasObj instanceof Map<?, ?> frameAliasMapObj)) {
+			return;
+		}
+
+		HashMap<String, Object> frameAliasMap = (HashMap<String, Object>) frameAliasMapObj;
+		if (frameAliasMap.isEmpty()) {
+			return;
+		}
+
+		Object promotedAliasObj = promotedScope.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (!(promotedAliasObj instanceof Map<?, ?> promotedAliasMapObj)) {
+			promotedScope.put(MUMBLE_TABLE_ALIAS_KEY, new LinkedHashMap<String, Object>(frameAliasMap));
+			return;
+		}
+
+		HashMap<String, Object> promotedAliasMap = (HashMap<String, Object>) promotedAliasMapObj;
+		for (Map.Entry<String, Object> entry : frameAliasMap.entrySet()) {
+			promotedAliasMap.putIfAbsent(entry.getKey(), entry.getValue());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeUnresolvedColumnMapsFromWithFrame(
+			HashMap<String, Object> promotedScope,
+			HashMap<String, Object> withFrameSymbols) {
+		if (withFrameSymbols == null || withFrameSymbols.isEmpty()) {
+			return;
+		}
+
+		Object frameUnresolvedObj = withFrameSymbols.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(frameUnresolvedObj instanceof Map<?, ?> frameUnresolvedMapObj)) {
+			return;
+		}
+
+		HashMap<String, Object> frameUnresolvedMap = (HashMap<String, Object>) frameUnresolvedMapObj;
+		if (frameUnresolvedMap.isEmpty()) {
+			return;
+		}
+
+		Object promotedUnresolvedObj = promotedScope.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (promotedUnresolvedObj instanceof Map<?, ?> promotedUnresolvedMapObj) {
+			walker.mergeUnknownEntries(
+					(HashMap<String, Object>) promotedUnresolvedMapObj,
+					frameUnresolvedMap);
+			return;
+		}
+
+		promotedScope.put(MUMBLE_UNRESOLVED_COLUMN_KEY, new HashMap<String, Object>(frameUnresolvedMap));
+	}
+
+	/**
+	 * Merges the global {@link SqlASTWalkerHelper#queryColumnDictionaryMap} entry for a published
+	 * query scope into that scope's local {@code query_dictionary} (handoff sync). Downstream
+	 * references (e.g. UPDATE {@code o.col}) land on the global map after the scope is published;
+	 * this keeps nested {@code def_queryN} payloads aligned with the global two-store model.
+	 */
+	@SuppressWarnings("unchecked")
+	public void syncPublishedScopeQueryDictionariesFromGlobal(HashMap<String, Object> scopeRoot) {
+		if (scopeRoot == null || scopeRoot.isEmpty()) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> entry : scopeRoot.entrySet()) {
+			String scopeKey = entry.getKey();
+			Object scopeObj = entry.getValue();
+			if (!(scopeObj instanceof HashMap<?, ?> scopeMapObj)) {
+				continue;
+			}
+
+			HashMap<String, Object> scopeMap = (HashMap<String, Object>) scopeMapObj;
+			if (scopeKey != null && scopeKey.startsWith("def_")) {
+				String liveScopeKey = normalizeQuerySourceReference(scopeKey);
+				if (liveScopeKey != null && isPublishedQueryDictionaryScopeKey(liveScopeKey)) {
+					mergeGlobalQueryDictionaryIntoScopeQueryDictionary(scopeMap, liveScopeKey);
+				}
+			}
+			syncPublishedScopeQueryDictionariesFromGlobal(scopeMap);
+		}
+	}
+
+	private boolean isPublishedQueryDictionaryScopeKey(String liveScopeKey) {
+		if (liveScopeKey == null || liveScopeKey.isBlank()) {
+			return false;
+		}
+		return liveScopeKey.startsWith(MUMBLE_QUERY_KEY)
+				|| liveScopeKey.startsWith(MUMBLE_UNION_KEY)
+				|| liveScopeKey.startsWith(MUMBLE_INTERSECT_KEY)
+				|| liveScopeKey.startsWith(MUMBLE_VALUES_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeGlobalQueryDictionaryIntoScopeQueryDictionary(
+			HashMap<String, Object> scopeMap,
+			String liveScopeKey) {
+		if (scopeMap == null || liveScopeKey == null || liveScopeKey.isBlank()
+				|| walker.queryColumnDictionaryMap == null) {
+			return;
+		}
+
+		Object globalDictionaryObj = walker.queryColumnDictionaryMap.get(liveScopeKey);
+		if (!(globalDictionaryObj instanceof Map<?, ?> globalDictionaryMapObj)
+				|| globalDictionaryMapObj.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> globalDictionary = (HashMap<String, Object>) globalDictionaryMapObj;
+		Object scopeDictionaryObj = scopeMap.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		HashMap<String, Object> scopeDictionary;
+		if (scopeDictionaryObj instanceof Map<?, ?> scopeDictionaryMapObj) {
+			scopeDictionary = (HashMap<String, Object>) scopeDictionaryMapObj;
+		} else {
+			scopeDictionary = new HashMap<String, Object>();
+			scopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, scopeDictionary);
+		}
+
+		for (Map.Entry<String, Object> columnEntry : globalDictionary.entrySet()) {
+			String columnName = columnEntry.getKey();
+			if (columnName == null) {
+				continue;
+			}
+			Object existingRefs = scopeDictionary.get(columnName);
+			if (existingRefs == null) {
+				scopeDictionary.put(columnName, columnEntry.getValue());
+				continue;
+			}
+			scopeDictionary.put(columnName, mergeReferenceCollections(existingRefs, columnEntry.getValue()));
+		}
+	}
+
+	/**
+	 * After {@code exitWith_query} promotes the main body, resolves any remaining
 	 * archived deferred refs against visible outer scope (no bubble into the parent frame).
 	 */
 	@SuppressWarnings("unchecked")
