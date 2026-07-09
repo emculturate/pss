@@ -11,9 +11,10 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (104 tests):
+ * Gate composition (107 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
+ *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
  *   <li>Correlated subquery canaries (29): scalar predicand (16), IN-list (8), EXISTS (5) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V7 (7): {@code insertValues*} V1–V7</li>
@@ -46,6 +47,23 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void nestedQueryDemoWithCteTest() {
 		coreSelectTests.nestedQueryDemoWithCteTest();
+	}
+
+	// --- Query dictionary source routing canaries (3) ---
+
+	@Test
+	public void explicitAliasWhereOutputRefTest() {
+		coreSelectTests.explicitAliasWhereOutputRefTest();
+	}
+
+	@Test
+	public void explicitAliasWherePhysicalRefTest() {
+		coreSelectTests.explicitAliasWherePhysicalRefTest();
+	}
+
+	@Test
+	public void implicitOutputWherePhysicalRefTest() {
+		coreSelectTests.implicitOutputWherePhysicalRefTest();
 	}
 
 	// --- Correlated scalar predicand canaries (13) ---

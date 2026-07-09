@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-09 (Phase 7 WITH main-body promotion Fix A in progress; gate 104 tests)
+**Last updated:** 2026-07-09 (Phase 7 WITH main-body promotion Fix A in progress; gate 107 tests)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**104 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**107 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -925,7 +925,7 @@ Validation (run after each step — full quality gate):
   cd parse
   mvn -Psymbol-table-resolution-consolidation test
 
-Gate = 104 tests: nested demo (2), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV15 (15), scalar subquery symbol-table matrix V1–V9 + correlated (10), production scalar/EXISTS probes (4), nested formula subqueries (1), subquery semantics probes (6).
+Gate = 107 tests: nested demo (2), query dictionary source routing canaries (3), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV15 (15), scalar subquery symbol-table matrix V1–V9 + correlated (10), production scalar/EXISTS probes (4), nested formula subqueries (1), subquery semantics probes (6).
 See "Quality gate" section at top of worklist for method names.
 
 Out of scope this session:
