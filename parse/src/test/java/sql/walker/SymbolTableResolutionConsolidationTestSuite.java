@@ -11,14 +11,18 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (82 tests):
+ * Gate composition (104 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Correlated subquery canaries (29): scalar predicand (16), IN-list (8), EXISTS (5) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V7 (7): {@code insertValues*} V1–V7</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
- *   <li>CTE unqualified column refs CTEV1–CTEV14 (14): full {@code SqlEventWalkerSubqueriesAndClauseSemanticsTests} WITH/CTE unqualified-ref matrix</li>
+ *   <li>CTE unqualified column refs CTEV1–CTEV15 (15): full {@code SqlEventWalkerSubqueriesAndClauseSemanticsTests} WITH/CTE unqualified-ref matrix</li>
+ *   <li>Scalar subquery symbol-table matrix (10): V1–V9 + correlated — full clause egress matrix (SELECT predicand, JOIN ON, GROUP BY/HAVING, ORDER BY, QUALIFY, WHERE scalar/EXISTS, correlated)</li>
+ *   <li>Production scalar / EXISTS probes (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
+ *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
+ *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
@@ -386,7 +390,7 @@ public class SymbolTableResolutionConsolidationTestSuite {
 		unaliasedTests.unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test();
 	}
 
-	// --- CTE unqualified column refs CTEV1–CTEV14 (14) ---
+	// --- CTE unqualified column refs CTEV1–CTEV15 (15) ---
 
 	@Test
 	public void selectWithMultipleSimpleUnqualifiedReferencesCTEV1() {
@@ -456,5 +460,123 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void substitutionAndSubstitutionUnqualifiedReferencesCTEV14() {
 		unaliasedTests.substitutionAndSubstitutionUnqualifiedReferencesCTEV14();
+	}
+
+	@Test
+	public void sameTableDifferentSchemaUnqualifiedReferencesCTEV15() {
+		unaliasedTests.sameTableDifferentSchemaUnqualifiedReferencesCTEV15();
+	}
+
+	// --- Scalar subquery symbol-table matrix (10) ---
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV1() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV1();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV2() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV2();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV3() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV3();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV4() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV4();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV5() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV5();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV6() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV6();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV7() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV7();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV8() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV8();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableTestV9() {
+		unaliasedTests.scalarSubqueriesSymbolTableTestV9();
+	}
+
+	@Test
+	public void scalarSubqueriesCorrelatedSubquerySymbolTableTest() {
+		unaliasedTests.scalarSubqueriesCorrelatedSubquerySymbolTableTest();
+	}
+
+	// --- Production scalar / EXISTS probes (4) ---
+
+	@Test
+	public void selectWhereScalarConditionCorrelatedSubquery() {
+		unaliasedTests.selectWhereScalarConditionCorrelatedSubquery();
+	}
+
+	@Test
+	public void selectOrderByScalarCorrelatedSubquery() {
+		unaliasedTests.selectOrderByScalarCorrelatedSubquery();
+	}
+
+	@Test
+	public void selectWhereVariableExists() {
+		unaliasedTests.selectWhereVariableExists();
+	}
+
+	@Test
+	public void selectWhereExistsCorrelatedSubquery() {
+		unaliasedTests.selectWhereExistsCorrelatedSubquery();
+	}
+
+	// --- Nested formula subqueries (1) ---
+
+	@Test
+	public void nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest() {
+		unaliasedTests.nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest();
+	}
+
+	// --- Subquery semantics probes (6) ---
+
+	@Test
+	public void queryOverQueriesSingleWildcardResolvesUnqualifiedColumn() {
+		unaliasedTests.queryOverQueriesSingleWildcardResolvesUnqualifiedColumn();
+	}
+
+	@Test
+	public void selectSameSubqueriesTest() {
+		unaliasedTests.selectSameSubqueriesTest();
+	}
+
+	@Test
+	public void havingExistsCorrelatedSubqueryTest() {
+		unaliasedTests.havingExistsCorrelatedSubqueryTest();
+	}
+
+	@Test
+	public void havingScalarSubqueryComparisonTest() {
+		unaliasedTests.havingScalarSubqueryComparisonTest();
+	}
+
+	@Test
+	public void selectWithUnionTest() {
+		unaliasedTests.selectWithUnionTest();
+	}
+
+	@Test
+	public void multipleScalarAndOtherSubqueriesSymbolTableTest() {
+		unaliasedTests.multipleScalarAndOtherSubqueriesSymbolTableTest();
 	}
 }

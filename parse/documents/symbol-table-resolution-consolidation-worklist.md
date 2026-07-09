@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-09 (quality gate expanded to 82 tests; full CTE unqualified-ref matrix CTEV1–CTEV14 in gate; goldens fixed)
+**Last updated:** 2026-07-09 (quality gate expanded to 104 tests; full scalar subquery V1–V9 matrix + subquery semantics probes in gate)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**82 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**104 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -31,7 +31,11 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
-| CTE unqualified column refs CTEV1–CTEV14 | 14 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWithMultipleSimpleUnqualifiedReferencesCTEV1`, CTEV2, `queryAndUnionUnqualifiedReferencesCTEV3`, `unionAndQueryUnqualifiedReferencesCTEV4`, `queryAndIntersectUnqualifiedReferencesCTEV5`, `intersectAndQueryUnqualifiedReferencesCTEV6`, `unionAndIntersectUnqualifiedReferencesCTEV7`, `intersectAndUnionUnqualifiedReferencesCTEV8`, `unionAndValuesUnqualifiedReferencesCTEV9`, `valuesAndIntersectUnqualifiedReferencesCTEV10`, `valuesAndValuesUnqualifiedReferencesCTEV11`, `queryAndSubstitutionUnqualifiedReferencesCTEV12`, `substitutionAndQueryUnqualifiedReferencesCTEV13`, `substitutionAndSubstitutionUnqualifiedReferencesCTEV14` |
+| CTE unqualified column refs CTEV1–CTEV15 | 15 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWithMultipleSimpleUnqualifiedReferencesCTEV1`, CTEV2, `queryAndUnionUnqualifiedReferencesCTEV3`, `unionAndQueryUnqualifiedReferencesCTEV4`, `queryAndIntersectUnqualifiedReferencesCTEV5`, `intersectAndQueryUnqualifiedReferencesCTEV6`, `unionAndIntersectUnqualifiedReferencesCTEV7`, `intersectAndUnionUnqualifiedReferencesCTEV8`, `unionAndValuesUnqualifiedReferencesCTEV9`, `valuesAndIntersectUnqualifiedReferencesCTEV10`, `valuesAndValuesUnqualifiedReferencesCTEV11`, `queryAndSubstitutionUnqualifiedReferencesCTEV12`, `substitutionAndQueryUnqualifiedReferencesCTEV13`, `substitutionAndSubstitutionUnqualifiedReferencesCTEV14`, `sameTableDifferentSchemaUnqualifiedReferencesCTEV15` |
+| Scalar subquery symbol-table matrix | 10 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `scalarSubqueriesSymbolTableTestV1` (SELECT predicand + WHERE IN), `scalarSubqueriesSymbolTableTestV2` (JOIN ON), `scalarSubqueriesSymbolTableTestV3` (GROUP BY + HAVING scalar), `scalarSubqueriesSymbolTableTestV4` (GROUP BY scalar predicand), `scalarSubqueriesSymbolTableTestV5` (ORDER BY), `scalarSubqueriesSymbolTableTestV6` (QUALIFY), `scalarSubqueriesSymbolTableTestV7` (WHERE scalar), `scalarSubqueriesSymbolTableTestV8` (WHERE EXISTS), `scalarSubqueriesSymbolTableTestV9` (QUALIFY EXISTS), `scalarSubqueriesCorrelatedSubquerySymbolTableTest` |
+| Production scalar / EXISTS probes | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWhereScalarConditionCorrelatedSubquery`, `selectOrderByScalarCorrelatedSubquery`, `selectWhereVariableExists`, `selectWhereExistsCorrelatedSubquery` |
+| Nested formula subqueries | 1 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest` |
+| Subquery semantics probes | 6 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `queryOverQueriesSingleWildcardResolvesUnqualifiedColumn`, `selectSameSubqueriesTest`, `havingExistsCorrelatedSubqueryTest`, `havingScalarSubqueryComparisonTest`, `selectWithUnionTest`, `multipleScalarAndOtherSubqueriesSymbolTableTest` |
 
 **Nested demo fatal expectations (unchanged):**
 
@@ -48,7 +52,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - Remaining `correlated*` tests **not in gate** (7 as of Jul 2026): last-CTE / final-query / IN-EXISTS middle-CTE chain cases still pending Phase 10 `context_list` review
 - `SqlEventWalkerCoreSelectFromAliasingTests` beyond gate canaries (~61 stale goldens — see Phase 7 backlog table below)
 
-**Gate status (Jul 2026):** **82/82 passing** as of last verification (includes full CTEV1–CTEV14 matrix).
+**Gate status (Jul 2026):** **104/104 passing** as of last verification (includes full scalar subquery V1–V9 matrix, production scalar/EXISTS probes, and subquery semantics probes).
 
 ---
 
@@ -56,9 +60,21 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 
 Tests from the Phase 7 inventory that **fail** today. Review case-by-case; update goldens when behavior is confirmed — no bulk refresh.
 
-### CTE unqualified refs CTEV1–CTEV14 (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
+### CTE unqualified refs CTEV1–CTEV15 (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
 
-Goldens updated for the full WITH/CTE unqualified-ref matrix (CTEV1–CTEV14). All 14 tests are in the quality gate. Prior failures (CTEV4/6 table-dictionary external alias tokens; CTEV9–11 query-dict set-op keys; CTEV13/14 substitution shapes) resolved via CTE alias `context_list` fixes and golden alignment.
+Goldens updated for the full WITH/CTE unqualified-ref matrix (CTEV1–CTEV15). All 15 tests are in the quality gate. Prior failures (CTEV4/6 table-dictionary external alias tokens; CTEV9–11 query-dict set-op keys; CTEV13/14 substitution shapes) resolved via CTE alias `context_list` fixes and golden alignment. CTEV15 adds same-table/different-schema cross-CTE unqualified refs.
+
+### Scalar subquery symbol-table matrix (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
+
+Goldens aligned for full clause-egress scalar subquery coverage: V1 (SELECT predicand + WHERE IN), V2 (JOIN ON), V3 (GROUP BY + HAVING scalar), V4 (GROUP BY scalar predicand), V5 (ORDER BY), V6 (QUALIFY), V7 (WHERE scalar), V8 (WHERE EXISTS), V9 (QUALIFY EXISTS), plus `scalarSubqueriesCorrelatedSubquerySymbolTableTest`. All 10 are in the quality gate.
+
+### Subquery semantics probes (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
+
+`queryOverQueriesSingleWildcardResolvesUnqualifiedColumn` (nested derived-table wildcard resolution), `selectSameSubqueriesTest` (repeated subquery reuse), `havingExistsCorrelatedSubqueryTest`, `havingScalarSubqueryComparisonTest`, `selectWithUnionTest` (top-level UNION), and `multipleScalarAndOtherSubqueriesSymbolTableTest` (mixed scalar + derived + IN) are green and in the quality gate.
+
+### Production scalar / EXISTS / nested-formula probes (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
+
+`selectWhereScalarConditionCorrelatedSubquery`, `selectOrderByScalarCorrelatedSubquery`, `selectWhereVariableExists`, `selectWhereExistsCorrelatedSubquery`, and `nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest` are green and in the quality gate. These cover correlated WHERE/ORDER BY scalar predicands, substitution EXISTS, correlated EXISTS, and nested-formula `{query=queryN}` refs in interface/filters (see **Published scope vs global dictionary rules** — Example V1).
 
 ### UPDATE CTE substitution spot checks (`SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`) — 5 failing
 
@@ -478,7 +494,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 2. Inner `exitQuery_specification` → `finalizeQueryScopeSymbolTable` (convert preserves `TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY` when in insert-source stack)
 3. `exitInsert_source_primary` → `finalizeInsertSourceAtPrimaryExit` + `popFrameAndMergeIntoParent`
 
-**Audit conclusion:** No walker-owned convert or inline convert+publish blocks. All documented forks are post-finalize registration, WITH-scope collapse, or statement-wrapper publish without convert. **No code changes required from this audit.** Remaining Phase 7 work is golden spot-review only (CoreSelect backlog; CTEV1–CTEV14 complete).
+**Audit conclusion:** No walker-owned convert or inline convert+publish blocks. All documented forks are post-finalize registration, WITH-scope collapse, or statement-wrapper publish without convert. **No code changes required from this audit.** Remaining Phase 7 work is golden spot-review only (CoreSelect backlog; CTEV1–CTEV15 + full scalar subquery matrix + semantics probes complete in gate).
 
 ---
 
@@ -538,11 +554,11 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | Retire stacked skip guards | ✅ | `isExistingArchivedClauseColumnRefSatisfied` short-circuits already-bound refs — **re-assess retire in Phase 10** (idempotency for dual probe; may become dead) |
 | Retire `collectClauseColumnsIntoUnresolved` ingress | ✅ | Deleted — clause lists no longer collected into `unresolved_column` |
 | DML clause probe audit | ✅ | UPDATE/DELETE/SELECT all route through `convertSymbolTableToTableDictionary` probe |
-| Supplementary gate goldens | ⏸️ | Predicand/union tests still expect `queryN` keys — stale `def_queryN` prefix backlog (not behavior) |
+| Supplementary gate goldens | ✅ | Full scalar subquery V1–V9 matrix + correlated + HAVING/UNION/wildcard semantics probes green in gate; remaining predicand/union `def_queryN` prefix drift is CoreSelect backlog only |
 
 **Note:** Outer/current-scope `query_dictionary` **does** include clause token strings (Phase 5+); nested published `def_*` children are not retroactively updated. `filters` / `grouped_by` / `ordered_by` remain the semantic `table_ref` signal per scope.
 
-**Gate:** Predicand four-scenario tests, plain-union branch outer fatal, correlated scalar + CTE GROUP BY tests.
+**Gate:** Predicand four-scenario tests, plain-union branch outer fatal, correlated scalar + CTE GROUP BY tests; full scalar subquery symbol-table matrix (V1–V9 + correlated); production WHERE/ORDER BY scalar + EXISTS probes; HAVING scalar/EXISTS probes; nested-formula `{query=queryN}` interface/filters test; query-over-queries wildcard resolution; top-level UNION; mixed multi-scalar composition.
 
 ---
 
@@ -832,7 +848,7 @@ Validation (run after each step — full quality gate):
   cd parse
   mvn -Psymbol-table-resolution-consolidation test
 
-Gate = 82 tests: nested demo (2), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV14 (14).
+Gate = 104 tests: nested demo (2), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV15 (15), scalar subquery symbol-table matrix V1–V9 + correlated (10), production scalar/EXISTS probes (4), nested formula subqueries (1), subquery semantics probes (6).
 See "Quality gate" section at top of worklist for method names.
 
 Out of scope this session:
