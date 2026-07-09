@@ -2195,19 +2195,27 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			String candidate = prefix + scopeIndex;
-			if (walker.symbolTable.containsKey(candidate)) {
+			if (isLiveOrDefinitionScopeKeyPresent(candidate)) {
 				return candidate;
 			}
 		}
 
 		for (String prefix : orderedPrefixes) {
 			String candidate = prefix + scopeIndex;
-			if (walker.symbolTable.containsKey(candidate)) {
+			if (isLiveOrDefinitionScopeKeyPresent(candidate)) {
 				return candidate;
 			}
 		}
 
 		return MUMBLE_QUERY_KEY + nextSyntheticWithQueryAliasIndex();
+	}
+
+	private boolean isLiveOrDefinitionScopeKeyPresent(String scopeKey) {
+		if (scopeKey == null || scopeKey.isBlank()) {
+			return false;
+		}
+		return walker.symbolTable.containsKey(scopeKey)
+				|| walker.symbolTable.containsKey(toDefinitionScopeKey(scopeKey));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -4512,18 +4520,6 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	private static final String DEF_ARCHIVED_UNRESOLVED_COLUMN_KEY = "def_" + MUMBLE_UNRESOLVED_COLUMN_KEY;
 
-	/**
-	 * Pops a finalized scope payload into the parent symbol table and advances {@code queryCount}.
-	 */
-	public void publishScopeSymbolTable(String scopeKey, HashMap<String, Object> scopePayload) {
-		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
-			return;
-		}
-		stripFrameLocalWalkTimeKeys(scopePayload);
-		walker.popSymbolTable(scopeKey, scopePayload);
-		walker.queryCount++;
-	}
-
 	@SuppressWarnings("unchecked")
 	public void publishQueryLikeScope(String scopeKey, HashMap<String, Object> scopePayload) {
 		if (scopeKey == null || scopeKey.isBlank() || scopePayload == null) {
@@ -5905,11 +5901,14 @@ public class SqlParseSymbolTreeHelper {
 				if (contextAlias == null || contextAlias.isBlank()) {
 					continue;
 				}
+				// context_list is authoritative for prior WITH/CTE alias → scope bindings.
+				if (contextEntry.getValue() instanceof String contextRef && !contextRef.isBlank()) {
+					contextBackedAliases.put(contextAlias, contextRef);
+					continue;
+				}
 				Object aliasTarget = outerVisibleScope.aliases.get(contextAlias);
 				if (aliasTarget instanceof String aliasTargetRef && !aliasTargetRef.isBlank()) {
 					contextBackedAliases.put(contextAlias, aliasTargetRef);
-				} else if (contextEntry.getValue() instanceof String contextRef && !contextRef.isBlank()) {
-					contextBackedAliases.put(contextAlias, contextRef);
 				}
 			}
 			if (!contextBackedAliases.isEmpty()) {
@@ -5978,7 +5977,7 @@ public class SqlParseSymbolTreeHelper {
 		if (contextList != null) {
 			for (Map.Entry<String, Object> entry : contextList.entrySet()) {
 				if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
-					result.aliases.putIfAbsent(entry.getKey(), scopeRef);
+					result.aliases.put(entry.getKey(), scopeRef);
 				}
 			}
 		}
@@ -11069,7 +11068,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 			// add alias to query
 			if (alias != null) {
-				walker.collectTableAlias(alias, queryName);
+				upsertCurrentTableAliasMapping(alias, queryName);
 				recordLocalFromRegisteredAlias(alias);
 			} else {
 				if (insertSourceFlow) {
