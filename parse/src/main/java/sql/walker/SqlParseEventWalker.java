@@ -5318,6 +5318,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// or a plain String (e.g. boolean literal TRUE from ON TRUE)
 				Object rawCondition = subMap.remove("1");
 				join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
+				symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
 			} else {
 				//Could not locate join map for ON clause
 			}

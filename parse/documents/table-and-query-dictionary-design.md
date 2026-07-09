@@ -65,22 +65,40 @@ Only names that appear in the query's **projected interface** (select list, INSE
 
 ### When token strings are collected (values)
 
-For each interface output column, record token locations whenever that output name is referenced and resolvable in:
+The local query dictionary receives tokens from **two disjoint lanes only**:
 
-#### A. Intra-query sibling clauses (same grammar frame)
+| Lane | What | Examples |
+|------|------|----------|
+| **Definition (phase 1)** | Output-name / alias token from select-list completion | `pd7` from `ic.pd7 AS pd7`; `xxx` from `ic.pd7 AS xxx`; implicit `pd7` from bare `ic.pd7` |
+| **External usage (phase 2)** | Qualified refs from an **immediate parent** scope targeting this query's published interface | Parent `ix.pd7` where `ix` → this `queryN` |
 
-Any clause of the query that defined the output, including but not limited to:
+**Nothing else** from the current query's own walk should land in the **local** query dictionary — including source expressions in the select list and qualified physical refs in sibling clauses.
 
-- SELECT list (origin / definition)
-- FROM-JOIN **ON**
-- WHERE
-- GROUP BY
-- HAVING
-- QUALIFY
-- ORDER BY
-- Boolean/predicand formulas in those clauses (see **predicate subqueries** below for visibility limits)
+#### Select list is a hard boundary
 
-**Intent:** the query dictionary is a **complete record of valid appearances** of each output column **within its owning query**, not merely a select-list index.
+The select list **defines** what this query exports and **names** where each output comes from. Those roles split across dictionaries:
+
+- **Local query dictionary:** output identity tokens only (phase 1).
+- **Lineage dictionary (elsewhere):** every source reference, routed to wherever that source lives.
+
+| Source expression in select list | Lineage tokens belong in | Local query dict? |
+|--------------------------------|--------------------------|-------------------|
+| Physical table (`ic.pd7`, `ic.pd7 AS pd7`, bare `pd7` on single table) | Local **table dictionary** | **No** — only output-name / alias token |
+| Subquery in FROM/JOIN (`sub.col`, `sub.col AS xxx`) | **Subquery's** query dictionary (its interface) | **No** — only `xxx` or implicit output name |
+| Correlated outer ref in select item (`oa.pd1` inside nested subquery) | **Outer scope's** table or query dictionary | **No** in the nested query |
+
+The same rule applies to **intra-query sibling clauses** (WHERE, HAVING, QUALIFY, JOIN ON, etc.): a qualified physical ref such as `ic.pd7` is still a **table-source** reference, not a reference to this query's output interface — even when the column name matches an output name (`ic.pd7 AS pd7`). Those tokens belong in the **table dictionary**, not the local query dictionary.
+
+#### Intra-query sibling clauses — output vs source
+
+| Reference style | Local query dict | Table dict | Source query dict |
+|-----------------|------------------|------------|-------------------|
+| Qualified physical (`ic.pd7`) | Never | Yes | — |
+| Qualified query alias in **parent** (`ix.pd7` → child `query0`) | On **child** (phase 2) | — | — |
+| Unqualified name in **GROUP BY / ORDER BY** that proves as interface output | Yes | Maybe also (physical proof) | — |
+| Unqualified name resolving to single visible physical table | No (table lineage) | Yes | — |
+
+GROUP BY and ORDER BY may still record **output-column** appearances when the ref is provably the interface output name (not merely a physical source that shares the name). Physical qualified refs in GROUP BY/ORDER BY (`GROUP BY ic.pd7`) follow the physical-source row.
 
 #### Predicate subqueries — do not drill inward (scalar predicand, EXISTS, IN-list)
 
@@ -131,13 +149,25 @@ Do **not** backpatch finalized child `def_queryN` payloads when a parent later r
 Token collection must happen **at resolution / materialization time** while the unresolved entry still carries locations:
 
 1. **Walk** archives references into `unresolved_column` (and captured qualified locations).
-2. **Convert / scope exit** resolves each reference; on success:
-   - physical proof → **table dictionary**
-   - interface output proof → **query dictionary** (same event, not a later table-dict backfill)
-3. **Archived clause probe** (`filters` / `grouped_by` / `ordered_by`) marks refs **SATISFIED** when table proof already exists; any still-unconsumed resolution tokens are mirrored onto interface outputs in the query dictionary.
+2. **Convert / scope exit** resolves each reference; on success route tokens by **source kind**, not by interface lineage match:
+   - **Physical table proof** → **table dictionary** (local + global). **Do not** mirror into the local query dictionary.
+   - **Query-backed source** (`sub.col`, CTE ref) → **source query's** query dictionary via `materializeResolvedQualifiedQuerySourceReference` / `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary`. **Do not** mirror into the **current** local query dictionary.
+   - **Correlated / outer scope** → bubble via `unresolved_column` to the scope that owns the source; materialize there.
+   - **Local interface output** → local query dictionary from **phase 1** (select-list output token) plus justified **GROUP BY / ORDER BY** output proofs where applicable.
+3. **Archived clause probe** (`filters` / `grouped_by` / `ordered_by`): **SATISFIED** when the appropriate **source** dictionary already holds the column. SATISFIED must **not** copy physical-source tokens onto local interface keys merely because the interface lists the same column name as lineage.
 4. **Phase 2** merges parent qualified usages (`alias.output_col`) into the **source query's** global query dictionary.
 
 Avoid end-of-pass fallbacks that **read table dictionary entries to infer query dictionary tokens** — that loses per-clause provenance and blurs the two roles.
+
+### How subquery sources already avoid local query-dict pollution
+
+For `sub.col` where `sub` → `query0`:
+
+1. `materializeQualifiedUnresolvedEntry` **returns early** when `isNonTableQuerySourceReference` — so no table-dict write and no `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution`.
+2. `materializeResolvedQualifiedQuerySourceReference` routes tokens to **`query0`'s** dictionary via `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary`.
+3. Phase 2 (`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`) does the same for select-list source refs on query aliases.
+
+Physical table sources (`ic.pd7`) should follow the **same routing shape**: materialize to the **table dictionary** and stop — never call `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution`. Parent-scope `ix.pd7` already uses phase 2 to target the **child** query dictionary.
 
 ---
 
@@ -145,9 +175,10 @@ Avoid end-of-pass fallbacks that **read table dictionary entries to infer query 
 
 | Phase | When | What |
 |-------|------|------|
-| **1 — Origins** | `exitSelect_item` (and statement-specific seeds) | Every interface output name receives its select-list origin tokens. |
-| **2 — External usage** | Scope exit, after interface resolution | Qualified refs on query aliases in parent scopes merge into the **source** query's dictionary. |
-| **Intra-sibling usage** | Qualified physical materialization + SATISFIED clause probe | WHERE / GROUP BY / ORDER BY (and peers sharing the same materialization path) merge onto owning interface keys during resolution. |
+| **1 — Origins** | `exitSelect_item` (and statement-specific seeds) | Every interface output name receives its **output-name / alias** token (`ctx.getStop()`). Source expressions (`ic.pd7`, `sub.col`) are **not** copied here. |
+| **2 — External usage** | Scope exit, after interface resolution | Qualified refs on query aliases in **parent** scopes merge into the **source** query's dictionary. |
+| **Lineage (parallel track)** | Resolution / materialization | Physical refs → table dictionary; query-backed refs → source query dictionary; correlated refs → outer scope. **Not** local query dictionary. |
+| **GROUP BY / ORDER BY output proof** | Archived clause probe | Unqualified (or proved output) refs in `grouped_by` / `ordered_by` may merge onto local interface keys when the ref is the output column, not a physical source alias. |
 
 ---
 
@@ -158,7 +189,9 @@ Before merging a dictionary change, ask:
 - [ ] Does table-dict collection require visible physical proof (qualified prefix or single-table assumption)?
 - [ ] Does query-dict collection use an **interface output name** as the key?
 - [ ] Are PIVOT/UNPIVOT derived-only names kept out of the pure query dictionary?
-- [ ] Are intra-query sibling clauses covered by resolution materialization, not table-dict copy?
+- [ ] Do physical / query-backed **source** refs materialize only on table dict or **source** query dict — never on the **current** local query dict?
+- [ ] Does phase 1 record **output-name / alias** tokens only — not select-list source expressions?
+- [ ] Does SATISFIED clause probe avoid mirroring physical lineage onto interface keys?
 - [ ] Does clause collection **stop at predicate-subquery boundaries** (scalar predicand, EXISTS, IN-list) and rely on unresolved bubble-up for correlated refs — not drill into child subquery namespaces?
 - [ ] Are parent-scope refs pushed to the **source query's** dictionary, not backpatched into finalized children?
 - [ ] Is global-vs-`def_queryN` variance explained by the publish contract, not treated as a bug?
@@ -170,7 +203,8 @@ Before merging a dictionary change, ask:
 | Concern | Primary location |
 |---------|------------------|
 | Scope-exit convert / materialization | `SqlParseSymbolTreeHelper.convertSymbolTableToTableDictionary` |
-| Physical qualified materialize + query mirror | `materializeQualifiedUnresolvedEntry`, `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution` |
+| Physical qualified materialize (table dict only) | `materializeQualifiedUnresolvedEntry` — must **not** call `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution` |
+| Query-backed source routing | `materializeResolvedQualifiedQuerySourceReference`, `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` |
 | Explicit qualified batch at convert | `extractExplicitQualifiedUnknownEntries`, `emitExplicitQualifiedUnknownDiagnostics` |
 | Archived clause probe | `probeArchivedScopeClauseColumns`, `ArchivedClauseColumnRefDisposition.SATISFIED` |
 | Phase 2 external query-alias usage | `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` |
@@ -184,6 +218,7 @@ Before merging a dictionary change, ask:
 
 These are areas to verify or extend; they are **not** relaxations of the contract above.
 
-1. **Archived clause keys:** `SCOPE_CLAUSE_COLUMN_LIST_KEYS` currently lists `filters`, `grouped_by`, `ordered_by` only. HAVING, QUALIFY, and JOIN-ON conditions may use separate symbol-table keys and need the same SATISFIED / materialization path if not already routed through `filters` or the explicit-qualified batch.
-2. **Output token shape:** Phase 1 may record bare output-name tokens (`pd7`) while goldens sometimes expect alias tokens (`ic`) from the select-list source ref — align origin capture with interface ref tokens if goldens encode source-alias provenance.
-3. **`backfillQueryDictionaryFromResolvedInterfaceSources`:** Legacy safety net when query dict is empty; must not replace resolution-driven capture for sibling clauses.
+1. **Clause ingress parity (Jul 2026):** WHERE, HAVING, QUALIFY, and JOIN ON column refs are flattened into the shared `filters` archived list (predicate-subquery boundaries respected). `grouped_by` and `ordered_by` keep their own lists. All three feed `extractExplicitQualifiedUnknownEntries` and `probeArchivedScopeClauseColumns`.
+2. **Physical source leak (Jul 2026):** resolved — physical lineage no longer mirrors into local `query_dictionary`; output-alias clause refs route to query dict; `moveEntriesToSingleTableIfSingleTarget` defers interface output-only alias names.
+3. **`materializeResolvedUnqualifiedReference`:** resolved — routes by source kind (output alias / query source / physical table).
+4. **`backfillQueryDictionaryFromResolvedInterfaceSources`:** Legacy safety net when query dict is empty; must not replace resolution-driven capture or reintroduce physical lineage on local query dict.
