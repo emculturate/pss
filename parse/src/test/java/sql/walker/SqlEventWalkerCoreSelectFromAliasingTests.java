@@ -1576,9 +1576,9 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	public void correlatedScalarPredicandNestedJoinSubqueryTest() {
 		final String query = "SELECT oa.pd1, oa.pd2 FROM tab_a AS oa"
 		    + "\nWHERE oa.pd3 = (SELECT ib.pd9 FROM tab_b AS ib"
-		    + "\nJOIN (SELECT ic.pd7 FROM tab_c AS ic"
-		    + "\n        WHERE ic.pd7 = oa.pd1) AS ix"
-		    + "\n        ON ix.pd7 = ib.pd6)";
+		    + "\n                JOIN (SELECT ic.pd7 FROM tab_c AS ic"
+		    + "\n                      WHERE ic.pd7 = oa.pd1) AS ix"
+		    + "\n                ON ix.pd7 = ib.pd6)";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);

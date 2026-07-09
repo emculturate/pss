@@ -165,6 +165,8 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 These rules govern acceptable variance between **live global maps** (`queryColumnDictionaryMap` / live `queryN` keys) and **published symbol-tree payloads** (`def_queryN` submaps). Canonical examples: `unaliasedDerivedSimpleAllOuterClausesV1Test` (`def_query5`, `def_query2`, `def_query3`).
 
+**Authoritative design contract (table vs query dictionary roles, visibility, collection rules):** [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md)
+
 ### Two artifacts, two roles
 
 | Artifact | When written | Role |
