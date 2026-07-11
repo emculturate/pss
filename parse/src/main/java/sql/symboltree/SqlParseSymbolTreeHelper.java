@@ -6656,9 +6656,12 @@ public class SqlParseSymbolTreeHelper {
 		if (subTree == null || subTree.isEmpty()) {
 			return false;
 		}
+		// Note: MUMBLE_IN_LIST_KEY / MUMBLE_NOT_IN_LIST_KEY are intentionally NOT checked here.
+		// The IN predicate container {item: {column:...}, in_list: {select:...}} contains
+		// MUMBLE_IN_LIST_KEY as a peer of item — treating that container as a boundary would
+		// silently drop the item column reference from the filters list.  The actual subquery
+		// value (in_list: {select:...}) is still caught by MUMBLE_SELECT_KEY one level deeper.
 		return subTree.containsKey(MUMBLE_EXISTS_KEY)
-				|| subTree.containsKey(MUMBLE_IN_LIST_KEY)
-				|| subTree.containsKey(MUMBLE_NOT_IN_LIST_KEY)
 				|| subTree.containsKey(MUMBLE_SELECT_KEY)
 				|| isQueryBackedSelectItemReference(subTree);
 	}

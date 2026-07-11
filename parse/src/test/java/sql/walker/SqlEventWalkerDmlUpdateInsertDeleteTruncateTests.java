@@ -555,7 +555,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 	@Test
 	public void insertValuesSourceNamedColumnsAndAliasV7() {
 		final String query = " insert into employees (score, rank_bucket)"
-				+ " select col1, col2 from (values (100, 1)) as value_src (col1, col2)";
+				+ "\n select col1, col2 from (values (100, 1)) as value_src (col1, col2)";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
@@ -569,9 +569,9 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@26,105:108='col2',<381>,1:105]], col1=[[@24,99:102='col1',<381>,1:99]]}, query1={values0={value_src=values0, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}}, insert2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={col2=[[@26,106:109='col2',<381>,2:62], [@11,58:61='col2',<381>,2:14]], col1=[[@24,100:103='col1',<381>,2:56], [@9,52:55='col1',<381>,2:8]]}, query1={col2=[[@11,58:61='col2',<381>,2:14]], col1=[[@9,52:55='col1',<381>,2:8]]}, insert2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query1={query_dictionary={values0={value_src=values0, col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}}, def_values0={query_dictionary={col2=[[@26,105:108='col2',<381>,1:105]], col1=[[@24,99:102='col1',<381>,1:99]]}, interface={col2=[], col1=[]}}, interface={col2=[{name=col2, table_ref=values0}], col1=[{name=col1, table_ref=values0}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query1={query_dictionary={col2=[[@11,58:61='col2',<381>,2:14]], col1=[[@9,52:55='col1',<381>,2:8]]}, def_values0={query_dictionary={col2=[[@26,106:109='col2',<381>,2:62], [@11,58:61='col2',<381>,2:14]], col1=[[@24,100:103='col1',<381>,2:56], [@9,52:55='col1',<381>,2:8]]}, interface={col2=[], col1=[]}}, interface={col2=[{name=col2, table_ref=values0}], col1=[{name=col1, table_ref=values0}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -595,20 +595,6 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				null,
 				"col2",
 				1);
-		assertDiagnosticCountBySeverity(
-				snippet,
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"col1 [(l:1 c:51)]",
-				null,
-				1);
-		assertDiagnosticCountBySeverity(
-				snippet,
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"col2 [(l:1 c:57)]",
-				null,
-				1);
 		assertDiagnosticListByCodeAndSeverity(
 				snippet,
 				"UNRESOLVED_UNQUALIFIED_COLUMNS",
@@ -625,7 +611,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{values0={$1=[[@15,75:75='(',<287>,1:75]], $2=[[@15,75:75='(',<287>,1:75]]}, query1={col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, insert2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query1={query_dictionary={col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, def_values0={query_dictionary={$1=[[@15,75:75='(',<287>,1:75]], $2=[[@15,75:75='(',<287>,1:75]]}, interface={$1=[], $2=[]}}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert2={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_query1={query_dictionary={col2=[[@11,57:60='col2',<381>,1:57]], col1=[[@9,51:54='col1',<381>,1:51]]}, def_values0={query_dictionary={$1=[[@15,75:75='(',<287>,1:75]], $2=[[@15,75:75='(',<287>,1:75]]}, interface={$1=[], $2=[]}}, interface={col2=[{name=col2, table_ref=null}], col1=[{name=col1, table_ref=null}]}, table_alias={value_src=values0}}, interface={score=[{name=col1, table_ref=query1}], rank_bucket=[{name=col2, table_ref=query1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2930,5 +2916,98 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Symbol Table is wrong",
 				"{delete1={query_dictionary={}, table_dictionary={employees={emp_id=[[@73,389:389='e',<381>,11:6]]}}, def_query0={query_dictionary={total_score=[[@18,85:95='total_score',<381>,3:53]], rn=[[@38,191:192='rn',<381>,4:93]], emp_id=[[@9,43:48='emp_id',<381>,3:11], [@77,400:402='src',<381>,11:17]]}, table_dictionary={<[Agg Data].[Fact Table D10]>={<delete order col D10>=[[@32,157:157='a',<381>,4:59]], rn=[[@67,370:371='rn',<381>,9:10]], <delete select col D10>=[[@13,55:55='a',<381>,3:23], [@60,329:329='a',<381>,8:13]], <delete where col D10>=[[@43,241:241='a',<381>,6:8]], <delete group col D10>=[[@54,291:291='a',<381>,7:21]], emp_id=[[@7,41:41='a',<381>,3:9], [@27,139:139='a',<381>,4:41], [@50,281:281='a',<381>,7:11]]}}, grouped_by=[{name=emp_id, table_ref=a}, {substitution={name=<delete group col D10>, type=column}, table_ref=a}], filters=[{substitution={name=<delete where col D10>, type=column}, table_ref=a}, {substitution={name=<delete select col D10>, type=column}, table_ref=a}, {name=rn, table_ref=<[Agg Data].[Fact Table D10]>}], interface={total_score=[{substitution={name=<delete select col D10>, type=column}, table_ref=a}], rn=[{name=emp_id, table_ref=a}, {substitution={name=<delete order col D10>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Agg Data].[Fact Table D10]>}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], interface=null, table_alias={e=employees, src=query0}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateFromSelectValuesWithExplicitColumnNamesV1() {
+		final String query = " update employees e set score = src.col1, rank_bucket = src.col2"
+				+ "\n from (select col1, col2 from (values (100, 1)) as value_src (col1, col2)) src"
+				+ "\n where e.emp_id = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={col2=[[@35,133:136='col2',<381>,2:68], [@20,85:88='col2',<381>,2:20]], col1=[[@33,127:130='col1',<381>,2:62], [@18,79:82='col1',<381>,2:14]]}, query1={col2=[[@20,85:88='col2',<381>,2:20], [@12,56:58='src',<381>,1:56]], col1=[[@18,79:82='col1',<381>,2:14], [@6,32:34='src',<381>,1:32]]}, update2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@10,42:52='rank_bucket',<381>,1:42]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void updateFromSelectValuesWithImplicitColumnNamesV2() {
+		final String query = " update employees e set score = src.col1, rank_bucket = src.col2"
+				+ "\n from (select $1 as col1, $2 as col2 from (values (100, 1)) as value_src) src"
+				+ "\n where e.emp_id = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={$1=[[@28,115:115='(',<287>,2:50]], $2=[[@28,115:115='(',<287>,2:50]]}, query1={col2=[[@24,97:100='col2',<381>,2:32], [@12,56:58='src',<381>,1:56]], col1=[[@20,85:88='col1',<381>,2:20], [@6,32:34='src',<381>,1:32]]}, update2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@10,42:52='rank_bucket',<381>,1:42]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void updateFromSelectValuesWithImplicitColumnNamesV3() {
+		final String query = " update employees e set score = src.col1, rank_bucket = src.col2"
+				+ "\n from (select $1 as col1, $2 as col2 from (values (100, 1))) src"
+				+ "\n where e.emp_id = 1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={$1=[[@28,115:115='(',<287>,2:50]], $2=[[@28,115:115='(',<287>,2:50]]}, query1={col2=[[@24,97:100='col2',<381>,2:32], [@12,56:58='src',<381>,1:56]], col1=[[@20,85:88='col1',<381>,2:20], [@6,32:34='src',<381>,1:32]]}, update2={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@10,42:52='rank_bucket',<381>,1:42]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithExplicitColumnNamesV1() {
+		final String query = " delete from employees e"
+				+ "\n where e.emp_id in ("
+				+ "\n   select col1 from (values (100), (200)) as value_src (col1)"
+				+ "\n )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={col1=[[@26,102:105='col1',<381>,3:56], [@11,56:59='col1',<381>,3:10]]}, query1={col1=[[@11,56:59='col1',<381>,3:10]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithImlicitColumnNamesV2() {
+		final String query = " delete from employees e"
+				+ "\n where e.emp_id in ("
+				+ "\n   select $1 as col1 from (values (100), (200)) as value_src"
+				+ "\n )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={$1=[[@17,80:80='(',<287>,3:34], [@21,87:87='(',<287>,3:41]]}, query1={col1=[[@13,62:65='col1',<381>,3:16]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithImlicitColumnNamesV3() {
+		final String query = " delete from employees e"
+				+ "\n where e.emp_id in ("
+				+ "\n   select $1 as col1 from (values (100), (200))"
+				+ "\n )";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={$1=[[@17,80:80='(',<287>,3:34], [@21,87:87='(',<287>,3:41]]}, query1={col1=[[@13,62:65='col1',<381>,3:16]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
 	}
 }

@@ -4017,7 +4017,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					Object aliasObj = valuesMap.get(MUMBLE_ALIAS_KEY);
 					if (aliasObj instanceof String valuesAlias && !valuesAlias.isBlank()) {
 						symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
-						symbolTreeHelper.addCurrentScopeValuesAliasMapping(valuesAlias, valuesScopeKey);
+						// NOTE: The alias is tracked in table_alias via collectTableAlias() below,
+						// so we do NOT create a nested submap in QCD via addCurrentScopeValuesAliasMapping().
+						// This prevents the VALUES columns from appearing both in a nested submap
+						// and at the top level of the parent query's QCD entry.
 						walker.collectTableAlias(valuesAlias, valuesScopeKey);
 					} else {
 						symbolTreeHelper.registerUnaliasedFromSource(item);

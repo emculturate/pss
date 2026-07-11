@@ -11,16 +11,17 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (107 tests):
+ * Gate composition (126 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
- *   <li>Correlated subquery canaries (29): scalar predicand (16), IN-list (8), EXISTS (5) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
+ *   <li>Correlated subquery canaries (38): scalar predicand (18), IN-list (10), EXISTS (10) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
- *   <li>DML INSERT V1–V7 (7): {@code insertValues*} V1–V7</li>
+ *   <li>DML INSERT V1–V8 (8): {@code insertValues*} V1–V8</li>
+ *   <li>DML VALUES source golden examples (7): explicit column names (SELECT, UPDATE, DELETE) + implicit column names (UPDATE V2-V3, DELETE V2-V3) — establish correct QCD structure for all VALUES source patterns</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
  *   <li>CTE unqualified column refs CTEV1–CTEV15 (15): full {@code SqlEventWalkerSubqueriesAndClauseSemanticsTests} WITH/CTE unqualified-ref matrix</li>
- *   <li>Scalar subquery symbol-table matrix (10): V1–V9 + correlated — full clause egress matrix (SELECT predicand, JOIN ON, GROUP BY/HAVING, ORDER BY, QUALIFY, WHERE scalar/EXISTS, correlated)</li>
+ *   <li>Scalar subquery symbol-table matrix (12): V1–V9 + correlated + filter variants (V1 with correlated WHERE-IN, V2 with correlated WHERE-scalar-comparison) — full clause egress matrix (SELECT predicand, JOIN ON, GROUP BY/HAVING, ORDER BY, QUALIFY, WHERE scalar/EXISTS, correlated)</li>
  *   <li>Production scalar / EXISTS probes (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
  *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
@@ -66,7 +67,7 @@ public class SymbolTableResolutionConsolidationTestSuite {
 		coreSelectTests.implicitOutputWherePhysicalRefTest();
 	}
 
-	// --- Correlated scalar predicand canaries (13) ---
+	// --- Correlated scalar predicand canaries (18) ---
 
 	@Test
 	public void correlatedScalarPredicandNestedJoinSubqueryTest() {
@@ -94,8 +95,8 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	}
 
 	@Test
-	public void correlatedScalarPredicandCteGroupByOuterFatalTest() {
-		coreSelectTests.correlatedScalarPredicandCteGroupByOuterFatalTest();
+	public void simpleWithColumnReferenceTest() {
+		coreSelectTests.simpleWithColumnReferenceTest();
 	}
 
 	@Test
@@ -124,8 +125,18 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	}
 
 	@Test
-	public void correlatedScalarPredicandFirstCteStandaloneTest() {
-		coreSelectTests.correlatedScalarPredicandFirstCteStandaloneTest();
+	public void scalarPredicandFirstCteStandaloneTest() {
+		coreSelectTests.scalarPredicandFirstCteStandaloneTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandLastCteReferencesPriorCtesTest() {
+		coreSelectTests.correlatedScalarPredicandLastCteReferencesPriorCtesTest();
+	}
+
+	@Test
+	public void correlatedScalarPredicandFinalQueryReferencesCteChainTest() {
+		coreSelectTests.correlatedScalarPredicandFinalQueryReferencesCteChainTest();
 	}
 
 	@Test
@@ -148,7 +159,7 @@ public class SymbolTableResolutionConsolidationTestSuite {
 		coreSelectTests.correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest();
 	}
 
-	// --- Correlated IN-subquery canaries (8) ---
+	// --- Correlated IN-subquery canaries (10) ---
 
 	@Test
 	public void correlatedInSubqueryNestedJoinSubqueryTest() {
@@ -181,6 +192,16 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	}
 
 	@Test
+	public void correlatedInSubqueryMiddleCteReferencesFirstCteTest() {
+		coreSelectTests.correlatedInSubqueryMiddleCteReferencesFirstCteTest();
+	}
+
+	@Test
+	public void correlatedInSubqueryLastCteReferencesPriorCtesTest() {
+		coreSelectTests.correlatedInSubqueryLastCteReferencesPriorCtesTest();
+	}
+
+	@Test
 	public void correlatedInSubqueryFinalQueryReferencesCteChainTest() {
 		coreSelectTests.correlatedInSubqueryFinalQueryReferencesCteChainTest();
 	}
@@ -190,11 +211,21 @@ public class SymbolTableResolutionConsolidationTestSuite {
 		coreSelectTests.correlatedInSubqueryNestedCteWithOuterRefTest();
 	}
 
-	// --- Correlated EXISTS-subquery canaries (5) ---
+	// --- Correlated EXISTS-subquery canaries (10) ---
 
 	@Test
 	public void correlatedExistsSubqueryNestedJoinSubqueryTest() {
 		coreSelectTests.correlatedExistsSubqueryNestedJoinSubqueryTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryUnionContextTest() {
+		coreSelectTests.correlatedExistsSubqueryUnionContextTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryIntersectContextTest() {
+		coreSelectTests.correlatedExistsSubqueryIntersectContextTest();
 	}
 
 	@Test
@@ -213,8 +244,23 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	}
 
 	@Test
+	public void correlatedExistsSubqueryMiddleCteReferencesFirstCteTest() {
+		coreSelectTests.correlatedExistsSubqueryMiddleCteReferencesFirstCteTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryLastCteReferencesPriorCtesTest() {
+		coreSelectTests.correlatedExistsSubqueryLastCteReferencesPriorCtesTest();
+	}
+
+	@Test
 	public void correlatedExistsSubqueryFinalQueryReferencesCteChainTest() {
 		coreSelectTests.correlatedExistsSubqueryFinalQueryReferencesCteChainTest();
+	}
+
+	@Test
+	public void correlatedExistsSubqueryNestedCteWithOuterRefTest() {
+		coreSelectTests.correlatedExistsSubqueryNestedCteWithOuterRefTest();
 	}
 
 	// --- DML UPDATE V1–V14 (14) ---
@@ -324,6 +370,48 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void insertValuesSourceNamedColumnsAndAliasV7() {
 		dmlTests.insertValuesSourceNamedColumnsAndAliasV7();
+	}
+
+	@Test
+	public void insertValuesSourceAliasOnlyV8() {
+		dmlTests.insertValuesSourceAliasOnlyV8();
+	}
+
+	// --- DML VALUES source golden examples (7) ---
+
+	@Test
+	public void selectFromValuesWithExplicitColumnNamesV1() {
+		coreSelectTests.selectFromValuesWithExplicitColumnNamesV1();
+	}
+
+	@Test
+	public void updateFromSelectValuesWithExplicitColumnNamesV1() {
+		dmlTests.updateFromSelectValuesWithExplicitColumnNamesV1();
+	}
+
+	@Test
+	public void updateFromSelectValuesWithImplicitColumnNamesV2() {
+		dmlTests.updateFromSelectValuesWithImplicitColumnNamesV2();
+	}
+
+	@Test
+	public void updateFromSelectValuesWithImplicitColumnNamesV3() {
+		dmlTests.updateFromSelectValuesWithImplicitColumnNamesV3();
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithExplicitColumnNamesV1() {
+		dmlTests.deleteFromSelectValuesWithExplicitColumnNamesV1();
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithImlicitColumnNamesV2() {
+		dmlTests.deleteFromSelectValuesWithImlicitColumnNamesV2();
+	}
+
+	@Test
+	public void deleteFromSelectValuesWithImlicitColumnNamesV3() {
+		dmlTests.deleteFromSelectValuesWithImlicitColumnNamesV3();
 	}
 
 	// --- Unaliased derived table V1–V16 (16) ---
@@ -535,6 +623,16 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void scalarSubqueriesCorrelatedSubquerySymbolTableTest() {
 		unaliasedTests.scalarSubqueriesCorrelatedSubquerySymbolTableTest();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableFilterV1() {
+		unaliasedTests.scalarSubqueriesSymbolTableFilterV1();
+	}
+
+	@Test
+	public void scalarSubqueriesSymbolTableFilterV2() {
+		unaliasedTests.scalarSubqueriesSymbolTableFilterV2();
 	}
 
 	// --- Production scalar / EXISTS probes (4) ---

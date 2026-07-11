@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-09 (Phase 7 WITH main-body promotion Fix A in progress; gate 107 tests)
+**Last updated:** 2026-07-11 (full clean-rebuild gate run; 94/116 passing; 22 failures documented below)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**107 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**116 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -30,7 +30,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Correlated EXISTS subquery | 5 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedExistsSubqueryNestedJoinSubqueryTest` … `correlatedExistsSubqueryFinalQueryReferencesCteChainTest` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
-| Unaliased derived V1–V16 | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
+| Unaliased derived V1–V16 (done) | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
 | CTE unqualified column refs CTEV1–CTEV15 | 15 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWithMultipleSimpleUnqualifiedReferencesCTEV1`, CTEV2, `queryAndUnionUnqualifiedReferencesCTEV3`, `unionAndQueryUnqualifiedReferencesCTEV4`, `queryAndIntersectUnqualifiedReferencesCTEV5`, `intersectAndQueryUnqualifiedReferencesCTEV6`, `unionAndIntersectUnqualifiedReferencesCTEV7`, `intersectAndUnionUnqualifiedReferencesCTEV8`, `unionAndValuesUnqualifiedReferencesCTEV9`, `valuesAndIntersectUnqualifiedReferencesCTEV10`, `valuesAndValuesUnqualifiedReferencesCTEV11`, `queryAndSubstitutionUnqualifiedReferencesCTEV12`, `substitutionAndQueryUnqualifiedReferencesCTEV13`, `substitutionAndSubstitutionUnqualifiedReferencesCTEV14`, `sameTableDifferentSchemaUnqualifiedReferencesCTEV15` |
 | Scalar subquery symbol-table matrix | 10 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `scalarSubqueriesSymbolTableTestV1` (SELECT predicand + WHERE IN), `scalarSubqueriesSymbolTableTestV2` (JOIN ON), `scalarSubqueriesSymbolTableTestV3` (GROUP BY + HAVING scalar), `scalarSubqueriesSymbolTableTestV4` (GROUP BY scalar predicand), `scalarSubqueriesSymbolTableTestV5` (ORDER BY), `scalarSubqueriesSymbolTableTestV6` (QUALIFY), `scalarSubqueriesSymbolTableTestV7` (WHERE scalar), `scalarSubqueriesSymbolTableTestV8` (WHERE EXISTS), `scalarSubqueriesSymbolTableTestV9` (QUALIFY EXISTS), `scalarSubqueriesCorrelatedSubquerySymbolTableTest` |
 | Production scalar / EXISTS probes | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWhereScalarConditionCorrelatedSubquery`, `selectOrderByScalarCorrelatedSubquery`, `selectWhereVariableExists`, `selectWhereExistsCorrelatedSubquery` |
@@ -52,7 +52,86 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - Remaining `correlated*` tests **not in gate** (7 as of Jul 2026): last-CTE / final-query / IN-EXISTS middle-CTE chain cases still pending Phase 10 `context_list` review
 - `SqlEventWalkerCoreSelectFromAliasingTests` beyond gate canaries (~61 stale goldens — see Phase 7 backlog table below)
 
-**Gate status (Jul 2026):** **104/104 passing** as of last verification (includes full scalar subquery V1–V9 matrix, production scalar/EXISTS probes, and subquery semantics probes).
+**Gate status (Jul 2026, post IN-list fix baseline 2026-07-11):** **93/116 passing** — 23 failures. IN-list LHS filter collection fixed (`isPredicateSubqueryBoundarySubtree` no longer short-circuits on `in_list` container; 2 Group E tests green). 3 golden updates for IN-list filter change still outstanding (Group A). See **Current gate failures** section below.
+
+---
+
+## Current gate failures (as of 2026-07-11, post IN-list fix)
+
+**23 failing / 93 passing out of 116 total.** Grouped by root cause.
+
+### Group A — IN-list `filters` golden not yet updated (3 tests) — `SqlEventWalkerCoreSelectFromAliasingTests`
+
+Goldens still have `filters=[]`; the fix now correctly produces the LHS column of `WHERE col IN (subquery)`. Only `filters` differs. Golden-only fix needed.
+
+| Test | `filters` was | `filters` now |
+|---|---|---|
+| `correlatedInSubqueryFirstCteStandaloneTest` | `[]` | `[{name=t1c1, table_ref=ta}]` |
+| `correlatedInSubqueryNestedCteWithOuterRefTest` | `[]` | `[{name=t2, table_ref=tb}]` |
+| `correlatedInSubqueryFinalQueryReferencesCteChainTest` | `[{name=q1, table_ref=fb}]` | `[{name=q1, table_ref=fb}, {name=p2, table_ref=pa}]` |
+
+### Group B — UPDATE query-dict stores column-name token instead of alias token (7 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
+
+The query_dictionary for UPDATE SET assignments records the column name token (e.g., `'acct_sales_count'`) at the write-position rather than the expected alias/table-ref token (e.g., `'a'`).
+
+| Test | Short description |
+|------|-------------------|
+| `updateDictionaryHandlingQualifiedColumnsFromWindowedSubqueryV1` | windowed subquery — assignment column token wrong |
+| `updateDictionaryHandlingGroupByHavingSubqueryAndUnqualifiedRhsV5` | GROUP BY / HAVING subquery — assignment token wrong |
+| `updateDictionaryHandlingOrderBySubqueryAndUnqualifiedRhsV6` | ORDER BY subquery — assignment token wrong |
+| `updateDictionaryHandlingWhereInSubqueryWithTargetTableRefAndOrphanRhsV8` | WHERE IN subquery — assignment token wrong |
+| `updateDictionaryHandlingJoinOnInSubqueryWithTargetTableRefAndOrphanRhsV9` | JOIN ON subquery — assignment token wrong |
+| `updateDictionaryHandlingOrderByInSubqueryWithTargetTableRefAndOrphanRhsV11` | ORDER BY inline subquery — assignment token wrong |
+| `updateDictionaryHandlingNoQualifiedSubqueryBodyWithQualifiedAssignmentAndOrphanRhsV12` | qualified assignment + orphan RHS — assignment token wrong |
+
+### Group C — UPDATE query-dict extra alias tokens leaking in / missing WINDOW column (5 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
+
+Extra `src` alias tokens appearing in query-dict entries (V2–V4). V7 and V10 are missing `rn` from `ROW_NUMBER() OVER (...)` in the table dictionary.
+
+| Test | Short description |
+|------|-------------------|
+| `updateDictionaryHandlingQualifiedColumnsAcrossWhereSubclausesV2` | extra `src` tokens in `emp_id` / `new_quota` |
+| `updateDictionaryHandlingUnqualifiedFallsBackToTargetTableV3` | extra `src` tokens in `score`, `emp_id` |
+| `updateDictionaryHandlingUnqualifiedWithAdditionalPhysicalTableStillResolvesV4` | extra `src` tokens across multiple columns |
+| `updateDictionaryHandlingQualifySubqueryAndUnqualifiedRhsV7` | missing `rn` WINDOW alias in table dict |
+| `updateDictionaryHandlingQualifyInSubqueryWithTargetTableRefAndOrphanRhsV10` | missing `rn` WINDOW alias in table dict |
+
+### Group D — UPDATE V13/V14 extra substitution variable tokens (2 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
+
+Extra `<emp_id>` / `<score>` substitution tokens (type `<327>`) double-recorded in nested correlated UPDATE paths.
+
+| Test | Short description |
+|------|-------------------|
+| `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13` | extra substitution tokens depth-2 |
+| `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` | extra substitution tokens depth-3 |
+
+### Group E — HAVING/GROUP BY alias token stored as column-name token (2 tests) — `SqlEventWalkerSubqueriesAndClauseSemanticsTests`
+
+GROUP BY columns in query-dict record the raw column-name token position instead of the aliased table-ref token.
+
+| Test | Short description |
+|------|-------------------|
+| `havingScalarSubqueryComparisonTest` | `dept=[[@3,9:12='dept',...]]` instead of `[[@1,7:7='e',...]]` |
+| `havingExistsCorrelatedSubqueryTest` | `customer_id=[[@3,...]]` instead of `[[@1,7:7='e',...]]` |
+
+### Group F — Stray wildcard/derived query-dict entry leaking into global QCD (3 tests) — `SqlEventWalkerSubqueriesAndClauseSemanticsTests`
+
+Extra `query4={*=...}` or `w` entry appearing in global `queryColumnDictionaryMap` — unaliased subquery/UNION branch intermediate registered at wrong scope.
+
+| Test | Short description |
+|------|-------------------|
+| `selectSameSubqueriesTest` | extra `query4={*=[...]}` in QCD |
+| `selectWithUnionTest` | extra `query4={*=[...]}` in QCD |
+| `multipleScalarAndOtherSubqueriesSymbolTableTest` | extra `w` column entry in QCD |
+
+### Group G — INSERT VALUES-wrapped-in-subquery QCD shape wrong (2 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
+
+When an INSERT source is `SELECT … FROM (VALUES …) AS alias (col1, col2)`, the global `queryColumnDictionaryMap` for `query1` (the wrapping SELECT) incorrectly **flattens** the `valuesN` column entries directly into `query1`'s own map alongside the expected `{valuesN: {…}}` submap. V1–V6 pass because they have no column-aliased VALUES subquery in the source; only V7 (named columns) and V8 (alias-only, different symptom: `insert2` key vs `def_insert2`) are affected.
+
+| Test | Symptom |
+|------|---------|
+| `insertValuesSourceNamedColumnsAndAliasV7` | QCD for `query1` has extra flat `col1`/`col2` entries alongside the expected `values0` submap; token positions shifted (multiline query vs inline) |
+| `insertValuesSourceAliasOnlyV8` *(not in gate)* | Symbol table uses bare `insert2` key instead of `def_insert2` |
 
 ---
 
@@ -134,11 +213,11 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
 | **5** def_query read-path gaps | ✅ Done | V1–V16 unaliased-derived green; symbol-tree + query-dict goldens aligned (Jul 2026) |
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
-| **7** uniform query scope finalization | ⚠️ Near done | ~85% | `finalizeQueryScopeSymbolTable` / set-op / VALUES aligned; CTE-body inline-fork audit open |
+| **7** uniform query scope finalization | ⚠️ Regressed | ~70% | `finalizeQueryScopeSymbolTable` aligned for SELECT/CTE; **HAVING/GROUP BY token tracking (Groups F, G) broke**; outer WHERE filter collection with scalar SELECT-list subqueries broken (Group E) |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
-| **9** clause-list validation (no parallel pipelines) | ⚠️ Near done | ~85% | `validateArchivedClauseColumnRef` + convert + archived-scope-tree probes; retired `collectClauseColumnsIntoUnresolved` ingress path |
+| **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
 | **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
-| **11** DML parity + fallback retirement | ⚠️ Started | ~25% | **V9 + V13 canaries pass**; `finalizeInsertScopeSymbolTable` exists; ~82/95 DML tests have stale goldens |
+| **11** DML parity + fallback retirement | ⚠️ Regressed | ~10% | **All 14 UPDATE gate tests now failing (Groups A–D)**; V9 + V13 were green on prior stale bytecode, now broken on clean rebuild; INSERT V7 also failing (Group H) |
 
 **Recent wins (Jul 2026):**
 
@@ -676,6 +755,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML canaries V9/V13 | ✅ | Passing with alias-token query dict |
 | DML golden refresh | ⚠️ | ~82/95 cases stale (see backlog below) |
 | DML clause probe | ❌ | Target-table rules only where semantically required (UPDATE LHS, DELETE preference) |
+| EXCEPT set-op parity | ⏸️ | Deferred: treat `EXCEPT` as a first-class sibling to `UNION`/`INTERSECT` across AST production, query dictionary, symbol table, and possibly grammar/precedence handling. Primary example: unaliasedDerivedExceptAllOuterClausesV10Test. |
 | Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | Phase 8 closed; `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` remain until Phase 9 |
 | Donor-email forward alias (TODO B) | ⏸️ | Unqualified ref in `PARTITION BY` binds to earlier select-list alias — orthogonal track |
 
