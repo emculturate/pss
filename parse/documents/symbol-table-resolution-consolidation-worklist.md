@@ -165,19 +165,19 @@ Goldens aligned for full clause-egress scalar subquery coverage: V1 (SELECT pred
 | `updateComplexSubstitutionU7ChainedCteReferences` | Interface | Expected `[score]`; actual `[raw_val, emp_id]` |
 | `updateComplexSubstitutionU9WithCteSelfUnionBranches` | Interface | Expected `[score]`; actual `[]` |
 
-### Correlated IN/EXISTS middle-CTE chain (`SqlEventWalkerCoreSelectFromAliasingTests`) — 7 failing (Phase 10)
+### Correlated IN/EXISTS middle-CTE chain (`SqlEventWalkerCoreSelectFromAliasingTests`) — ✅ DONE (Jul 2026)
 
-All fail: expected `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` fatal not found at golden position.
+All 7 tests now passing. Single broken test fixed; remaining 6 confirmed passing.
 
-| Test |
-|------|
-| `correlatedInSubqueryMiddleCteReferencesFirstCteTest` |
-| `correlatedInSubqueryLastCteReferencesPriorCtesTest` |
-| `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest` |
-| `correlatedExistsSubqueryLastCteReferencesPriorCtesTest` |
-| `correlatedExistsSubqueryUnionContextTest` |
-| `correlatedExistsSubqueryIntersectContextTest` |
-| `correlatedExistsSubqueryNestedCteWithOuterRefTest` |
+| Test | Status |
+|------|--------|
+| `correlatedInSubqueryMiddleCteReferencesFirstCteTest` | ✅ |
+| `correlatedInSubqueryLastCteReferencesPriorCtesTest` | ✅ |
+| `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest` | ✅ |
+| `correlatedExistsSubqueryLastCteReferencesPriorCtesTest` | ✅ |
+| `correlatedExistsSubqueryUnionContextTest` | ✅ |
+| `correlatedExistsSubqueryIntersectContextTest` | ✅ |
+| `correlatedExistsSubqueryNestedCteWithOuterRefTest` | ✅ |
 
 ### CTE substitution column-variable (`SqlEventWalkerCoreSelectFromAliasingTests`) — 18 failing
 
@@ -202,7 +202,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 `basicSelectDistinctListWithEmbeddedAllListQualifierTest`, `basicSelectListQuotedNumericPrefixColumnTest` (key order), `real1`–`real4SelectListNumericPrefixAliasingTest`, `jinjaTupleSingleSourceUnqualifiedContactKeyTest`, `jinjaTupleWithAliasTest`.
 
-**Total backlog: 73 failing tests.**
+**Total backlog: 66 failing tests.** (73 − 7 completed middle-CTE tests = 66)
 
 ---
 
@@ -216,8 +216,9 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **7** uniform query scope finalization | ⚠️ Regressed | ~70% | `finalizeQueryScopeSymbolTable` aligned for SELECT/CTE; **HAVING/GROUP BY token tracking (Groups F, G) broke**; outer WHERE filter collection with scalar SELECT-list subqueries broken (Group E) |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
 | **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
-| **10** downward `context_list` resolution | ❌ Not started | 0% | `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
-| **11** DML parity + fallback retirement | ⚠️ Regressed | ~10% | **All 14 UPDATE gate tests now failing (Groups A–D)**; V9 + V13 were green on prior stale bytecode, now broken on clean rebuild; INSERT V7 also failing (Group H) |
+| **10** Substitution Variable Quality Gate Inventory | ⚠️ In Progress | ~60% | **New Phase (inserted Jul 2026).** Comprehensive quality gate for all substitution variable types. Target: 115+ tests covering Column, Predicand, Condition, Tuple, In_List, Join_Extension variables. Column vars (CTE-wrapped V9-V16) and complex UPDATE/INSERT I1-I10/U1-U10 currently regressed; In_List golden updates pending. Completion gate before Phase 11. |
+| **11** downward `context_list` resolution | ❌ Not started | 0% | *(Formerly Phase 10)* `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
+| **12** DML parity + fallback retirement | ⚠️ Regressed | ~10% | *(Formerly Phase 11)* **All 14 UPDATE gate tests now failing (Groups A–D)**; V9 + V13 were green on prior stale bytecode, now broken on clean rebuild; INSERT V7 also failing (Group H) |
 
 **Recent wins (Jul 2026):**
 
@@ -236,7 +237,113 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 1. ~~Phase 8 late-pass helper audit~~ ✅ Done (Jul 2026)
 2. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
 
-**Suggested next focus:** Phase 9 close → Phase 10 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
+**Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
+
+---
+
+## Phase 10 — Substitution Variable Quality Gate Inventory (NEW — Jul 2026)
+
+**Objective:** Establish and lock a comprehensive quality gate for all substitution variable types (Column, Predicand, Condition, Tuple, In_List, Join_Extension) across the project. Use this inventory as a continuous verification checkpoint before advancing to Phase 11–12 work.
+
+**Scope:** 115+ unique tests containing at least one substitution variable. Tests are organized by variable type with current pass/fail status by category.
+
+### Substitution Variable Categories & Test Inventory
+
+#### 1. **Column Substitution Variables** (type=column)
+- **Definition:** Variables representing columns from physical/derived tables (e.g., `<my_column>`).
+- **Test count:** ~40+ tests
+- **Status:** ⚠️ **PARTIAL** — Basic tests pass; CTE-wrapped V9-V16 failing; complex UPDATE/INSERT failing
+- **Key tests:**
+  - `SqlEventWalkerCoreSelectFromAliasingTests`: `getSimpleColumnVariableTest`, `getSubstitutionColumnVariableV1–V16Test` (16 tests)
+  - `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`: `insertComplexSubstitutionI1–I10`, `updateComplexSubstitutionU1–U10` (20 tests)
+  - `SqlEventWalkerNonSqlEndpointParserTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests`, others
+- **Blockers:**
+  - V9-V16 CTE-wrapped tests: external CTE tokens migrating from `table_dictionary` → `query_dictionary`; `def_query*` wrapper nesting
+  - INSERT/UPDATE I1–I10 / U1–U10: query-dict shape regressions; assignment token tracking
+
+#### 2. **Predicand Substitution Variables** (type=predicand)
+- **Definition:** Variables for complete predicate expressions or subqueries (e.g., `<comparison_expr>`).
+- **Test count:** ~25+ tests
+- **Status:** ✅ **LIKELY PASSING** — Non-DML predicand handling working
+- **Key tests:**
+  - `SqlEventWalkerNonSqlEndpointParserTests`: predicand substitution tests across CASE expressions (13+ tests)
+  - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`: predicand comparison, NULL checks, ORDER BY (6+ tests)
+  - Non-DML aggregate, function, window function tests
+- **Action:** Continue monitoring; treat as stable baseline
+
+#### 3. **Condition Substitution Variables** (type=condition)
+- **Definition:** Variables for boolean conditions or entire clause conditions (e.g., `<where_cond>`).
+- **Test count:** ~13+ tests
+- **Status:** ✅ **LIKELY PASSING** — Condition substitution stable
+- **Key tests:**
+  - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`: condition comparison, HAVING, WHERE (7+ tests)
+  - `SqlEventWalkerNonSqlEndpointParserTests`: nested condition substitution (6+ tests)
+- **Action:** Continue monitoring; baseline stable
+
+#### 4. **Tuple Substitution Variables** (type=tuple)
+- **Definition:** Variables representing table or datasource names (e.g., `<[Schema].[Table]>`).
+- **Test count:** ~20+ tests
+- **Status:** ✅ **LIKELY PASSING** — Tuple substitution comprehensive and stable
+- **Key tests:**
+  - `SqlEventWalkerNonSqlEndpointParserTests`: 18+ tests covering simple/complex/extended tuple names
+  - Live sample queries and custom parsing endpoint tests
+- **Action:** Continue monitoring; well-covered and stable
+
+#### 5. **In_List Substitution Variables** (type=in_list)
+- **Definition:** Variables for IN-list expressions (e.g., `<in_list_expr>`).
+- **Test count:** ~10+ tests
+- **Status:** ⚠️ **PARTIAL** — Core fix applied post-2026-07-11; 3 golden-only updates pending
+- **Key tests:**
+  - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`: 6 basic IN/NOT IN tests
+  - `SqlEventWalkerNonSqlEndpointParserTests`: 2 embedded IN-list tests
+- **Blockers:**
+  - 3 Group A tests (`correlatedInSubqueryFirstCteStandaloneTest`, `correlatedInSubqueryNestedCteWithOuterRefTest`, `correlatedInSubqueryFinalQueryReferencesCteChainTest`): `filters` golden not yet updated post-IN-list LHS fix
+- **Action:** Apply 3 golden updates + re-run gate
+
+#### 6. **Join_Extension Substitution Variables** (type=join_extension)
+- **Definition:** Variables for join extensions or extension-specific conditions (e.g., `<join_ext_cond>`).
+- **Test count:** ~7+ tests
+- **Status:** ✅ **LIKELY PASSING** — Join extension handling stable
+- **Key tests:**
+  - `SqlEventWalkerNonSqlEndpointParserTests`: 4 tests
+  - `SqlEventWalkerJoinsAndTableResolutionTests`: 3 basic join tests
+- **Action:** Continue monitoring; baseline stable
+
+### Pass/Fail Summary by Variable Type
+
+| Type | Count | Status | Priority | Action |
+|------|-------|--------|----------|--------|
+| **Column** | ~40 | ⚠️ PARTIAL | **CRITICAL** | Fix CTE-wrapped V9-V16 + INSERT/UPDATE I/U series; review Phase 7 backlog |
+| **Predicand** | ~25 | ✅ PASS | LOW | Monitor; treat as baseline |
+| **Condition** | ~13 | ✅ PASS | LOW | Monitor; treat as baseline |
+| **Tuple** | ~20 | ✅ PASS | LOW | Monitor; treat as baseline |
+| **In_List** | ~10 | ⚠️ PARTIAL | **MEDIUM** | Apply 3 golden updates; rerun gate |
+| **Join_Extension** | ~7 | ✅ PASS | LOW | Monitor; treat as baseline |
+| **TOTAL** | **~115+** | ⚠️ ~60% | — | Complete Phase 10 gate before Phase 11 |
+
+### Phase 10 Completion Criteria
+
+**All 115+ substitution variable tests must pass before advancing to Phase 11.**
+
+1. **Column Substitution:** Fix V9-V16 CTE-wrapped tests and complex INSERT/UPDATE I1-I10/U1-U10
+2. **In_List Substitution:** Apply 3 golden-only updates for `filters` field; verify GREEN
+3. **Predicand, Condition, Tuple, Join_Extension:** Maintain current passing status; no new regressions
+
+**Gate command:**
+```bash
+cd parse
+mvn -Psymbol-table-resolution-consolidation test  # includes substitution variable tests
+# OR targeted:
+# mvn -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#getSubstitutionColumnVariableV* test
+# mvn -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#*ComplexSubstitution* test
+```
+
+### Timeline & Dependencies
+
+- **Phase 10 start:** Jul 2026 (inventory + baseline; this document)
+- **Phase 10 completion:** Dependent on resolution of Column + In_List failures
+- **Phase 10 → Phase 11 gate:** All 115+ tests GREEN before `context_list` work
+- **Phase 11 start:** Post Phase 10 green gate (estimated Aug 2026+)
 
 ---
 

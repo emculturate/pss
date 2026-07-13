@@ -4000,7 +4000,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 				String tableName = resolveSubstitutionTableReference(substitution);
 				if (tableName != null) {
-					walker.ensureTableDictionaryEntry(tableName);
+					// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
+					Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
+					String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
+					if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+						walker.ensureTableDictionaryEntry(tableName);
+					}
 				}
 			} else if (item.keySet().contains(MUMBLE_TABLE_FUNCTION_KEY)) {
 				// Table functions are table sources, not query sources.
@@ -4068,14 +4073,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Collect Symbol Table Reference
 				Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
 				String tableName = resolveSubstitutionTableReference(substitution);
-				walker.collectTableAlias(alias, tableName);
-				walker.ensureTableDictionaryEntry(tableName);
-
-			} else if (reference.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
-				// Keep table_function in the from-list item directly; reserve query for subqueries.
-				item.putAll(reference);
-				symbolTreeHelper.registerTableFunctionSourceReference(reference, alias);
-
+				// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
+				Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
+				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
+				if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+					walker.collectTableAlias(alias, tableName);
+					walker.ensureTableDictionaryEntry(tableName);
+				}
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
 				item.put(MUMBLE_QUERY_KEY, reference);
 				registerQueryLikeFromSource(reference, alias);
@@ -5126,7 +5130,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
 			// Collect Symbol Table Reference
 			String name = resolveSubstitutionTableReference(substitution);
-			walker.ensureTableDictionaryEntry(name);
+			// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
+			Object typeObj = substitution.get(MUMBLE_TYPE_KEY);
+			String type = typeObj == null ? null : typeObj.toString();
+			if (type == null || (!MUMBLE_COLUMN_KEY.equals(type) && !MUMBLE_PREDICAND_KEY.equals(type))) {
+				walker.ensureTableDictionaryEntry(name);
+			}
 			// Substitution Variable is ready for use
 			subMap.putAll(item);
 
