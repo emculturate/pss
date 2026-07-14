@@ -1030,6 +1030,83 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Object interfaceObject = queryMap.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObject instanceof Map<?, ?> interfaceMap && !interfaceMap.isEmpty()) {
+			for (Object keyObj : interfaceMap.keySet()) {
+				if (keyObj instanceof String key) {
+					interfac.add(key);
+				}
+			}
+			return interfac;
+		}
+
+		Map<String, Object> setOperationMap = null;
+		int topSetOperationIndex = -1;
+		for (String key : walker.symbolTable.keySet()) {
+			if (key == null) {
+				continue;
+			}
+			String normalizedSetOpKey = null;
+			if (key.startsWith(MUMBLE_UNION_KEY) || key.startsWith(MUMBLE_INTERSECT_KEY)) {
+				normalizedSetOpKey = key;
+			} else if (key.startsWith("def_" + MUMBLE_UNION_KEY)
+					|| key.startsWith("def_" + MUMBLE_INTERSECT_KEY)) {
+				normalizedSetOpKey = key.substring("def_".length());
+			}
+			if (normalizedSetOpKey == null) {
+				continue;
+			}
+			Object scopedObject = walker.symbolTable.get(key);
+			if (!(scopedObject instanceof Map<?, ?> scopedMap)) {
+				continue;
+			}
+			Object scopedInterfaceObject = ((Map<String, Object>) scopedMap).get(MUMBLE_INTERFACE_KEY);
+			if (!(scopedInterfaceObject instanceof Map<?, ?> scopedInterfaceMap) || scopedInterfaceMap.isEmpty()) {
+				continue;
+			}
+			String numericSuffix = normalizedSetOpKey.replaceFirst("^[^0-9]+", "");
+			int scopeIndex;
+			try {
+				scopeIndex = Integer.parseInt(numericSuffix);
+			} catch (NumberFormatException ex) {
+				continue;
+			}
+			if (scopeIndex > topSetOperationIndex) {
+				topSetOperationIndex = scopeIndex;
+				setOperationMap = (Map<String, Object>) scopedMap;
+			}
+		}
+
+		if (setOperationMap != null) {
+			Object setOperationInterface = setOperationMap.get(MUMBLE_INTERFACE_KEY);
+			if (setOperationInterface instanceof Map<?, ?> setOperationInterfaceMap && !setOperationInterfaceMap.isEmpty()) {
+				for (Object keyObj : setOperationInterfaceMap.keySet()) {
+					if (keyObj instanceof String key) {
+						interfac.add(key);
+					}
+				}
+				if (!interfac.isEmpty()) {
+					return interfac;
+				}
+			}
+		}
+
+		HashMap<String, Object> queryColumnDictionaryMap = getQueryColumnDictionaryMap();
+		if (!queryColumnDictionaryMap.isEmpty()) {
+			for (Object queryDictionaryObj : queryColumnDictionaryMap.values()) {
+				if (!(queryDictionaryObj instanceof Map<?, ?> queryDictionaryMap)) {
+					continue;
+				}
+				for (Object keyObj : queryDictionaryMap.keySet()) {
+					if (keyObj instanceof String key && !key.isBlank()) {
+						interfac.add(key);
+					}
+				}
+			}
+			if (!interfac.isEmpty()) {
+				return interfac;
+			}
+		}
+
 		if (interfaceObject == null) {
 			Object assignmentsObject = queryMap.get(MUMBLE_ASSIGNMENTS_KEY);
 			if (assignmentsObject instanceof Map<?, ?> assignmentsMap) {
@@ -1041,15 +1118,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				return interfac;
 			}
 		}
-		if (!(interfaceObject instanceof Map<?, ?> interfaceMap)) {
+		if (!(interfaceObject instanceof Map<?, ?>)) {
 			return interfac;
 		}
 
-		for (Object keyObj : interfaceMap.keySet()) {
-			if (keyObj instanceof String key) {
-				interfac.add(key);
-			}
-		}
 		return interfac;
 	}
 
@@ -1059,14 +1131,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return null;
 		}
 
-		if (queryMap.get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?>) {
+		if (queryMap.get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?> interfaceMap && !interfaceMap.isEmpty()) {
 			return queryMap;
 		}
 
 		if (normalizedQueryKey != null) {
 			Object exactChild = queryMap.get("def_" + normalizedQueryKey);
 			if (exactChild instanceof Map<?, ?> exactChildMap
-					&& ((Map<String, Object>) exactChildMap).get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?>) {
+					&& ((Map<String, Object>) exactChildMap).get(MUMBLE_INTERFACE_KEY) instanceof Map<?, ?> exactInterfaceMap
+					&& !exactInterfaceMap.isEmpty()) {
 				return (Map<String, Object>) exactChildMap;
 			}
 		}
@@ -2493,7 +2566,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			alias = (String) subMap.remove("1");
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-		    walker.checkForSubstitutionVariable((Map<String, Object>) aliasMap, "tuple");
+		    walker.checkForSubstitutionVariable((Map<String, Object>) aliasMap, MUMBLE_TUPLE_KEY);
 			boolean tupleWithSubstitution = symbolTreeHelper.isTupleWithSubstitution(aliasMap);
 
 			Map<String, Object> withItem = new HashMap<String, Object>();
@@ -2576,7 +2649,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
+		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_QUERY_KEY);
 
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.finalizeInsertScopeSymbolTable();
@@ -2679,7 +2752,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else if (symbolTreeHelper.isColumnReferenceListNode(entry)) {
 				insertColumns = entry;
 			} else if (reference == null) {
-				reference = walker.checkForSubstitutionVariable(entry, "tuple");
+				reference = walker.checkForSubstitutionVariable(entry, MUMBLE_TUPLE_KEY);
 			}
 		}
 
@@ -3474,7 +3547,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> source = (Map<String, Object>) subMap.remove("1");
-		walker.checkForSubstitutionVariable(source, "query");
+		walker.checkForSubstitutionVariable(source, MUMBLE_QUERY_KEY);
 
 		if (subMap.isEmpty()) {
 			walker.collect(ruleIndex, stackLevel, source);
@@ -3502,7 +3575,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "query");
+		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_QUERY_KEY);
 
 		walker.handleOneChild(ruleIndex);
 	}
@@ -3669,7 +3742,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Get first item, record if it is a Substitution Variable by adding the
 		// Substitution List
-		item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
+		item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), MUMBLE_PREDICAND_KEY);
 
 		// make a copy of the item AST subtree without the alias for use in the symbol table interface
 		interfaceReference.putAll(item);
@@ -3872,7 +3945,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
-				"join_extension");
+				MUMBLE_JOIN_EXTENSION_TYPE_KEY);
 
 		walker.handleOneChild(ruleIndex);
 	}
@@ -3943,25 +4016,26 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		if (subMap == null) {
-			String sourceText = recoverVariableNameFromToken(ctx.getStart());
+		if (subMap == null && ctx.getChild(0) instanceof SQLSelectParserParser.Variable_identifierContext varCtx) {
+			// Grammar-based detection: table_source_primary -> variable_identifier as_clause
+			// This matches the grammar rule directly, regardless of naming convention or child count
+			String sourceText = recoverVariableNameFromToken(varCtx.getStart());
 			String aliasText = ctx.getChildCount() >= 2 ? ctx.getChild(1).getText() : null;
-			if (sourceText != null && sourceText.startsWith("<") && sourceText.endsWith(">")) {
-				subMap = walker.makeRuleMap(ruleIndex);
+			
+			subMap = walker.makeRuleMap(ruleIndex);
 
-				Map<String, Object> substitution = new HashMap<String, Object>();
-				substitution.put(MUMBLE_NAME_KEY, sourceText);
+			Map<String, Object> substitution = new HashMap<String, Object>();
+			substitution.put(MUMBLE_NAME_KEY, sourceText);
 
-				Map<String, Object> syntheticReference = new HashMap<String, Object>();
-				syntheticReference.put(MUMBLE_SUBSTITUTION_KEY, substitution);
-				subMap.put("1", syntheticReference);
+			Map<String, Object> syntheticReference = new HashMap<String, Object>();
+			syntheticReference.put(MUMBLE_SUBSTITUTION_KEY, substitution);
+			subMap.put("1", syntheticReference);
 
-				Map<String, Object> aliasMap = new HashMap<String, Object>();
-				aliasMap.put(MUMBLE_ALIAS_KEY, aliasText);
-				subMap.put("2", aliasMap);
+			Map<String, Object> aliasMap = new HashMap<String, Object>();
+			aliasMap.put(MUMBLE_ALIAS_KEY, aliasText);
+			subMap.put("2", aliasMap);
 
-				emitInvalidVariableDiagnostic(ctx.getStart(), sourceText);
-			}
+			emitInvalidVariableDiagnostic(varCtx.getStart(), sourceText);
 		}
 		if (subMap == null) {
 			throw new IllegalStateException("Missing AST node map for table_primary at: " + ctx.getText());
@@ -3994,7 +4068,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					}
 				}
 			} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
-				item = walker.checkForSubstitutionVariable(item, "tuple");
+				item = walker.checkForSubstitutionVariable(item, MUMBLE_TUPLE_KEY);
 				item.put(MUMBLE_ALIAS_KEY, null);
 				subMap.put(MUMBLE_TABLE_KEY, item);
 				Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
@@ -4048,7 +4122,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else if (ctx.getChildCount() == 2) {
 			item = new HashMap<String, Object>();
 			Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					"tuple");
+					MUMBLE_TUPLE_KEY);
 
 			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
 			alias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
@@ -5064,7 +5138,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					"tuple");
+					MUMBLE_TUPLE_KEY);
 
 		Map<String, Object> sourceNode = new HashMap<String, Object>();
 
@@ -5103,7 +5177,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		// Get the referenced AST segment from the stack and collect any Substitution Variables in the process
 		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					"tuple");
+					MUMBLE_TUPLE_KEY);
 		
 		// allocate work variables if needed later
 
@@ -5132,8 +5206,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String name = resolveSubstitutionTableReference(substitution);
 			// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
 			Object typeObj = substitution.get(MUMBLE_TYPE_KEY);
-			String type = typeObj == null ? null : typeObj.toString();
-			if (type == null || (!MUMBLE_COLUMN_KEY.equals(type) && !MUMBLE_PREDICAND_KEY.equals(type))) {
+			String substitutionType = typeObj == null ? null : typeObj.toString();
+			if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
 				walker.ensureTableDictionaryEntry(name);
 			}
 			// Substitution Variable is ready for use
@@ -6219,6 +6293,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				tableRefKey = tableRef;
 			}
 			columnRef = subMap.remove(Integer.toString(subMap.size()));
+			if (columnRef instanceof HashMap<?, ?> columnMap) {
+				columnRef = markColumnSubstitution((HashMap<String, Object>) columnMap, MUMBLE_COLUMN_KEY);
+			}
 		} else if (ctx.name != null) {
 			if (ctx.tb_name != null) {
 				tableRef = ctx.tb_name.getText();
@@ -6234,14 +6311,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Add column to SQL AST Tree
 			columnSubTree.put(MUMBLE_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
-				// should be a substitution
-				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
-				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
-				substitutionMap.put(MUMBLE_TYPE_KEY, MUMBLE_COLUMN_KEY);
-
-				// Add reference to Substitution Variables list
-				walker.substitutionsMap.put((String) substitutionMap.get("name"), MUMBLE_COLUMN_KEY);
-
 				columnSubTree.putAll((HashMap<String, Object>) columnRef);
 			} else {
 				columnSubTree.put(MUMBLE_NAME_KEY, columnRef);
@@ -6272,12 +6341,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		String tableRefKey = MUMBLE_UNKNOWN_KEY;
 
 		if (ctx.substitution != null) {
+			// this is a column variable
 			if (ctx.tb_name != null) {
 				tableRef = ctx.tb_name.getText();
 				tableRefKey = tableRef;
 			}
 			columnRef = subMap.remove(Integer.toString(subMap.size()));
+			if (columnRef instanceof HashMap<?, ?> columnMap) {
+				columnRef = markColumnSubstitution((HashMap<String, Object>) columnMap, MUMBLE_COLUMN_KEY);
+			}
 		} else if (ctx.name != null) {
+				// this is a regular column reference
 			if (ctx.tb_name != null) {
 				tableRef = ctx.tb_name.getText();
 				tableRefKey = tableRef;
@@ -6292,14 +6366,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Add column to SQL AST Tree
 			columnSubTree.put(MUMBLE_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
-				// should be a substitution
-				HashMap<String, Object> columnMap = (HashMap<String, Object>) columnRef;
-				HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
-				substitutionMap.put(MUMBLE_TYPE_KEY, MUMBLE_COLUMN_KEY);
-
-				// Add reference to Substitution Variables list
-				walker.substitutionsMap.put((String) substitutionMap.get("name"), MUMBLE_COLUMN_KEY);
-
 				columnSubTree.putAll((HashMap<String, Object>) columnRef);
 			} else {
 				columnSubTree.put(MUMBLE_NAME_KEY, columnRef);
@@ -6313,6 +6379,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> markColumnSubstitution(HashMap<String, Object> columnMap, String type) {
+		if (columnMap == null) {
+			return null;
+		}
+
+		HashMap<String, Object> substitutionMap = (HashMap<String, Object>) columnMap.get(MUMBLE_SUBSTITUTION_KEY);
+		if (substitutionMap != null) {
+			substitutionMap.put(MUMBLE_TYPE_KEY, type);
+			walker.substitutionsMap.put((String) substitutionMap.get("name"), type);
+		}
+		return columnMap;
 	}
 
 	private String buildJsonPath(List<SQLSelectParserParser.IdentifierContext> pathNodes) {
@@ -6368,7 +6448,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "predicand");
+		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_PREDICAND_KEY);
 
 
 		if (item.containsKey(MUMBLE_SELECT_KEY)) {
@@ -6675,7 +6755,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.put(MUMBLE_FUNCTION_NAME_KEY, function);
 				item.put(MUMBLE_TYPE_KEY, function.toUpperCase());
 				// ITEM 104: Set the substitution type if the cast statement has a variable
-				item.put(MUMBLE_VALUE_KEY, walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), "predicand"));
+				item.put(MUMBLE_VALUE_KEY, walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), MUMBLE_PREDICAND_KEY));
 				item.put(MUMBLE_DATATYPE_KEY, subMap.remove("3"));
 				subMap.put(MUMBLE_FUNCTION_KEY, item);
 			} else {
@@ -7658,8 +7738,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
 			if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 				HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
-				hold.put(MUMBLE_TYPE_KEY, "predicand");
-				walker.substitutionsMap.put((String) hold.get("name"), "predicand");
+				hold.put(MUMBLE_TYPE_KEY, MUMBLE_PREDICAND_KEY);
+				walker.substitutionsMap.put((String) hold.get("name"), MUMBLE_PREDICAND_KEY);
 			}
 			HashMap<String, Object> hold = new HashMap<String, Object>();
 			hold.put(MUMBLE_LEFT_FACTOR_KEY, item);
@@ -7795,12 +7875,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			else
 				condition.put(MUMBLE_OPERATOR_KEY, ((HashMap<String, String>) operator).get("1"));
 
-			Map<String, Object> left = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					"predicand");
+				Map<String, Object> left = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+						MUMBLE_PREDICAND_KEY);
 			condition.put(MUMBLE_LEFT_FACTOR_KEY, left);
 
-			Map<String, Object> right = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
-					"predicand");
+				Map<String, Object> right = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
+						MUMBLE_PREDICAND_KEY);
 			condition.put(MUMBLE_RIGHT_FACTOR_KEY, right);
 
 			subMap.put(MUMBLE_CONDITION_KEY, condition);
@@ -7851,7 +7931,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
 				}
 			else {
-				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
+				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, MUMBLE_PREDICAND_KEY);
 				condition.put(itemKey, operator);
 				itemKey = MUMBLE_RANGE_END_KEY;
 				condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
@@ -7864,7 +7944,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			else {
 				if (!condition.containsKey(MUMBLE_SYMMETRY_KEY))
 					condition.put(MUMBLE_SYMMETRY_KEY, null);
-				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, "predicand");
+				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, MUMBLE_PREDICAND_KEY);
 				condition.put(itemKey, operator);
 				if (itemKey.equals(MUMBLE_RANGE_BEGIN_KEY))
 					itemKey = MUMBLE_RANGE_END_KEY;
@@ -7995,7 +8075,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "in_list");
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_IN_LIST_KEY);
 
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.exitPredicateSubqueryFrame(
@@ -8072,7 +8152,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_TUPLE_KEY);
 
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.exitPredicateSubqueryFrame(
@@ -8093,7 +8173,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), "tuple");
+		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_TUPLE_KEY);
 
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.exitPredicateSubqueryFrame(
@@ -8478,7 +8558,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() == 1) {
 				// Get first item, record if it is a Substitution Variable by
 				// adding the Substitution List
-				valueExpression = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), "predicand");
+				valueExpression = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), MUMBLE_PREDICAND_KEY);
 
 				// Get Value Expression entry
 				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(MUMBLE_COLUMN_KEY);
@@ -8536,7 +8616,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Get first item, record if it is a Substitution Variable by
 			// adding the Substitution List - This captures when the entire
 			// condition is a Substitution Variable alone
-			subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, "predicand");
+				subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_PREDICAND_KEY);
 
 			// NOW handle the child
 			walker.handleOneChild(ruleIndex);
@@ -8549,7 +8629,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Get first item, record if it is a Substitution Variable by
 			// adding the Substitution List - This captures when the entire
 			// condition is a Substitution Variable alone
-			subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, "predicand");
+				subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_PREDICAND_KEY);
 
 			// NOW handle the child
 			walker.handleOneChild(ruleIndex);
@@ -8680,7 +8760,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Get first item, record if it is a Substitution Variable by
 		// adding the Substitution List
 		Map<String, Object> substitutionPredicand = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
-				"predicand");
+				MUMBLE_PREDICAND_KEY);
 
 		walker.handleOneChild(ruleIndex);
 	}

@@ -1777,6 +1777,12 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> tableDictionaryForSymbolTable = new HashMap<String, Object>();
 		for (Map.Entry<String, Object> tableEntry : localTableCollection.entrySet()) {
 			String tableRef = tableEntry.getKey();
+			if (tableRef != null && tableRef.startsWith("<")) {
+				Object substitutionType = walker.substitutionsMap == null ? null : walker.substitutionsMap.get(tableRef);
+				if (substitutionType != null && !MUMBLE_TUPLE_KEY.equals(substitutionType.toString())) {
+					continue;
+				}
+			}
 			if (tableRef == null
 					|| tableRef.isBlank()
 					|| isQuerySourceReference(tableRef)
@@ -2171,7 +2177,7 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		Object typeObject = substitutionMap.get(MUMBLE_TYPE_KEY);
-		return "tuple".equals(typeObject);
+		return MUMBLE_TUPLE_KEY.equals(typeObject);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2969,41 +2975,47 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		ArrayList<Map<String, Object>> participants = collectSetOperationParticipantsInOrder(setOperationDefinition);
-		if (participants.size() < 2) {
-			return;
-		}
-
-		Map<String, Object> firstParticipantInterface = extractScopeInterfaceMap(participants.get(0));
-		if (firstParticipantInterface == null || firstParticipantInterface.isEmpty()) {
+		if (participants.isEmpty()) {
 			return;
 		}
 
 		ArrayList<String> outputColumnNames = extractInterfaceColumnNamesInOrder(participants.get(0));
 		if (outputColumnNames.isEmpty()) {
+			outputColumnNames = extractScopeOutputColumnNamesInSelectOrder(participants.get(0));
+		}
+		if (outputColumnNames.isEmpty()) {
 			return;
 		}
 
-		ArrayList<String> firstBranchSelectOrder = extractScopeOutputColumnNamesInSelectOrder(participants.get(0));
-
 		LinkedHashMap<String, Object> mergedInterface = new LinkedHashMap<String, Object>();
+		Object sentinelValue = hasDirectQueryParticipant(setOperationDefinition)
+				? "query_column"
+				: new ArrayList<Object>();
 		for (String outputColumnName : outputColumnNames) {
-			int selectPosition = firstBranchSelectOrder.indexOf(outputColumnName);
-			if (selectPosition < 0) {
-				selectPosition = outputColumnNames.indexOf(outputColumnName);
-			}
-			ArrayList<Object> mergedRefs = new ArrayList<Object>();
-			for (Map<String, Object> participant : participants) {
-				appendInterfaceReferenceEntries(
-						mergedRefs,
-						extractInterfaceReferenceEntriesAtPosition(participant, selectPosition));
-			}
-			// Preserve output columns even when refs are empty (e.g. literal SELECT items).
-			mergedInterface.put(outputColumnName, mergedRefs);
+			mergedInterface.put(outputColumnName, sentinelValue);
 		}
 
 		if (!mergedInterface.isEmpty()) {
 			setOperationDefinition.put(MUMBLE_INTERFACE_KEY, mergedInterface);
 		}
+	}
+
+	private boolean hasDirectQueryParticipant(Map<String, Object> setOperationDefinition) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
+			return false;
+		}
+
+		for (String key : setOperationDefinition.keySet()) {
+			if (key == null) {
+				continue;
+			}
+			String normalizedKey = key.startsWith("def_") ? key.substring("def_".length()) : key;
+			if (normalizedKey.startsWith(MUMBLE_QUERY_KEY) || normalizedKey.startsWith(MUMBLE_VALUES_KEY)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -3076,7 +3088,32 @@ public class SqlParseSymbolTreeHelper {
 	public ArrayList<String> extractScopeOutputColumnNamesInSelectOrder(Map<String, Object> scopeDefinition) {
 		Map<String, Object> interfaceMap = extractScopeInterfaceMap(scopeDefinition);
 		if (interfaceMap == null || interfaceMap.isEmpty()) {
-			return new ArrayList<String>();
+			Object queryDictionaryObj = scopeDefinition == null ? null : scopeDefinition.get(MUMBLE_QUERY_DICTIONARY_KEY);
+			if (!(queryDictionaryObj instanceof Map<?, ?> queryDictionaryMapObj) || queryDictionaryMapObj.isEmpty()) {
+				return new ArrayList<String>();
+			}
+
+			ArrayList<String> derivedColumnNames = new ArrayList<String>();
+			for (Object columnNameObj : queryDictionaryMapObj.keySet()) {
+				if (columnNameObj instanceof String columnName && !columnName.isBlank()) {
+					derivedColumnNames.add(columnName);
+				}
+			}
+			if (derivedColumnNames.isEmpty()) {
+				return derivedColumnNames;
+			}
+
+			Map<String, Object> queryDictionary = (Map<String, Object>) queryDictionaryMapObj;
+			derivedColumnNames.sort((left, right) -> {
+				long leftPosition = getEarliestQueryDictionaryTokenSortKey(queryDictionary.get(left));
+				long rightPosition = getEarliestQueryDictionaryTokenSortKey(queryDictionary.get(right));
+				int positionCompare = Long.compare(leftPosition, rightPosition);
+				if (positionCompare != 0) {
+					return positionCompare;
+				}
+				return left.compareTo(right);
+			});
+			return derivedColumnNames;
 		}
 
 		if (isSetOperationDefinition(scopeDefinition)) {
@@ -7582,6 +7619,12 @@ public class SqlParseSymbolTreeHelper {
 		boolean queryBackedSource = queryAliasSourceRef != null
 				|| walker.isNonTableQuerySourceReference(canonicalSourceRef)
 				|| isTableFunctionSourceReference(canonicalSourceRef);
+		if (!queryBackedSource && canonicalSourceRef != null && canonicalSourceRef.startsWith("<")) {
+			Object substitutionType = walker.substitutionsMap == null ? null : walker.substitutionsMap.get(canonicalSourceRef);
+			if (substitutionType == null || !MUMBLE_TUPLE_KEY.equals(substitutionType.toString())) {
+				return;
+			}
+		}
 
 		if (queryBackedSource) {
 			String querySourceRef = (queryAliasSourceRef != null && !queryAliasSourceRef.isBlank())

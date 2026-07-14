@@ -37,6 +37,7 @@
 - `SqlEventWalkerFunctionsAggregatesWindowingTests` — 4 tests (CASE expressions, aggregate contexts)
 - `SqlEventWalkerNonSqlEndpointParserTests` — 13+ tests (CASE predicand positions 1-7; window functions)
 - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` — 6+ tests (comparisons, NULL checks, ORDER BY)
+  - now-green probes: `selectListWithSubstitutions`, `withQueryFromNavigateV2StudentSubstitution`, `whereConditionComparingPredicandVariablesTest`, `whereConditionComparingPredicandVariableToNullTest`, `whereConditionComparingPredicandVariableToNotNullTest`
 - `SqlEventWalkerCastingAndTypesTests` — 2 tests (casting with variables)
 - `SqlEventWalkerLiveSampleQueriesTests` — 1 test (complex predicand extraction)
 
@@ -49,6 +50,7 @@
 
 **Coverage:**
 - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` — 7+ tests (WHERE, HAVING, QUALIFY conditions)
+  - now-green probes: `whereConditionWithSingleConditionVariableTest`, `whereConditionWithSingleColumnVariableTest`, `withQueryFromNavigateV2StudentSubstitution`
 - `SqlEventWalkerNonSqlEndpointParserTests` — 6+ tests (nested condition substitution in CASE/queries)
 
 **Action:** Continue baseline monitoring; stable
@@ -71,25 +73,14 @@
 
 ---
 
-### ⚠️ In_List Substitution Variables (type=in_list) — ~10+ Tests
-**Status:** ⚠️ PARTIAL — Core fix applied; 3 golden updates pending
+### ✅ In_List Substitution Variables (type=in_list) — ~10+ Tests
+**Status:** ✅ PASSING
 
 **Passing:**
 - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` — 6 tests (basic IN/NOT IN predicates)
 - `SqlEventWalkerNonSqlEndpointParserTests` — 2 tests (embedded IN-list)
 
-**Failing (Golden-only - 3 tests from Quality Gate Group A):**
-- `SqlEventWalkerCoreSelectFromAliasingTests::correlatedInSubqueryFirstCteStandaloneTest`
-  - **Issue:** `filters` field was `[]`; now correctly produces `[{name=t1c1, table_ref=ta}]` 
-  - **Fix:** Update golden for IN-list LHS filter collection
-- `SqlEventWalkerCoreSelectFromAliasingTests::correlatedInSubqueryNestedCteWithOuterRefTest`
-  - **Issue:** `filters` was `[]`; now correctly produces `[{name=t2, table_ref=tb}]`
-  - **Fix:** Update golden
-- `SqlEventWalkerCoreSelectFromAliasingTests::correlatedInSubqueryFinalQueryReferencesCteChainTest`
-  - **Issue:** `filters` was `[{name=q1, table_ref=fb}]`; now correctly has additional `[{name=p2, table_ref=pa}]`
-  - **Fix:** Update golden
-
-**Action:** Apply 3 golden updates from IN-list LHS filter fix (committed post-2026-07-11); rerun gate → expect GREEN
+**Action:** Continue monitoring; stable
 
 ---
 
@@ -119,9 +110,9 @@
 | **Predicand** | ~25+ | ✅ PASS | 100% | — |
 | **Condition** | ~13+ | ✅ PASS | 100% | — |
 | **Tuple** | ~20+ | ✅ PASS | 100% | — |
-| **In_List** | ~10+ | ⚠️ PARTIAL | ~80% | 3 golden updates (pending) |
+| **In_List** | ~10+ | ✅ PASS | 100% | — |
 | **Join_Extension** | ~7+ | ✅ PASS | 100% | — |
-| **TOTAL** | **~115+** | ⚠️ ~60% | ~60% | **2 categories** |
+| **TOTAL** | **~115+** | ⚠️ ~76% | ~76% | **28 exact blockers** |
 
 ---
 
@@ -129,8 +120,10 @@
 
 ### Prerequisites (before Phase 11 start)
 
+At this point, the remaining Phase 10 blockers are exactly 28 tests: Column V9-V16, INSERT I1-I10, and UPDATE U1-U10.
+
 1. ✅ **Predicand, Condition, Tuple, Join_Extension tests** — All passing (no changes needed)
-2. ⚠️ **In_List tests** — Apply 3 golden updates from IN-list LHS fix; rerun → GREEN
+2. ✅ **In_List tests** — All passing
 3. ⚠️ **Column tests** — Fix CTE-wrapped V9-V16 and complex INSERT/UPDATE I/U series
 
 ### Gate Command
@@ -151,7 +144,7 @@ mvn -Dtest=SqlEventWalkerPredicatesOperatorsSubstitutionsTests#*Variable* test
 - **115+ tests with substitution variables:** ALL PASSING
 - **No regressions** in Predicand, Condition, Tuple, Join_Extension categories
 - **Column substitution:** CTE wrapping and complex DML resolved
-- **In_List substitution:** Golden updates applied and verified
+- **In_List substitution:** Stable
 
 ---
 
@@ -161,11 +154,10 @@ mvn -Dtest=SqlEventWalkerPredicatesOperatorsSubstitutionsTests#*Variable* test
 
 - [ ] Review Phase 10 section in `symbol-table-resolution-consolidation-worklist.md`
 - [ ] Inventory confirmed: 115+ substitution variable tests catalogued by type
-- [ ] Current baseline: ~60% passing (~70 tests), 4 types fully passing, 2 types partially passing
+- [ ] Current baseline: ~76% passing, 5 types fully passing, 1 type partially passing, 28 exact blockers remaining
 
 ### Short-term (Before Phase 11)
 
-- [ ] Apply 3 In_List golden updates for Group A tests
 - [ ] Review Phase 7 backlog for Column substitution failures (V9-V16, INSERT/UPDATE)
 - [ ] Fix CTE def_queryN wrapping for external tuple token materialization
 - [ ] Fix INSERT/UPDATE I/U series query-dict assignment token tracking

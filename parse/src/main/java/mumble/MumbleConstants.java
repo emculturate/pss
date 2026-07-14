@@ -152,6 +152,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_SELECT_DIRECTION_KEY = "select_from";
     public static final String MUMBLE_SELECT_KEY = "select";
     public static final String MUMBLE_SET_KEY = "set";
+    public static final String MUMBLE_TUPLE_KEY = SQLParserEndPoints.getLowerCaseValueForValue(SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY);
+    public static final String MUMBLE_JOIN_EXTENSION_TYPE_KEY = SQLParserEndPoints.getLowerCaseValueForValue(SQLParserEndPoints.SQLPARSER_JOIN_EXTENSION_TREE_KEY);
     public static final String MUMBLE_SORT_ORDER_KEY = "sort_order";
     public static final String MUMBLE_SUBSTITUTION_KEY = "substitution";
     public static final String MUMBLE_SYMMETRY_KEY = "symmetry";

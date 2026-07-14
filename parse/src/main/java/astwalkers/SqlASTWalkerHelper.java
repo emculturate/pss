@@ -338,6 +338,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		for (Map.Entry<String, Object> tableEntry : localTableDictionary.entrySet()) {
 			String tableRef = tableEntry.getKey();
+			if (!isTupleSubstitutionReference(tableRef) && tableRef != null && tableRef.startsWith("<")) {
+				continue;
+			}
 			Object incomingColumnsObject = tableEntry.getValue();
 			if (!(incomingColumnsObject instanceof Map<?, ?> incomingColumns)) {
 				continue;
@@ -2499,6 +2502,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		HashMap<String, Object> tableDictionary = null;
 		if (hold.size() > 0) {
 			for (String tab_ref : hold.keySet()) {
+				if (!isTupleSubstitutionReference(tab_ref) && tab_ref != null && tab_ref.startsWith("<")) {
+					continue;
+				}
 				if ((tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
 					|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
 					|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))

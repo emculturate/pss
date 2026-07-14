@@ -52,7 +52,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - Remaining `correlated*` tests **not in gate** (7 as of Jul 2026): last-CTE / final-query / IN-EXISTS middle-CTE chain cases still pending Phase 10 `context_list` review
 - `SqlEventWalkerCoreSelectFromAliasingTests` beyond gate canaries (~61 stale goldens — see Phase 7 backlog table below)
 
-**Gate status (Jul 2026, post IN-list fix baseline 2026-07-11):** **93/116 passing** — 23 failures. IN-list LHS filter collection fixed (`isPredicateSubqueryBoundarySubtree` no longer short-circuits on `in_list` container; 2 Group E tests green). 3 golden updates for IN-list filter change still outstanding (Group A). See **Current gate failures** section below.
+**Gate status (Jul 2026, post IN-list Group A green):** **96/116 passing** — 20 failures. IN-list LHS filter collection fixed (`isPredicateSubqueryBoundarySubtree` no longer short-circuits on `in_list` container; 2 Group E tests green). See **Current gate failures** section below.
 
 ---
 
@@ -216,7 +216,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **7** uniform query scope finalization | ⚠️ Regressed | ~70% | `finalizeQueryScopeSymbolTable` aligned for SELECT/CTE; **HAVING/GROUP BY token tracking (Groups F, G) broke**; outer WHERE filter collection with scalar SELECT-list subqueries broken (Group E) |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
 | **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
-| **10** Substitution Variable Quality Gate Inventory | ⚠️ In Progress | ~60% | **New Phase (inserted Jul 2026).** Comprehensive quality gate for all substitution variable types. Target: 115+ tests covering Column, Predicand, Condition, Tuple, In_List, Join_Extension variables. Column vars (CTE-wrapped V9-V16) and complex UPDATE/INSERT I1-I10/U1-U10 currently regressed; In_List golden updates pending. Completion gate before Phase 11. |
+| **10** Substitution Variable Quality Gate Inventory | ⚠️ In Progress | ~76% | **New Phase (inserted Jul 2026).** Comprehensive quality gate for all substitution variable types. Target: 115+ tests covering Column, Predicand, Condition, Tuple, In_List, Join_Extension variables. Predicand, Condition, Tuple, Join_Extension, and In_List are green; 28 exact blockers remain (Column V9-V16 + INSERT/UPDATE I1-I10/U1-U10). Completion gate before Phase 11. |
 | **11** downward `context_list` resolution | ❌ Not started | 0% | *(Formerly Phase 10)* `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
 | **12** DML parity + fallback retirement | ⚠️ Regressed | ~10% | *(Formerly Phase 11)* **All 14 UPDATE gate tests now failing (Groups A–D)**; V9 + V13 were green on prior stale bytecode, now broken on clean rebuild; INSERT V7 also failing (Group H) |
 
@@ -297,8 +297,8 @@ Empty global query dict or alias token where column token expected: `simpleVaria
   - `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`: 6 basic IN/NOT IN tests
   - `SqlEventWalkerNonSqlEndpointParserTests`: 2 embedded IN-list tests
 - **Blockers:**
-  - 3 Group A tests (`correlatedInSubqueryFirstCteStandaloneTest`, `correlatedInSubqueryNestedCteWithOuterRefTest`, `correlatedInSubqueryFinalQueryReferencesCteChainTest`): `filters` golden not yet updated post-IN-list LHS fix
-- **Action:** Apply 3 golden updates + re-run gate
+  - Group A IN-list tests are green: `correlatedInSubqueryFirstCteStandaloneTest`, `correlatedInSubqueryNestedCteWithOuterRefTest`, `correlatedInSubqueryFinalQueryReferencesCteChainTest`
+- **Action:** Continue baseline monitoring; stable
 
 #### 6. **Join_Extension Substitution Variables** (type=join_extension)
 - **Definition:** Variables for join extensions or extension-specific conditions (e.g., `<join_ext_cond>`).
@@ -309,6 +309,25 @@ Empty global query dict or alias token where column token expected: `simpleVaria
   - `SqlEventWalkerJoinsAndTableResolutionTests`: 3 basic join tests
 - **Action:** Continue monitoring; baseline stable
 
+### Now-green probes in `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`
+
+| Test | Variable type | Clause type | Status |
+|------|---------------|-------------|--------|
+| `selectListWithSubstitutions` | predicand, condition, column, tuple | SELECT list + FROM + JOIN/WHERE | ✅ GREEN |
+| `withQueryFromNavigateV2StudentSubstitution` | predicand, condition, column, tuple | WITH + SELECT + JOIN + WHERE | ✅ GREEN |
+| `whereConditionWithSingleConditionVariableTest` | condition | WHERE | ✅ GREEN |
+| `whereConditionWithSingleColumnVariableTest` | column | WHERE | ✅ GREEN |
+| `whereConditionComparingPredicandVariablesTest` | predicand | WHERE | ✅ GREEN |
+| `whereConditionComparingPredicandVariableToNullTest` | predicand | WHERE | ✅ GREEN |
+| `whereConditionComparingPredicandVariableToNotNullTest` | predicand | WHERE | ✅ GREEN |
+
+### Remaining Phase 10 blockers
+
+| Family | Exact tests remaining |
+|--------|------------------------|
+| Column CTE V9-V16 | `getSubstitutionColumnVariableV9CteWrappedWhereVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV10CteWrappedGroupByVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV11CteWrappedOrderByVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV12CteWrappedHavingVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV13CteWrappedQualifyVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV14CteWrappedSecondJoinOnVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV15CteWrappedSelfUnionVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV16CteWrappedSelfIntersectionVariantWithJoinOnSelectColumnTest` |
+| INSERT complex I1-I10 | `insertComplexSubstitutionI1WithCteGroupByHaving`, `insertComplexSubstitutionI2SubqueryUnionWhereSubstitutions`, `insertComplexSubstitutionI3WithCteIntersectOrderBySubstitution`, `insertComplexSubstitutionI4NestedWithInCteBody`, `insertComplexSubstitutionI5WithCteQualifyWindowSubstitution`, `insertComplexSubstitutionI6SubqueryJoinOnColumnSubstitution`, `insertComplexSubstitutionI7ChainedCteReferences`, `insertComplexSubstitutionI8UnionIntersectNestedSubquery`, `insertComplexSubstitutionI9WithCteSelfUnionBranches`, `insertComplexSubstitutionI10SubqueryGroupByHavingQualifyCombined` |
+| UPDATE complex U1-U10 | `updateComplexSubstitutionU1WithCteGroupByHaving`, `updateComplexSubstitutionU2SubqueryUnionWhereSubstitutions`, `updateComplexSubstitutionU3WithCteIntersectOrderBySubstitution`, `updateComplexSubstitutionU4NestedWithInCteBody`, `updateComplexSubstitutionU5WithCteQualifyWindowSubstitution`, `updateComplexSubstitutionU6SubqueryJoinOnColumnSubstitution`, `updateComplexSubstitutionU7ChainedCteReferences`, `updateComplexSubstitutionU8UnionIntersectNestedSubquery`, `updateComplexSubstitutionU9WithCteSelfUnionBranches`, `updateComplexSubstitutionU10SubqueryGroupByHavingQualifyCombined` |
 ### Pass/Fail Summary by Variable Type
 
 | Type | Count | Status | Priority | Action |
@@ -317,9 +336,9 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **Predicand** | ~25 | ✅ PASS | LOW | Monitor; treat as baseline |
 | **Condition** | ~13 | ✅ PASS | LOW | Monitor; treat as baseline |
 | **Tuple** | ~20 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **In_List** | ~10 | ⚠️ PARTIAL | **MEDIUM** | Apply 3 golden updates; rerun gate |
+| **In_List** | ~10 | ✅ PASS | LOW | Monitor; treat as baseline |
 | **Join_Extension** | ~7 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **TOTAL** | **~115+** | ⚠️ ~60% | — | Complete Phase 10 gate before Phase 11 |
+| **TOTAL** | **~115+** | ⚠️ ~76% | — | 28 exact blockers remain; complete Phase 10 gate before Phase 11 |
 
 ### Phase 10 Completion Criteria
 

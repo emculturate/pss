@@ -129,10 +129,8 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@5,28:28='*',<291>,2:9]], col2=[[@11,52:55='col2',<381>,3:16]], col1=[[@9,46:49='col1',<381>,3:10]]}, query1={*=[[@5,28:28='*',<291>,2:9]]}, query2={col1=[[@1,8:11='col1',<381>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertTrue("Symbol Table should contain query alias mapping T3=query0",
-				extractor.getSymbolTable().toString().contains("T3=query0"));
-		Assert.assertTrue("Symbol Table should keep query1 filter with qualified reference",
-				extractor.getSymbolTable().toString().contains("filters=[{name=col3, table_ref=T3}]"));
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={col1=[[@1,8:11='col1',<381>,1:8]]}, def_query1={query_dictionary={*=[[@5,28:28='*',<291>,2:9]], col1=[[@1,8:11='col1',<381>,1:8]]}, def_query0={query_dictionary={*=[[@9,46:46='*',<291>,3:10]]}, table_dictionary={third={*=[[@9,46:46='*',<291>,3:10]]}}, interface={*=[{name=*, table_ref=*}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={T3=query0}}, interface={col1=[{name=col1, table_ref=query1}]}, table_alias={F4=query1}}}",
+				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
 		assertFatalDiagnosticAtPosition(snippet, "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",

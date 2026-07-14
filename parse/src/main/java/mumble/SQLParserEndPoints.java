@@ -3,6 +3,7 @@ package mumble;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class SQLParserEndPoints {
@@ -79,5 +80,24 @@ public class SQLParserEndPoints {
      */
     public static String getValueForName(String name) {
         return NAME_TO_VALUE_MAP.get(name);
+    }
+
+    /**
+     * Gets the lower-case text value for a given constant name.
+     * @param name The constant name to look up
+     * @return The lower-case value of the constant, or null if not found
+     */
+    public static String getLowerCaseValueForName(String name) {
+        String value = NAME_TO_VALUE_MAP.get(name);
+        return value == null ? null : value.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Gets the lower-case text value for a given constant value.
+     * @param value The constant value to normalize
+     * @return The lower-case value, or null if value is null
+     */
+    public static String getLowerCaseValueForValue(String value) {
+        return value == null ? null : value.toLowerCase(Locale.ROOT);
     }
 }
