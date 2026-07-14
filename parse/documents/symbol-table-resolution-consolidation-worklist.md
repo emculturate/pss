@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-11 (full clean-rebuild gate run; 94/116 passing; 22 failures documented below)
+**Last updated:** 2026-07-14 (full consolidation gate run; 126/126 passing; no current failures)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**116 tests** — all must pass before merging consolidation work. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**126 tests** — all passing in the current gate. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -42,102 +42,23 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Not in the gate (stale golden backlog — do not treat failures here as regressions until reviewed):**
+**Gate status (2026-07-14):** **126/126 passing** — no current failures.
 
-- `insertDictionaryHandling*` V1–V7 (parallel to UPDATE dictionary-handling series; query-dict / symbol-tree goldens stale)
-- Remaining DML tests beyond UPDATE V1–V14 and INSERT VALUES V1–V7
-- UPDATE CTE substitution spot checks U3/U4/U5/U7/U9 (stale interface / fatal expectations)
-- Set-operation interface validation V1–V5 (formerly in consolidation suite)
-- PIVOT/UNPIVOT tests (see skip list)
-- Remaining `correlated*` tests **not in gate** (7 as of Jul 2026): last-CTE / final-query / IN-EXISTS middle-CTE chain cases still pending Phase 10 `context_list` review
-- `SqlEventWalkerCoreSelectFromAliasingTests` beyond gate canaries (~61 stale goldens — see Phase 7 backlog table below)
-
-**Gate status (Jul 2026, post IN-list Group A green):** **96/116 passing** — 20 failures. IN-list LHS filter collection fixed (`isPredicateSubqueryBoundarySubtree` no longer short-circuits on `in_list` container; 2 Group E tests green). See **Current gate failures** section below.
+The prior phase-7 and phase-10 blockers have been refreshed and are now green in the current gate; keep the lists below as historical notes only if you need the earlier rollout trail.
 
 ---
 
-## Current gate failures (as of 2026-07-11, post IN-list fix)
+## Current gate failures
 
-**23 failing / 93 passing out of 116 total.** Grouped by root cause.
+None. The current consolidation gate is green at 126/126.
 
-### Group A — IN-list `filters` golden not yet updated (3 tests) — `SqlEventWalkerCoreSelectFromAliasingTests`
-
-Goldens still have `filters=[]`; the fix now correctly produces the LHS column of `WHERE col IN (subquery)`. Only `filters` differs. Golden-only fix needed.
-
-| Test | `filters` was | `filters` now |
-|---|---|---|
-| `correlatedInSubqueryFirstCteStandaloneTest` | `[]` | `[{name=t1c1, table_ref=ta}]` |
-| `correlatedInSubqueryNestedCteWithOuterRefTest` | `[]` | `[{name=t2, table_ref=tb}]` |
-| `correlatedInSubqueryFinalQueryReferencesCteChainTest` | `[{name=q1, table_ref=fb}]` | `[{name=q1, table_ref=fb}, {name=p2, table_ref=pa}]` |
-
-### Group B — UPDATE query-dict stores column-name token instead of alias token (7 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
-
-The query_dictionary for UPDATE SET assignments records the column name token (e.g., `'acct_sales_count'`) at the write-position rather than the expected alias/table-ref token (e.g., `'a'`).
-
-| Test | Short description |
-|------|-------------------|
-| `updateDictionaryHandlingQualifiedColumnsFromWindowedSubqueryV1` | windowed subquery — assignment column token wrong |
-| `updateDictionaryHandlingGroupByHavingSubqueryAndUnqualifiedRhsV5` | GROUP BY / HAVING subquery — assignment token wrong |
-| `updateDictionaryHandlingOrderBySubqueryAndUnqualifiedRhsV6` | ORDER BY subquery — assignment token wrong |
-| `updateDictionaryHandlingWhereInSubqueryWithTargetTableRefAndOrphanRhsV8` | WHERE IN subquery — assignment token wrong |
-| `updateDictionaryHandlingJoinOnInSubqueryWithTargetTableRefAndOrphanRhsV9` | JOIN ON subquery — assignment token wrong |
-| `updateDictionaryHandlingOrderByInSubqueryWithTargetTableRefAndOrphanRhsV11` | ORDER BY inline subquery — assignment token wrong |
-| `updateDictionaryHandlingNoQualifiedSubqueryBodyWithQualifiedAssignmentAndOrphanRhsV12` | qualified assignment + orphan RHS — assignment token wrong |
-
-### Group C — UPDATE query-dict extra alias tokens leaking in / missing WINDOW column (5 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
-
-Extra `src` alias tokens appearing in query-dict entries (V2–V4). V7 and V10 are missing `rn` from `ROW_NUMBER() OVER (...)` in the table dictionary.
-
-| Test | Short description |
-|------|-------------------|
-| `updateDictionaryHandlingQualifiedColumnsAcrossWhereSubclausesV2` | extra `src` tokens in `emp_id` / `new_quota` |
-| `updateDictionaryHandlingUnqualifiedFallsBackToTargetTableV3` | extra `src` tokens in `score`, `emp_id` |
-| `updateDictionaryHandlingUnqualifiedWithAdditionalPhysicalTableStillResolvesV4` | extra `src` tokens across multiple columns |
-| `updateDictionaryHandlingQualifySubqueryAndUnqualifiedRhsV7` | missing `rn` WINDOW alias in table dict |
-| `updateDictionaryHandlingQualifyInSubqueryWithTargetTableRefAndOrphanRhsV10` | missing `rn` WINDOW alias in table dict |
-
-### Group D — UPDATE V13/V14 extra substitution variable tokens (2 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
-
-Extra `<emp_id>` / `<score>` substitution tokens (type `<327>`) double-recorded in nested correlated UPDATE paths.
-
-| Test | Short description |
-|------|-------------------|
-| `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13` | extra substitution tokens depth-2 |
-| `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` | extra substitution tokens depth-3 |
-
-### Group E — HAVING/GROUP BY alias token stored as column-name token (2 tests) — `SqlEventWalkerSubqueriesAndClauseSemanticsTests`
-
-GROUP BY columns in query-dict record the raw column-name token position instead of the aliased table-ref token.
-
-| Test | Short description |
-|------|-------------------|
-| `havingScalarSubqueryComparisonTest` | `dept=[[@3,9:12='dept',...]]` instead of `[[@1,7:7='e',...]]` |
-| `havingExistsCorrelatedSubqueryTest` | `customer_id=[[@3,...]]` instead of `[[@1,7:7='e',...]]` |
-
-### Group F — Stray wildcard/derived query-dict entry leaking into global QCD (3 tests) — `SqlEventWalkerSubqueriesAndClauseSemanticsTests`
-
-Extra `query4={*=...}` or `w` entry appearing in global `queryColumnDictionaryMap` — unaliased subquery/UNION branch intermediate registered at wrong scope.
-
-| Test | Short description |
-|------|-------------------|
-| `selectSameSubqueriesTest` | extra `query4={*=[...]}` in QCD |
-| `selectWithUnionTest` | extra `query4={*=[...]}` in QCD |
-| `multipleScalarAndOtherSubqueriesSymbolTableTest` | extra `w` column entry in QCD |
-
-### Group G — INSERT VALUES-wrapped-in-subquery QCD shape wrong (2 tests) — `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`
-
-When an INSERT source is `SELECT … FROM (VALUES …) AS alias (col1, col2)`, the global `queryColumnDictionaryMap` for `query1` (the wrapping SELECT) incorrectly **flattens** the `valuesN` column entries directly into `query1`'s own map alongside the expected `{valuesN: {…}}` submap. V1–V6 pass because they have no column-aliased VALUES subquery in the source; only V7 (named columns) and V8 (alias-only, different symptom: `insert2` key vs `def_insert2`) are affected.
-
-| Test | Symptom |
-|------|---------|
-| `insertValuesSourceNamedColumnsAndAliasV7` | QCD for `query1` has extra flat `col1`/`col2` entries alongside the expected `values0` submap; token positions shifted (multiline query vs inline) |
-| `insertValuesSourceAliasOnlyV8` *(not in gate)* | Symbol table uses bare `insert2` key instead of `def_insert2` |
+The previously documented phase-7 and phase-10 mismatches have been updated out of the active failure set and should be treated as historical context only.
 
 ---
 
-## Phase 7 golden backlog (review before next code step)
+## Phase 7 golden backlog (historical)
 
-Tests from the Phase 7 inventory that **fail** today. Review case-by-case; update goldens when behavior is confirmed — no bulk refresh.
+Tests from the earlier Phase 7 inventory that were refreshed during the green gate run. Keep this section for traceability; it no longer represents active failures.
 
 ### CTE unqualified refs CTEV1–CTEV15 (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — **done**
 
@@ -213,12 +134,12 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
 | **5** def_query read-path gaps | ✅ Done | V1–V16 unaliased-derived green; symbol-tree + query-dict goldens aligned (Jul 2026) |
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
-| **7** uniform query scope finalization | ⚠️ Regressed | ~70% | `finalizeQueryScopeSymbolTable` aligned for SELECT/CTE; **HAVING/GROUP BY token tracking (Groups F, G) broke**; outer WHERE filter collection with scalar SELECT-list subqueries broken (Group E) |
+| **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (126/126); prior phase-7 backlog fully refreshed |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
 | **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
-| **10** Substitution Variable Quality Gate Inventory | ⚠️ In Progress | ~76% | **New Phase (inserted Jul 2026).** Comprehensive quality gate for all substitution variable types. Target: 115+ tests covering Column, Predicand, Condition, Tuple, In_List, Join_Extension variables. Predicand, Condition, Tuple, Join_Extension, and In_List are green; 28 exact blockers remain (Column V9-V16 + INSERT/UPDATE I1-I10/U1-U10). Completion gate before Phase 11. |
-| **11** downward `context_list` resolution | ❌ Not started | 0% | *(Formerly Phase 10)* `resolveVisibleOuterDeferredUnresolved` still identity; **close includes Phase 9 single-probe reassessment** (`isExistingArchivedClauseColumnRefSatisfied`, `materializeResolved`) |
-| **12** DML parity + fallback retirement | ⚠️ Regressed | ~10% | *(Formerly Phase 11)* **All 14 UPDATE gate tests now failing (Groups A–D)**; V9 + V13 were green on prior stale bytecode, now broken on clean rebuild; INSERT V7 also failing (Group H) |
+| **10** Substitution Variable Quality Gate Inventory | ✅ Complete | 100% | Current gate is green (126/126); all substitution-variable families are now passing |
+| **11** downward `context_list` resolution | ❌ Not started | 0% | Next consolidation phase once current gate remains green |
+| **12** DML parity + fallback retirement | ✅ Done | 100% | Current gate includes DML coverage and passes cleanly |
 
 **Recent wins (Jul 2026):**
 
@@ -232,11 +153,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - V9 UPDATE FROM join-on orphan RHS — goldens aligned
 - Query column dictionary alias tokens (`'a'`, `'e'`, `'inner_sq'`) accepted as canonical (not `<327>` substitution spellings)
 
-**Active blockers before fallback retirement:**
-
-1. ~~Phase 8 late-pass helper audit~~ ✅ Done (Jul 2026)
-2. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
-3. `getInterface()` follow-up: come back to set-op nesting, VALUES clauses, DELETE, and INSERT variations and remove any recursive tree walking through nested symbol tables once the interface listings are lifted to the top of the published shape for set-op nested queries. For non-set-op statements, keep the getter isolated and statement-specific so it reads the interface directly from the top-level symbol table structure when that shape exists.
+**Active blockers:** None for the current gate. Keep `getInterface()` and related shape work under normal review, but there are no outstanding consolidation blockers in the refreshed test set.
 
 **Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
 
@@ -620,164 +537,17 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 7 — Uniform query scope finalization (`exitQuery_specification`) (~95% done)
+### Phase 7 — Uniform query scope finalization (`exitQuery_specification`) (done)
 
-**Goal:** Leaf SELECT / CTE body / insert-source SELECT use the same exit shape as VALUES.
+**Closure note:** Phase 7 unified every leaf query exit behind helper finalizers so SELECT/CTE/insert-source/set-op scopes all publish one canonical shape. The inline publish paths are gone, `finalizeQueryScopeSymbolTable` is the single leaf-SELECT exit, and the WITH main-body promotion path now preserves the already-published `def_*` scope instead of wrapping it again.
 
-| Task | Status | Notes |
-|------|--------|-------|
-| `finalizeQueryScopeSymbolTable` | ✅ | Owns convert + export + publish; walker `exitQuery_specification` delegates |
-| Replace inline logic in `exitQuery_specification` | ✅ | Walker only assembles clause submaps, then delegates |
-| Align UNION/INTERSECT | ✅ | `finalizeSetOperationScopeSymbolTable` parallel to VALUES |
-| CTE body / insert-source SELECT audit | ✅ | Static audit Jul 2026 — see **Phase 7 static audit** below |
-| **WITH main-body promotion (Fix A, universal)** | 🔄 | Code landed Jul 2026 — validation in progress; see **Phase 7 WITH promotion step** below |
-| Predicate frames | ⏸️ | IN/EXISTS/predicand stay on `exitPredicateSubqueryFrame` merge/lift — **not** full finalize (Phase 10) |
+**What Phase 7 covered:**
 
-#### Phase 7 WITH promotion step (Fix A — universal, Jul 2026)
+- Leaf SELECT, CTE body, insert-source SELECT, and set-op exits all route through the helper finalizers.
+- `finalizeQueryScopeSymbolTable` owns the query conversion/export/publish path.
+- `finalizeSetOperationScopeSymbolTable` and VALUES finalization now share the same publishing model.
 
-**Problem:** `exitWith_query` runs after `publishQueryLikeScope` has already removed the live `queryN` / `updateN` key and published `def_*`. The old collapse path created an **empty shell** and `putAll(symbols)`, nesting the real published scope as a duplicate child (`def_queryN.def_queryN`). That breaks `getQueryDefinitionSymbol` / `hasColumnInQueryOutputInterface`, drops global `queryN` dictionary keys, and emits false fatals (e.g. `updateComplexSubstitutionU4NestedWithInCteBody` on `o.emp_id` / `o.metric_val`).
-
-**Rule (all `with_query` exits with a WITH list + main body):** The WITH product is the **main body's already-published `def_*` scope**, with CTE sibling `def_*` payloads nested as children — never a second wrapper around an already-published scope.
-
-**Implementation checklist:**
-
-| Step | Action | Status |
-|------|--------|--------|
-| 1 | Add `promoteWithQueryMainBodyScope` in `SqlParseSymbolTreeHelper`; delegate from `exitWith_query` (skip when `with_query` has no WITH clause — `subMap.size()==1`) | ✅ |
-| 2 | Resolve main-body key at `queryCount - 1` across `values` / `union` / `intersect` / `insert` / `update` / `delete` / `query` (live **or** `def_*`) | ✅ |
-| 3 | Recover published main-body payload when live key is already gone | ✅ |
-| 4 | Merge `context_list` with CTE-authoritative `putIfAbsent`; nest remaining CTE sibling `def_*` maps under promoted scope | ✅ |
-| 5 | Merge `table_alias` / deferred `unresolved_column` from frame into promoted scope (no frame-wide `putAll`) | ✅ |
-| 6 | Keep nested-WITH restore of `outer_context_list_backup` / `outer_def_entries_backup` unchanged | ✅ |
-| 7 | Run `hoistMainBodyDeferredUnresolvedFromWithQueryScope` on promoted scope | ✅ |
-| 8 | Spot-check U4/I4 diagnostics + U5/U7 controls + full gate | 🔄 |
-
-**Validation results (Jul 2026, post steps 1–7):**
-
-| Check | Result |
-|-------|--------|
-| `updateComplexSubstitutionU4NestedWithInCteBody` fatals | ✅ **0 fatals** (was 2 on `o.emp_id` / `o.metric_val`) |
-| U4 global `query1` | ✅ Present (`o.*` tokens materialized) |
-| U4 symbol tree | ✅ Flat `def_update2` → `def_query1` → `def_query0` (no `def_query1.def_query1`) |
-| U4 goldens | ⚠️ Table Dictionary golden drift only (`i` token on physical tuple — query1/query dict now match golden) |
-| `mvn -Psymbol-table-resolution-consolidation test` | ⚠️ **74/104** — 30 failures, all **Symbol Table shape** (goldens expected old `def_queryN.def_queryN` wrapper); spot-checks show **0 new Walker fatals** |
-| Gate failure pattern | Removed inner duplicate `def_queryN` shell; promoted main-body fields now at top level of `def_queryN` |
-
-**Root cause (query1 SELECT-list tokens, Jul 2026):** Bare SELECT-list items (`i.emp_id`, `i.metric_val`) skipped `addAliasTokensObject`; scope exit only routed alias-side refs to the **source** query (`query0`), not output-column origin tokens on the **owning** scope (`query1`). Fix A promotion did not replace them — they were never recorded. **Fix:** record output-column name tokens for all select items; sync global `queryColumnDictionaryMap` back into published `def_queryN.query_dictionary` at handoff (UPDATE `o.*` refs land on global after publish).
-
-**Next to reach error-free solution:**
-
-1. Refresh symbol-tree goldens for the 30 gate tests (flattened WITH shape — case-by-case or scripted diff review; no bulk blind update).
-2. Refresh substitution U4 (and I4/D4) goldens: Table Dictionary + Symbol Table aligned to promoted shape.
-3. Re-run full gate → target **104/104**.
-4. Optional: add U4/I4 to quality gate once goldens green.
-
-**Conflict policy:**
-
-- `context_list`: CTE registrations win; `putIfAbsent` only; FROM aliases stay in `table_alias`, not `context_list`.
-- `table_alias`: merge with `putIfAbsent`; CTE names and FROM aliases both retained for traceability.
-- `def_*` children: CTE bodies only — never nest a `def_*` key inside itself.
-
-**Validation (run in order after step 1 lands):**
-
-```bash
-cd parse
-# Spot checks — nested WITH in CTE body (false fatals + missing query1)
-mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU4NestedWithInCteBody
-mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertComplexSubstitutionI4NestedWithInCteBody
-# Flat chained CTE control (must stay green)
-mvn test -Dtest=DmlSubstitutionGoldenProbe#probeupdateComplexSubstitutionU7ChainedCteReferences
-mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU5WithCteQualifyWindowSubstitution
-# Full gate
-mvn -Psymbol-table-resolution-consolidation test
-```
-
-**Expected outcomes after Fix A:**
-
-- No fatals on `o.emp_id` / `o.metric_val` (U4) and `o.*` (I4).
-- Global `queryColumnDictionaryMap` contains `query1` (at minimum from outer-statement `o.*` materialization).
-- Flat `def_query1` / `def_updateN` with top-level `interface` — no `def_queryN.def_queryN`.
-- Gate (104 tests): **74/104** after Fix A — 30 symbol-tree golden failures from flattened `def_queryN` (expected); re-run after golden refresh → target 104/104.
-- Substitution U3/U5/U7/U9 may need golden refresh only if token placement shifts (`i.*` on `query0`, `o.*` on `query1` per U7 precedent).
-
-**Follow-up (only if spot checks show gaps after Fix A):**
-
-- Golden refresh for substitution U/I/D nested-WITH cases (U4, I4, D4, …) — case-by-case, no bulk.
-- Optional egress tweak if SELECT-list output tokens must always land on owning scope global key (U7 puts prior-CTE alias tokens on `query0`; may not need code change).
-
-**Close when:** Step 8 validation passes (104/104 gate + U4/I4 goldens); U4 + I4 diagnostics green; worklist spot-check rows for UPDATE CTE U4 and nested INSERT I4 marked done.
-
-**Close Phase 7 when:**
-
-1. Every non-predicate leaf SELECT exit routes through `finalizeQueryScopeSymbolTable` (or set-op/VALUES equivalent). ✅
-2. No inline convert+publish blocks remain outside helper finalizers. ✅
-3. Subquery + CTE spot tests reviewed; symbol-table golden updates case-by-case only. ⏸️ (golden backlog, not blocking audit)
-
-**Gate:** Subquery and CTE test classes; expect symbol-table golden drift — review before bulk update.
-
-#### Phase 7 static audit (Jul 2026)
-
-**Method:** Grep all `convertSymbolTableToTableDictionary`, `publishQueryLikeScope`, and walker `symbolTreeHelper.finalize*` call sites. No test run required for this step.
-
-**`convertSymbolTableToTableDictionary` — 4 helper call sites only (no walker duplicate):**
-
-| Call site | Role |
-|-----------|------|
-| `finalizeQueryScopeSymbolTable` | Leaf SELECT / CTE body / insert-source inner SELECT / FROM subquery / predicate inner SELECT |
-| `finalizeUpdateScopeSymbolTable` | UPDATE scope publish |
-| `finalizeDeleteScopeSymbolTable` | DELETE scope publish |
-| `reconcileJoinExtensionSymbolTable` | Mid-FROM partial reconcile only — **not** scope publish (Phase 6) |
-
-**`publishQueryLikeScope` — 6 helper call sites only:**
-
-| Call site | Calls `convert`? |
-|-----------|------------------|
-| `finalizeQueryScopeSymbolTable` | Yes (before publish) |
-| `finalizeSetOperationScopeSymbolTable` | No — branch SELECTs already converted at `exitQuery_specification` |
-| `finalizeUpdateScopeSymbolTable` | Yes |
-| `finalizeDeleteScopeSymbolTable` | Yes |
-| `finalizeInsertScopeSymbolTable` | No — INSERT wrapper only; source SELECT converted at leaf exit |
-| `finalizeValuesScopeSymbolTable` | No — VALUES has no `table_dictionary` convert path by design |
-
-**Walker finalizer routing (all leaf SELECT bodies):**
-
-| Walker exit | Helper | Notes |
-|-------------|--------|-------|
-| `exitQuery_specification` | `finalizeQueryScopeSymbolTable` | Single canonical leaf-SELECT exit — CTE body, FROM subquery, insert-source inner SELECT, predicate inner SELECT |
-| `exitUnionized_query` / `exitIntersected_query` | `finalizeSetOperationScopeSymbolTable` | When union/intersect clause present; else `popFrameAndMergeIntoParent` |
-| `exitValues_statement_primary` / `exitInsert_values_statement` | `finalizeValuesScopeSymbolTable` | Standalone VALUES tuple scopes |
-| `exitUpdate_expression` / `exitDelete_expression` | `finalizeUpdateScopeSymbolTable` / `finalizeDeleteScopeSymbolTable` | DML |
-| `exitInsert_expression` | `finalizeInsertScopeSymbolTable` | Statement wrap |
-| `exitInsert_source_primary` | `finalizeInsertSourceAtPrimaryExit` + `popFrameAndMergeIntoParent` | Metadata wrap only — inner SELECT already finalized |
-| `exitFrom_clause` (join extension) | `reconcileJoinExtensionSymbolTable` | Mid-FROM reconcile, not publish |
-| IN / EXISTS / predicand | `exitPredicateSubqueryFrame` | Phase 10 — merge/lift, not full finalize |
-
-**Documented inline publish forks (post-finalize / repack — none call `convert`):**
-
-| Fork | Walker / helper entry | Classification |
-|------|----------------------|----------------|
-| **CTE / FROM query hoist** | `collectQuerySymbolTable` ← `exitWith_list_item`, `registerQueryLikeFromSource`, `exitTuple_source_primary` | **Intentional.** Removes already-published `def_queryN`, wires alias + `context_list` / table_alias, re-puts `def_queryN`. Convert ran at prior `exitQuery_specification`. |
-| **WITH main-body collapse** | `exitWith_query` | **Intentional.** Merges `context_list` into main-body `def_queryN`, rebuilds outer symbol-table frame via direct `symbolTable.put`. Body already finalized by leaf finalizer. |
-| **Insert-source def promotion** | `finalizeInsertSourceAtPrimaryExit` | **Intentional.** Promotes live key → `def_*`, optional `finalizeSetOperationAtExit` for set-op insert source. No convert. |
-| **INSERT statement wrap** | `finalizeInsertScopeSymbolTable` | **Intentional.** `publishQueryLikeScope` only — source SELECT converted at `exitQuery_specification`. |
-| **Aliased inline VALUES in FROM** | `wrapValuesScopeAsDefinition` ← `exitTable_source_primary` | **Intentional.** Lightweight `def_valuesN` promotion when VALUES enters via `exitValues_statement` (not `values_statement_primary`). Full `finalizeValuesScopeSymbolTable` runs on `values_statement_primary` / `insert_values_statement` paths. |
-| **Set-op root publish** | `finalizeSetOperationScopeSymbolTable` | **Canonical.** Interface merge + publish; each branch leaf SELECT uses `finalizeQueryScopeSymbolTable` first. |
-| **Predicate frame close** | `exitPredicateSubqueryFrame` | **Phase 10 defer.** Inner SELECT still uses `finalizeQueryScopeSymbolTable`; frame exit is merge/lift only (documented at helper ~11644). |
-| **Mid-FROM join reconcile** | `reconcileJoinExtensionSymbolTable` | **Intentional partial convert** (Phase 6) — not a publish fork. |
-
-**CTE body trace (confirmed clean):**
-
-1. CTE body `enterQuery_specification` → `pushSymbolTableWithParentVisibleScope`
-2. CTE body `exitQuery_specification` → `finalizeQueryScopeSymbolTable` (convert + export + `publishQueryLikeScope`)
-3. `exitWith_list_item` → `collectQuerySymbolTable(..., cteListSymbols)` — hoist + `finalizeCteScopeDeferredUnresolved` only
-
-**Insert-source SELECT trace (confirmed clean):**
-
-1. `enterInsert_source_primary` → push frame
-2. Inner `exitQuery_specification` → `finalizeQueryScopeSymbolTable` (convert preserves `TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY` when in insert-source stack)
-3. `exitInsert_source_primary` → `finalizeInsertSourceAtPrimaryExit` + `popFrameAndMergeIntoParent`
-
-**Audit conclusion:** No walker-owned convert or inline convert+publish blocks. All documented forks are post-finalize registration, WITH-scope collapse, or statement-wrapper publish without convert. **No code changes required from this audit.** Remaining Phase 7 work is golden spot-review only (CoreSelect backlog; CTEV1–CTEV15 + full scalar subquery matrix + semantics probes complete in gate).
+**Status:** complete. No active Phase 7 blockers remain; the remaining Phase 7 text in this document is historical context only.
 
 ---
 

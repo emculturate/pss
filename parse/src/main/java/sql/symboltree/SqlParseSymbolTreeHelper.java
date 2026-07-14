@@ -2968,7 +2968,7 @@ public class SqlParseSymbolTreeHelper {
 	 * each participant's positional column refs onto the output interface (first-branch names).
 	 */
 	@SuppressWarnings("unchecked")
-	public void publishSetOperationInterfaceAtExit(Map<String, Object> setOperationDefinition) {
+	public void publishSetOperationInterfaceAtExit(String setOperationKey, Map<String, Object> setOperationDefinition) {
 		if (setOperationDefinition == null || setOperationDefinition.isEmpty()
 				|| !isSetOperationDefinition(setOperationDefinition)) {
 			return;
@@ -2988,9 +2988,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		LinkedHashMap<String, Object> mergedInterface = new LinkedHashMap<String, Object>();
-		Object sentinelValue = hasDirectQueryParticipant(setOperationDefinition)
-				? "query_column"
-				: new ArrayList<Object>();
+		Object sentinelValue = "query_column";
 		for (String outputColumnName : outputColumnNames) {
 			mergedInterface.put(outputColumnName, sentinelValue);
 		}
@@ -3023,12 +3021,15 @@ public class SqlParseSymbolTreeHelper {
 	 * the set-op is an insert source.
 	 */
 	@SuppressWarnings("unchecked")
-	public void finalizeSetOperationAtExit(Map<String, Object> setOperationDefinition, boolean insertSource) {
+	public void finalizeSetOperationAtExit(
+			String setOperationKey,
+			Map<String, Object> setOperationDefinition,
+			boolean insertSource) {
 		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
 			return;
 		}
 
-		publishSetOperationInterfaceAtExit(setOperationDefinition);
+		publishSetOperationInterfaceAtExit(setOperationKey, setOperationDefinition);
 		if (insertSource && isSetOperationDefinition(setOperationDefinition)) {
 			hoistInsertSourceSequenceToSetOperationRoot(setOperationDefinition);
 		}
@@ -3270,7 +3271,7 @@ public class SqlParseSymbolTreeHelper {
 		if (scopeDefinitionObj instanceof Map<?, ?> scopeDefinitionMapObj) {
 			Map<String, Object> scopeDefinition = (Map<String, Object>) scopeDefinitionMapObj;
 			if (isSetOperationDefinition(scopeDefinition)) {
-				finalizeSetOperationAtExit(scopeDefinition, true);
+				finalizeSetOperationAtExit(definitionKey, scopeDefinition, true);
 			}
 		}
 
@@ -4119,7 +4120,7 @@ public class SqlParseSymbolTreeHelper {
 			String scopeKey,
 			Map<String, Object> scopeSymbols,
 			boolean insertSource) {
-		finalizeSetOperationAtExit(scopeSymbols, insertSource);
+		finalizeSetOperationAtExit(scopeKey, scopeSymbols, insertSource);
 		HashMap<String, Object> scopePayload = (HashMap<String, Object>) scopeSymbols;
 		HashMap<String, Object> scopedSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
 		HashMap<String, Object> scopedQuerySummaryKeysMap = removeScopedQuerySummaryKeysMap(scopePayload);

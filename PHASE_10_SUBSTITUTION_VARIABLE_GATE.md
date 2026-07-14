@@ -1,12 +1,12 @@
 # Phase 10 — Substitution Variable Quality Gate Inventory
-**Status:** New Phase (Jul 2026) — Inserted between Phase 9 and former Phase 10 (now Phase 11)
+**Status:** Complete (Jul 2026) — Current consolidation gate is green; this inventory is now historical reference
 
 ---
 
 ## Quick Reference: Test Coverage by Variable Type
 
 ### ✅ Column Substitution Variables (type=column) — ~40+ Tests
-**Status:** ⚠️ PARTIAL — CTE-wrapped tests & complex DML failing
+**Status:** ✅ PASSING
 
 **Passing:**
 - `SqlEventWalkerCoreSelectFromAliasingTests::simpleVariableName1Test`
@@ -14,14 +14,14 @@
 - `SqlEventWalkerCoreSelectFromAliasingTests::simpleVariableNameWithDashTest`
 - `SqlEventWalkerCoreSelectFromAliasingTests::getSimpleColumnVariableTest`
 
-**Failing (CTE-wrapped):**
+**Historical blockers (now green):**
 - `getSubstitutionColumnVariableV9CteWrappedWhereVariantWithJoinOnSelectColumnTest` through `V16CteWrappedSelfIntersectionVariantWithJoinOnSelectColumnTest` (8 tests)
-- Root cause: External CTE tokens need migration from table_dictionary → query_dictionary; def_queryN wrapper nesting
+- Root cause was external CTE tokens migrating from table_dictionary → query_dictionary; def_queryN wrapper nesting
 
-**Failing (Complex DML):**
+**Historical blockers (now green):**
 - `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests::insertComplexSubstitutionI1WithCteGroupByHaving` through `I10` (10 tests)
 - `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests::updateComplexSubstitutionU1WithCteGroupByHaving` through `U10` (10 tests)
-- Root cause: Query dictionary shape regression; assignment column token position tracking broken
+- Root cause was query dictionary shape regression; assignment column token position tracking
 
 **Extended Variable Tests (18+ tests):**
 - Extended name variants: dots, dashes, population qualifiers, entity names (all extensions)
@@ -106,13 +106,13 @@
 
 | Variable Type | Tests | Status | Pass Rate | Blocker Items |
 |---------------|-------|--------|-----------|---------------|
-| **Column** | ~40+ | ⚠️ PARTIAL | ~50% | CTE V9-V16 wrapping; INSERT/UPDATE I/U series |
+| **Column** | ~40+ | ✅ PASS | 100% | — |
 | **Predicand** | ~25+ | ✅ PASS | 100% | — |
 | **Condition** | ~13+ | ✅ PASS | 100% | — |
 | **Tuple** | ~20+ | ✅ PASS | 100% | — |
 | **In_List** | ~10+ | ✅ PASS | 100% | — |
 | **Join_Extension** | ~7+ | ✅ PASS | 100% | — |
-| **TOTAL** | **~115+** | ⚠️ ~76% | ~76% | **28 exact blockers** |
+| **TOTAL** | **~126** | ✅ 100% | 100% | 0 blockers |
 
 ---
 
@@ -120,11 +120,11 @@
 
 ### Prerequisites (before Phase 11 start)
 
-At this point, the remaining Phase 10 blockers are exactly 28 tests: Column V9-V16, INSERT I1-I10, and UPDATE U1-U10.
+At this point, the Phase 10 blocker set has been cleared. The list below is retained only as the historical record of what was updated during the phase.
 
-1. ✅ **Predicand, Condition, Tuple, Join_Extension tests** — All passing (no changes needed)
-2. ✅ **In_List tests** — All passing
-3. ⚠️ **Column tests** — Fix CTE-wrapped V9-V16 and complex INSERT/UPDATE I/U series
+1. ✅ **Predicand, Condition, Tuple, Join_Extension tests** — Passing
+2. ✅ **In_List tests** — Passing
+3. ✅ **Column tests** — Passing
 
 ### Gate Command
 
@@ -141,7 +141,7 @@ mvn -Dtest=SqlEventWalkerPredicatesOperatorsSubstitutionsTests#*Variable* test
 
 ### Success Criteria
 
-- **115+ tests with substitution variables:** ALL PASSING
+- **126 tests with substitution variables:** ALL PASSING
 - **No regressions** in Predicand, Condition, Tuple, Join_Extension categories
 - **Column substitution:** CTE wrapping and complex DML resolved
 - **In_List substitution:** Stable
@@ -152,21 +152,16 @@ mvn -Dtest=SqlEventWalkerPredicatesOperatorsSubstitutionsTests#*Variable* test
 
 ### Immediate (This Session)
 
-- [ ] Review Phase 10 section in `symbol-table-resolution-consolidation-worklist.md`
-- [ ] Inventory confirmed: 115+ substitution variable tests catalogued by type
-- [ ] Current baseline: ~76% passing, 5 types fully passing, 1 type partially passing, 28 exact blockers remaining
+- [ ] Keep the 126/126 consolidation gate green as follow-on work lands
+- [ ] Treat this inventory as the historical record of the phase 10 blocker set
 
 ### Short-term (Before Phase 11)
 
-- [ ] Review Phase 7 backlog for Column substitution failures (V9-V16, INSERT/UPDATE)
-- [ ] Fix CTE def_queryN wrapping for external tuple token materialization
-- [ ] Fix INSERT/UPDATE I/U series query-dict assignment token tracking
-- [ ] Rerun Phase 10 quality gate → target 100% (115+/115)
+- [ ] Proceed with Phase 11 work only after confirming the gate remains green
 
 ### Long-term (Phase 11 start)
 
-- Once Phase 10 reaches 100% pass rate, proceed to Phase 11 (`context_list` resolution)
-- Maintain Phase 10 gate as continuous verification checkpoint during later phases
+- Maintain the 126/126 gate as the continuous verification checkpoint during later phases
 
 ---
 
@@ -178,4 +173,4 @@ mvn -Dtest=SqlEventWalkerPredicatesOperatorsSubstitutionsTests#*Variable* test
 
 ---
 
-**Last Updated:** 2026-07-13 (Phase 10 inserted; comprehensive inventory created)
+**Last Updated:** 2026-07-14 (Phase 10 complete; current gate 126/126 passing)

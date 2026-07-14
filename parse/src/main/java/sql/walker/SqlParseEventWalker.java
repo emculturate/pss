@@ -769,6 +769,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
+		Object queryObj = sqlTree.get(MUMBLE_QUERY_KEY);
+		if (queryObj instanceof Map<?, ?> queryMapObj) {
+			for (String key : ((Map<String, Object>) queryMapObj).keySet()) {
+				if (key != null && key.startsWith(MUMBLE_UPDATE_KEY)) {
+					return true;
+				}
+			}
+		}
+
 		return false;
 	}
 
@@ -827,6 +836,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		HashSet<String> interfac = new HashSet<String>();
 		if (walker.symbolTable == null || walker.symbolTable.isEmpty()) {
 			return interfac;
+		}
+
+		for (String key : walker.symbolTable.keySet()) {
+			if (key == null) {
+				continue;
+			}
+			if (key.startsWith(MUMBLE_DELETE_KEY) || key.startsWith("def_" + MUMBLE_DELETE_KEY)) {
+				return interfac;
+			}
 		}
 
 		if (isTopLevelUpdateTree()) {
@@ -3561,24 +3579,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 
 		walker.handleOperandList(ruleIndex, MUMBLE_UNION_KEY);
-
-		Object interfaceObj = walker.symbolTable.get(MUMBLE_INTERFACE_KEY);
-		HashMap<String, Object> interfaceMap = null;
-		if (interfaceObj instanceof HashMap<?, ?>) {
-			interfaceMap = (HashMap<String, Object>) interfaceObj;
-		}
-
-		if (walker.unionClauseFound && interfaceMap == null) {
-			// Defensive fallback: union output interface should mirror first union branch.
-			HashMap<String, Object> interfac = walker.captureQueryInterface();
-			if (interfac != null) {
-				interfaceMap = interfac;
-			}
-		}
-
-		if (interfaceMap != null) {
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, interfaceMap);
-		}
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols =  walker.symbolTable;
