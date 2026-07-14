@@ -772,6 +772,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return false;
 	}
 
+	private boolean isTopLevelInsertTree() {
+		Object sqlTreeObj = walker.asTree.get(SQLPARSER_SQL_TREE_KEY);
+		if (!(sqlTreeObj instanceof Map<?, ?> sqlTreeMapObj)) {
+			return false;
+		}
+
+		Map<String, Object> sqlTree = (Map<String, Object>) sqlTreeMapObj;
+		for (String key : sqlTree.keySet()) {
+			if (key != null && key.startsWith(MUMBLE_INSERT_KEY)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	public HashMap<String, Object> getQueryColumnDictionaryMap() {
 		HashMap<String, Object> exposed = new HashMap<String, Object>();
 		if (walker.queryColumnDictionaryMap == null || walker.queryColumnDictionaryMap.isEmpty()) {
@@ -810,6 +826,106 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public HashSet<String> getInterface() {
 		HashSet<String> interfac = new HashSet<String>();
 		if (walker.symbolTable == null || walker.symbolTable.isEmpty()) {
+			return interfac;
+		}
+
+		if (isTopLevelUpdateTree()) {
+			Map<String, Object> topUpdateMap = null;
+			int topUpdateIndex = -1;
+			for (String key : walker.symbolTable.keySet()) {
+				if (key == null) {
+					continue;
+				}
+
+				String normalizedUpdateKey = null;
+				if (key.startsWith(MUMBLE_UPDATE_KEY)) {
+					normalizedUpdateKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_UPDATE_KEY)) {
+					normalizedUpdateKey = key.substring("def_".length());
+				}
+				if (normalizedUpdateKey == null) {
+					continue;
+				}
+
+				Object scopedObject = walker.symbolTable.get(key);
+				if (!(scopedObject instanceof Map<?, ?>)) {
+					continue;
+				}
+
+				String numericSuffix = normalizedUpdateKey.replaceFirst("^[^0-9]+", "");
+				int scopeIndex;
+				try {
+					scopeIndex = Integer.parseInt(numericSuffix);
+				} catch (NumberFormatException ex) {
+					continue;
+				}
+
+				if (scopeIndex > topUpdateIndex) {
+					topUpdateIndex = scopeIndex;
+					topUpdateMap = (Map<String, Object>) scopedObject;
+				}
+			}
+
+			if (topUpdateMap != null) {
+				Object assignmentsObject = topUpdateMap.get(MUMBLE_ASSIGNMENTS_KEY);
+				if (assignmentsObject instanceof Map<?, ?> assignmentsMap) {
+					for (Object assignmentKeyObj : assignmentsMap.keySet()) {
+						if (assignmentKeyObj instanceof String assignmentKey && !assignmentKey.isBlank()) {
+							interfac.add(assignmentKey);
+						}
+					}
+				}
+			}
+			return interfac;
+		}
+
+		if (isTopLevelInsertTree()) {
+			Map<String, Object> topInsertMap = null;
+			int topInsertIndex = -1;
+			for (String key : walker.symbolTable.keySet()) {
+				if (key == null) {
+					continue;
+				}
+
+				String normalizedInsertKey = null;
+				if (key.startsWith(MUMBLE_INSERT_KEY)) {
+					normalizedInsertKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_INSERT_KEY)) {
+					normalizedInsertKey = key.substring("def_".length());
+				}
+				if (normalizedInsertKey == null) {
+					continue;
+				}
+
+				Object scopedObject = walker.symbolTable.get(key);
+				if (!(scopedObject instanceof Map<?, ?>)) {
+					continue;
+				}
+
+				String numericSuffix = normalizedInsertKey.replaceFirst("^[^0-9]+", "");
+				int scopeIndex;
+				try {
+					scopeIndex = Integer.parseInt(numericSuffix);
+				} catch (NumberFormatException ex) {
+					continue;
+				}
+
+				if (scopeIndex > topInsertIndex) {
+					topInsertIndex = scopeIndex;
+					topInsertMap = (Map<String, Object>) scopedObject;
+				}
+			}
+
+			if (topInsertMap != null) {
+				Object interfaceObject = topInsertMap.get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObject instanceof Map<?, ?> interfaceMap) {
+					for (Object keyObj : interfaceMap.keySet()) {
+						if (keyObj instanceof String key && !key.isBlank()) {
+							interfac.add(key);
+						}
+					}
+				}
+			}
 			return interfac;
 		}
 
@@ -1187,8 +1303,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 * @return
 	 */
 	public Snippet getSnippet() {
-		Snippet snippet = new Snippet(walker.asTree, walker.getWalkerTableDictionary(), walker.queryColumnDictionaryMap,
-				walker.symbolTable, walker.substitutionsMap, getInterface());
+		Snippet snippet = new Snippet(
+				walker.asTree,
+				walker.getWalkerTableDictionary(),
+				walker.queryColumnDictionaryMap,
+				walker.symbolTable,
+				walker.substitutionsMap,
+				getInterface());
 		if (scriptParseAccumulator.hasArrayOutputs()) {
 			snippet.setArrayOutputCollectorsMap(scriptParseAccumulator.buildScriptArrayOutputCollectorsMap());
 		}

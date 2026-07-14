@@ -236,6 +236,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 1. ~~Phase 8 late-pass helper audit~~ ✅ Done (Jul 2026)
 2. Stale golden backlog — do not treat as behavior bugs until reviewed case-by-case (~82/95 DML, V4–V16 unaliased-derived, ~60 PIVOT/UNPIVOT table/query dict goldens pre-date current behavior)
+3. `getInterface()` follow-up: come back to set-op nesting, VALUES clauses, DELETE, and INSERT variations and remove any recursive tree walking through nested symbol tables once the interface listings are lifted to the top of the published shape for set-op nested queries. For non-set-op statements, keep the getter isolated and statement-specific so it reads the interface directly from the top-level symbol table structure when that shape exists.
 
 **Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
 
