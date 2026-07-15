@@ -93,10 +93,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	}
 
-	public SqlParseSymbolTreeHelper getSymbolTreeHelper() {
-		return symbolTreeHelper;
-	}
-
 	@Override
 	public void enterTable_source_primary(SQLSelectParserParser.Table_source_primaryContext ctx) {
 		tableSourcePrimaryNestingDepth++;

@@ -603,8 +603,8 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 |------|--------|-------|
 | `SCOPE_CLAUSE_COLUMN_LIST_KEYS` | ✅ | `filters`, `grouped_by`, `ordered_by` |
 | Single `validateArchivedClauseColumnRef` decision tree | ✅ | Skip query-alias refs; GROUP/ORDER require output-column proof; filters allow physical-table dict keys |
-| `probeArchivedScopeClauseColumns` at convert exit | ✅ | Materializes + binds `table_ref`; UPDATE assignment RHS uses filters policy |
-| `probeArchivedScopeClauseColumnsOnScopeTree` | ✅ | Wired into `finalizeScopeDeferredUnresolved` with `materializeResolved=false` |
+| `probeArchivedScopeClauseColumns` at convert exit | ✅ | Single probe per scope (Option C Jul 2026: retired `probeArchivedScopeClauseColumnsOnScopeTree`) |
+| `probeArchivedScopeClauseColumnsOnScopeTree` | ❌ Retired | Removed after C0/C1 showed zero gate mutations; deferred-unresolved finalization remains |
 | Retire stacked skip guards | ✅ | `isExistingArchivedClauseColumnRefSatisfied` short-circuits already-bound refs — **re-assess retire in Phase 10** (idempotency for dual probe; may become dead) |
 | Retire `collectClauseColumnsIntoUnresolved` ingress | ✅ | Deleted — clause lists no longer collected into `unresolved_column` |
 | DML clause probe audit | ✅ | UPDATE/DELETE/SELECT all route through `convertSymbolTableToTableDictionary` probe |
@@ -632,13 +632,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 **Close Phase 10 when** (in addition to gate tests green):
 
 1. Downward visible scope replaces upward bubble for outer-correlated refs.
-2. **Single-probe reassessment (Phase 9 simplification):** Revisit whether `isExistingArchivedClauseColumnRefSatisfied`, `probeArchivedScopeClauseColumnsOnScopeTree`, and `materializeResolved` are still needed. Today they exist because clause lists can be probed twice (convert exit with `materializeResolved=true`, then scope-tree finalize with `materializeResolved=false` after deferred-unresolved work). After Phase 10, aim for **exactly one probe per scope** by one of:
-   - **Phase C0 (instrumentation):** `ArchivedClauseDualProbeDiffRecorder` + `ArchivedClauseDualProbeDiffTest` — enable with `-Dpss.archivedClause.dualProbeDiff=true` or `SqlParseSymbolTreeHelper#setArchivedClauseDualProbeDiffRecording`. Records `SCOPE_TREE_*` mutations from probe 2 and `CONVERT_TO_PRE_SCOPE_TREE_*` drift before probe 2.
-   - **Phase C1 (gate measurement):** `ArchivedClauseDualProbeDiffGateTest` runs all 130 consolidation-gate cases plus supplemental DML nested-CTE probes. Jul 2026 result: **485 probe-2 invocations across 55 gate cases, zero `SCOPE_TREE_*` / `CONVERT_TO_PRE_SCOPE_TREE_*` mutations** — probe 2 is idempotent on the full gate; safe to proceed toward single convert-time probe (Option A or C).
-   - **Option A:** Scope-tree pass probes **only** `table_ref=null` entries (annotation-only, no re-validation of already-bound refs). **Done (Jul 2026):** guard in `probeArchivedScopeClauseColumnList` when `materializeResolved=false`.
-   - **Option B:** Deferred resolution completes **before** the single convert probe so `finalizeScopeDeferredUnresolved` no longer needs a second clause pass.
-   - **Option C:** Retire scope-tree clause probe entirely if `context_list` makes the convert-time probe sufficient at first finalize.
-3. If reassessment succeeds: delete `isExistingArchivedClauseColumnRefSatisfied` and collapse `ArchivedClauseProbeContext.materializeResolved` (or remove the scope-tree probe caller). Re-run Phase 9 gate + predicand/union supplementary tests.
+2. **Single-probe reassessment (Phase 9 simplification):** **Done (Jul 2026).** C0/C1 measured zero probe-2 mutations across 130 gate cases; Option A limited scope-tree pass to `table_ref=null`; Option C retired `probeArchivedScopeClauseColumnsOnScopeTree` and collapsed `ArchivedClauseProbeContext.materializeResolved`. Exactly one archived-clause probe per scope at convert exit.
 
 **Gate:** `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest`, correlated predicand + union/`ua` tests, `subqueryParseTest` (siloed fatals must fire at statement boundary when appropriate).
 
@@ -877,15 +871,13 @@ Step 5 — Phase 9 start (enables more retirement)                   ⚠️ ~85%
   single validateArchivedClauseColumnRef tree at scope exit
   retire second assignTableRefsForColumnReferenceList pass on filters/groupby/orderby
   probeArchivedScopeClauseColumns replaces validateFilterReferences + clause location tracking
-  archived-scope-tree probe in finalizeScopeDeferredUnresolved (CTE/UNION/INTERSECT)
+  archived deferred-unresolved finalization in finalizeScopeDeferredUnresolved (CTE/UNION/INTERSECT)
   retired collectClauseColumnsIntoUnresolved ingress path
 
-Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ❌ NOT STARTED
-  context_list downward resolution (primary Phase 10 work)
-  re-assess: isExistingArchivedClauseColumnRefSatisfied still needed?
-  target: one probe per scope — scope-tree pass only table_ref=null OR defer before convert probe
-  candidate deletes: isExistingArchivedClauseColumnRefSatisfied, materializeResolved flag,
-    possibly probeArchivedScopeClauseColumnsOnScopeTree if convert probe becomes sufficient
+Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ⚠️ dual-probe done (Jul 2026)
+  context_list downward resolution (primary Phase 10 work — remaining)
+  done: retired probeArchivedScopeClauseColumnsOnScopeTree; collapsed materializeResolved flag
+  C0/C1 gate: zero probe-2 mutations across 130 cases before retirement
 
 Jul 2026 — Phase A/B (query-dict contract): step-1 release + explicit no global-fallback on
   dictionary merges stops duplicate query-alias tokens on owning scope (V9–V16 goldens updated).
