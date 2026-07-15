@@ -2149,24 +2149,6 @@ public class SqlParseSymbolTreeHelper {
 				unknownColumnsCsv);
 	}
 
-	public void mergeContextListIntoQueryScope(Map<String, Object> querySymbols, Map<String, Object> withSymbols) {
-		Map<String, Object> withContextList = getContextListSymbolMap(withSymbols);
-		if (withContextList == null || withContextList.isEmpty()) {
-			return;
-		}
-
-		Map<String, Object> queryContextList = getContextListSymbolMap(querySymbols);
-		if (queryContextList == null) {
-			querySymbols.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(withContextList));
-		} else {
-			for (Map.Entry<String, Object> entry : withContextList.entrySet()) {
-				queryContextList.putIfAbsent(entry.getKey(), entry.getValue());
-			}
-		}
-
-		withSymbols.remove(MUMBLE_CONTEXT_LIST_KEY);
-	}
-
 	@SuppressWarnings("unchecked")
 	public boolean isTupleWithSubstitution(Map<String, Object> aliasMap) {
 		if (aliasMap == null) {
@@ -5951,21 +5933,7 @@ public class SqlParseSymbolTreeHelper {
 					MUMBLE_INHERITED_VISIBLE_ALIASES_KEY,
 					new HashMap<String, Object>(outerVisibleScope.aliases));
 			HashMap<String, Object> contextBackedAliases = new HashMap<String, Object>();
-			for (Map.Entry<String, Object> contextEntry : outerVisibleScope.contextList.entrySet()) {
-				String contextAlias = contextEntry.getKey();
-				if (contextAlias == null || contextAlias.isBlank()) {
-					continue;
-				}
-				// context_list is authoritative for prior WITH/CTE alias → scope bindings.
-				if (contextEntry.getValue() instanceof String contextRef && !contextRef.isBlank()) {
-					contextBackedAliases.put(contextAlias, contextRef);
-					continue;
-				}
-				Object aliasTarget = outerVisibleScope.aliases.get(contextAlias);
-				if (aliasTarget instanceof String aliasTargetRef && !aliasTargetRef.isBlank()) {
-					contextBackedAliases.put(contextAlias, aliasTargetRef);
-				}
-			}
+			mergeContextListAliasesIntoMap(contextBackedAliases, outerVisibleScope.contextList);
 			if (!contextBackedAliases.isEmpty()) {
 				walker.symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, contextBackedAliases);
 			}
@@ -6060,11 +6028,24 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		Map<String, Object> contextList = getContextListSymbolMap(scopeSymbols);
-		if (contextList == null || contextList.isEmpty()) {
+		mergeContextListAliasesIntoMap(merged, contextList);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeContextListAliasesIntoMap(
+			Map<String, Object> targetAliasMap,
+			Map<String, Object> contextList) {
+		if (targetAliasMap == null || contextList == null || contextList.isEmpty()) {
 			return;
 		}
 		for (Map.Entry<String, Object> entry : contextList.entrySet()) {
-			merged.putIfAbsent(entry.getKey(), entry.getValue());
+			String alias = entry.getKey();
+			if (alias == null || alias.isBlank()) {
+				continue;
+			}
+			if (entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
+				targetAliasMap.putIfAbsent(alias, scopeRef);
+			}
 		}
 	}
 
@@ -6190,11 +6171,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		Map<String, Object> publishedContextList = collectPublishedScopeContextList();
-		for (Map.Entry<String, Object> entry : publishedContextList.entrySet()) {
-			if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
-				aliasMap.putIfAbsent(entry.getKey(), scopeRef);
-			}
-		}
+		mergeContextListAliasesIntoMap(aliasMap, publishedContextList);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -11601,7 +11578,18 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		HashMap<String, Object> withFrameSymbols = walker.symbolTable;
-		mergeContextListIntoQueryScope(promotedScope, withFrameSymbols);
+		Map<String, Object> withContextList = getContextListSymbolMap(withFrameSymbols);
+		if (withContextList != null && !withContextList.isEmpty()) {
+			Map<String, Object> queryContextList = getContextListSymbolMap(promotedScope);
+			if (queryContextList == null) {
+				promotedScope.put(MUMBLE_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(withContextList));
+			} else {
+				for (Map.Entry<String, Object> entry : withContextList.entrySet()) {
+					queryContextList.putIfAbsent(entry.getKey(), entry.getValue());
+				}
+			}
+			withFrameSymbols.remove(MUMBLE_CONTEXT_LIST_KEY);
+		}
 		nestCteSiblingDefinitionsFromWithFrame(promotedScope, definitionScopeKey, withFrameSymbols);
 		mergeTableAliasMapsFromWithFrame(promotedScope, withFrameSymbols);
 		mergeUnresolvedColumnMapsFromWithFrame(promotedScope, withFrameSymbols);
