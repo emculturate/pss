@@ -4153,7 +4153,7 @@ public class SqlParseSymbolTreeHelper {
 			walker.mergeUnknownEntries(liveDeferred, (HashMap<String, Object>) liveUnresolved);
 		}
 
-		finalizeScopeDeferredUnresolved(scopePayload, liveDeferred, getVisiblePriorNamedScopeRefs());
+		finalizeScopeDeferredUnresolved(scopePayload, liveDeferred);
 		publishQueryLikeScope(scopeKey, scopePayload);
 	}
 
@@ -5766,7 +5766,7 @@ public class SqlParseSymbolTreeHelper {
 				? (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY)
 				: new HashMap<String, Object>();
 		HashMap<String, Object> visibleAliasMap =
-				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).aliases;
+				collectOuterVisibleScope(null, true).aliases;
 		for (Map.Entry<String, Object> aliasEntry : visibleAliasMap.entrySet()) {
 			currentTableAliasMap.putIfAbsent(aliasEntry.getKey(), aliasEntry.getValue());
 		}
@@ -5782,7 +5782,7 @@ public class SqlParseSymbolTreeHelper {
 			currentTableCollection = new HashMap<String, Object>();
 		}
 		HashMap<String, Object> visibleTableCollection =
-				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).tableDictionary;
+				collectOuterVisibleScope(null, true).tableDictionary;
 		for (Map.Entry<String, Object> tableEntry : visibleTableCollection.entrySet()) {
 			currentTableCollection.putIfAbsent(tableEntry.getKey(), tableEntry.getValue());
 		}
@@ -5939,7 +5939,7 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void pushSymbolTableWithParentVisibleScope() {
-		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true, null);
+		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true);
 
 		walker.pushSymbolTable();
 		walker.symbolTable.put(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY, new LinkedHashSet<String>());
@@ -5990,8 +5990,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private OuterVisibleScope collectOuterVisibleScope(
 			Map<String, Object> ancestorStopFrame,
-			boolean includeActiveFrame,
-			Map<String, Object> priorNamedScopeRefs) {
+			boolean includeActiveFrame) {
 		OuterVisibleScope result = new OuterVisibleScope();
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
 			mergeOuterVisibleScopeFromFrame(result, ancestorSymbols);
@@ -6001,13 +6000,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (includeActiveFrame) {
 			mergeOuterVisibleScopeFromFrame(result, walker.symbolTable);
-		}
-		if (priorNamedScopeRefs != null) {
-			for (String cteAlias : priorNamedScopeRefs.keySet()) {
-				if (cteAlias != null && !cteAlias.isBlank()) {
-					result.aliases.putIfAbsent(cteAlias, cteAlias);
-				}
-			}
 		}
 		return result;
 	}
@@ -9288,14 +9280,13 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	private void probeArchivedScopeClauseColumnsOnScopeTree(
-			HashMap<String, Object> scopeRoot,
-			Map<String, Object> priorNamedScopeRefs) {
+			HashMap<String, Object> scopeRoot) {
 		if (scopeRoot == null || scopeRoot.isEmpty()) {
 			return;
 		}
 
 		ArchivedClauseProbeContext probeContext =
-				buildArchivedClauseProbeContextFromScopePayload(scopeRoot, priorNamedScopeRefs);
+				buildArchivedClauseProbeContextFromScopePayload(scopeRoot);
 		probeArchivedScopeClauseColumns(probeContext);
 
 		for (Map.Entry<String, Object> entry : scopeRoot.entrySet()) {
@@ -9309,16 +9300,14 @@ public class SqlParseSymbolTreeHelper {
 			}
 			if (entry.getValue() instanceof HashMap<?, ?>) {
 				probeArchivedScopeClauseColumnsOnScopeTree(
-						(HashMap<String, Object>) entry.getValue(),
-						priorNamedScopeRefs);
+						(HashMap<String, Object>) entry.getValue());
 			}
 		}
 	}
 
 	@SuppressWarnings("unchecked")
 	private ArchivedClauseProbeContext buildArchivedClauseProbeContextFromScopePayload(
-			HashMap<String, Object> scopePayload,
-			Map<String, Object> priorNamedScopeRefs) {
+			HashMap<String, Object> scopePayload) {
 		HashMap<String, Object> localInterface = null;
 		Object interfaceObj = scopePayload.get(MUMBLE_INTERFACE_KEY);
 		if (interfaceObj instanceof HashMap<?, ?>) {
@@ -9335,7 +9324,6 @@ public class SqlParseSymbolTreeHelper {
 		if (localTableAliasMap == null) {
 			localTableAliasMap = new HashMap<String, Object>();
 		}
-		mergePriorNamedScopeRefsIntoAliasMap(localTableAliasMap, priorNamedScopeRefs);
 		Object contextListObj = scopePayload.get(MUMBLE_CONTEXT_LIST_KEY);
 		if (contextListObj instanceof Map<?, ?>) {
 			mergePriorNamedScopeRefsIntoAliasMap(
@@ -11328,7 +11316,6 @@ public class SqlParseSymbolTreeHelper {
 						alias,
 						queryName,
 						(HashMap<String, Object>) query,
-						definitionTarget,
 						liveDeferred);
 				definitionTarget.put(alias, queryName);
 			} else {
@@ -11511,23 +11498,6 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Returns the nearest visible {@code cte_list} from the current frame or an ancestor scope.
-	 */
-	public Map<String, Object> getVisiblePriorNamedScopeRefs() {
-		Map<String, Object> cteList = getContextListSymbolMap(walker.symbolTable);
-		if (cteList != null && !cteList.isEmpty()) {
-			return cteList;
-		}
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-			cteList = getContextListSymbolMap(ancestorSymbols);
-			if (cteList != null && !cteList.isEmpty()) {
-				return cteList;
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * Shared exit finalizer for archived query-like scopes (WITH CTE bodies, UNION/INTERSECT).
 	 * Resolves scope-local deferred unknowns in-place; merges outer-correlated refs into the
 	 * global table dictionary when the alias is visible — no upward bubble.
@@ -11535,8 +11505,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void finalizeScopeDeferredUnresolved(
 			HashMap<String, Object> scopePayload,
-			HashMap<String, Object> liveDeferred,
-			Map<String, Object> priorNamedScopeRefs) {
+			HashMap<String, Object> liveDeferred) {
 		if (scopePayload == null) {
 			return;
 		}
@@ -11548,7 +11517,7 @@ public class SqlParseSymbolTreeHelper {
 		collectAndStripUnresolvedFromScopeTree(scopePayload, pending);
 
 		if (pending.isEmpty()) {
-			probeArchivedScopeClauseColumnsOnScopeTree(scopePayload, priorNamedScopeRefs);
+			probeArchivedScopeClauseColumnsOnScopeTree(scopePayload);
 			return;
 		}
 
@@ -11560,15 +11529,15 @@ public class SqlParseSymbolTreeHelper {
 		for (Map.Entry<String, Object> entry : pending.entrySet()) {
 			String tableRef = extractTableRefFromUnresolvedEntry(entry.getKey(), entry.getValue());
 			if (isAliasLocalToScopeTree(scopePayload, tableRef)
-					|| isPriorCteAlias(tableRef, priorNamedScopeRefs)) {
+					|| isPriorCteAlias(tableRef, getContextListSymbolMap(scopePayload))) {
 				scopeLocal.put(entry.getKey(), entry.getValue());
 			} else {
 				outerCorrelated.put(entry.getKey(), entry.getValue());
 			}
 		}
 
-		resolveScopeBodyDeferredUnresolved(scopeLocal, scopePayload, priorNamedScopeRefs);
-		probeArchivedScopeClauseColumnsOnScopeTree(scopePayload, priorNamedScopeRefs);
+		resolveScopeBodyDeferredUnresolved(scopeLocal, scopePayload);
+		probeArchivedScopeClauseColumnsOnScopeTree(scopePayload);
 		mergeUnresolvedEntriesIntoCurrentScope(outerCorrelated);
 	}
 
@@ -11579,9 +11548,8 @@ public class SqlParseSymbolTreeHelper {
 			String cteAlias,
 			String queryName,
 			HashMap<String, Object> cteScopePayload,
-			Map<String, Object> priorCteList,
 			HashMap<String, Object> liveDeferred) {
-		finalizeScopeDeferredUnresolved(cteScopePayload, liveDeferred, priorCteList);
+		finalizeScopeDeferredUnresolved(cteScopePayload, liveDeferred);
 	}
 
 	private static final String[] WITH_MAIN_BODY_SCOPE_PREFIXES = new String[] {
@@ -11888,14 +11856,12 @@ public class SqlParseSymbolTreeHelper {
 			partitionPredicateUnresolvedByScope(
 					singlePending,
 					nestedScope,
-					getVisiblePriorNamedScopeRefs(),
 					outerCorrelated,
 					innerLocal);
 			if (!innerLocal.isEmpty()) {
 				resolveInnerLocalPredicateUnresolved(
 						innerLocal,
-						nestedScope,
-						getVisiblePriorNamedScopeRefs());
+						nestedScope);
 				consumed.add(entry.getKey());
 			}
 		}
@@ -11953,8 +11919,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private void resolveScopeBodyDeferredUnresolved(
 			HashMap<String, Object> scopeLocal,
-			HashMap<String, Object> scopePayload,
-			Map<String, Object> priorNamedScopeRefs) {
+			HashMap<String, Object> scopePayload) {
 		if (scopeLocal == null || scopeLocal.isEmpty()) {
 			return;
 		}
@@ -11975,6 +11940,7 @@ public class SqlParseSymbolTreeHelper {
 
 		HashMap<String, Object> priorNamedRefs = new HashMap<String, Object>();
 		HashMap<String, Object> scopeBodyRefs = new HashMap<String, Object>();
+		Map<String, Object> priorNamedScopeRefs = getContextListSymbolMap(scopePayload);
 		for (Map.Entry<String, Object> entry : qualifiedUnresolved.entrySet()) {
 			String tableRef = extractTableRefFromUnresolvedEntry(entry.getKey(), entry.getValue());
 			if (isPriorCteAlias(tableRef, priorNamedScopeRefs)) {
@@ -12088,7 +12054,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> buildEffectiveVisibleAliasMap(HashMap<String, Object> localAliasMap) {
 		HashMap<String, Object> effective =
-				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).aliases;
+				collectOuterVisibleScope(null, true).aliases;
 		if (localAliasMap != null && !localAliasMap.isEmpty()) {
 			effective.putAll(localAliasMap);
 		}
@@ -12098,7 +12064,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> buildEffectiveVisibleTableCollection(HashMap<String, Object> localTableCollection) {
 		HashMap<String, Object> effective =
-				collectOuterVisibleScope(null, true, getVisiblePriorNamedScopeRefs()).tableDictionary;
+				collectOuterVisibleScope(null, true).tableDictionary;
 		if (localTableCollection != null && !localTableCollection.isEmpty()) {
 			effective.putAll(localTableCollection);
 		}
@@ -12158,19 +12124,16 @@ public class SqlParseSymbolTreeHelper {
 
 		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, liveQueryRefKey);
 		HashMap<String, Object> defScopePayload = getDefQueryScopePayload(predicateFrameSymbols, liveQueryRefKey);
-		Map<String, Object> priorNamedScopeRefs = getVisiblePriorNamedScopeRefs();
 		HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
 		HashMap<String, Object> innerLocal = new HashMap<String, Object>();
 		partitionPredicateUnresolvedByScope(
 				pendingUnresolved,
 				defScopePayload,
-				priorNamedScopeRefs,
 				outerCorrelated,
 				innerLocal);
 		HashMap<String, Object> deferredForParent = resolveInnerLocalPredicateUnresolved(
 				innerLocal,
-				defScopePayload,
-				priorNamedScopeRefs);
+				defScopePayload);
 		walker.mergeUnknownEntries(deferredForParent, outerCorrelated);
 		stripUnresolvedFromScopePayloads(predicateFrameSymbols);
 		// Predicate frames inherit context-backed aliases for inner resolution only; merging
@@ -12305,7 +12268,6 @@ public class SqlParseSymbolTreeHelper {
 	private void partitionPredicateUnresolvedByScope(
 			HashMap<String, Object> pendingUnresolved,
 			HashMap<String, Object> defScopePayload,
-			Map<String, Object> priorNamedScopeRefs,
 			HashMap<String, Object> outerCorrelated,
 			HashMap<String, Object> innerLocal) {
 		if (pendingUnresolved == null || pendingUnresolved.isEmpty()) {
@@ -12320,7 +12282,7 @@ public class SqlParseSymbolTreeHelper {
 			String tableRef = extractTableRefFromUnresolvedEntry(unresolvedKey, entry.getValue());
 			if (tableRef != null
 					&& (isAliasLocalToScope(tableRef, innerAliasMap)
-						|| isPriorCteAlias(tableRef, priorNamedScopeRefs))) {
+						|| isInheritedCteContextListAlias(tableRef))) {
 				innerLocal.put(unresolvedKey, entry.getValue());
 			} else {
 				outerCorrelated.put(unresolvedKey, entry.getValue());
@@ -12397,8 +12359,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> resolveInnerLocalPredicateUnresolved(
 			HashMap<String, Object> innerLocal,
-			HashMap<String, Object> defScopePayload,
-			Map<String, Object> priorNamedScopeRefs) {
+			HashMap<String, Object> defScopePayload) {
 		HashMap<String, Object> deferredForParent = new HashMap<String, Object>();
 		if (innerLocal == null || innerLocal.isEmpty()) {
 			return deferredForParent;
@@ -12409,13 +12370,6 @@ public class SqlParseSymbolTreeHelper {
 		splitUnresolvedEntriesByQualification(innerLocal, qualifiedUnresolved, unqualifiedUnresolved);
 
 		HashMap<String, Object> innerAliasMap = buildEffectiveVisibleAliasMap(getScopeTableAliasMap(defScopePayload));
-		if (priorNamedScopeRefs != null && !priorNamedScopeRefs.isEmpty()) {
-			for (Map.Entry<String, Object> entry : priorNamedScopeRefs.entrySet()) {
-				if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
-					innerAliasMap.putIfAbsent(entry.getKey(), scopeRef);
-				}
-			}
-		}
 		if (!qualifiedUnresolved.isEmpty()) {
 			emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(qualifiedUnresolved, innerAliasMap);
 			deferredForParent.putAll(qualifiedUnresolved);
