@@ -25,6 +25,8 @@ import sql.SQLSelectParserParser;
 public class SqlParseSymbolTreeHelper {
 
 	private final SqlASTWalkerHelper walker;
+	private final ArchivedClauseDualProbeDiffRecorder archivedClauseDualProbeDiffRecorder =
+			new ArchivedClauseDualProbeDiffRecorder();
 
 	// Fields moved from SqlParseEventWalker
 	private int tableFunctionSourceCount = 0;
@@ -72,6 +74,17 @@ public class SqlParseSymbolTreeHelper {
 	public void setTableFunctionSourceCount(int count) { this.tableFunctionSourceCount = count; }
 	public Set<String> getSuppressedAmbiguousUnqualifiedKeys() { return suppressedAmbiguousUnqualifiedKeys; }
 	public Set<String> getTableFunctionSourceRefs() { return tableFunctionSourceRefs; }
+
+	public ArchivedClauseDualProbeDiffRecorder getArchivedClauseDualProbeDiffRecorder() {
+		return archivedClauseDualProbeDiffRecorder;
+	}
+
+	public void setArchivedClauseDualProbeDiffRecording(boolean enabled) {
+		archivedClauseDualProbeDiffRecorder.setEnabled(enabled);
+		if (!enabled) {
+			archivedClauseDualProbeDiffRecorder.clear();
+		}
+	}
 
 	// --- normalizeTableRef delegate (mirrors event-walker static helper) ---
 
@@ -4145,7 +4158,10 @@ public class SqlParseSymbolTreeHelper {
 			walker.mergeUnknownEntries(liveDeferred, (HashMap<String, Object>) liveUnresolved);
 		}
 
-		finalizeScopeDeferredUnresolved(scopePayload, liveDeferred);
+		finalizeScopeDeferredUnresolved(
+				scopePayload,
+				liveDeferred,
+				toDefinitionScopeKey(scopeKey));
 		publishQueryLikeScope(scopeKey, scopePayload);
 	}
 
@@ -4588,6 +4604,14 @@ public class SqlParseSymbolTreeHelper {
 		walker.mergeQuerySetOperationSummaryKeysIntoCurrentScope(scopedQuerySummaryKeysMap);
 		mergeUnresolvedEntriesIntoCurrentScope(hoistedUnresolved);
 		walker.queryCount++;
+
+		if (archivedClauseDualProbeDiffRecorder.isEnabled()) {
+			archivedClauseDualProbeDiffRecorder.indexPublishedScopeTree(
+					definitionKey,
+					scopePayload,
+					walker,
+					this);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9207,6 +9231,7 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	private void probeArchivedScopeClauseColumnsOnScopeTree(
+			String scopePath,
 			HashMap<String, Object> scopeRoot) {
 		if (scopeRoot == null || scopeRoot.isEmpty()) {
 			return;
@@ -9214,7 +9239,28 @@ public class SqlParseSymbolTreeHelper {
 
 		ArchivedClauseProbeContext probeContext =
 				buildArchivedClauseProbeContextFromScopePayload(scopeRoot);
+
+		ArchivedClauseDualProbeDiffRecorder.Snapshot before = null;
+		ArchivedClauseDualProbeDiffRecorder.Snapshot after = null;
+		if (archivedClauseDualProbeDiffRecorder.isEnabled()) {
+			before = archivedClauseDualProbeDiffRecorder.captureScopeSnapshot(
+					scopeRoot,
+					walker,
+					this);
+		}
+
 		probeArchivedScopeClauseColumns(probeContext);
+
+		if (archivedClauseDualProbeDiffRecorder.isEnabled()) {
+			after = archivedClauseDualProbeDiffRecorder.captureScopeSnapshot(
+					scopeRoot,
+					walker,
+					this);
+			archivedClauseDualProbeDiffRecorder.recordScopeTreeProbe(
+					scopePath == null ? "" : scopePath,
+					before,
+					after);
+		}
 
 		for (Map.Entry<String, Object> entry : scopeRoot.entrySet()) {
 			String nestedScopeKey = entry.getKey();
@@ -9226,7 +9272,11 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (entry.getValue() instanceof HashMap<?, ?>) {
+				String nestedPath = (scopePath == null || scopePath.isBlank())
+						? nestedScopeKey
+						: scopePath + "/" + nestedScopeKey;
 				probeArchivedScopeClauseColumnsOnScopeTree(
+						nestedPath,
 						(HashMap<String, Object>) entry.getValue());
 			}
 		}
@@ -9310,6 +9360,13 @@ public class SqlParseSymbolTreeHelper {
 		ArrayList<Object> columnRefs = (ArrayList<Object>) columnListObj;
 		for (int index = 0; index < columnRefs.size(); index++) {
 			Object columnRefObj = columnRefs.get(index);
+			// Scope-tree probe (materializeResolved=false): only bind refs probe 1 left unqualified.
+			if (!probeContext.materializeResolved) {
+				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnRefObj);
+				if (!isUnqualifiedColumnRef(tableRef)) {
+					continue;
+				}
+			}
 			ArchivedClauseColumnRefResult result = validateArchivedClauseColumnRef(
 					columnRefObj,
 					clauseKey,
@@ -11443,9 +11500,18 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void finalizeScopeDeferredUnresolved(
 			HashMap<String, Object> scopePayload,
-			HashMap<String, Object> liveDeferred) {
+			HashMap<String, Object> liveDeferred,
+			String scopeRootPath) {
 		if (scopePayload == null) {
 			return;
+		}
+
+		if (archivedClauseDualProbeDiffRecorder.isEnabled() && scopeRootPath != null) {
+			archivedClauseDualProbeDiffRecorder.ensurePostConvertIndexed(
+					scopeRootPath,
+					scopePayload,
+					walker,
+					this);
 		}
 
 		HashMap<String, Object> pending = new HashMap<String, Object>();
@@ -11455,7 +11521,7 @@ public class SqlParseSymbolTreeHelper {
 		collectAndStripUnresolvedFromScopeTree(scopePayload, pending);
 
 		if (pending.isEmpty()) {
-			probeArchivedScopeClauseColumnsOnScopeTree(scopePayload);
+			probeArchivedScopeClauseColumnsOnScopeTree(scopeRootPath, scopePayload);
 			return;
 		}
 
@@ -11475,7 +11541,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		resolveScopeBodyDeferredUnresolved(scopeLocal, scopePayload);
-		probeArchivedScopeClauseColumnsOnScopeTree(scopePayload);
+		probeArchivedScopeClauseColumnsOnScopeTree(scopeRootPath, scopePayload);
 		mergeUnresolvedEntriesIntoCurrentScope(outerCorrelated);
 	}
 
@@ -11487,7 +11553,10 @@ public class SqlParseSymbolTreeHelper {
 			String queryName,
 			HashMap<String, Object> cteScopePayload,
 			HashMap<String, Object> liveDeferred) {
-		finalizeScopeDeferredUnresolved(cteScopePayload, liveDeferred);
+		finalizeScopeDeferredUnresolved(
+				cteScopePayload,
+				liveDeferred,
+				toDefinitionScopeKey(queryName));
 	}
 
 	private static final String[] WITH_MAIN_BODY_SCOPE_PREFIXES = new String[] {
