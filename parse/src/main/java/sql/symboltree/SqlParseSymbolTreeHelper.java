@@ -504,6 +504,7 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String resolvedKey : resolvedKeys) {
 			unresolvedColumnMap.remove(resolvedKey);
+			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
 		}
 	}
 
@@ -603,12 +604,12 @@ public class SqlParseSymbolTreeHelper {
 				? null
 				: consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName, false);
 		if (matchedEntry == null) {
-			matchedEntry = unresolvedColumnMap.remove(columnName);
+			matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, columnName);
 		}
 		if (matchedEntry == null) {
 			for (String key : new ArrayList<String>(unresolvedColumnMap.keySet())) {
 				if (key != null && key.equalsIgnoreCase(columnName)) {
-					matchedEntry = unresolvedColumnMap.remove(key);
+					matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, key);
 					break;
 				}
 			}
@@ -656,12 +657,12 @@ public class SqlParseSymbolTreeHelper {
 			matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, dictionaryTargetRef, columnName, false);
 		}
 		if (matchedEntry == null) {
-			matchedEntry = unresolvedColumnMap.remove(columnName);
+			matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, columnName);
 		}
 		if (matchedEntry == null) {
 			for (String key : new ArrayList<String>(unresolvedColumnMap.keySet())) {
 				if (key != null && key.equalsIgnoreCase(columnName)) {
-					matchedEntry = unresolvedColumnMap.remove(key);
+					matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, key);
 					break;
 				}
 			}
@@ -829,19 +830,40 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Removes one entry from a scope-local unresolved map and, when the key is qualified,
+	 * drops the matching statement-level position tracker entry.
+	 */
+	private Object removeUnresolvedMapEntry(
+			HashMap<String, Object> unresolvedColumnMap,
+			String key) {
+		if (unresolvedColumnMap == null || key == null || key.isBlank()) {
+			return null;
+		}
+
+		Object removed = unresolvedColumnMap.remove(key);
+		if (removed != null) {
+			releaseResolvedQualifiedGlobalLocationIfQualified(key);
+		}
+		return removed;
+	}
+
 	public void removeFromUnresolvedMapCaseInsensitive(HashMap<String, Object> unresolvedColumnMap, String columnName) {
-		if (unresolvedColumnMap.remove(columnName) != null) {
+		if (columnName == null || columnName.isBlank()) {
+			return;
+		}
+		if (removeUnresolvedMapEntry(unresolvedColumnMap, columnName) != null) {
 			return;
 		}
 		String matchingKey = null;
 		for (String key : unresolvedColumnMap.keySet()) {
-			if (key.equalsIgnoreCase(columnName)) {
+			if (key != null && key.equalsIgnoreCase(columnName)) {
 				matchingKey = key;
 				break;
 			}
 		}
 		if (matchingKey != null) {
-			unresolvedColumnMap.remove(matchingKey);
+			removeUnresolvedMapEntry(unresolvedColumnMap, matchingKey);
 		}
 	}
 
@@ -2290,7 +2312,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
-		unresolvedMap.remove(columnName);
+		removeUnresolvedMapEntry(unresolvedMap, columnName);
 		if (unresolvedMap.isEmpty()) {
 			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
 		}
@@ -5361,9 +5383,7 @@ public class SqlParseSymbolTreeHelper {
 					normalizedTableRef);
 			walker.mergeResolvedColumnIntoDictionary(globalTarget, columnName, entryValue);
 		}
-		if (walker.globalQualifiedUnresolvedLocations != null) {
-			walker.globalQualifiedUnresolvedLocations.remove(unresolvedKey);
-		}
+		releaseResolvedQualifiedGlobalLocationIfQualified(unresolvedKey);
 		return true;
 	}
 
@@ -5535,6 +5555,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 		for (String resolvedKey : resolvedKeys) {
 			qualifiedUnresolved.remove(resolvedKey);
+			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
 		}
 		if (qualifiedUnresolved.isEmpty() || !emitUnresolvedFatals) {
 			return;
@@ -6819,6 +6840,7 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String resolvedKey : resolvedKeys) {
 			unresolvedColumnMap.remove(resolvedKey);
+			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
 		}
 	}
 
@@ -6874,6 +6896,7 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String resolvedKey : resolvedKeys) {
 			unresolvedColumnMap.remove(resolvedKey);
+			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
 		}
 	}
 
@@ -7221,6 +7244,13 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String resolvedKey : resolvedKeys) {
 			unresolvedColumnMap.remove(resolvedKey);
+			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
+		}
+	}
+
+	private void releaseResolvedQualifiedGlobalLocationIfQualified(String unresolvedKey) {
+		if (unresolvedKey != null && unresolvedKey.contains(".")) {
+			walker.releaseResolvedQualifiedGlobalLocation(unresolvedKey);
 		}
 	}
 
@@ -7637,6 +7667,7 @@ public class SqlParseSymbolTreeHelper {
 		if (unresolvedColumnMap != null && !unresolvedColumnMap.isEmpty()) {
 			Object removedDirect = unresolvedColumnMap.remove(directKey);
 			if (removedDirect != null) {
+				releaseResolvedQualifiedGlobalLocationIfQualified(directKey);
 				return removedDirect;
 			}
 
@@ -7652,7 +7683,9 @@ public class SqlParseSymbolTreeHelper {
 				String keyColumnName = key.substring(separatorIndex + 1);
 				if (keyTableRef.equalsIgnoreCase(tableRef)
 						&& keyColumnName.equalsIgnoreCase(columnName)) {
-					return unresolvedColumnMap.remove(key);
+					Object removed = unresolvedColumnMap.remove(key);
+					releaseResolvedQualifiedGlobalLocationIfQualified(key);
+					return removed;
 				}
 			}
 		}
@@ -9378,6 +9411,9 @@ public class SqlParseSymbolTreeHelper {
 					probeContext.localCurrentQueryDictionary,
 					columnName,
 					refTokens);
+			if (!isUnqualifiedColumnRef(tableRef)) {
+				releaseResolvedQualifiedGlobalLocationIfQualified(tableRef + "." + columnName);
+			}
 		}
 	}
 
@@ -10714,6 +10750,27 @@ public class SqlParseSymbolTreeHelper {
 		} else {
 			sourceQueryDictionary.put(columnName, promotedRefs);
 		}
+
+		releaseResolvedQualifiedGlobalLocationFromUnknownEntry(unknownEntryValue);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void releaseResolvedQualifiedGlobalLocationFromUnknownEntry(Object unknownEntryValue) {
+		if (!(unknownEntryValue instanceof Map<?, ?> entryMapObj)) {
+			return;
+		}
+
+		Object columnObj = ((Map<String, Object>) entryMapObj).get(MUMBLE_COLUMN_KEY);
+		if (!(columnObj instanceof Map<?, ?>)) {
+			return;
+		}
+
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnObj);
+		String resolvedColumnName = walker.extractReferenceNameFromInterfaceEntry(columnObj);
+		if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)
+				&& resolvedColumnName != null && !resolvedColumnName.isBlank()) {
+			releaseResolvedQualifiedGlobalLocationIfQualified(tableRef + "." + resolvedColumnName);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -11534,6 +11591,7 @@ public class SqlParseSymbolTreeHelper {
 		nestCteSiblingDefinitionsFromWithFrame(promotedScope, definitionScopeKey, withFrameSymbols);
 		mergeTableAliasMapsFromWithFrame(promotedScope, withFrameSymbols);
 		mergeUnresolvedColumnMapsFromWithFrame(promotedScope, withFrameSymbols);
+		absorbWalkTimeBackupKey(withFrameSymbols, promotedScope, MUMBLE_OUTER_TABLE_ALIAS_KEY);
 
 		walker.symbolTable = new HashMap<String, Object>();
 		if (definitionScopeKey != null) {
@@ -11632,6 +11690,16 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		promotedScope.put(MUMBLE_UNRESOLVED_COLUMN_KEY, new HashMap<String, Object>(frameUnresolvedMap));
+	}
+
+	private void absorbWalkTimeBackupKey(
+			HashMap<String, Object> from,
+			HashMap<String, Object> to,
+			String key) {
+		Object value = from.remove(key);
+		if (value != null) {
+			to.put(key, value);
+		}
 	}
 
 	/**
@@ -12341,6 +12409,7 @@ public class SqlParseSymbolTreeHelper {
 		stripFrameLocalWalkTimeKeys(scopePayload);
 		scopePayload.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
 		scopePayload.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
+		scopePayload.remove(MUMBLE_OUTER_TABLE_ALIAS_KEY);
 		scopePayload.remove(TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY);
 		scopePayload.remove(TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY);
 		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);

@@ -3091,6 +3091,32 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	/**
+	 * Drops a qualified unresolved key from the statement-level position tracker once the
+	 * reference has been resolved and consumed in the current scope. Prevents inner WITH
+	 * CTE resolutions from polluting outer-scope fatal diagnostics for the same column name.
+	 */
+	public void releaseResolvedQualifiedGlobalLocation(String unresolvedQualifiedKey) {
+		if (unresolvedQualifiedKey == null
+				|| unresolvedQualifiedKey.isBlank()
+				|| !unresolvedQualifiedKey.contains(".")
+				|| globalQualifiedUnresolvedLocations == null
+				|| globalQualifiedUnresolvedLocations.isEmpty()) {
+			return;
+		}
+
+		if (globalQualifiedUnresolvedLocations.remove(unresolvedQualifiedKey) != null) {
+			return;
+		}
+
+		for (String key : new ArrayList<String>(globalQualifiedUnresolvedLocations.keySet())) {
+			if (key != null && key.equalsIgnoreCase(unresolvedQualifiedKey)) {
+				globalQualifiedUnresolvedLocations.remove(key);
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Build a compact column list with per-entry location annotations.
 	 * Example: [c (l:1 c:43), doll (l:3 c:22)].
 	 */

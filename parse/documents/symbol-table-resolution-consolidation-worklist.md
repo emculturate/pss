@@ -761,6 +761,16 @@ These are uncovered by the current coverage run, but they map to real feature fa
 
 **Recommended execution order for that optional phase:** run the 11 canaries above first, then refresh only the files that move. If the matrix stays mostly `No-change`, keep the change out of Phase 12.
 
+#### Revisit when returning to Pivot / Unpivot (deferred — Jul 2026)
+
+When we get back to `SqlEventWalkerPivotUnpivotTests` and the pivot/unpivot helpers in `SqlParseSymbolTreeHelper`, schedule a consolidation pass with the agent to re-validate the **nested WITH `context_list` / global qualified position-tracker** work completed earlier in Phase 11:
+
+- **`globalQualifiedUnresolvedLocations` release-on-resolve** — inner nested-WITH scopes now drop resolved qualified keys from the statement-level position tracker when local resolution consumes them (fixes leaked line refs in outer `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` fatals; see `nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee`).
+- **`removeUnresolvedMapEntry` helper** — unpivot fallback removals and `removeFromUnresolvedMapCaseInsensitive` now also release global qualified keys; confirm no pivot/unpivot golden churn or missed releases.
+- **Pivot/Unpivot test class** — not re-run during the nested-WITH fix; expect to triage `SqlEventWalkerPivotUnpivotTests` goldens and the `resolveUnpivotGeneratedColumnsFromUnresolvedMap` / `removeUnpivotGeneratedColumnReference` paths together at that time.
+
+**Canary for the nested-WITH side (already green):** `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee`.
+
 #### V13 canary — nested UPDATE FROM correlated substitution columns
 
 Primary test: `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`
