@@ -645,6 +645,26 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 **Goal:** UPDATE / DELETE / INSERT use the same ingress + egress + publish patterns; delete redundant fallbacks.
 
+**Phase 11 cleanup triage:**
+
+| Fallback / helper | Current status | What Phase 11 should do |
+|--------------------|----------------|--------------------------|
+| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Load-bearing for V13 | Keep until clause egress emits alias + substitution tokens natively |
+| `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Load-bearing | Keep until walk-time token capture is proven stable at interface validation |
+| `moveEntriesToSingleTableIfSingleTarget` | Load-bearing | Keep until single-source scopes resolve fully at exit |
+| `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Load-bearing | Keep until derived-column ingress no longer needs pre-/post-wildcard stripping |
+| `resolveVisibleOuterDeferredUnresolved` | Phase 11 removal target | Remove once downward `context_list` resolution is live |
+| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Phase 11 removal target | Collapse after single-probe reassessment |
+
+**Phase 11 canary set:**
+
+- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoWithCteTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedInSubqueryMiddleCteReferencesFirstCteTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
+- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU4NestedWithInCteBody`
+- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertComplexSubstitutionI4NestedWithInCteBody`
+
 | Task | Status | Notes |
 |------|--------|-------|
 | `finalizeUpdateScopeSymbolTable` / `finalizeDeleteScopeSymbolTable` | ✅ | Aligned — audit against Phase 8–9 helpers remains |
@@ -653,7 +673,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML golden refresh | ⚠️ | ~82/95 cases stale (see backlog below) |
 | DML clause probe | ❌ | Target-table rules only where semantically required (UPDATE LHS, DELETE preference) |
 | EXCEPT set-op parity | ⏸️ | Deferred: treat `EXCEPT` as a first-class sibling to `UNION`/`INTERSECT` across AST production, query dictionary, symbol table, and possibly grammar/precedence handling. Primary example: unaliasedDerivedExceptAllOuterClausesV10Test. |
-| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | Phase 8 closed; `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` remain until Phase 9 |
+| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | Phase 11 cleanup in progress; `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` remain until downward resolution and single-probe simplification land |
 | Donor-email forward alias (TODO B) | ⏸️ | Unqualified ref in `PARTITION BY` binds to earlier select-list alias — orthogonal track |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
