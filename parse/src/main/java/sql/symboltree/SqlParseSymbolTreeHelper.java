@@ -602,7 +602,7 @@ public class SqlParseSymbolTreeHelper {
 
 		Object matchedEntry = (sourceRef == null || sourceRef.isBlank())
 				? null
-				: consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName, false);
+				: consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName);
 		if (matchedEntry == null) {
 			matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, columnName);
 		}
@@ -649,12 +649,12 @@ public class SqlParseSymbolTreeHelper {
 			dictionaryTargetRef = resolvedSourceRef;
 		}
 
-		Object matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName, false);
+		Object matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName);
 		if (matchedEntry == null
 				&& dictionaryTargetRef != null
 				&& !dictionaryTargetRef.isBlank()
 				&& !dictionaryTargetRef.equalsIgnoreCase(sourceRef)) {
-			matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, dictionaryTargetRef, columnName, false);
+			matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, dictionaryTargetRef, columnName);
 		}
 		if (matchedEntry == null) {
 			matchedEntry = removeUnresolvedMapEntry(unresolvedColumnMap, columnName);
@@ -1527,12 +1527,7 @@ public class SqlParseSymbolTreeHelper {
 								Object qualifiedTokens = consumeQualifiedUnknownEntry(
 										localUnresolvedColumnMap,
 										tableRef,
-										columnName,
-										true);
-								if (qualifiedTokens == null) {
-									qualifiedTokens = walker.getCapturedQualifiedUnresolvedLocationEntry(
-											tableRef + "." + columnName);
-								}
+										columnName);
 								if (substitutionResolutionResult.status
 										== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE) {
 									materializeResolvedQualifiedQuerySourceReference(
@@ -1543,12 +1538,6 @@ public class SqlParseSymbolTreeHelper {
 											localUnresolvedColumnMap,
 											effectiveAliasMap,
 											false);
-									if (localCurrentQueryDictionary != null && qualifiedTokens != null) {
-										walker.mergeResolvedColumnIntoDictionary(
-												localCurrentQueryDictionary,
-												outputCol,
-												qualifiedTokens);
-									}
 								}
 							}
 						}
@@ -1592,8 +1581,7 @@ public class SqlParseSymbolTreeHelper {
 								Object wildcardEntry = consumeQualifiedUnknownEntry(
 										localUnresolvedColumnMap,
 										tableRef,
-										columnName,
-										false);
+										columnName);
 								if (wildcardEntry != null) {
 									promoteQualifiedWildcardIntoQuerySource(
 											resolutionResult.querySourceRef,
@@ -7553,8 +7541,7 @@ public class SqlParseSymbolTreeHelper {
 		Object unresolvedEntry = consumeQualifiedUnknownEntry(
 				unresolvedColumnMap,
 				canonicalSourceRef,
-				columnName,
-				true);
+				columnName);
 		if (unresolvedEntry == null) {
 			unresolvedEntry = consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
 		} else {
@@ -7653,11 +7640,14 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Removes and returns one qualified unknown entry from a scope-local map.
+	 * Global qualified location capture is for diagnostics only — not re-read here.
+	 */
 	public Object consumeQualifiedUnknownEntry(
 			HashMap<String, Object> unresolvedColumnMap,
 			String tableRef,
-			String columnName,
-			boolean includeCapturedFallback) {
+			String columnName) {
 		if (tableRef == null || tableRef.isBlank()
 				|| columnName == null || columnName.isBlank()) {
 			return null;
@@ -7687,25 +7677,6 @@ public class SqlParseSymbolTreeHelper {
 					releaseResolvedQualifiedGlobalLocationIfQualified(key);
 					return removed;
 				}
-			}
-		}
-
-		if (includeCapturedFallback) {
-			Object capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(directKey);
-			if (capturedEntry != null) {
-				return capturedEntry;
-			}
-			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef.toLowerCase() + "." + columnName);
-			if (capturedEntry != null) {
-				return capturedEntry;
-			}
-			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef + "." + columnName.toLowerCase());
-			if (capturedEntry != null) {
-				return capturedEntry;
-			}
-			capturedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(tableRef.toLowerCase() + "." + columnName.toLowerCase());
-			if (capturedEntry != null) {
-				return capturedEntry;
 			}
 		}
 
@@ -7883,8 +7854,7 @@ public class SqlParseSymbolTreeHelper {
 		Object qualifiedEntry = consumeQualifiedUnknownEntry(
 				unresolvedColumnMap,
 				tableRef,
-				columnName,
-				false);
+				columnName);
 		if (qualifiedEntry == null) {
 			consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
 		}
@@ -8179,8 +8149,7 @@ public class SqlParseSymbolTreeHelper {
 			qualifiedUnknownEntry = consumeQualifiedUnknownEntry(
 					unresolvedColumnMap,
 					tableRef,
-					columnName,
-					false);
+					columnName);
 			if (qualifiedUnknownEntry == null) {
 				qualifiedUnknownEntry = consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
 			} else {
@@ -9400,8 +9369,7 @@ public class SqlParseSymbolTreeHelper {
 			refTokens = consumeQualifiedUnknownEntry(
 					probeContext.localUnresolvedColumnMap,
 					tableRef,
-					columnName,
-					true);
+					columnName);
 		}
 		if (refTokens == null) {
 			refTokens = getUnqualifiedUnknownEntry(probeContext.localUnresolvedColumnMap, columnName);
@@ -10641,12 +10609,7 @@ public class SqlParseSymbolTreeHelper {
 				Object sourceRefTokens = consumeQualifiedUnknownEntry(
 						localUnresolvedColumnMap,
 						tableRef,
-						columnName,
-						true);
-				if (sourceRefTokens == null) {
-					sourceRefTokens = walker.getCapturedQualifiedUnresolvedLocationEntry(
-							tableRef + "." + columnName);
-				}
+						columnName);
 				if (sourceRefTokens != null) {
 					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
 							querySourceRef,

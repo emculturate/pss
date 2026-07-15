@@ -885,6 +885,11 @@ Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ❌ NOT STA
   candidate deletes: isExistingArchivedClauseColumnRefSatisfied, materializeResolved flag,
     possibly probeArchivedScopeClauseColumnsOnScopeTree if convert probe becomes sufficient
 
+Jul 2026 — Phase A/B (query-dict contract): step-1 release + explicit no global-fallback on
+  dictionary merges stops duplicate query-alias tokens on owning scope (V9–V16 goldens updated).
+  `consumeQualifiedUnknownEntry` is scope-local only; `getCapturedQualifiedUnresolvedLocationEntry`
+  retained for diagnostics only.
+
 Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
   resolveVisibleOuterDeferredUnresolved (removed), DML golden bulk refresh.
 ```
