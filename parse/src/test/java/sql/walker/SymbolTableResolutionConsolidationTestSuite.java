@@ -11,11 +11,12 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
  *
- * Gate composition (126 tests):
+ * Gate composition (130 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
  *   <li>Correlated subquery canaries (38): scalar predicand (18), IN-list (10), EXISTS (10) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
+ *   <li>Nested WITH / CTE handling (4): {@code nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee}, {@code nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors}</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V8 (8): {@code insertValues*} V1–V8</li>
  *   <li>DML VALUES source golden examples (7): explicit column names (SELECT, UPDATE, DELETE) + implicit column names (UPDATE V2-V3, DELETE V2-V3) — establish correct QCD structure for all VALUES source patterns</li>
@@ -261,6 +262,28 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void correlatedExistsSubqueryNestedCteWithOuterRefTest() {
 		coreSelectTests.correlatedExistsSubqueryNestedCteWithOuterRefTest();
+	}
+
+	// --- Nested WITH / CTE handling (4) ---
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaBbbThenCccDddEee() {
+		unaliasedTests.nestedWithExistsCarriesCteListAaaBbbThenCccDddEee();
+	}
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee() {
+		unaliasedTests.nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee();
+	}
+
+	@Test
+	public void nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee() {
+		unaliasedTests.nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee();
+	}
+
+	@Test
+	public void nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		unaliasedTests.nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors();
 	}
 
 	// --- DML UPDATE V1–V14 (14) ---

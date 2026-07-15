@@ -74,6 +74,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
 	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
+	private static final String MUMBLE_OUTER_TABLE_ALIAS_KEY = "mumble_outer_table_alias";
 	private final ArrayDeque<Integer> setOperationWrapAnchorStackLevels;
 	private int tableSourcePrimaryNestingDepth;
 
@@ -2627,11 +2628,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// (no push has occurred yet). We save it under MUMBLE_OUTER_CONTEXT_LIST_KEY so
 		// exitWith_query can restore it once the nested scope collapses back.
 		Map<String, Object> existingCteList = symbolTreeHelper.getContextListSymbolMap(walker.symbolTable);
-		if (existingCteList != null && !existingCteList.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_OUTER_CONTEXT_LIST_KEY, new LinkedHashMap<String, Object>(existingCteList));
+		saveOuterContextListForNestedWith(existingCteList);
+		saveOuterTableAliasForNestedWith();
+		saveOuterDefEntriesForNestedWith();
+		// Seed the new cte_list from the outer one so inner CTEs can reference outer
+		// aliases (e.g. aaa=delete0 visible inside the nested WITH bbb/ccc scopes).
+		walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, seedNestedWithContextList(existingCteList));
+	}
+
+	private void saveOuterContextListForNestedWith(Map<String, Object> existingContextList) {
+		if (existingContextList != null && !existingContextList.isEmpty()) {
+			walker.symbolTable.put(
+					MUMBLE_OUTER_CONTEXT_LIST_KEY,
+					new LinkedHashMap<String, Object>(existingContextList));
 		}
-		// Also save all outer def_* entries (e.g. def_delete0, def_values0) so that
-		// exitWith_query can restore them after the nested scope's putAll absorbs them.
+	}
+
+	private LinkedHashMap<String, Object> seedNestedWithContextList(Map<String, Object> existingContextList) {
+		LinkedHashMap<String, Object> withContextList = new LinkedHashMap<String, Object>();
+		if (existingContextList != null) {
+			withContextList.putAll(existingContextList);
+		}
+		return withContextList;
+	}
+
+	private void saveOuterDefEntriesForNestedWith() {
 		LinkedHashMap<String, Object> outerDefEntries = new LinkedHashMap<String, Object>();
 		for (Map.Entry<String, Object> entry : walker.symbolTable.entrySet()) {
 			if (entry.getKey() != null && entry.getKey().startsWith("def_")) {
@@ -2641,13 +2662,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (!outerDefEntries.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_OUTER_DEF_ENTRIES_KEY, outerDefEntries);
 		}
-		// Seed the new cte_list from the outer one so inner CTEs can reference outer
-		// aliases (e.g. aaa=delete0 visible inside the nested WITH bbb/ccc scopes).
-		LinkedHashMap<String, Object> withCteScope = new LinkedHashMap<String, Object>();
-		if (existingCteList != null) {
-			withCteScope.putAll(existingCteList);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void saveOuterTableAliasForNestedWith() {
+		Object outerAliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (outerAliasMapObj instanceof Map<?, ?> outerAliasMap && !outerAliasMap.isEmpty()) {
+			walker.symbolTable.put(
+					MUMBLE_OUTER_TABLE_ALIAS_KEY,
+					new LinkedHashMap<String, Object>((Map<String, Object>) outerAliasMap));
 		}
-		walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, withCteScope);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void restoreOuterContextListFromPromotedScope(HashMap<String, Object> currentQuerySymbolTable) {
+		Object outerCteListObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_CONTEXT_LIST_KEY);
+		if (outerCteListObj instanceof Map<?, ?> outerCteListMapObj) {
+			walker.symbolTable.put(
+					MUMBLE_CONTEXT_LIST_KEY,
+					new LinkedHashMap<String, Object>((Map<String, Object>) outerCteListMapObj));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void restoreOuterDefEntriesFromPromotedScope(HashMap<String, Object> currentQuerySymbolTable) {
+		Object outerDefEntriesObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_DEF_ENTRIES_KEY);
+		if (outerDefEntriesObj instanceof Map<?, ?> outerDefEntriesMap) {
+			for (Map.Entry<?, ?> defEntry : outerDefEntriesMap.entrySet()) {
+				if (defEntry.getKey() instanceof String defKey) {
+					walker.symbolTable.put(defKey, defEntry.getValue());
+				}
+			}
+		}
+			Object outerAliasMapObj = currentQuerySymbolTable.remove(MUMBLE_OUTER_TABLE_ALIAS_KEY);
+			if (outerAliasMapObj instanceof Map<?, ?> outerAliasMap) {
+				walker.symbolTable.put(
+						MUMBLE_TABLE_ALIAS_KEY,
+						new LinkedHashMap<String, Object>((Map<String, Object>) outerAliasMap));
+			}
 	}
 
 	@Override
@@ -7585,7 +7637,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.putAll(orderedParts);
 	}
 
-	
 	@Override
 	public void exitJinja_function_call( SQLSelectParserParser.Jinja_function_callContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();

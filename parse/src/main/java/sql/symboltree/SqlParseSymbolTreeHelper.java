@@ -5752,7 +5752,7 @@ public class SqlParseSymbolTreeHelper {
 		for (Map.Entry<String, Object> aliasEntry : visibleAliasMap.entrySet()) {
 			currentTableAliasMap.putIfAbsent(aliasEntry.getKey(), aliasEntry.getValue());
 		}
-		mergePublishedScopeContextListIntoAliasMap(currentTableAliasMap);
+		mergeContextListAliasesIntoMap(currentTableAliasMap, collectPublishedScopeContextList());
 		if (currentTableAliasMap.isEmpty()) {
 			HashMap<String, Object> topLevelAliasMap = getTopLevelQueryTableAliasMap();
 			if (topLevelAliasMap != null) {
@@ -5815,34 +5815,6 @@ public class SqlParseSymbolTreeHelper {
 		String localScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, walker.symbolTable);
 		if (localScope != null) {
 			return localScope;
-		}
-
-		for (Object scopeObj : walker.symbolTable.values()) {
-			if (scopeObj instanceof Map<?, ?> nestedScopeObj) {
-				String nestedScope = resolveCteScopeReferenceInSymbols(
-						sourceRef,
-						tableAliasMap,
-						(Map<String, Object>) nestedScopeObj);
-				if (nestedScope != null) {
-					return nestedScope;
-				}
-			}
-		}
-
-		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-			HashMap<String, Object> ancestorAliasMap = getTableAliasMap(ancestorSymbols);
-
-			if (tableAliasMap != null && !tableAliasMap.isEmpty()) {
-				String inheritedScope = resolveCteScopeReferenceInSymbols(sourceRef, tableAliasMap, ancestorSymbols);
-				if (inheritedScope != null) {
-					return inheritedScope;
-				}
-			}
-
-			String inheritedScope = resolveCteScopeReferenceInSymbols(sourceRef, ancestorAliasMap, ancestorSymbols);
-			if (inheritedScope != null) {
-				return inheritedScope;
-			}
 		}
 
 		return null;
@@ -5926,7 +5898,9 @@ public class SqlParseSymbolTreeHelper {
 		walker.pushSymbolTable();
 		walker.symbolTable.put(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY, new LinkedHashSet<String>());
 		if (!outerVisibleScope.contextList.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_CONTEXT_LIST_KEY, outerVisibleScope.contextList);
+			walker.symbolTable.put(
+					MUMBLE_CONTEXT_LIST_KEY,
+					new LinkedHashMap<String, Object>(outerVisibleScope.contextList));
 		}
 		if (!outerVisibleScope.aliases.isEmpty()) {
 			walker.symbolTable.put(
@@ -5988,28 +5962,7 @@ public class SqlParseSymbolTreeHelper {
 		if (aliasObj instanceof HashMap<?, ?> aliasMapObj) {
 			result.aliases.putAll((HashMap<String, Object>) aliasMapObj);
 		}
-		Map<String, Object> contextList = getContextListSymbolMap(scopeSymbols);
-		if (contextList != null) {
-			for (Map.Entry<String, Object> entry : contextList.entrySet()) {
-				if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
-					result.aliases.put(entry.getKey(), scopeRef);
-				}
-			}
-		}
-		for (Object valueObj : scopeSymbols.values()) {
-			if (valueObj instanceof Map<?, ?> nestedScopeObj) {
-				Map<String, Object> nestedContextList = getContextListSymbolMap((Map<String, Object>) nestedScopeObj);
-				if (nestedContextList != null) {
-					for (Map.Entry<String, Object> entry : nestedContextList.entrySet()) {
-						if (entry.getKey() != null
-								&& entry.getValue() instanceof String scopeRef
-								&& !scopeRef.isBlank()) {
-							result.aliases.putIfAbsent(entry.getKey(), scopeRef);
-						}
-					}
-				}
-			}
-		}
+		mergeContextListFromScopeSymbols(result.aliases, scopeSymbols);
 		Object tableDictObj = scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY);
 		if (tableDictObj instanceof HashMap<?, ?> tableDictMapObj) {
 			result.tableDictionary.putAll((HashMap<String, Object>) tableDictMapObj);
@@ -6021,20 +5974,43 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	private void mergeContextListAliasesFromScopeTree(
+			Map<String, Object> targetAliasMap,
+			Map<String, Object> scopeSymbols,
+			boolean directPutIfAbsent,
+			boolean nestedPutIfAbsent) {
+		if (targetAliasMap == null || scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+
+		mergeContextListAliasesIntoMap(
+				targetAliasMap,
+				getContextListSymbolMap(scopeSymbols),
+				directPutIfAbsent);
+		for (Object valueObj : scopeSymbols.values()) {
+			if (valueObj instanceof Map<?, ?> nestedScopeObj) {
+				mergeContextListAliasesIntoMap(
+						targetAliasMap,
+						getContextListSymbolMap((Map<String, Object>) nestedScopeObj),
+						nestedPutIfAbsent);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
 	private void mergeContextListFromScopeSymbols(
-			LinkedHashMap<String, Object> merged,
+			Map<String, Object> merged,
 			Map<String, Object> scopeSymbols) {
 		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
 			return;
 		}
-		Map<String, Object> contextList = getContextListSymbolMap(scopeSymbols);
-		mergeContextListAliasesIntoMap(merged, contextList);
+		mergeContextListAliasesIntoMap(merged, getContextListSymbolMap(scopeSymbols), true);
 	}
 
-	@SuppressWarnings("unchecked")
 	private void mergeContextListAliasesIntoMap(
 			Map<String, Object> targetAliasMap,
-			Map<String, Object> contextList) {
+			Map<String, Object> contextList,
+			boolean putIfAbsent) {
 		if (targetAliasMap == null || contextList == null || contextList.isEmpty()) {
 			return;
 		}
@@ -6044,9 +6020,19 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
-				targetAliasMap.putIfAbsent(alias, scopeRef);
+				if (putIfAbsent) {
+					targetAliasMap.putIfAbsent(alias, scopeRef);
+				} else {
+					targetAliasMap.put(alias, scopeRef);
+				}
 			}
 		}
+	}
+
+	private void mergeContextListAliasesIntoMap(
+			Map<String, Object> targetAliasMap,
+			Map<String, Object> contextList) {
+		mergeContextListAliasesIntoMap(targetAliasMap, contextList, true);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -6113,22 +6099,6 @@ public class SqlParseSymbolTreeHelper {
 			return directScopeRef;
 		}
 
-		if (tableAliasMap != null) {
-			Object mappedSourceObject = tableAliasMap.get(sourceRef);
-			if (mappedSourceObject instanceof String mappedSource && !mappedSource.isBlank()) {
-				Object mappedScope = cteListMap.get(mappedSource);
-				if (mappedScope instanceof String mappedScopeRef && !mappedScopeRef.isBlank()) {
-					return mappedScopeRef;
-				}
-
-				for (Object cteScopeValue : cteListMap.values()) {
-					if (cteScopeValue instanceof String cteScopeRef && cteScopeRef.equals(mappedSource)) {
-						return cteScopeRef;
-					}
-				}
-			}
-		}
-
 		for (Object cteScopeValue : cteListMap.values()) {
 			if (cteScopeValue instanceof String cteScopeRef && cteScopeRef.equals(sourceRef)) {
 				return cteScopeRef;
@@ -6139,27 +6109,11 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void mergeContextListFromPublishedScopePayloads(
-			LinkedHashMap<String, Object> merged,
-			Map<String, Object> scopeSymbols) {
-		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
-			return;
-		}
-
-		mergeContextListFromScopeSymbols(merged, scopeSymbols);
-		for (Object valueObj : scopeSymbols.values()) {
-			if (valueObj instanceof Map<?, ?> nestedScopeObj) {
-				mergeContextListFromScopeSymbols(merged, (Map<String, Object>) nestedScopeObj);
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
 	private Map<String, Object> collectPublishedScopeContextList() {
 		LinkedHashMap<String, Object> merged = new LinkedHashMap<String, Object>();
-		mergeContextListFromPublishedScopePayloads(merged, walker.symbolTable);
+		mergeContextListFromScopeSymbols(merged, walker.symbolTable);
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
-			mergeContextListFromPublishedScopePayloads(merged, ancestorSymbols);
+			mergeContextListFromScopeSymbols(merged, ancestorSymbols);
 		}
 		return merged;
 	}
@@ -6170,8 +6124,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Map<String, Object> publishedContextList = collectPublishedScopeContextList();
-		mergeContextListAliasesIntoMap(aliasMap, publishedContextList);
+		mergeContextListAliasesIntoMap(aliasMap, collectPublishedScopeContextList());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -6880,7 +6833,7 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> effectiveAliasMap = tableAliasMap != null
 				? new HashMap<String, Object>(tableAliasMap)
 				: new HashMap<String, Object>();
-		mergePublishedScopeContextListIntoAliasMap(effectiveAliasMap);
+		mergeContextListAliasesIntoMap(effectiveAliasMap, collectPublishedScopeContextList());
 
 		ArrayList<String> resolvedKeys = new ArrayList<String>();
 		for (Map.Entry<String, Object> unresolvedEntry : unresolvedColumnMap.entrySet()) {
@@ -8765,7 +8718,6 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	private enum ArchivedClauseColumnRefDisposition {
 		SKIP,
-		SATISFIED,
 		RESOLVED,
 		DEFERRED,
 		AMBIGUOUS,
@@ -8788,10 +8740,6 @@ public class SqlParseSymbolTreeHelper {
 
 		static ArchivedClauseColumnRefResult skip() {
 			return new ArchivedClauseColumnRefResult(ArchivedClauseColumnRefDisposition.SKIP, null, null);
-		}
-
-		static ArchivedClauseColumnRefResult satisfied() {
-			return new ArchivedClauseColumnRefResult(ArchivedClauseColumnRefDisposition.SATISFIED, null, null);
 		}
 
 		static ArchivedClauseColumnRefResult resolved(String resolvedSourceRef) {
@@ -9453,13 +9401,6 @@ public class SqlParseSymbolTreeHelper {
 				columnName);
 
 		switch (result.disposition) {
-			case SATISFIED -> {
-				recordInterfaceOutputClauseRefOnQueryDictionary(
-						columnRefObj,
-						columnName,
-						clauseKey,
-						probeContext);
-			}
 			case RESOLVED -> {
 				if (result.resolvedSourceRef == null || result.resolvedSourceRef.isBlank()) {
 					return;

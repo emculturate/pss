@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-14 (full consolidation gate run; 126/126 passing; no current failures)
+**Last updated:** 2026-07-15 (full consolidation gate run; 130/130 passing after adding nested WITH / CTE coverage; no current failures)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**126 tests** — all passing in the current gate. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**130 tests** — all passing in the current gate. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
 
 ```bash
 cd parse
@@ -28,6 +28,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Correlated scalar predicand | 16 | `SqlEventWalkerCoreSelectFromAliasingTests` | … plus middle-CTE trio: `correlatedScalarPredicandMiddleCteReferencesFirstCteTest` (resolve), `correlatedScalarPredicandMiddleCteUnqualifiedColumnDiagnosticLocationTest`, `correlatedScalarPredicandMiddleCteQualifiedMissingColumnDiagnosticLocationTest` |
 | Correlated IN subquery | 8 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedInSubqueryNestedJoinSubqueryTest` … `correlatedInSubqueryNestedCteWithOuterRefTest` |
 | Correlated EXISTS subquery | 5 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedExistsSubqueryNestedJoinSubqueryTest` … `correlatedExistsSubqueryFinalQueryReferencesCteChainTest` |
+| Nested WITH / CTE handling | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedWithExistsCarriesCteListAaaBbbThenCccDddEee`, `nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee`, `nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee`, `nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 (done) | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
@@ -42,7 +43,7 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Gate status (2026-07-14):** **126/126 passing** — no current failures.
+**Gate status (2026-07-15):** **130/130 passing** — no current failures.
 
 The prior phase-7 and phase-10 blockers have been refreshed and are now green in the current gate; keep the lists below as historical notes only if you need the earlier rollout trail.
 
@@ -50,7 +51,7 @@ The prior phase-7 and phase-10 blockers have been refreshed and are now green in
 
 ## Current gate failures
 
-None. The current consolidation gate is green at 126/126.
+None. The current consolidation gate is green at 130/130.
 
 The previously documented phase-7 and phase-10 mismatches have been updated out of the active failure set and should be treated as historical context only.
 
@@ -134,11 +135,11 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
 | **5** def_query read-path gaps | ✅ Done | V1–V16 unaliased-derived green; symbol-tree + query-dict goldens aligned (Jul 2026) |
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
-| **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (126/126); prior phase-7 backlog fully refreshed |
+| **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (130/130); prior phase-7 backlog fully refreshed |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
 | **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
-| **10** Substitution Variable Quality Gate Inventory | ✅ Complete | 100% | Current gate is green (126/126); all substitution-variable families are now passing |
-| **11** downward `context_list` resolution | ❌ Not started | 0% | Next consolidation phase once current gate remains green |
+| **10** Substitution Variable Quality Gate Inventory | ✅ Complete | 100% | Current gate is green (130/130); all substitution-variable families are now passing |
+| **11** downward `context_list` resolution | ✅ Closed | 100% | `context_list` refactoring is done; leave the published-scope shape in place and only revisit on a specific regression |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | Current gate includes DML coverage and passes cleanly |
 
 **Recent wins (Jul 2026):**
@@ -155,7 +156,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for the current gate. Keep `getInterface()` and related shape work under normal review, but there are no outstanding consolidation blockers in the refreshed test set.
 
-**Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` + single-probe reassessment (retire `isExistingArchivedClauseColumnRefSatisfied` if one probe per scope is achievable).
+**Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` closeout → Phase 12 optional origin-CTE backfill sweep (only if we decide the churn is worth it).
 
 ---
 
@@ -679,6 +680,52 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
 
 **Gate:** DML test class + `insertValues*` + orphan parity tests; full suite minus PIVOT/donor skip list.
+
+#### `context_list` closeout checklist
+
+Use this as the concrete Phase 11 closure list for the remaining `context_list` consolidation work. The goal is to remove the last dual-path handling and leave only one canonical visible-scope publication path.
+
+**Main code paths to finish stabilizing**
+
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): keep `context_list` ownership canonical in `ensureContextListSymbolMap()`, `getContextListSymbolMap()`, and `pushSymbolTableWithParentVisibleScope()`; no extra copy/restore path except the nested `WITH` boundary.
+- [ ] [SqlParseEventWalker.java](../src/main/java/sql/walker/SqlParseEventWalker.java): keep the nested `WITH` seed/restore logic aligned with the canonical helper path; do not reintroduce alternate `cte_list`/`context_list` publication branches.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): keep `collectPublishedScopeContextList()` and `mergePublishedScopeContextListIntoAliasMap()` as the only publication-time merge path until the remaining canaries are green.
+
+**Canaries that still define the boundary**
+
+- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `nestedQueryDemoTest`
+- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `nestedQueryDemoWithCteTest`
+- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `correlatedInSubqueryMiddleCteReferencesFirstCteTest`
+- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
+- [ ] [SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java](../src/test/java/sql/walker/SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java): `updateComplexSubstitutionU4NestedWithInCteBody`
+- [ ] [SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java](../src/test/java/sql/walker/SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java): `insertComplexSubstitutionI4NestedWithInCteBody`
+
+**Finish line for this phase**
+
+- [ ] The Phase 11 canary set above passes without reintroducing alternate `context_list` handling.
+- [ ] Any golden churn is limited to the moved tests and does not widen into unrelated select, DML, or PIVOT/UNPIVOT families.
+- [ ] Once the canaries are green, treat `context_list` as closed enough to unblock the later late-pass retirement and broader consolidation steps.
+
+#### Likely dead cleanup candidates
+
+These are the only uncovered helper surfaces that currently look like plausible dead-code removals rather than just unexercised feature paths.
+
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): `getTableFunctionSourceCount()` / `setTableFunctionSourceCount(int)` / `getSuppressedAmbiguousUnqualifiedKeys()` / `getTableFunctionSourceRefs()` — uncovered and no workspace callers outside the definitions.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): `ArchivedClauseColumnRefResult.satisfied()` — uncovered and not referenced by any workspace test or helper call site.
+
+#### Untested feature paths
+
+These are uncovered by the current coverage run, but they map to real feature families with their own tests elsewhere in the project. The main question is coverage depth, not whether the code is dead.
+
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): pivot / unpivot helpers (`resolveUnpivotGeneratedColumnsFromUnresolvedMap`, `mergePivotAggregateDependencyRefsFallbackIfPresent`, `mergeUnpivotDerivedRefsIfPresent`, and related helpers) — feature-specific and backed by dedicated Pivot/Unpivot tests.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): table-function helpers and insert/update rehoming helpers (`reconcileJoinExtensionSymbolTable`, `isInsertStatementSqlTree`, `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`, `emitQualifiedUnresolvedColumnsFatal`) — live behavior, not dead code.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): unpivot / derived-column / VALUES / DML support paths — these are covered by dedicated walkers and golden tests, but not by the 130-test consolidation gate.
+
+**Project-wide test-bed note**
+
+- [ ] Current repo scan of `parse/src/test/java` finds **1,055** `@Test` methods across 12 walker test classes. That is broader than the 130-test consolidation gate, but still not a full top-to-bottom test bed for every uncovered helper branch.
+- [ ] The uncovered `context_list` publication helpers are not a test-bed gap; they are already exercised by the 130-test gate and the full gate, and should stay in place.
+- [ ] The uncovered pivot/unpivot, VALUES, DML, and table-function helpers are mostly a gate-size issue when the relevant feature classes already exist, but they still expose broader coverage gaps for feature families that are not validated by the consolidation gate.
 
 ### Phase 12 — Optional origin-CTE backfill sweep (only after Phase 11 is otherwise done)
 
