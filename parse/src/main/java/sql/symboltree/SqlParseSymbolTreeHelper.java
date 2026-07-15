@@ -9076,53 +9076,6 @@ public class SqlParseSymbolTreeHelper {
 						|| isTableFunctionSourceReference(sourceRef));
 	}
 
-	private boolean isExistingArchivedClauseColumnRefSatisfied(
-			String clauseKey,
-			String columnName,
-			String tableRef,
-			HashMap<String, Object> localInterface,
-			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> effectiveAliasMap,
-			HashMap<String, Object> effectiveTableCollection,
-			HashMap<String, Object> visibleQuerySourceCollection) {
-		if (tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
-			return false;
-		}
-
-		String resolvedTableRef = walker.resolveAliasToTableName(tableRef, effectiveAliasMap);
-		String resolvedQuerySourceRef = resolveAliasToQuerySourceRefPreferDefinition(
-				tableRef,
-				effectiveAliasMap,
-				visibleQuerySourceCollection);
-		if (resolvedQuerySourceRef != null || walker.isNonTableQuerySourceReference(resolvedTableRef)) {
-			return true;
-		}
-
-		HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-				resolvedTableRef,
-				effectiveTableCollection);
-		if (indicatedTableDictionary == null
-				|| !containsKeyIgnoreCase(indicatedTableDictionary, columnName)) {
-			return false;
-		}
-
-		if (!isGroupOrOrderClauseKey(clauseKey)) {
-			return true;
-		}
-
-		String normalizedPhysicalRef = normalizeTableRef(
-				(resolvedTableRef == null || resolvedTableRef.isBlank()) ? tableRef : resolvedTableRef);
-		return isQueryOutputColumnProofForClause(
-				columnName,
-				tableRef,
-				normalizedPhysicalRef,
-				clauseKey,
-				localInterface,
-				effectiveAliasMap,
-				visibleQuerySourceCollection,
-				effectiveTableCollection);
-	}
-
 	@SuppressWarnings("unchecked")
 	private ArchivedClauseColumnRefResult validateArchivedClauseColumnRef(
 			Object refObj,
@@ -9157,18 +9110,6 @@ public class SqlParseSymbolTreeHelper {
 				tableRef,
 				columnName)) {
 			return ArchivedClauseColumnRefResult.skip();
-		}
-
-		if (isExistingArchivedClauseColumnRefSatisfied(
-				clauseKey,
-				columnName,
-				tableRef,
-				localInterface,
-				localCurrentQueryDictionary,
-				effectiveAliasMap,
-				effectiveTableCollection,
-				visibleQuerySourceCollection)) {
-			return ArchivedClauseColumnRefResult.satisfied();
 		}
 
 		boolean requiresOutputColumnProof = isGroupOrOrderClauseKey(clauseKey);
@@ -11628,8 +11569,7 @@ public class SqlParseSymbolTreeHelper {
 
 		resolveScopeBodyDeferredUnresolved(scopeLocal, scopePayload, priorNamedScopeRefs);
 		probeArchivedScopeClauseColumnsOnScopeTree(scopePayload, priorNamedScopeRefs);
-		mergeUnresolvedEntriesIntoCurrentScope(
-				resolveVisibleOuterDeferredUnresolved(outerCorrelated));
+		mergeUnresolvedEntriesIntoCurrentScope(outerCorrelated);
 	}
 
 	/**
@@ -11889,7 +11829,7 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> hoisted = new HashMap<String, Object>();
 		walker.mergeUnknownEntries(hoisted, extractDefArchivedUnresolved(queryScopePayload));
 		walker.mergeUnknownEntries(hoisted, extractUnresolvedColumnMapFromScopePayload(queryScopePayload));
-		mergeUnresolvedEntriesIntoCurrentScope(resolveVisibleOuterDeferredUnresolved(hoisted));
+		mergeUnresolvedEntriesIntoCurrentScope(hoisted);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -11945,9 +11885,17 @@ public class SqlParseSymbolTreeHelper {
 			singlePending.put(entry.getKey(), entry.getValue());
 			HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
 			HashMap<String, Object> innerLocal = new HashMap<String, Object>();
-			partitionPredicateUnresolvedByScope(singlePending, nestedScope, outerCorrelated, innerLocal);
+			partitionPredicateUnresolvedByScope(
+					singlePending,
+					nestedScope,
+					getVisiblePriorNamedScopeRefs(),
+					outerCorrelated,
+					innerLocal);
 			if (!innerLocal.isEmpty()) {
-				resolveInnerLocalPredicateUnresolved(innerLocal, nestedScope);
+				resolveInnerLocalPredicateUnresolved(
+						innerLocal,
+						nestedScope,
+						getVisiblePriorNamedScopeRefs());
 				consumed.add(entry.getKey());
 			}
 		}
@@ -12210,11 +12158,20 @@ public class SqlParseSymbolTreeHelper {
 
 		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, liveQueryRefKey);
 		HashMap<String, Object> defScopePayload = getDefQueryScopePayload(predicateFrameSymbols, liveQueryRefKey);
+		Map<String, Object> priorNamedScopeRefs = getVisiblePriorNamedScopeRefs();
 		HashMap<String, Object> outerCorrelated = new HashMap<String, Object>();
 		HashMap<String, Object> innerLocal = new HashMap<String, Object>();
-		partitionPredicateUnresolvedByScope(pendingUnresolved, defScopePayload, outerCorrelated, innerLocal);
-		HashMap<String, Object> deferredForParent = resolveInnerLocalPredicateUnresolved(innerLocal, defScopePayload);
-		walker.mergeUnknownEntries(deferredForParent, resolveVisibleOuterDeferredUnresolved(outerCorrelated));
+		partitionPredicateUnresolvedByScope(
+				pendingUnresolved,
+				defScopePayload,
+				priorNamedScopeRefs,
+				outerCorrelated,
+				innerLocal);
+		HashMap<String, Object> deferredForParent = resolveInnerLocalPredicateUnresolved(
+				innerLocal,
+				defScopePayload,
+				priorNamedScopeRefs);
+		walker.mergeUnknownEntries(deferredForParent, outerCorrelated);
 		stripUnresolvedFromScopePayloads(predicateFrameSymbols);
 		// Predicate frames inherit context-backed aliases for inner resolution only; merging
 		// that snapshot onto the parent would overwrite locally registered FROM aliases (e.g. kk).
@@ -12348,6 +12305,7 @@ public class SqlParseSymbolTreeHelper {
 	private void partitionPredicateUnresolvedByScope(
 			HashMap<String, Object> pendingUnresolved,
 			HashMap<String, Object> defScopePayload,
+			Map<String, Object> priorNamedScopeRefs,
 			HashMap<String, Object> outerCorrelated,
 			HashMap<String, Object> innerLocal) {
 		if (pendingUnresolved == null || pendingUnresolved.isEmpty()) {
@@ -12360,7 +12318,9 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			String tableRef = extractTableRefFromUnresolvedEntry(unresolvedKey, entry.getValue());
-			if (tableRef != null && isAliasLocalToScope(tableRef, innerAliasMap)) {
+			if (tableRef != null
+					&& (isAliasLocalToScope(tableRef, innerAliasMap)
+						|| isPriorCteAlias(tableRef, priorNamedScopeRefs))) {
 				innerLocal.put(unresolvedKey, entry.getValue());
 			} else {
 				outerCorrelated.put(unresolvedKey, entry.getValue());
@@ -12437,7 +12397,8 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> resolveInnerLocalPredicateUnresolved(
 			HashMap<String, Object> innerLocal,
-			HashMap<String, Object> defScopePayload) {
+			HashMap<String, Object> defScopePayload,
+			Map<String, Object> priorNamedScopeRefs) {
 		HashMap<String, Object> deferredForParent = new HashMap<String, Object>();
 		if (innerLocal == null || innerLocal.isEmpty()) {
 			return deferredForParent;
@@ -12447,9 +12408,13 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
 		splitUnresolvedEntriesByQualification(innerLocal, qualifiedUnresolved, unqualifiedUnresolved);
 
-		HashMap<String, Object> innerAliasMap = getScopeTableAliasMap(defScopePayload);
-		if (innerAliasMap == null) {
-			innerAliasMap = new HashMap<String, Object>();
+		HashMap<String, Object> innerAliasMap = buildEffectiveVisibleAliasMap(getScopeTableAliasMap(defScopePayload));
+		if (priorNamedScopeRefs != null && !priorNamedScopeRefs.isEmpty()) {
+			for (Map.Entry<String, Object> entry : priorNamedScopeRefs.entrySet()) {
+				if (entry.getKey() != null && entry.getValue() instanceof String scopeRef && !scopeRef.isBlank()) {
+					innerAliasMap.putIfAbsent(entry.getKey(), scopeRef);
+				}
+			}
 		}
 		if (!qualifiedUnresolved.isEmpty()) {
 			emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(qualifiedUnresolved, innerAliasMap);
@@ -12462,15 +12427,6 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/** Hoists outer-correlated predicate unresolved refs to the parent query exit pipeline. */
-	private HashMap<String, Object> resolveVisibleOuterDeferredUnresolved(
-			HashMap<String, Object> outerCorrelated) {
-		if (outerCorrelated == null || outerCorrelated.isEmpty()) {
-			return new HashMap<String, Object>();
-		}
-		return outerCorrelated;
-	}
-
-
 	private void stripUnresolvedFromScopePayload(HashMap<String, Object> scopePayload) {
 		if (scopePayload == null || scopePayload.isEmpty()) {
 			return;

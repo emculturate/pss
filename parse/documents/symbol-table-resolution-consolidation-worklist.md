@@ -653,8 +653,8 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Load-bearing | Keep until walk-time token capture is proven stable at interface validation |
 | `moveEntriesToSingleTableIfSingleTarget` | Load-bearing | Keep until single-source scopes resolve fully at exit |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Load-bearing | Keep until derived-column ingress no longer needs pre-/post-wildcard stripping |
-| `resolveVisibleOuterDeferredUnresolved` | Phase 11 removal target | Remove once downward `context_list` resolution is live |
-| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Phase 11 removal target | Collapse after single-probe reassessment |
+| `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
+| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Removed | Inlined into `validateArchivedClauseColumnRef`; dual-probe follow-up still remains |
 
 **Phase 11 canary set:**
 
@@ -679,6 +679,40 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
 
 **Gate:** DML test class + `insertValues*` + orphan parity tests; full suite minus PIVOT/donor skip list.
+
+### Phase 12 — Optional origin-CTE backfill sweep (only after Phase 11 is otherwise done)
+
+**Goal:** If we later decide the origin-CTE retro-write is worth the churn, add it as a final opt-in step after Phase 11 has finished and stayed green.
+
+| File | Change? | Why |
+|------|---------|-----|
+| `SqlEventWalkerLiveSampleQueriesTests.java` | Change | Largest nested CTE / alias surface; a deeper origin-CTE backfill would rewrite already-published nested payloads here. |
+| `SqlEventWalkerFunctionsAggregatesWindowingTests.java` | Change | Contains nested window / aggregate / CTE composition where later-query refs can be retro-written into the source CTE dictionary. |
+| `SqlEventWalkerSubqueriesAndClauseSemanticsTests.java` | Change | CTE-backed subquery cases are the direct consumer of downward visibility, so they would pick up the new origin writeback. |
+| `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java` | Change | The nested UPDATE / INSERT / DELETE canaries rely on the same publication path and would churn if origin dictionaries are backfilled. |
+| `SqlParseEventWalkerWithAccessObjectTest.java` | Change | Access-object nested query cases already show token backfill behavior and are sensitive to any retro-write into the origin CTE. |
+| `SqlEventWalkerCoreSelectFromAliasingTests.java` | Change | This is the narrowest and best canary family for the nested CTE / correlated alias path. |
+| `SqlEventWalkerJoinsAndTableResolutionTests.java` | No-change | Join resolution changes table/reference binding, but not the origin-CTE backfill surface itself. |
+| `SqlEventWalkerCastingAndTypesTests.java` | No-change | Mostly single-scope casts and projections; there is no descendant CTE to rewrite back into. |
+| `SqlEventWalkerTableFunctionTests.java` | No-change | Table-function publication is a separate scope shape and does not depend on origin-CTE writeback. |
+| `SqlEventWalkerPivotUnpivotTests.java` | No-change | Derived-column handling is the controlling path here, not a later-query origin CTE backfill. |
+| `SqlEventWalkerScriptsAndDDLTests.java` | No-change | DDL / script scaffolding does not exercise the nested publication path that would churn from this change. |
+
+**Phase 12 gate if we ever take it:**
+
+- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoWithCteTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedInSubqueryMiddleCteReferencesFirstCteTest`
+- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
+- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSubqueryWithColumnsV0`
+- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV3`
+- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV5`
+- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV6`
+- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU4NestedWithInCteBody`
+- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertComplexSubstitutionI4NestedWithInCteBody`
+- `SqlParseEventWalkerWithAccessObjectTest#coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`
+
+**Recommended execution order for that optional phase:** run the 11 canaries above first, then refresh only the files that move. If the matrix stays mostly `No-change`, keep the change out of Phase 12.
 
 #### V13 canary — nested UPDATE FROM correlated substitution columns
 
@@ -749,8 +783,8 @@ The four `@Deprecated` CTE-named aliases were deleted after call sites were rena
 | ~~`materializeResolvableGlobalQualifiedUnresolvedLocations`~~ | ~~Late global qualified materialization~~ | **Retired Jul 2026** — unified `resolveQualifiedUnresolvedEntries` on `globalQualifiedUnresolvedLocations` |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Pre-wildcard + post-UPDATE-rhs derived-column stripping | Unified ingress skips derived before wildcard/single-table paths |
 | `moveEntriesToSingleTableIfSingleTarget` | Single-source unqualified relocation | Scope exit resolves all unqualified in one pass |
-| `resolveVisibleOuterDeferredUnresolved` | Identity placeholder | Phase 10 implements downward resolution |
-| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Idempotency for convert + scope-tree passes (Phase 9) | Phase 10 single-probe reassessment — see Phase 10 close criteria |
+| `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
+| `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Removed | Inlined into `validateArchivedClauseColumnRef`; remaining follow-up is the dual-probe simplification itself |
 
 ---
 
@@ -795,7 +829,7 @@ Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ❌ NOT STA
     possibly probeArchivedScopeClauseColumnsOnScopeTree if convert probe becomes sufficient
 
 Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
-resolveVisibleOuterDeferredUnresolved (Phase 10), DML golden bulk refresh.
+  resolveVisibleOuterDeferredUnresolved (removed), DML golden bulk refresh.
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, PIVOT/UNPIVOT golden bulk refresh, or removing `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` (V13 depends on it).
@@ -880,6 +914,8 @@ Phases 1–4 ✅  →  5 (V1 delta)  →  6 (one convert)  →  7 (query finaliz
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
+
+If Phase 12 is ever taken, do it only after Phase 11 is fully complete and the Phase 11 canary set is still green; keep it as an opt-in cleanup step rather than part of the default execution order.
 
 ---
 
