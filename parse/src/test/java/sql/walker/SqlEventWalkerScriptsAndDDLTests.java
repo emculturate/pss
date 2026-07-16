@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static mumble.MumbleConstants.MUMBLE_ALTER_KEY;
@@ -30,7 +29,6 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 
 	// SCRIPTS TESTS
 
-	@Ignore
 	@Test
 	@SuppressWarnings("unchecked")
 	public void simpleScriptTest() {
@@ -51,7 +49,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertNotNull("SCRIPT statement 1 should be present", firstStatement);
 		Assert.assertNotNull("SCRIPT statement 2 should be present", secondStatement);
 		Assert.assertEquals("SCRIPT statement 1 tree is wrong",
-				"{select={1={column={name=col1, table_ref=p}}, 2={column={name=*, table_ref=*}}}, from={table={alias=f, query={table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[1,2]'}}, function_name=parse_json}}}}}}}}",
+				"{select={1={column={name=col1, table_ref=p}}, 2={column={name=*, table_ref=*}}}, from={table={alias=f, table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[1,2]'}}, function_name=parse_json}}}}}}}",
 				firstStatement.toString());
 		Assert.assertEquals("SCRIPT statement 2 tree is wrong",
 				"{select={1={column={name=*, table_ref=*}}}, from={table={alias=f2, table_function={function_name=flatten, parameters={input={function={parameters={1={literal='[3,4]'}}, function_name=parse_json}}}}}}}",
@@ -62,10 +60,10 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Map<String, Object> firstStatementSymbols = (Map<String, Object>) scriptSymbolTable.get("1");
 		Map<String, Object> secondStatementSymbols = (Map<String, Object>) scriptSymbolTable.get("2");
 		Assert.assertEquals("Statement 1 symbol subtree is wrong",
-				"{query0={query_dictionary={*=[[@5,15:15='*',<291>,1:15]], col1=[[@3,9:12='col1',<381>,1:9]]}, table_dictionary={flatten0={*=[[@5,15:15='*',<291>,1:15]]}}, interface={*=[{name=*, table_ref=*}], col1=[{name=col1, table_ref=p}]}, table_alias={f=flatten0}}}",
+				"{def_query0={query_dictionary={*=[[@5,15:15='*',<291>,1:15]], col1=[[@3,9:12='col1',<381>,1:9]]}, table_dictionary={flatten0={*=[[@5,15:15='*',<291>,1:15]]}}, interface={*=[{name=*, table_ref=*}], col1=[{name=col1, table_ref=p}]}, table_alias={f=flatten0}}}",
 				firstStatementSymbols.toString());
 		Assert.assertEquals("Statement 2 symbol subtree is wrong",
-				"{query0={query_dictionary={*=[[@22,77:77='*',<291>,2:8]]}, table_dictionary={flatten1={*=[[@22,77:77='*',<291>,2:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f2=flatten1}}}",
+				"{def_query0={query_dictionary={*=[[@22,77:77='*',<291>,2:8]]}, table_dictionary={flatten1={*=[[@22,77:77='*',<291>,2:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f2=flatten1}}}",
 				secondStatementSymbols.toString());
 
 		Map<String, Object> scriptTableDictionary = (Map<String, Object>) extractor.getTableColumnDictionaryMap().get("SCRIPT");
@@ -296,7 +294,6 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 
 	// DDL TESTS
 
-	@Ignore
 	@Test
 	public void simpleDdlCreateTableV1Test() {
 		final String query = "create table tab1 as select * from table(flatten(input=>parse_json('[1,2]'))) f";
@@ -310,7 +307,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_create1={query0={query_dictionary={*=[[@5,28:28='*',<291>,1:28]]}, table_dictionary={flatten0={*=[[@5,28:28='*',<291>,1:28]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}}",
+				"{def_create1={def_query0={query_dictionary={*=[[@5,28:28='*',<291>,1:28]]}, table_dictionary={flatten0={*=[[@5,28:28='*',<291>,1:28]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}}",
 				extractor.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
 				"{flatten0={*=[[@5,28:28='*',<291>,1:28]]}}",

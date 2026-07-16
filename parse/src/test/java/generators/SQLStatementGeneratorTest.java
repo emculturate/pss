@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class SQLStatementGeneratorTest {
@@ -156,10 +155,9 @@ public class SQLStatementGeneratorTest {
         Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
     }
 
-    @Ignore
     @Test
     public void basicSelectQuotedTableNameV1Test() {
-        final String astString = "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={schema=schema, dbname=dbname, alias=null, table=tab1}}}}";
+        final String astString = "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=\"dbname.schema.tab1\"}}}}";
         final String query = "SELECT * FROM \"dbname.schema.tab1\"";
         String generated = runGenerationBasic("basicSelectQuotedTableNameV1Test", astString, query);
         Assert.assertNotNull("Generated SQL should not be null", generated);
