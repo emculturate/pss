@@ -1741,7 +1741,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 			snippet.getQueryInterface().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{truncate0={}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_truncate0={}}",
 			snippet.getSymbolTable().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}",
 			snippet.getTableDictionary().toString());

@@ -4772,7 +4772,8 @@ public class SqlParseSymbolTreeHelper {
 			payload = new HashMap<String, Object>();
 		}
 		stripFrameLocalWalkTimeKeys(payload);
-		walker.popSymbolTable(scopeKey, payload);
+		String definitionKey = toDefinitionScopeKey(scopeKey);
+		walker.popSymbolTable(definitionKey != null ? definitionKey : scopeKey, payload);
 	}
 
 	@SuppressWarnings("unchecked")
