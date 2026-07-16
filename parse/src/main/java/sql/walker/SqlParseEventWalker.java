@@ -3962,7 +3962,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
 
 		Object existingInterfaceEntry = selectInterface.get(interfaceAlias);
-		if (existingInterfaceEntry != null) {
+		if (existingInterfaceEntry != null && !"*".equals(interfaceAlias)) {
 			symbolTreeHelper.emitDuplicateInterfaceColumnFatal(interfaceAlias, existingInterfaceEntry, columnList, aliasToken);
 		}
 
