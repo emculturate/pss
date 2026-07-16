@@ -8054,6 +8054,10 @@ public class SqlParseSymbolTreeHelper {
 			return QualifiedScopeResolutionResult.unresolvedPhysicalSource(null, tableRef);
 		}
 
+		if (isNonTupleSubstitutionReference(tableRef)) {
+			return QualifiedScopeResolutionResult.unresolvedPhysicalSource(null, tableRef);
+		}
+
 		if (isRelationalModifierDerivedColumnReference(
 				localDerivedColumns,
 				relationalModifierInterfaceHints,
@@ -9484,6 +9488,18 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * Substitution variables that are not tuple/table row sources (join_extension, column,
+	 * predicand, condition, etc.) must never participate in column resolution.
+	 */
+	private boolean isNonTupleSubstitutionReference(String referenceName) {
+		if (referenceName == null || !referenceName.startsWith("<")) {
+			return false;
+		}
+		Object substitutionType = walker.substitutionsMap == null ? null : walker.substitutionsMap.get(referenceName);
+		return substitutionType != null && !MUMBLE_TUPLE_KEY.equals(substitutionType.toString());
+	}
+
+	/**
 	 * Physical tables registered in this query frame's {@code table_dictionary} only.
 	 * Inherited CTE {@code context_list} / query aliases are excluded.
 	 */
@@ -9496,6 +9512,9 @@ public class SqlParseSymbolTreeHelper {
 		for (Map.Entry<String, Object> entry : tableCollection.entrySet()) {
 			String tableRef = entry.getKey();
 			if (tableRef == null || tableRef.isBlank()) {
+				continue;
+			}
+			if (isNonTupleSubstitutionReference(tableRef)) {
 				continue;
 			}
 			if (isQuerySourceReference(tableRef)

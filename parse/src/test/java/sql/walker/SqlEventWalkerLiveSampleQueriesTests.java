@@ -274,7 +274,8 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 		    "\n<source_eab_system_type> as source_eab_system_type" +
 		    "\n , ROW_NUMBER() OVER ( -- NEW: assign rank to dedupe emails" +
 			// TODO: source_partner_system_name is the alias for a column appearing 3 lines earlier; This resolution
-			// requires new code to check the aliases in the current select list.
+			// requires new code to check the aliases in the current select list. The Parser currently doesn't look locally
+			// for aliases to resolve columns references, and this could be a tricky solution.
 		    "\n    PARTITION BY src_donor_id, donor_email.email, source_partner_system_name -- NEW: group by email " +
 		    "\n    ORDER BY " +
 		    "\n        CASE WHEN LOWER(donor_email.email_type) = 'primary' THEN 1 ELSE 2 END --, NEW: prioritize primary if email dupes between primary and secondary" +
@@ -314,9 +315,22 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 		    "\norder by src_donor_id, email_type";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		// TODO: The problem in this example is that the join extension variable is being treated as a possible resolution target. I think the easiest fix will 
-		// be to have the resolution logic notice that it is NOT a tuple/table or query variable and therefore not a possible resolution target. The join extension variable is a special case that is not a tuple/table or query variable, so it should be ignored in the resolution logic.
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'source_partner_system_name' at (l:18 c:50) was not found in output interface of any visible query alias [donor_email].",
+				"source_partner_system_name",
+				18,
+				50);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [source_partner_system_name [(l:18 c:50)]]",
+				"source_partner_system_name",
+				18,
+				50);
 	}
 
 	@Test
