@@ -4313,6 +4313,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					walker.collectTableAlias(alias, tableName);
 					walker.ensureTableDictionaryEntry(tableName);
 				}
+			} else if (reference.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+				// Keep table_function in the from-list item directly; reserve query for subqueries.
+				item.putAll(reference);
+				symbolTreeHelper.registerTableFunctionSourceReference(reference, alias);
 			} else {// then it's a query, add it to the tree no matter what kind of query it is
 				item.put(MUMBLE_QUERY_KEY, reference);
 				registerQueryLikeFromSource(reference, alias);
