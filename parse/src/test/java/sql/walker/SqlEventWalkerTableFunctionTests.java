@@ -3,6 +3,8 @@ package sql.walker;
 import org.junit.Assert;
 import org.junit.Test;
 
+import access.Snippet;
+import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalkerTest {
@@ -418,12 +420,22 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 
 	@Test
 	public void simpleTfCallFlattenSplitV5Test() {
+		// Unaliased FLATTEN in FROM does not expose value for unqualified SELECT resolution;
+		// writers should add a table-function alias and qualify the column (e.g. f.value).
 		final String query = "SELECT value FROM TABLE(FLATTEN(input => SPLIT('a,b,c', ',')))";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		assertNoFatalErrors(extractor);
-		assertNoWalkerDiagnostics(extractor);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [value [(l:1 c:7)]]",
+				"value",
+				1,
+				7);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=value, table_ref=null}}}, from={table_function={function_name=FLATTEN, parameters={input={function={parameters={1={literal='a,b,c'}, 2={literal=','}}, function_name=SPLIT}}}}}}}",
 				extractor.getAsTree().toString());

@@ -193,15 +193,16 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 		assertNoFatalErrors(extractor);
 
 		Snippet snippet = extractor.getSnippet();
-		// intake_dt in ORDER BY is ambiguous between the outer join alias and union6 of gifts_allocation
+		// intake_dt in ORDER BY is ambiguous between the outer join alias and union6 of gifts_allocation;
+		// join_extension is excluded from resolution and is not a possible source.
 		assertDiagnosticAtPosition(
 				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
-				"Ambiguous column reference 'intake_dt' at (l:97 c:80). Possible sources: [<join_extension_gifts_allocation>, <fy_credited_gifts_allocation>, union6]",
+				"Ambiguous column reference 'intake_dt' at (l:97 c:99). Possible sources: [<fy_credited_gifts_allocation>, union6]",
 				"intake_dt",
 				97,
-				80);
+				99);
 
 	}
 
