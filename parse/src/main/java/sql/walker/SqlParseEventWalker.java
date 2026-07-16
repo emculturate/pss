@@ -38,6 +38,7 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.CharStream;
 
 import org.antlr.v4.runtime.misc.Interval;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
@@ -4165,6 +4166,100 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 
+	private String extractTableSourcePrimaryAlias(SQLSelectParserParser.Table_source_primaryContext ctx) {
+		if (ctx == null || ctx.getChildCount() < 2) {
+			return null;
+		}
+
+		ParseTree aliasChild = ctx.getChild(1);
+		if (aliasChild instanceof SQLSelectParserParser.As_clauseContext asClause) {
+			if (asClause.alias_identifier() != null) {
+				return asClause.alias_identifier().getText();
+			}
+			return null;
+		}
+
+		String aliasText = aliasChild.getText();
+		if (aliasText == null || aliasText.isBlank() || "as".equalsIgnoreCase(aliasText)) {
+			return null;
+		}
+		return aliasText;
+	}
+
+	private void emitMalformedVariableStartRecoveryWarning(Token startToken) {
+		if (startToken == null) {
+			return;
+		}
+
+		Integer line = startToken.getLine();
+		Integer charPos = startToken.getCharPositionInLine();
+		String tokenText = startToken.getText() == null ? "<" : startToken.getText();
+		String message = String.format(
+				"Line %d:%d - Recovering malformed variable identifier start '%s' by skipping one token",
+				line,
+				charPos,
+				tokenText);
+
+		walker.addWalkerDiagnostic(
+				ParseDiagnostic.Severity.WARNING,
+				"RECOVER_MALFORMED_VARIABLE_START",
+				message,
+				line,
+				charPos,
+				walker.getClass().getSimpleName(),
+				null,
+				tokenText,
+				true,
+				"ast-walk",
+				null,
+				null);
+	}
+
+	private Map<String, Object> tryRecoverMalformedVariableTableSourcePrimary(
+			SQLSelectParserParser.Table_source_primaryContext ctx,
+			int ruleIndex) {
+		if (ctx == null) {
+			return null;
+		}
+
+		Token variableStartToken = null;
+		if (ctx.getChildCount() >= 1
+				&& ctx.getChild(0) instanceof SQLSelectParserParser.Variable_identifierContext varCtx) {
+			variableStartToken = varCtx.getStart();
+		} else {
+			Token startToken = ctx.getStart();
+			if (startToken != null && "<".equals(startToken.getText())) {
+				variableStartToken = startToken;
+			}
+		}
+
+		if (variableStartToken == null) {
+			return null;
+		}
+
+		String sourceText = recoverVariableNameFromToken(variableStartToken);
+		String aliasText = extractTableSourcePrimaryAlias(ctx);
+
+		Map<String, Object> recovered = walker.makeRuleMap(ruleIndex);
+
+		Map<String, Object> substitution = new HashMap<String, Object>();
+		substitution.put(MUMBLE_NAME_KEY, sourceText);
+
+		Map<String, Object> syntheticReference = new HashMap<String, Object>();
+		syntheticReference.put(MUMBLE_SUBSTITUTION_KEY, substitution);
+		recovered.put("1", syntheticReference);
+
+		if (aliasText != null) {
+			Map<String, Object> aliasMap = new HashMap<String, Object>();
+			aliasMap.put(MUMBLE_ALIAS_KEY, aliasText);
+			recovered.put("2", aliasMap);
+		}
+
+		emitMalformedVariableStartRecoveryWarning(variableStartToken);
+		emitInvalidVariableDiagnostic(variableStartToken, sourceText);
+		return recovered;
+	}
+
 	
 	@Override
 	public void exitTable_source_primary( SQLSelectParserParser.Table_source_primaryContext ctx) {
@@ -4175,26 +4270,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		if (subMap == null && ctx.getChild(0) instanceof SQLSelectParserParser.Variable_identifierContext varCtx) {
-			// Grammar-based detection: table_source_primary -> variable_identifier as_clause
-			// This matches the grammar rule directly, regardless of naming convention or child count
-			String sourceText = recoverVariableNameFromToken(varCtx.getStart());
-			String aliasText = ctx.getChildCount() >= 2 ? ctx.getChild(1).getText() : null;
-			
-			subMap = walker.makeRuleMap(ruleIndex);
-
-			Map<String, Object> substitution = new HashMap<String, Object>();
-			substitution.put(MUMBLE_NAME_KEY, sourceText);
-
-			Map<String, Object> syntheticReference = new HashMap<String, Object>();
-			syntheticReference.put(MUMBLE_SUBSTITUTION_KEY, substitution);
-			subMap.put("1", syntheticReference);
-
-			Map<String, Object> aliasMap = new HashMap<String, Object>();
-			aliasMap.put(MUMBLE_ALIAS_KEY, aliasText);
-			subMap.put("2", aliasMap);
-
-			emitInvalidVariableDiagnostic(varCtx.getStart(), sourceText);
+		if (subMap == null || !subMap.containsKey("1")) {
+			Map<String, Object> recovered = tryRecoverMalformedVariableTableSourcePrimary(ctx, ruleIndex);
+			if (recovered != null) {
+				subMap = recovered;
+			}
 		}
 		if (subMap == null) {
 			throw new IllegalStateException("Missing AST node map for table_primary at: " + ctx.getText());

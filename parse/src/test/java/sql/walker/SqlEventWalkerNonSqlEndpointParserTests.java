@@ -68,6 +68,15 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 
 		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticAtPosition(
+				snippet,
+				"RECOVER_MALFORMED_VARIABLE_START",
+				ParseDiagnostic.Severity.WARNING,
+				"Recovering malformed variable identifier start '<' by skipping one token",
+				"<",
+				1,
+				15);
 		
 			assertDiagnosticAtPosition(
 				snippet,
@@ -107,6 +116,15 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 
 		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
+
+		assertDiagnosticAtPosition(
+				snippet,
+				"RECOVER_MALFORMED_VARIABLE_START",
+				ParseDiagnostic.Severity.WARNING,
+				"Recovering malformed variable identifier start '<' by skipping one token",
+				"<",
+				1,
+				15);
 		
 		assertDiagnosticAtPosition(
 				snippet,
