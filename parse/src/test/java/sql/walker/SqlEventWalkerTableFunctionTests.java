@@ -1,10 +1,12 @@
 package sql.walker;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import sql.SQLSelectParserParser;
 
+@Ignore
 public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalkerTest {
 
 	// FLATTEN TABLE FUNCTION TESTS

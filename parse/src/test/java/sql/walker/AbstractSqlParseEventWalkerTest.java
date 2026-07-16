@@ -289,6 +289,17 @@ public abstract class AbstractSqlParseEventWalkerTest {
 				actualCount);
 	}
 
+
+	protected void assertAliasBoundaryVisibility(String symbolSnapshot, String... aliases) {
+		Assert.assertTrue("Expected top-level interface entries", symbolSnapshot.contains("interface={"));
+		Assert.assertTrue("Expected table alias mapping", symbolSnapshot.contains("table_alias={"));
+		for (String alias : aliases) {
+			Assert.assertTrue(
+					"Expected alias visibility for " + alias,
+					symbolSnapshot.contains(alias + "=") || symbolSnapshot.contains("table_ref=" + alias));
+		}
+	}
+
 	/**
 	 * Asserts the exact set of diagnostics matching {@code code} and {@code severity},
 	 * formatted as a sorted, newline-delimited list so each diagnostic is visible at a glance:
