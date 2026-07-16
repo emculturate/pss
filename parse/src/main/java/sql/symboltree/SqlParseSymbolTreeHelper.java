@@ -11445,6 +11445,8 @@ public class SqlParseSymbolTreeHelper {
 		mergeTableAliasMapsFromWithFrame(promotedScope, withFrameSymbols);
 		mergeUnresolvedColumnMapsFromWithFrame(promotedScope, withFrameSymbols);
 		absorbWalkTimeBackupKey(withFrameSymbols, promotedScope, MUMBLE_OUTER_TABLE_ALIAS_KEY);
+		absorbWalkTimeBackupKey(withFrameSymbols, promotedScope, MUMBLE_OUTER_CONTEXT_LIST_KEY);
+		absorbWalkTimeBackupKey(withFrameSymbols, promotedScope, MUMBLE_OUTER_DEF_ENTRIES_KEY);
 
 		walker.symbolTable = new HashMap<String, Object>();
 		if (definitionScopeKey != null) {

@@ -2591,10 +2591,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			int scopeIndex = walker.queryCount - 1;
 			currentQuerySymbolTable = symbolTreeHelper.promoteWithQueryMainBodyScope(scopeIndex);
 			restoreOuterTableAliasFromPromotedScope(currentQuerySymbolTable);
-			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
-
 			restoreOuterContextListFromPromotedScope(currentQuerySymbolTable);
 			restoreOuterDefEntriesFromPromotedScope(currentQuerySymbolTable);
+			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(currentQuerySymbolTable);
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
