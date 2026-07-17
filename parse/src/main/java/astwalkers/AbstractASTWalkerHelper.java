@@ -100,10 +100,9 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 	public static final String DIAG_ANTLR_RECOVER_INLINE = "ANTLR_RECOVER_INLINE";
 	public static final String DIAG_ANTLR_RECOVER = "ANTLR_RECOVER";
 	public static final String DIAG_ANTLR_REPORT_ERROR = "ANTLR_REPORT_ERROR";
-	public static final String DIAG_MANUAL_ERROR = "MANUAL_ERROR";
-	public static final String DIAG_MANUAL_FATAL = "MANUAL_FATAL";
-	public static final String DIAG_MANUAL_SEVERE_WARNING = "MANUAL_SEVERE_WARNING";
-	public static final String DIAG_MANUAL_WARNING = "MANUAL_WARNING";
+	public static final String DIAG_APPLICATION_ISSUE_ERROR = "APPLICATION_ISSUE_ERROR";
+	public static final String DIAG_APPLICATION_ISSUE_FATAL = "APPLICATION_ISSUE_FATAL";
+	public static final String DIAG_APPLICATION_ISSUE_WARNING = "APPLICATION_ISSUE_WARNING";
 
 
     public AbstractASTWalkerHelper() {
@@ -130,10 +129,15 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 		registerDiagnostic(DIAG_ANTLR_RECOVER_INLINE, "RECOVER_INLINE", "ANTLR inline recovery occurred");
 		registerDiagnostic(DIAG_ANTLR_RECOVER, "RECOVER", "ANTLR recovery occurred");
 		registerDiagnostic(DIAG_ANTLR_REPORT_ERROR, "REPORT_ERROR", "ANTLR reported parser error");
-		registerDiagnostic(DIAG_MANUAL_ERROR, "MANUAL_ERROR", "Manual parser error");
-		registerDiagnostic(DIAG_MANUAL_FATAL, "MANUAL_FATAL", "Manual fatal parser error");
-		registerDiagnostic(DIAG_MANUAL_SEVERE_WARNING, "MANUAL_SEVERE_WARNING", "Manual parser severe warning");
-		registerDiagnostic(DIAG_MANUAL_WARNING, "MANUAL_WARNING", "Manual parser warning");
+		registerDiagnostic(DIAG_APPLICATION_ISSUE_ERROR,
+				"APPLICATION_ISSUE_ERROR",
+				"Application-injected parser error");
+		registerDiagnostic(DIAG_APPLICATION_ISSUE_FATAL,
+				"APPLICATION_ISSUE_FATAL",
+				"Application-injected parser fatal error");
+		registerDiagnostic(DIAG_APPLICATION_ISSUE_WARNING,
+				"APPLICATION_ISSUE_WARNING",
+				"Application-injected parser warning");
 	}
 
 	public void registerDiagnostic(String key, String code, String defaultMessage) {

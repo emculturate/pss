@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (177 tests):
+ * Gate composition (181 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -41,7 +41,7 @@ import org.junit.Test;
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
  *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
  *   <li>Diagnostic exemplars (5): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
- *   <li>Parser diagnostic exemplars (7): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorManualErrorDiagnosticTest}, {@code parseErrorCollectorManualFatalDiagnosticTest}, {@code parseErrorCollectorManualWarningDiagnosticTest}</li>
+ *   <li>Parser diagnostic exemplars (11): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
@@ -1003,17 +1003,37 @@ public class SmoketestQualityGateTestSuite {
 	}
 
 	@Test
-	public void parseErrorCollectorManualErrorDiagnosticTest() {
-		parserDiagnosticTests.parseErrorCollectorManualErrorDiagnosticTest();
+	public void parseErrorCollectorApplicationIssueErrorDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorApplicationIssueErrorDiagnosticTest();
 	}
 
 	@Test
-	public void parseErrorCollectorManualFatalDiagnosticTest() {
-		parserDiagnosticTests.parseErrorCollectorManualFatalDiagnosticTest();
+	public void parseErrorCollectorApplicationIssueFatalDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorApplicationIssueFatalDiagnosticTest();
 	}
 
 	@Test
-	public void parseErrorCollectorManualWarningDiagnosticTest() {
-		parserDiagnosticTests.parseErrorCollectorManualWarningDiagnosticTest();
+	public void parseErrorCollectorApplicationIssueWarningDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorApplicationIssueWarningDiagnosticTest();
+	}
+
+	@Test
+	public void parserAmbiguityDiagnosticTest() {
+		parserDiagnosticTests.parserAmbiguityDiagnosticTest();
+	}
+
+	@Test
+	public void parserFullContextDiagnosticTest() {
+		parserDiagnosticTests.parserFullContextDiagnosticTest();
+	}
+
+	@Test
+	public void parserContextSensitivityDiagnosticTest() {
+		parserDiagnosticTests.parserContextSensitivityDiagnosticTest();
+	}
+
+	@Test
+	public void parserSyntaxErrorDiagnosticTest() {
+		parserDiagnosticTests.parserSyntaxErrorDiagnosticTest();
 	}
 }

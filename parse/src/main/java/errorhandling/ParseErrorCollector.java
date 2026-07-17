@@ -71,16 +71,16 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	public void addError(String errorMessage) {
 		// This method adds an error message to the error list.
 		errorList.add(errorMessage);
-		addDiagnostic(ParseDiagnostic.Severity.ERROR, "MANUAL_ERROR", errorMessage, null, false, null);
+		addDiagnostic(ParseDiagnostic.Severity.ERROR, "APPLICATION_ISSUE_ERROR", errorMessage, null, false, null);
 	}	
 
 	public void addFatalError(String errorMessage) {
 		errorList.add(errorMessage);
-		addDiagnostic(ParseDiagnostic.Severity.FATAL, "MANUAL_FATAL", errorMessage, null, false, null);
+		addDiagnostic(ParseDiagnostic.Severity.FATAL, "APPLICATION_ISSUE_FATAL", errorMessage, null, false, null);
 	}
 
 	public void addWarning(String warningMessage) {
-		addDiagnostic(ParseDiagnostic.Severity.WARNING, "MANUAL_WARNING", warningMessage, null, true, null);
+		addDiagnostic(ParseDiagnostic.Severity.WARNING, "APPLICATION_ISSUE_WARNING", warningMessage, null, true, null);
 	}
 
 	private boolean expectsVariableIdentifierToken(Parser recognizer) {

@@ -141,8 +141,8 @@ public abstract class AbstractParserAccess {
     }
 
     public void addFatalError(String errorMessage) {
-        // This method adds a fatal error message to the ParseErrorCollector.
-        // It allows you to manually add errors that are not captured by the parser.
+        // Application-injected fatal diagnostic when the walker or access layer reports
+        // an issue that ANTLR did not capture as a parse-token error.
         if (errorCollector != null) {
             errorCollector.addFatalError(errorMessage);
         }

@@ -18,9 +18,9 @@ public class AbstractASTWalkerHelperTest {
 		Assert.assertThrows(IllegalArgumentException.class,
 				() -> helper.overrideDiagnosticCode("UNKNOWN_KEY", "X"));
 
-		helper.overrideDiagnosticCode(AbstractASTWalkerHelper.DIAG_MANUAL_FATAL, "MY_FATAL");
+		helper.overrideDiagnosticCode(AbstractASTWalkerHelper.DIAG_APPLICATION_ISSUE_FATAL, "MY_FATAL");
 		Assert.assertEquals("MY_FATAL",
-				helper.getDiagnosticCode(AbstractASTWalkerHelper.DIAG_MANUAL_FATAL));
+				helper.getDiagnosticCode(AbstractASTWalkerHelper.DIAG_APPLICATION_ISSUE_FATAL));
 	}
 
 	@Test
@@ -32,9 +32,9 @@ public class AbstractASTWalkerHelperTest {
 		Assert.assertThrows(IllegalArgumentException.class,
 				() -> helper.overrideDiagnosticMessage("UNKNOWN_KEY", "X"));
 
-		helper.overrideDiagnosticMessage(AbstractASTWalkerHelper.DIAG_MANUAL_WARNING, "custom warning message");
+		helper.overrideDiagnosticMessage(AbstractASTWalkerHelper.DIAG_APPLICATION_ISSUE_WARNING, "custom warning message");
 		Assert.assertEquals("custom warning message",
-				helper.getDiagnosticMessage(AbstractASTWalkerHelper.DIAG_MANUAL_WARNING));
+				helper.getDiagnosticMessage(AbstractASTWalkerHelper.DIAG_APPLICATION_ISSUE_WARNING));
 	}
 
 	@Test

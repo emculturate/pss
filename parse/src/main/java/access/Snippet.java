@@ -234,7 +234,7 @@ public class Snippet {
 			}
 			this.parserDiagnosticList.add(new ParseDiagnostic(
 					ParseDiagnostic.Severity.FATAL,
-					"MANUAL_FATAL",
+					"APPLICATION_ISSUE_FATAL",
 					fatalError,
 					null,
 					null,
