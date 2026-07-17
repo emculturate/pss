@@ -22,7 +22,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_SHADOWED_PARENT_CTE_NAME = "SQL_SHADOWED_PARENT_CTE_NAME";
 		public static final String DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS = "SQL_UNRESOLVED_UNQUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES = "SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES";
-		public static final String DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS = "SQL_UNRESOLVED_QUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_DUPLICATE_INTERFACE_COLUMNS = "SQL_DUPLICATE_INTERFACE_COLUMNS";
 		public static final String DIAG_SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH = "SQL_SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH";
 		public static final String DIAG_SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH = "SQL_INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH";
@@ -180,9 +179,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES,
 				 "UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
 				 "Unqualified column '%s' at (l:%s c:%s) was not found in output interface of any visible query alias %s.");
-		 registerDiagnostic(DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS,
-				 "UNRESOLVED_QUALIFIED_COLUMNS",
-				 "Unresolved qualified column reference(s): %s");
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
 				 "Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.");

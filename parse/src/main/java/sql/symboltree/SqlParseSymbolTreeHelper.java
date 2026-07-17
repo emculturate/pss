@@ -2137,28 +2137,6 @@ public class SqlParseSymbolTreeHelper {
 				null);
 	}
 
-	public void emitQualifiedUnresolvedColumnsFatal(HashMap<String, Object> qualifiedUnresolvedMap) {
-		if (qualifiedUnresolvedMap == null || qualifiedUnresolvedMap.isEmpty()) {
-			return;
-		}
-
-		Integer[] firstTokenLocation = walker.getFirstEntryLineAndCharacter(qualifiedUnresolvedMap);
-		String unknownColumnsWithLocations = walker.formatColumnEntriesWithLocations(qualifiedUnresolvedMap);
-		String unknownColumnsCsv = walker.formatEntryKeysAsCsv(qualifiedUnresolvedMap);
-		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS);
-		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_UNRESOLVED_QUALIFIED_COLUMNS);
-		String diagMessage = (diagTemplate == null)
-				? "Unresolved qualified column reference(s): " + unknownColumnsWithLocations
-				: String.format(diagTemplate, unknownColumnsWithLocations);
-
-		walker.addWalkerFatal(
-				diagCode,
-				diagMessage,
-				firstTokenLocation[0],
-				firstTokenLocation[1],
-				unknownColumnsCsv);
-	}
-
 	@SuppressWarnings("unchecked")
 	public boolean isTupleWithSubstitution(Map<String, Object> aliasMap) {
 		if (aliasMap == null) {

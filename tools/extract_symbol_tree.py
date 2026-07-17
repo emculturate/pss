@@ -29,7 +29,6 @@ MOVE_METHODS = {
     "normalizeUpdateColumnRefs",
     "splitUnresolvedEntriesByQualification",
     "emitUnqualifiedUnresolvedColumnsError",
-    "emitQualifiedUnresolvedColumnsFatal",
 
     # CTE / WITH scope
     "mergeCteListIntoQueryScope",

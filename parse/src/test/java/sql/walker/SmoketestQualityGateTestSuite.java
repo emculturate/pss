@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (170 tests):
+ * Gate composition (177 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -41,6 +41,7 @@ import org.junit.Test;
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
  *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
  *   <li>Diagnostic exemplars (5): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
+ *   <li>Parser diagnostic exemplars (7): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorManualErrorDiagnosticTest}, {@code parseErrorCollectorManualFatalDiagnosticTest}, {@code parseErrorCollectorManualWarningDiagnosticTest}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
@@ -68,6 +69,8 @@ public class SmoketestQualityGateTestSuite {
 			new SqlEventWalkerJoinsAndTableResolutionTests();
 	private final SqlParseEventWalkerWithAccessObjectTest accessObjectTests =
 			new SqlParseEventWalkerWithAccessObjectTest();
+	private final SqlParserDiagnosticTests parserDiagnosticTests =
+			new SqlParserDiagnosticTests();
 
 	// --- Nested demo canaries (2) ---
 
@@ -975,5 +978,42 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void pivotInIdentifierDirectTableFatalV1Test() {
 		pivotUnpivotTests.pivotInIdentifierDirectTableFatalV1Test();
+	}
+
+	// --- Parser diagnostic exemplars (7) ---
+
+	@Test
+	public void parserReportErrorUnexpectedInputDiagnosticTest() {
+		parserDiagnosticTests.parserReportErrorUnexpectedInputDiagnosticTest();
+	}
+
+	@Test
+	public void parserRecoverInlineInvalidSyntaxNearDiagnosticTest() {
+		parserDiagnosticTests.parserRecoverInlineInvalidSyntaxNearDiagnosticTest();
+	}
+
+	@Test
+	public void parserRecoverMalformedVariableStartDiagnosticTest() {
+		parserDiagnosticTests.parserRecoverMalformedVariableStartDiagnosticTest();
+	}
+
+	@Test
+	public void parserRecoverSyntaxErrorDiagnosticTest() {
+		parserDiagnosticTests.parserRecoverSyntaxErrorDiagnosticTest();
+	}
+
+	@Test
+	public void parseErrorCollectorManualErrorDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorManualErrorDiagnosticTest();
+	}
+
+	@Test
+	public void parseErrorCollectorManualFatalDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorManualFatalDiagnosticTest();
+	}
+
+	@Test
+	public void parseErrorCollectorManualWarningDiagnosticTest() {
+		parserDiagnosticTests.parseErrorCollectorManualWarningDiagnosticTest();
 	}
 }

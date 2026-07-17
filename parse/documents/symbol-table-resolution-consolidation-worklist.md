@@ -729,7 +729,7 @@ These are the only uncovered helper surfaces that currently look like plausible 
 These are uncovered by the current coverage run, but they map to real feature families with their own tests elsewhere in the project. The main question is coverage depth, not whether the code is dead.
 
 - [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): pivot / unpivot helpers (`resolveUnpivotGeneratedColumnsFromUnresolvedMap`, `mergePivotAggregateDependencyRefsFallbackIfPresent`, `mergeUnpivotDerivedRefsIfPresent`, and related helpers) — feature-specific and backed by dedicated Pivot/Unpivot tests.
-- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): table-function helpers and insert/update rehoming helpers (`reconcileJoinExtensionSymbolTable`, `isInsertStatementSqlTree`, `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`, `emitQualifiedUnresolvedColumnsFatal`) — live behavior, not dead code.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): table-function helpers and insert/update rehoming helpers (`reconcileJoinExtensionSymbolTable`, `isInsertStatementSqlTree`, `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`) — live behavior, not dead code.
 - [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): unpivot / derived-column / VALUES / DML support paths — these are covered by dedicated walkers and golden tests, but not by the 130-test consolidation gate.
 
 **Project-wide test-bed note**

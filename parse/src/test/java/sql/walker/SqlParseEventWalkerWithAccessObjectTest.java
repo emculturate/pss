@@ -2031,6 +2031,14 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				"REPORT_ERROR",
 				"unexpected input",
 				"(");
+		assertDiagnosticAtPosition(
+				nestedFunctionArgs,
+				"REPORT_ERROR",
+				ParseDiagnostic.Severity.FATAL,
+				"unexpected input",
+				"(",
+				1,
+				31);
 	}
 
 	@Test
