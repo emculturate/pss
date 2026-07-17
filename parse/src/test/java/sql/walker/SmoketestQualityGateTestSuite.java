@@ -3,20 +3,34 @@ package sql.walker;
 import org.junit.Test;
 
 /**
- * Quality gate for symbol-table resolution consolidation (Phases 5–11).
+ * Smoketest quality gate — permanent regression suite for SQL parse/walker behavior.
  *
  * Run the full gate:
- * {@code mvn -Psymbol-table-resolution-consolidation test}
+ * {@code mvn -Psmoketest-quality-gate test}
  *
  * Or:
- * {@code mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test}
+ * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (130 tests):
+ * Gate composition (170 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
  *   <li>Correlated subquery canaries (38): scalar predicand (18), IN-list (10), EXISTS (10) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>Nested WITH / CTE handling (4): {@code nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee}, {@code nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors}</li>
+ *   <li>Nested WITH alias-boundary visibility (3): {@code nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee}, {@code nestedVisibilityWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors}, {@code nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors}</li>
+ *   <li>Nested WITH depth / cross-clause probes (2): {@code nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces}, {@code nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs}</li>
+ *   <li>Table function smoke (7): FLATTEN/GENERATOR FROM shape, chained lateral, wildcard interface, CTAS, tuple endpoint syntax</li>
+ *   <li>DML DELETE canary (1): {@code deleteDictionaryHandlingPostgresReturningQualifiedAcrossWhereSubclausesV2}</li>
+ *   <li>SCRIPT / DDL smoke (3): {@code simpleScriptTest}, {@code simpleDdlCreateTableV1Test}, {@code mixedScriptStatementTypesTest}</li>
+ *   <li>Endpoint / tuple parser smoke (3): {@code tupleSubstitutionVariableTestV1/V2}, {@code basicTupleTableTest}</li>
+ *   <li>Snippet construction (1): {@code basicJoinWithOnOnConditionVariableTest}</li>
+ *   <li>Production join_extension / ambiguity probes (2): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}, {@code getMissingColumnFromTupleDictionaryTest}</li>
+ *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
+ *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
+ *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
+ *   <li>Endpoint parser extensions (2): {@code basicTupleSubstitutionVariableTest}, {@code inListVariableSubstitutionTest}</li>
+ *   <li>JOIN duplicate-interface fatal (1): {@code handlingRepeatingColumnNamesInTheInterfaceV1}</li>
+ *   <li>Access-object / Snippet integration (2): {@code basicQuerySnippetTest}, {@code basicTupleSnippetTest}</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
  *   <li>DML INSERT V1–V8 (8): {@code insertValues*} V1–V8</li>
  *   <li>DML VALUES source golden examples (7): explicit column names (SELECT, UPDATE, DELETE) + implicit column names (UPDATE V2-V3, DELETE V2-V3) — establish correct QCD structure for all VALUES source patterns</li>
@@ -26,11 +40,12 @@ import org.junit.Test;
  *   <li>Production scalar / EXISTS probes (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
  *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
+ *   <li>Diagnostic exemplars (5): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
  */
-public class SymbolTableResolutionConsolidationTestSuite {
+public class SmoketestQualityGateTestSuite {
 
 	private final SqlEventWalkerCoreSelectFromAliasingTests coreSelectTests =
 			new SqlEventWalkerCoreSelectFromAliasingTests();
@@ -38,6 +53,21 @@ public class SymbolTableResolutionConsolidationTestSuite {
 			new SqlEventWalkerDmlUpdateInsertDeleteTruncateTests();
 	private final SqlEventWalkerSubqueriesAndClauseSemanticsTests unaliasedTests =
 			new SqlEventWalkerSubqueriesAndClauseSemanticsTests();
+	private final SqlEventWalkerTableFunctionTests tableFunctionTests =
+			new SqlEventWalkerTableFunctionTests();
+	private final SqlEventWalkerScriptsAndDDLTests scriptsAndDdlTests =
+			new SqlEventWalkerScriptsAndDDLTests();
+	private final SqlEventWalkerNonSqlEndpointParserTests endpointParserTests =
+			new SqlEventWalkerNonSqlEndpointParserTests();
+	private final SqlEventWalkerLiveSampleQueriesTests liveSampleTests =
+			new SqlEventWalkerLiveSampleQueriesTests();
+	private final access.SnippetTest snippetTests = new access.SnippetTest();
+	private final SqlEventWalkerPivotUnpivotTests pivotUnpivotTests =
+			new SqlEventWalkerPivotUnpivotTests();
+	private final SqlEventWalkerJoinsAndTableResolutionTests joinsTests =
+			new SqlEventWalkerJoinsAndTableResolutionTests();
+	private final SqlParseEventWalkerWithAccessObjectTest accessObjectTests =
+			new SqlParseEventWalkerWithAccessObjectTest();
 
 	// --- Nested demo canaries (2) ---
 
@@ -284,6 +314,207 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors() {
 		unaliasedTests.nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors();
+	}
+
+	// --- Nested WITH alias-boundary visibility (3) ---
+
+	@Test
+	public void nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee() {
+		unaliasedTests.nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee();
+	}
+
+	@Test
+	public void nestedVisibilityWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors() {
+		unaliasedTests.nestedVisibilityWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors();
+	}
+
+	@Test
+	public void nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors() {
+		unaliasedTests.nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors();
+	}
+
+	// --- Nested WITH depth / cross-clause probes (2) ---
+
+	@Test
+	public void nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces() {
+		unaliasedTests.nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces();
+	}
+
+	@Test
+	public void nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs() {
+		unaliasedTests.nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs();
+	}
+
+	// --- Table function smoke (7) ---
+
+	@Test
+	public void flattenTableFunctionFromListDoesNotUseQueryWrapperTest() {
+		tableFunctionTests.flattenTableFunctionFromListDoesNotUseQueryWrapperTest();
+	}
+
+	@Test
+	public void simpleTfCallFlattenWildcardV1Test() {
+		tableFunctionTests.simpleTfCallFlattenWildcardV1Test();
+	}
+
+	@Test
+	public void tfFromBaseTableLateralFlattenV1Test() {
+		tableFunctionTests.tfFromBaseTableLateralFlattenV1Test();
+	}
+
+	@Test
+	public void chainedLateralTfDoubleNestedV1Test() {
+		tableFunctionTests.chainedLateralTfDoubleNestedV1Test();
+	}
+
+	@Test
+	public void chainedLateralTfWildcardBothV3Test() {
+		tableFunctionTests.chainedLateralTfWildcardBothV3Test();
+	}
+
+	@Test
+	public void explicitJoinFormCtasGeneratorV6Test() {
+		tableFunctionTests.explicitJoinFormCtasGeneratorV6Test();
+	}
+
+	@Test
+	public void flattenTableFunctionTupleEndpointTableSyntaxDoesNotUseQueryWrapperTest() {
+		tableFunctionTests.flattenTableFunctionTupleEndpointTableSyntaxDoesNotUseQueryWrapperTest();
+	}
+
+	// --- DML DELETE canary (1) ---
+
+	@Test
+	public void deleteDictionaryHandlingPostgresReturningQualifiedAcrossWhereSubclausesV2() {
+		dmlTests.deleteDictionaryHandlingPostgresReturningQualifiedAcrossWhereSubclausesV2();
+	}
+
+	// --- SCRIPT / DDL smoke (3) ---
+
+	@Test
+	public void simpleScriptTest() {
+		scriptsAndDdlTests.simpleScriptTest();
+	}
+
+	@Test
+	public void simpleDdlCreateTableV1Test() {
+		scriptsAndDdlTests.simpleDdlCreateTableV1Test();
+	}
+
+	@Test
+	public void mixedScriptStatementTypesTest() {
+		scriptsAndDdlTests.mixedScriptStatementTypesTest();
+	}
+
+	// --- Endpoint / tuple parser smoke (3) ---
+
+	@Test
+	public void tupleSubstitutionVariableTestV1() {
+		endpointParserTests.tupleSubstitutionVariableTestV1();
+	}
+
+	@Test
+	public void tupleSubstitutionVariableTestV2() {
+		endpointParserTests.tupleSubstitutionVariableTestV2();
+	}
+
+	@Test
+	public void basicTupleTableTest() {
+		endpointParserTests.basicTupleTableTest();
+	}
+
+	@Test
+	public void basicTupleSubstitutionVariableTest() {
+		endpointParserTests.basicTupleSubstitutionVariableTest();
+	}
+
+	@Test
+	public void inListVariableSubstitutionTest() {
+		endpointParserTests.inListVariableSubstitutionTest();
+	}
+
+	// --- Snippet construction (1) ---
+
+	@Test
+	public void basicJoinWithOnOnConditionVariableTest() {
+		snippetTests.basicJoinWithOnOnConditionVariableTest();
+	}
+
+	// --- Production join_extension / ambiguity probes (2) ---
+
+	@Test
+	public void donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest() {
+		liveSampleTests.donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest();
+	}
+
+	@Test
+	public void getMissingColumnFromTupleDictionaryTest() {
+		liveSampleTests.getMissingColumnFromTupleDictionaryTest();
+	}
+
+	// --- Table-function resolution diagnostic (1) ---
+
+	@Test
+	public void simpleTfCallFlattenSplitV5Test() {
+		tableFunctionTests.simpleTfCallFlattenSplitV5Test();
+	}
+
+	// --- PIVOT / UNPIVOT smoke (3) ---
+
+	@Test
+	public void unpivotV1Test() {
+		pivotUnpivotTests.unpivotV1Test();
+	}
+
+	@Test
+	public void pivotV1Tab1Test() {
+		pivotUnpivotTests.pivotV1Tab1Test();
+	}
+
+	@Test
+	public void pivotInIdentifierResolvedFromSubqueryWarningV1Test() {
+		pivotUnpivotTests.pivotInIdentifierResolvedFromSubqueryWarningV1Test();
+	}
+
+	// --- Nested WITH clause / set-op matrix (4) ---
+
+	@Test
+	public void nestedWithScalarHavingAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		unaliasedTests.nestedWithScalarHavingAaaBbbThenCccDddEeeParsesWithoutErrors();
+	}
+
+	@Test
+	public void nestedWithScalarSelectListAaaBbbThenCccDddEeeParsesWithoutErrors() {
+		unaliasedTests.nestedWithScalarSelectListAaaBbbThenCccDddEeeParsesWithoutErrors();
+	}
+
+	@Test
+	public void nestedWithUnionCarriesCteListAaaBbbThenCccDddEee() {
+		unaliasedTests.nestedWithUnionCarriesCteListAaaBbbThenCccDddEee();
+	}
+
+	@Test
+	public void nestedWithIntersectCarriesCteListAaaBbbThenCccDddEee() {
+		unaliasedTests.nestedWithIntersectCarriesCteListAaaBbbThenCccDddEee();
+	}
+
+	// --- JOIN duplicate-interface fatal (1) ---
+
+	@Test
+	public void handlingRepeatingColumnNamesInTheInterfaceV1() {
+		joinsTests.handlingRepeatingColumnNamesInTheInterfaceV1();
+	}
+
+	// --- Access-object / Snippet integration (2) ---
+
+	@Test
+	public void basicQuerySnippetTest() {
+		accessObjectTests.basicQuerySnippetTest();
+	}
+
+	@Test
+	public void basicTupleSnippetTest() {
+		accessObjectTests.basicTupleSnippetTest();
 	}
 
 	// --- DML UPDATE V1–V14 (14) ---
@@ -717,5 +948,32 @@ public class SymbolTableResolutionConsolidationTestSuite {
 	@Test
 	public void multipleScalarAndOtherSubqueriesSymbolTableTest() {
 		unaliasedTests.multipleScalarAndOtherSubqueriesSymbolTableTest();
+	}
+
+	// --- Diagnostic exemplars (5) — one test per walker diagnostic not covered elsewhere in gate ---
+
+	@Test
+	public void nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal() {
+		unaliasedTests.nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal();
+	}
+
+	@Test
+	public void unionWithMismatchColumnCountsAndNamesTest() {
+		unaliasedTests.unionWithMismatchColumnCountsAndNamesTest();
+	}
+
+	@Test
+	public void insertValuesExtraTargetColumnV9() {
+		dmlTests.insertValuesExtraTargetColumnV9();
+	}
+
+	@Test
+	public void coverageDrivenSelectIntoUnionBothSidesSnapshotTest() {
+		accessObjectTests.coverageDrivenSelectIntoUnionBothSidesSnapshotTest();
+	}
+
+	@Test
+	public void pivotInIdentifierDirectTableFatalV1Test() {
+		pivotUnpivotTests.pivotInIdentifierDirectTableFatalV1Test();
 	}
 }

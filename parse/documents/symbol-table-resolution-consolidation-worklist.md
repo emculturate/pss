@@ -7,19 +7,19 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-15 (full consolidation gate run; 130/130 passing after adding nested WITH / CTE coverage; no current failures)
+**Last updated:** 2026-07-17 (smoketest quality gate renamed to `SmoketestQualityGateTestSuite`; gate expanded to 170/170 with diagnostic exemplars)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**130 tests** — all passing in the current gate. Implemented in `SymbolTableResolutionConsolidationTestSuite` and runnable via Maven profile `symbol-table-resolution-consolidation`.
+**170 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
 
 ```bash
 cd parse
-mvn -Psymbol-table-resolution-consolidation test
+mvn -Psmoketest-quality-gate test
 # equivalent:
-mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
+mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 ```
 
 | Group | Count | Class | Methods |
@@ -29,6 +29,20 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Correlated IN subquery | 8 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedInSubqueryNestedJoinSubqueryTest` … `correlatedInSubqueryNestedCteWithOuterRefTest` |
 | Correlated EXISTS subquery | 5 | `SqlEventWalkerCoreSelectFromAliasingTests` | `correlatedExistsSubqueryNestedJoinSubqueryTest` … `correlatedExistsSubqueryFinalQueryReferencesCteChainTest` |
 | Nested WITH / CTE handling | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedWithExistsCarriesCteListAaaBbbThenCccDddEee`, `nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee`, `nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee`, `nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors` |
+| Nested WITH alias-boundary visibility | 3 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee`, `nestedVisibilityWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors`, `nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors` |
+| Nested WITH depth / cross-clause | 2 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces`, `nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs` |
+| Table function smoke | 7 | `SqlEventWalkerTableFunctionTests` | FROM-list shape, wildcard interface, chained lateral, CTAS `def_create`, tuple endpoint syntax, etc. |
+| DML DELETE canary | 1 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `deleteDictionaryHandlingPostgresReturningQualifiedAcrossWhereSubclausesV2` |
+| SCRIPT / DDL smoke | 3 | `SqlEventWalkerScriptsAndDDLTests` | `simpleScriptTest`, `simpleDdlCreateTableV1Test`, `mixedScriptStatementTypesTest` (CREATE/TRUNCATE/DELETE/INSERT/UPDATE/SELECT script) |
+| Endpoint / tuple parser | 3 | `SqlEventWalkerNonSqlEndpointParserTests` | `tupleSubstitutionVariableTestV1/V2`, `basicTupleTableTest` |
+| Snippet construction | 1 | `access.SnippetTest` | `basicJoinWithOnOnConditionVariableTest` |
+| Live-sample probes | 2 | `SqlEventWalkerLiveSampleQueriesTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest`, `getMissingColumnFromTupleDictionaryTest` |
+| Table-function diagnostic | 1 | `SqlEventWalkerTableFunctionTests` | `simpleTfCallFlattenSplitV5Test` |
+| PIVOT / UNPIVOT smoke | 3 | `SqlEventWalkerPivotUnpivotTests` | `unpivotV1Test`, `pivotV1Tab1Test`, `pivotInIdentifierResolvedFromSubqueryWarningV1Test` |
+| Nested WITH clause / set-op matrix | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars |
+| Endpoint parser extensions | 2 | `SqlEventWalkerNonSqlEndpointParserTests` | `basicTupleSubstitutionVariableTest`, `inListVariableSubstitutionTest` |
+| JOIN duplicate-interface fatal | 1 | `SqlEventWalkerJoinsAndTableResolutionTests` | `handlingRepeatingColumnNamesInTheInterfaceV1` |
+| Access-object / Snippet integration | 2 | `SqlParseEventWalkerWithAccessObjectTest` | `basicQuerySnippetTest`, `basicTupleSnippetTest` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 (done) | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
@@ -37,13 +51,14 @@ mvn -Dtest=sql.walker.SymbolTableResolutionConsolidationTestSuite test
 | Production scalar / EXISTS probes | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWhereScalarConditionCorrelatedSubquery`, `selectOrderByScalarCorrelatedSubquery`, `selectWhereVariableExists`, `selectWhereExistsCorrelatedSubquery` |
 | Nested formula subqueries | 1 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest` |
 | Subquery semantics probes | 6 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `queryOverQueriesSingleWildcardResolvesUnqualifiedColumn`, `selectSameSubqueriesTest`, `havingExistsCorrelatedSubqueryTest`, `havingScalarSubqueryComparisonTest`, `selectWithUnionTest`, `multipleScalarAndOtherSubqueriesSymbolTableTest` |
+| Diagnostic exemplars | 5 | mixed | `nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal` (`SHADOWED_PARENT_CTE_NAME`), `unionWithMismatchColumnCountsAndNamesTest` (`SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`), `insertValuesExtraTargetColumnV9` (`INSERT_TARGET_SOURCE_COLUMN_COUNT_MISMATCH`), `coverageDrivenSelectIntoUnionBothSidesSnapshotTest` (`INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER`), `pivotInIdentifierDirectTableFatalV1Test` (`PIVOT_IN_IDENTIFIER_UNRESOLVED`) |
 
 **Nested demo fatal expectations (unchanged):**
 
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Gate status (2026-07-15):** **130/130 passing** — no current failures.
+**Gate status (2026-07-17):** **170/170 passing** — no current failures.
 
 The prior phase-7 and phase-10 blockers have been refreshed and are now green in the current gate; keep the lists below as historical notes only if you need the earlier rollout trail.
 
@@ -270,7 +285,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 **Gate command:**
 ```bash
 cd parse
-mvn -Psymbol-table-resolution-consolidation test  # includes substitution variable tests
+mvn -Psmoketest-quality-gate test  # includes substitution variable tests
 # OR targeted:
 # mvn -Dtest=SqlEventWalkerCoreSelectFromAliasingTests#getSubstitutionColumnVariableV* test
 # mvn -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#*ComplexSubstitution* test
@@ -919,7 +934,7 @@ Use the **Quality gate** section at the top of this document. Prefer the Maven p
 
 ```bash
 cd parse
-mvn -Psymbol-table-resolution-consolidation test
+mvn -Psmoketest-quality-gate test
 ```
 
 ### Supplementary spot checks (optional, not part of gate)
@@ -980,7 +995,7 @@ If Phase 12 is ever taken, do it only after Phase 11 is fully complete and the P
 ```
 We are continuing symbol-table resolution consolidation for the SQL parse walker.
 
-Read parse/documents/symbol-table-resolution-consolidation-worklist.md first — especially:
+Read parse/documents/smoketest-quality-gate-worklist.md first — especially:
 - Progress dashboard (Jul 2026)
 - Shortest path to dead-code removal
 - Published scope vs global dictionary rules
@@ -1012,7 +1027,7 @@ Contract to preserve:
 Validation (run after each step — full quality gate):
 
   cd parse
-  mvn -Psymbol-table-resolution-consolidation test
+  mvn -Psmoketest-quality-gate test
 
 Gate = 107 tests: nested demo (2), query dictionary source routing canaries (3), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV15 (15), scalar subquery symbol-table matrix V1–V9 + correlated (10), production scalar/EXISTS probes (4), nested formula subqueries (1), subquery semantics probes (6).
 See "Quality gate" section at top of worklist for method names.

@@ -217,14 +217,14 @@
       </properties>
     </profile>
     <profile>
-      <id>symbol-table-resolution-consolidation</id>
+      <id>smoketest-quality-gate</id>
       <build>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <test>sql.walker.SymbolTableResolutionConsolidationTestSuite</test>
+              <test>sql.walker.SmoketestQualityGateTestSuite</test>
             </configuration>
           </plugin>
         </plugins>
