@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (181 tests):
+ * Gate composition (195 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -32,6 +32,8 @@ import org.junit.Test;
  *   <li>JOIN duplicate-interface fatal (1): {@code handlingRepeatingColumnNamesInTheInterfaceV1}</li>
  *   <li>Access-object / Snippet integration (2): {@code basicQuerySnippetTest}, {@code basicTupleSnippetTest}</li>
  *   <li>DML UPDATE V1–V14 (14): {@code updateDictionaryHandling*} V1–V12 + nested {@code updateFromNestedSubquery*} V13–V14</li>
+ *   <li>Query-dictionary external alias routing (8): {@code nestedSubqueryWithColumnsV0}; {@code subqueryDictionaryExtensionWhereClauseV12}, {@code subqueryDictionaryExtensionHavingClauseV13}, {@code subqueryDictionaryExtensionQualifyClauseV14}, {@code subqueryDictionaryExtensionAggregateGroupByV15}, {@code subqueryDictionaryExtensionOrderByV16}, {@code subqueryDictionaryExtensionJoinClauseSubqueryJoinV31}, {@code subqueryDictionaryExtensionWhereClauseSubqueryJoinV32}</li>
+ *   <li>Query-dictionary diagnostic routing (6): qualified missing on subquery alias V22/V25/V26 ({@code QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS}); ambiguous unqualified V36/V37/V38 ({@code UNRESOLVED_UNQUALIFIED_COLUMNS} + {@code AMBIGUOUS_COLUMN_REFERENCE})</li>
  *   <li>DML INSERT V1–V8 (8): {@code insertValues*} V1–V8</li>
  *   <li>DML VALUES source golden examples (7): explicit column names (SELECT, UPDATE, DELETE) + implicit column names (UPDATE V2-V3, DELETE V2-V3) — establish correct QCD structure for all VALUES source patterns</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
@@ -590,6 +592,80 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14() {
 		dmlTests.updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14();
+	}
+
+	// --- Query-dictionary external alias routing (8) ---
+
+	@Test
+	public void nestedSubqueryWithColumnsV0() {
+		unaliasedTests.nestedSubqueryWithColumnsV0();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWhereClauseV12() {
+		unaliasedTests.subqueryDictionaryExtensionWhereClauseV12();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionHavingClauseV13() {
+		unaliasedTests.subqueryDictionaryExtensionHavingClauseV13();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionQualifyClauseV14() {
+		unaliasedTests.subqueryDictionaryExtensionQualifyClauseV14();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByV15() {
+		unaliasedTests.subqueryDictionaryExtensionAggregateGroupByV15();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByV16() {
+		unaliasedTests.subqueryDictionaryExtensionOrderByV16();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionJoinClauseSubqueryJoinV31() {
+		unaliasedTests.subqueryDictionaryExtensionJoinClauseSubqueryJoinV31();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionWhereClauseSubqueryJoinV32() {
+		unaliasedTests.subqueryDictionaryExtensionWhereClauseSubqueryJoinV32();
+	}
+
+	// --- Query-dictionary diagnostic routing (6) ---
+
+	@Test
+	public void subqueryDictionaryExtensionWhereClauseMissingQualifiedV22() {
+		unaliasedTests.subqueryDictionaryExtensionWhereClauseMissingQualifiedV22();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByMissingQualifiedV25() {
+		unaliasedTests.subqueryDictionaryExtensionAggregateGroupByMissingQualifiedV25();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByMissingQualifiedV26() {
+		unaliasedTests.subqueryDictionaryExtensionOrderByMissingQualifiedV26();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionQualifyClauseMissingUnqualifiedAmbiguousV36() {
+		unaliasedTests.subqueryDictionaryExtensionQualifyClauseMissingUnqualifiedAmbiguousV36();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionAggregateGroupByMissingUnqualifiedAmbiguousV37() {
+		unaliasedTests.subqueryDictionaryExtensionAggregateGroupByMissingUnqualifiedAmbiguousV37();
+	}
+
+	@Test
+	public void subqueryDictionaryExtensionOrderByMissingUnqualifiedAmbiguousV38() {
+		unaliasedTests.subqueryDictionaryExtensionOrderByMissingUnqualifiedAmbiguousV38();
 	}
 
 	// --- DML INSERT V1–V7 (7) ---

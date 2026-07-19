@@ -1702,13 +1702,6 @@ public class SqlParseSymbolTreeHelper {
 				orderedByList,
 				localRelationalModifierInterfaceHints);
 
-		mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
-				localInterface,
-				localCurrentQueryDictionary,
-				localUnresolvedColumnMap,
-				localTableAliasMap,
-				visibleQuerySourceCollection);
-
 		// Resolve ingress-captured unqualified entries (nested-scope merges, UPDATE no-FROM, etc.).
 		// Archived clause lists are validated separately via probeArchivedScopeClauseColumns.
 		if (!deferCorrelatedValueSubqueryQualifiedUnknowns) {
@@ -10434,119 +10427,6 @@ public class SqlParseSymbolTreeHelper {
 
 		// Non-local source ref inside DELETE USING subquery: should not bind to sibling USING sources.
 		return true;
-	}
-
-	/**
-	 * Phase 2 of query-dictionary population: after output interface names are on the owning
-	 * scope (phase 1 at {@code exitSelect_item} / statement-specific seeds), record qualified
-	 * reference locations on the <em>source</em> query's global dictionary. This proves each
-	 * outer use of a subordinate interface column (WHERE, qualified select list, etc.) was
-	 * resolved without adding new symbol-table structure.
-	 */
-	@SuppressWarnings("unchecked")
-	public void mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary(
-			HashMap<String, Object> localInterface,
-			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> localUnresolvedColumnMap,
-			HashMap<String, Object> localTableAliasMap,
-			HashMap<String, Object> visibleQuerySourceCollection) {
-		if (localInterface == null || localInterface.isEmpty()) {
-			return;
-		}
-
-		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
-			String outputCol = interfaceEntry.getKey();
-			Object refsObj = interfaceEntry.getValue();
-			if (!(refsObj instanceof ArrayList<?> refs)) {
-				continue;
-			}
-
-			for (Object refObj : refs) {
-				String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
-				String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
-				if (columnName == null || columnName.isBlank() || "*".equals(columnName)
-						|| tableRef == null || tableRef.isBlank() || "*".equals(tableRef)) {
-					continue;
-				}
-
-				String resolvedNonTableSourceRef = walker.resolveAliasToNonTableSourceQueryKey(
-						tableRef,
-						visibleQuerySourceCollection);
-				String resolvedTableRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
-				String querySourceRef = (resolvedNonTableSourceRef != null)
-						? resolvedNonTableSourceRef
-						: resolvedTableRef;
-				if (querySourceRef == null || !walker.isNonTableQuerySourceReference(querySourceRef)) {
-					continue;
-				}
-				if (!aliasMapsToQuerySource(tableRef, querySourceRef, localTableAliasMap)) {
-					continue;
-				}
-
-				Object sourceDictionaryObj = walker.queryColumnDictionaryMap.get(querySourceRef);
-				if (!(sourceDictionaryObj instanceof Map<?, ?> sourceDictionaryMapObj)) {
-					continue;
-				}
-				Map<String, Object> sourceDictionary = (Map<String, Object>) sourceDictionaryMapObj;
-				boolean sourceProvidesColumn = containsKeyIgnoreCase(sourceDictionary, columnName)
-						|| containsKeyIgnoreCase(sourceDictionary, "*")
-						|| hasColumnInQueryOutputInterface(querySourceRef, columnName)
-						|| hasWildcardInQueryOutputInterface(querySourceRef);
-				if (!sourceProvidesColumn) {
-					continue;
-				}
-
-				Object sourceRefTokens = consumeQualifiedUnknownEntry(
-						localUnresolvedColumnMap,
-						tableRef,
-						columnName);
-				if (sourceRefTokens != null) {
-					mergeExplicitQualifiedUnknownIntoSourceQueryDictionary(
-							querySourceRef,
-							columnName,
-							sourceRefTokens);
-				}
-			}
-		}
-	}
-
-	public boolean aliasMapsToQuerySource(
-			String aliasRef,
-			String querySourceRef,
-			HashMap<String, Object> tableAliasMap) {
-		if (aliasRef == null || aliasRef.isBlank() || querySourceRef == null || querySourceRef.isBlank()) {
-			return false;
-		}
-		if (tableAliasMap == null || tableAliasMap.isEmpty()) {
-			return false;
-		}
-
-		String mappedSource = null;
-		Object mappedObj = tableAliasMap.get(aliasRef);
-		if (mappedObj instanceof String s && !s.isBlank()) {
-			mappedSource = s;
-		} else {
-			for (Map.Entry<String, Object> entry : tableAliasMap.entrySet()) {
-				if (entry.getKey() != null
-						&& entry.getKey().equalsIgnoreCase(aliasRef)
-						&& entry.getValue() instanceof String mappedValue
-						&& !mappedValue.isBlank()) {
-					mappedSource = mappedValue;
-					break;
-				}
-			}
-		}
-		if (mappedSource == null || mappedSource.isBlank()) {
-			return false;
-		}
-
-		String normalizedMapped = mappedSource.startsWith("def_")
-				? mappedSource.substring("def_".length())
-				: mappedSource;
-		String normalizedQuerySource = querySourceRef.startsWith("def_")
-				? querySourceRef.substring("def_".length())
-				: querySourceRef;
-		return normalizedMapped.equalsIgnoreCase(normalizedQuerySource);
 	}
 
 	@SuppressWarnings("unchecked")
