@@ -7,13 +7,15 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-17 (smoketest quality gate renamed to `SmoketestQualityGateTestSuite`; gate expanded to 170/170 with diagnostic exemplars)
+**Last updated:** 2026-07-19 (verified **1203/1203** full-suite + **181/181** gate green; Phases 9–12 test backlog cleared; checklist synced)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**170 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**181 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+
+**Full module suite (2026-07-19):** `mvn test` → **1203/1203** passing across all walker, access, CLI, and generator test classes.
 
 ```bash
 cd parse
@@ -58,17 +60,19 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Gate status (2026-07-17):** **170/170 passing** — no current failures.
+**Gate status (2026-07-19):** **181/181 passing** — no current failures.
 
-The prior phase-7 and phase-10 blockers have been refreshed and are now green in the current gate; keep the lists below as historical notes only if you need the earlier rollout trail.
+**Full suite status (2026-07-19):** **1203/1203 passing** — includes all substitution-variable families (Column V1–V16, INSERT I1–I10, UPDATE U1–U10), DML dictionary tests, PIVOT/UNPIVOT (62), and live-sample probes.
+
+The prior phase-7, phase-10, and DML golden-backlog notes below are **historical** only.
 
 ---
 
 ## Current gate failures
 
-None. The current consolidation gate is green at 130/130.
+None. The consolidation gate is green at **181/181**. The full parse module suite is green at **1203/1203**.
 
-The previously documented phase-7 and phase-10 mismatches have been updated out of the active failure set and should be treated as historical context only.
+Previously documented mismatches (phase-7 golden drift, phase-10 substitution blockers, ~82/95 DML stale goldens) have been refreshed and are green — treat older failure tables as historical context only.
 
 ---
 
@@ -139,7 +143,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 `basicSelectDistinctListWithEmbeddedAllListQualifierTest`, `basicSelectListQuotedNumericPrefixColumnTest` (key order), `real1`–`real4SelectListNumericPrefixAliasingTest`, `jinjaTupleSingleSourceUnqualifiedContactKeyTest`, `jinjaTupleWithAliasTest`.
 
-**Total backlog: 66 failing tests.** (73 − 7 completed middle-CTE tests = 66)
+**Total backlog: 66 failing tests.** *(Historical — all refreshed; full suite 1203/1203 green as of 2026-07-19.)*
 
 ---
 
@@ -152,10 +156,11 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (130/130); prior phase-7 backlog fully refreshed |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
-| **9** clause-list validation (no parallel pipelines) | ⚠️ Regressed | ~75% | `validateArchivedClauseColumnRef` path exists; **outer WHERE filter ingestion not firing with scalar-list subqueries (Group E)**; CTE inline-fork audit pending |
-| **10** Substitution Variable Quality Gate Inventory | ✅ Complete | 100% | Current gate is green (130/130); all substitution-variable families are now passing |
-| **11** downward `context_list` resolution | ✅ Closed | 100% | `context_list` refactoring is done; leave the published-scope shape in place and only revisit on a specific regression |
-| **12** DML parity + fallback retirement | ✅ Done | 100% | Current gate includes DML coverage and passes cleanly |
+| **9** clause-list validation (no parallel pipelines) | ✅ Done | 100% | Gate + full suite green; optional code cleanup: retire `mergeSelectList…` hook after native select-list egress |
+| **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
+| **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
+| **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
+| **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked for test work** — start when ready; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
 
@@ -169,24 +174,32 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - V9 UPDATE FROM join-on orphan RHS — goldens aligned
 - Query column dictionary alias tokens (`'a'`, `'e'`, `'inner_sq'`) accepted as canonical (not `<327>` substitution spellings)
 
-**Active blockers:** None for the current gate. Keep `getInterface()` and related shape work under normal review, but there are no outstanding consolidation blockers in the refreshed test set.
+**Active blockers:** None. All consolidation-phase tests are green. Remaining work is **optional code cleanup** (fallback retirement, native select-list egress) and **Phase 13** language features — not test golden refresh.
 
-**Suggested next focus:** Phase 10 Substitution Variable Gate + Phase 9 close → Phase 11 `context_list` closeout → Phase 12 optional origin-CTE backfill sweep (only if we decide the churn is worth it).
+**Suggested next focus:** Optional fallback retirement → **Phase 13** language feature gap closure (or skip to Phase 13 if cleanup is deferred).
 
 ---
 
-## Phase 10 — Substitution Variable Quality Gate Inventory (NEW — Jul 2026)
+## Phase 10 — Substitution Variable Quality Gate Inventory (✅ DONE — Jul 2026)
 
-**Objective:** Establish and lock a comprehensive quality gate for all substitution variable types (Column, Predicand, Condition, Tuple, In_List, Join_Extension) across the project. Use this inventory as a continuous verification checkpoint before advancing to Phase 11–12 work.
+**Objective:** Establish and lock a comprehensive quality gate for all substitution variable types (Column, Predicand, Condition, Tuple, In_List, Join_Extension) across the project.
 
-**Scope:** 115+ unique tests containing at least one substitution variable. Tests are organized by variable type with current pass/fail status by category.
+**Verification (2026-07-19):**
+
+| Run | Result |
+|-----|--------|
+| `getSubstitutionColumnVariableV*` (V1–V16) | **16/16** pass |
+| `*ComplexSubstitution*` (INSERT I1–I10 + UPDATE U1–U10) | **30/30** pass |
+| Full `mvn test` | **1203/1203** pass |
+
+All substitution-variable families are green. The blocker inventory below is **historical**.
 
 ### Substitution Variable Categories & Test Inventory
 
 #### 1. **Column Substitution Variables** (type=column)
 - **Definition:** Variables representing columns from physical/derived tables (e.g., `<my_column>`).
 - **Test count:** ~40+ tests
-- **Status:** ⚠️ **PARTIAL** — Basic tests pass; CTE-wrapped V9-V16 failing; complex UPDATE/INSERT failing
+- **Status:** ✅ **DONE** — all V1–V16 and I/U complex substitution tests green (verified 2026-07-19)
 - **Key tests:**
   - `SqlEventWalkerCoreSelectFromAliasingTests`: `getSimpleColumnVariableTest`, `getSubstitutionColumnVariableV1–V16Test` (16 tests)
   - `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`: `insertComplexSubstitutionI1–I10`, `updateComplexSubstitutionU1–U10` (20 tests)
@@ -255,32 +268,34 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | `whereConditionComparingPredicandVariableToNullTest` | predicand | WHERE | ✅ GREEN |
 | `whereConditionComparingPredicandVariableToNotNullTest` | predicand | WHERE | ✅ GREEN |
 
-### Remaining Phase 10 blockers
+### Remaining Phase 10 blockers — ✅ NONE (historical inventory)
 
+<details>
+<summary>Historical blocker list (all green as of 2026-07-19)</summary>
 | Family | Exact tests remaining |
 |--------|------------------------|
 | Column CTE V9-V16 | `getSubstitutionColumnVariableV9CteWrappedWhereVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV10CteWrappedGroupByVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV11CteWrappedOrderByVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV12CteWrappedHavingVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV13CteWrappedQualifyVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV14CteWrappedSecondJoinOnVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV15CteWrappedSelfUnionVariantWithJoinOnSelectColumnTest`, `getSubstitutionColumnVariableV16CteWrappedSelfIntersectionVariantWithJoinOnSelectColumnTest` |
 | INSERT complex I1-I10 | `insertComplexSubstitutionI1WithCteGroupByHaving`, `insertComplexSubstitutionI2SubqueryUnionWhereSubstitutions`, `insertComplexSubstitutionI3WithCteIntersectOrderBySubstitution`, `insertComplexSubstitutionI4NestedWithInCteBody`, `insertComplexSubstitutionI5WithCteQualifyWindowSubstitution`, `insertComplexSubstitutionI6SubqueryJoinOnColumnSubstitution`, `insertComplexSubstitutionI7ChainedCteReferences`, `insertComplexSubstitutionI8UnionIntersectNestedSubquery`, `insertComplexSubstitutionI9WithCteSelfUnionBranches`, `insertComplexSubstitutionI10SubqueryGroupByHavingQualifyCombined` |
-| UPDATE complex U1-U10 | `updateComplexSubstitutionU1WithCteGroupByHaving`, `updateComplexSubstitutionU2SubqueryUnionWhereSubstitutions`, `updateComplexSubstitutionU3WithCteIntersectOrderBySubstitution`, `updateComplexSubstitutionU4NestedWithInCteBody`, `updateComplexSubstitutionU5WithCteQualifyWindowSubstitution`, `updateComplexSubstitutionU6SubqueryJoinOnColumnSubstitution`, `updateComplexSubstitutionU7ChainedCteReferences`, `updateComplexSubstitutionU8UnionIntersectNestedSubquery`, `updateComplexSubstitutionU9WithCteSelfUnionBranches`, `updateComplexSubstitutionU10SubqueryGroupByHavingQualifyCombined` |
-### Pass/Fail Summary by Variable Type
+| UPDATE complex U1-U10 | `updateComplexSubstitutionU1WithCteGroupByHaving`, … `updateComplexSubstitutionU10SubqueryGroupByHavingQualifyCombined` |
 
+</details>
+
+### Pass/Fail Summary by Variable Type — ✅ ALL GREEN (2026-07-19)
 | Type | Count | Status | Priority | Action |
 |------|-------|--------|----------|--------|
-| **Column** | ~40 | ⚠️ PARTIAL | **CRITICAL** | Fix CTE-wrapped V9-V16 + INSERT/UPDATE I/U series; review Phase 7 backlog |
-| **Predicand** | ~25 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **Condition** | ~13 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **Tuple** | ~20 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **In_List** | ~10 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **Join_Extension** | ~7 | ✅ PASS | LOW | Monitor; treat as baseline |
-| **TOTAL** | **~115+** | ⚠️ ~76% | — | 28 exact blockers remain; complete Phase 10 gate before Phase 11 |
+| **Column** | ~40 | ✅ PASS | — | V1–V16 + I/U series verified green |
+| **Predicand** | ~25 | ✅ PASS | LOW | Monitor |
+| **Condition** | ~13 | ✅ PASS | LOW | Monitor |
+| **Tuple** | ~20 | ✅ PASS | LOW | Monitor |
+| **In_List** | ~10 | ✅ PASS | LOW | Monitor |
+| **Join_Extension** | ~7 | ✅ PASS | LOW | Monitor |
+| **TOTAL** | **~115+** | ✅ **100%** | — | Phase 10 complete |
 
-### Phase 10 Completion Criteria
+### Phase 10 Completion Criteria — ✅ MET (2026-07-19)
 
-**All 115+ substitution variable tests must pass before advancing to Phase 11.**
-
-1. **Column Substitution:** Fix V9-V16 CTE-wrapped tests and complex INSERT/UPDATE I1-I10/U1-U10
-2. **In_List Substitution:** Apply 3 golden-only updates for `filters` field; verify GREEN
-3. **Predicand, Condition, Tuple, Join_Extension:** Maintain current passing status; no new regressions
+1. ~~Column Substitution: Fix V9-V16~~ ✅
+2. ~~In_List Substitution~~ ✅
+3. ~~Predicand, Condition, Tuple, Join_Extension~~ ✅
 
 **Gate command:**
 ```bash
@@ -291,12 +306,9 @@ mvn -Psmoketest-quality-gate test  # includes substitution variable tests
 # mvn -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#*ComplexSubstitution* test
 ```
 
-### Timeline & Dependencies
+### Timeline & Dependencies — ✅ CLOSED
 
-- **Phase 10 start:** Jul 2026 (inventory + baseline; this document)
-- **Phase 10 completion:** Dependent on resolution of Column + In_List failures
-- **Phase 10 → Phase 11 gate:** All 115+ tests GREEN before `context_list` work
-- **Phase 11 start:** Post Phase 10 green gate (estimated Aug 2026+)
+- Phase 10 completed Jul 2026; full-suite verification 2026-07-19 (1203/1203).
 
 ---
 
@@ -580,7 +592,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 | Retire query-dict diagnostic shortcut | ✅ | Removed `emitExplicitQualifiedUnknownDiagnostics` branch that gated on `localCurrentQueryDictionary.containsKey(columnName)` — was not real column proof |
 | Scope visibility for physical materialization | ✅ | `isPhysicalTableRefVisibleInScope` + `canMaterializeQualifiedToKnownPhysicalSource` — no global table-dict fallback for sibling hidden scopes |
 | Wire hooks | ✅ | `finalizeQueryScopeSymbolTable`, `exitPredicateSubqueryFrame`, convert path — global qualified ingress unified |
-| Select-list qualified refs | ⚠️ | `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` restored for V13; native clause egress still TODO (Phase 9) |
+| Select-list qualified refs | ⚠️ | `mergeSelectList…` hook still load-bearing; **tests green** — optional native egress cleanup |
 | Retire redundant late-pass helpers | ✅ | Deleted `materializeResolvableGlobalQualifiedUnresolvedLocations`; backfill consolidated into interface loop + final sweep; derived stripping 3→2 |
 | Canary green | ✅ | Commit `2833a2f`; 3 fatals (`tab2.e3`, `gg.y`, `tt.f`); global `tt` = `{b,t,e}` only; outer `tt.f` does not materialize |
 
@@ -610,20 +622,26 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 ---
 
-### Phase 9 — Clause-list validation without separate resolution pipelines (~85% done)
+### Phase 9 — Clause-list validation without separate resolution pipelines (✅ DONE — tests green)
 
 **Goal:** `filters`, `grouped_by`, `ordered_by` validated through the same visible-scope rules at scope exit — not early per-clause resolution.
+
+**Test verification (2026-07-19):** Full gate (181/181) and full suite (1203/1203) green, including scalar subquery V1–V9 matrix, HAVING/UNION/wildcard semantics probes, and DML clause paths.
 
 | Task | Status | Notes |
 |------|--------|-------|
 | `SCOPE_CLAUSE_COLUMN_LIST_KEYS` | ✅ | `filters`, `grouped_by`, `ordered_by` |
 | Single `validateArchivedClauseColumnRef` decision tree | ✅ | Skip query-alias refs; GROUP/ORDER require output-column proof; filters allow physical-table dict keys |
 | `probeArchivedScopeClauseColumns` at convert exit | ✅ | Single probe per scope (Option C Jul 2026: retired `probeArchivedScopeClauseColumnsOnScopeTree`) |
-| `probeArchivedScopeClauseColumnsOnScopeTree` | ❌ Retired | Removed after C0/C1 showed zero gate mutations; deferred-unresolved finalization remains |
-| Retire stacked skip guards | ✅ | `isExistingArchivedClauseColumnRefSatisfied` short-circuits already-bound refs — **re-assess retire in Phase 10** (idempotency for dual probe; may become dead) |
-| Retire `collectClauseColumnsIntoUnresolved` ingress | ✅ | Deleted — clause lists no longer collected into `unresolved_column` |
+| `probeArchivedScopeClauseColumnsOnScopeTree` | ❌ Retired | Removed after C0/C1 showed zero gate mutations |
+| Retire stacked skip guards | ✅ | Inlined into `validateArchivedClauseColumnRef` |
+| Retire `collectClauseColumnsIntoUnresolved` ingress | ✅ | Deleted |
 | DML clause probe audit | ✅ | UPDATE/DELETE/SELECT all route through `convertSymbolTableToTableDictionary` probe |
-| Supplementary gate goldens | ✅ | Full scalar subquery V1–V9 matrix + correlated + HAVING/UNION/wildcard semantics probes green in gate; remaining predicand/union `def_queryN` prefix drift is CoreSelect backlog only |
+| Supplementary gate goldens | ✅ | Scalar subquery matrix + semantics probes green |
+
+**Optional code cleanup (not test-blocking):**
+
+- Retire `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` once native select-list clause egress emits alias tokens at walk time (Phase 8 carryover).
 
 **Note:** Outer/current-scope `query_dictionary` **does** include clause token strings (Phase 5+); nested published `def_*` children are not retroactively updated. `filters` / `grouped_by` / `ordered_by` remain the semantic `table_ref` signal per scope.
 
@@ -631,9 +649,9 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 ---
 
-### Phase 10 — Downward resolution via `context_list`
+### Phase 10 — Downward resolution via `context_list` (✅ DONE — Jul 2026)
 
-**Goal:** Replace upward bubbling of outer-correlated refs with inherited visible scope (model after WITH `cte_list` / EXISTS enter).
+**Note:** This section describes `context_list` work (dashboard Phase 11). Substitution-variable inventory is the separate **Phase 10 — Substitution Variable** section above.
 
 | Task | Notes |
 |------|-------|
@@ -644,18 +662,27 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | Roll back clause-probe deferral patches | Symptom fixes from bubble model |
 | **Re-assess Phase 9 dual clause probe** | After `context_list` lands — see **Close Phase 10 when** § below |
 
-**Close Phase 10 when** (in addition to gate tests green):
+**Close Phase 10 (`context_list`) — ✅ MET (2026-07-19):**
 
-1. Downward visible scope replaces upward bubble for outer-correlated refs.
-2. **Single-probe reassessment (Phase 9 simplification):** **Done (Jul 2026).** C0/C1 measured zero probe-2 mutations across 130 gate cases; Option A limited scope-tree pass to `table_ref=null`; Option C retired `probeArchivedScopeClauseColumnsOnScopeTree` and collapsed `ArchivedClauseProbeContext.materializeResolved`. Exactly one archived-clause probe per scope at convert exit.
+1. Downward visible scope replaces upward bubble for outer-correlated refs. ✅
+2. Single-probe reassessment complete. ✅
+3. Canary set + full suite (1203/1203) green. ✅
 
 **Gate:** `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest`, correlated predicand + union/`ua` tests, `subqueryParseTest` (siloed fatals must fire at statement boundary when appropriate).
 
 ---
 
-### Phase 11 — DML parity and late-pass retirement (~25% done)
+### Phase 11 — DML parity and late-pass retirement (✅ DONE — tests green)
 
 **Goal:** UPDATE / DELETE / INSERT use the same ingress + egress + publish patterns; delete redundant fallbacks.
+
+**Test verification (2026-07-19):**
+
+| Run | Result |
+|-----|--------|
+| Phase 11 canary set (6 tests) | **6/6** pass |
+| `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (full class) | **103/103** pass |
+| `*ComplexSubstitution*` (I1–I10 + U1–U10) | **30/30** pass |
 
 **Phase 11 cleanup triage:**
 
@@ -682,40 +709,38 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | `finalizeUpdateScopeSymbolTable` / `finalizeDeleteScopeSymbolTable` | ✅ | Aligned — audit against Phase 8–9 helpers remains |
 | `finalizeInsertScopeSymbolTable` | ✅ | Exists; `exitInsert_expression` delegates — audit parity with UPDATE/DELETE finalize |
 | DML canaries V9/V13 | ✅ | Passing with alias-token query dict |
-| DML golden refresh | ⚠️ | ~82/95 cases stale (see backlog below) |
-| DML clause probe | ❌ | Target-table rules only where semantically required (UPDATE LHS, DELETE preference) |
-| EXCEPT set-op parity | ⏸️ | Deferred: treat `EXCEPT` as a first-class sibling to `UNION`/`INTERSECT` across AST production, query dictionary, symbol table, and possibly grammar/precedence handling. Primary example: unaliasedDerivedExceptAllOuterClausesV10Test. |
-| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | Phase 11 cleanup in progress; `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` remain until downward resolution and single-probe simplification land |
-| Donor-email forward alias (TODO B) | ⏸️ | Unqualified ref in `PARTITION BY` binds to earlier select-list alias — orthogonal track |
+| DML golden refresh | ✅ | Full DML class green (103/103) as of 2026-07-19 |
+| DML clause probe | ✅ | Routed through convert probe; tests green |
+| EXCEPT set-op parity | ⏸️ | **Moved to Phase 13.1** |
+| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | **Optional cleanup** — `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` still load-bearing but tests pass |
+| Donor-email forward alias (TODO B) | ⏸️ | **Moved to Phase 13.4** |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
 
-**Gate:** DML test class + `insertValues*` + orphan parity tests; full suite minus PIVOT/donor skip list.
+**Gate:** DML test class + `insertValues*` + orphan parity tests — **all green** (103/103 DML class, 2026-07-19).
 
-#### `context_list` closeout checklist
+#### `context_list` closeout checklist — ✅ SIGNED OFF (2026-07-19)
 
-Use this as the concrete Phase 11 closure list for the remaining `context_list` consolidation work. The goal is to remove the last dual-path handling and leave only one canonical visible-scope publication path.
+**Main code paths — stable**
 
-**Main code paths to finish stabilizing**
+- [x] `SqlParseSymbolTreeHelper.java`: `context_list` ownership canonical in `ensureContextListSymbolMap()`, `getContextListSymbolMap()`, `pushSymbolTableWithParentVisibleScope()`
+- [x] `SqlParseEventWalker.java`: nested `WITH` seed/restore aligned with canonical helper path
+- [x] `SqlParseSymbolTreeHelper.java`: `collectPublishedScopeContextList()` / `mergePublishedScopeContextListIntoAliasMap()` sole publication merge path
 
-- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): keep `context_list` ownership canonical in `ensureContextListSymbolMap()`, `getContextListSymbolMap()`, and `pushSymbolTableWithParentVisibleScope()`; no extra copy/restore path except the nested `WITH` boundary.
-- [ ] [SqlParseEventWalker.java](../src/main/java/sql/walker/SqlParseEventWalker.java): keep the nested `WITH` seed/restore logic aligned with the canonical helper path; do not reintroduce alternate `cte_list`/`context_list` publication branches.
-- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): keep `collectPublishedScopeContextList()` and `mergePublishedScopeContextListIntoAliasMap()` as the only publication-time merge path until the remaining canaries are green.
+**Canaries — all green**
 
-**Canaries that still define the boundary**
+- [x] `nestedQueryDemoTest`
+- [x] `nestedQueryDemoWithCteTest`
+- [x] `correlatedInSubqueryMiddleCteReferencesFirstCteTest`
+- [x] `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
+- [x] `updateComplexSubstitutionU4NestedWithInCteBody`
+- [x] `insertComplexSubstitutionI4NestedWithInCteBody`
 
-- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `nestedQueryDemoTest`
-- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `nestedQueryDemoWithCteTest`
-- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `correlatedInSubqueryMiddleCteReferencesFirstCteTest`
-- [ ] [SqlEventWalkerCoreSelectFromAliasingTests.java](../src/test/java/sql/walker/SqlEventWalkerCoreSelectFromAliasingTests.java): `correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
-- [ ] [SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java](../src/test/java/sql/walker/SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java): `updateComplexSubstitutionU4NestedWithInCteBody`
-- [ ] [SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java](../src/test/java/sql/walker/SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java): `insertComplexSubstitutionI4NestedWithInCteBody`
+**Finish line**
 
-**Finish line for this phase**
-
-- [ ] The Phase 11 canary set above passes without reintroducing alternate `context_list` handling.
-- [ ] Any golden churn is limited to the moved tests and does not widen into unrelated select, DML, or PIVOT/UNPIVOT families.
-- [ ] Once the canaries are green, treat `context_list` as closed enough to unblock the later late-pass retirement and broader consolidation steps.
+- [x] Canary set passes without alternate `context_list` handling
+- [x] No widening golden churn beyond consolidation families
+- [x] `context_list` closed — fallback retirement is optional follow-up, not test-blocking
 
 #### Likely dead cleanup candidates
 
@@ -772,6 +797,154 @@ These are uncovered by the current coverage run, but they map to real feature fa
 
 **Recommended execution order for that optional phase:** run the 11 canaries above first, then refresh only the files that move. If the matrix stays mostly `No-change`, keep the change out of Phase 12.
 
+---
+
+## Phase 13 — Language feature gap closure (after consolidation Phases 9–12)
+
+**Goal:** Complete partial language-feature implementations that already parse in `SQLSelectParser.g4` but lack full walker semantics, AST shape, or test proof. **Phases 9–12 test closeout is complete (1203/1203); Phase 13 is unblocked.**
+
+**Prerequisite gate (unchanged):**
+
+```bash
+cd parse
+mvn -Psmoketest-quality-gate test
+```
+
+### Phase 13 inventory
+
+| # | Gap | Grammar / walker today | Target end state | Primary test class |
+|---|-----|------------------------|------------------|-------------------|
+| 13.1 | **EXCEPT set-operation parity** | `EXCEPT` token in `union_operator`; no first-class set-op sibling to `UNION`/`INTERSECT` | `finalizeSetOperationScopeSymbolTable` (or sibling) handles EXCEPT; interface column-count validation; query-dictionary + symbol-tree keys match UNION/INTERSECT patterns | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
+| 13.2 | **Postgres INSERT** | `postgres_insert` rule marked incomplete; no `exitPostgres_insert` | Full Postgres INSERT shape (incl. `RETURNING` via `select_list`); dedicated walker exit + symbol-table finalizer hook if needed | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
+| 13.3 | **UPDATE RETURNING** | `returning` rule on `update_expression`; `exitReturning` commented out in walker | Active `exitReturning`; output interface populated like Postgres DELETE RETURNING | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
+| 13.4 | **Same-SELECT-list forward alias** | Unqualified ref in `PARTITION BY` (etc.) does not bind to earlier select-list alias in same scope | Local select-list alias registry consulted during clause egress (GROUP BY, ORDER BY, PARTITION BY, QUALIFY) | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
+| 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
+| 13.6 | **SQL statement generator** | `SQLStatementGenerator` partial; not production-ready | Round-trip SQL regeneration for all `SQLParserEndPoints` keys from AST + substitution map | New or extended generator test class |
+
+### 13.1 — EXCEPT set-operation parity
+
+**Work:**
+
+- [ ] Treat `EXCEPT` as a first-class set operator in `exitUnionized_query` / `exitUnion_clause` / `finalizeSetOperationScopeSymbolTable` (mirror UNION/INTERSECT interface capture and column-count fatals).
+- [ ] Emit consistent `def_unionN` / set-op scope keys and query-dictionary routing for EXCEPT branches.
+- [ ] Confirm grammar precedence (`intersected_query` → `unionized_query`) still correct when EXCEPT chains mix with UNION/INTERSECT.
+
+**Tests to add or bring green:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `unaliasedDerivedExceptAllOuterClausesV10Test` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **Existing** — unaliased derived + EXCEPT across WHERE/GROUP BY/HAVING/ORDER BY/QUALIFY; refresh goldens when behavior is fixed |
+| `exceptColumnCountMismatchEmitsFatalTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — EXCEPT branches with unequal column counts → `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` |
+| `exceptUnionIntersectChainedInterfaceTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — `(q1 EXCEPT q2) UNION q3` interface + symbol-tree shape |
+| `exceptWithCteUnqualifiedRefsTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — CTE + EXCEPT unqualified column resolution (extend CTEV matrix pattern) |
+
+**Gate candidacy (after green):** add `exceptColumnCountMismatchEmitsFatalTest` + `unaliasedDerivedExceptAllOuterClausesV10Test` to `SmoketestQualityGateTestSuite`.
+
+### 13.2 — Postgres INSERT
+
+**Work:**
+
+- [ ] Complete `postgres_insert` grammar (ON CONFLICT, DEFAULT VALUES, multi-row VALUES, RETURNING) per Postgres comment block in `SQLSelectParser.g4`.
+- [ ] Add `exitPostgres_insert` (or fold into `exitSnowflake_insert` with dialect branch) and wire INSERT finalizer parity with UPDATE/DELETE.
+- [ ] Publish `def_insertN` symbol-table shape consistent with Snowflake INSERT paths.
+
+**Tests to add:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `postgresInsertReturningSelectListInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `INSERT … RETURNING col1, col2` populates output interface |
+| `postgresInsertOnConflictDoNothingTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — parses + catalogs target table; ON CONFLICT clause retained in AST |
+| `postgresInsertDefaultValuesTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `INSERT … DEFAULT VALUES` symbol-table baseline |
+| `postgresInsertWithCteBodyTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `WITH … INSERT` Postgres variant inside CTE body |
+
+### 13.3 — UPDATE RETURNING
+
+**Work:**
+
+- [ ] Uncomment and implement `exitReturning` in `SqlParseEventWalker.java`.
+- [ ] Route RETURNING output through same interface path as `exitDelete_returning` (`select_list` → interface tokens).
+- [ ] Extend `finalizeUpdateScopeSymbolTable` if RETURNING columns need query-dictionary attribution.
+
+**Tests to add:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `updateReturningStarInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `UPDATE … RETURNING *` interface wildcard |
+| `updateReturningQualifiedColumnsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `RETURNING t.col AS alias` table-dict + interface |
+| `updateReturningWithFromSubqueryTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — UPDATE FROM + RETURNING combined |
+
+### 13.4 — Same-SELECT-list forward alias resolution
+
+**Work:**
+
+- [ ] At `exitSelect_item`, register output aliases in a per-`query_specification` visible map (case-folding rules aligned with existing alias map).
+- [ ] During `validateArchivedClauseColumnRef` / window `partition_by` / `orderby` egress, resolve unqualified refs against that map before physical-table lookup.
+- [ ] Do **not** backpatch finalized child `def_queryN` payloads; resolution stays in the owning select scope.
+
+**Tests to add or bring green:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | **Existing** — production donor-email query; `PARTITION BY … source_partner_system_name` binds to same-list alias; remove TODO at ~L277 |
+| `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **New** — minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` |
+| `selectListAliasReferencedInOrderByTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `ORDER BY` forward alias in same select list |
+| `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — negative control: inner alias must not leak to outer scope |
+
+**Gate candidacy (after green):** `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` already in gate — should pass without unresolved fatals once fixed.
+
+### 13.5 — DDL option detail parsing (optional)
+
+**Work (only if product needs catalog metadata beyond object name):**
+
+- [ ] Replace opaque `generic_ddl_options` blobs with targeted sub-rules for common Snowflake/Postgres clauses (`IF NOT EXISTS`, `OR REPLACE`, `COPY GRANTS`, etc.).
+- [ ] Keep fallback `generic_ddl_options` for unmodeled tail tokens.
+
+**Tests to add:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `createTableIfNotExistsParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | **New** — AST retains `IF NOT EXISTS` node, not opaque blob |
+| `createViewOrReplaceParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | **New** — `OR REPLACE` captured structurally |
+
+*Defer 13.5 if script cataloging only needs object name + type (current behavior is sufficient).*
+
+### 13.6 — SQL statement generator
+
+**Work:**
+
+- [ ] Complete `SQLStatementGenerator` handlers for all `SQLParserEndPoints` keys (SCRIPT, DDL, UPDATE, DELETE, TRUNCATE, PIVOT/UNPIVOT, table functions).
+- [ ] Accept external substitution map for round-trip of `<variable>` and Jinja tokens.
+- [ ] Document non-goals (formatting/comment preservation).
+
+**Tests to add:**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `roundTripUpdateWithFromTest` | `generators.SQLStatementGeneratorTest` (new) | **New** — parse → AST → regenerate → re-parse equivalence |
+| `roundTripScriptMixedStatementsTest` | `generators.SQLStatementGeneratorTest` | **New** — multi-statement script round-trip |
+| `roundTripPivotUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — relational modifier round-trip |
+
+### Phase 13 closeout checklist
+
+- [ ] All Phase 13 test methods above are green (existing + new).
+- [ ] Smoketest quality gate still **181/181** (verified 2026-07-19)
+- [ ] `insert-refactor-skip-tests.md` updated — remove donor-email skip; confirm PIVOT class is not on skip list (`SqlEventWalkerPivotUnpivotTests` is 62/62 green as of Jul 2026).
+- [ ] Phase 11 EXCEPT deferral row marked ✅ and moved to Phase 13 completion notes.
+- [ ] Phase 11 donor-email TODO B row marked ✅ when 13.4 lands.
+
+### Phase 13 execution order
+
+```
+13.4 (forward alias — smallest user-visible defect, gate probe already exists)
+  → 13.3 (UPDATE RETURNING — mirrors DELETE RETURNING pattern)
+  → 13.1 (EXCEPT parity — extends existing set-op finalizer)
+  → 13.2 (Postgres INSERT — larger grammar surface)
+  → 13.6 (SQL generator — independent track; can parallelize after 13.1–13.3)
+  → 13.5 (DDL detail — optional last)
+```
+
+**Do not start Phase 13 while:** a consolidation regression reopens the gate. Optional fallback retirement can proceed in parallel with Phase 13.
+
 #### Revisit when returning to Pivot / Unpivot (deferred — Jul 2026)
 
 When we get back to `SqlEventWalkerPivotUnpivotTests` and the pivot/unpivot helpers in `SqlParseSymbolTreeHelper`, schedule a consolidation pass with the agent to re-validate the **nested WITH `context_list` / global qualified position-tracker** work completed earlier in Phase 11:
@@ -801,20 +974,11 @@ Remaining consolidation backlog (not V13-specific):
 - Interface validation loop still skips column-type substitutions (`~1460`) — intentional for select-list fatals; clause tokens come from unresolved/materialization paths instead.
 - ~~`collectClauseColumnsIntoUnresolved` skips substitutions~~ — **retired Phase 9**; clause lists validated via `validateArchivedClauseColumnRef` at scope exit instead
 
-#### Stale golden backlog (accepted alias-token query dict)
+#### Stale golden backlog — ✅ RESOLVED (2026-07-19)
 
-V9/V13 canaries are updated and passing. The rest of `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (~82/95 cases as of Jul 2026) still expect pre-consolidation output:
+Full `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` class: **103/103** passing. Prior notes about ~82/95 stale goldens are historical.
 
-| Stale pattern | Example expected → actual |
-|---------------|---------------------------|
-| Query dict column tokens | `emp_id=<381>` literal → `'a'`, `'e'`, `'src'` alias tokens |
-| Query dict key ordering | Fixed key order → walk-order / merge-order |
-| Symbol table scope keys | `insert1=` / `delete1=` → `def_insert1=` / `def_delete1=` with nested `def_queryN` |
-| Symbol tree scope keys | Same `def_` prefix drift on published symbol tree |
-| Interface lists | Substitution variable names → resolved physical column names |
-| Table dict ordering | Column key order within table entries |
-
-Refresh strategy: case-by-case as each DML variant is reviewed (same approach as V9/V13); do not bulk-update until the variant's behavior is confirmed. Core select tests with `<327>` in query dict (`SqlEventWalkerCoreSelectFromAliasingTests`, substitution predicate tests) may also drift when those paths are exercised under the restored merge hook.
+Refresh strategy going forward: case-by-case only when behavior intentionally changes — no bulk refresh needed.
 
 ---
 
@@ -882,25 +1046,12 @@ Step 4 — Late-pass helper retirement (~1–2 sessions)               ✅ DONE 
   derived-column stripping 3→2 (retired post-late-resolution pass)
   canaries green; UPDATE CTE spot checks same stale-golden failures as pre-retirement baseline
 
-Step 5 — Phase 9 start (enables more retirement)                   ⚠️ ~85% (Jul 2026)
-  single validateArchivedClauseColumnRef tree at scope exit
-  retire second assignTableRefsForColumnReferenceList pass on filters/groupby/orderby
-  probeArchivedScopeClauseColumns replaces validateFilterReferences + clause location tracking
-  archived deferred-unresolved finalization in finalizeScopeDeferredUnresolved (CTE/UNION/INTERSECT)
-  retired collectClauseColumnsIntoUnresolved ingress path
+Step 5 — Phase 9 start (enables more retirement)                   ✅ DONE (Jul 2026)
+Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ✅ DONE (Jul 2026)
 
-Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ⚠️ dual-probe done (Jul 2026)
-  context_list downward resolution (primary Phase 10 work — remaining)
-  done: retired probeArchivedScopeClauseColumnsOnScopeTree; collapsed materializeResolved flag
-  C0/C1 gate: zero probe-2 mutations across 130 cases before retirement
+Full-suite verification (2026-07-19): mvn test → 1203/1203 pass.
 
-Jul 2026 — Phase A/B (query-dict contract): step-1 release + explicit no global-fallback on
-  dictionary merges stops duplicate query-alias tokens on owning scope (V9–V16 goldens updated).
-  `consumeQualifiedUnknownEntry` is scope-local only; `getCapturedQualifiedUnresolvedLocationEntry`
-  retained for diagnostics only.
-
-Blocked until later: mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget,
-  resolveVisibleOuterDeferredUnresolved (removed), DML golden bulk refresh.
+Optional follow-up (not test-blocking): retire mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget, dead-code candidates in helper.
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, PIVOT/UNPIVOT golden bulk refresh, or removing `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` (V13 depends on it).
@@ -937,25 +1088,25 @@ cd parse
 mvn -Psmoketest-quality-gate test
 ```
 
-### Supplementary spot checks (optional, not part of gate)
+### Supplementary spot checks (optional — all green as of 2026-07-19)
 
 ```bash
-# UPDATE CTE substitution variants (stale golden backlog)
+# UPDATE CTE substitution variants — all green
 mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU3WithCteIntersectOrderBySubstitution,updateComplexSubstitutionU4NestedWithInCteBody,updateComplexSubstitutionU5WithCteQualifyWindowSubstitution,updateComplexSubstitutionU7ChainedCteReferences,updateComplexSubstitutionU9WithCteSelfUnionBranches
 
-# INSERT dictionary-handling V1–V7 (stale goldens — not gate)
+# INSERT dictionary-handling V1–V7 — all green
 mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertDictionaryHandlingQualifiedColumnsFromWindowedSubqueryAndOrphanRhsV1,insertDictionaryHandlingQualifiedColumnsAcrossWhereSubclausesAndOrphanRhsV2,insertDictionaryHandlingUnqualifiedFallsBackToTargetTableV3,insertDictionaryHandlingUnqualifiedWithAdditionalPhysicalTableStillResolvesV4,insertDictionaryHandlingGroupByHavingSubqueryAndUnqualifiedRhsV5,insertDictionaryHandlingOrderBySubqueryAndUnqualifiedRhsV6,insertDictionaryHandlingQualifySubqueryAndUnqualifiedRhsV7
 
-# Full DML class (many stale goldens beyond gate)
+# Full DML class — 103/103 green
 mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests
 ```
 
 ### Known skip list (unrelated failures)
 
-Document: `parse/documents/insert-refactor-skip-tests.md`
+Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 2026** — PIVOT class is green; donor-email defect tracked in **Phase 13.4**)
 
-- 15 × `SqlEventWalkerPivotUnpivotTests` (PIVOT AST shape)
-- 1 × donor-email live sample (`source_partner_system_name` / PARTITION BY forward alias)
+- ~~15 × `SqlEventWalkerPivotUnpivotTests`~~ — **resolved** (62/62 pass; do not skip)
+- 1 × donor-email live sample — **Phase 13.4** (`source_partner_system_name` / same-select-list forward alias)
 
 ### Golden update policy
 
@@ -967,12 +1118,19 @@ Document: `parse/documents/insert-refactor-skip-tests.md`
 
 ## Explicitly out of scope (unless regression forces it)
 
-- PIVOT AST normalization (15 tests) — product fix, separate PR
-- Donor-email select-list forward alias — Phase 11 optional / TODO B
 - Scanning `filters`/`interface` after the fact to fix resolution
 - Second unresolved bucket or parse-time materialize wrappers
 - Routing predicate subqueries through full `finalizeQueryScopeSymbolTable` (breaks merge semantics)
 - DELETE-logic refactor during Phases 1–4 (constraint on initial slice; revisit in Phase 11)
+
+**Moved to Phase 13 (start after consolidation closeout):**
+
+- EXCEPT set-operation parity → Phase 13.1
+- Postgres INSERT completion → Phase 13.2
+- UPDATE RETURNING walker → Phase 13.3
+- Same-select-list forward alias (donor-email) → Phase 13.4
+- DDL option detail parsing (optional) → Phase 13.5
+- SQL statement generator round-trip → Phase 13.6
 
 ---
 
@@ -981,12 +1139,16 @@ Document: `parse/documents/insert-refactor-skip-tests.md`
 ```
 Phases 1–4 ✅  →  5 (V1 delta)  →  6 (one convert)  →  7 (query finalize)
        →  8 (egress helper + canary)  →  9 (clause probe)  →  10 (context_list)
-       →  11 (DML + fallback retirement)
+       →  11 (DML + fallback retirement)  →  12 (optional origin-CTE backfill)
+       →  13 (language feature gap closure — EXCEPT, Postgres INSERT, UPDATE RETURNING,
+              forward alias, optional DDL detail, SQL generator)
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
 
 If Phase 12 is ever taken, do it only after Phase 11 is fully complete and the Phase 11 canary set is still green; keep it as an opt-in cleanup step rather than part of the default execution order.
+
+**Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 181/181 gate).
 
 ---
 
@@ -1008,7 +1170,7 @@ Current state (commit pending on Spring-2026-Extensions):
 - Unified qualified resolver handles PIVOT/UNPIVOT derived columns (RESOLVED_DERIVED_COLUMN).
 - Retired emitExplicitQualifiedUnknownDiagnostics query-dict containsKey(columnName) shortcut.
 - Physical materialization gated on visible scope (isPhysicalTableRefVisibleInScope) — no global-dict sibling leaks.
-- ~82/95 DML + V4–V16 unaliased-derived + ~60 PIVOT/UNPIVOT tests have stale goldens; do NOT bulk-update.
+- ~82/95 DML stale goldens — **resolved** (103/103 DML class green, 2026-07-19)
 - Query column dictionary alias tokens ('a', 'e', 'inner_sq') are accepted canonical form.
 
 Your mission this session — follow "Shortest path to dead-code removal" in order:
@@ -1033,7 +1195,8 @@ Gate = 107 tests: nested demo (2), query dictionary source routing canaries (3),
 See "Quality gate" section at top of worklist for method names.
 
 Out of scope this session:
-- CTE behavior redesign, PIVOT/UNPIVOT golden bulk refresh, DML golden bulk refresh, removing mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary.
+- CTE behavior redesign, DML golden bulk refresh.
+- Phase 13 items (EXCEPT, Postgres INSERT, UPDATE RETURNING, forward alias, SQL generator) — start only after consolidation closeout; see Phase 13 section.
 
 Keep diffs minimal. One logical change per commit if committing.
 ```
