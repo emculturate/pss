@@ -24,7 +24,6 @@ MOVE_METHODS = {
 
     # unresolved-column finalization
     "finalizeTopLevelUnresolvedColumns",
-    "rehomeUpdateUnqualifiedUnknownsToSingleFromTable",
     "ensureTableDictionaryEntry",
     "normalizeUpdateColumnRefs",
     "splitUnresolvedEntriesByQualification",
@@ -69,7 +68,6 @@ MOVE_METHODS = {
     "getUpdateTargetTableReference",
     "getDeleteTargetTableReference",
     "initializeUpdateTargetTableSubtree",
-    "getSingleUpdateFromTableReference",
     "getUpdateNode",
     "moveAssignmentLhsToLhsUnresolvedColumns",
     "extractAssignmentLhsColumnReference",
@@ -126,8 +124,6 @@ MOVE_METHODS = {
     "convertSymbolTableToTableDictionary",
     "pruneUpdateTargetFromInputTableCollection",
     "resolveUpdateLhsColumnsToTargetTable",
-    "mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary",
-    "aliasMapsToQuerySource",
     "resolveUpdateQualifiedUnresolvedColumnsToInputTables",
     "resolveUpdateUnqualifiedUnresolvedColumnsToTargetTableWhenNoInputSources",
     "resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable",

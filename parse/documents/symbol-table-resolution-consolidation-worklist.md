@@ -7,13 +7,13 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-19 (verified **1203/1203** full-suite + **181/181** gate green; Phases 9–12 test backlog cleared; checklist synced)
+**Last updated:** 2026-07-19 (verified **1203/1203** full-suite + **195/195** gate green; fallback cleanup Steps A–B complete; Phases 9–12 test backlog cleared)
 
 ---
 
 ## Quality gate (run before every consolidation change)
 
-**181 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**195 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
 
 **Full module suite (2026-07-19):** `mvn test` → **1203/1203** passing across all walker, access, CLI, and generator test classes.
 
@@ -46,6 +46,8 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 | JOIN duplicate-interface fatal | 1 | `SqlEventWalkerJoinsAndTableResolutionTests` | `handlingRepeatingColumnNamesInTheInterfaceV1` |
 | Access-object / Snippet integration | 2 | `SqlParseEventWalkerWithAccessObjectTest` | `basicQuerySnippetTest`, `basicTupleSnippetTest` |
 | DML UPDATE V1–V14 | 14 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateDictionaryHandling*` V1–V12; `updateFromNestedSubqueryDepth2CorrelatedTargetQualifiedColumnV13`; `updateFromNestedSubqueryDepth3CorrelatedTargetQualifiedColumnV14` |
+| Query-dictionary external alias routing | 8 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `nestedSubqueryWithColumnsV0`; `subqueryDictionaryExtensionWhereClauseV12`, `HavingClauseV13`, `QualifyClauseV14`, `AggregateGroupByV15`, `OrderByV16`, `JoinClauseSubqueryJoinV31`, `WhereClauseSubqueryJoinV32` |
+| Query-dictionary diagnostic routing | 6 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | qualified missing V22/V25/V26; ambiguous unqualified V36/V37/V38 |
 | DML INSERT V1–V7 | 7 | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `insertValuesPlainMatrixNoTargetColumnsV1` … `insertValuesSourceNamedColumnsAndAliasV7` |
 | Unaliased derived V1–V16 (done) | 16 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `unaliasedDerivedSimpleAllOuterClausesV1Test` … `unaliasedDerivedFlattenInnerSelectAllOuterClausesV16Test` |
 | CTE unqualified column refs CTEV1–CTEV15 | 15 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | `selectWithMultipleSimpleUnqualifiedReferencesCTEV1`, CTEV2, `queryAndUnionUnqualifiedReferencesCTEV3`, `unionAndQueryUnqualifiedReferencesCTEV4`, `queryAndIntersectUnqualifiedReferencesCTEV5`, `intersectAndQueryUnqualifiedReferencesCTEV6`, `unionAndIntersectUnqualifiedReferencesCTEV7`, `intersectAndUnionUnqualifiedReferencesCTEV8`, `unionAndValuesUnqualifiedReferencesCTEV9`, `valuesAndIntersectUnqualifiedReferencesCTEV10`, `valuesAndValuesUnqualifiedReferencesCTEV11`, `queryAndSubstitutionUnqualifiedReferencesCTEV12`, `substitutionAndQueryUnqualifiedReferencesCTEV13`, `substitutionAndSubstitutionUnqualifiedReferencesCTEV14`, `sameTableDifferentSchemaUnqualifiedReferencesCTEV15` |
@@ -60,7 +62,7 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Gate status (2026-07-19):** **181/181 passing** — no current failures.
+**Gate status (2026-07-19):** **195/195 passing** — no current failures.
 
 **Full suite status (2026-07-19):** **1203/1203 passing** — includes all substitution-variable families (Column V1–V16, INSERT I1–I10, UPDATE U1–U10), DML dictionary tests, PIVOT/UNPIVOT (62), and live-sample probes.
 
@@ -70,7 +72,7 @@ The prior phase-7, phase-10, and DML golden-backlog notes below are **historical
 
 ## Current gate failures
 
-None. The consolidation gate is green at **181/181**. The full parse module suite is green at **1203/1203**.
+None. The consolidation gate is green at **195/195**. The full parse module suite is green at **1203/1203**.
 
 Previously documented mismatches (phase-7 golden drift, phase-10 substitution blockers, ~82/95 DML stale goldens) have been refreshed and are green — treat older failure tables as historical context only.
 
@@ -156,7 +158,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (130/130); prior phase-7 backlog fully refreshed |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
-| **9** clause-list validation (no parallel pipelines) | ✅ Done | 100% | Gate + full suite green; optional code cleanup: retire `mergeSelectList…` hook after native select-list egress |
+| **9** clause-list validation (no parallel pipelines) | ✅ Done | 100% | Gate + full suite green; `mergeSelectList…` post-hoc hook retired (Jul 2026, commit `e60d8f8`) |
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
@@ -170,13 +172,14 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `2833a2f`: PIVOT/UNPIVOT derived columns proof folded into unified qualified resolver (`RESOLVED_DERIVED_COLUMN`); retired `localCurrentQueryDictionary.containsKey(columnName)` diagnostic shortcut
 - Commit `2833a2f`: `isPhysicalTableRefVisibleInScope` — physical materialization gated on visible scope only (no global-dict visibility leak); `nestedQueryDemoTest` goldens updated
 - Phase 8 canaries green: `nestedQueryDemoTest` (3 fatals), `nestedQueryDemoWithCteTest`, V9, V13
-- V13 nested UPDATE FROM correlated substitution columns — table dict + query dict + symbol tree green
+- Commit `e60d8f8`: retired `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` + `aliasMapsToQuerySource` (native interface loop + `materializeResolvedQualifiedQuerySourceReference` cover V13/V14); gate +14 query-dict routing/diagnostic tests (195 total)
+- Step A (Jul 2026, pending commit): removed dead `rehomeUpdateUnqualifiedUnknownsToSingleFromTable` + `getSingleUpdateFromTableReference` (zero callers)
 - V9 UPDATE FROM join-on orphan RHS — goldens aligned
 - Query column dictionary alias tokens (`'a'`, `'e'`, `'inner_sq'`) accepted as canonical (not `<327>` substitution spellings)
 
-**Active blockers:** None. All consolidation-phase tests are green. Remaining work is **optional code cleanup** (fallback retirement, native select-list egress) and **Phase 13** language features — not test golden refresh.
+**Active blockers:** None. All consolidation-phase tests are green. Remaining optional cleanup: `moveEntriesToSingleTableIfSingleTarget` and PIVOT/UNPIVOT domain fallbacks. **Phase 13** language features are unblocked.
 
-**Suggested next focus:** Optional fallback retirement → **Phase 13** language feature gap closure (or skip to Phase 13 if cleanup is deferred).
+**Suggested next focus:** Step C (`moveEntriesToSingleTableIfSingleTarget`) or **Phase 13** language feature gap closure.
 
 ---
 
@@ -478,7 +481,7 @@ Instead of merging qualified and unqualified refs into **one working set** durin
 |---------|------------|-------------------|
 | Early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (×3 in convert) | Strips derived keys from unresolved map before unified egress | May be redundant now that unified resolver returns `RESOLVED_DERIVED_COLUMN` |
 | `local query_dictionary` | Scope **output** token map (select-list names → tokens) | **Not** used for `alias.col` proof; do not fold into `querySourceExportsColumn` |
-| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Post-hoc merge of qualified select-list refs into source query dict | Load-bearing for V13; retire after native clause egress |
+| ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | ~~Post-hoc merge of qualified select-list refs into source query dict~~ | **Retired Jul 2026** (`e60d8f8`) — native interface loop + clause probe |
 | `emitExplicitQualifiedUnknownDiagnostics` | Unified resolver + materialize on `RESOLVED_*`; no query-dict containsKey shortcut | ✅ shortcut retired Jul 2026 |
 
 **Visible scope inputs:** `buildEffectiveVisibleAliasMap`, `buildEffectiveVisibleTableCollection`, `collectVisibleQuerySourceCollection` (FROM aliases only — not nested `def_*` siblings).
@@ -559,7 +562,6 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 - `convertSymbolTableToTableDictionary` internal egress
 - `resolveQualifiedUnresolvedAtQueryScopeExit` after finalize
-- `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` — V13 query-dict alias tokens
 - `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` + per-column backfill at interface `RESOLVED_PHYSICAL_SOURCE`
 - `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 (pre-wildcard + post-UPDATE-rhs)
 
@@ -592,7 +594,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 | Retire query-dict diagnostic shortcut | ✅ | Removed `emitExplicitQualifiedUnknownDiagnostics` branch that gated on `localCurrentQueryDictionary.containsKey(columnName)` — was not real column proof |
 | Scope visibility for physical materialization | ✅ | `isPhysicalTableRefVisibleInScope` + `canMaterializeQualifiedToKnownPhysicalSource` — no global table-dict fallback for sibling hidden scopes |
 | Wire hooks | ✅ | `finalizeQueryScopeSymbolTable`, `exitPredicateSubqueryFrame`, convert path — global qualified ingress unified |
-| Select-list qualified refs | ⚠️ | `mergeSelectList…` hook still load-bearing; **tests green** — optional native egress cleanup |
+| Select-list qualified refs | ✅ | `mergeSelectList…` retired Jul 2026; V13/V14 + 14 gate query-dict tests green without post-hoc merge |
 | Retire redundant late-pass helpers | ✅ | Deleted `materializeResolvableGlobalQualifiedUnresolvedLocations`; backfill consolidated into interface loop + final sweep; derived stripping 3→2 |
 | Canary green | ✅ | Commit `2833a2f`; 3 fatals (`tab2.e3`, `gg.y`, `tt.f`); global `tt` = `{b,t,e}` only; outer `tt.f` does not materialize |
 
@@ -626,7 +628,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 **Goal:** `filters`, `grouped_by`, `ordered_by` validated through the same visible-scope rules at scope exit — not early per-clause resolution.
 
-**Test verification (2026-07-19):** Full gate (181/181) and full suite (1203/1203) green, including scalar subquery V1–V9 matrix, HAVING/UNION/wildcard semantics probes, and DML clause paths.
+**Test verification (2026-07-19):** Full gate (195/195) and full suite (1203/1203) green, including scalar subquery V1–V9 matrix, HAVING/UNION/wildcard semantics probes, DML clause paths, and query-dict routing/diagnostic matrix.
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -639,9 +641,10 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML clause probe audit | ✅ | UPDATE/DELETE/SELECT all route through `convertSymbolTableToTableDictionary` probe |
 | Supplementary gate goldens | ✅ | Scalar subquery matrix + semantics probes green |
 
-**Optional code cleanup (not test-blocking):**
+**Fallback cleanup (Jul 2026):**
 
-- Retire `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` once native select-list clause egress emits alias tokens at walk time (Phase 8 carryover).
+- ✅ Retired `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` + `aliasMapsToQuerySource` (commit `e60d8f8`) — V13/V14 and 14 new gate query-dict tests green without post-hoc merge
+- ✅ Removed dead `rehomeUpdateUnqualifiedUnknownsToSingleFromTable` + `getSingleUpdateFromTableReference` (Step A, zero callers)
 
 **Note:** Outer/current-scope `query_dictionary` **does** include clause token strings (Phase 5+); nested published `def_*` children are not retroactively updated. `filters` / `grouped_by` / `ordered_by` remain the semantic `table_ref` signal per scope.
 
@@ -688,7 +691,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 
 | Fallback / helper | Current status | What Phase 11 should do |
 |--------------------|----------------|--------------------------|
-| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Load-bearing for V13 | Keep until clause egress emits alias + substitution tokens natively |
+| ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | **Retired** (`e60d8f8`) | Native interface loop + `materializeResolvedQualifiedQuerySourceReference` |
 | `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Load-bearing | Keep until walk-time token capture is proven stable at interface validation |
 | `moveEntriesToSingleTableIfSingleTarget` | Load-bearing | Keep until single-source scopes resolve fully at exit |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Load-bearing | Keep until derived-column ingress no longer needs pre-/post-wildcard stripping |
@@ -712,7 +715,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML golden refresh | ✅ | Full DML class green (103/103) as of 2026-07-19 |
 | DML clause probe | ✅ | Routed through convert probe; tests green |
 | EXCEPT set-op parity | ⏸️ | **Moved to Phase 13.1** |
-| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | **Optional cleanup** — `mergeSelectList` hook + backfill sweep + `moveEntriesToSingleTableIfSingleTarget` still load-bearing but tests pass |
+| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | **Partial** — `mergeSelectList` retired; `moveEntriesToSingleTableIfSingleTarget` still load-bearing |
 | Donor-email forward alias (TODO B) | ⏸️ | **Moved to Phase 13.4** |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
@@ -742,6 +745,11 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 - [x] No widening golden churn beyond consolidation families
 - [x] `context_list` closed — fallback retirement is optional follow-up, not test-blocking
 
+#### Dead code removed (Jul 2026)
+
+- [x] `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` + `aliasMapsToQuerySource` — post-hoc query-dict merge (Step B, `e60d8f8`)
+- [x] `rehomeUpdateUnqualifiedUnknownsToSingleFromTable` + `getSingleUpdateFromTableReference` — zero callers (Step A)
+
 #### Likely dead cleanup candidates
 
 These are the only uncovered helper surfaces that currently look like plausible dead-code removals rather than just unexercised feature paths.
@@ -754,7 +762,7 @@ These are the only uncovered helper surfaces that currently look like plausible 
 These are uncovered by the current coverage run, but they map to real feature families with their own tests elsewhere in the project. The main question is coverage depth, not whether the code is dead.
 
 - [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): pivot / unpivot helpers (`resolveUnpivotGeneratedColumnsFromUnresolvedMap`, `mergePivotAggregateDependencyRefsFallbackIfPresent`, `mergeUnpivotDerivedRefsIfPresent`, and related helpers) — feature-specific and backed by dedicated Pivot/Unpivot tests.
-- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): table-function helpers and insert/update rehoming helpers (`reconcileJoinExtensionSymbolTable`, `isInsertStatementSqlTree`, `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`) — live behavior, not dead code.
+- [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): table-function helpers and live UPDATE helpers (`reconcileJoinExtensionSymbolTable`, `isInsertStatementSqlTree`) — feature-specific paths, not dead code.
 - [ ] [SqlParseSymbolTreeHelper.java](../src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java): unpivot / derived-column / VALUES / DML support paths — these are covered by dedicated walkers and golden tests, but not by the 130-test consolidation gate.
 
 **Project-wide test-bed note**
@@ -927,7 +935,7 @@ mvn -Psmoketest-quality-gate test
 ### Phase 13 closeout checklist
 
 - [ ] All Phase 13 test methods above are green (existing + new).
-- [ ] Smoketest quality gate still **181/181** (verified 2026-07-19)
+- [ ] Smoketest quality gate still **195/195** (verified 2026-07-19)
 - [ ] `insert-refactor-skip-tests.md` updated — remove donor-email skip; confirm PIVOT class is not on skip list (`SqlEventWalkerPivotUnpivotTests` is 62/62 green as of Jul 2026).
 - [ ] Phase 11 EXCEPT deferral row marked ✅ and moved to Phase 13 completion notes.
 - [ ] Phase 11 donor-email TODO B row marked ✅ when 13.4 lands.
@@ -988,7 +996,9 @@ Retire only after Phases 6–8 make scope exits self-contained:
 
 | Fallback | Why it exists | Retire when |
 |----------|---------------|-------------|
-| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Post-hoc select-list merge into source `queryN` dict | **Restored for V13** (Jul 2026) — re-evaluate retire after clause egress emits alias+substitution tokens natively |
+| ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | Post-hoc select-list merge into source `queryN` dict | **Retired Jul 2026** (`e60d8f8`) — native interface loop + clause probe |
+| ~~`rehomeUpdateUnqualifiedUnknownsToSingleFromTable`~~ | UPDATE single-FROM unqualified rehome | **Retired Jul 2026** — zero callers (dead code) |
+| ~~`getSingleUpdateFromTableReference`~~ | Helper for rehome path only | **Retired Jul 2026** with rehome |
 | `materializeResolvedUnqualifiedReference` query-backed early return | Wrong dictionary target | Resolution writes correct scope key in one pass |
 | `moveEntriesToSingleTableIfSingleTarget` | Last-chance single-table relocation | Single-source scopes resolve at exit |
 | Second `assignTableRefsForColumnReferenceList` on filters/groupby/orderby | Clauses collected early, resolved late | Same pass as interface validation at exit |
@@ -1006,11 +1016,10 @@ The four `@Deprecated` CTE-named aliases were deleted after call sites were rena
 | ~~`getCteListSymbolMap`~~ | `getContextListSymbolMap` |
 | ~~`pushSymbolTableWithParentCteList`~~ | `pushSymbolTableWithParentVisibleScope` (walker already used canonical name) |
 
-### Load-bearing fallbacks — do NOT delete until Phase 9 close
+### Load-bearing fallbacks — do NOT delete until ingress refactor
 
 | Method | Why still needed | Retire trigger |
 |--------|------------------|----------------|
-| `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` | Query dict alias tokens for qualified select-list refs | Clause egress emits tokens natively at walk time |
 | `backfillQueryDictionaryFromResolvedInterfaceSources` (per-column) + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Interface-resolved physical columns → query dict after single-table relocation / late materialization | Native walk-time token capture at interface validation |
 | ~~`materializeResolvableGlobalQualifiedUnresolvedLocations`~~ | ~~Late global qualified materialization~~ | **Retired Jul 2026** — unified `resolveQualifiedUnresolvedEntries` on `globalQualifiedUnresolvedLocations` |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Pre-wildcard + post-UPDATE-rhs derived-column stripping | Unified ingress skips derived before wildcard/single-table paths |
@@ -1051,10 +1060,17 @@ Step 6 — Phase 10 close + Phase 9 dual-probe simplification        ✅ DONE (J
 
 Full-suite verification (2026-07-19): mvn test → 1203/1203 pass.
 
-Optional follow-up (not test-blocking): retire mergeSelectList hook, moveEntriesToSingleTableIfSingleTarget, dead-code candidates in helper.
+Step A — Dead code removal (~30 min)                              ✅ DONE (Jul 2026)
+  deleted rehomeUpdateUnqualifiedUnknownsToSingleFromTable + getSingleUpdateFromTableReference (zero callers)
+
+Step B — mergeSelectList retirement (~1 session)                   ✅ DONE (Jul 2026, e60d8f8)
+  deleted mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary + aliasMapsToQuerySource
+  gate +14 query-dict routing/diagnostic tests (181 → 195); V13/V14 green without post-hoc merge
+
+Optional follow-up (not test-blocking): retire moveEntriesToSingleTableIfSingleTarget, remaining dead-code candidates in helper.
 ```
 
-**Do not start with:** DML golden bulk update, CTE redesign, PIVOT/UNPIVOT golden bulk refresh, or removing `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` (V13 depends on it).
+**Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.
 
 ---
 
@@ -1148,7 +1164,7 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 
 If Phase 12 is ever taken, do it only after Phase 11 is fully complete and the Phase 11 canary set is still green; keep it as an opt-in cleanup step rather than part of the default execution order.
 
-**Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 181/181 gate).
+**Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
 ---
 

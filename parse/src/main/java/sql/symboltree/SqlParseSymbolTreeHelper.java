@@ -1972,75 +1972,6 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void rehomeUpdateUnqualifiedUnknownsToSingleFromTable(HashMap<String, Object> unresolvedMap) {
-		if (unresolvedMap == null || unresolvedMap.isEmpty()) {
-			return;
-		}
-
-		Object sqlTreeObj = walker.asTree.get(SQLPARSER_SQL_TREE_KEY);
-		if (!(sqlTreeObj instanceof Map<?, ?> sqlTree)) {
-			return;
-		}
-
-		Map<String, Object> updateAst = (Map<String, Object>) sqlTree;
-		boolean isUpdateAst = false;
-		for (Map.Entry<?, ?> entry : sqlTree.entrySet()) {
-			if (entry.getKey() instanceof String key
-					&& key.startsWith(MUMBLE_UPDATE_KEY)) {
-				isUpdateAst = true;
-				break;
-			}
-		}
-		if (!isUpdateAst) {
-			return;
-		}
-
-		String fromTableRef = getSingleUpdateFromTableReference(updateAst);
-		if (fromTableRef == null || fromTableRef.isBlank()) {
-			Map<String, Object> updateNode = getUpdateNode(updateAst);
-			fromTableRef = getUpdateTargetTableReference(updateNode);
-		}
-		if (fromTableRef == null || fromTableRef.isBlank()) {
-			return;
-		}
-		String normalizedFromTableRef = normalizeTableRef(fromTableRef);
-
-		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
-		HashMap<String, Object> fromTableDictionary = ensureTableDictionaryEntry(currentTableDictionary, normalizedFromTableRef);
-
-		HashMap<String, Object> nestedFromTableDictionary = null;
-		Object nestedTableDictionaryObj = currentTableDictionary.get(MUMBLE_TABLE_DICTIONARY_KEY);
-		if (nestedTableDictionaryObj instanceof HashMap<?, ?> nestedTableDictionaryMapObj) {
-			nestedFromTableDictionary = ensureTableDictionaryEntry((Map<String, Object>) nestedTableDictionaryMapObj, normalizedFromTableRef);
-		}
-
-		HashMap<String, Object> walkerTableDictionary = walker.getWalkerTableDictionary();
-		HashMap<String, Object> globalFromTableDictionary = ensureTableDictionaryEntry(walkerTableDictionary, normalizedFromTableRef);
-
-		ArrayList<String> resolvedKeys = new ArrayList<String>();
-		for (Map.Entry<String, Object> unresolvedEntry : unresolvedMap.entrySet()) {
-			String unresolvedKey = unresolvedEntry.getKey();
-			if (unresolvedKey == null || unresolvedKey.contains(".")) {
-				continue;
-			}
-			Object unresolvedValue = normalizeUpdateColumnRefs(unresolvedEntry.getValue());
-			if (unresolvedValue == null) {
-				continue;
-			}
-			fromTableDictionary.put(unresolvedKey, unresolvedValue);
-			globalFromTableDictionary.put(unresolvedKey, unresolvedValue);
-			if (nestedFromTableDictionary != null) {
-				nestedFromTableDictionary.put(unresolvedKey, unresolvedValue);
-			}
-			resolvedKeys.add(unresolvedKey);
-		}
-
-		for (String resolvedKey : resolvedKeys) {
-			unresolvedMap.remove(resolvedKey);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> ensureTableDictionaryEntry(Map<String, Object> dictionary, String tableRef) {
 		if (dictionary == null || tableRef == null) {
 			return new HashMap<String, Object>();
@@ -3425,32 +3356,6 @@ public class SqlParseSymbolTreeHelper {
 
 		String normalizedTargetRef = normalizeTableRef(updateTargetTableRef);
 		targetTableMap.putIfAbsent(normalizedTargetRef, new HashMap<String, Object>());
-	}
-
-	@SuppressWarnings("unchecked")
-	public String getSingleUpdateFromTableReference(Map<String, Object> updateAst) {
-		if (updateAst == null) {
-			return null;
-		}
-
-		Map<String, Object> updateNode = getUpdateNode(updateAst);
-		if (updateNode == null) {
-			return null;
-		}
-
-		Object fromObj = updateNode.get(MUMBLE_FROM_KEY);
-		if (!(fromObj instanceof Map<?, ?> fromMapObj)) {
-			return null;
-		}
-
-		Map<String, Object> fromMap = (Map<String, Object>) fromMapObj;
-		Object tableObj = fromMap.get(MUMBLE_TABLE_KEY);
-		if (tableObj instanceof Map<?, ?> tableMapObj) {
-			String tableRef = getQualifiedTableReference((Map<String, Object>) tableMapObj);
-			return (tableRef == null || tableRef.isBlank()) ? null : tableRef;
-		}
-
-		return null;
 	}
 
 	@SuppressWarnings("unchecked")

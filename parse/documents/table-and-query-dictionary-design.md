@@ -155,7 +155,7 @@ Token collection must happen **at resolution / materialization time** while the 
    - **Correlated / outer scope** → bubble via `unresolved_column` to the scope that owns the source; materialize there.
    - **Local interface output** → local query dictionary from **phase 1** (select-list output token) plus justified **GROUP BY / ORDER BY** output proofs where applicable.
 3. **Archived clause probe** (`filters` / `grouped_by` / `ordered_by`): **SATISFIED** when the appropriate **source** dictionary already holds the column. SATISFIED must **not** copy physical-source tokens onto local interface keys merely because the interface lists the same column name as lineage.
-4. **Phase 2** merges parent qualified usages (`alias.output_col`) into the **source query's** global query dictionary.
+4. **External query-alias usage** at scope exit: qualified refs on query aliases in parent scopes merge into the **source** query's global query dictionary via the interface validation loop and `materializeResolvedQualifiedQuerySourceReference` (formerly a separate Phase 2 post-hoc merge hook — **retired Jul 2026**).
 
 Avoid end-of-pass fallbacks that **read table dictionary entries to infer query dictionary tokens** — that loses per-clause provenance and blurs the two roles.
 
@@ -165,7 +165,7 @@ For `sub.col` where `sub` → `query0`:
 
 1. `materializeQualifiedUnresolvedEntry` **returns early** when `isNonTableQuerySourceReference` — so no table-dict write and no `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution`.
 2. `materializeResolvedQualifiedQuerySourceReference` routes tokens to **`query0`'s** dictionary via `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary`.
-3. Phase 2 (`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`) does the same for select-list source refs on query aliases.
+3. The interface validation loop at scope exit performs the same routing for qualified refs on query aliases in select-list, clause lists, and DML contexts — no separate end-of-pass merge hook.
 
 Physical table sources (`ic.pd7`) should follow the **same routing shape**: materialize to the **table dictionary** and stop — never call `mergeInterfaceOutputTokensFromQualifiedPhysicalResolution`. Parent-scope `ix.pd7` already uses phase 2 to target the **child** query dictionary.
 
@@ -176,7 +176,7 @@ Physical table sources (`ic.pd7`) should follow the **same routing shape**: mate
 | Phase | When | What |
 |-------|------|------|
 | **1 — Origins** | `exitSelect_item` (and statement-specific seeds) | Every interface output name receives its **output-name / alias** token (`ctx.getStop()`). Source expressions (`ic.pd7`, `sub.col`) are **not** copied here. |
-| **2 — External usage** | Scope exit, after interface resolution | Qualified refs on query aliases in **parent** scopes merge into the **source** query's dictionary. |
+| **2 — External usage** | Scope exit, after interface resolution | Qualified refs on query aliases in **parent** scopes merge into the **source** query's dictionary via interface loop + `materializeResolvedQualifiedQuerySourceReference`. |
 | **Lineage (parallel track)** | Resolution / materialization | Physical refs → table dictionary; query-backed refs → source query dictionary; correlated refs → outer scope. **Not** local query dictionary. |
 | **GROUP BY / ORDER BY output proof** | Archived clause probe | Unqualified (or proved output) refs in `grouped_by` / `ordered_by` may merge onto local interface keys when the ref is the output column, not a physical source alias. |
 
@@ -207,7 +207,7 @@ Before merging a dictionary change, ask:
 | Query-backed source routing | `materializeResolvedQualifiedQuerySourceReference`, `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` |
 | Explicit qualified batch at convert | `extractExplicitQualifiedUnknownEntries`, `emitExplicitQualifiedUnknownDiagnostics` |
 | Archived clause probe | `probeArchivedScopeClauseColumns`, `ArchivedClauseColumnRefDisposition.SATISFIED` |
-| Phase 2 external query-alias usage | `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` |
+| External query-alias usage at scope exit | Interface validation loop + `materializeResolvedQualifiedQuerySourceReference` (~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ retired Jul 2026) |
 | Predicand / correlated unresolved bubble-up | `dependent_queries`, deferred `unresolved_column` at scope exit, `finalizeQueryScopeSymbolTable` pass-up flags |
 | Phase 1 output origins | `SqlParseEventWalker.exitSelect_item` → `addAliasTokensObject` |
 | Global / published sync | `mergeIntoGlobalQueryColumnDictionary`, `syncPublishedScopeQueryDictionariesFromGlobal` |
