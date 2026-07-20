@@ -848,11 +848,11 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={a=[[@9,38:38='a',<381>,1:38]], field1=[[@6,29:34='field1',<381>,1:29]], b=[[@11,43:43='b',<381>,1:43]], subj_code=[[@25,95:103='subj_code',<381>,1:95]], field2=[[@17,59:64='field2',<381>,1:59]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{scbcrse={a=[[@9,38:38='a',<381>,1:38]], b=[[@11,43:43='b',<381>,1:43]], field1=[[@6,29:34='field1',<381>,1:29]], subj_code=[[@25,95:103='subj_code',<381>,1:95]], field2=[[@17,59:64='field2',<381>,1:59]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_1=[[@11,43:43='b',<381>,1:43]], unnamed_2=[[@20,69:69=')',<288>,1:69]], unnamed_0=[[@7,35:35=')',<288>,1:35]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={unnamed_1=[[@11,43:43='b',<381>,1:43]], unnamed_2=[[@20,69:69=')',<288>,1:69]], unnamed_0=[[@7,35:35=')',<288>,1:35]]}, table_dictionary={scbcrse={a=[[@9,38:38='a',<381>,1:38]], field1=[[@6,29:34='field1',<381>,1:29]], b=[[@11,43:43='b',<381>,1:43]], subj_code=[[@25,95:103='subj_code',<381>,1:95]], field2=[[@17,59:64='field2',<381>,1:59]]}}, filters=[{name=subj_code, table_ref=scbcrse}], interface={unnamed_1=[{name=a, table_ref=scbcrse}, {name=b, table_ref=scbcrse}], unnamed_2=[{name=field2, table_ref=scbcrse}], unnamed_0=[{name=field1, table_ref=scbcrse}]}, table_alias={aa=scbcrse}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={unnamed_1=[[@11,43:43='b',<381>,1:43]], unnamed_2=[[@20,69:69=')',<288>,1:69]], unnamed_0=[[@7,35:35=')',<288>,1:35]]}, table_dictionary={scbcrse={a=[[@9,38:38='a',<381>,1:38]], b=[[@11,43:43='b',<381>,1:43]], field1=[[@6,29:34='field1',<381>,1:29]], subj_code=[[@25,95:103='subj_code',<381>,1:95]], field2=[[@17,59:64='field2',<381>,1:59]]}}, filters=[{name=subj_code, table_ref=scbcrse}], interface={unnamed_1=[{name=a, table_ref=scbcrse}, {name=b, table_ref=scbcrse}], unnamed_2=[{name=field2, table_ref=scbcrse}], unnamed_0=[{name=field1, table_ref=scbcrse}]}, table_alias={aa=scbcrse}}}",
 				extractor.getSymbolTable().toString());
 	}
 

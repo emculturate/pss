@@ -4541,7 +4541,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String forColumn = (nameColObj instanceof String) ? (String) nameColObj : null;
+		String forColumn = extractPivotForColumnName(nameColObj);
 		ArrayList<String> sourceColumns = new ArrayList<String>();
 		if (forColumn != null && !forColumn.isBlank()) {
 			sourceColumns.add(forColumn);
@@ -4750,6 +4750,26 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String extractPivotForColumnName(Object nameColObj) {
+		if (nameColObj instanceof String columnName && !columnName.isBlank()) {
+			return columnName;
+		}
+		if (nameColObj instanceof Map<?, ?> nameColMapObj) {
+			ArrayList<Object> refs = new ArrayList<Object>();
+			symbolTreeHelper.flattenSubTreeForDependencyColumns(
+					new HashMap<String, Object>((Map<String, Object>) nameColMapObj),
+					refs);
+			for (Object refObj : refs) {
+				String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				if (refName != null && !refName.isBlank() && !"*".equals(refName)) {
+					return refName;
+				}
+			}
+		}
+		return walker.extractReferenceNameFromInterfaceEntry(nameColObj);
 	}
 
 	@SuppressWarnings("unchecked")
