@@ -219,6 +219,6 @@ Before merging a dictionary change, ask:
 These are areas to verify or extend; they are **not** relaxations of the contract above.
 
 1. **Clause ingress parity (Jul 2026):** WHERE, HAVING, QUALIFY, and JOIN ON column refs are flattened into the shared `filters` archived list (predicate-subquery boundaries respected). `grouped_by` and `ordered_by` keep their own lists. All three feed `extractExplicitQualifiedUnknownEntries` and `probeArchivedScopeClauseColumns`.
-2. **Physical source leak (Jul 2026):** resolved — physical lineage no longer mirrors into local `query_dictionary`; output-alias clause refs route to query dict; `moveEntriesToSingleTableIfSingleTarget` defers interface output-only alias names.
+2. **Physical source leak (Jul 2026):** resolved — physical lineage no longer mirrors into local `query_dictionary`; output-alias clause refs route to query dict via `recordInterfaceOutputClauseRefOnQueryDictionary`.
 3. **`materializeResolvedUnqualifiedReference`:** resolved — routes by source kind (output alias / query source / physical table).
-4. **`backfillQueryDictionaryFromResolvedInterfaceSources`:** Legacy safety net when query dict is empty; must not replace resolution-driven capture or reintroduce physical lineage on local query dict.
+4. **`backfillQueryDictionaryFromResolvedInterfaceSources` / `sweepBackfillQueryDictionaryFromResolvedInterfaceSources`:** resolved (`876c7ce`) — deleted; native walk-time capture at interface validation + clause probe replaced both post-hoc repair passes. Step D audit green (Jul 2026).

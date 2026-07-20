@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-20 (verified **1204/1204** full-suite + **195/195** gate green; Phase 14 **Step C complete** (`C1a`–`C2b` + closeout); **Step D audit** is next)
+**Last updated:** 2026-07-20 (verified **1204/1204** full-suite + **195/195** gate green; Phase 14 **Step C + Step D audit** complete; **Step E** is next)
 
 ---
 
@@ -162,7 +162,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
-| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~75% | **Step C** ✅ (`C1a`–`C2b` + closeout, `1d20503`); **Step D** audit next; see Phase 14 |
+| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~80% | **Step C + D** ✅; **Step E** next (PIVOT ingress); see Phase 14 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked for test work** — start when ready; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
@@ -185,7 +185,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 14 Step D** — audit that native walk-time query-dict capture fully replaced the retired backfill helpers (`876c7ce`); then **Step E** (PIVOT ingress) or **Step F** (hygiene). Phase 13 can run in parallel once the gate stays green.
+**Suggested next focus:** **Phase 14 Step E** (retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2) — then **Step F** (hygiene). Phase 13 can run in parallel once the gate stays green.
 
 ---
 
@@ -568,7 +568,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 - `convertSymbolTableToTableDictionary` internal egress
 - `resolveQualifiedUnresolvedAtQueryScopeExit` after finalize
-- `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` + per-column backfill at interface `RESOLVED_PHYSICAL_SOURCE`
+- ~~`sweepBackfillQueryDictionaryFromResolvedInterfaceSources` + per-column backfill~~ — **deleted** (`876c7ce`); Step D audit ✅
 - `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 (pre-wildcard + post-UPDATE-rhs)
 
 ---
@@ -698,7 +698,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | Fallback / helper | Current status | What Phase 11 should do |
 |--------------------|----------------|--------------------------|
 | ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | **Retired** (`e60d8f8`) | Native interface loop + `materializeResolvedQualifiedQuerySourceReference` |
-| `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | **Retired** (`876c7ce`) | Step D audit — confirm native capture covers all former surfaces |
+| `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | **Deleted** (`876c7ce`) | Step D audit ✅ — native capture verified (Jul 2026) |
 | ~~`moveEntriesToSingleTableIfSingleTarget`~~ | **Deleted** (`1d20503`) | C2.4 closeout complete |
 | ~~`moveUnknownEntriesToSingleWildcardBackedNonTableSource`~~ | **Deleted** (`1d20503`) | C2b.3 closeout complete |
 | ~~`canResolveUnqualifiedFromSingleWildcardQuerySource`~~ | **Deleted** (`1d20503`) | C2b closeout complete |
@@ -968,7 +968,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 
 **Step C complete** — all single-viable-source bulk relocation retired. Per-column pipeline (interface loop + `resolveRemaining…` + clause probe) is the sole ingress path.
 
-### Step D — Backfill retirement audit
+### Step D — Backfill retirement audit ✅ DONE (Jul 2026)
 
 **Historical context:** `backfillQueryDictionaryFromResolvedInterfaceSources` and `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` were post-hoc repair passes that copied interface-resolved physical-column tokens into `query_dictionary` when walk-time capture missed them. They were **deleted** in `876c7ce` (“Separate query-dict capture from physical source lineage routing”) and replaced by native capture at validation time.
 
@@ -981,22 +981,16 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | Unqualified / query-source materialize | `materializeResolvedUnqualifiedReference` + `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` | Interface loop + `resolveRemainingUnresolvedAgainstQuerySources` |
 | Final sweep after late materialization | **Removed** — Step C2 eliminated late bulk materialization; convert steps 6–8 must drain locally | N/A after C2 |
 
-**Objective (audit, not re-implementation):** Prove the `876c7ce` deletion is safe after Step C — no query-dict holes on surfaces the backfill used to patch.
-
-| Sub-step | Action | Verify |
-|----------|--------|--------|
-| **D.0** | Confirm zero `backfill*` / `sweepBackfill*` in `parse/src` | `rg backfillQueryDictionary\|sweepBackfill parse/src` → clean |
-| **D.1** | Gate canaries: query-dict routing matrix (8) + diagnostic routing (6) + UPDATE V13/V14 | Gate **195/195** |
-| **D.2** | Substitution column families — CTE external tokens land in `query_dictionary` natively | `getSubstitutionColumnVariableV1`–`V16` (16/16) |
-| **D.3** | Complex substitution nested CTE bodies — no empty interface from missing backfill | `*ComplexSubstitution*` INSERT I1–I10 + UPDATE U1–U10 (30/30) |
-| **D.4** | Spot nested-demo + unaliased-derived V13/V14 — query-dict tokens present without retro-write | `nestedQueryDemoTest`, `unaliasedDerived*` V13/V14 |
-| **D.5** | Doc hygiene: mark gap #4 resolved in `table-and-query-dictionary-design.md`; remove stale “load-bearing backfill” rows from this worklist | Doc grep clean |
-
-**Gate:** query-dict routing matrix (8) + UPDATE V13/V14 + substitution column families + full suite.
+| Sub-step | Action | Verify | Result |
+|----------|--------|--------|--------|
+| **D.0** | Confirm zero `backfill*` / `sweepBackfill*` in `parse/src` | Grep clean | ✅ |
+| **D.1** | Gate canaries: query-dict routing (8) + diagnostic routing (6) + UPDATE V13/V14 | Gate **195/195** | ✅ |
+| **D.2** | Substitution column families — CTE external tokens in `query_dictionary` natively | `getSubstitutionColumnVariableV1`–`V16` | ✅ **16/16** |
+| **D.3** | Complex substitution nested CTE bodies — no empty interface | INSERT I1–I10 + UPDATE U1–U10 | ✅ **20/20** |
+| **D.4** | Spot nested-demo + unaliased-values V13/V14 | `nestedQueryDemoTest`, `unaliasedValuesPositionalAllOuterClausesV13Test`, `unaliasedValuesAliasOnlyAllOuterClausesV14Test` | ✅ |
+| **D.5** | Doc hygiene | `table-and-query-dictionary-design.md` gap #4; worklist stale rows | ✅ |
 
 **If failures:** Do **not** restore backfill — fix the native capture path (interface loop, clause probe, or `materializeResolvedUnqualifiedReference` routing) per symptom, same discipline as C2b.4.
-
-**Risk:** Low — code already green; Step D is primarily verification + documentation closeout unless audit finds a hole.
 
 ### Step E — PIVOT/UNPIVOT domain fallbacks (existing backlog)
 
@@ -1023,7 +1017,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 - [x] Output-alias deferral preserved via `isInterfaceOutputAliasOnly` (bulk helper removed with C1a)
 - [x] Correlated pass-up unchanged (no local bulk bind of outer refs) — verified during **C2a** (`coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`, `largeStudentgeneralQueryParseTest`)
 - [x] Smoketest gate **195/195** + full suite **1204/1204** (Jul 2026)
-- [ ] `table-and-query-dictionary-design.md` updated — bulk relocation marked retired
+- [x] `table-and-query-dictionary-design.md` updated — backfill gap #4 resolved; bulk relocation retired — **Step D** (Jul 2026)
 
 ### Phase 14 vs Phase 13 ordering
 
@@ -1032,8 +1026,8 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **Phase 14 C1a + C1b** | ✅ Done (Jul 2026) | `1274ee3` (C1b), `37da020` (C1a + prepend removal) |
 | **Phase 14 C2a** | ✅ Done (Jul 2026) | `cd937c2` — convert-time lineage + pass-up consumption |
 | **Phase 14 C2b + closeout** | ✅ Done (Jul 2026) | `1d20503` — wildcard suppressor + orphan bulk helper deletion |
-| **Phase 14 Step D** | **Now** — low risk | Audit native query-dict capture replaced backfill (`876c7ce`); doc hygiene |
-| **Phase 14 Steps E–F** | After D or parallel | PIVOT ingress + dead-code hygiene |
+| **Phase 14 Step D** | ✅ Done (Jul 2026) | Audit green — native capture verified; gap #4 doc updated |
+| **Phase 14 Steps E–F** | **Now** | PIVOT ingress + dead-code hygiene |
 | **Phase 13** | Parallel once gate green | Language features independent unless touching convert |
 | **Phase 12** (origin-CTE backfill) | Optional, last | Defer unless explicit churn approved |
 
@@ -1286,7 +1280,7 @@ Step 3 — Phase 8 canary fix (~1 session)                           ✅ DONE (2
 Step 4 — Late-pass helper retirement (~1–2 sessions)               ✅ DONE (Jul 2026)
   deleted materializeResolvableGlobalQualifiedUnresolvedLocations
   statement-top global qualified ingress → resolveQualifiedUnresolvedEntries
-  backfill consolidated: per-column at interface RESOLVED_PHYSICAL_SOURCE + sweepBackfill after late materialization
+  backfill deleted (876c7ce); Step D audit confirms native capture at interface + clause probe
   derived-column stripping 3→2 (retired post-late-resolution pass)
   canaries green; UPDATE CTE spot checks same stale-golden failures as pre-retirement baseline
 
@@ -1318,10 +1312,10 @@ Step C2b — Retire late wildcard scope-exit suppressor (Phase 14)    ✅ DONE (
 Step C2 closeout — Delete bulk helpers when zero call sites         ✅ DONE (Jul 2026, 1d20503)
   moveEntriesToSingleTableIfSingleTarget (C2.4) + moveUnknownEntriesToSingleWildcardBackedNonTableSource (C2b.3)
 
-Step D — Backfill retirement audit (Phase 14)                       ⏸️ NEXT
-  confirm native capture (876c7ce deletion) still covers all surfaces; doc hygiene
+Step D — Backfill retirement audit (Phase 14)                       ✅ DONE (Jul 2026)
+  D.0–D.5 green: gate 195/195, substitution V1–V16, complex sub I/U 20/20, nested demo + values V13/V14
 
-Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  ⏸️ AFTER D
+Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  ⏸️ NEXT
   resolveRelationalModifierDerivedColumnsFromUnresolvedMap ×2
 
 Step F — Dead-code hygiene (Phase 14)                              ⏸️ OPTIONAL
@@ -1413,7 +1407,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 ```
 Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 (optional origin-CTE backfill)
        →  Steps A–B ✅ (dead code + mergeSelectList)
-       →  Phase 14 Step C ✅ (C1a–C2b + closeout, 1d20503)  →  Step D audit ⏸️ NEXT
+       →  Phase 14 Step C + D ✅  →  Step E ⏸️ NEXT
        →  Phase 14 E–F (PIVOT / hygiene)
        →  Phase 13 (language features — can overlap Phase 14 once gate stays green)
 ```
@@ -1424,7 +1418,7 @@ If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canar
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
-**Phase 14 Step D is the recommended immediate next step** — audit that native walk-time query-dict capture fully replaced the retired backfill helpers (`876c7ce`); see Step D sub-steps. Step C complete (`37da020`, `1274ee3`, `cd937c2`, `1d20503`).
+**Phase 14 Step E is the recommended immediate next step** — retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2; see Step E. Steps C + D complete (`1d20503`, `85d3013`).
 
 ---
 
