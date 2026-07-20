@@ -4092,9 +4092,7 @@ public class SqlParseSymbolTreeHelper {
 			// For deferred correlated subqueries (EXISTS, etc.), pass up ALL unresolved columns to the parent.
 			// The parent query will resolve them after its own assembly is complete.
 			if (!deferSubqueryUnresolvedDiagnosticsToStatementBoundary && !passUpQualifiedUnresolvedFromThisSubquery) {
-				if (!canResolveUnqualifiedFromSingleWildcardQuerySource(unqualifiedUnresolvedForLocal)) {
-					emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolvedForLocal);
-				}
+				emitUnqualifiedUnresolvedColumnsError(unqualifiedUnresolvedForLocal);
 				HashMap<String, Object> tableAliasMap =
 						(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
 				emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune(
@@ -6372,94 +6370,6 @@ public class SqlParseSymbolTreeHelper {
 		for (String keyToRemove : keysToRemove) {
 			qualifiedUnresolvedMap.remove(keyToRemove);
 		}
-	}
-
-	@SuppressWarnings("unchecked")
-	public boolean canResolveUnqualifiedFromSingleWildcardQuerySource(HashMap<String, Object> unqualifiedUnresolvedMap) {
-		if (unqualifiedUnresolvedMap == null || unqualifiedUnresolvedMap.isEmpty()) {
-			return false;
-		}
-
-		Object tableAliasObject = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
-		if (!(tableAliasObject instanceof Map<?, ?> tableAliasMap) || tableAliasMap.isEmpty()) {
-			return false;
-		}
-
-		HashMap<String, Object> localTableAliasMap = (HashMap<String, Object>) tableAliasMap;
-		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
-		if (localTableCollection == null) {
-			localTableCollection = new HashMap<String, Object>();
-		}
-		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
-		if (hasUnqualifiedUnknownWithMultipleViableSources(
-				unqualifiedUnresolvedMap,
-				localTableCollection,
-				visibleQuerySourceCollection,
-				localTableAliasMap)) {
-			return false;
-		}
-
-		HashSet<String> queryBackedSources = new HashSet<String>();
-		for (Object mappedSourceObj : localTableAliasMap.values()) {
-			if (!(mappedSourceObj instanceof String mappedSource)) {
-				continue;
-			}
-			if (isQueryOrSetOrValuesSourceReference(mappedSource)) {
-				String normalizedSourceKey = normalizeQuerySourceReference(mappedSource);
-				if (normalizedSourceKey != null && !normalizedSourceKey.isBlank()) {
-					queryBackedSources.add(normalizedSourceKey);
-				}
-			}
-		}
-
-		if (queryBackedSources.size() != 1) {
-			return false;
-		}
-
-		String sourceQueryKey = queryBackedSources.iterator().next();
-		Object queryDictionaryObj = getQuerySourceDictionaryPreferDefinition(sourceQueryKey);
-		if (queryDictionaryObj instanceof Map<?, ?> queryDictionary) {
-			Map<String, Object> sourceQueryDictionary = (Map<String, Object>) queryDictionary;
-			if (sourceQueryDictionary.containsKey("*")) {
-				unqualifiedUnresolvedMap.clear();
-				return true;
-			}
-
-			ArrayList<String> resolvedKeys = new ArrayList<String>();
-			for (String unresolvedKey : unqualifiedUnresolvedMap.keySet()) {
-				if (sourceQueryDictionary.containsKey(unresolvedKey)
-						|| hasColumnInQueryOutputInterface(sourceQueryKey, unresolvedKey)) {
-					resolvedKeys.add(unresolvedKey);
-				}
-			}
-
-			for (String resolvedKey : resolvedKeys) {
-				unqualifiedUnresolvedMap.remove(resolvedKey);
-			}
-			if (unqualifiedUnresolvedMap.isEmpty()) {
-				return true;
-			}
-		}
-
-		ArrayList<String> interfaceResolvedKeys = new ArrayList<String>();
-		for (String unresolvedKey : unqualifiedUnresolvedMap.keySet()) {
-			if (hasColumnInQueryOutputInterface(sourceQueryKey, unresolvedKey)) {
-				interfaceResolvedKeys.add(unresolvedKey);
-			}
-		}
-		for (String resolvedKey : interfaceResolvedKeys) {
-			unqualifiedUnresolvedMap.remove(resolvedKey);
-		}
-		if (unqualifiedUnresolvedMap.isEmpty()) {
-			return true;
-		}
-
-		if (hasWildcardInQueryOutputInterface(sourceQueryKey)) {
-			unqualifiedUnresolvedMap.clear();
-			return true;
-		}
-
-		return false;
 	}
 
 	@SuppressWarnings("unchecked")

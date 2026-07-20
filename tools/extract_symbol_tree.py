@@ -105,7 +105,6 @@ MOVE_METHODS = {
     "resolveCteScopeReferenceInSymbols",
     "getTopLevelQueryTableAliasMap",
     "emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune",
-    "canResolveUnqualifiedFromSingleWildcardQuerySource",
     "hasWildcardInQueryOutputInterface",
 
     # select-item interface building
