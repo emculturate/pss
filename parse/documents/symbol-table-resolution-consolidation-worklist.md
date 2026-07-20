@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-19 (verified **1203/1203** full-suite + **195/195** gate green; fallback cleanup Steps A–B complete; Phases 9–12 test backlog cleared)
+**Last updated:** 2026-07-19 (verified **1203/1203** full-suite + **195/195** gate green; Steps A–B complete; Phase 14 plan added for single-target relocation retirement)
 
 ---
 
@@ -162,6 +162,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
+| **14** Universal per-column resolution (Steps C–F) | ⏸️ Not started | 0% | Retire all **single-viable-source bulk relocation** (physical table + wildcard/single query source); see Phase 14 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked for test work** — start when ready; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
@@ -173,13 +174,13 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `2833a2f`: `isPhysicalTableRefVisibleInScope` — physical materialization gated on visible scope only (no global-dict visibility leak); `nestedQueryDemoTest` goldens updated
 - Phase 8 canaries green: `nestedQueryDemoTest` (3 fatals), `nestedQueryDemoWithCteTest`, V9, V13
 - Commit `e60d8f8`: retired `mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary` + `aliasMapsToQuerySource` (native interface loop + `materializeResolvedQualifiedQuerySourceReference` cover V13/V14); gate +14 query-dict routing/diagnostic tests (195 total)
-- Step A (Jul 2026, pending commit): removed dead `rehomeUpdateUnqualifiedUnknownsToSingleFromTable` + `getSingleUpdateFromTableReference` (zero callers)
+- Step A (Jul 2026, `36f7aa0`): removed dead `rehomeUpdateUnqualifiedUnknownsToSingleFromTable` + `getSingleUpdateFromTableReference` (zero callers)
 - V9 UPDATE FROM join-on orphan RHS — goldens aligned
 - Query column dictionary alias tokens (`'a'`, `'e'`, `'inner_sq'`) accepted as canonical (not `<327>` substitution spellings)
 
-**Active blockers:** None. All consolidation-phase tests are green. Remaining optional cleanup: `moveEntriesToSingleTableIfSingleTarget` and PIVOT/UNPIVOT domain fallbacks. **Phase 13** language features are unblocked.
+**Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** Step C (`moveEntriesToSingleTableIfSingleTarget`) or **Phase 13** language feature gap closure.
+**Suggested next focus:** **Phase 14 Step C1** (eliminate early bulk relocation — physical **C1a** and wildcard query **C1b**) — then C2 (late drains). Phase 13 can run in parallel once the gate stays green.
 
 ---
 
@@ -693,7 +694,9 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 |--------------------|----------------|--------------------------|
 | ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | **Retired** (`e60d8f8`) | Native interface loop + `materializeResolvedQualifiedQuerySourceReference` |
 | `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Load-bearing | Keep until walk-time token capture is proven stable at interface validation |
-| `moveEntriesToSingleTableIfSingleTarget` | Load-bearing | Keep until single-source scopes resolve fully at exit |
+| `moveEntriesToSingleTableIfSingleTarget` | Load-bearing bulk shortcut (physical single-table) | **Phase 14 C1a–C2a** |
+| `moveUnknownEntriesToSingleWildcardBackedNonTableSource` | Load-bearing bulk shortcut (single wildcard/single query source) | **Phase 14 C1b–C2b** |
+| `canResolveUnqualifiedFromSingleWildcardQuerySource` | Late bulk validator/clearer at scope finalize (no per-column materialize) | **Phase 14 C2b** — replace with convert-time per-key resolution |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Load-bearing | Keep until derived-column ingress no longer needs pre-/post-wildcard stripping |
 | `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
 | `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Removed | Inlined into `validateArchivedClauseColumnRef`; dual-probe follow-up still remains |
@@ -715,7 +718,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML golden refresh | ✅ | Full DML class green (103/103) as of 2026-07-19 |
 | DML clause probe | ✅ | Routed through convert probe; tests green |
 | EXCEPT set-op parity | ⏸️ | **Moved to Phase 13.1** |
-| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | **Partial** — `mergeSelectList` retired; `moveEntriesToSingleTableIfSingleTarget` still load-bearing |
+| Retire late-pass fallbacks (as scopes self-contain) | ⚠️ | **Partial** — `mergeSelectList` retired; physical + wildcard bulk relocation → **Phase 14 C1–C2** |
 | Donor-email forward alias (TODO B) | ⏸️ | **Moved to Phase 13.4** |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
@@ -804,6 +807,201 @@ These are uncovered by the current coverage run, but they map to real feature fa
 - `SqlParseEventWalkerWithAccessObjectTest#coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`
 
 **Recommended execution order for that optional phase:** run the 11 canaries above first, then refresh only the files that move. If the matrix stays mostly `No-change`, keep the change out of Phase 12.
+
+---
+
+## Phase 14 — Universal per-column resolution (Steps C–F)
+
+**Goal:** Retire **all single-viable-source bulk relocation** in favor of the **canonical per-column pipeline** — one column at a time, regardless of whether the sole source is a physical table or a wildcard/single query-backed subquery:
+
+```
+walk archives ref → unresolved_column
+  → resolveUnqualifiedColumnAgainstVisibleScope / resolveQualifiedColumnAgainstVisibleScope
+  → applyUnqualifiedScopeResolutionResult / materializeResolvedUnqualifiedReference
+  → probeArchivedScopeClauseColumns (WHERE / GROUP BY / ORDER BY / UPDATE RHS)
+```
+
+**Unified abstraction — “single viable source”:** When exactly one source can provide a column (physical `FROM` table, or a single query-backed alias whose output is wildcard `*` or lists the column), resolution should use the **same per-key path** everywhere the reference appears (SELECT list, clauses, ingress merges). Today two parallel bulk shortcuts implement this policy:
+
+| Bulk shortcut | Single source | When | Per-column replacement |
+|---------------|---------------|------|------------------------|
+| `moveEntriesToSingleTableIfSingleTarget` | Sole physical `FROM` table | Early convert + late scope exit | `resolveUnqualifiedColumnAgainstVisibleScope` → `materializeResolvedUnqualifiedReference` (physical dict) |
+| `moveUnknownEntriesToSingleWildcardBackedNonTableSource` | Sole wildcard-backed or column-matching query source | Early convert (~L1369) | Same resolver → `materializeResolvedUnqualifiedReference` → `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` |
+| `canResolveUnqualifiedFromSingleWildcardQuerySource` | Sole wildcard-backed query source | Late scope finalize (~L3856) | Per-key resolve + materialize at convert; finalize should not need bulk map clear |
+
+**Not bulk relocation (keep):** `processWildcardUnknownEntries` expands `*` / `alias.*` into concrete scoped unknowns — this is ingress normalization, not single-source shoveling.
+
+**Why this is not like Step B (`mergeSelectList`):** Step B removed a post-hoc repair that duplicated interface-loop work. The bulk helpers above are **alternate ingress paths** that shovel the entire `unresolved_column` map before or after the per-column passes. Retiring them requires proving every straggler category is drained by the standard passes — or explicitly deferred/bubbled (correlated subqueries).
+
+**Known per-column gap (fix during C1b):** The interface loop currently calls `resolveUnqualifiedColumnAgainstVisibleScope` with `visibleQuerySourceCollection=null` and `allowQuerySourceFallback=false` (~L1636–1644). That forces early wildcard bulk bind for query-only scopes (`FROM (SELECT * FROM t) sq`). **C1b prerequisite:** pass `visibleQuerySourceCollection` and enable query-source fallback for output-column unqualified resolution so wildcard/single-query scopes use the same path as `resolveRemaining…` and clause probe.
+
+**Prerequisite gate (every sub-step):**
+
+```bash
+cd parse
+mvn -Psmoketest-quality-gate test
+```
+
+### Terminology
+
+| Term | Code | Role |
+|------|------|------|
+| **Early physical bulk priming** | `relocateUnqualifiedToSingleTableExcludingOutputAliases` (~L1403, ~L1453) | Moves all unqualified keys to sole physical table **before** interface loop; second call gated by `!hasUnqualifiedUnknownWithMultipleViableSources`; first call is **not** gated |
+| **Early wildcard-query bulk bind** | `moveUnknownEntriesToSingleWildcardBackedNonTableSource` (~L1369) | Moves all unqualified keys to sole wildcard-backed (or column-matching) query source in `localCurrentQueryDictionary` — **same policy as physical bulk, different target dict** |
+| **Late physical scope-exit drain** | `materializeRemainingSingleTableUnqualifiedAtScopeExit` (~L3929, UPDATE FROM ~L4072) | Last-chance bulk bind on `unqualifiedUnresolved` to sole physical table after convert |
+| **Late wildcard scope-exit suppressor** | `canResolveUnqualifiedFromSingleWildcardQuerySource` (~L3856) | Bulk-validates then clears `unqualifiedUnresolvedForLocal` when sole wildcard query source accepts all keys — avoids fatal without per-column materialize |
+| **Per-column ingress drain** | `resolveRemainingUnresolvedAgainstQuerySources` | Loops unresolved map; unified resolver + materializer per key (already passes `visibleQuerySourceCollection`) |
+| **Clause egress** | `probeArchivedScopeClauseColumns` | filters / grouped_by / ordered_by + UPDATE assignment RHS |
+| **Output-alias deferral** | `deferInterfaceOutputAliasOnlyUnqualifiedEntries` | Prevents bulk bind of select-list alias names onto physical table; must be preserved in any refactor |
+
+### Target convert order (end state — no bulk relocation)
+
+```
+1. Wildcard expansion (processWildcardUnknownEntries)          [keep — not bulk bind]
+2. PIVOT/UNPIVOT derived-column strip (pre-wildcard)
+3. propagateUnqualifiedSelectStarToScopeTables
+4. UPDATE/DML-specific RHS + target hooks (unchanged)
+5. emitExplicitQualifiedUnknownDiagnostics (qualified batch)
+6. Interface loop — per output column: unified resolver + materialize
+     (unqualified: visibleQuerySourceCollection + allowQuerySourceFallback=true)
+7. resolveRemainingUnresolvedAgainstQuerySources — per remaining unqualified key
+8. probeArchivedScopeClauseColumns — per archived clause ref
+9. patchInterfaceTableRefsForSinglePhysicalTableScope
+10. validateQueryInterface
+```
+
+Scope exit (`finalizeQueryScopeSymbolTable` / UPDATE FROM finalize) should **not** need bulk bind or bulk wildcard clear once steps 6–8 drain all local keys; correlated keys pass up via existing defer/bubble flags.
+
+### Straggler categories (audit checklist for Step C2)
+
+Keys that can still sit in `unresolved_column` after convert today — each must be **consumed**, **materialized**, **deferred**, or **passed up** without bulk bind:
+
+| # | Category | Typical SQL / ingress | Standard handler today | Bulk bind risk if removed too early |
+|---|----------|----------------------|------------------------|-------------------------------------|
+| S1 | Correlated subquery deferral | `WHERE EXISTS (SELECT 1 FROM t WHERE t.col = outer.col)` | Skip `resolveRemaining…`; pass-up at finalize | Late drain may bind local `col` — OK; outer refs stay qualified |
+| S2 | Output-alias-only names | `SELECT expr AS revenue …` then `ORDER BY revenue` | Deferred from bulk; clause probe → `query_dictionary` | Must keep `deferInterfaceOutputAliasOnlyUnqualifiedEntries` |
+| S3 | Qualified-shaped keys in unqualified map | Ingress from nested `def_*` / UPDATE paths | Skipped by `resolveRemaining` loop (`tableRef != null`) | Needs per-key qualified path or map normalization |
+| S4 | Clause-only unqualified refs | `WHERE status = 1` (single table `accounts`) | `probeArchivedScopeClauseColumns` → materialize | Covered once bulk priming removed if probe runs on full map |
+| S5 | Non-interface ingress | Nested-scope merge, UPDATE no-FROM temp keys | `resolveRemainingUnresolvedAgainstQuerySources` | Primary replacement for early bulk |
+| S6 | Hoisted archived unresolved | `collectAndStripUnresolvedFromScopeTree` at finalize | Re-enters map post-convert; late drain today | Step C2 scope |
+| S7 | Subquery `emitFinalUnresolvedUnknownFatal=false` | Nested `query_specification` | Intentionally leaves map until finalize | Step C2 scope |
+| S8 | Substitution columns | `<emp_id>` unqualified | Interface substitution branch + materialize | Gate + substitution families |
+| S9 | Ambiguous multi-source | `FROM t JOIN sq …` unqualified `col` | Unified resolver → AMBIGUOUS fatal | **Never** bulk-bind without per-column source count |
+| S10 | Query-only / wildcard single source | `SELECT col FROM (SELECT * FROM t) sq` | Early wildcard bulk today; per-column via `isWildcardBackedQueryCandidate` + materialize to query dict | **C1b** — interface loop must pass `visibleQuerySourceCollection` |
+
+### Step C1 — Eliminate early bulk relocation (attempt first)
+
+**Objective:** Remove all early bulk shoveling in `convertSymbolTableToTableDictionary`. Rely on interface loop (step 6) + `resolveRemaining…` (step 7) + clause probe (step 8).
+
+#### C1a — Early physical bulk priming
+
+Remove both `relocateUnqualifiedToSingleTableExcludingOutputAliases` calls (~L1401–1407 and ~L1452–1457).
+
+| Sub-step | Action | Verify |
+|----------|--------|--------|
+| **C1a.0** | Gate canaries: single physical table + unqualified WHERE; `FROM t JOIN (SELECT …) sq` ambiguity; output-alias ORDER BY; `insertDictionaryHandlingUnqualifiedFallsBackToTargetTableV3` | Gate 195 + spot DML INSERT V3 |
+| **C1a.1** | Remove **first** relocate only (~L1403) | Gate + full suite |
+| **C1a.2** | Remove **second** relocate (~L1453) | Gate + full suite |
+| **C1a.3** | If failures: fix per-key gap — document S1–S9 row; do not restore bulk without cause | Targeted test |
+
+**Rollback:** restore one relocate call at a time; prefer second (guarded) pass over first (unguarded).
+
+#### C1b — Early wildcard-query bulk bind
+
+Remove `moveUnknownEntriesToSingleWildcardBackedNonTableSource` (~L1369). Same “accept every unqualified ref from the sole viable source” policy as C1a, but target is `query_dictionary` not `table_dictionary`.
+
+| Sub-step | Action | Verify |
+|----------|--------|--------|
+| **C1b.0** | Confirm gate coverage for query-only wildcard scopes: `nestedSelectStarV1`–`V7` (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`); add to gate if missing | `nestedSelectStar*` + gate |
+| **C1b.1** | **Prerequisite fix:** interface loop unqualified branch — pass `visibleQuerySourceCollection` and `allowQuerySourceFallback=true` to `resolveUnqualifiedColumnAgainstVisibleScope`; set `materializeWhenImmediateScope=true` in `applyUnqualifiedScopeResolutionResult` where appropriate for query-only scopes | `nestedSelectStarV1`–`V3` spot |
+| **C1b.2** | Remove `moveUnknownEntriesToSingleWildcardBackedNonTableSource` call | Gate + `nestedSelectStarV1`–`V7` + full suite |
+| **C1b.3** | If failures: confirm `collectUnqualifiedSourceReferences` + `isWildcardBackedQueryCandidate` bind single query alias; confirm `materializeResolvedUnqualifiedReference` routes to `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` | S10 row |
+
+**Can run in parallel with C1a** if different test families; prefer **C1b.1 before C1b.2** (interface-loop fix may be required for clean removal).
+
+**Files:** `SqlParseSymbolTreeHelper.java` (`convertSymbolTableToTableDictionary`, interface loop ~L1627–1674); `SqlASTWalkerHelper.java` (`moveUnknownEntriesToSingleWildcardBackedNonTableSource` — delete when zero call sites after C2).
+
+### Step C2 — Retire late scope-exit bulk paths (after C1 green)
+
+**Objective:** Remove late bulk helpers at scope finalize. Replace with per-key unified resolver + materializer (or prove convert leaves zero local unqualified for non-deferred scopes).
+
+#### C2a — Late physical scope-exit drain
+
+Remove `materializeRemainingSingleTableUnqualifiedAtScopeExit` from `finalizeQueryScopeSymbolTable` and `finalizeUpdateScopeUnresolvedColumnsAtExit`.
+
+| Sub-step | Action | Verify |
+|----------|--------|--------|
+| **C2a.0** | Optional assert: `unqualifiedUnresolvedForLocal` empty for top-level single-table SELECT after convert | Debug test or temporary flag |
+| **C2a.1** | Replace late drain with per-key loop (same as `resolveRemaining…`) | Gate |
+| **C2a.2** | Audit S6 + S7 — pass-up still works | EXISTS correlated + `coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest` |
+| **C2a.3** | Delete `materializeRemainingSingleTableUnqualifiedAtScopeExit` + `relocateUnqualifiedToSingleTableExcludingOutputAliases` when unused | Grep clean |
+
+#### C2b — Late wildcard scope-exit suppressor
+
+Remove `canResolveUnqualifiedFromSingleWildcardQuerySource` guard at finalize (~L3856). Today it bulk-clears the map when a sole wildcard query source would accept all keys, suppressing `emitUnqualifiedUnresolvedColumnsError` without materializing tokens.
+
+| Sub-step | Action | Verify |
+|----------|--------|--------|
+| **C2b.0** | Confirm C1b left no unqualified keys in query-only wildcard scopes at convert exit | `nestedSelectStarV4`–`V7` (nested / clause shapes) |
+| **C2b.1** | Remove `canResolveUnqualifiedFromSingleWildcardQuerySource` call; rely on convert-time per-key materialize | Gate + nestedSelectStar* |
+| **C2b.2** | If spurious fatals: ensure deferred/nested scopes still skip emit when `emitFinalUnresolvedUnknownFatal=false` | S7 row |
+| **C2b.3** | Delete `canResolveUnqualifiedFromSingleWildcardQuerySource` + `moveUnknownEntriesToSingleWildcardBackedNonTableSource` when zero call sites | Grep + `extract_symbol_tree.py` allowlist |
+
+#### C2 closeout
+
+| Sub-step | Action | Verify |
+|----------|--------|--------|
+| **C2.4** | Delete `moveEntriesToSingleTableIfSingleTarget` when zero call sites | Grep clean |
+
+**Higher risk than C1** — do not start until C1a **and** C1b are green for at least one full suite run.
+
+### Step D — Backfill retirement (existing backlog)
+
+**Objective:** Retire `backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` once walk-time token capture at interface validation is proven stable.
+
+| Item | Retire when |
+|------|-------------|
+| Per-column backfill at `RESOLVED_PHYSICAL_SOURCE` | Interface loop emits all required query-dict tokens natively |
+| Final sweep after late materialization | Step C2 complete; no post-convert dict holes |
+
+**Gate:** query-dict routing matrix (8) + UPDATE V13/V14 + substitution column families.
+
+### Step E — PIVOT/UNPIVOT domain fallbacks (existing backlog)
+
+**Objective:** Retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 when unified ingress skips derived columns before wildcard/single-table paths.
+
+**Gate:** `SqlEventWalkerPivotUnpivotTests` (62) + gate PIVOT/UNPIVOT smoke (3).
+
+### Step F — Remaining dead-code + helper hygiene
+
+- [ ] `getTableFunctionSourceCount` / `setTableFunctionSourceCount` / `getSuppressedAmbiguousUnqualifiedKeys` / `getTableFunctionSourceRefs` — zero callers
+- [ ] `ArchivedClauseColumnRefResult.satisfied()` — uncovered, no references
+- [ ] `tools/extract_symbol_tree.py` allowlist sync after Step C2 deletions
+- [ ] Coverage report stale rows for `rehomeUpdate…` / `getSingleUpdateFromTableReference` (optional doc hygiene)
+
+### Phase 14 closeout checklist
+
+- [ ] Early physical bulk priming removed (both relocate sites in convert) — **C1a**
+- [ ] Early wildcard-query bulk bind removed (`moveUnknownEntriesToSingleWildcardBackedNonTableSource`) — **C1b**
+- [ ] Interface loop uses `visibleQuerySourceCollection` + query-source fallback for unqualified output columns — **C1b.1**
+- [ ] Late physical scope-exit drain removed or replaced with per-key exit loop — **C2a**
+- [ ] Late wildcard scope-exit suppressor removed (`canResolveUnqualifiedFromSingleWildcardQuerySource`) — **C2b**
+- [ ] `moveEntriesToSingleTableIfSingleTarget` deleted (zero call sites) — **C2.4**
+- [ ] `moveUnknownEntriesToSingleWildcardBackedNonTableSource` deleted (zero call sites) — **C2b.3**
+- [ ] `deferInterfaceOutputAliasOnlyUnqualifiedEntries` behavior unchanged (output-alias → query dict, not physical table)
+- [ ] Correlated pass-up unchanged (no local bulk bind of outer refs)
+- [ ] Smoketest gate **195/195** + full suite **1203/1203**
+- [ ] `table-and-query-dictionary-design.md` updated — bulk relocation marked retired
+
+### Phase 14 vs Phase 13 ordering
+
+| Track | When | Notes |
+|-------|------|-------|
+| **Phase 14 C1a + C1b** | **Now** — low–medium risk | C1b.1 (interface-loop fix) may be required before C1b.2; C1a and C1b can interleave |
+| **Phase 14 C2a + C2b** | After C1 stable | Needs straggler audit S1–S10 |
+| **Phase 13** | Parallel once gate green | Language features independent unless touching convert |
+| **Phase 12** (origin-CTE backfill) | Optional, last | Defer unless explicit churn approved |
+| **Steps D–F** | After C2 or parallel if green | Backfill / PIVOT touch same convert file — sequence carefully |
 
 ---
 
@@ -1000,7 +1198,9 @@ Retire only after Phases 6–8 make scope exits self-contained:
 | ~~`rehomeUpdateUnqualifiedUnknownsToSingleFromTable`~~ | UPDATE single-FROM unqualified rehome | **Retired Jul 2026** — zero callers (dead code) |
 | ~~`getSingleUpdateFromTableReference`~~ | Helper for rehome path only | **Retired Jul 2026** with rehome |
 | `materializeResolvedUnqualifiedReference` query-backed early return | Wrong dictionary target | Resolution writes correct scope key in one pass |
-| `moveEntriesToSingleTableIfSingleTarget` | Last-chance single-table relocation | Single-source scopes resolve at exit |
+| `moveEntriesToSingleTableIfSingleTarget` | Early + late physical single-table bulk relocation | **Phase 14 C1a–C2a** — per-column resolver + materializer |
+| `moveUnknownEntriesToSingleWildcardBackedNonTableSource` | Early wildcard/single-query bulk bind | **Phase 14 C1b–C2b** — same per-column path → query dict |
+| `canResolveUnqualifiedFromSingleWildcardQuerySource` | Late finalize bulk clear (no materialize) | **Phase 14 C2b** — convert must materialize per key first |
 | Second `assignTableRefsForColumnReferenceList` on filters/groupby/orderby | Clauses collected early, resolved late | Same pass as interface validation at exit |
 | `resolveInsertUnqualifiedOrphanSourceColumnsToTargetTable` | INSERT orphan hack | **Removed** — do not reintroduce |
 | Predicate `embedDeferredUnresolvedInDefQueryScope` | Upward archive | Replaced by downward `context_list` + lift at predicate exit |
@@ -1023,7 +1223,8 @@ The four `@Deprecated` CTE-named aliases were deleted after call sites were rena
 | `backfillQueryDictionaryFromResolvedInterfaceSources` (per-column) + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources` | Interface-resolved physical columns → query dict after single-table relocation / late materialization | Native walk-time token capture at interface validation |
 | ~~`materializeResolvableGlobalQualifiedUnresolvedLocations`~~ | ~~Late global qualified materialization~~ | **Retired Jul 2026** — unified `resolveQualifiedUnresolvedEntries` on `globalQualifiedUnresolvedLocations` |
 | `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Pre-wildcard + post-UPDATE-rhs derived-column stripping | Unified ingress skips derived before wildcard/single-table paths |
-| `moveEntriesToSingleTableIfSingleTarget` | Single-source unqualified relocation | Scope exit resolves all unqualified in one pass |
+| `moveEntriesToSingleTableIfSingleTarget` | Physical single-table bulk relocation | **Phase 14 C1a–C2a** |
+| `moveUnknownEntriesToSingleWildcardBackedNonTableSource` | Wildcard/single-query bulk bind | **Phase 14 C1b–C2b** |
 | `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
 | `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Removed | Inlined into `validateArchivedClauseColumnRef`; remaining follow-up is the dual-probe simplification itself |
 
@@ -1067,7 +1268,32 @@ Step B — mergeSelectList retirement (~1 session)                   ✅ DONE (J
   deleted mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary + aliasMapsToQuerySource
   gate +14 query-dict routing/diagnostic tests (181 → 195); V13/V14 green without post-hoc merge
 
-Optional follow-up (not test-blocking): retire moveEntriesToSingleTableIfSingleTarget, remaining dead-code candidates in helper.
+Step C1a — Eliminate early physical bulk priming (Phase 14)          ⏸️ NEXT
+  remove both relocateUnqualifiedToSingleTableExcludingOutputAliases calls in convert
+  see Phase 14 C1a.0–C1a.3
+
+Step C1b — Eliminate early wildcard-query bulk bind (Phase 14)      ⏸️ NEXT (parallel or after C1a)
+  fix interface loop to pass visibleQuerySourceCollection (C1b.1)
+  remove moveUnknownEntriesToSingleWildcardBackedNonTableSource (~L1369)
+  gate: nestedSelectStarV1–V7
+
+Step C2a — Retire late physical scope-exit drain (Phase 14)         ⏸️ AFTER C1a
+  remove materializeRemainingSingleTableUnqualifiedAtScopeExit; audit S1–S9
+
+Step C2b — Retire late wildcard scope-exit suppressor (Phase 14)    ⏸️ AFTER C1b
+  remove canResolveUnqualifiedFromSingleWildcardQuerySource at finalize
+
+Step C2 closeout — Delete bulk helpers when zero call sites         ⏸️ AFTER C2a+C2b
+  moveEntriesToSingleTableIfSingleTarget, moveUnknownEntriesToSingleWildcardBackedNonTableSource
+
+Step D — Backfill retirement (Phase 14)                            ⏸️ OPTIONAL
+  backfillQueryDictionaryFromResolvedInterfaceSources + sweepBackfill
+
+Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  ⏸️ OPTIONAL
+  resolveRelationalModifierDerivedColumnsFromUnresolvedMap ×2
+
+Step F — Dead-code hygiene (Phase 14)                              ⏸️ OPTIONAL
+  table-function getter/setter orphans; coverage doc cleanup
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.
@@ -1153,18 +1379,20 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 ## Suggested execution order
 
 ```
-Phases 1–4 ✅  →  5 (V1 delta)  →  6 (one convert)  →  7 (query finalize)
-       →  8 (egress helper + canary)  →  9 (clause probe)  →  10 (context_list)
-       →  11 (DML + fallback retirement)  →  12 (optional origin-CTE backfill)
-       →  13 (language feature gap closure — EXCEPT, Postgres INSERT, UPDATE RETURNING,
-              forward alias, optional DDL detail, SQL generator)
+Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 (optional origin-CTE backfill)
+       →  Steps A–B ✅ (dead code + mergeSelectList)
+       →  Phase 14 C1a (early physical bulk) + C1b (early wildcard bulk)  →  C2a + C2b (late drains)
+       →  Phase 14 D–F (backfill / PIVOT / hygiene)
+       →  Phase 13 (language features — can overlap Phase 14 once gate stays green)
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
 
-If Phase 12 is ever taken, do it only after Phase 11 is fully complete and the Phase 11 canary set is still green; keep it as an opt-in cleanup step rather than part of the default execution order.
+If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canaries are green and **after** Phase 14 C1 at minimum — backfill rewrites published nested payloads and will churn goldens.
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
+
+**Phase 14 C1a + C1b are the recommended immediate next steps** — see Phase 14 section. Prefer **C1b.1** (interface-loop fix) before removing wildcard bulk bind.
 
 ---
 
