@@ -45,6 +45,7 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_KEY = "_tmp_update_nodefrom_target";
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY = "_tmp_update_nodefrom_target_table_collection";
 	public static final String TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY = "_tmp_update_assignment_rhs_tokens";
+	public static final String UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY = "_update_assignment_rhs_clause_probe";
 	public static final String DERIVED_COLUMNS_HINTS_KEY = "derived_columns";
 	private static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY =
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY;
@@ -1116,7 +1117,9 @@ public class SqlParseSymbolTreeHelper {
 				for (Object derivedColumnObj : derivedColumnsList) {
 					if (derivedColumnObj instanceof String derivedColumnName && !derivedColumnName.isBlank()) {
 						addDerivedColumnNameIfMissing(derivedColumns, derivedColumnName);
-						mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, derivedColumnName);
+						if (!isPivotHint) {
+							mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, derivedColumnName);
+						}
 						if (isPivotHint) {
 							mergePivotAggregateDependencyRefsFallbackIfPresent(
 									derivedColumns,
@@ -1604,7 +1607,9 @@ public class SqlParseSymbolTreeHelper {
 					localTableCollection,
 					localTableAliasMap,
 					visibleQuerySourceCollection,
-					updateTargetTableRef);
+					updateTargetTableRef,
+					localDerivedColumns,
+					localRelationalModifierInterfaceHints);
 			walker.symbolTable.remove(TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY);
 		}
 		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
@@ -6953,7 +6958,9 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> targetTableCollection,
 			HashMap<String, Object> tableAliasMap,
 			HashMap<String, Object> visibleQuerySourceCollection,
-			String updateTargetTableRef) {
+			String updateTargetTableRef,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
 		if (targetTableCollection == null
 				|| updateTargetTableRef == null
 				|| updateTargetTableRef.isBlank()) {
@@ -7004,6 +7011,25 @@ public class SqlParseSymbolTreeHelper {
 					continue;
 				}
 				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
+					if (isRelationalModifierDerivedColumnReference(
+							localDerivedColumns,
+							relationalModifierInterfaceHints,
+							tableRef,
+							columnName,
+							tableAliasMap)) {
+						consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
+						continue;
+					}
+					continue;
+				}
+
+				if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)
+						|| isRelationalModifierDerivedColumnReference(
+								localDerivedColumns,
+								relationalModifierInterfaceHints,
+								null,
+								columnName)) {
+					consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
 					continue;
 				}
 
@@ -9309,6 +9335,16 @@ public class SqlParseSymbolTreeHelper {
 		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
 			return ArchivedClauseColumnRefResult.skip();
 		}
+		if (UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(clauseKey)
+				&& (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)
+						|| isRelationalModifierDerivedColumnReference(
+								localDerivedColumns,
+								relationalModifierInterfaceHints,
+								tableRef,
+								columnName))) {
+			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
+			return ArchivedClauseColumnRefResult.skip();
+		}
 		if (isRelationalModifierDerivedColumnReference(
 				localDerivedColumns,
 				relationalModifierInterfaceHints,
@@ -9469,7 +9505,10 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		for (Object rhsRefsObj : assignmentsMapObj.values()) {
-			probeArchivedScopeClauseColumnList(rhsRefsObj, MUMBLE_FILTERS_KEY, probeContext);
+			probeArchivedScopeClauseColumnList(
+					rhsRefsObj,
+					UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY,
+					probeContext);
 		}
 	}
 

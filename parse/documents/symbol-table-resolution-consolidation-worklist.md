@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-20 (verified **1204/1204** full-suite + **195/195** gate green; Phase 14 **Step C + Step D audit** complete; **Step E** is next)
+**Last updated:** 2026-07-20 (verified **1209/1209** full-suite + **195/195** gate green; Phase 14 **Step D** ✅; **Step E** prep complete — **E.2** is next)
 
 ---
 
@@ -64,7 +64,7 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 
 **Gate status (2026-07-19):** **195/195 passing** — no current failures.
 
-**Full suite status (2026-07-19):** **1203/1203 passing** — includes all substitution-variable families (Column V1–V16, INSERT I1–I10, UPDATE U1–U10), DML dictionary tests, PIVOT/UNPIVOT (62), and live-sample probes.
+**Full suite status (2026-07-20):** **1209/1209 passing** — includes all substitution-variable families (Column V1–V16, INSERT I1–I10, UPDATE U1–U10), DML dictionary tests, PIVOT/UNPIVOT (**67**), and live-sample probes.
 
 The prior phase-7, phase-10, and DML golden-backlog notes below are **historical** only.
 
@@ -162,7 +162,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
-| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~80% | **Step C + D** ✅; **Step E** next (PIVOT ingress); see Phase 14 |
+| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~85% | **Step C + D** ✅; **Step E** prep ✅ — **E.2** next (retire strip call sites); see Phase 14 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked for test work** — start when ready; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
@@ -182,10 +182,11 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `b445286`: skip unqualified physical resolution for PIVOT-derived interface outputs (spurious join-table binding fix)
 - Commit `cd937c2`: Phase 14 **C2a** — retired `materializeRemainingSingleTableUnqualifiedAtScopeExit`; convert-time `materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit` + `consumeLocallyResolvedUnqualifiedBeforeScopePassUp` on pass-up egress; authorization golden refresh
 - Commit `1d20503`: Phase 14 **C2b + C2 closeout** — removed finalize wildcard suppressor; deleted `canResolveUnqualifiedFromSingleWildcardQuerySource`, `moveUnknownEntriesToSingleWildcardBackedNonTableSource`, `moveEntriesToSingleTableIfSingleTarget`
+- Step E prep (Jul 2026, uncommitted): **E.0 inventory** complete; E0g UPDATE RHS canary + 4 `monthly_sales_long` derived-column clause tests; 11 IN-list alias tests annotated; PIVOT derived naming verified (`{inValue}_{aggregate}`); `SqlEventWalkerPivotUnpivotTests` **67/67**
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 14 Step E** (retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2) — then **Step F** (hygiene). Phase 13 can run in parallel once the gate stays green.
+**Suggested next focus:** **Phase 14 Step E.2** — remove first `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call site (~L1581 in convert); then **E.3** (post-UPDATE-RHS site), **E.4** (delete method). **Step F** (hygiene) after E. Phase 13 can run in parallel once the gate stays green.
 
 ---
 
@@ -485,7 +486,7 @@ Instead of merging qualified and unqualified refs into **one working set** durin
 
 | Surface | Role today | Consolidation note |
 |---------|------------|-------------------|
-| Early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (×3 in convert) | Strips derived keys from unresolved map before unified egress | May be redundant now that unified resolver returns `RESOLVED_DERIVED_COLUMN` |
+| Early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (×2 in convert) | Strips derived keys from unresolved map before unified egress | **Step E.2–E.4** — retire when unified skip + clause probe consume derived keys (E.0 prep green) |
 | `local query_dictionary` | Scope **output** token map (select-list names → tokens) | **Not** used for `alias.col` proof; do not fold into `querySourceExportsColumn` |
 | ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | ~~Post-hoc merge of qualified select-list refs into source query dict~~ | **Retired Jul 2026** (`e60d8f8`) — native interface loop + clause probe |
 | `emitExplicitQualifiedUnknownDiagnostics` | Unified resolver + materialize on `RESOLVED_*`; no query-dict containsKey shortcut | ✅ shortcut retired Jul 2026 |
@@ -994,9 +995,49 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 
 ### Step E — PIVOT/UNPIVOT domain fallbacks (existing backlog)
 
-**Objective:** Retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 when unified ingress skips derived columns before wildcard/single-table paths.
+**Objective:** Retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 when unified ingress skips/consumes derived columns before wildcard/single-table paths and before finalize emit.
 
-**Gate:** `SqlEventWalkerPivotUnpivotTests` (62) + gate PIVOT/UNPIVOT smoke (3).
+**Gate:** `SqlEventWalkerPivotUnpivotTests` (**67**) + gate PIVOT/UNPIVOT smoke (3) + `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (UPDATE RHS spot).
+
+**Status:** 🔄 **E.0 prep complete** (Jul 2026, uncommitted) — **E.2** is next.
+
+#### E.0 inventory (prep) ✅ DONE
+
+| ID | Ingress / surface | Handler today | Test coverage |
+|----|-------------------|---------------|---------------|
+| **E0a** | Unified resolver `RESOLVED_DERIVED_COLUMN` | `isRelationalModifierDerivedColumnReference` (first in qualified tree) | `pivotSameQuery*` family + `pivotBasicMonthSalesV7Test` |
+| **E0b** | Interface loop unqualified/qualified derived skip | `isPivotDerivedInterfaceOutputColumn` + derived guard | V7 + `pivotMonthlySalesLong*` derived tests |
+| **E0c** | PIVOT aggregate/FOR **operand** columns on joined physical table | `resolvePivotOperandColumnsFromUnresolvedMap` (**keep** — not Step E) | `pivotBasicMonthSalesJoinV8Test`, JOIN patterns |
+| **E0d** | UNPIVOT walk-time VALUE/FOR/IN strip | `resolveUnpivotGeneratedColumnsFromUnresolvedMap` in walker (**keep**) | UNPIVOT test matrix |
+| **E0e** | Clause probe skip (WHERE / **JOIN ON** / GROUP BY / ORDER BY / HAVING / QUALIFY) | `probeArchivedScopeClauseColumns` → `validateArchivedClauseColumnRef` derived skip | `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest` (IN-list alias); `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` (derived); `pivotSameQuery*` per clause |
+| **E0f** | PIVOT IN-identifier resolution | Dedicated fatal/warning paths | `pivotInIdentifier*` tests |
+| **E0g** | UPDATE assignment RHS + second derived strip pass | `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` |
+
+**E.0 findings:**
+
+- PIVOT `derived_columns` keys are **`{inValue}_{aggregate}`** (e.g. `jan_sales_SUM`) — generator correct; bare IN-list names in SELECT are a **separate** Snowflake alias / physical-lineage path (11 tests annotated).
+- Pre-strip ×2 still load-bearing until E.2–E.4: without strip, derived keys can remain in `unresolved_column` and hit `emitUnqualifiedUnresolvedColumnsError` at finalize; clause probe skips but does not always remove them.
+- `resolveRemainingUnresolvedAgainstQuerySources` passes `null` for relational-modifier hints — optional **E.5** if stragglers appear after strip removal.
+
+**E.0 test additions (Jul 2026):**
+
+- `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` — UPDATE RHS `jan_sales_SUM`
+- `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` — JOIN ON derived
+- `pivotMonthlySalesLongJoinFilterDerivedSumTest` — alias `u` + JOIN + WHERE + tax expr
+- `pivotMonthlySalesLongTaxWhereDerivedSumTest` — SELECT expr + WHERE
+- `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` — ORDER BY `jan_sales_SUM / feb_sales_SUM`
+
+#### E.2–E.4 retirement substeps ⏸️ NEXT
+
+| Sub-step | Action | Verify | Status |
+|----------|--------|--------|--------|
+| **E.1** | Re-confirm unified resolver + clause probe consume/remove derived keys at both strip sites | Pivot **67/67** + gate **195/195** | ✅ (prep) |
+| **E.2** | Remove **pre-wildcard** `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call (~L1581) | Gate + pivot 67 + full suite | ⏸️ **NEXT** |
+| **E.3** | Remove **post-UPDATE-RHS** call (~L1615) | E0g + DML UPDATE class | ⏸️ |
+| **E.4** | Delete `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` when zero call sites | Grep clean | ⏸️ |
+| **E.5** (optional) | Pass derived hints into `resolveRemainingUnresolvedAgainstQuerySources` | Only if E.2–E.4 expose stragglers | ⏸️ |
+
+**Do not retire:** `resolvePivotOperandColumnsFromUnresolvedMap`, `resolveUnpivotGeneratedColumnsFromUnresolvedMap` (walk-time UNPIVOT hook).
 
 ### Step F — Remaining dead-code + helper hygiene
 
@@ -1016,7 +1057,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 - [x] `moveUnknownEntriesToSingleWildcardBackedNonTableSource` deleted (zero call sites) — **C2b.3** (`1d20503`)
 - [x] Output-alias deferral preserved via `isInterfaceOutputAliasOnly` (bulk helper removed with C1a)
 - [x] Correlated pass-up unchanged (no local bulk bind of outer refs) — verified during **C2a** (`coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`, `largeStudentgeneralQueryParseTest`)
-- [x] Smoketest gate **195/195** + full suite **1204/1204** (Jul 2026)
+- [x] Smoketest gate **195/195** + full suite **1209/1209** (Jul 2026)
 - [x] `table-and-query-dictionary-design.md` updated — backfill gap #4 resolved; bulk relocation retired — **Step D** (Jul 2026)
 
 ### Phase 14 vs Phase 13 ordering
@@ -1027,7 +1068,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **Phase 14 C2a** | ✅ Done (Jul 2026) | `cd937c2` — convert-time lineage + pass-up consumption |
 | **Phase 14 C2b + closeout** | ✅ Done (Jul 2026) | `1d20503` — wildcard suppressor + orphan bulk helper deletion |
 | **Phase 14 Step D** | ✅ Done (Jul 2026) | Audit green — native capture verified; gap #4 doc updated |
-| **Phase 14 Steps E–F** | **Now** | PIVOT ingress + dead-code hygiene |
+| **Phase 14 Steps E–F** | **Now** | **E.0 prep** ✅ — **E.2** next (strip call-site retirement); then hygiene |
 | **Phase 13** | Parallel once gate green | Language features independent unless touching convert |
 | **Phase 12** (origin-CTE backfill) | Optional, last | Defer unless explicit churn approved |
 
@@ -1315,8 +1356,9 @@ Step C2 closeout — Delete bulk helpers when zero call sites         ✅ DONE (
 Step D — Backfill retirement audit (Phase 14)                       ✅ DONE (Jul 2026)
   D.0–D.5 green: gate 195/195, substitution V1–V16, complex sub I/U 20/20, nested demo + values V13/V14
 
-Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  ⏸️ NEXT
-  resolveRelationalModifierDerivedColumnsFromUnresolvedMap ×2
+Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  🔄 IN PROGRESS
+  E.0 prep ✅ (inventory, E0g, +4 derived tests, 67/67 pivot); E.2 ⏸️ NEXT
+  resolveRelationalModifierDerivedColumnsFromUnresolvedMap ×2 → delete at E.4
 
 Step F — Dead-code hygiene (Phase 14)                              ⏸️ OPTIONAL
   table-function getter/setter orphans; coverage doc cleanup
@@ -1373,7 +1415,7 @@ mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests
 
 Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 2026** — PIVOT class is green; donor-email defect tracked in **Phase 13.4**)
 
-- ~~15 × `SqlEventWalkerPivotUnpivotTests`~~ — **resolved** (62/62 pass; do not skip)
+- ~~15 × `SqlEventWalkerPivotUnpivotTests`~~ — **resolved** (**67/67** pass as of Jul 2026; do not skip)
 - 1 × donor-email live sample — **Phase 13.4** (`source_partner_system_name` / same-select-list forward alias)
 
 ### Golden update policy
@@ -1407,7 +1449,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 ```
 Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 (optional origin-CTE backfill)
        →  Steps A–B ✅ (dead code + mergeSelectList)
-       →  Phase 14 Step C + D ✅  →  Step E ⏸️ NEXT
+       →  Phase 14 Step C + D ✅  →  Step E.0 prep ✅  →  Step E.2 ⏸️ NEXT
        →  Phase 14 E–F (PIVOT / hygiene)
        →  Phase 13 (language features — can overlap Phase 14 once gate stays green)
 ```
@@ -1418,7 +1460,7 @@ If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canar
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
-**Phase 14 Step E is the recommended immediate next step** — retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2; see Step E. Steps C + D complete (`1d20503`, `85d3013`).
+**Phase 14 Step E.2 is the recommended immediate next step** — remove the pre-wildcard `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call (~L1581); E.0 prep complete (pivot **67/67**, gate **195/195**). Steps C + D complete (`1d20503`, `85d3013`).
 
 ---
 

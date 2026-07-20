@@ -1244,7 +1244,15 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	// PIVOT IN-LIST ALIAS / PHYSICAL LINEAGE TESTS (V1–V8)
+	//
+	// Bare IN-list values (e.g. jan_sales) in SELECT and subclauses are Snowflake-style output
+	// aliases that resolve to the pivot source table (physical lineage). They are not entries in
+	// derived_columns. Derived pivot names are {inValue}_{aggregate} (e.g. jan_sales_SUM).
+	// See pivotBasicMonthSalesV7Test and pivotMonthlySalesLongDerived* tests below.
+
 	@Test
+	// IN-list alias SELECT: bare jan_sales/feb_sales/mar_sales bind to my_table, not derived_columns.
 	public void pivotBasicMetricColumnsV1Test() {
 		final String query =
 			"SELECT id, jan_sales, feb_sales, mar_sales\n" +
@@ -1270,6 +1278,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias SELECT + WHERE on a physical source column (units), not a derived column.
 	public void pivotTableWithInAliasesJanFebMarV2Test() {
 		final String query =
 			"SELECT empid, units, jan_sales, feb_sales, mar_sales\n" +
@@ -1296,6 +1305,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in GROUP BY and ORDER BY: jan_sales resolves to monthly_sales_long.
 	public void pivotTableWithGroupByAndOrderByV2GroupOrderTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
@@ -1323,6 +1333,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in HAVING and ORDER BY: jan_sales resolves to monthly_sales_long.
 	public void pivotTableWithHavingAndOrderByV2HavingOrderTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
@@ -1351,6 +1362,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in JOIN ON (E0e clause probe): jan_sales is not a derived_columns key.
 	public void pivotTableJoinOnWithUnqualifiedJanSalesProbeTest() {
 		final String query =
 			"SELECT empid, jan_sales, p.target_amount\n" +
@@ -1377,6 +1389,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in QUALIFY (clause probe): jan_sales resolves to monthly_sales_long.
 	public void pivotTableWithQualifyJanSalesProbeTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
@@ -1403,6 +1416,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in ORDER BY expression: jan_sales/feb_sales resolve to monthly_sales_long.
 	public void pivotTableWithOrderByExpressionJanFebProbeTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
@@ -1456,6 +1470,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias in SELECT expression (tax) and WHERE: jan_sales binds to physical source.
 	public void pivotWithTaxAndWhereV4Test() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales, jan_sales * 0.07 AS tax\n" +
@@ -1481,6 +1496,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias JOIN ON with pivot alias u + WHERE: jan_sales is physical lineage, not derived.
 	public void pivotJoinTargetsWithFilterV5Test() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, jan_sales * 0.07 AS tax\n" +
@@ -1506,6 +1522,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// IN-list alias SELECT with FOR column (month_name) retained alongside pivot output aliases.
 	public void pivotKeepingForColumnV6Test() {
 		final String query =
 			"SELECT empid, month_name, jan_sales, feb_sales, mar_sales\n" +
@@ -1531,6 +1548,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
+	// Derived column SELECT: jan_sales_SUM/feb_sales_SUM/mar_sales_SUM have table_ref=null.
 	public void pivotBasicMonthSalesV7Test() {
 		final String query =
 			"SELECT empid, jan_sales_SUM, feb_sales_SUM, mar_sales_SUM\n" +
@@ -1555,7 +1573,121 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	// PIVOT DERIVED COLUMN TESTS (monthly_sales_long fixture)
+	//
+	// Complement the IN-list alias tests above: these use real derived names
+	// (jan_sales_SUM = IN-value + aggregate) in subclauses on monthly_sales_long.
+
 	@Test
+	// Derived column in JOIN ON (E0e probe): jan_sales_SUM has table_ref=null in filters.
+	public void pivotMonthlySalesLongJoinOnDerivedSumProbeTest() {
+		final String query =
+			"SELECT empid, jan_sales_SUM, p.target_amount\n" +
+			"FROM monthly_sales_long\n" +
+			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales', 'mar_sales'))\n" +
+			"JOIN targets p ON jan_sales_SUM >= p.target_amount;";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=target_amount, table_ref=p}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}, 3={pivot_literal='mar_sales'}}}, table={alias=null, table=monthly_sales_long}}, 2={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=null}}, right={column={name=target_amount, table_ref=p}}, operator=>=}}}, 3={table={alias=p, table=targets}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid, jan_sales_SUM, target_amount]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{targets={month_name=[[@17,98:107='month_name',<381>,3:29]], target_amount=[[@5,29:29='p',<381>,1:29], [@33,188:188='p',<381>,4:35]], sales_amount=[[@14,80:91='sales_amount',<381>,3:11]]}, monthly_sales_long={}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], target_amount=[[@7,31:43='target_amount',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], target_amount=[[@7,31:43='target_amount',<381>,1:31]]}, table_dictionary={targets={month_name=[[@17,98:107='month_name',<381>,3:29]], target_amount=[[@5,29:29='p',<381>,1:29], [@33,188:188='p',<381>,4:35]], sales_amount=[[@14,80:91='sales_amount',<381>,3:11]]}, monthly_sales_long={}}, filters=[{name=jan_sales_SUM, table_ref=null}, {name=target_amount, table_ref=p}], interface={empid=[{name=empid, table_ref=null}], jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], target_amount=[{name=target_amount, table_ref=p}]}, derived_columns={jan_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], mar_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], feb_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}]}, table_alias={p=targets}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	// Derived column JOIN ON with pivot alias u + WHERE + SELECT expression (tax).
+	public void pivotMonthlySalesLongJoinFilterDerivedSumTest() {
+		final String query =
+			"SELECT empid, jan_sales_SUM, feb_sales_SUM, jan_sales_SUM * 0.07 AS tax\n" +
+			"FROM monthly_sales_long PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) u\n" +
+			"JOIN targets t ON u.empid = t.empid AND u.jan_sales_SUM >= t.target_amount WHERE jan_sales_SUM > 100;";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=feb_sales_SUM, table_ref=null}}, 4={alias=tax, calc={left={column={name=jan_sales_SUM, table_ref=null}}, right={literal=0.07}, operator=*}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}}}, alias=u, table={alias=null, table=monthly_sales_long}}, 2={join=JOIN, on={and={1={condition={left={column={name=empid, table_ref=u}}, right={column={name=empid, table_ref=t}}, operator==}}, 2={condition={left={column={name=jan_sales_SUM, table_ref=u}}, right={column={name=target_amount, table_ref=t}}, operator=>=}}}}}, 3={table={alias=t, table=targets}}}}, where={condition={left={column={name=jan_sales_SUM, table_ref=null}}, right={literal=100}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid, jan_sales_SUM, tax, feb_sales_SUM]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{targets={empid=[[@40,197:197='t',<381>,3:28]], month_name=[[@23,125:134='month_name',<381>,2:53]], target_amount=[[@48,228:228='t',<381>,3:59]], sales_amount=[[@20,107:118='sales_amount',<381>,2:35]]}, monthly_sales_long={empid=[[@36,187:187='u',<381>,3:18]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], tax=[[@13,68:70='tax',<381>,1:68]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], tax=[[@13,68:70='tax',<381>,1:68]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}, table_dictionary={targets={month_name=[[@23,125:134='month_name',<381>,2:53]], empid=[[@40,197:197='t',<381>,3:28]], target_amount=[[@48,228:228='t',<381>,3:59]], sales_amount=[[@20,107:118='sales_amount',<381>,2:35]]}, monthly_sales_long={empid=[[@36,187:187='u',<381>,3:18]]}}, filters=[{name=empid, table_ref=u}, {name=empid, table_ref=t}, {name=jan_sales_SUM, table_ref=u}, {name=target_amount, table_ref=t}, {name=jan_sales_SUM, table_ref=null}], interface={empid=[{name=empid, table_ref=null}], jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], tax=[{name=jan_sales_SUM, table_ref=null}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=null}]}, derived_columns={jan_sales_SUM=[{name=sales_amount, table_ref=u}], feb_sales_SUM=[{name=sales_amount, table_ref=u}]}, table_alias={u=monthly_sales_long, t=targets}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	// Derived column in SELECT expression (tax) and WHERE on monthly_sales_long.
+	public void pivotMonthlySalesLongTaxWhereDerivedSumTest() {
+		final String query =
+			"SELECT empid, jan_sales_SUM, feb_sales_SUM, mar_sales_SUM, jan_sales_SUM * 0.07 AS tax\n" +
+			"FROM monthly_sales_long\n" +
+			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales', 'mar_sales')) WHERE empid > 100;";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=feb_sales_SUM, table_ref=null}}, 4={column={name=mar_sales_SUM, table_ref=null}}, 5={alias=tax, calc={left={column={name=jan_sales_SUM, table_ref=null}}, right={literal=0.07}, operator=*}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}, 3={pivot_literal='mar_sales'}}}, table={alias=null, table=monthly_sales_long}}, where={condition={left={column={name=empid, table_ref=null}}, right={literal=100}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid, jan_sales_SUM, mar_sales_SUM, tax, feb_sales_SUM]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales_long={month_name=[[@25,140:149='month_name',<381>,3:29]], empid=[[@1,7:11='empid',<381>,1:7], [@36,201:205='empid',<381>,3:90]], sales_amount=[[@22,122:133='sales_amount',<381>,3:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], mar_sales_SUM=[[@7,44:56='mar_sales_SUM',<381>,1:44]], tax=[[@15,83:85='tax',<381>,1:83]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], mar_sales_SUM=[[@7,44:56='mar_sales_SUM',<381>,1:44]], tax=[[@15,83:85='tax',<381>,1:83]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}, table_dictionary={monthly_sales_long={month_name=[[@25,140:149='month_name',<381>,3:29]], empid=[[@1,7:11='empid',<381>,1:7], [@36,201:205='empid',<381>,3:90]], sales_amount=[[@22,122:133='sales_amount',<381>,3:11]]}}, filters=[{name=empid, table_ref=monthly_sales_long}], interface={empid=[{name=empid, table_ref=monthly_sales_long}], jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], mar_sales_SUM=[{name=mar_sales_SUM, table_ref=null}], tax=[{name=jan_sales_SUM, table_ref=null}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=null}]}, derived_columns={jan_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], mar_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], feb_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	// Derived column in ORDER BY expression: jan_sales_SUM/feb_sales_SUM have table_ref=null.
+	public void pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest() {
+		final String query =
+			"SELECT empid, jan_sales_SUM, feb_sales_SUM, mar_sales_SUM\n" +
+			"FROM monthly_sales_long\n" +
+			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales', 'mar_sales'))\n" +
+			"ORDER BY jan_sales_SUM / feb_sales_SUM;";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=feb_sales_SUM, table_ref=null}}, 4={column={name=mar_sales_SUM, table_ref=null}}}, orderby={1={null_order=null, predicand={calc={left={column={name=jan_sales_SUM, table_ref=null}}, right={column={name=feb_sales_SUM, table_ref=null}}, operator=/}}, sort_order=ASC}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}, 3={pivot_literal='mar_sales'}}}, table={alias=null, table=monthly_sales_long}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid, jan_sales_SUM, mar_sales_SUM, feb_sales_SUM]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales_long={month_name=[[@17,111:120='month_name',<381>,3:29]], empid=[[@1,7:11='empid',<381>,1:7]], sales_amount=[[@14,93:104='sales_amount',<381>,3:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], mar_sales_SUM=[[@7,44:56='mar_sales_SUM',<381>,1:44]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={empid=[[@1,7:11='empid',<381>,1:7]], jan_sales_SUM=[[@3,14:26='jan_sales_SUM',<381>,1:14]], mar_sales_SUM=[[@7,44:56='mar_sales_SUM',<381>,1:44]], feb_sales_SUM=[[@5,29:41='feb_sales_SUM',<381>,1:29]]}, table_dictionary={monthly_sales_long={month_name=[[@17,111:120='month_name',<381>,3:29]], empid=[[@1,7:11='empid',<381>,1:7]], sales_amount=[[@14,93:104='sales_amount',<381>,3:11]]}}, ordered_by=[{name=jan_sales_SUM, table_ref=null}, {name=feb_sales_SUM, table_ref=null}], interface={empid=[{name=empid, table_ref=monthly_sales_long}], jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], mar_sales_SUM=[{name=mar_sales_SUM, table_ref=null}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=null}]}, derived_columns={jan_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], mar_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}], feb_sales_SUM=[{name=sales_amount, table_ref=monthly_sales_long}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	// IN-list alias SELECT + JOIN on physical empid; pivot output aliases have table_ref=null.
 	public void pivotBasicMonthSalesJoinV8Test() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales, t2.a1, t2.a2\n" +
@@ -1890,6 +2022,38 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query3={query_dictionary={empid=[[@3,9:13='empid',<381>,1:9]], target_amount=[[@11,29:41='target_amount',<381>,1:29]], jan_sum=[[@7,18:24='jan_sum',<381>,1:18]]}, table_dictionary={targets={target_amount=[[@9,27:27='t',<381>,1:27], [@54,237:237='t',<381>,7:31], [@77,313:313='t',<381>,9:40]]}}, grouped_by=[{name=empid, table_ref=p}, {name=jan_sum, table_ref=p}, {name=feb_sum, table_ref=p}, {name=target_amount, table_ref=t}], ordered_by=[{name=jan_sum, table_ref=p}], filters=[{name=jan_sum, table_ref=p}, {name=target_amount, table_ref=t}, {name=feb_sum, table_ref=p}], interface={empid=[{name=empid, table_ref=p}], target_amount=[{name=target_amount, table_ref=t}], jan_sum=[{name=jan_sum, table_ref=p}]}, table_alias={p=query2, t=targets}, def_query2={query_dictionary={empid=[[@1,7:7='p',<381>,1:7], [@65,282:282='p',<381>,9:9]], jan_sum=[[@5,16:16='p',<381>,1:16], [@50,224:224='p',<381>,7:18], [@69,291:291='p',<381>,9:18], [@81,336:336='p',<381>,10:7], [@94,382:382='p',<381>,12:9]], feb_sum=[[@58,259:259='p',<381>,8:6], [@73,302:302='p',<381>,9:29], [@87,359:359='p',<381>,11:8]], *=[[@15,59:59='*',<291>,3:9]]}, def_query0={query_dictionary={empid=[[@19,76:80='empid',<381>,4:15]], month_name=[[@21,83:92='month_name',<381>,4:22], [@36,172:181='month_name',<381>,5:35]], sales_amount=[[@23,95:106='sales_amount',<381>,4:34], [@32,150:161='sales_amount',<381>,5:13]], *=[[@15,59:59='*',<291>,3:9]]}, table_dictionary={monthly_sales_long={empid=[[@19,76:80='empid',<381>,4:15]], month_name=[[@21,83:92='month_name',<381>,4:22]], sales_amount=[[@23,95:106='sales_amount',<381>,4:34]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, interface={*=[{name=*, table_ref=*}]}, derived_columns={jan_sum=[{name=sales_amount, table_ref=src}], feb_sum=[{name=sales_amount, table_ref=src}]}, table_alias={src=query0}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest() {
+		final String query =
+			"UPDATE targets t\n" +
+			"SET target_amount = jan_sales_SUM\n" +
+			"FROM monthly_sales_long\n" +
+			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) u\n" +
+			"WHERE t.empid = u.empid;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}}}, alias=u, table={alias=null, table=monthly_sales_long}}, where={condition={left={column={name=empid, table_ref=t}}, right={column={name=empid, table_ref=u}}, operator==}}, assignments={1={set={column={name=target_amount, table_ref=null}}, to={column={name=jan_sales_SUM, table_ref=null}}}}, table={alias=t, table=targets}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[target_amount]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{targets={empid=[[@26,154:154='t',<381>,5:6]], month_name=[[@16,104:113='month_name',<381>,4:29]], target_amount=[[@4,21:33='target_amount',<381>,2:4]], sales_amount=[[@13,86:97='sales_amount',<381>,4:11]]}, monthly_sales_long={empid=[[@30,164:164='u',<381>,5:16]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{update1={target_amount=[[@4,21:33='target_amount',<381>,2:4]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update1={assignments={target_amount=[{name=jan_sales_SUM, table_ref=null}]}, table_dictionary={targets={month_name=[[@16,104:113='month_name',<381>,4:29]], empid=[[@26,154:154='t',<381>,5:6]], sales_amount=[[@13,86:97='sales_amount',<381>,4:11]], target_amount=[[@4,21:33='target_amount',<381>,2:4]]}, monthly_sales_long={empid=[[@30,164:164='u',<381>,5:16]]}}, update_dictionary={target_amount=[[@4,21:33='target_amount',<381>,2:4]]}, filters=[{name=empid, table_ref=t}, {name=empid, table_ref=u}], derived_columns={jan_sales_SUM=[{name=sales_amount, table_ref=u}], feb_sales_SUM=[{name=sales_amount, table_ref=u}]}, table_alias={t=targets, u=monthly_sales_long}}}",
 				extractor.getSymbolTable().toString());
 	}
 
