@@ -2003,6 +2003,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
+		materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit(
+				localUnresolvedColumnMap,
+				localTableCollection);
+
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
 		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
@@ -4161,12 +4165,14 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		materializeRemainingSingleTableUnqualifiedAtScopeExit(unqualifiedUnresolvedForLocal, scopeSymbols);
 		mergeScopeTableDictionaryIntoGlobalWalkerDictionary(scopeSymbols);
 
 		publishQueryLikeScope(scopeKey, scopeSymbols);
 
 		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
+			consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
+					unqualifiedUnresolvedForLocal,
+					scopeSymbols);
 			HashMap<String, Object> deferredUnresolvedForParent = new HashMap<String, Object>();
 			deferredUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
 			deferredUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
@@ -4177,6 +4183,9 @@ public class SqlParseSymbolTreeHelper {
 		// For correlated subqueries (passUpQualifiedUnresolvedFromThisSubquery=true), pass up ALL unresolved
 		// columns (both qualified and unqualified) to the parent query for resolution.
 		if (passUpQualifiedUnresolvedFromThisSubquery) {
+			consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
+					unqualifiedUnresolvedForLocal,
+					scopeSymbols);
 			HashMap<String, Object> allUnresolvedForParent = new HashMap<String, Object>();
 			allUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
 			allUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
@@ -4304,7 +4313,6 @@ public class SqlParseSymbolTreeHelper {
 		pruneMaterializedQualifiedUnresolved(qualifiedUnresolved);
 		resolveQualifiedUnresolvedAtQueryScopeExit(qualifiedUnresolved, true);
 		pruneMaterializedQualifiedUnresolved(qualifiedUnresolved);
-		materializeRemainingSingleTableUnqualifiedAtScopeExit(unqualifiedUnresolved, walker.symbolTable);
 		mergeScopeTableDictionaryIntoGlobalWalkerDictionary(walker.symbolTable);
 
 		unresolvedMap.clear();
@@ -5498,35 +5506,6 @@ public class SqlParseSymbolTreeHelper {
 				&& !tableDictionaryMap.isEmpty()) {
 			walker.mergeTableDictionaryIntoWalkerTableDictionary(
 					(HashMap<String, Object>) tableDictionaryMap);
-		}
-	}
-
-	/** Resolves deferred unqualified columns when the scope has exactly one physical table source. */
-	@SuppressWarnings("unchecked")
-	private void materializeRemainingSingleTableUnqualifiedAtScopeExit(
-			HashMap<String, Object> unqualifiedUnresolved,
-			Map<String, Object> scopeSymbols) {
-		if (unqualifiedUnresolved == null || unqualifiedUnresolved.isEmpty() || scopeSymbols == null) {
-			return;
-		}
-
-		HashMap<String, Object> tableCollection =
-				(scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY) instanceof HashMap<?, ?>)
-						? (HashMap<String, Object>) scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY)
-						: new HashMap<String, Object>();
-		if (tableCollection.isEmpty()) {
-			return;
-		}
-
-		if (walker.moveEntriesToSingleTableIfSingleTarget(unqualifiedUnresolved, tableCollection)) {
-			scopeSymbols.put(MUMBLE_TABLE_DICTIONARY_KEY, tableCollection);
-			walker.mergeTableDictionaryIntoWalkerTableDictionary(tableCollection);
-			Object interfaceObj = scopeSymbols.get(MUMBLE_INTERFACE_KEY);
-			if (interfaceObj instanceof HashMap<?, ?>) {
-				patchInterfaceTableRefsForSinglePhysicalTableScope(
-						(HashMap<String, Object>) interfaceObj,
-						tableCollection);
-			}
 		}
 	}
 
@@ -8240,6 +8219,126 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Per-column lineage capture for scopes with exactly one {@code FROM} source (physical table,
+	 * table function, or tuple substitution). Replaces late scope-exit bulk relocation (Phase 14 C2a):
+	 * merges unresolved unqualified tokens into the sole source dictionary without consuming the
+	 * unresolved map so finalize can still emit diagnostics for entries that remain locally ambiguous
+	 * or unresolved. {@link #consumeLocallyResolvedUnqualifiedBeforeScopePassUp} removes entries that
+	 * resolve unambiguously in this scope before parent pass-up.
+	 */
+	private void materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit(
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()
+				|| tableCollection == null || tableCollection.size() != 1) {
+			return;
+		}
+
+		String onlySourceRef = normalizeTableRef(tableCollection.keySet().iterator().next());
+		if (onlySourceRef == null || onlySourceRef.isBlank()) {
+			return;
+		}
+
+		for (String columnKey : new ArrayList<String>(unresolvedColumnMap.keySet())) {
+			if (columnKey == null || columnKey.isBlank() || columnKey.contains(".")) {
+				continue;
+			}
+
+			Object unresolvedEntry = unresolvedColumnMap.get(columnKey);
+			Object tokenPayload = coalesceMaterializationRefTokens(unresolvedEntry, null);
+			if (tokenPayload == null) {
+				continue;
+			}
+
+			mergeSourceLineageIntoPhysicalTableDictionary(
+					tableCollection,
+					onlySourceRef,
+					columnKey,
+					tokenPayload);
+		}
+	}
+
+	/**
+	 * Before unresolved unqualified columns are passed to a parent scope, bind and consume any that
+	 * {@link #resolveUnqualifiedColumnAgainstVisibleScope} can resolve unambiguously against this
+	 * scope's own {@code FROM} sources. Used only on pass-up / statement-defer egress paths so
+	 * top-level scopes can still emit {@code UNRESOLVED_UNQUALIFIED_COLUMNS} when interface binding
+	 * remains open. Avoids parent-scope false ambiguities without blind single-table bulk relocation.
+	 */
+	@SuppressWarnings("unchecked")
+	private void consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
+			HashMap<String, Object> unqualifiedUnresolvedForLocal,
+			Map<String, Object> scopeSymbols) {
+		if (unqualifiedUnresolvedForLocal == null || unqualifiedUnresolvedForLocal.isEmpty()
+				|| scopeSymbols == null) {
+			return;
+		}
+
+		Object tableCollectionObj = scopeSymbols.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (!(tableCollectionObj instanceof HashMap<?, ?>)) {
+			return;
+		}
+		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) tableCollectionObj;
+
+		HashMap<String, Object> localTableAliasMap =
+				(scopeSymbols.get(MUMBLE_TABLE_ALIAS_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) scopeSymbols.get(MUMBLE_TABLE_ALIAS_KEY)
+						: new HashMap<String, Object>();
+		HashMap<String, Object> localCurrentQueryDictionary =
+				(scopeSymbols.get(MUMBLE_QUERY_DICTIONARY_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) scopeSymbols.get(MUMBLE_QUERY_DICTIONARY_KEY)
+						: new HashMap<String, Object>();
+		HashMap<String, Object> localInterface =
+				(scopeSymbols.get(MUMBLE_INTERFACE_KEY) instanceof HashMap<?, ?>)
+						? (HashMap<String, Object>) scopeSymbols.get(MUMBLE_INTERFACE_KEY)
+						: new HashMap<String, Object>();
+
+		HashMap<String, Object> localPhysicalFromTables =
+				buildLocalPhysicalFromTableCollection(localTableCollection);
+		HashMap<String, Object> visibleQuerySourceCollection =
+				collectVisibleQuerySourceCollection(localTableAliasMap);
+
+		for (String unresolvedKey : new ArrayList<String>(unqualifiedUnresolvedForLocal.keySet())) {
+			Object unresolvedEntry = unqualifiedUnresolvedForLocal.get(unresolvedKey);
+			String columnName = extractColumnNameFromUnresolvedEntry(unresolvedKey, unresolvedEntry);
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			if (extractTableRefFromUnresolvedEntry(unresolvedKey, unresolvedEntry) != null) {
+				continue;
+			}
+
+			UnqualifiedScopeResolutionResult resolutionResult =
+					resolveUnqualifiedColumnAgainstVisibleScope(
+							columnName,
+							localPhysicalFromTables,
+							localTableCollection,
+							visibleQuerySourceCollection,
+							localTableAliasMap,
+							null,
+							true,
+							false,
+							null);
+			if (resolutionResult.status != UnqualifiedScopeResolutionStatus.RESOLVED) {
+				continue;
+			}
+
+			materializeResolvedUnqualifiedReference(
+					unqualifiedUnresolvedForLocal,
+					localTableCollection,
+					localTableAliasMap,
+					localCurrentQueryDictionary,
+					localInterface,
+					visibleQuerySourceCollection,
+					null,
+					resolutionResult.resolvedSourceRef,
+					columnName,
+					unresolvedEntry,
+					true);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
