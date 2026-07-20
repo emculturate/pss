@@ -1844,6 +1844,12 @@ public class SqlParseSymbolTreeHelper {
 							}
 						}
 					} else {
+						if (isPivotDerivedInterfaceOutputColumn(
+								columnName,
+								localRelationalModifierInterfaceHints)) {
+							continue;
+						}
+
 						Integer[] refLocation = resolveUnqualifiedReferenceLocation(
 								columnName,
 								refObj,
@@ -8093,6 +8099,42 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		return derivedColumnSourceRefMatchesTableRef(tableRef, sourceRef, visibleAliasMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isPivotDerivedInterfaceOutputColumn(
+			String columnName,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (columnName == null || columnName.isBlank()
+				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+			return false;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (!(operatorObj instanceof String operator) || !MUMBLE_PIVOT_KEY.equals(operator)) {
+				continue;
+			}
+
+			Object derivedColumnsObj = hintMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
+			if (!(derivedColumnsObj instanceof ArrayList<?> derivedColumns)) {
+				continue;
+			}
+
+			for (Object derivedColumnObj : derivedColumns) {
+				if (derivedColumnObj instanceof String derivedColumn
+						&& derivedColumn.equalsIgnoreCase(columnName)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	private boolean hintDefinesDerivedColumn(Map<String, Object> hintMap, String columnName) {
