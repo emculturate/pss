@@ -2912,4 +2912,40 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{values0={col2=[[@18,61:64='col2',<381>,1:61], [@3,13:16='col2',<381>,1:13]], col1=[[@16,55:58='col1',<381>,1:55], [@1,7:10='col1',<381>,1:7]]}, query1={col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void interfaceLoopDualRoleTrailingClauseSourceAndAliasRefTest() {
+		// Fundamental dual-role routing: SELECT-list source lineage -> table_dictionary;
+		// output-interface alias identity -> query_dictionary. Post-FROM clauses must
+		// capture token positions for source columns (a, b) and output aliases (aa, x).
+		final String query =
+				"SELECT a, b + 1 AS aa, a + b AS x\n"
+				+ "FROM tab1\n"
+				+ "WHERE a = 1 AND b = 2 AND aa = 3 AND x = 4\n"
+				+ "GROUP BY a, b, aa, x\n"
+				+ "HAVING a > 0 AND aa > 0 AND x > 0\n"
+				+ "QUALIFY ROW_NUMBER() OVER (PARTITION BY a, b ORDER BY aa, x) = 1\n"
+				+ "ORDER BY a, b, aa, x";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals(
+				"Interface is wrong",
+				"[aa, a, x]",
+				extractor.getInterface().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23], [@17,50:50='a',<381>,3:6], [@34,96:96='a',<381>,4:9], [@42,115:115='a',<381>,5:7], [@61,182:182='a',<381>,6:40], [@74,216:216='a',<381>,7:9]], b=[[@3,10:10='b',<381>,1:10], [@11,27:27='b',<381>,1:27], [@21,60:60='b',<381>,3:16], [@36,99:99='b',<381>,4:12], [@63,185:185='b',<381>,6:43], [@76,219:219='b',<381>,7:12]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={aa=[[@7,19:20='aa',<381>,1:19], [@25,70:71='aa',<381>,3:26], [@38,102:103='aa',<381>,4:15], [@46,125:126='aa',<381>,5:17], [@66,196:197='aa',<381>,6:54], [@78,222:223='aa',<381>,7:15]], x=[[@13,32:32='x',<381>,1:32], [@29,81:81='x',<381>,3:37], [@40,106:106='x',<381>,4:19], [@50,136:136='x',<381>,5:28], [@68,200:200='x',<381>,6:58], [@80,226:226='x',<381>,7:19]], a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={aa=[[@7,19:20='aa',<381>,1:19], [@25,70:71='aa',<381>,3:26], [@38,102:103='aa',<381>,4:15], [@46,125:126='aa',<381>,5:17], [@66,196:197='aa',<381>,6:54], [@78,222:223='aa',<381>,7:15]], a=[[@1,7:7='a',<381>,1:7]], x=[[@13,32:32='x',<381>,1:32], [@29,81:81='x',<381>,3:37], [@40,106:106='x',<381>,4:19], [@50,136:136='x',<381>,5:28], [@68,200:200='x',<381>,6:58], [@80,226:226='x',<381>,7:19]]}, table_dictionary={tab1={a=[[@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23], [@17,50:50='a',<381>,3:6], [@34,96:96='a',<381>,4:9], [@42,115:115='a',<381>,5:7], [@61,182:182='a',<381>,6:40], [@74,216:216='a',<381>,7:9]], b=[[@3,10:10='b',<381>,1:10], [@11,27:27='b',<381>,1:27], [@21,60:60='b',<381>,3:16], [@36,99:99='b',<381>,4:12], [@63,185:185='b',<381>,6:43], [@76,219:219='b',<381>,7:12]]}}, grouped_by=[{name=a, table_ref=tab1}, {name=b, table_ref=null}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], ordered_by=[{name=a, table_ref=tab1}, {name=b, table_ref=null}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], filters=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], interface={aa=[{name=b, table_ref=tab1}], a=[{name=a, table_ref=tab1}], x=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
 }
