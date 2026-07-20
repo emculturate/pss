@@ -1366,11 +1366,6 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localUnresolvedColumnMap);
 
-		walker.moveUnknownEntriesToSingleWildcardBackedNonTableSource(
-				localUnresolvedColumnMap,
-				localCurrentQueryDictionary,
-				localTableAliasMap);
-
 		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		propagateUnqualifiedSelectStarToScopeTables(
 				localInterface,
@@ -1637,10 +1632,10 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										localFromTableCollection,
 										localFromTableCollection,
-										null,
+										visibleQuerySourceCollection,
 										localTableAliasMap,
 										deleteTargetTableRef,
-										false,
+										true,
 										!emitFinalUnresolvedUnknownFatal,
 										localRelationalModifierInterfaceHints);
 						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
@@ -1670,7 +1665,7 @@ public class SqlParseSymbolTreeHelper {
 								null,
 								null,
 								deferCorrelatedValueSubqueryQualifiedUnknowns,
-								false,
+								true,
 								shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation));
 					}
 				}
