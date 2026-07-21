@@ -1568,8 +1568,8 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localCurrentQueryDictionary);
 
-		// Resolve relational-modifier derived columns (PIVOT/UNPIVOT) before
-		// wildcard fallback can materialize them into physical table dictionaries.
+		// Resolve PIVOT aggregate/FOR operand columns before wildcard fallback can
+		// materialize them into physical table dictionaries.
 		HashMap<String, Object> localFromTableCollection =
 				buildLocalPhysicalFromTableCollection(localTableCollection);
 		resolvePivotOperandColumnsFromUnresolvedMap(
@@ -1578,10 +1578,6 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localFromTableCollection,
 				localTableAliasMap);
-		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localDerivedColumns,
-				localUnresolvedColumnMap);
 
 		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		propagateUnqualifiedSelectStarToScopeTables(
@@ -1612,10 +1608,6 @@ public class SqlParseSymbolTreeHelper {
 					localRelationalModifierInterfaceHints);
 			walker.symbolTable.remove(TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY);
 		}
-		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localDerivedColumns,
-				localUnresolvedColumnMap);
 		resolvePivotOperandColumnsFromUnresolvedMap(
 				localRelationalModifierInterfaceHints,
 				localUnresolvedColumnMap,
@@ -1624,6 +1616,11 @@ public class SqlParseSymbolTreeHelper {
 				localTableAliasMap);
 		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
 		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
+
+		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
+				localRelationalModifierInterfaceHints,
+				localDerivedColumns,
+				localUnresolvedColumnMap);
 
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			// Check for explicitly qualified columns whose table qualifiers do not exist

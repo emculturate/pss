@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-20 (verified **1209/1209** full-suite + **195/195** gate green; Phase 14 **Step D** ✅; **Step E** prep complete — **E.2** is next)
+**Last updated:** 2026-07-20 (verified **1209/1209** full-suite + **195/195** gate green; Phase 14 **Step E.2 + E.3** ✅; **E.4** is next)
 
 ---
 
@@ -162,7 +162,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
-| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~85% | **Step C + D** ✅; **Step E** prep ✅ — **E.2** next (retire strip call sites); see Phase 14 |
+| **14** Universal per-column resolution (Steps C–F) | 🔄 In progress | ~88% | **Step E.0–E.3** ✅; **E.4** next (delete strip helper); see Phase 14 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked for test work** — start when ready; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
@@ -182,11 +182,12 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `b445286`: skip unqualified physical resolution for PIVOT-derived interface outputs (spurious join-table binding fix)
 - Commit `cd937c2`: Phase 14 **C2a** — retired `materializeRemainingSingleTableUnqualifiedAtScopeExit`; convert-time `materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit` + `consumeLocallyResolvedUnqualifiedBeforeScopePassUp` on pass-up egress; authorization golden refresh
 - Commit `1d20503`: Phase 14 **C2b + C2 closeout** — removed finalize wildcard suppressor; deleted `canResolveUnqualifiedFromSingleWildcardQuerySource`, `moveUnknownEntriesToSingleWildcardBackedNonTableSource`, `moveEntriesToSingleTableIfSingleTarget`
-- Step E prep (Jul 2026, uncommitted): **E.0 inventory** complete; E0g UPDATE RHS canary + 4 `monthly_sales_long` derived-column clause tests; 11 IN-list alias tests annotated; PIVOT derived naming verified (`{inValue}_{aggregate}`); `SqlEventWalkerPivotUnpivotTests` **67/67**
+- Step E prep (Jul 2026, `ed1ebfd`): **E.0 inventory** complete; E0g UPDATE RHS canary + 4 `monthly_sales_long` derived-column clause tests; 11 IN-list alias tests annotated; PIVOT derived naming verified (`{inValue}_{aggregate}`)
+- Step E.2 + E.3 (Jul 2026): retired **two** `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call sites (pre-wildcard + post-UPDATE-RHS); consolidated to **one** pre-diagnostics egress drain before `emitExplicitQualifiedUnknownDiagnostics`; pivot **67/67**, gate **195/195**, full suite **1209/1209**
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 14 Step E.2** — remove first `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call site (~L1581 in convert); then **E.3** (post-UPDATE-RHS site), **E.4** (delete method). **Step F** (hygiene) after E. Phase 13 can run in parallel once the gate stays green.
+**Suggested next focus:** **Phase 14 Step E.4** — inline/delete `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (single call site remains at pre-diagnostics egress). **Step F** (hygiene) after E.
 
 ---
 
@@ -486,7 +487,7 @@ Instead of merging qualified and unqualified refs into **one working set** durin
 
 | Surface | Role today | Consolidation note |
 |---------|------------|-------------------|
-| Early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (×2 in convert) | Strips derived keys from unresolved map before unified egress | **Step E.2–E.4** — retire when unified skip + clause probe consume derived keys (E.0 prep green) |
+| Early `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (×1 in convert) | Strips derived keys from unresolved map before diagnostics/egress | **E.4** — delete when inlined; E.2–E.3 retired pre-wildcard + post-UPDATE sites |
 | `local query_dictionary` | Scope **output** token map (select-list names → tokens) | **Not** used for `alias.col` proof; do not fold into `querySourceExportsColumn` |
 | ~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ | ~~Post-hoc merge of qualified select-list refs into source query dict~~ | **Retired Jul 2026** (`e60d8f8`) — native interface loop + clause probe |
 | `emitExplicitQualifiedUnknownDiagnostics` | Unified resolver + materialize on `RESOLVED_*`; no query-dict containsKey shortcut | ✅ shortcut retired Jul 2026 |
@@ -570,7 +571,7 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 - `convertSymbolTableToTableDictionary` internal egress
 - `resolveQualifiedUnresolvedAtQueryScopeExit` after finalize
 - ~~`sweepBackfillQueryDictionaryFromResolvedInterfaceSources` + per-column backfill~~ — **deleted** (`876c7ce`); Step D audit ✅
-- `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 (pre-wildcard + post-UPDATE-rhs)
+- `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×1 (pre-diagnostics egress; was ×2 before E.2–E.3)
 
 ---
 
@@ -703,7 +704,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | ~~`moveEntriesToSingleTableIfSingleTarget`~~ | **Deleted** (`1d20503`) | C2.4 closeout complete |
 | ~~`moveUnknownEntriesToSingleWildcardBackedNonTableSource`~~ | **Deleted** (`1d20503`) | C2b.3 closeout complete |
 | ~~`canResolveUnqualifiedFromSingleWildcardQuerySource`~~ | **Deleted** (`1d20503`) | C2b closeout complete |
-| `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Load-bearing | Keep until derived-column ingress no longer needs pre-/post-wildcard stripping |
+| `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×1 | Pre-diagnostics egress drain (E.2–E.3 retired pre-wildcard + post-UPDATE sites) | **E.4** — delete or inline at single call site |
 | `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
 | `isExistingArchivedClauseColumnRefSatisfied` + dual clause probe | Removed | Inlined into `validateArchivedClauseColumnRef`; dual-probe follow-up still remains |
 
@@ -864,16 +865,17 @@ mvn -Psmoketest-quality-gate test
 
 ```
 1. Wildcard expansion (processWildcardUnknownEntries)          [keep — not bulk bind]
-2. PIVOT/UNPIVOT derived-column strip (pre-wildcard)
+2. PIVOT operand column resolve (pre/post propagateUnqualifiedSelectStar)
 3. propagateUnqualifiedSelectStarToScopeTables
 4. UPDATE/DML-specific RHS + target hooks (unchanged)
-5. emitExplicitQualifiedUnknownDiagnostics (qualified batch)
-6. Interface loop — per output column: unified resolver + materialize
+5. PIVOT/UNPIVOT derived-column drain (pre-diagnostics egress)  [E.2–E.3: single site]
+6. emitExplicitQualifiedUnknownDiagnostics (qualified batch)
+7. Interface loop — per output column: unified resolver + materialize
      (unqualified: visibleQuerySourceCollection + allowQuerySourceFallback=true)
-7. resolveRemainingUnresolvedAgainstQuerySources — per remaining unqualified key
-8. probeArchivedScopeClauseColumns — per archived clause ref
-9. patchInterfaceTableRefsForSinglePhysicalTableScope
-10. validateQueryInterface
+8. resolveRemainingUnresolvedAgainstQuerySources — per remaining unqualified key
+9. probeArchivedScopeClauseColumns — per archived clause ref
+10. patchInterfaceTableRefsForSinglePhysicalTableScope
+11. validateQueryInterface
 ```
 
 Scope exit (`finalizeQueryScopeSymbolTable` / UPDATE FROM finalize) should **not** need bulk bind or bulk wildcard clear once steps 6–8 drain all local keys; correlated keys pass up via existing defer/bubble flags.
@@ -995,11 +997,11 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 
 ### Step E — PIVOT/UNPIVOT domain fallbacks (existing backlog)
 
-**Objective:** Retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 when unified ingress skips/consumes derived columns before wildcard/single-table paths and before finalize emit.
+**Objective:** Retire `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` when unified ingress no longer needs a pre-diagnostics derived-key drain.
 
 **Gate:** `SqlEventWalkerPivotUnpivotTests` (**67**) + gate PIVOT/UNPIVOT smoke (3) + `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (UPDATE RHS spot).
 
-**Status:** 🔄 **E.0 prep complete** (Jul 2026, uncommitted) — **E.2** is next.
+**Status:** 🔄 **E.2 + E.3 complete** (Jul 2026) — **E.4** is next.
 
 #### E.0 inventory (prep) ✅ DONE
 
@@ -1011,13 +1013,14 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **E0d** | UNPIVOT walk-time VALUE/FOR/IN strip | `resolveUnpivotGeneratedColumnsFromUnresolvedMap` in walker (**keep**) | UNPIVOT test matrix |
 | **E0e** | Clause probe skip (WHERE / **JOIN ON** / GROUP BY / ORDER BY / HAVING / QUALIFY) | `probeArchivedScopeClauseColumns` → `validateArchivedClauseColumnRef` derived skip | `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest` (IN-list alias); `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` (derived); `pivotSameQuery*` per clause |
 | **E0f** | PIVOT IN-identifier resolution | Dedicated fatal/warning paths | `pivotInIdentifier*` tests |
-| **E0g** | UPDATE assignment RHS + second derived strip pass | `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` |
+| **E0g** | UPDATE assignment RHS derived re-entry | `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` |
 
 **E.0 findings:**
 
 - PIVOT `derived_columns` keys are **`{inValue}_{aggregate}`** (e.g. `jan_sales_SUM`) — generator correct; bare IN-list names in SELECT are a **separate** Snowflake alias / physical-lineage path (11 tests annotated).
-- Pre-strip ×2 still load-bearing until E.2–E.4: without strip, derived keys can remain in `unresolved_column` and hit `emitUnqualifiedUnresolvedColumnsError` at finalize; clause probe skips but does not always remove them.
-- `resolveRemainingUnresolvedAgainstQuerySources` passes `null` for relational-modifier hints — optional **E.5** if stragglers appear after strip removal.
+- E.2 removed pre-wildcard strip; E.3 removed post-UPDATE-RHS strip and **relocated** drain to pre-diagnostics egress (after effective alias maps, before `emitExplicitQualifiedUnknownDiagnostics`). Naive removal without relocation broke **36/67** pivot tests (derived keys materialized into physical table dictionaries).
+- One call site remains until **E.4** deletes or inlines the helper.
+- `resolveRemainingUnresolvedAgainstQuerySources` still passes `null` for relational-modifier hints — optional **E.5** if E.4 exposes stragglers.
 
 **E.0 test additions (Jul 2026):**
 
@@ -1027,15 +1030,15 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 - `pivotMonthlySalesLongTaxWhereDerivedSumTest` — SELECT expr + WHERE
 - `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` — ORDER BY `jan_sales_SUM / feb_sales_SUM`
 
-#### E.2–E.4 retirement substeps ⏸️ NEXT
+#### E.2–E.4 retirement substeps
 
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
 | **E.1** | Re-confirm unified resolver + clause probe consume/remove derived keys at both strip sites | Pivot **67/67** + gate **195/195** | ✅ (prep) |
-| **E.2** | Remove **pre-wildcard** `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call (~L1581) | Gate + pivot 67 + full suite | ⏸️ **NEXT** |
-| **E.3** | Remove **post-UPDATE-RHS** call (~L1615) | E0g + DML UPDATE class | ⏸️ |
-| **E.4** | Delete `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` when zero call sites | Grep clean | ⏸️ |
-| **E.5** (optional) | Pass derived hints into `resolveRemainingUnresolvedAgainstQuerySources` | Only if E.2–E.4 expose stragglers | ⏸️ |
+| **E.2** | Remove **pre-wildcard** `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call (~L1581) | Gate + pivot 67 + full suite | ✅ (Jul 2026) |
+| **E.3** | Remove **post-UPDATE-RHS** call; relocate drain to pre-diagnostics egress (~L1620) | E0g + pivot 67 + full suite | ✅ (Jul 2026) |
+| **E.4** | Delete `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` when zero call sites | Grep clean | ⏸️ **NEXT** |
+| **E.5** (optional) | Pass derived hints into `resolveRemainingUnresolvedAgainstQuerySources` | Only if E.4 exposes stragglers | ⏸️ |
 
 **Do not retire:** `resolvePivotOperandColumnsFromUnresolvedMap`, `resolveUnpivotGeneratedColumnsFromUnresolvedMap` (walk-time UNPIVOT hook).
 
@@ -1059,6 +1062,9 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 - [x] Correlated pass-up unchanged (no local bulk bind of outer refs) — verified during **C2a** (`coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`, `largeStudentgeneralQueryParseTest`)
 - [x] Smoketest gate **195/195** + full suite **1209/1209** (Jul 2026)
 - [x] `table-and-query-dictionary-design.md` updated — backfill gap #4 resolved; bulk relocation retired — **Step D** (Jul 2026)
+- [x] PIVOT derived-column strip: pre-wildcard call site removed — **E.2** (Jul 2026)
+- [x] PIVOT derived-column strip: post-UPDATE-RHS site removed; drain relocated to pre-diagnostics egress — **E.3** (Jul 2026)
+- [ ] `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` deleted (one call site remains) — **E.4**
 
 ### Phase 14 vs Phase 13 ordering
 
@@ -1068,7 +1074,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **Phase 14 C2a** | ✅ Done (Jul 2026) | `cd937c2` — convert-time lineage + pass-up consumption |
 | **Phase 14 C2b + closeout** | ✅ Done (Jul 2026) | `1d20503` — wildcard suppressor + orphan bulk helper deletion |
 | **Phase 14 Step D** | ✅ Done (Jul 2026) | Audit green — native capture verified; gap #4 doc updated |
-| **Phase 14 Steps E–F** | **Now** | **E.0 prep** ✅ — **E.2** next (strip call-site retirement); then hygiene |
+| **Phase 14 Steps E–F** | **Now** | **E.2 + E.3** ✅ — **E.4** next; then hygiene |
 | **Phase 13** | Parallel once gate green | Language features independent unless touching convert |
 | **Phase 12** (origin-CTE backfill) | Optional, last | Defer unless explicit churn approved |
 
@@ -1291,7 +1297,7 @@ The four `@Deprecated` CTE-named aliases were deleted after call sites were rena
 |--------|------------------|----------------|
 | ~~`backfillQueryDictionaryFromResolvedInterfaceSources` + `sweepBackfillQueryDictionaryFromResolvedInterfaceSources`~~ | ~~Post-hoc query-dict repair after physical resolution~~ | **Deleted (`876c7ce`)** — Step D audit confirms native capture |
 | ~~`materializeResolvableGlobalQualifiedUnresolvedLocations`~~ | ~~Late global qualified materialization~~ | **Retired Jul 2026** — unified `resolveQualifiedUnresolvedEntries` on `globalQualifiedUnresolvedLocations` |
-| `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×2 | Pre-wildcard + post-UPDATE-rhs derived-column stripping | Unified ingress skips derived before wildcard/single-table paths — **Step E** |
+| `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` ×1 | Pre-diagnostics derived-key drain | **E.4** — delete when inlined |
 | ~~`moveEntriesToSingleTableIfSingleTarget`~~ | ~~Physical single-table bulk relocation~~ | **Deleted (`1d20503`)** |
 | ~~`moveUnknownEntriesToSingleWildcardBackedNonTableSource`~~ | ~~Wildcard/single-query bulk bind~~ | **Deleted (`1d20503`)** |
 | `resolveVisibleOuterDeferredUnresolved` | Removed | Inlined at call sites during Phase 11 kickoff |
@@ -1357,8 +1363,8 @@ Step D — Backfill retirement audit (Phase 14)                       ✅ DONE (
   D.0–D.5 green: gate 195/195, substitution V1–V16, complex sub I/U 20/20, nested demo + values V13/V14
 
 Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  🔄 IN PROGRESS
-  E.0 prep ✅ (inventory, E0g, +4 derived tests, 67/67 pivot); E.2 ⏸️ NEXT
-  resolveRelationalModifierDerivedColumnsFromUnresolvedMap ×2 → delete at E.4
+  E.0 prep ✅; E.2 ✅ (retire pre-wildcard strip); E.3 ✅ (relocate to pre-diagnostics)
+  E.4 ⏸️ NEXT — delete resolveRelationalModifierDerivedColumnsFromUnresolvedMap (1 call site left)
 
 Step F — Dead-code hygiene (Phase 14)                              ⏸️ OPTIONAL
   table-function getter/setter orphans; coverage doc cleanup
@@ -1449,7 +1455,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 ```
 Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 (optional origin-CTE backfill)
        →  Steps A–B ✅ (dead code + mergeSelectList)
-       →  Phase 14 Step C + D ✅  →  Step E.0 prep ✅  →  Step E.2 ⏸️ NEXT
+       →  Phase 14 Step C + D ✅  →  Step E.0–E.3 ✅  →  Step E.4 ⏸️ NEXT
        →  Phase 14 E–F (PIVOT / hygiene)
        →  Phase 13 (language features — can overlap Phase 14 once gate stays green)
 ```
@@ -1460,7 +1466,7 @@ If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canar
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
-**Phase 14 Step E.2 is the recommended immediate next step** — remove the pre-wildcard `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call (~L1581); E.0 prep complete (pivot **67/67**, gate **195/195**). Steps C + D complete (`1d20503`, `85d3013`).
+**Phase 14 Step E.4 is the recommended immediate next step** — delete or inline `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` (single pre-diagnostics call site after E.2–E.3). Steps C + D complete (`1d20503`, `85d3013`); E prep (`ed1ebfd`).
 
 ---
 
