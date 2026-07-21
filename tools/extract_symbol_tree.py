@@ -672,13 +672,6 @@ public class SqlParseSymbolTreeHelper {
 \t\tthis.walker = walkerHelper;
 \t}
 
-\t// --- Getters/setters for moved fields ---
-
-\tpublic int getTableFunctionSourceCount() { return tableFunctionSourceCount; }
-\tpublic void setTableFunctionSourceCount(int count) { this.tableFunctionSourceCount = count; }
-\tpublic Set<String> getSuppressedAmbiguousUnqualifiedKeys() { return suppressedAmbiguousUnqualifiedKeys; }
-\tpublic Set<String> getTableFunctionSourceRefs() { return tableFunctionSourceRefs; }
-
 \t// --- normalizeTableRef delegate (mirrors event-walker static helper) ---
 
 \tprivate static String normalizeTableRef(String tableRef) {
@@ -787,10 +780,7 @@ def _replace_field_refs(lines):
     manual fixup.
     """
     replacements = [
-        # tableFunctionSourceCount used only in moved methods, but be safe
-        (re.compile(r'(?<![.\w])tableFunctionSourceCount\b'), 'symbolTree.getTableFunctionSourceCount()'),
-        # suppressedAmbiguousUnqualifiedKeys - used only in moved methods
-        # tableFunctionSourceRefs - used only in moved methods
+        # Moved table-function fields are private on SqlParseSymbolTreeHelper; no public getters.
     ]
     result = []
     for line in lines:

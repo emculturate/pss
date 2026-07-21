@@ -67,13 +67,6 @@ public class SqlParseSymbolTreeHelper {
 			MUMBLE_ORDERED_BY_KEY,
 	};
 
-	// --- Getters/setters for moved fields ---
-
-	public int getTableFunctionSourceCount() { return tableFunctionSourceCount; }
-	public void setTableFunctionSourceCount(int count) { this.tableFunctionSourceCount = count; }
-	public Set<String> getSuppressedAmbiguousUnqualifiedKeys() { return suppressedAmbiguousUnqualifiedKeys; }
-	public Set<String> getTableFunctionSourceRefs() { return tableFunctionSourceRefs; }
-
 	// --- normalizeTableRef delegate (mirrors event-walker static helper) ---
 
 	public static String normalizeTableRef(String tableRef) {
@@ -463,7 +456,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
-	public void resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
+	/**
+	 * Remove PIVOT/UNPIVOT derived-column keys from {@code unresolved_column} before
+	 * qualified-unknown diagnostics and interface egress so they are not materialized
+	 * into physical table dictionaries.
+	 */
+	private void consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap(
 			ArrayList<Object> relationalModifierInterfaceHints,
 			HashMap<String, Object> derivedColumns,
 			HashMap<String, Object> unresolvedColumnMap) {
@@ -1617,7 +1615,7 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
 		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
 
-		resolveRelationalModifierDerivedColumnsFromUnresolvedMap(
+		consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap(
 				localRelationalModifierInterfaceHints,
 				localDerivedColumns,
 				localUnresolvedColumnMap);
