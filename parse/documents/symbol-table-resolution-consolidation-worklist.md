@@ -161,7 +161,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **9** clause-list validation (no parallel pipelines) | ✅ Done | 100% | Gate + full suite green; `mergeSelectList…` post-hoc hook retired (Jul 2026, commit `e60d8f8`) |
 | **10** Substitution Variable Quality Gate Inventory | ✅ Done | 100% | All families green — Column V1–V16, INSERT I1–I10, UPDATE U1–U10 verified 2026-07-19 |
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
-| **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green; optional origin-CTE backfill not taken |
+| **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green |
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Phase **15** is NEXT |
 | **15** Unified convert egress loop | ⏸️ Not started | 0% | **NEXT** — derived registry keys in `unresolved_column`; see Phase 15 |
 | **16** PIVOT operand materialization | ⏸️ Not started | 0% | After Phase 15 — physical operand cols; see Phase 16 |
@@ -829,41 +829,13 @@ These are uncovered by the current coverage run, but they map to real feature fa
 - [ ] The uncovered `context_list` publication helpers are not a test-bed gap; they are already exercised by the 130-test gate and the full gate, and should stay in place.
 - [ ] The uncovered pivot/unpivot, VALUES, DML, and table-function helpers are mostly a gate-size issue when the relevant feature classes already exist, but they still expose broader coverage gaps for feature families that are not validated by the consolidation gate.
 
-### Phase 12 — Optional origin-CTE backfill sweep (only after Phase 11 is otherwise done)
+### Origin-CTE backfill — ❌ PERMANENTLY REJECTED (Jul 2026)
 
-**Goal:** If we later decide the origin-CTE retro-write is worth the churn, add it as a final opt-in step after Phase 11 has finished and stayed green.
+**Decision:** Do **not** retro-write descendant query references into an origin CTE's published `def_*` payload. That approach rewrites already-finalized nested scopes, churns goldens across nested CTE / DML / access-object tests, and violates the no-backpatch publish contract.
 
-| File | Change? | Why |
-|------|---------|-----|
-| `SqlEventWalkerLiveSampleQueriesTests.java` | Change | Largest nested CTE / alias surface; a deeper origin-CTE backfill would rewrite already-published nested payloads here. |
-| `SqlEventWalkerFunctionsAggregatesWindowingTests.java` | Change | Contains nested window / aggregate / CTE composition where later-query refs can be retro-written into the source CTE dictionary. |
-| `SqlEventWalkerSubqueriesAndClauseSemanticsTests.java` | Change | CTE-backed subquery cases are the direct consumer of downward visibility, so they would pick up the new origin writeback. |
-| `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests.java` | Change | The nested UPDATE / INSERT / DELETE canaries rely on the same publication path and would churn if origin dictionaries are backfilled. |
-| `SqlParseEventWalkerWithAccessObjectTest.java` | Change | Access-object nested query cases already show token backfill behavior and are sensitive to any retro-write into the origin CTE. |
-| `SqlEventWalkerCoreSelectFromAliasingTests.java` | Change | This is the narrowest and best canary family for the nested CTE / correlated alias path. |
-| `SqlEventWalkerJoinsAndTableResolutionTests.java` | No-change | Join resolution changes table/reference binding, but not the origin-CTE backfill surface itself. |
-| `SqlEventWalkerCastingAndTypesTests.java` | No-change | Mostly single-scope casts and projections; there is no descendant CTE to rewrite back into. |
-| `SqlEventWalkerTableFunctionTests.java` | No-change | Table-function publication is a separate scope shape and does not depend on origin-CTE writeback. |
-| `SqlEventWalkerPivotUnpivotTests.java` | No-change | Derived-column handling is the controlling path here, not a later-query origin CTE backfill. |
-| `SqlEventWalkerScriptsAndDDLTests.java` | No-change | DDL / script scaffolding does not exercise the nested publication path that would churn from this change. |
+**Superseded by:** Phase 11 `context_list` downward visibility + native capture at scope exit (Phase 8–9 / Step D). Parent attribution belongs in the **parent's** published payload, not by drilling back into finalized children.
 
-**Phase 12 gate if we ever take it:**
-
-- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoTest`
-- `SqlEventWalkerCoreSelectFromAliasingTests#nestedQueryDemoWithCteTest`
-- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedInSubqueryMiddleCteReferencesFirstCteTest`
-- `SqlEventWalkerCoreSelectFromAliasingTests#correlatedExistsSubqueryMiddleCteReferencesFirstCteTest`
-- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSubqueryWithColumnsV0`
-- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV3`
-- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV5`
-- `SqlEventWalkerSubqueriesAndClauseSemanticsTests#nestedSelectStarV6`
-- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#updateComplexSubstitutionU4NestedWithInCteBody`
-- `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests#insertComplexSubstitutionI4NestedWithInCteBody`
-- `SqlParseEventWalkerWithAccessObjectTest#coverageDrivenSubqueryUnresolvedQualifierPassUpToParentTest`
-
-**Recommended execution order for that optional phase:** run the 11 canaries above first, then refresh only the files that move. If the matrix stays mostly `No-change`, keep the change out of Phase 12.
-
----
+**Do not reopen** unless a production regression explicitly requires it and the publish contract is revised deliberately.
 
 ## Phase 14 — Universal per-column resolution (Steps C–F)
 
@@ -1115,7 +1087,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 - [x] `getTableFunctionSourceCount` / `setTableFunctionSourceCount` / `getSuppressedAmbiguousUnqualifiedKeys` / `getTableFunctionSourceRefs` — deleted (zero external callers; fields remain private on helper)
 - [x] `ArchivedClauseColumnRefResult.satisfied()` — audit: method not present in current tree
 - [x] `tools/extract_symbol_tree.py` allowlist synced after Step C2 deletions — **C2b.3** (`1d20503`); getter template removed Step F
-- [ ] Coverage report stale rows for `rehomeUpdate…` / `getSingleUpdateFromTableReference` (optional doc hygiene — deferred)
+- [x] Coverage report stale rows for `rehomeUpdate…` / `getSingleUpdateFromTableReference` pruned — **Step F hygiene** (Jul 2026); see `parse/documents/coverage/sql_walker_astwalkers_gap_report.md`
 
 ### Phase 14 closeout checklist
 
@@ -1148,7 +1120,6 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **Phase 14 Step F** | ✅ Done (Jul 2026) | Removed unused table-function getters |
 | **Phase 15** | **NEXT** | Unified egress loop — see Phase 15 section |
 | **Phase 13** | Parallel once gate green | Language features — independent unless touching convert |
-| **Phase 12** (origin-CTE backfill) | Optional, last | Defer unless explicit churn approved |
 
 ---
 
@@ -1901,6 +1872,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 - Second unresolved bucket or parse-time materialize wrappers
 - Routing predicate subqueries through full `finalizeQueryScopeSymbolTable` (breaks merge semantics)
 - DELETE-logic refactor during Phases 1–4 (constraint on initial slice; revisit in Phase 11)
+- **Origin-CTE backfill** — retro-writing descendant refs into finalized origin CTE `def_*` payloads (permanently rejected Jul 2026; see **Origin-CTE backfill — PERMANENTLY REJECTED** under Phase 11 closeout)
 
 **Moved to Phase 13 (start after consolidation closeout):**
 
@@ -1916,7 +1888,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 ## Suggested execution order
 
 ```
-Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 (optional origin-CTE backfill)
+Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  →  12 ✅
        →  Steps A–B ✅ (dead code + mergeSelectList)
        →  Phase 14 Steps C–F ✅
        →  Phase 15 (unified convert egress loop) ⏸️ NEXT — 15.1 first
@@ -1927,8 +1899,6 @@ Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  → 
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
-
-If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canaries are green and **after** Phase 14 C1 at minimum — backfill rewrites published nested payloads and will churn goldens.
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 

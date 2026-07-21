@@ -2,6 +2,7 @@
 
 - Source data: parse/target/site/jacoco/jacoco.xml
 - Detailed method gap CSV: parse/documents/coverage/sql_walker_astwalkers_method_gaps.csv
+- **Hygiene (Jul 2026):** Removed rows for retired dead code — `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`, `getSingleUpdateFromTableReference` (Step A, `36f7aa0`).
 
 ## astwalkers :: astwalkers/AbstractASTWalkerHelper
 - Source: parse/src/main/java/astwalkers/AbstractASTWalkerHelper.java
@@ -60,13 +61,12 @@
 
 ## sql/walker :: sql/walker/SqlParseEventWalker
 - Source: parse/src/main/java/sql/walker/SqlParseEventWalker.java
-- Method-level total lines: missed=695, covered=3956
-- Method-level total branches: missed=1027, covered=1695
+- Method-level total lines: missed=649, covered=3956
+- Method-level total branches: missed=989, covered=1695
 
 | Method | Start line | Missed lines(counter) | Missed branches(counter) | Uncovered lines (by line nr) |
 |---|---:|---:|---:|---|
 | emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune | 3392 | 30 | 25 | 3392-3393, 3400-3401, 3405-3406, 3417-3420, 3426-3429, 3431-3432, 3434, 3438-3441, 3444-3457, 3459-3464, 3466, 3469-3470 |
-| rehomeUpdateUnqualifiedUnknownsToSingleFromTable | 943 | 32 | 26 | 943-944, 948-949, 955-958, 961, 965-967, 969, 971-972, 974-977, 980-981, 983-987, 989-991, 993-996, 998, 1001-1002, 1004 |
 | emitExplicitQualifiedUnknownDiagnostics | 5338 | 14 | 30 | 5338, 5345, 5351, 5360, 5367, 5377, 5381-5382, 5384-5385, 5394-5395, 5403-5405, 5413-5414, 5419-5426, 5432-5433, 5446-5448, 5460, 5466-5467, 5470-5471, 5473 |
 | convertSymbolTableToTableDictionary | 4002 | 15 | 29 | 4036, 4040, 4056, 4127, 4151, 4160-4161, 4181, 4190, 4194, 4210-4212, 4214-4215, 4229, 4232, 4234-4235, 4237-4238, 4243-4244, 4284-4290, 4351, 4354-4355, 4357, 4365-4366 |
 | getInterface | 369 | 12 | 17 | 370, 381-382, 388-389, 391, 403-404, 410-411, 413, 422, 426-427, 433-434, 436, 445, 449-450, 456-457, 459, 468-469, 475-476, 484-485, 492-493, 496, 512, 524 |
@@ -83,7 +83,6 @@
 | emitQualifiedSourceNotFoundFatals | 3261 | 5 | 17 | 3261-3262, 3266-3267, 3269, 3273, 3282-3283, 3287-3288, 3303, 3311, 3314-3315, 3319 |
 | propagateUnqualifiedSelectStarToScopeTables | 4704 | 3 | 14 | 4704-4706, 4716-4717, 4723-4724, 4728, 4740-4745, 4748 |
 | moveAssignmentLhsToLhsUnresolvedColumns | 2297 | 6 | 13 | 2298-2299, 2303-2304, 2309, 2312-2313, 2317, 2320-2321, 2323-2324, 2336-2337 |
-| getSingleUpdateFromTableReference | 2208 | 14 | 12 | 2208-2209, 2212-2214, 2217-2219, 2222-2226, 2229 |
 | sanitizeQueryDictionaryForGlobalExport | 5733 | 5 | 9 | 5733, 5741, 5745-5749, 5753-5755, 5760-5762, 5766 |
 
 ## Branch Gaps Mapped To Scenario Categories
@@ -96,9 +95,10 @@
 	- Missing scenarios: alias points to query/union/values with missing column vs wildcard column vs present column; mixed-case key lookups
 
 - UPDATE unresolved-column resolution pipeline:
-	- Methods: rehomeUpdateUnqualifiedUnknownsToSingleFromTable, resolveUpdateLhsColumnsToTargetTable, resolveUpdateQualifiedUnresolvedColumnsToInputTables, resolveRemainingQualifiedUnresolvedColumnsToTargetTable, mergeUpdateTargetAndLhsIntoTableDictionary
-	- Gap signal: substantial branch misses across UPDATE-specific table dictionary and unknown-entry rehoming logic
-	- Missing scenarios: UPDATE with single FROM source, UPDATE with target-only qualification, UPDATE with conflicting target/input column names, UPDATE with nested source aliases
+	- Methods: resolveUpdateLhsColumnsToTargetTable, resolveUpdateQualifiedUnresolvedColumnsToInputTables, resolveRemainingQualifiedUnresolvedColumnsToTargetTable, mergeUpdateTargetAndLhsIntoTableDictionary
+	- Retired (not in gap inventory): ~~rehomeUpdateUnqualifiedUnknownsToSingleFromTable~~, ~~getSingleUpdateFromTableReference~~ — deleted Step A Jul 2026
+	- Gap signal: substantial branch misses across UPDATE-specific table dictionary logic
+	- Missing scenarios: UPDATE with target-only qualification, UPDATE with conflicting target/input column names, UPDATE with nested source aliases
 
 - Table-primary and dictionary merge behavior:
 	- Methods: exitTable_primary, convertSymbolTableToTableDictionary, getTableColumnDictionaryMap
@@ -136,48 +136,43 @@ The existing style in parse/src/test/java/sql/walker/SqlParseEventWalkerWithAcce
 
 Recommended additions:
 
-1. testName: updateSingleFromTableRehomesUnqualifiedUnknowns
-- Intent: cover rehomeUpdateUnqualifiedUnknownsToSingleFromTable true-path and follow-on unresolved pruning.
-- Query shape: UPDATE t SET a = b FROM t2 WHERE c = 1
-- Assertions: unknown unqualified entries rehomed into t2 dictionary; UNRESOLVED_UNQUALIFIED_COLUMNS reduced/absent as expected.
-
-2. testName: qualifiedAliasMissingColumnEmitsQueryAliasFatalAndPrunes
+1. testName: qualifiedAliasMissingColumnEmitsQueryAliasFatalAndPrunes
 - Intent: cover emitQualifiedQueryAliasUnresolvedColumnsFatalAndPrune miss path with alias backed by query.
 - Query shape: SELECT q.missing FROM (SELECT a FROM tab1) q
 - Assertions: QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS fatal emitted once, unresolved key removed from qualified map.
 
-3. testName: qualifiedAliasWildcardOutputDoesNotEmitQueryAliasFatal
+2. testName: qualifiedAliasWildcardOutputDoesNotEmitQueryAliasFatal
 - Intent: branch where wildcard in query output suppresses alias fatal.
 - Query shape: SELECT q.anycol FROM (SELECT * FROM tab1) q
 - Assertions: no QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS fatal for q.anycol.
 
-4. testName: explicitQualifiedUnknownAgainstValuesAliasBecomesForcedUnknown
+3. testName: explicitQualifiedUnknownAgainstValuesAliasBecomesForcedUnknown
 - Intent: exercise non-table alias reconciliation through values-backed alias.
 - Query shape: SELECT v.missing FROM (VALUES (1)) v(a)
 - Assertions: explicit ref tracked as forced unknown; unresolved diagnostic produced with expected token.
 
-5. testName: topLevelSiblingSetOperationColumnCountMismatchFatal
+4. testName: topLevelSiblingSetOperationColumnCountMismatchFatal
 - Intent: drive validateTopLevelSetOperationSiblings mismatch branch.
 - Query shape: (SELECT a FROM t1 UNION SELECT b FROM t2) INTERSECT (SELECT a,b FROM t3)
 - Assertions: SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH fatal with expected/actual counts in message.
 
-6. testName: nestedSetOperationColumnCountMismatchAgainstTopLevelFatal
+5. testName: nestedSetOperationColumnCountMismatchAgainstTopLevelFatal
 - Intent: drive validateTopLevelVsNestedSetOperations branch.
 - Query shape: SELECT * FROM ((SELECT a FROM t1 UNION SELECT b FROM t2) u JOIN (SELECT a,b FROM t3) x ON ...)
 - Assertions: mismatch fatal includes both nested and top-level location anchors.
 
-7. testName: insertDerivedSourceColumnSequenceMismatchFallback
+6. testName: insertDerivedSourceColumnSequenceMismatchFallback
 - Intent: cover insert source sequence inference and fallback logic.
 - Query shape: INSERT INTO tab1(c,d) SELECT x,y FROM (SELECT a AS x, b AS y FROM t2 UNION SELECT c AS x, d AS y FROM t3) s
 - Assertions: insert interface maps c->x and d->y consistently, no spurious unresolved errors.
 
-8. testName: abstractWalkerOverrideDiagnosticKeyValidation
+7. testName: abstractWalkerOverrideDiagnosticKeyValidation
 - Intent: cover AbstractASTWalkerHelper override rejection branches.
 - Approach: new focused unit test class under parse/src/test/java/astwalkers for helper-only behavior.
 - Assertions: IllegalArgumentException for null key/code/message and unknown key override; duplicate diagnostics deduped by sameDiagnostic.
 
 ## Prioritized Next Coverage Sprint
 
-1. Start with proposals 2, 3, 5, 6 (highest missed-branch hotspots).
-2. Add proposal 1 and 7 to improve UPDATE/INSERT transformation paths.
-3. Add proposal 8 to close low-level helper guard branches in astwalkers.
+1. Start with proposals 1, 2, 4, 5 (highest missed-branch hotspots).
+2. Add proposal 6 to improve INSERT transformation paths.
+3. Add proposal 7 to close low-level helper guard branches in astwalkers.
