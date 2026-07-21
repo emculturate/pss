@@ -163,7 +163,6 @@ MOVE_METHODS = {
     "mergeExplicitQualifiedUnknownIntoSourceQueryDictionary",
     "promoteQualifiedWildcardIntoQuerySource",
     "getQueryDefinitionSymbol",
-    "findInCurrentOrAncestorSymbolTables",
     "getCurrentTableAliasMap",
     "resolveCteOrQueryScopeReference",
     "resolveCteOrQueryScopeReferenceInVisibleScopes",

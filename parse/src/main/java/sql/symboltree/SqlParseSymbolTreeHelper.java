@@ -10307,7 +10307,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		Object queryObj = findDefinitionSymbolInVisibleScopes(defQueryRef);
+		Object queryObj = resolveDefinitionSymbolInScopeChain(defQueryRef);
 		if (queryObj instanceof Map<?, ?>) {
 			return queryObj;
 		}
@@ -10891,13 +10891,6 @@ public class SqlParseSymbolTreeHelper {
 		return toDefinitionScopeKey(queryKey);
 	}
 
-	private Object findDefinitionSymbolInVisibleScopes(String definitionKey) {
-		if (definitionKey == null || definitionKey.isBlank()) {
-			return null;
-		}
-		return findInCurrentOrAncestorSymbolTables(definitionKey);
-	}
-
 	public Object getQueryDefinitionSymbol(String queryKey) {
 		if (queryKey == null || queryKey.isBlank()) {
 			return null;
@@ -10905,7 +10898,7 @@ public class SqlParseSymbolTreeHelper {
 
 		String definitionKey = normalizeQueryScopeDefinitionKey(queryKey);
 		if (definitionKey != null) {
-			Object normalizedDefObj = findDefinitionSymbolInVisibleScopes(definitionKey);
+			Object normalizedDefObj = resolveDefinitionSymbolInScopeChain(definitionKey);
 			if (normalizedDefObj != null) {
 				return normalizedDefObj;
 			}
@@ -10914,7 +10907,7 @@ public class SqlParseSymbolTreeHelper {
 		String cteScopeRef = resolveCteScopeReference(queryKey, null);
 		if (cteScopeRef != null && !cteScopeRef.isBlank()) {
 			String cteDefinitionKey = toDefinitionScopeKey(cteScopeRef);
-			Object cteDefScopeObj = findDefinitionSymbolInVisibleScopes(cteDefinitionKey);
+			Object cteDefScopeObj = resolveDefinitionSymbolInScopeChain(cteDefinitionKey);
 			if (cteDefScopeObj != null) {
 				return cteDefScopeObj;
 			}
@@ -10924,12 +10917,15 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Searches the current symbol table and all ancestor symbol tables (in order from
-	 * closest to farthest) for the given key. Returns the first non-null value found,
-	 * or null if not found anywhere in the visible scope chain.
+	 * Definition scope chain resolution: searches the current symbol table and all
+	 * ancestor symbol tables (closest to farthest) for a published {@code def_*} payload.
+	 * Returns the first non-null value found, or null if not visible on the scope chain.
+	 * <p>
+	 * Convert-egress readers should migrate to {@code ConvertEgressScopeBundle} (Phase 15.6)
+	 * so this walk is not repeated per lookup during scope exit.
 	 */
 	@SuppressWarnings("unchecked")
-	public Object findInCurrentOrAncestorSymbolTables(String key) {
+	private Object resolveDefinitionSymbolInScopeChain(String key) {
 		if (key == null || key.isBlank()) {
 			return null;
 		}
@@ -10941,43 +10937,6 @@ public class SqlParseSymbolTreeHelper {
 			found = ancestor.get(key);
 			if (found != null) {
 				return found;
-			}
-		}
-		return null;
-	}
-
-	@SuppressWarnings("unchecked")
-	public Object findInCurrentOrAncestorSymbolTablesRecursive(String key) {
-		if (key == null || key.isBlank()) {
-			return null;
-		}
-		Object found = findInScopeTreeByKeyRecursive(walker.symbolTable, key);
-		if (found != null) {
-			return found;
-		}
-		for (Map<String, Object> ancestor : getAncestorSymbolTables()) {
-			found = findInScopeTreeByKeyRecursive(ancestor, key);
-			if (found != null) {
-				return found;
-			}
-		}
-		return null;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Object findInScopeTreeByKeyRecursive(Map<String, Object> scopeNode, String key) {
-		if (scopeNode == null || scopeNode.isEmpty() || key == null || key.isBlank()) {
-			return null;
-		}
-		if (scopeNode.containsKey(key)) {
-			return scopeNode.get(key);
-		}
-		for (Object valueObj : scopeNode.values()) {
-			if (valueObj instanceof Map<?, ?> valueMapObj) {
-				Object found = findInScopeTreeByKeyRecursive((Map<String, Object>) valueMapObj, key);
-				if (found != null) {
-					return found;
-				}
 			}
 		}
 		return null;

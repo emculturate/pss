@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-20 (Phase **15–18** roadmap; Phase 15 **NEXT** at 15.1)
+**Last updated:** 2026-07-20 (Phase **15.6** + **19** roadmap; Phase 15 **NEXT** at 15.1)
 
 ---
 
@@ -154,7 +154,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | Phase | Status | % | Gate / notes |
 |-------|--------|---|--------------|
 | **1–4** def_query canonicalization | ✅ Done | 100% | Commit `b59688c` |
-| **5** def_query read-path gaps | ✅ Done | V1–V16 unaliased-derived green; symbol-tree + query-dict goldens aligned (Jul 2026) |
+| **5** def_query read-path gaps | ✅ Done | 100% | Strict `def_*` lookup; V1–V16 green; recursive fallback deleted (Jul 2026) |
 | **6** one `convertSymbolTableToTableDictionary` | ✅ Done | 100% | Audit Jul 2026: single helper impl; `reconcileJoinExtensionSymbolTable` for mid-FROM; dead `explicitTableRefByColumn` removed |
 | **7** uniform query scope finalization | ✅ Done | 100% | Current gate is green (130/130); prior phase-7 backlog fully refreshed |
 | **8** unified egress helper | ✅ Done | 100% | Late-pass helpers retired/consolidated; global qualified ingress now uses `resolveQualifiedUnresolvedEntries`; backfill folded into interface loop + final sweep |
@@ -167,7 +167,8 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **16** PIVOT operand materialization | ⏸️ Not started | 0% | After Phase 15 — physical operand cols; see Phase 16 |
 | **17** UNPIVOT synthetic columns | ⏸️ Not started | 0% | After Phase 15 — walk + convert UNPIVOT paths; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
-| **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–18; see Phase 13 section |
+| **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
+| **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
 
@@ -190,11 +191,12 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Step E.2 + E.3 (Jul 2026): retired **two** `resolveRelationalModifierDerivedColumnsFromUnresolvedMap` call sites (pre-wildcard + post-UPDATE-RHS); consolidated to **one** pre-diagnostics egress drain before `emitExplicitQualifiedUnknownDiagnostics`; pivot **67/67**, gate **195/195**, full suite **1209/1209**
 - Step E.4 (Jul 2026): deleted public `resolveRelationalModifierDerivedColumnsFromUnresolvedMap`; privatized as `consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap`
 - Phase 14 **Step F** (Jul 2026): removed unused table-function field getters; `ArchivedClauseColumnRefResult.satisfied()` already absent
-- Phases **15–18** roadmap added: unified egress loop + operand / UNPIVOT / IN-list namespaces
+- Phase **5** closeout (Jul 2026): strict `def_*` payload lookup audit; renamed ancestor walk to **`resolveDefinitionSymbolInScopeChain`** (definition scope chain resolution); deleted dead `findInCurrentOrAncestorSymbolTablesRecursive` + `findInScopeTreeByKeyRecursive`
+- Phases **15–19** roadmap added: unified egress loop + operand / UNPIVOT / IN-list namespaces + egress scope bundle + query-dict publish consolidation
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 15.1** (unqualified resolver derived-awareness). Phases **16–18** follow Phase 15 closeout (operand → UNPIVOT → IN-list/identifier). **Phase 14 Step F** and **Phase 13** can run in parallel.
+**Suggested next focus:** **Phase 15.1** (unqualified resolver derived-awareness). Phases **16–18** follow Phase 15 closeout (operand → UNPIVOT → IN-list/identifier). **15.6** then **Phase 19** consolidate egress reads and publish writes. **Phase 14 Step F** and **Phase 13** can run in parallel.
 
 ---
 
@@ -523,18 +525,57 @@ Detail and patch chunks: see `def-query-canonicalization-phases1-4-checklist.md`
 
 ---
 
-### Phase 5 — Close def_query canonicalization gaps (~40% done)
+### Phase 5 — Close def_query canonicalization gaps ✅ DONE (Jul 2026)
 
 **Goal:** Finish the read-path and snapshot behavior started in Phases 1–4 before larger refactors.
 
 | Task | Status | Notes |
 |------|--------|-------|
 | Resolve V1 `table_ref` delta | ✅ | Correlated outer ref stays `table_ref=null` in child; parent carries resolution |
-| Expand verification | ⚠️ | V1/V2/V3 pass; V4–V16 fail mostly on **query-dict golden drift** (richer tokens), not fatals |
+| Expand verification (unaliased-derived V1–V16) | ✅ | All in gate + full suite green (Jul 2026); earlier “query-dict golden drift” was **snapshot refresh**, not missing logic |
 | Document `queryN` vs `def_queryN` contract | ✅ | See **Published scope vs global dictionary** above |
-| Enforce strict payload lookup | ⚠️ | Partial — recursive descendant fallbacks still under narrow-pass audit |
+| Enforce strict payload lookup | ✅ | Audit Jul 2026 — see **Phase 5 strict lookup audit** below |
 
-**Gate:** V1/V7 (or agreed subset) pass without regressions on anonymous FROM registration. V7 currently fails query-dict golden only — review before bulk update.
+**Gate:** Unaliased-derived V1–V16 + substitution column V1–V16 + full suite **1209/1209**.
+
+#### What “strict payload lookup” means
+
+When resolver code needs a **published query scope payload** (interface, `table_dictionary`, `filters`, etc.), it must load it by **`def_queryN`** (or `def_unionN` / `def_valuesN` / …), **not** by the live reference key `queryN`.
+
+| Key kind | Example | Role |
+|----------|---------|------|
+| **Live reference** | `query3`, `union1` | Alias maps, `dependent_queries`, external `query_dictionary` keys |
+| **Definition payload** | `def_query3` | Frozen published scope map after `publishQueryLikeScope` |
+
+**Strict** means:
+
+1. `getQueryDefinitionSymbol(liveKey)` normalizes to `def_*` and resolves via **`resolveDefinitionSymbolInScopeChain`** — **definition scope chain resolution** (current frame + ancestor symbol-table frames only), not nested map descent.
+2. **No** reading live `queryN` maps as if they were published payloads (except intentional pre-publish walk-time holds, e.g. INSERT source sequence).
+3. **No** recursive descent into arbitrary nested `def_*` children to “find” a payload — that would reconstruct lost sequencing and could bind the wrong scope.
+
+The Phase 1–4 checklist once added `findInCurrentOrAncestorSymbolTablesRecursive` as a fallback; **strict mode removed that from `getQueryDefinitionSymbol`**. The recursive helpers were **dead code** (zero call sites) until deleted in Phase 5 closeout. The retained ancestor walk was renamed **`resolveDefinitionSymbolInScopeChain`** (Jul 2026) to reflect that it is the intended strict lookup mechanism, not a fallback. **Phase 15.6** replaces repeated egress-time walks with a pre-built convert-egress scope bundle.
+
+#### Phase 5 strict lookup audit (Jul 2026)
+
+| Check | Result |
+|-------|--------|
+| `getQueryDefinitionSymbol` uses `normalizeQueryScopeDefinitionKey` + `resolveDefinitionSymbolInScopeChain` only | ✅ |
+| `findInCurrentOrAncestorSymbolTablesRecursive` / `findInScopeTreeByKeyRecursive` call sites | **0** — **deleted** |
+| `resolveDefinitionSymbolInScopeChain` is private; egress readers migrate to scope bundle in **15.6** | ⏸️ Phase 15.6 |
+| Live `queryN` reads for published payload (grep) | Only pre-publish INSERT-source `hold` map — **intentional** |
+| Unaliased-derived V1–V16 + gate **195/195** after deletion | ✅ (verify on commit) |
+
+#### Left open from early Phase 5 notes — resolution
+
+| Item | Necessary? | Action |
+|------|------------|--------|
+| **V4–V16 “query-dict golden drift”** | No — was richer token capture in `query_dictionary`; goldens updated | **Closed** — not new tests; existing V1–V16 prove contract |
+| **Consolidate query-dict dual-write** | Backfill repair closed (Step D); architectural two-store remains | **Phase 19** — single publish ingress; see Phase 19 |
+| **Definition scope chain walks at convert egress** | Required today (`resolveDefinitionSymbolInScopeChain`) | **Phase 15.6** — pre-built egress scope bundle |
+| **Ad-hoc `queryN`/`def_queryN` at call sites** | Low — use canonical helpers when touched | Opportunistic cleanup during Phases 15+ |
+| **Recursive descendant fallback** | **No** — violates strict contract | **Removed** (dead code deletion) |
+
+**Phase 5 is complete.** No additional tests required beyond the existing unaliased-derived V1–V16 and substitution families already in the gate.
 
 ---
 
@@ -1142,6 +1183,7 @@ At convert exit, after wildcard / PIVOT-operand / SELECT* / UPDATE-specific prep
    - `UNRESOLVED` → fatal or pass-up per policy
 4. **Interface loop** and **clause probe** become **callers** of the shared per-key resolver (or re-walk archived lists **only** for diagnostics/output binding) — not parallel pipelines with different consume rules.
 5. **Delete** `consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap` entirely (no batch derived strip).
+6. **Build** `ConvertEgressScopeBundle` at convert exit (Phase **15.6**): pre-resolved `def_*` payloads, visible query-source handles, and local/global query-dictionary refs so egress readers do not repeat definition scope chain walks.
 
 ### Where we are today (gap audit)
 
@@ -1197,8 +1239,9 @@ derived registry key in unresolved_column
 | **15.4a** | **Retire UPDATE RHS derived branches:** remove derived-specific skip/consume in `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` once shared loop handles UPDATE assignment RHS refs (keep non-derived UPDATE RHS target-table / single-FROM fallback logic) | ~`resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` + DML UPDATE spot + gate | ⏸️ |
 | **15.4b** | **Retire interface-loop ad-hoc derived skips:** remove redundant qualified-derived branches where shared resolver covers true `derived_columns` keys; **defer** full IN-list output-alias model to **Phase 18** (keep minimal skip until `RESOLVED_PIVOT_IN_LIST_OUTPUT` exists) | Interface loop ~L1696+ | Pivot **67/67** + gate | ⏸️ |
 | **15.5** | **Collapse + delete shim:** replace convert steps 5–9 with unified loop; delete `consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap`; grep clean | `convertSymbolTableToTableDictionary` | Full suite **1209/1209**; rationalization matrix “end state” column all green | ⏸️ |
+| **15.6** | **Convert-egress scope bundle:** at convert exit (after **15.5** unified loop), build `ConvertEgressScopeBundle` with frozen maps: `visibleDefinitionPayloads` (`def_*` → published scope map), `visibleQuerySourceRefs` (live ref → payload / dict handle), `localQueryDictionary` snapshot for current scope. Route egress-time readers (`getQuerySourcePayloadPreferDefinition`, interface loop, wildcard promotion, `hasColumnInQueryOutputInterface`) through the bundle instead of `resolveDefinitionSymbolInScopeChain`. Walk-time / mid-convert may still use scope chain until bundle is built. | `convertSymbolTableToTableDictionary`, resolver helpers | `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest`, substitution V9–V16, gate **195/195** | ⏸️ |
 
-**Recommended session order:** **15.1 → 15.2 → 15.3** (bridge — each consumer derived-safe) → **15.4 → 15.4a → 15.4b → 15.5** (collapse — shared loop, retire duplicate handlers, delete shim).
+**Recommended session order:** **15.1 → 15.2 → 15.3** (bridge — each consumer derived-safe) → **15.4 → 15.4a → 15.4b → 15.5** (collapse — shared loop, retire duplicate handlers, delete shim) → **15.6** (egress scope bundle — eliminate repeated definition scope chain walks).
 
 **Rollback discipline:** same as Phase 14 — if a sub-step regresses pivot derived tests, fix the per-key path for that symptom; do **not** restore the public batch strip without explicit approval.
 
@@ -1211,9 +1254,34 @@ derived registry key in unresolved_column
 - [ ] Derived-specific branches retired in `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` — **15.4a**
 - [ ] Redundant qualified-derived skips retired in interface loop; IN-list output alias fully modeled in **Phase 18** — **15.4b**
 - [ ] `consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap` deleted; convert steps 5–9 collapsed — **15.5**
+- [ ] `ConvertEgressScopeBundle` built at convert exit; egress readers use bundle, not `resolveDefinitionSymbolInScopeChain` — **15.6**
 - [ ] Rationalization matrix: all handlers show “end state” column (single `RESOLVED_DERIVED_COLUMN` consume rule)
 - [ ] Target convert order diagram updated to Phase 15 “today = target”
 - [ ] Smoketest gate **195/195** + pivot **67/67** + full suite **1209/1209**
+
+### Convert-egress scope bundle (15.6 detail)
+
+**Problem:** During `convertSymbolTableToTableDictionary`, multiple egress paths call `getQueryDefinitionSymbol` / `getQuerySourcePayloadPreferDefinition`, each triggering **`resolveDefinitionSymbolInScopeChain`** (walk current + ancestor `symbolTable_N` frames). That is correct strict-mode behavior but duplicates work and obscures visibility at the convert boundary.
+
+**End state:** One bundle object built once per convert invocation (or per scope-finalize when convert runs):
+
+| Bundle field | Contents | Replaces |
+|--------------|----------|----------|
+| `visibleDefinitionPayloads` | `def_queryN` / `def_unionN` / … → published scope `Map` | Repeated `resolveDefinitionSymbolInScopeChain` during egress |
+| `visibleQuerySourceRefs` | Live `queryN` → payload ref or embedded dict handle | Ad-hoc `queryCollection.get(def_*)` + scope-chain fallback |
+| `localQueryDictionary` | Current scope's output-token map at finalize | Re-reads of `localCurrentQueryDictionary` across parallel consumers |
+| `globalQueryDictionaryRefs` | Live key → `queryColumnDictionaryMap` entry (read-only view) | Scattered `walker.queryColumnDictionaryMap.get` during egress (**Phase 19** consolidates writes) |
+
+**Readers that migrate to bundle (15.6):**
+
+- `getQuerySourcePayloadPreferDefinition` (when called from convert egress — bundle-first, scope chain fallback only pre-bundle)
+- Interface loop qualified/unqualified proof against published interfaces
+- `hasColumnInQueryOutputInterface` / `hasWildcardInQueryOutputInterface` / `promoteQualifiedWildcardIntoQuerySource`
+- Shared per-key egress helper from **15.4** (accept bundle parameter)
+
+**Not in 15.6 scope:** walk-time resolution before convert starts; `context_list` CTE downward resolution (Phase 11). Scope chain remains for non-convert readers until a later generalization.
+
+**Prerequisite for Phase 19:** **15.6** stabilizes egress-time **reads**; Phase 19 consolidates egress-time **writes** to `queryColumnDictionaryMap` and `def_*.query_dictionary`.
 
 ---
 
@@ -1383,14 +1451,72 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 - [ ] `applyPivotValueInterfaceDerivations` legacy fallback path resolved
 - [ ] Pivot **67/67** + gate **195/195** + full suite **1209/1209**
 
-### Phase 15 vs Phase 13 / 16–18
+---
+
+## Phase 19 — Query dictionary publish path consolidation
+
+**Goal:** Replace scattered **ingress** paths that write `query_dictionary` / global `queryColumnDictionaryMap` with a **single publish policy**, and retire or narrow end-of-walk **`syncPublishedScopeQueryDictionariesFromGlobal`** repair. The intentional **two-store model** (`def_queryN.query_dictionary` immutable snapshot + global live index) **remains by design** — Phase 19 eliminates **redundant write sites**, not the architectural split documented in `table-and-query-dictionary-design.md`.
+
+**Prerequisite:** Phase **15.6** closeout (`ConvertEgressScopeBundle` stabilizes egress-time reads). Phases **16–18** may overlap if they do not touch publish finalizers.
+
+**Gate:** Gate **195/195**; substitution column V1–V16; `nestedQueryDemoTest` + `nestedQueryDemoWithCteTest`; DML UPDATE V13/V14; full suite **1209/1209**.
+
+### Problem today — write-path spread
+
+Step D closed **backfill repair** (post-hoc sweeps). These **ingress** paths still duplicate publish logic:
+
+| Ingress site | What it writes | Issue |
+|--------------|----------------|-------|
+| `finalizeQueryScopeSymbolTable` → `mergeIntoGlobalQueryColumnDictionary` | Global `queryColumnDictionaryMap[queryN]` from local dict | Parallel to `publishQueryLikeScope` embedded snapshot |
+| `publishQueryLikeScope` | `def_queryN.query_dictionary` + global merge | Correct publish point; not all scopes route here uniformly |
+| `finalizeInsertScopeSymbolTable` / INSERT path | Global merge for insert-source scope | Duplicate merge policy |
+| `finalizeUpdateScopeSymbolTable` | Global merge | Duplicate merge policy |
+| `finalizeDeleteScopeSymbolTable` | Global merge | Duplicate merge policy |
+| `SqlParseEventWalker` end-of-walk | `syncPublishedScopeQueryDictionariesFromGlobal` | **Repair sync** global → `def_*` when handoff drifted |
+
+**Symptom:** global map and embedded `def_*.query_dictionary` can diverge **legitimately** (phase-2 parent attribution) but also **accidentally** when ingress order or merge sanitization differs between finalizers.
+
+### Phase 19 end state
+
+1. **Single API** — `publishQueryDictionary(PublishContext)` (name TBD) owns:
+   - sanitize local dict (`sanitizeQueryDictionaryForGlobalExport`)
+   - write embedded `def_*.query_dictionary` at publish
+   - merge into global `queryColumnDictionaryMap`
+   - record publish phase (phase-1 origins vs phase-2 external usage) for diagnostics
+2. **All scope finalizers** call the same API — SELECT, VALUES, UNION/INTERSECT, INSERT, UPDATE, DELETE.
+3. **`syncPublishedScopeQueryDictionariesFromGlobal`** retired or reduced to a **debug/assert** path only (no production repair at walk end).
+4. **`ConvertEgressScopeBundle`** (15.6) receives read-only global dict handles from publish API — no ad-hoc map reads during egress.
+5. **Two-store contract** documented: global may be richer than `def_*` snapshot after parent phase-2; that is not a sync bug.
+
+### Phase 19 substeps
+
+| Sub-step | Action | Primary files | Verify | Status |
+|----------|--------|---------------|--------|--------|
+| **19.0** | Ingress inventory: grep `mergeIntoGlobalQueryColumnDictionary`, `query_dictionary.put`, `syncPublishedScopeQueryDictionariesFromGlobal`; document per-finalizer ordering | worklist + helper | Matrix in this section | ⏸️ |
+| **19.1** | Introduce `publishQueryDictionary` / `PublishContext` with sanitize + embedded + global merge | `SqlParseSymbolTreeHelper.java` | Gate; no golden churn | ⏸️ |
+| **19.2** | Route `finalizeQueryScopeSymbolTable` + `publishQueryLikeScope` through **19.1** | Finalizers | nested demo + substitution V1–V16 | ⏸️ |
+| **19.3** | Route INSERT / UPDATE / DELETE finalizers through **19.1** | DML finalizers | DML V13/V14 + complex sub I/U | ⏸️ |
+| **19.4** | Audit `syncPublishedScopeQueryDictionariesFromGlobal` call sites in `SqlParseEventWalker`; retire or guard behind assert | `SqlParseEventWalker.java` | Full suite; confirm no handoff drift | ⏸️ |
+| **19.5** | Wire `ConvertEgressScopeBundle.globalQueryDictionaryRefs` to publish API outputs; grep clean for stray egress `mergeIntoGlobal…` | Helper + convert | Gate **195/195** + full suite | ⏸️ |
+
+### Phase 19 closeout checklist
+
+- [ ] Single `publishQueryDictionary` API; all finalizers use it — **19.1–19.3**
+- [ ] Ingress inventory complete; no direct `mergeIntoGlobalQueryColumnDictionary` outside publish API — **19.0**, **19.5**
+- [ ] `syncPublishedScopeQueryDictionariesFromGlobal` retired or assert-only — **19.4**
+- [ ] `table-and-query-dictionary-design.md` cross-ref: two-store intentional; publish API is sole write ingress
+- [ ] Gate **195/195** + full suite **1209/1209**
+
+### Phase 15 vs Phase 13 / 16–19
 
 | Track | Overlap risk | Notes |
 |-------|--------------|-------|
 | **Phase 15** | Touches `convertSymbolTableToTableDictionary` | **Do first** — unified egress loop for derived registry keys |
+| **Phase 15.6** | Same convert file | After **15.5** — `ConvertEgressScopeBundle`; prerequisite for **19** |
 | **Phase 16** | Same convert file | After 15 — operand materialize branch |
 | **Phase 17** | Walker modifier exit + convert | After 15 — UNPIVOT walk/convert boundary |
 | **Phase 18** | Walker + convert + interface derivations | After 15 — IN-list output + IN-identifier; completes 15.4b deferrals |
+| **Phase 19** | Finalizers + walker end sync | After **15.6** — single query-dict publish ingress |
 | **Phase 13** | Low unless feature work edits convert | EXCEPT, RETURNING, forward-alias (13.4) — prefer **15.1–15.3** before 13.4 clause work |
 
 ---
@@ -1692,6 +1818,7 @@ Phase 15 — Unified convert egress loop                             ⏸️ NEXT
   15.4a retire UPDATE RHS derived branches (resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable)
   15.4b retire interface-loop registry derived skips (IN-list output → Phase 18)
   15.5 collapse steps 5–9; delete consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap
+  15.6 ConvertEgressScopeBundle — pre-resolved def_* payloads; retire egress-time scope-chain walks
 
 Phase 16 — PIVOT operand materialization                               ⏸️ after Phase 15
   16.0–16.3: RESOLVED_PIVOT_OPERAND; collapse triple resolvePivotOperandColumnsFromUnresolvedMap
@@ -1701,6 +1828,9 @@ Phase 17 — UNPIVOT synthetic columns                                   ⏸️ 
 
 Phase 18 — PIVOT IN-list output + IN-identifier                        ⏸️ after Phase 15
   18.0–18.5: RESOLVED_PIVOT_IN_LIST_OUTPUT; retire isPivotDerivedInterfaceOutputColumn; IN-identifier contract
+
+Phase 19 — Query dictionary publish path consolidation                   ⏸️ after Phase 15.6
+  19.0–19.5: single publishQueryDictionary ingress; retire write-path spread + syncPublishedScopeQueryDictionariesFromGlobal repair
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.
@@ -1790,8 +1920,10 @@ Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  → 
        →  Steps A–B ✅ (dead code + mergeSelectList)
        →  Phase 14 Steps C–F ✅
        →  Phase 15 (unified convert egress loop) ⏸️ NEXT — 15.1 first
+       →  Phase 15.6 (ConvertEgressScopeBundle — pre-resolved def_* at convert exit)
        →  Phase 16 (PIVOT operands) → Phase 17 (UNPIVOT synthetic) → Phase 18 (IN-list output + IN-identifier)
-       →  Phase 13 (language features — can overlap Phases 15–18 once gate stays green)
+       →  Phase 19 (query-dict publish ingress consolidation — after 15.6)
+       →  Phase 13 (language features — can overlap Phases 15–19 once gate stays green)
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
@@ -1800,7 +1932,7 @@ If Phase 12 (origin-CTE backfill) is ever taken, do it only after Phase 11 canar
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
-**Phase 15.1 is the recommended immediate next step.** Phases **16–18** complete relational-modifier namespaces (operands, UNPIVOT synthetic, IN-list output / IN-identifier) after Phase 15 closeout. See **Relational modifier column namespaces** and Phases 16–18 sections.
+**Phase 15.1 is the recommended immediate next step.** Phases **16–18** complete relational-modifier namespaces after Phase 15 closeout; **15.6** builds `ConvertEgressScopeBundle`; **Phase 19** consolidates query-dict publish ingress after **15.6**. See Phases 15–19 sections.
 
 ---
 
@@ -1811,16 +1943,17 @@ We are continuing symbol-table resolution consolidation for the SQL parse walker
 
 Read parse/documents/symbol-table-resolution-consolidation-worklist.md first — especially:
 - Progress dashboard (Jul 2026) — Phase 15 is NEXT
-- Phase 15 — Unified convert egress loop (end-state vision + 15.1–15.5 substeps)
+- Phase 15 — Unified convert egress loop (15.1–15.6; **15.6** = ConvertEgressScopeBundle)
+- Phase 19 — Query dictionary publish path consolidation (after 15.6)
 - Shortest path to dead-code removal
 - Published scope vs global dictionary rules
 - Phase 8 unified resolver (RESOLVED_DERIVED_COLUMN, isPhysicalTableRefVisibleInScope)
 
 Current state (Spring-2026-Extensions):
 - Phases 1–12 + Phase 14 Steps C–E done; gate 195/195; full suite 1209/1209.
-- Phase 15 NEXT (derived registry keys); Phases 16–18 roadmap (operands, UNPIVOT synthetic, IN-list output / IN-identifier).
+- Phase 15 NEXT (derived registry keys + egress scope bundle at 15.6); Phases 16–18 (relational modifiers); Phase 19 (query-dict publish ingress).
 
-Your mission this session — follow Phase 15 substeps unless user directs otherwise; see Phases 16–18 for later namespaces:
+Your mission this session — follow Phase 15 substeps unless user directs otherwise; see Phases 16–19 for later work:
 1. Phase 15.1: derived-awareness in resolveUnqualifiedColumnAgainstVisibleScope
 2. Re-run pivot 67 + gate 195 + full suite after each sub-step.
 

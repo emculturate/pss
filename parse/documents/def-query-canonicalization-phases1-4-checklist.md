@@ -172,7 +172,12 @@ This section summarizes where we are after the def-key canonicalization follow-o
 	- `parse/documents/symbol-table-resolution-consolidation-worklist.md`.
 
 ### Suggested Immediate Completion Slice
-- Perform a focused cleanup pass that only:
-	- removes duplicate call-site key-normalization logic,
-	- keeps current behavior/test outputs unchanged,
-	- validates V1, V2, V16 plus one UNION-derived and one INTERSECT-derived case.
+- ~~Perform a focused cleanup pass…~~ **Superseded** — Phase 5 closed Jul 2026 in master worklist (strict lookup audit + dead recursive lookup removal).
+
+## Phase 5 Closeout (Jul 2026)
+
+- **Strict payload lookup** enforced in `getQueryDefinitionSymbol` — `def_*` via **`resolveDefinitionSymbolInScopeChain`** (definition scope chain resolution); no recursive nested-map fallback.
+- **Renamed (Jul 2026):** `findInCurrentOrAncestorSymbolTables` → private `resolveDefinitionSymbolInScopeChain`; egress bundle migration → Phase **15.6**.
+- **Dead code removed:** `findInCurrentOrAncestorSymbolTablesRecursive`, `findInScopeTreeByKeyRecursive` (zero call sites).
+- **Verification:** unaliased-derived V1–V16 + gate **195/195** + full suite **1209/1209**.
+- **Query-dict dual-write consolidation** → Phase **19** (backfill repair closed in Step D; two-store model remains intentional).
