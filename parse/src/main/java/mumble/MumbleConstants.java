@@ -152,6 +152,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_SCALE_KEY = "scale";
     public static final String MUMBLE_SCHEMA_KEY = "schema";
     public static final String MUMBLE_SELECT_DIRECTION_KEY = "select_from";
+    /** Set operator that introduced this participant into its parent set-op scope ({@code UNION}, {@code EXCEPT}, or {@code INTERSECTION}). Anchor branch omits. */
+    public static final String MUMBLE_SETOP_KEY = "setop";
     public static final String MUMBLE_SELECT_KEY = "select";
     public static final String MUMBLE_SET_KEY = "set";
     public static final String MUMBLE_TUPLE_KEY = SQLParserEndPoints.getLowerCaseValueForValue(SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY);

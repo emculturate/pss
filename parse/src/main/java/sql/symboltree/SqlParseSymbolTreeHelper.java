@@ -31,6 +31,8 @@ public class SqlParseSymbolTreeHelper {
 	private final Set<String> suppressedAmbiguousUnqualifiedKeys = new HashSet<String>();
 	private final Set<String> tableFunctionSourceRefs = new HashSet<String>();
 	private final ArrayDeque<String> dependentQueryContextStack = new ArrayDeque<>();
+	private final ArrayDeque<String> pendingUnionSetOperatorsForNextParticipants = new ArrayDeque<>();
+	private final ArrayDeque<String> pendingIntersectSetOperatorsForNextParticipants = new ArrayDeque<>();
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -55,6 +57,10 @@ public class SqlParseSymbolTreeHelper {
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY;
 	private static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY =
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY;
+	private static final String TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY =
+			SqlASTWalkerHelper.TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY;
+	private static final String TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY =
+			SqlASTWalkerHelper.TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY;
 	public static final String RELATIONAL_MODIFIER_OPERATOR_KEY = "operator";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
@@ -4165,6 +4171,7 @@ public class SqlParseSymbolTreeHelper {
 
 		mergeScopeTableDictionaryIntoGlobalWalkerDictionary(scopeSymbols);
 
+		applyParentFramePendingSetOperatorToPublishingParticipant(scopeSymbols);
 		publishQueryLikeScope(scopeKey, scopeSymbols);
 
 		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
@@ -4671,6 +4678,11 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Composite set-op scopes stamp setop when published as a participant of an outer set-op.
+		if (!isLeafQueryScopeKey(scopeKey)) {
+			applyParentFramePendingSetOperatorToCompositePublishingParticipant(scopePayload);
+		}
+
 		// Canonical contract: payload-bearing symbol-table keys are always def_*;
 		// references (table_alias/table_ref/context/dependencies) remain live keys.
 		String liveScopeKey = toLiveScopeKey(scopeKey);
@@ -4705,6 +4717,105 @@ public class SqlParseSymbolTreeHelper {
 		walker.mergeQuerySetOperationSummaryKeysIntoCurrentScope(scopedQuerySummaryKeysMap);
 		mergeUnresolvedEntriesIntoCurrentScope(hoistedUnresolved);
 		walker.queryCount++;
+	}
+
+	/**
+	 * Records the set operator that will introduce the next participant published into this set-op frame.
+	 */
+	public void stagePendingSetOperatorForNextParticipant(Object rawOperator) {
+		String normalized = normalizeSetOperatorForParticipantStamp(rawOperator);
+		if (normalized == null) {
+			return;
+		}
+		if ("INTERSECTION".equals(normalized)) {
+			pendingIntersectSetOperatorsForNextParticipants.push(normalized);
+		} else {
+			pendingUnionSetOperatorsForNextParticipants.push(normalized);
+		}
+	}
+
+	/**
+	 * When a unionized_query has no UNION clause, its lone leaf is a direct intersect participant.
+	 */
+	@SuppressWarnings("unchecked")
+	public void applyIntersectSetopToPassthroughUnionizedQueryFrame(HashMap<String, Object> frameSymbols) {
+		if (frameSymbols == null || frameSymbols.isEmpty()) {
+			return;
+		}
+
+		String intersectSetop = consumePendingIntersectSetOperatorForNextParticipant();
+		if (intersectSetop == null) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> entry : frameSymbols.entrySet()) {
+			String key = entry.getKey();
+			if (!isSetOperationParticipantKey(key) || !(entry.getValue() instanceof HashMap<?, ?>)) {
+				continue;
+			}
+			if (!key.startsWith("def_query")) {
+				continue;
+			}
+			((HashMap<String, Object>) entry.getValue()).put(MUMBLE_SETOP_KEY, intersectSetop);
+		}
+	}
+
+	private String normalizeSetOperatorForParticipantStamp(Object rawOperator) {
+		if (rawOperator == null) {
+			return null;
+		}
+		String operatorText = rawOperator.toString().trim();
+		if (operatorText.isEmpty()) {
+			return null;
+		}
+		String normalized = operatorText.toUpperCase(java.util.Locale.ROOT);
+		if ("UNION".equals(normalized)) {
+			return "UNION";
+		}
+		if ("EXCEPT".equals(normalized)) {
+			return "EXCEPT";
+		}
+		if ("INTERSECT".equals(normalized)) {
+			return "INTERSECTION";
+		}
+		return null;
+	}
+
+	private void applyParentFramePendingSetOperatorToPublishingParticipant(HashMap<String, Object> scopePayload) {
+		String unionSetop = consumePendingUnionSetOperatorForNextParticipant();
+		if (unionSetop != null) {
+			scopePayload.put(MUMBLE_SETOP_KEY, unionSetop);
+		}
+	}
+
+	private void applyParentFramePendingSetOperatorToCompositePublishingParticipant(HashMap<String, Object> scopePayload) {
+		String intersectSetop = consumePendingIntersectSetOperatorForNextParticipant();
+		if (intersectSetop != null) {
+			scopePayload.put(MUMBLE_SETOP_KEY, intersectSetop);
+			return;
+		}
+		String unionSetop = consumePendingUnionSetOperatorForNextParticipant();
+		if (unionSetop != null) {
+			scopePayload.put(MUMBLE_SETOP_KEY, unionSetop);
+		}
+	}
+
+	private String consumePendingUnionSetOperatorForNextParticipant() {
+		if (pendingUnionSetOperatorsForNextParticipants.isEmpty()) {
+			return null;
+		}
+		return pendingUnionSetOperatorsForNextParticipants.pop();
+	}
+
+	private String consumePendingIntersectSetOperatorForNextParticipant() {
+		if (pendingIntersectSetOperatorsForNextParticipants.isEmpty()) {
+			return null;
+		}
+		return pendingIntersectSetOperatorsForNextParticipants.pop();
+	}
+
+	private boolean isLeafQueryScopeKey(String scopeKey) {
+		return scopeKey != null && scopeKey.startsWith(MUMBLE_QUERY_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -12439,6 +12550,8 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(MUMBLE_LOCAL_FROM_REGISTERED_ALIASES_KEY);
 		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY);
 		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
+		scopePayload.remove(TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY);
+		scopePayload.remove(TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY);
 	}
 
 	private void stripWalkTimeKeysFromScopePayload(HashMap<String, Object> scopePayload) {

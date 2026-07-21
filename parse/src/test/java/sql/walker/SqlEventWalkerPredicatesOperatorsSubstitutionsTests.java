@@ -2074,7 +2074,7 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_intersect3={def_union1={def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}, def_union2={}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_intersect3={def_union1={setop=UNION, def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}, def_union2={setop=INTERSECTION}, setop=UNION}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2094,7 +2094,7 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_union1={def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_union1={setop=UNION, def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -2117,7 +2117,7 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_union1={def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={student={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_union1={setop=UNION, def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={student={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 

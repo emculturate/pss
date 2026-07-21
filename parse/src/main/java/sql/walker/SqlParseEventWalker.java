@@ -3596,6 +3596,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Trace removed: Wrong number of entries: {ctx.getText()}
 		}
+		symbolTreeHelper.stagePendingSetOperatorForNextParticipant(
+				subMap.get(MUMBLE_INTERSECT_KEY) instanceof Map<?, ?> intersectOperatorMap
+						? ((Map<String, Object>) intersectOperatorMap).get(MUMBLE_OPERATOR_KEY)
+						: null);
 		// Trace removed: Intersect Operator: {subMap}
 
 		// Get first interface to represent intersection output
@@ -3629,6 +3633,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					symbols,
 					insertSource);
 		} else {
+			symbolTreeHelper.applyIntersectSetopToPassthroughUnionizedQueryFrame(symbols);
 			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 		}
 
@@ -3676,6 +3681,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Trace removed: Wrong number of entries: {ctx.getText()}
 		}
+		symbolTreeHelper.stagePendingSetOperatorForNextParticipant(
+				subMap.get(MUMBLE_UNION_KEY) instanceof Map<?, ?> unionOperatorMap
+						? ((Map<String, Object>) unionOperatorMap).get(MUMBLE_OPERATOR_KEY)
+						: null);
 		// Trace removed: Union Operator: {subMap}
 
 		// Get first interface to represent union output

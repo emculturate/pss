@@ -1516,13 +1516,35 @@ mvn -Psmoketest-quality-gate test
 
 ### 13.1 — EXCEPT set-operation parity
 
+**Grammar / scope-key decision (2026-07):** Keep `EXCEPT` on the `unionized_query` rail (`union_operator`); do **not** split a separate `excepted_query` tier (would break INTERSECT > UNION/EXCEPT precedence). Keep composite scope keys as `def_unionN` / `unionN` (grammar-rail name, not operator name). Per-participant `setop` on published `def_queryN` / nested `def_unionN` payloads records which operator introduced that branch.
+
+#### 13.1.0 — Per-participant `setop` + operator-aware diagnostics (pre-requisite)
+
 **Work:**
 
-- [ ] Treat `EXCEPT` as a first-class set operator in `exitUnionized_query` / `exitUnion_clause` / `finalizeSetOperationScopeSymbolTable` (mirror UNION/INTERSECT interface capture and column-count fatals).
-- [ ] Emit consistent `def_unionN` / set-op scope keys and query-dictionary routing for EXCEPT branches.
-- [ ] Confirm grammar precedence (`intersected_query` → `unionized_query`) still correct when EXCEPT chains mix with UNION/INTERSECT.
+- [x] **13.1.0a** — Add `setop` mumble key (`UNION` | `EXCEPT` | `INTERSECTION`); stage pending operator on set-op frame at `exitUnion_clause` / `exitIntersect_clause`; consume and stamp on next `publishQueryLikeScope` participant (anchor branch omits `setop`).
+- [x] **13.1.0b** — `validateSingleSetOperationInterface`: read mismatch label from mismatching participant's `setop`, fallback to parent scope key (`union` → `UNION`, `intersect` → `INTERSECTION`).
+- [x] **13.1.0c** — Refresh mismatch-test goldens (`unionWithMismatchColumnCounts…`, `intersectionWithMismatchColumnCounts…`, `SqlParseEventWalkerWithAccessObjectTest` set-op interface tests); add `exceptColumnCountMismatchEmitsFatalTest`.
+- [x] **13.1.0d** — Full `mvn test` green before EXCEPT clone matrix (13.1.1+).
 
-**Tests to add or bring green:**
+**Tests (13.1.0):**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `unionWithMismatchColumnCountsAndNamesTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **Existing** — `def_query1` gains `setop=UNION`; diagnostic unchanged |
+| `intersectionWithMismatchColumnCountsAndNamesTest` | same | **Existing** — `def_query1` gains `setop=INTERSECTION` |
+| `exceptColumnCountMismatchEmitsFatalTest` | same | **New** — `setop=EXCEPT`; diagnostic says `EXCEPT` |
+| Set-op interface validation V1–V5 | `SqlParseEventWalkerWithAccessObjectTest` | **Existing** — non-anchor participants gain `setop` in symbol-table goldens |
+
+#### 13.1.1+ — EXCEPT clone matrix and nesting (after 13.1.0 green)
+
+**Work:**
+
+- [ ] Clone every UNION/INTERSECT test to EXCEPT variants per file plan (13.1.1–13.1.15 substeps).
+- [ ] Add three-level UNION/INTERSECT/EXCEPT nesting suite (6 permutation tests).
+- [ ] Gate candidacy for representative EXCEPT clones.
+
+**Tests to add or bring green (13.1.1+):**
 
 | Method | Class | Proves |
 |--------|-------|--------|

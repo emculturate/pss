@@ -32,6 +32,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY = "_tmp_set_operation_operator_anchor_char";
+		/** Staged on a unionized_query frame; consumed when the next leaf participant in that union is published. */
+		public static final String TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY =
+				"_tmp_pending_union_setop_for_next_participant";
+		/** Staged on an intersected_query frame; consumed when the next unionized_query output is published. */
+		public static final String TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY =
+				"_tmp_pending_intersect_setop_for_next_participant";
 
 		
     /*************************************
@@ -1256,11 +1262,36 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			}
 
 			validateSingleSetOperationInterface(setOperationKey, setEntry.getValue());
+			validateNestedSetOperationInterfaces(setEntry.getValue());
 			validatedSetOperationEntries.add(setOperationKey);
 		}
 
 		validateTopLevelSetOperationSiblings(setOperationEntries);
 		flushPendingGenericSetOperationMismatchFatals();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void validateNestedSetOperationInterfaces(HashMap<String, Object> scopeMap) {
+		if (scopeMap == null || scopeMap.isEmpty()) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> entry : scopeMap.entrySet()) {
+			String scopeKey = entry.getKey();
+			if (!isSetOperationScopeKey(scopeKey) || !(entry.getValue() instanceof HashMap<?, ?> nestedScopeObj)) {
+				continue;
+			}
+
+			String liveScopeKey = normalizeSetOperationScopeKey(scopeKey);
+			if (liveScopeKey == null || validatedSetOperationEntries.contains(liveScopeKey)) {
+				continue;
+			}
+
+			HashMap<String, Object> nestedScopeMap = (HashMap<String, Object>) nestedScopeObj;
+			validateSingleSetOperationInterface(liveScopeKey, nestedScopeMap);
+			validateNestedSetOperationInterfaces(nestedScopeMap);
+			validatedSetOperationEntries.add(liveScopeKey);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1599,6 +1630,37 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return "UNION";
 		}
 		return "SET_OPERATION";
+	}
+
+	private String resolveSetOperationMismatchTypeFromParticipant(Map<String, Object> participantDefinition) {
+		if (participantDefinition == null || participantDefinition.isEmpty()) {
+			return null;
+		}
+
+		Object setopObj = participantDefinition.get(MUMBLE_SETOP_KEY);
+		if (!(setopObj instanceof String setop) || setop.isBlank()) {
+			return null;
+		}
+
+		return normalizeSetopLabelForDiagnostic(setop);
+	}
+
+	private String normalizeSetopLabelForDiagnostic(String rawSetop) {
+		if (rawSetop == null || rawSetop.isBlank()) {
+			return null;
+		}
+
+		String normalized = rawSetop.trim().toUpperCase(java.util.Locale.ROOT);
+		if ("UNION".equals(normalized)) {
+			return "UNION";
+		}
+		if ("EXCEPT".equals(normalized)) {
+			return "EXCEPT";
+		}
+		if ("INTERSECT".equals(normalized) || "INTERSECTION".equals(normalized)) {
+			return "INTERSECTION";
+		}
+		return normalized;
 	}
 
 	private String resolveTopLevelSiblingGroupMismatchType(List<String> topLevelSetOperationKeys) {
@@ -1971,12 +2033,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 		Map<String, Object> summaryBySetOperationKey = getCurrentSetOperationSummaryMap();
 
-		String normalizedSetOperationKey = normalizeSetOperationScopeKey(setOperationKey);
-		String setOperationType = normalizedSetOperationKey != null
-				&& normalizedSetOperationKey.startsWith(MUMBLE_INTERSECT_KEY)
-				? "INTERSECTION"
-				: "UNION";
-
 		HashMap<String, Map<String, Object>> participantQueryMaps = new HashMap<String, Map<String, Object>>();
 		HashMap<String, Map<String, Object>> participantInterfaces = new HashMap<String, Map<String, Object>>();
 		ArrayList<String> participantKeys = new ArrayList<String>();
@@ -2043,6 +2099,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			}
 
 			String normalizedParticipantKey = normalizeSetOperationScopeKey(setEntryKey);
+			String setOperationType = resolveSetOperationMismatchTypeFromParticipant(queryMap);
+			if (setOperationType == null) {
+				setOperationType = resolveSetOperationMismatchType(setOperationKey);
+			}
 
 			int actualCount = queryInterfaceMap.size();
 			if (actualCount == expectedCount) {
