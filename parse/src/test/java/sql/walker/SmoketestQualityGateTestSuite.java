@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (200 tests):
+ * Gate composition (204 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -24,7 +24,8 @@ import org.junit.Test;
  *   <li>SCRIPT / DDL smoke (3): {@code simpleScriptTest}, {@code simpleDdlCreateTableV1Test}, {@code mixedScriptStatementTypesTest}</li>
  *   <li>Endpoint / tuple parser smoke (3): {@code tupleSubstitutionVariableTestV1/V2}, {@code basicTupleTableTest}</li>
  *   <li>Snippet construction (1): {@code basicJoinWithOnOnConditionVariableTest}</li>
- *   <li>Production join_extension / ambiguity probes (2): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}, {@code getMissingColumnFromTupleDictionaryTest}</li>
+ *   <li>Production join_extension / ambiguity probes (1): {@code getMissingColumnFromTupleDictionaryTest}</li>
+ *   <li>Phase 13.4 intra–select-list forward alias (5): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}; {@code selfReferenceColumnAliasInSameSelectListHappyPathV1Test}, {@code selfReferenceColumnAliasReversedOrderUnresolvedV2Test}, {@code selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test}, {@code selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test}</li>
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
  *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
@@ -1080,6 +1081,28 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void pivotInIdentifierDirectTableFatalV1Test() {
 		pivotUnpivotTests.pivotInIdentifierDirectTableFatalV1Test();
+	}
+
+	// --- Phase 13.4 intra–select-list forward alias (4) ---
+
+	@Test
+	public void selfReferenceColumnAliasInSameSelectListHappyPathV1Test() {
+		coreSelectTests.selfReferenceColumnAliasInSameSelectListHappyPathV1Test();
+	}
+
+	@Test
+	public void selfReferenceColumnAliasReversedOrderUnresolvedV2Test() {
+		coreSelectTests.selfReferenceColumnAliasReversedOrderUnresolvedV2Test();
+	}
+
+	@Test
+	public void selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test() {
+		coreSelectTests.selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test();
+	}
+
+	@Test
+	public void selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test() {
+		coreSelectTests.selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test();
 	}
 
 	// --- Parser diagnostic exemplars (7) ---

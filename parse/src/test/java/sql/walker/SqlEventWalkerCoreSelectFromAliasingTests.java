@@ -3339,7 +3339,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	// SELF REFERENCE COLUMN ALIASES IN THE SAME SELECT LIST
 
 	@Test
-	public void selfReferenceColumnAliasInSameSelectListTest() {
+	public void selfReferenceColumnAliasInSameSelectListHappyPathV1Test() {
 		final String query = "SELECT a + b as x, x * a AS y, y / b AS z FROM (select a, b from tab1)";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
@@ -3348,9 +3348,9 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 
 		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=x, calc={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=+}}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={column={name=a, table_ref=null}}, operator=*}}, 3={alias=z, calc={left={column={name=y, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=/}}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[x, y, z]", 
+		Assert.assertEquals("Interface is wrong", "[x, y, z]",
 				extractor.getInterface().toString());
-		Assert.assertEquals("Substitution List is wrong", "{}", 
+		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals(
 				"Query Column Dictionary is wrong",
@@ -3361,8 +3361,140 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{tab1={a=[[@21,55:55='a',<381>,1:55]], b=[[@23,58:58='b',<381>,1:58]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals(
-			"Symbol Table is wrong",
-			"{def_query1={query_dictionary={x=[[@5,16:16='x',<381>,1:16], [@7,19:19='x',<381>,1:19]], y=[[@11,28:28='y',<381>,1:28], [@13,31:31='y',<381>,1:31]], z=[[@17,40:40='z',<381>,1:40]]}, def_query0={query_dictionary={a=[[@21,55:55='a',<381>,1:55], [@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23]], b=[[@23,58:58='b',<381>,1:58], [@3,11:11='b',<381>,1:11], [@15,35:35='b',<381>,1:35]]}, table_dictionary={tab1={a=[[@21,55:55='a',<381>,1:55]], b=[[@23,58:58='b',<381>,1:58]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=a, table_ref=query0}, {name=b, table_ref=query0}], y=[{name=x, table_ref=null}, {name=a, table_ref=query0}], z=[{name=y, table_ref=null}, {name=b, table_ref=query0}]}, table_alias={query0=query0}}}",
-			extractor.getSymbolTable().toString());
-		}
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={x=[[@5,16:16='x',<381>,1:16], [@7,19:19='x',<381>,1:19]], y=[[@11,28:28='y',<381>,1:28], [@13,31:31='y',<381>,1:31]], z=[[@17,40:40='z',<381>,1:40]]}, def_query0={query_dictionary={a=[[@21,55:55='a',<381>,1:55], [@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23]], b=[[@23,58:58='b',<381>,1:58], [@3,11:11='b',<381>,1:11], [@15,35:35='b',<381>,1:35]]}, table_dictionary={tab1={a=[[@21,55:55='a',<381>,1:55]], b=[[@23,58:58='b',<381>,1:58]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=a, table_ref=query0}, {name=b, table_ref=query0}], y=[{name=x, table_ref=null}, {name=a, table_ref=query0}], z=[{name=y, table_ref=null}, {name=b, table_ref=query0}]}, table_alias={query0=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selfReferenceColumnAliasReversedOrderUnresolvedV2Test() {
+		final String query = "SELECT y / b AS z, x * a AS y, a + b as x FROM (select a, b from tab1)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=z, calc={left={column={name=y, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=/}}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={column={name=a, table_ref=null}}, operator=*}}, 3={alias=x, calc={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=+}}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x, y, z]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={a=[[@21,55:55='a',<381>,1:55], [@9,23:23='a',<381>,1:23], [@13,31:31='a',<381>,1:31]], b=[[@23,58:58='b',<381>,1:58], [@3,11:11='b',<381>,1:11], [@15,35:35='b',<381>,1:35]]}, query1={x=[[@17,40:40='x',<381>,1:40]], y=[[@11,28:28='y',<381>,1:28]], z=[[@5,16:16='z',<381>,1:16]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@21,55:55='a',<381>,1:55]], b=[[@23,58:58='b',<381>,1:58]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={x=[[@17,40:40='x',<381>,1:40]], y=[[@11,28:28='y',<381>,1:28]], z=[[@5,16:16='z',<381>,1:16]]}, def_query0={query_dictionary={a=[[@21,55:55='a',<381>,1:55], [@9,23:23='a',<381>,1:23], [@13,31:31='a',<381>,1:31]], b=[[@23,58:58='b',<381>,1:58], [@3,11:11='b',<381>,1:11], [@15,35:35='b',<381>,1:35]]}, table_dictionary={tab1={a=[[@21,55:55='a',<381>,1:55]], b=[[@23,58:58='b',<381>,1:58]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=a, table_ref=query0}, {name=b, table_ref=query0}], y=[{name=x, table_ref=null}, {name=a, table_ref=query0}], z=[{name=y, table_ref=null}, {name=b, table_ref=query0}]}, table_alias={query0=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'y' at (l:1 c:7) was not found in output interface of any visible query alias [query0].",
+				"column 'y'",
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'x' at (l:1 c:19) was not found in output interface of any visible query alias [query0].",
+				"column 'x'",
+				1,
+				19);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [x [(l:1 c:19)], y [(l:1 c:7)]]",
+				"x",
+				1,
+				19);
+	}
+
+	@Test
+	public void selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test() {
+		// Parentheses around <a> and <b> avoid '<' being parsed as a comparison operator.
+		final String query =
+				"SELECT <a plus b> as x, x * (<a>) AS y, y / (<b>) AS z FROM (select a, b from tab1)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={substitution={name=<a plus b>, type=predicand}, alias=x}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=condition}}}, operator=*}}, 3={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=condition}}}, operator=/}}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x, y, z]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=condition, <a>=condition}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, query1={x=[[@3,21:21='x',<381>,1:21], [@5,24:24='x',<381>,1:24]], y=[[@11,37:37='y',<381>,1:37], [@13,40:40='y',<381>,1:40]], z=[[@19,53:53='z',<381>,1:53]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={x=[[@3,21:21='x',<381>,1:21], [@5,24:24='x',<381>,1:24]], y=[[@11,37:37='y',<381>,1:37], [@13,40:40='y',<381>,1:40]], z=[[@19,53:53='z',<381>,1:53]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}], z=[{name=y, table_ref=null}]}, table_alias={query0=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test() {
+		// Parentheses around <a> and <b> avoid '<' being parsed as a comparison operator.
+		final String query =
+				"SELECT y / (<b>) AS z, x * (<a>) AS y, <a plus b> as x FROM (select a, b from tab1)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=condition}}}, operator=/}}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=condition}}}, operator=*}}, 3={substitution={name=<a plus b>, type=predicand}, alias=x}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x, y, z]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=condition, <a>=condition}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, query1={x=[[@19,53:53='x',<381>,1:53]], y=[[@15,36:36='y',<381>,1:36]], z=[[@7,20:20='z',<381>,1:20]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={x=[[@19,53:53='x',<381>,1:53]], y=[[@15,36:36='y',<381>,1:36]], z=[[@7,20:20='z',<381>,1:20]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}], z=[{name=y, table_ref=null}]}, table_alias={query0=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'y' at (l:1 c:7) was not found in output interface of any visible query alias [query0].",
+				"column 'y'",
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'x' at (l:1 c:23) was not found in output interface of any visible query alias [query0].",
+				"column 'x'",
+				1,
+				23);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [x [(l:1 c:23)], y [(l:1 c:7)]]",
+				"x",
+				1,
+				23);
+	}
 }

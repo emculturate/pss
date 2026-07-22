@@ -13,9 +13,9 @@ Use this document as the single handoff for consolidating column resolution in t
 
 ## Quality gate (run before every consolidation change)
 
-**200 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**204 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
 
-**Full module suite (2026-07-19):** `mvn test` → **1203/1203** passing across all walker, access, CLI, and generator test classes.
+**Full module suite (2026-07-22):** `mvn test` → **1399/1399** passing across all walker, access, CLI, and generator test classes.
 
 ```bash
 cd parse
@@ -38,7 +38,8 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 | SCRIPT / DDL smoke | 3 | `SqlEventWalkerScriptsAndDDLTests` | `simpleScriptTest`, `simpleDdlCreateTableV1Test`, `mixedScriptStatementTypesTest` (CREATE/TRUNCATE/DELETE/INSERT/UPDATE/SELECT script) |
 | Endpoint / tuple parser | 3 | `SqlEventWalkerNonSqlEndpointParserTests` | `tupleSubstitutionVariableTestV1/V2`, `basicTupleTableTest` |
 | Snippet construction | 1 | `access.SnippetTest` | `basicJoinWithOnOnConditionVariableTest` |
-| Live-sample probes | 2 | `SqlEventWalkerLiveSampleQueriesTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest`, `getMissingColumnFromTupleDictionaryTest` |
+| Live-sample probes | 1 | `SqlEventWalkerLiveSampleQueriesTests` | `getMissingColumnFromTupleDictionaryTest` |
+| Phase 13.4 intra–select-list forward alias | 5 | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerCoreSelectFromAliasingTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest`; `selfReferenceColumnAliasInSameSelectListHappyPathV1Test`, `selfReferenceColumnAliasReversedOrderUnresolvedV2Test`, `selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test`, `selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test` |
 | Table-function diagnostic | 1 | `SqlEventWalkerTableFunctionTests` | `simpleTfCallFlattenSplitV5Test` |
 | PIVOT / UNPIVOT smoke | 3 | `SqlEventWalkerPivotUnpivotTests` | `unpivotV1Test`, `pivotV1Tab1Test`, `pivotInIdentifierResolvedFromSubqueryWarningV1Test` |
 | Nested WITH clause / set-op matrix | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars |
@@ -1606,19 +1607,27 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 **Work:**
 
 - [x] In `collectUnresolvedColumnReference`, when `RULE_select_list` is active and the ref is unqualified, if the name matches a **true output alias** already on `MUMBLE_INTERFACE_KEY` (`isInterfaceOutputAliasOnly` — explicit `AS` alias or expression output whose name differs from its source column; pass-through names like `SELECT a, … a+b` still route through unresolved for `table_dictionary` lineage), treat as resolved: **do not** enqueue unresolved; merge the usage token onto `query_dictionary` for that interface column (case-folding aligned with existing alias map / quoted-identifier rules).
-- [ ] Do **not** backpatch finalized child `def_queryN` payloads; resolution stays in the owning select scope.
-- [ ] Refresh goldens + flip donor-email test expectations after review.
+- [x] Do **not** backpatch finalized child `def_queryN` payloads; resolution stays in the owning select scope.
+- [x] Refresh goldens + flip donor-email test expectations after review.
 
-**Tests to add or bring green:**
+**Tests (delivered Jul 2026):**
 
 | Method | Class | Proves |
 |--------|-------|--------|
-| `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | **Existing** — production donor-email query; `PARTITION BY … source_partner_system_name` binds to earlier same-list alias; remove TODO at ~L418 |
-| `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **New** — minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` |
-| `selectListAliasReferencedInLaterSelectItemExpressionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `expr AS alias, alias + 1` forward ref in same select list |
-| `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — negative control: inner alias must not leak to outer scope |
+| `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | Production donor-email query; `PARTITION BY … source_partner_system_name` binds to earlier same-list alias |
+| `selfReferenceColumnAliasInSameSelectListHappyPathV1Test` | `SqlEventWalkerCoreSelectFromAliasingTests` | `a+b AS x, x*a AS y, y/b AS z` — forward alias chain; no diagnostics |
+| `selfReferenceColumnAliasReversedOrderUnresolvedV2Test` | same | Reversed select-list order `z,y,x` — fatals for forward refs to `y` and `x` |
+| `selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test` | same | V1 with `<a plus b>` predicand + `(<a>)` / `(<b>)` substitution operands; no diagnostics |
+| `selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test` | same | V3 reversed order — same diagnostic count as V2 |
 
-**Gate candidacy (after green):** `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` already in gate — should pass without unresolved fatals once fixed.
+**Gate (204/204):** all five methods above in `SmoketestQualityGateTestSuite` under Phase 13.4 group.
+
+**Optional follow-ups (not in gate):**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | Minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` |
+| `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | Negative control: inner alias must not leak to outer scope |
 
 ### 13.5 — DDL option detail parsing (optional)
 
@@ -1654,8 +1663,8 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 
 ### Phase 13 closeout checklist
 
-- [ ] All Phase 13 test methods above are green (existing + new).
-- [ ] Smoketest quality gate still **200/200** (verified Jul 2026 after 13.1 gate additions)
+- [x] All Phase 13.4 gate tests green (donor-email + self-reference V1–V4).
+- [ ] Smoketest quality gate **204/204** (verified Jul 2026 after 13.4 gate additions)
 - [ ] `insert-refactor-skip-tests.md` updated — remove donor-email skip; confirm PIVOT class is not on skip list (`SqlEventWalkerPivotUnpivotTests` is 62/62 green as of Jul 2026).
 - [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
 - [ ] Phase 11 donor-email TODO B row marked ✅ when 13.4 lands.
