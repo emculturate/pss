@@ -62,7 +62,7 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 - `nestedQueryDemoTest` — exactly **3** fatals (`tab2.e3`, `gg.y`, `tt.f`)
 - `nestedQueryDemoWithCteTest` — exactly **2** fatals (same minus `gg.y`; CTE resolves `gg.y`)
 
-**Gate status (2026-07-19):** **195/195 passing** — no current failures.
+**Gate status (Jul 2026):** **200/200 passing** — no current failures (13.1 EXCEPT set-op canaries added).
 
 **Full suite status (2026-07-20):** **1209/1209 passing** — includes all substitution-variable families (Column V1–V16, INSERT I1–I10, UPDATE U1–U10), DML dictionary tests, PIVOT/UNPIVOT (**67**), and live-sample probes.
 
@@ -773,7 +773,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML canaries V9/V13 | ✅ | Passing with alias-token query dict |
 | DML golden refresh | ✅ | Full DML class green (103/103) as of 2026-07-19 |
 | DML clause probe | ✅ | Routed through convert probe; tests green |
-| EXCEPT set-op parity | ⏸️ | **Moved to Phase 13.1** |
+| EXCEPT set-op parity | ✅ | **Done** — Phase 13.1 complete (Jul 2026): `setop` stamping, operator-aware diagnostics, UNION/INTERSECT→EXCEPT clone matrices, three-level nesting suite, gate canaries |
 | Retire late-pass fallbacks (as scopes self-contain) | ✅ | **Done** — `mergeSelectList` + early bulk (C1a/C1b) + late drains (C2a/C2b) + orphan helpers (C2 closeout) retired |
 | Donor-email forward alias (TODO B) | ⏸️ | **Moved to Phase 13.4** |
 
@@ -1488,7 +1488,7 @@ Step D closed **backfill repair** (post-hoc sweeps). These **ingress** paths sti
 | **Phase 17** | Walker modifier exit + convert | After 15 — UNPIVOT walk/convert boundary |
 | **Phase 18** | Walker + convert + interface derivations | After 15 — IN-list output + IN-identifier; completes 15.4b deferrals |
 | **Phase 19** | Finalizers + walker end sync | After **15.6** — single query-dict publish ingress |
-| **Phase 13** | Low unless feature work edits convert | EXCEPT, RETURNING, forward-alias (13.4) — prefer **15.1–15.3** before 13.4 clause work |
+| **Phase 13** | Low unless feature work edits convert | ~~EXCEPT (13.1)~~ ✅; RETURNING, forward-alias (13.4) — prefer **15.1–15.3** before 13.4 clause work |
 
 ---
 
@@ -1507,14 +1507,14 @@ mvn -Psmoketest-quality-gate test
 
 | # | Gap | Grammar / walker today | Target end state | Primary test class |
 |---|-----|------------------------|------------------|-------------------|
-| 13.1 | **EXCEPT set-operation parity** | `EXCEPT` token in `union_operator`; no first-class set-op sibling to `UNION`/`INTERSECT` | `finalizeSetOperationScopeSymbolTable` (or sibling) handles EXCEPT; interface column-count validation; query-dictionary + symbol-tree keys match UNION/INTERSECT patterns | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
+| 13.1 | **EXCEPT set-operation parity** | ✅ **Complete (Jul 2026)** | `finalizeSetOperationScopeSymbolTable` handles EXCEPT on `union_operator` rail; per-participant `setop`; operator-aware column-count diagnostics; **157** EXCEPT clone tests + **12** three-level nesting tests; gate canaries | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
 | 13.2 | **Postgres INSERT** | `postgres_insert` rule marked incomplete; no `exitPostgres_insert` | Full Postgres INSERT shape (incl. `RETURNING` via `select_list`); dedicated walker exit + symbol-table finalizer hook if needed | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.3 | **UPDATE RETURNING** | `returning` rule on `update_expression`; `exitReturning` commented out in walker | Active `exitReturning`; output interface populated like Postgres DELETE RETURNING | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.4 | **Same-SELECT-list forward alias** | Unqualified ref in `PARTITION BY` (etc.) does not bind to earlier select-list alias in same scope | Local select-list alias registry consulted during clause egress (GROUP BY, ORDER BY, PARTITION BY, QUALIFY) | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
 | 13.6 | **SQL statement generator** | `SQLStatementGenerator` partial; not production-ready | Round-trip SQL regeneration for all `SQLParserEndPoints` keys from AST + substitution map | New or extended generator test class |
 
-### 13.1 — EXCEPT set-operation parity
+### 13.1 — EXCEPT set-operation parity ✅ COMPLETE (Jul 2026)
 
 **Grammar / scope-key decision (2026-07):** Keep `EXCEPT` on the `unionized_query` rail (`union_operator`); do **not** split a separate `excepted_query` tier (would break INTERSECT > UNION/EXCEPT precedence). Keep composite scope keys as `def_unionN` / `unionN` (grammar-rail name, not operator name). Per-participant `setop` on published `def_queryN` / nested `def_unionN` payloads records which operator introduced that branch.
 
@@ -1552,7 +1552,17 @@ mvn -Psmoketest-quality-gate test
 
 **Dev tooling:** one-off UNION/INTERSECT → EXCEPT clone + golden-refresh scripts removed after matrices landed (no `parse/tools/` helpers retained).
 
-#### 13.1.1+ — EXCEPT nesting extensions (after clone approval)
+#### 13.1.1+ — Three-level nesting ✅ (folded into 13.1.1)
+
+Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 6 happy-path operator permutations + 6 triple-mismatch permutations with `assertDiagnosticAtPosition` and `setop=` stamping. Representative happy + mismatch cases are in `SmoketestQualityGateTestSuite` (200 tests).
+
+**Optional coverage (not required for 13.1 sign-off):**
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Remaining 4/6 three-level happy-path permutations | ✅ full suite | Only 2 permutations promoted to gate; others covered by clone matrix |
+| Remaining 5/6 three-level mismatch permutations | ✅ full suite | One permutation (`UnionIntersectExcept`) in gate |
+| `unaliasedDerivedExceptAllOuterClausesV9Test` (derived-table EXCEPT column mismatch) | ✅ full suite | V10 happy path in gate; V9 mismatch optional gate candidate |
 
 ### 13.2 — Postgres INSERT
 
@@ -1641,9 +1651,9 @@ mvn -Psmoketest-quality-gate test
 ### Phase 13 closeout checklist
 
 - [ ] All Phase 13 test methods above are green (existing + new).
-- [ ] Smoketest quality gate still **195/195** (verified 2026-07-19)
+- [ ] Smoketest quality gate still **200/200** (verified Jul 2026 after 13.1 gate additions)
 - [ ] `insert-refactor-skip-tests.md` updated — remove donor-email skip; confirm PIVOT class is not on skip list (`SqlEventWalkerPivotUnpivotTests` is 62/62 green as of Jul 2026).
-- [ ] Phase 11 EXCEPT deferral row marked ✅ and moved to Phase 13 completion notes.
+- [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
 - [ ] Phase 11 donor-email TODO B row marked ✅ when 13.4 lands.
 
 ### Phase 13 execution order
@@ -1651,7 +1661,7 @@ mvn -Psmoketest-quality-gate test
 ```
 13.4 (forward alias — smallest user-visible defect, gate probe already exists)
   → 13.3 (UPDATE RETURNING — mirrors DELETE RETURNING pattern)
-  → 13.1 (EXCEPT parity — extends existing set-op finalizer)
+  → 13.1 (EXCEPT parity) ✅ DONE Jul 2026
   → 13.2 (Postgres INSERT — larger grammar surface)
   → 13.6 (SQL generator — independent track; can parallelize after 13.1–13.3)
   → 13.5 (DDL detail — optional last)
@@ -1897,7 +1907,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 202
 
 **Moved to Phase 13 (start after consolidation closeout):**
 
-- EXCEPT set-operation parity → Phase 13.1
+- ~~EXCEPT set-operation parity → Phase 13.1~~ ✅ **Done (Jul 2026)**
 - Postgres INSERT completion → Phase 13.2
 - UPDATE RETURNING walker → Phase 13.3
 - Same-select-list forward alias (donor-email) → Phase 13.4
