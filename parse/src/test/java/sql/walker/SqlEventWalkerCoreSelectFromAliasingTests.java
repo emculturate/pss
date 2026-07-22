@@ -3497,4 +3497,46 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				1,
 				23);
 	}
+
+	@Test
+	public void selectListArithmeticPredicandSubstitutionTest() {
+		final String query = "SELECT (<a>) + (<b>) FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={calc={left={parentheses={substitution={name=<a>, type=predicand}}}, right={parentheses={substitution={name=<b>, type=predicand}}}, operator=+}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void selectListComparisonPredicandSubstitutionTest() {
+		final String query = "SELECT <a> >= <b> AS truth FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={condition={left={substitution={name=<a>, type=predicand}}, right={substitution={name=<b>, type=predicand}}, operator=>=}, alias=truth}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void selectListBooleanAndConditionSubstitutionTest() {
+		final String query = "SELECT <a> AND <b> AS truth FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={and={1={substitution={name=<a>, type=condition}}, 2={substitution={name=<b>, type=condition}}}, alias=truth}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=condition, <a>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
 }

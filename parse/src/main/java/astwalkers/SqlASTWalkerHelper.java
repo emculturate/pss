@@ -2630,41 +2630,109 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
  * @return The modified map structure with properly typed substitution variable
  */
 	public String resolveSubstitutionValueTypeFromContext(ParserRuleContext ctx) {
+		boolean underSearchCondition = hasAncestorRule(ctx, SQLSelectParserParser.RULE_search_condition);
+		boolean underValueSlot = hasAncestorRule(ctx, SQLSelectParserParser.RULE_select_item)
+				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_row_value_predicand)
+				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_partition_by_clause);
 		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
 			int ruleIndex = walk.getRuleIndex();
-			if (isSubstitutionConditionContextRule(ruleIndex)) {
-				return MUMBLE_CONDITION_KEY;
+			if (ruleIndex == SQLSelectParserParser.RULE_substitution_predicate) {
+				return isTruthValuePredicateOperand(walk) ? MUMBLE_PREDICAND_KEY : MUMBLE_CONDITION_KEY;
 			}
-			if (isSubstitutionPredicandContextRule(ruleIndex)) {
+			if (isStrongSubstitutionPredicandOperatorRule(ruleIndex)) {
 				return MUMBLE_PREDICAND_KEY;
 			}
+			if (isSubstitutionConditionOperatorRule(ruleIndex)) {
+				return MUMBLE_CONDITION_KEY;
+			}
+			if (isWeakSubstitutionPredicandOperatorRule(ruleIndex) && underValueSlot && !underSearchCondition) {
+				return MUMBLE_PREDICAND_KEY;
+			}
+			if (isWeakSubstitutionPredicandOperatorRule(ruleIndex) && underValueSlot && underSearchCondition) {
+				// Scalar calc inside a subquery select list that also has a WHERE clause.
+				if (hasAncestorRuleBetween(ctx, walk, SQLSelectParserParser.RULE_select_item)) {
+					return MUMBLE_PREDICAND_KEY;
+				}
+			}
+		}
+		if (underSearchCondition) {
+			return MUMBLE_CONDITION_KEY;
 		}
 		return MUMBLE_PREDICAND_KEY;
 	}
 
-	private static boolean isSubstitutionConditionContextRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_search_condition
-				|| ruleIndex == SQLSelectParserParser.RULE_where_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_having_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_qualify_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_searched_when_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_condition_value
-				|| ruleIndex == SQLSelectParserParser.RULE_substitution_predicate;
+	private static boolean hasAncestorRule(ParserRuleContext ctx, int ruleIndex) {
+		for (ParserRuleContext walk = ctx.getParent(); walk != null; walk = walk.getParent()) {
+			if (walk.getRuleIndex() == ruleIndex) {
+				return true;
+			}
+		}
+		return false;
 	}
 
-	private static boolean isSubstitutionPredicandContextRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_select_item
-				|| ruleIndex == SQLSelectParserParser.RULE_select_list
-				|| ruleIndex == SQLSelectParserParser.RULE_groupby_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_orderby_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_partition_by_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_case_expression
+	private static boolean hasAncestorRuleBetween(ParserRuleContext ctx, ParserRuleContext stop, int ruleIndex) {
+		for (ParserRuleContext walk = ctx.getParent(); walk != null && walk != stop; walk = walk.getParent()) {
+			if (walk.getRuleIndex() == ruleIndex) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Definite value-position operators (comparison operands, etc.). */
+	private static boolean isStrongSubstitutionPredicandOperatorRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_comparison_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_between_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_like_any_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_null_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_in_predicate
 				|| ruleIndex == SQLSelectParserParser.RULE_case_result
 				|| ruleIndex == SQLSelectParserParser.RULE_when_value_clause
 				|| ruleIndex == SQLSelectParserParser.RULE_aggregate_function
 				|| ruleIndex == SQLSelectParserParser.RULE_trim_operands
 				|| ruleIndex == SQLSelectParserParser.RULE_sql_argument_list
 				|| ruleIndex == SQLSelectParserParser.RULE_row_value_predicand;
+	}
+
+	/** Calc grammar chain links; predicand only in value slots, not bare filter wrappers. */
+	private static boolean isWeakSubstitutionPredicandOperatorRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_additive_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_multiplicative_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_common_value_expression;
+	}
+
+	/** Boolean-composition contexts: AND/OR/NOT, bare filter substitution, standalone condition subs. */
+	private static boolean isSubstitutionConditionOperatorRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_or_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_and_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_negative_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_exists_predicate
+				|| ruleIndex == SQLSelectParserParser.RULE_searched_when_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_search_condition
+				|| ruleIndex == SQLSelectParserParser.RULE_condition_value;
+	}
+
+	/** {@code <var> IS TRUE|FALSE} left operand — predicand, not a boolean-composition condition sub. */
+	private static boolean isTruthValuePredicateOperand(ParserRuleContext substitutionPredicateCtx) {
+		ParserRuleContext predicate = substitutionPredicateCtx.getParent();
+		if (predicate == null || predicate.getRuleIndex() != SQLSelectParserParser.RULE_predicate) {
+			return false;
+		}
+		ParserRuleContext booleanPrimary = predicate.getParent();
+		if (booleanPrimary == null || booleanPrimary.getRuleIndex() != SQLSelectParserParser.RULE_boolean_primary) {
+			return false;
+		}
+		ParserRuleContext parenthetical = booleanPrimary.getParent();
+		if (parenthetical == null
+				|| parenthetical.getRuleIndex() != SQLSelectParserParser.RULE_parenthetical_predicate) {
+			return false;
+		}
+		return parenthetical.getChildCount() >= 2;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> stampSubstitutionVariableFromContext(Map<String, Object> subMap, ParserRuleContext ctx) {
+		return checkForSubstitutionVariable(subMap, resolveSubstitutionValueTypeFromContext(ctx));
 	}
 
 	@SuppressWarnings("unchecked")

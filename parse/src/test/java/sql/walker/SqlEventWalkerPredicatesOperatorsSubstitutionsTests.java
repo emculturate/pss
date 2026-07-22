@@ -453,6 +453,20 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void whereComparisonPredicandSameAsSelectTest() {
+		final String query = "SELECT apple FROM tab1 WHERE <a> >= <b>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={substitution={name=<a>, type=predicand}}, right={substitution={name=<b>, type=predicand}}, operator=>=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
 
 	@Test
 	public void whereConditionWithParentheticalConditionVariableInOrTest() {

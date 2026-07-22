@@ -3911,7 +3911,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Get first item, record if it is a Substitution Variable by adding the
 		// Substitution List
-		item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), MUMBLE_PREDICAND_KEY);
+		item = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("1"), ctx);
 
 		// make a copy of the item AST subtree without the alias for use in the symbol table interface
 		interfaceReference.putAll(item);
@@ -6720,7 +6720,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
-		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_PREDICAND_KEY);
+		Map<String, Object> item = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.get("1"), ctx);
 
 
 		if (item.containsKey(MUMBLE_SELECT_KEY)) {
@@ -7027,7 +7027,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.put(MUMBLE_FUNCTION_NAME_KEY, function);
 				item.put(MUMBLE_TYPE_KEY, function.toUpperCase());
 				// ITEM 104: Set the substitution type if the cast statement has a variable
-				item.put(MUMBLE_VALUE_KEY, walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("2"), MUMBLE_PREDICAND_KEY));
+				item.put(MUMBLE_VALUE_KEY, walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("2"), ctx));
 				item.put(MUMBLE_DATATYPE_KEY, subMap.remove("3"));
 				subMap.put(MUMBLE_FUNCTION_KEY, item);
 			} else {
@@ -7992,26 +7992,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	
 	@Override
 	public void exitBasic_predicate_clause( SQLSelectParserParser.Basic_predicate_clauseContext ctx) {
-		// {condition={left={substitution={name=<subject code>,
-		// type=predicand}}, operator=is true}}
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
 			subMap.putAll(left);
 		} else if (subMap.size() == 2) {
-			// Grammar peculiarity results in Substitution Variable
-			// mislabelled as a condition when it should be a predicand.
-			// Fixing it here
-			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
-			if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-				HashMap<String, Object> hold = (HashMap<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
-				hold.put(MUMBLE_TYPE_KEY, MUMBLE_PREDICAND_KEY);
-				walker.substitutionsMap.put((String) hold.get("name"), MUMBLE_PREDICAND_KEY);
-			}
+			Map<String, Object> item = walker.stampSubstitutionVariableFromContext(
+					(Map<String, Object>) subMap.remove("1"), ctx);
 			HashMap<String, Object> hold = new HashMap<String, Object>();
 			hold.put(MUMBLE_LEFT_FACTOR_KEY, item);
 			subMap.put(MUMBLE_CONDITION_KEY, hold);
@@ -8027,18 +8018,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitSubstitution_predicate( SQLSelectParserParser.Substitution_predicateContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			Map<String, Object> left = (Map<String, Object>) subMap.remove("1");
 			subMap.putAll(left);
-			// If the clause remaining is an embedded Condition Substitution
-			// Variable, this captures and labels it
-			subMap = walker.checkForSubstitutionVariable(subMap, MUMBLE_CONDITION_KEY);
+			subMap = walker.stampSubstitutionVariableFromContext(subMap, ctx);
 		} else {
 			// Wrong number of entries
 		}
@@ -8146,12 +8134,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			else
 				condition.put(MUMBLE_OPERATOR_KEY, ((HashMap<String, String>) operator).get("1"));
 
-				Map<String, Object> left = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-						MUMBLE_PREDICAND_KEY);
+				Map<String, Object> left = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("1"),
+						ctx);
 			condition.put(MUMBLE_LEFT_FACTOR_KEY, left);
 
-				Map<String, Object> right = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("3"),
-						MUMBLE_PREDICAND_KEY);
+				Map<String, Object> right = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("3"),
+						ctx);
 			condition.put(MUMBLE_RIGHT_FACTOR_KEY, right);
 
 			subMap.put(MUMBLE_CONDITION_KEY, condition);
@@ -8202,7 +8190,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
 				}
 			else {
-				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, MUMBLE_PREDICAND_KEY);
+				operator = walker.stampSubstitutionVariableFromContext((Map<String, Object>) operator, ctx);
 				condition.put(itemKey, operator);
 				itemKey = MUMBLE_RANGE_END_KEY;
 				condition.put(MUMBLE_OPERATOR_KEY, MUMBLE_BETWEEN_KEY);
@@ -8215,7 +8203,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			else {
 				if (!condition.containsKey(MUMBLE_SYMMETRY_KEY))
 					condition.put(MUMBLE_SYMMETRY_KEY, null);
-				operator = walker.checkForSubstitutionVariable((Map<String, Object>) operator, MUMBLE_PREDICAND_KEY);
+				operator = walker.stampSubstitutionVariableFromContext((Map<String, Object>) operator, ctx);
 				condition.put(itemKey, operator);
 				if (itemKey.equals(MUMBLE_RANGE_BEGIN_KEY))
 					itemKey = MUMBLE_RANGE_END_KEY;
@@ -8829,7 +8817,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (subMap.size() == 1) {
 				// Get first item, record if it is a Substitution Variable by
 				// adding the Substitution List
-				valueExpression = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"), MUMBLE_PREDICAND_KEY);
+				valueExpression = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("1"), ctx);
 
 				// Get Value Expression entry
 				HashMap<String, Object> node = (HashMap<String, Object>) valueExpression.get(MUMBLE_COLUMN_KEY);
@@ -8864,51 +8852,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Add column to SQL AST Tree
 				subMap.putAll(valueExpression);
 			}
-		} else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)) {
-			Integer stackLevel = walker.currentStackLevel(ruleIndex);
-			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			subMap = (Map<String, Object>) subMap.get("1");
-			String substitutionType = walker.resolveSubstitutionValueTypeFromContext(ctx);
-			subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, substitutionType);
-			walker.handleOneChild(ruleIndex);
-		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_search_condition))
+		} else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_search_condition))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_searched_when_clause))
-				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_condition_value))) {
-			Integer stackLevel = walker.currentStackLevel(ruleIndex);
-			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			subMap = (Map<String, Object>) subMap.get("1");
-			// Get first item, record if it is a Substitution Variable by
-			// adding the Substitution List - This captures when the entire
-			// condition is a Substitution Variable alone
-			subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_CONDITION_KEY);
-
-			// NOW handle the child
-			walker.handleOneChild(ruleIndex);
-		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_expression))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_condition_value))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_expression))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_when_value_clause))
-				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_result))) {
-			Integer stackLevel = walker.currentStackLevel(ruleIndex);
-			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			subMap = (Map<String, Object>) subMap.get("1");
-			// Get first item, record if it is a Substitution Variable by
-			// adding the Substitution List - This captures when the entire
-			// condition is a Substitution Variable alone
-				subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_PREDICAND_KEY);
-
-			// NOW handle the child
-			walker.handleOneChild(ruleIndex);
-		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_aggregate_function))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_case_result))
+				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_aggregate_function))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_trim_operands))) {
-			// Trim and Aggregate Function Parameter
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 			subMap = (Map<String, Object>) subMap.get("1");
-			// Get first item, record if it is a Substitution Variable by
-			// adding the Substitution List - This captures when the entire
-			// condition is a Substitution Variable alone
-				subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, MUMBLE_PREDICAND_KEY);
-
-			// NOW handle the child
+			subMap = walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap, ctx);
 			walker.handleOneChild(ruleIndex);
 			//
 		} else {
@@ -9036,8 +8992,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		// Get first item, record if it is a Substitution Variable by
 		// adding the Substitution List
-		Map<String, Object> substitutionPredicand = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
-				MUMBLE_PREDICAND_KEY);
+		walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.get("1"), ctx);
 
 		walker.handleOneChild(ruleIndex);
 	}
