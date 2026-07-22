@@ -197,6 +197,29 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void joinQualifiedWithTupleVariableT1Except(){
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=join}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={F4=fourth, T3=<tuple1>}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void joinQualifiedWithTupleVariableT2() {
@@ -245,9 +268,55 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void joinUnQualifiedWithTupleVariableT2Except(){
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 cross join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=crossjoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={F4=fourth, T3=<tuple1>}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void joinUnQualifiedWithTupleVariableT3() {
+		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
+		final String query = " SELECT * FROM <tuple1> as T3 natural join fourth as F4";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=T3, substitution={name=<tuple1>, type=tuple}}}, 2={join=naturaljoin}, 3={table={alias=F4, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<tuple1>=tuple}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={<tuple1>={*=[[@1,8:8='*',<291>,1:8]]}, fourth={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={F4=fourth, T3=<tuple1>}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUnQualifiedWithTupleVariableT3Except(){
 		// ITEM 34 - Qualified Joins (e.g., cross, natural, union) do not parse when tuple substitution variables are included
 		final String query = " SELECT * FROM <tuple1> as T3 natural join fourth as F4";
 
@@ -1320,6 +1389,29 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 	}
 
 	@Test
+	public void sameTableDifferentSchemaQualifiedReferencesV4Except(){
+		String sql =  " Select  aaa.col1 FROM sch1.aaa aaa except select bbb.col1 from sch2.bbb bbb";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=col1, table_ref=aaa}}}, from={table={schema=sch1, alias=aaa, table=aaa}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=col1, table_ref=bbb}}}, from={table={schema=sch2, alias=bbb, table=bbb}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sch2.bbb={col1=[[@11,50:52='bbb',<381>,1:50]]}, sch1.aaa={col1=[[@1,9:11='aaa',<381>,1:9]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@3,13:16='col1',<381>,1:13]]}, query1={col1=[[@13,54:57='col1',<381>,1:54]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union2={def_query1={query_dictionary={col1=[[@13,54:57='col1',<381>,1:54]]}, table_dictionary={sch2.bbb={col1=[[@11,50:52='bbb',<381>,1:50]]}}, setop=EXCEPT, interface={col1=[{name=col1, table_ref=bbb}]}, table_alias={bbb=sch2.bbb}}, def_query0={query_dictionary={col1=[[@3,13:16='col1',<381>,1:13]]}, table_dictionary={sch1.aaa={col1=[[@1,9:11='aaa',<381>,1:9]]}}, interface={col1=[{name=col1, table_ref=aaa}]}, table_alias={aaa=sch1.aaa}}, interface={col1=query_column}}}",
+				extractor.getSymbolTable().toString());
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
 	public void simplifiedQualifiedWildcardOverUnionInMiddleLayerTest() {
 		final String query = "select mid.id, mid.c1 "
 				+ "\n from (select u.* from ("
@@ -1342,6 +1434,32 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={*=[[@11,37:37='u',<381>,2:14]]}, query4={c1=[[@7,19:20='c1',<381>,1:19]], id=[[@3,11:12='id',<381>,1:11]]}, query0={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, query1={id=[[@35,109:110='id',<381>,5:11]], c1=[[@39,116:117='c1',<381>,5:18]], c2=[[@43,123:124='c2',<381>,5:25]]}, query3={*=[[@13,39:39='*',<291>,2:16]], c1=[[@5,15:17='mid',<381>,1:15]], id=[[@1,7:9='mid',<381>,1:7], [@52,157:159='mid',<381>,7:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query4={query_dictionary={id=[[@3,11:12='id',<381>,1:11]], c1=[[@7,19:20='c1',<381>,1:19]]}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, def_query3={def_union2={query_dictionary={*=[[@11,37:37='u',<381>,2:14]]}, def_query1={query_dictionary={id=[[@35,109:110='id',<381>,5:11]], c1=[[@39,116:117='c1',<381>,5:18]], c2=[[@43,123:124='c2',<381>,5:25]]}, table_dictionary={tab2={id=[[@33,106:107='t2',<381>,5:8]], c1=[[@37,113:114='t2',<381>,5:15]], c2=[[@41,120:121='t2',<381>,5:22]]}}, setop=UNION, interface={id=[{name=id, table_ref=t2}], c1=[{name=c1, table_ref=t2}], c2=[{name=c2, table_ref=t2}]}, table_alias={t2=tab2}}, def_query0={query_dictionary={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, table_dictionary={tab1={id=[[@17,56:57='t1',<381>,3:8]], c1=[[@21,63:64='t1',<381>,3:15]], c2=[[@25,70:71='t1',<381>,3:22]]}}, interface={id=[{name=id, table_ref=t1}], c1=[{name=c1, table_ref=t1}], c2=[{name=c2, table_ref=t1}]}, table_alias={t1=tab1}}, interface={id=query_column, c1=query_column, c2=query_column, *=wildcard}}, query_dictionary={*=[[@13,39:39='*',<291>,2:16]], id=[[@1,7:9='mid',<381>,1:7], [@52,157:159='mid',<381>,7:7]], c1=[[@5,15:17='mid',<381>,1:15]]}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=union2}}, table_alias={mid=query3}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void simplifiedQualifiedWildcardOverExceptInMiddleLayerTest(){
+		final String query = "select mid.id, mid.c1 "
+				+ "\n from (select u.* from ("
+				+ "\n select t1.id, t1.c1, t1.c2 from tab1 t1 "
+				+ "\n except "
+				+ "\n select t2.id, t2.c1, t2.c2 from tab2 t2"
+				+ "\n ) u) mid "
+				+ "\n where mid.id > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=mid}}, 2={column={name=c1, table_ref=mid}}}, from={table={alias=mid, query={select={1={column={name=*, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=id, table_ref=t1}}, 2={column={name=c1, table_ref=t1}}, 3={column={name=c2, table_ref=t1}}}, from={table={alias=t1, table=tab1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=id, table_ref=t2}}, 2={column={name=c1, table_ref=t2}}, 3={column={name=c2, table_ref=t2}}}, from={table={alias=t2, table=tab2}}}}}}}}}}, where={condition={left={column={name=id, table_ref=mid}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, c1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={id=[[@17,56:57='t1',<381>,3:8]], c1=[[@21,63:64='t1',<381>,3:15]], c2=[[@25,70:71='t1',<381>,3:22]]}, tab2={id=[[@33,107:108='t2',<381>,5:8]], c1=[[@37,114:115='t2',<381>,5:15]], c2=[[@41,121:122='t2',<381>,5:22]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={*=[[@11,37:37='u',<381>,2:14]]}, query4={c1=[[@7,19:20='c1',<381>,1:19]], id=[[@3,11:12='id',<381>,1:11]]}, query0={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, query1={id=[[@35,110:111='id',<381>,5:11]], c1=[[@39,117:118='c1',<381>,5:18]], c2=[[@43,124:125='c2',<381>,5:25]]}, query3={*=[[@13,39:39='*',<291>,2:16]], c1=[[@5,15:17='mid',<381>,1:15]], id=[[@1,7:9='mid',<381>,1:7], [@52,158:160='mid',<381>,7:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query4={query_dictionary={id=[[@3,11:12='id',<381>,1:11]], c1=[[@7,19:20='c1',<381>,1:19]]}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, def_query3={def_union2={query_dictionary={*=[[@11,37:37='u',<381>,2:14]]}, def_query1={query_dictionary={id=[[@35,110:111='id',<381>,5:11]], c1=[[@39,117:118='c1',<381>,5:18]], c2=[[@43,124:125='c2',<381>,5:25]]}, table_dictionary={tab2={id=[[@33,107:108='t2',<381>,5:8]], c1=[[@37,114:115='t2',<381>,5:15]], c2=[[@41,121:122='t2',<381>,5:22]]}}, setop=EXCEPT, interface={id=[{name=id, table_ref=t2}], c1=[{name=c1, table_ref=t2}], c2=[{name=c2, table_ref=t2}]}, table_alias={t2=tab2}}, def_query0={query_dictionary={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, table_dictionary={tab1={id=[[@17,56:57='t1',<381>,3:8]], c1=[[@21,63:64='t1',<381>,3:15]], c2=[[@25,70:71='t1',<381>,3:22]]}}, interface={id=[{name=id, table_ref=t1}], c1=[{name=c1, table_ref=t1}], c2=[{name=c2, table_ref=t1}]}, table_alias={t1=tab1}}, interface={id=query_column, c1=query_column, c2=query_column, *=wildcard}}, query_dictionary={*=[[@13,39:39='*',<291>,2:16]], id=[[@1,7:9='mid',<381>,1:7], [@52,158:160='mid',<381>,7:7]], c1=[[@5,15:17='mid',<381>,1:15]]}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=union2}}, table_alias={mid=query3}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1407,6 +1525,25 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				+ "), unioned_first_latest_audience as (\n"
 				+ "  select csps.contact_key, csps.product, csps.first_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
 				+ "  union\n"
+				+ "  select csps.contact_key, csps.product, csps.latest_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
+				+ ")\n"
+				+ "select ufla.contact_key, ufla.segment_id, ufla.product from unioned_first_latest_audience as ufla";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+	}
+
+	@Test
+	public void simplifiedqualifiedNestedColumnResolutionOverExceptsTest(){
+		final String query = "with contact_streams_product_subproduct as (\n"
+				+ "  select cs.contact_key, str.product, cs.first_marketing_activity_segment_id,\n"
+				+ "         cs.latest_marketing_activity_segment_id, cs.first_marketing_activity_dt as first_contact_dt\n"
+				+ "  from {{ ref('contact_streams') }} as cs join {{ ref('streams') }} as str on cs.stream_key = str.stream_key\n"
+				+ "), unioned_first_latest_audience as (\n"
+				+ "  select csps.contact_key, csps.product, csps.first_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
+				+ "  except\n"
 				+ "  select csps.contact_key, csps.product, csps.latest_marketing_activity_segment_id as segment_id, csps.first_contact_dt from contact_streams_product_subproduct as csps\n"
 				+ ")\n"
 				+ "select ufla.contact_key, ufla.segment_id, ufla.product from unioned_first_latest_audience as ufla";

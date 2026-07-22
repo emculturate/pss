@@ -1536,24 +1536,23 @@ mvn -Psmoketest-quality-gate test
 | `exceptColumnCountMismatchEmitsFatalTest` | same | **New** — `setop=EXCEPT`; diagnostic says `EXCEPT` |
 | Set-op interface validation V1–V5 | `SqlParseEventWalkerWithAccessObjectTest` | **Existing** — non-anchor participants gain `setop` in symbol-table goldens |
 
-#### 13.1.1+ — EXCEPT clone matrix and nesting (after 13.1.0 green)
+#### 13.1.1 — EXCEPT clone matrix (UNION → EXCEPT clones)
+
+**Status:** EXCEPT clone matrix **green** (`mvn test` 1313/1313). **87** EXCEPT-variant `@Test` methods across 7 walker test files (cloned adjacent to UNION originals; goldens refreshed). INTERSECT clones deferred until EXCEPT sampling approved.
 
 **Work:**
 
-- [ ] Clone every UNION/INTERSECT test to EXCEPT variants per file plan (13.1.1–13.1.15 substeps).
+- [x] Clone every UNION test to an EXCEPT variant placed next to the original (per-file; `parse/tools/clone_union_tests_to_except.py`).
+- [x] Refresh goldens for all EXCEPT clones (AST `operator=except`, symbol-tree `setop=EXCEPT` on non-anchor participants; token offsets adjusted after `union` → `except`).
+- [ ] Clone INTERSECT tests to EXCEPT variants (13.1.1b — after user approves EXCEPT sampling).
 - [ ] Add three-level UNION/INTERSECT/EXCEPT nesting suite (6 permutation tests).
 - [ ] Gate candidacy for representative EXCEPT clones.
 
-**Tests to add or bring green (13.1.1+):**
-
-| Method | Class | Proves |
-|--------|-------|--------|
-| `unaliasedDerivedExceptAllOuterClausesV10Test` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **Existing** — unaliased derived + EXCEPT across WHERE/GROUP BY/HAVING/ORDER BY/QUALIFY; refresh goldens when behavior is fixed |
-| `exceptColumnCountMismatchEmitsFatalTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — EXCEPT branches with unequal column counts → `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` |
-| `exceptUnionIntersectChainedInterfaceTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — `(q1 EXCEPT q2) UNION q3` interface + symbol-tree shape |
-| `exceptWithCteUnqualifiedRefsTest` | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | **New** — CTE + EXCEPT unqualified column resolution (extend CTEV matrix pattern) |
-
 **Gate candidacy (after green):** add `exceptColumnCountMismatchEmitsFatalTest` + `unaliasedDerivedExceptAllOuterClausesV10Test` to `SmoketestQualityGateTestSuite`.
+
+**Dev tooling (optional cleanup):** `ExceptSnippetGoldenProbe.java` + `parse/tools/bump_except_goldens_from_union.py` — golden-generation helpers; safe to delete if undesired.
+
+#### 13.1.1+ — EXCEPT nesting extensions (after clone approval)
 
 ### 13.2 — Postgres INSERT
 
