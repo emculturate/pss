@@ -3426,11 +3426,11 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
 
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={substitution={name=<a plus b>, type=predicand}, alias=x}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=condition}}}, operator=*}}, 3={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=condition}}}, operator=/}}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={substitution={name=<a plus b>, type=predicand}, alias=x}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=predicand}}}, operator=*}}, 3={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=predicand}}}, operator=/}}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[x, y, z]",
 				extractor.getInterface().toString());
-		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=condition, <a>=condition}",
+		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=predicand, <a>=predicand}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals(
 				"Query Column Dictionary is wrong",
@@ -3442,7 +3442,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals(
 				"Symbol Table is wrong",
-				"{def_query1={query_dictionary={x=[[@3,21:21='x',<381>,1:21], [@5,24:24='x',<381>,1:24]], y=[[@11,37:37='y',<381>,1:37], [@13,40:40='y',<381>,1:40]], z=[[@19,53:53='z',<381>,1:53]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}], z=[{name=y, table_ref=null}]}, table_alias={query0=query0}}}",
+				"{def_query1={query_dictionary={x=[[@3,21:21='x',<381>,1:21], [@5,24:24='x',<381>,1:24]], y=[[@11,37:37='y',<381>,1:37], [@13,40:40='y',<381>,1:40]], z=[[@19,53:53='z',<381>,1:53]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}, {name=<a>, type=predicand}], z=[{name=y, table_ref=null}, {name=<b>, type=predicand}]}, table_alias={query0=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3454,11 +3454,11 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=condition}}}, operator=/}}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=condition}}}, operator=*}}, 3={substitution={name=<a plus b>, type=predicand}, alias=x}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=z, calc={left={column={name=y, table_ref=null}}, right={parentheses={substitution={name=<b>, type=predicand}}}, operator=/}}, 2={alias=y, calc={left={column={name=x, table_ref=null}}, right={parentheses={substitution={name=<a>, type=predicand}}}, operator=*}}, 3={substitution={name=<a plus b>, type=predicand}, alias=x}}, from={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[x, y, z]",
 				extractor.getInterface().toString());
-		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=condition, <a>=condition}",
+		Assert.assertEquals("Substitution List is wrong", "{<a plus b>=predicand, <b>=predicand, <a>=predicand}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals(
 				"Query Column Dictionary is wrong",
@@ -3470,7 +3470,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals(
 				"Symbol Table is wrong",
-				"{def_query1={query_dictionary={x=[[@19,53:53='x',<381>,1:53]], y=[[@15,36:36='y',<381>,1:36]], z=[[@7,20:20='z',<381>,1:20]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}], z=[{name=y, table_ref=null}]}, table_alias={query0=query0}}}",
+				"{def_query1={query_dictionary={x=[[@19,53:53='x',<381>,1:53]], y=[[@15,36:36='y',<381>,1:36]], z=[[@7,20:20='z',<381>,1:20]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<381>,1:68]], b=[[@25,71:71='b',<381>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}, {name=<a>, type=predicand}], z=[{name=y, table_ref=null}, {name=<b>, type=predicand}]}, table_alias={query0=query0}}}",
 				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();

@@ -2629,6 +2629,44 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
  * @param type The semantic type to assign to the variable based on context
  * @return The modified map structure with properly typed substitution variable
  */
+	public String resolveSubstitutionValueTypeFromContext(ParserRuleContext ctx) {
+		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
+			int ruleIndex = walk.getRuleIndex();
+			if (isSubstitutionConditionContextRule(ruleIndex)) {
+				return MUMBLE_CONDITION_KEY;
+			}
+			if (isSubstitutionPredicandContextRule(ruleIndex)) {
+				return MUMBLE_PREDICAND_KEY;
+			}
+		}
+		return MUMBLE_PREDICAND_KEY;
+	}
+
+	private static boolean isSubstitutionConditionContextRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_search_condition
+				|| ruleIndex == SQLSelectParserParser.RULE_where_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_having_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_qualify_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_searched_when_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_condition_value
+				|| ruleIndex == SQLSelectParserParser.RULE_substitution_predicate;
+	}
+
+	private static boolean isSubstitutionPredicandContextRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_select_item
+				|| ruleIndex == SQLSelectParserParser.RULE_select_list
+				|| ruleIndex == SQLSelectParserParser.RULE_groupby_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_orderby_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_partition_by_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_case_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_case_result
+				|| ruleIndex == SQLSelectParserParser.RULE_when_value_clause
+				|| ruleIndex == SQLSelectParserParser.RULE_aggregate_function
+				|| ruleIndex == SQLSelectParserParser.RULE_trim_operands
+				|| ruleIndex == SQLSelectParserParser.RULE_sql_argument_list
+				|| ruleIndex == SQLSelectParserParser.RULE_row_value_predicand;
+	}
+
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> checkForSubstitutionVariable(Map<String, Object> subMap, String type) {
 		if (subMap.containsKey(getASTWALKER_SUBSTITUTION_KEY())) {

@@ -1617,7 +1617,7 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | Production donor-email query; `PARTITION BY … source_partner_system_name` binds to earlier same-list alias |
 | `selfReferenceColumnAliasInSameSelectListHappyPathV1Test` | `SqlEventWalkerCoreSelectFromAliasingTests` | `a+b AS x, x*a AS y, y/b AS z` — forward alias chain; no diagnostics |
 | `selfReferenceColumnAliasReversedOrderUnresolvedV2Test` | same | Reversed select-list order `z,y,x` — fatals for forward refs to `y` and `x` |
-| `selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test` | same | V1 with `<a plus b>` predicand + `(<a>)` / `(<b>)` substitution operands; no diagnostics |
+| `selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test` | same | V1 with `<a plus b>` predicand + `(<a>)` / `(<b>)` substitution operands; predicand typing via ancestor context (13.4.1); no diagnostics |
 | `selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test` | same | V3 reversed order — same diagnostic count as V2 |
 
 **Gate (204/204):** all five methods above in `SmoketestQualityGateTestSuite` under Phase 13.4 group.
@@ -1628,6 +1628,140 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 |--------|-------|--------|
 | `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | Minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` |
 | `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | Negative control: inner alias must not leak to outer scope |
+
+### 13.4.1 — Substitution variable context typing (condition vs predicand)
+
+**Problem (precise):** Substitution semantic type (`condition` vs `predicand`) was assigned from the **immediate parent rule** in each `exit*` handler, not from grammatical containment. `exitValue_expression` lumped `RULE_parenthesized_value_expression` with `RULE_search_condition`, so `SELECT x * (<a>)` stamped `<a>` as `condition` even though the substitution is a calc operand in the select list. Parentheses are a parse disambiguation device (`<` vs comparison), not a semantic boolean-context marker.
+
+**Principle:** Type assignment must use **operator / expression-kind context** (nearest decisive operator or boolean-composition rule), applied **the same way in every clause** — SELECT, WHERE, GROUP BY, ORDER BY, JOIN ON, etc. Parentheses must **not** influence type. Clause context matters only for edge cases like a **bare substitution** standing in for an entire filter (`WHERE <filter>` → `condition`).
+
+**Operator-based model (authoritative):**
+
+| Syntactic context | Operand / substitution type | Rationale |
+|-------------------|----------------------------|-----------|
+| Comparison operators (`=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, …) | **predicand** (both sides) | Operands are values being compared; substituting boolean condition vars yields nonsense (`true >= false`). Same rule in SELECT and WHERE. |
+| Arithmetic (`+`, `-`, `*`, `/`, `%`) | **predicand** | Scalar calc operands. |
+| Function scalar args, casts, CASE THEN/ELSE results | **predicand** | Value positions. |
+| Boolean connectives (`AND`, `OR`) between substitutions | **condition** (each operand) | Each sub is a boolean fragment: `WHERE <a> AND <b>`, `SELECT <a> AND <b> AS truth`. |
+| Bare substitution replacing entire filter / ON / WHEN | **condition** | `WHERE <filter>`, `ON <join_cond>`, `CASE WHEN <cond>`. |
+| `NOT` wrapping a condition sub | **condition** | Unary boolean negation of a condition variable. |
+
+**Examples (same types in SELECT and WHERE):**
+
+- `SELECT <a> + <b>` / `WHERE <a> + <b> > 0` → `<a>`, `<b>` are **predicand**.
+- `SELECT <a> >= <b> AS truth` / `WHERE <a> >= <b>` → `<a>`, `<b>` are **predicand** (comparison operands).
+- `SELECT <a> AND <b> AS truth` / `WHERE <a> AND <b>` → `<a>`, `<b>` are **condition** (boolean composition).
+- `WHERE <filter>` → `<filter>` is **condition** (bare filter substitution).
+
+**Gap (Jul 2026):** Delivered resolver is **clause-tier only** (select_item → predicand, search_condition → condition). It fixed the parenthesized-calc bug but does **not** yet unify all sites on operator-based rules. `exitComparison_predicate` already stamps **predicand** on comparison operands (correct); the gap is inconsistent clause-tier overrides elsewhere and fragmented exit methods—not wrong comparison typing.
+
+**Delivered (Jul 2026 — partial 13.4.1):**
+
+- [x] `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext(ctx)` — walks ancestors; returns `condition` if a filter/predicate-root rule is hit first, `predicand` if a value-expression-root rule is hit first.
+- [x] `exitValue_expression`: split `RULE_parenthesized_value_expression` out of the blanket condition branch; parenthesized operands use the resolver.
+- [x] V3/V4 goldens refreshed (`<a>`, `<b>` → `predicand`; symbol-table interface lists predicand deps on `y`/`z`).
+- [x] Full suite green (1605/1605); WHERE parenthesis regression tests unchanged.
+
+**Condition-context rules (resolver):** `search_condition`, `where_clause`, `having_clause`, `qualify_clause`, `searched_when_clause`, `condition_value`, `substitution_predicate`.
+
+**Predicand-context rules (resolver):** `select_item`, `select_list`, `groupby_clause`, `orderby_clause`, `partition_by_clause`, `case_expression`, `case_result`, `when_value_clause`, `aggregate_function`, `trim_operands`, `sql_argument_list`, `row_value_predicand`.
+
+**Confirmed behavior after fix (existing tests, no golden drift):**
+
+| Macro clause | Condition variable shape | Predicand variable shape | Mechanism |
+|--------------|-------------------------|--------------------------|-----------|
+| **CASE WHEN** | Entire `WHEN` = `<var>` | `WHEN <col> = <var>` (comparison operand) | `searched_when_clause` → condition; `exitComparison_predicate` → predicand on operands |
+| **CASE THEN/ELSE** | N/A | `<var>` as result expression | `case_result` / `when_value_clause` → predicand |
+| **JOIN ON** | Entire `ON` = `<var>`; `ON (<var>)`; `ON <a> AND <b>` | `ON a.<col> = <var>` (comparison operand) | `search_condition` under `join_condition` → condition for bare subs; comparison operands → predicand |
+| **WHERE / HAVING / QUALIFY** | Same as JOIN ON | Comparison / function / calc operands | Same ancestor rules |
+
+JOIN `ON` resolves through `search_condition` in the ancestor chain (not a separate `join_condition` rule in the resolver). `exitJoin_condition` strips outermost parentheses from the AST only — it does not assign types.
+
+**Remaining fragmentation (pre-consolidation audit):**
+
+| Site | Current typing | Target |
+|------|----------------|--------|
+| `exitSelect_item` | hardcoded `predicand` | resolver (should agree) |
+| `exitValue_expression` (`search_condition`, `case_*`, `aggregate_function`, `sql_argument_list`) | hardcoded per branch | resolver |
+| `exitComparison_predicate` | hardcoded `predicand` on operands | resolver |
+| `exitSubstitution_predicate` | hardcoded `condition` | resolver |
+| `exitBasic_predicate_clause` | manual relabel predicand | retire once resolver covers grammar path |
+| `exitRow_value_predicand` | hardcoded `predicand` | resolver |
+| `exitColumn_reference` | `column` | keep separate (different type family) |
+| FROM / table exits | `tuple`, `query`, `join_extension` | keep separate |
+
+#### 13.4.1a — Route remaining value-expression paths through resolver
+
+**Work:**
+
+- [ ] Replace hardcoded `MUMBLE_CONDITION_KEY` / `MUMBLE_PREDICAND_KEY` in all `exitValue_expression` branches with `resolveSubstitutionValueTypeFromContext(ctx)`.
+- [ ] Route `exitRow_value_predicand`, `exitSelect_item` (top-level sub only), `exitComparison_predicate` operands, `exitSubstitution_predicate` through resolver.
+- [ ] Retire or narrow `exitBasic_predicate_clause` manual predicand relabel once covered.
+- [ ] Single call site pattern: `checkForSubstitutionVariable(subMap, resolveSubstitutionValueTypeFromContext(ctx))` for all value-expression substitutions.
+
+**Gate:** existing substitution families + gate 204/204; no golden drift on `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`, `SqlEventWalkerNonSqlEndpointParserTests` (CASE/JOIN), `SqlEventWalkerJoinsAndTableResolutionTests`.
+
+#### 13.4.1b — Clause × context test matrix
+
+Use `SUBSTITUTION_VARIABLE_TEST_TEMPLATES.md` as scaffold. Add gate or near-gate tests proving resolver coverage:
+
+| Clause | Bare substitution | Parenthesized substitution | Comparison (`<a> >= <b>`) | Arithmetic (`<a> + <b>`) | AND/OR (`<a> AND <b>`) |
+|--------|-------------------|---------------------------|---------------------------|-------------------------|-------------------------|
+| SELECT list | predicand* | predicand | predicand (both) | predicand (both) | condition (both) |
+| WHERE | condition | condition | predicand (both) | predicand (both) | condition (both) |
+| HAVING | condition | condition | predicand (both) | predicand (both) | condition (both) |
+| QUALIFY | condition | condition | predicand (both) | predicand (both) | condition (both) |
+| GROUP BY | predicand | predicand | predicand (both) | predicand (both) | condition (both)† |
+| ORDER BY | predicand | predicand | predicand (both) | predicand (both) | condition (both)† |
+| JOIN ON | condition | condition | predicand (both) | predicand (both) | condition (both) |
+| CASE WHEN | condition | condition | predicand (operands) | — | condition |
+
+\*Bare `SELECT <var>`: predicand per grammar (`variable_identifier` in value_expression).  
+†Requires `boolean_value_expression` in `row_value_predicand` if not already parseable.
+
+Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface` / `filters` where applicable.
+
+**Tests to add (minimum new coverage):**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `selectListParenthesizedPredicandInCalcTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — V3/V4 |
+| `caseWhenBareConditionSubstitutionTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Exists** — bare `<var>` in WHEN |
+| `caseWhenComparisonPredicandOperandTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Exists** — predicand in WHEN comparison |
+| `joinOnBareConditionSubstitutionTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Exists** — bare + parenthesized ON |
+| `joinOnAndOrConditionSubstitutionsTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Exists** — AND/OR targets |
+| `havingParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
+| `qualifyParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
+| `groupByParenthesizedPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
+| `joinOnComparisonPredicandOperandTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **New** — `ON a = <predicand>` |
+| `selectListComparisonPredicandSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `SELECT <a> >= <b> AS truth` → both `predicand` (same as WHERE) |
+| `selectListBooleanAndConditionSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `SELECT <a> AND <b> AS truth` → both `condition` |
+| `selectListArithmeticPredicandSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `SELECT <a> + <b>` → both `predicand` |
+| `whereComparisonPredicandSameAsSelectTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** — `WHERE <a> >= <b>` matches SELECT typing |
+| `groupByArithmeticPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** — `GROUP BY <a> + <b>` |
+
+#### 13.4.1d — Operator-based resolution (clause-agnostic)
+
+**Work:**
+
+- [ ] Replace clause-tier-only `resolveSubstitutionValueTypeFromContext` with operator-walk logic: from the substitution node, walk ancestors for the **nearest decisive operator rule**:
+  - **predicand:** `comparison_predicate`, `between_predicate` (bounds), `additive_expression`, `multiplicative_expression`, `common_value_expression`, function scalar params, `case_result`, `when_value_clause`, etc.
+  - **condition:** direct child of `or_predicate` / `and_predicate` as a substitution (not inside a comparison), `substitution_predicate`, `searched_when_clause` bare WHEN sub, bare `search_condition` substitution.
+- [ ] **Clause-agnostic:** `SELECT <a> >= <b>` and `WHERE <a> >= <b>` must produce identical types for `<a>` and `<b>`.
+- [ ] Retire clause-tier overrides that stamp `select_item` → predicand or `search_condition` → condition when operator context is more specific.
+- [ ] Route all operand stamping (`exitComparison_predicate`, `exitOr_predicate`/`exitAnd_predicate` leaves, `exitValue_expression`, etc.) through one resolver taking `ParserRuleContext`.
+- [ ] Optional grammar: extend `row_value_predicand` for boolean compositions in GROUP BY/ORDER BY if needed.
+
+**Gate:** new tests above + existing `whereConditionComparingPredicandVariablesTest`, `querySubstitutionVariableWithQualifiedColumnsMixedConditionVariablesSubstitution`, V3/V4.
+
+#### 13.4.1c — Shared grammar-context classifier
+
+**Work:**
+
+- [ ] Extract rule-index sets from `resolveSubstitutionValueTypeFromContext` and `SqlParseSymbolTreeHelper.inferDependentQueryContext` into one `SqlGrammarContextClassifier` (or shared constants) — same ancestor walk, two consumers (substitution typing + dependent-query context).
+- [ ] Document non-goals: `column`, `tuple`, `in_list`, `join_extension`, `query` types remain on dedicated exits.
+
+**Relationship to column-resolution consolidation:** Phases 9–13 unified **reference resolution** (ingress, dictionaries, forward aliases). This sub-phase unifies **substitution typing** using the same “walk ancestors, nearest clause wins” pattern already used for dependent-query context.
 
 ### 13.5 — DDL option detail parsing (optional)
 

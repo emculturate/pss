@@ -8864,8 +8864,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				// Add column to SQL AST Tree
 				subMap.putAll(valueExpression);
 			}
+		} else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression)) {
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+			subMap = (Map<String, Object>) subMap.get("1");
+			String substitutionType = walker.resolveSubstitutionValueTypeFromContext(ctx);
+			subMap = walker.checkForSubstitutionVariable((Map<String, Object>) subMap, substitutionType);
+			walker.handleOneChild(ruleIndex);
 		} else if ((parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_search_condition))
-				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_parenthesized_value_expression))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_searched_when_clause))
 				|| (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_condition_value))) {
 			Integer stackLevel = walker.currentStackLevel(ruleIndex);
