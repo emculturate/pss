@@ -1321,7 +1321,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{unresolved_column={}}",
+				"{}",
 				extractor.getSymbolTable().toString());
 	}
 

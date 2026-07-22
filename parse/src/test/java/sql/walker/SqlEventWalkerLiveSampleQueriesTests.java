@@ -458,21 +458,8 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticAtPosition(
-				snippet,
-				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
-				"Unqualified column 'source_partner_system_name' at (l:18 c:50) was not found in output interface of any visible query alias [donor_email].",
-				"source_partner_system_name",
-				18,
-				50);
-		assertDiagnosticAtPosition(
-				snippet,
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"Unresolved unqualified column reference(s): [source_partner_system_name [(l:18 c:50)]]",
-				"source_partner_system_name",
-				18,
-				50);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
 	}
 
 	@Test

@@ -1510,7 +1510,7 @@ mvn -Psmoketest-quality-gate test
 | 13.1 | **EXCEPT set-operation parity** | ✅ **Complete (Jul 2026)** | `finalizeSetOperationScopeSymbolTable` handles EXCEPT on `union_operator` rail; per-participant `setop`; operator-aware column-count diagnostics; **157** EXCEPT clone tests + **12** three-level nesting tests; gate canaries | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
 | 13.2 | **Postgres INSERT** | `postgres_insert` rule marked incomplete; no `exitPostgres_insert` | Full Postgres INSERT shape (incl. `RETURNING` via `select_list`); dedicated walker exit + symbol-table finalizer hook if needed | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.3 | **UPDATE RETURNING** | `returning` rule on `update_expression`; `exitReturning` commented out in walker | Active `exitReturning`; output interface populated like Postgres DELETE RETURNING | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
-| 13.4 | **Same-SELECT-list forward alias** | Unqualified ref in `PARTITION BY` (etc.) does not bind to earlier select-list alias in same scope | Local select-list alias registry consulted during clause egress (GROUP BY, ORDER BY, PARTITION BY, QUALIFY) | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
+| 13.4 | **Intra–select-list forward output-column resolution** | Unqualified refs in a later select-item expression (window `PARTITION BY`, nested formula, etc.) are collected as unresolved even when an earlier item already registered the name on the query interface | At ingress (`collectUnresolvedColumnReference`), while walking `select_list`, skip unresolved for unqualified names matching an **earlier** interface key; merge usage tokens onto `query_dictionary` | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
 | 13.6 | **SQL statement generator** | `SQLStatementGenerator` partial; not production-ready | Round-trip SQL regeneration for all `SQLParserEndPoints` keys from AST + substitution map | New or extended generator test class |
 
@@ -1597,21 +1597,25 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | `updateReturningQualifiedColumnsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `RETURNING t.col AS alias` table-dict + interface |
 | `updateReturningWithFromSubqueryTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — UPDATE FROM + RETURNING combined |
 
-### 13.4 — Same-SELECT-list forward alias resolution
+### 13.4 — Intra–select-list forward output-column resolution
+
+**Problem (precise):** While building a `query_specification` select list, each `exitSelect_item` registers an output name on `MUMBLE_INTERFACE_KEY` (implicit column name, explicit `AS` alias, or generated `unnamed_N`) and its defining token on `query_dictionary`. Later items in the **same** select list can reference those names in any subsequent predicand (window `PARTITION BY` / `ORDER BY`, `CASE`, function args, etc.). Ingress still routes those refs through `collectUnresolvedColumnReference`, so they land in `MUMBLE_UNRESOLVED_COLUMN_KEY` and fail at finalize as if they were external — even though they are self-references to the current query's in-progress interface.
+
+**Note:** Query-level `GROUP BY` / `ORDER BY` / `WHERE` forward-alias binding already has archived-clause egress (`probeArchivedScopeClauseColumns` + `isIntraQueryOutputClauseUsage`). This gap is specifically **inside the select list** during the sequential walk.
 
 **Work:**
 
-- [ ] At `exitSelect_item`, register output aliases in a per-`query_specification` visible map (case-folding rules aligned with existing alias map).
-- [ ] During `validateArchivedClauseColumnRef` / window `partition_by` / `orderby` egress, resolve unqualified refs against that map before physical-table lookup.
+- [x] In `collectUnresolvedColumnReference`, when `RULE_select_list` is active and the ref is unqualified, if the name matches a **true output alias** already on `MUMBLE_INTERFACE_KEY` (`isInterfaceOutputAliasOnly` — explicit `AS` alias or expression output whose name differs from its source column; pass-through names like `SELECT a, … a+b` still route through unresolved for `table_dictionary` lineage), treat as resolved: **do not** enqueue unresolved; merge the usage token onto `query_dictionary` for that interface column (case-folding aligned with existing alias map / quoted-identifier rules).
 - [ ] Do **not** backpatch finalized child `def_queryN` payloads; resolution stays in the owning select scope.
+- [ ] Refresh goldens + flip donor-email test expectations after review.
 
 **Tests to add or bring green:**
 
 | Method | Class | Proves |
 |--------|-------|--------|
-| `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | **Existing** — production donor-email query; `PARTITION BY … source_partner_system_name` binds to same-list alias; remove TODO at ~L277 |
+| `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` | `SqlEventWalkerLiveSampleQueriesTests` | **Existing** — production donor-email query; `PARTITION BY … source_partner_system_name` binds to earlier same-list alias; remove TODO at ~L418 |
 | `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **New** — minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` |
-| `selectListAliasReferencedInOrderByTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `ORDER BY` forward alias in same select list |
+| `selectListAliasReferencedInLaterSelectItemExpressionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — `expr AS alias, alias + 1` forward ref in same select list |
 | `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **New** — negative control: inner alias must not leak to outer scope |
 
 **Gate candidacy (after green):** `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` already in gate — should pass without unresolved fatals once fixed.
@@ -1659,7 +1663,7 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 ### Phase 13 execution order
 
 ```
-13.4 (forward alias — smallest user-visible defect, gate probe already exists)
+13.4 (intra–select-list forward output-column resolution — gate probe already exists)
   → 13.3 (UPDATE RETURNING — mirrors DELETE RETURNING pattern)
   → 13.1 (EXCEPT parity) ✅ DONE Jul 2026
   → 13.2 (Postgres INSERT — larger grammar surface)

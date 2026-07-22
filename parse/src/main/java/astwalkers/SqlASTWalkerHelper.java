@@ -703,17 +703,21 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	@SuppressWarnings("unchecked")
 	public void collectUnresolvedColumnReference(Object tableReference, Object item, Token token) {
 	
+		HashMap<String, Object> unresolvedColumnEntry = buildUnresolvedColumnEntry(tableReference, item, token);
+		if (unresolvedColumnEntry == null) {
+			return;
+		}
+
+		if (tryResolveIntraSelectListForwardReference(tableReference, unresolvedColumnEntry)) {
+			return;
+		}
+
 		Object qryTableDictObject = symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
 		if (!(qryTableDictObject instanceof Map<?, ?>)) {
 			qryTableDictObject = new HashMap<String, Object>();
 			symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qryTableDictObject);
 		}
 		Map<String, Object> qryTableDict = (Map<String, Object>) qryTableDictObject;
-
-		HashMap<String, Object> unresolvedColumnEntry = buildUnresolvedColumnEntry(tableReference, item, token);
-		if (unresolvedColumnEntry == null) {
-			return;
-		}
 
 		String unresolvedKey = buildUnresolvedColumnKey(tableReference, unresolvedColumnEntry);
 		if (unresolvedKey == null) {
@@ -745,6 +749,104 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		} else {
 			qryTableDict.put(unresolvedKey, unresolvedColumnEntry);
 		}
+	}
+
+	/**
+	 * While walking a select list, output columns registered by earlier {@code exitSelect_item}
+	 * calls are visible on {@link MumbleConstants#MUMBLE_INTERFACE_KEY}. Unqualified refs to
+	 * those names in later select-item expressions are self-references to the current query,
+	 * not external unresolved columns.
+	 */
+	@SuppressWarnings("unchecked")
+	private boolean tryResolveIntraSelectListForwardReference(
+			Object tableReference,
+			HashMap<String, Object> unresolvedColumnEntry) {
+		if (!isInsideSelectList()) {
+			return false;
+		}
+		if (normalizeUnresolvedTableRef(tableReference) != null) {
+			return false;
+		}
+
+		Object columnMetaObj = unresolvedColumnEntry.get(MUMBLE_COLUMN_KEY);
+		if (!(columnMetaObj instanceof Map<?, ?> columnMeta)) {
+			return false;
+		}
+		String columnName = (String) ((Map<String, Object>) columnMeta).get(MUMBLE_NAME_KEY);
+		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+			return false;
+		}
+
+		Object interfaceObj = symbolTable.get(MUMBLE_INTERFACE_KEY);
+		if (!(interfaceObj instanceof Map<?, ?>)) {
+			return false;
+		}
+		HashMap<String, Object> selectInterface = (HashMap<String, Object>) interfaceObj;
+		String interfaceKey = findInterfaceKeyIgnoreCase(selectInterface, columnName);
+		if (interfaceKey == null || !isInterfaceOutputAliasOnly(selectInterface, interfaceKey)) {
+			return false;
+		}
+
+		Object queryDictObj = symbolTable.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		HashMap<String, Object> queryDictionary;
+		if (queryDictObj instanceof HashMap<?, ?> existingDictionary) {
+			queryDictionary = (HashMap<String, Object>) existingDictionary;
+		} else {
+			queryDictionary = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
+		}
+		mergeResolvedColumnIntoDictionary(queryDictionary, interfaceKey, unresolvedColumnEntry);
+		return true;
+	}
+
+	private boolean isInsideSelectList() {
+		Integer level = currentStackLevel(SQLSelectParserParser.RULE_select_list);
+		return level != null && level > 0;
+	}
+
+	private String findInterfaceKeyIgnoreCase(Map<String, Object> interfaceMap, String columnName) {
+		if (interfaceMap == null || interfaceMap.isEmpty() || columnName == null) {
+			return null;
+		}
+		if (interfaceMap.containsKey(columnName)) {
+			return columnName;
+		}
+		if (isQuotedIdentifier(columnName)) {
+			return null;
+		}
+		for (String existingKey : interfaceMap.keySet()) {
+			if (existingKey != null
+					&& !isQuotedIdentifier(existingKey)
+					&& existingKey.equalsIgnoreCase(columnName)) {
+				return existingKey;
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isInterfaceOutputAliasOnly(
+			HashMap<String, Object> localInterface,
+			String outputColumnName) {
+		if (outputColumnName == null || outputColumnName.isBlank()) {
+			return false;
+		}
+		String matchedKey = findInterfaceKeyIgnoreCase(localInterface, outputColumnName);
+		if (matchedKey == null) {
+			return false;
+		}
+		Object refsObj = localInterface.get(matchedKey);
+		if (!(refsObj instanceof ArrayList<?> refs)) {
+			return true;
+		}
+		for (Object refObj : refs) {
+			String sourceColumnName = extractReferenceNameFromInterfaceEntry(refObj);
+			if (sourceColumnName != null
+					&& sourceColumnName.equalsIgnoreCase(outputColumnName)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@SuppressWarnings("unchecked")
