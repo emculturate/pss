@@ -13,7 +13,7 @@ Use this document as the single handoff for consolidating column resolution in t
 
 ## Quality gate (run before every consolidation change)
 
-**195 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**200 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
 
 **Full module suite (2026-07-19):** `mvn test` → **1203/1203** passing across all walker, access, CLI, and generator test classes.
 
@@ -1538,19 +1538,19 @@ mvn -Psmoketest-quality-gate test
 
 #### 13.1.1 — EXCEPT clone matrix (UNION → EXCEPT clones)
 
-**Status:** EXCEPT clone matrix **green** (`mvn test` 1313/1313). **87** EXCEPT-variant `@Test` methods across 7 walker test files (cloned adjacent to UNION originals; goldens refreshed). INTERSECT clones deferred until EXCEPT sampling approved.
+**Status:** UNION + INTERSECT → EXCEPT clone matrices **green**. **87** UNION-derived + **70** INTERSECT-derived EXCEPT-variant `@Test` methods (goldens refreshed; one-off clone scripts removed after landing).
 
 **Work:**
 
-- [x] Clone every UNION test to an EXCEPT variant placed next to the original (per-file; `parse/tools/clone_union_tests_to_except.py`).
+- [x] Clone every UNION test to an EXCEPT variant placed next to the original (per-file; one-off script removed after landing).
 - [x] Refresh goldens for all EXCEPT clones (AST `operator=except`, symbol-tree `setop=EXCEPT` on non-anchor participants; token offsets adjusted after `union` → `except`).
-- [x] Clone INTERSECT tests to EXCEPT variants (13.1.1b — **70** clones; skipped queries with both INTERSECT and EXCEPT; `parse/tools/clone_intersect_tests_to_except.py`; goldens refreshed; `mvn test` **1383/1383** green).
-- [ ] Add three-level UNION/INTERSECT/EXCEPT nesting suite (6 permutation tests).
-- [ ] Gate candidacy for representative EXCEPT clones.
+- [x] Clone INTERSECT tests to EXCEPT variants (13.1.1b — **70** clones; skipped queries with both INTERSECT and EXCEPT; goldens refreshed; one-off scripts removed after landing).
+- [x] Add three-level UNION/INTERSECT/EXCEPT nesting suite (**12** tests: 6 happy-path permutations + 6 column-count mismatch permutations with triple diagnostics and `setop=` stamping).
+- [x] Gate candidacy for representative EXCEPT / set-op clones.
 
-**Gate candidacy (after green):** add `exceptColumnCountMismatchEmitsFatalTest` + `unaliasedDerivedExceptAllOuterClausesV10Test` to `SmoketestQualityGateTestSuite`.
+**Gate candidacy (after green):** `exceptColumnCountMismatchEmitsFatalTest`, `intersectionWithMismatchColumnCountsAndNamesTest`, `threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest`, `threeLevelSetOpNestUnionIntersectExceptHappyPathTest`, `threeLevelSetOpNestExceptUnionIntersectHappyPathTest`, and `unaliasedDerivedExceptAllOuterClausesV10Test` in `SmoketestQualityGateTestSuite`.
 
-**Dev tooling (optional cleanup):** `ExceptSnippetGoldenProbe.java` + `parse/tools/bump_except_goldens_from_union.py` — golden-generation helpers; safe to delete if undesired.
+**Dev tooling:** one-off UNION/INTERSECT → EXCEPT clone + golden-refresh scripts removed after matrices landed (no `parse/tools/` helpers retained).
 
 #### 13.1.1+ — EXCEPT nesting extensions (after clone approval)
 

@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (195 tests):
+ * Gate composition (200 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -42,7 +42,8 @@ import org.junit.Test;
  *   <li>Production scalar / EXISTS probes (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
  *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
- *   <li>Diagnostic exemplars (5): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
+ *   <li>Diagnostic exemplars (9): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code intersectionWithMismatchColumnCountsAndNamesTest}, {@code exceptColumnCountMismatchEmitsFatalTest}, {@code threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
+ *   <li>Three-level set-op nesting smoke (2): {@code threeLevelSetOpNestUnionIntersectExceptHappyPathTest}, {@code threeLevelSetOpNestExceptUnionIntersectHappyPathTest}</li>
  *   <li>Parser diagnostic exemplars (11): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
  * </ul>
  *
@@ -1039,6 +1040,31 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void unionWithMismatchColumnCountsAndNamesTest() {
 		unaliasedTests.unionWithMismatchColumnCountsAndNamesTest();
+	}
+
+	@Test
+	public void intersectionWithMismatchColumnCountsAndNamesTest() {
+		unaliasedTests.intersectionWithMismatchColumnCountsAndNamesTest();
+	}
+
+	@Test
+	public void exceptColumnCountMismatchEmitsFatalTest() {
+		unaliasedTests.exceptColumnCountMismatchEmitsFatalTest();
+	}
+
+	@Test
+	public void threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest() {
+		unaliasedTests.threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest();
+	}
+
+	@Test
+	public void threeLevelSetOpNestUnionIntersectExceptHappyPathTest() {
+		unaliasedTests.threeLevelSetOpNestUnionIntersectExceptHappyPathTest();
+	}
+
+	@Test
+	public void threeLevelSetOpNestExceptUnionIntersectHappyPathTest() {
+		unaliasedTests.threeLevelSetOpNestExceptUnionIntersectHappyPathTest();
 	}
 
 	@Test

@@ -1281,12 +1281,14 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertDiagnosticAtPosition(
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				"UNION has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17)",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17).",
 				null,
-				1);
+				3,
+				17);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=desc, table_ref=null}}, 3={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1315,12 +1317,14 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertDiagnosticAtPosition(
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17)",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17).",
 				null,
-				1);
+				3,
+				17);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=desc, table_ref=null}}, 3={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1350,12 +1354,14 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertDiagnosticAtPosition(
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				"INTERSECTION has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17)",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17).",
 				null,
-				1);
+				3,
+				17);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=desc, table_ref=null}}, 3={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1384,12 +1390,14 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertDiagnosticAtPosition(
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17)",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17).",
 				null,
-				1);
+				3,
+				17);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=desc, table_ref=null}}, 3={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -1420,12 +1428,14 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertDiagnosticAtPosition(
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
-				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17)",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (rank, desc, student) at (l:1 c:7) but there were 4 (app_name, category, is_active, nk) at (l:3 c:17).",
 				null,
-				1);
+				3,
+				17);
 		
 		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=desc, table_ref=null}}, 3={column={name=student, table_ref=null}}}, from={table={alias=Guide_Student_Conditions, substitution={name=<Guide>, type=tuple}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={alias=app_name, literal='Nav'}, 2={column={name=category, table_ref=null}}, 3={column={name=is_active, table_ref=null}}, 4={column={name=nk, table_ref=null}}}, from={table={alias=Nav_Student_Conditions, substitution={name=<NAV>, type=tuple}}}}}}}",
 				extractor.getAsTree().toString());
@@ -10266,4 +10276,499 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 
 	}
 
+
+
+	// --- Three-level UNION / INTERSECT / EXCEPT nesting (6 permutations x happy + mismatch) ---
+
+	@Test
+	public void threeLevelSetOpNestUnionIntersectExceptHappyPathTest() {
+		// Three-level nesting: left=UNION, mid=INTERSECT, right=EXCEPT; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third UNION SELECT third FROM fifth)"
+				+ " INTERSECT "
+				+ "(SELECT fourth FROM sixth EXCEPT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,75:80='fourth',<381>,1:75]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,39:43='third',<381>,1:39]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,39:43='third',<381>,1:39]]}, query3={fourth=[[@15,75:80='fourth',<381>,1:75]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_intersect6={def_union2={def_query1={query_dictionary={third=[[@8,39:43='third',<381>,1:39]]}, table_dictionary={fifth={third=[[@8,39:43='third',<381>,1:39]]}}, setop=UNION, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={setop=INTERSECTION, interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=EXCEPT, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,75:80='fourth',<381>,1:75]]}, table_dictionary={sixth={fourth=[[@15,75:80='fourth',<381>,1:75]]}}, interface={fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestUnionExceptIntersectHappyPathTest() {
+		// Three-level nesting: left=UNION, mid=EXCEPT, right=INTERSECT; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third UNION SELECT third FROM fifth)"
+				+ " EXCEPT "
+				+ "(SELECT fourth FROM sixth INTERSECT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={intersect={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,72:77='fourth',<381>,1:72]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,39:43='third',<381>,1:39]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,39:43='third',<381>,1:39]]}, query3={fourth=[[@15,72:77='fourth',<381>,1:72]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_union2={def_query1={query_dictionary={third=[[@8,39:43='third',<381>,1:39]]}, table_dictionary={fifth={third=[[@8,39:43='third',<381>,1:39]]}}, setop=UNION, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, def_intersect5={interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=INTERSECTION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,72:77='fourth',<381>,1:72]]}, table_dictionary={sixth={fourth=[[@15,72:77='fourth',<381>,1:72]]}}, setop=EXCEPT, interface={fourth=[{name=fourth, table_ref=sixth}]}}}, interface={first=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestIntersectUnionExceptHappyPathTest() {
+		// Three-level nesting: left=INTERSECT, mid=UNION, right=EXCEPT; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third INTERSECT SELECT third FROM fifth)"
+				+ " UNION "
+				+ "(SELECT fourth FROM sixth EXCEPT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=UNION}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,75:80='fourth',<381>,1:75]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,43:47='third',<381>,1:43]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,43:47='third',<381>,1:43]]}, query3={fourth=[[@15,75:80='fourth',<381>,1:75]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_intersect2={def_query1={query_dictionary={third=[[@8,43:47='third',<381>,1:43]]}, table_dictionary={fifth={third=[[@8,43:47='third',<381>,1:43]]}}, setop=INTERSECTION, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=EXCEPT, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,75:80='fourth',<381>,1:75]]}, table_dictionary={sixth={fourth=[[@15,75:80='fourth',<381>,1:75]]}}, setop=UNION, interface={fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestIntersectExceptUnionHappyPathTest() {
+		// Three-level nesting: left=INTERSECT, mid=EXCEPT, right=UNION; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third INTERSECT SELECT third FROM fifth)"
+				+ " EXCEPT "
+				+ "(SELECT fourth FROM sixth UNION SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,76:81='fourth',<381>,1:76]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,43:47='third',<381>,1:43]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,43:47='third',<381>,1:43]]}, query3={fourth=[[@15,76:81='fourth',<381>,1:76]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_intersect2={def_query1={query_dictionary={third=[[@8,43:47='third',<381>,1:43]]}, table_dictionary={fifth={third=[[@8,43:47='third',<381>,1:43]]}}, setop=INTERSECTION, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=UNION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,76:81='fourth',<381>,1:76]]}, table_dictionary={sixth={fourth=[[@15,76:81='fourth',<381>,1:76]]}}, setop=EXCEPT, interface={fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestExceptUnionIntersectHappyPathTest() {
+		// Three-level nesting: left=EXCEPT, mid=UNION, right=INTERSECT; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third EXCEPT SELECT third FROM fifth)"
+				+ " UNION "
+				+ "(SELECT fourth FROM sixth INTERSECT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=UNION}}, 3={intersect={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,72:77='fourth',<381>,1:72]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,40:44='third',<381>,1:40]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,40:44='third',<381>,1:40]]}, query3={fourth=[[@15,72:77='fourth',<381>,1:72]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_union2={def_query1={query_dictionary={third=[[@8,40:44='third',<381>,1:40]]}, table_dictionary={fifth={third=[[@8,40:44='third',<381>,1:40]]}}, setop=EXCEPT, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, def_intersect5={interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=INTERSECTION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,72:77='fourth',<381>,1:72]]}, table_dictionary={sixth={fourth=[[@15,72:77='fourth',<381>,1:72]]}}, setop=UNION, interface={fourth=[{name=fourth, table_ref=sixth}]}}}, interface={first=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestExceptIntersectUnionHappyPathTest() {
+		// Three-level nesting: left=EXCEPT, mid=INTERSECT, right=UNION; matching column counts
+		final String query = "("
+				+ "(SELECT first FROM third EXCEPT SELECT third FROM fifth)"
+				+ " INTERSECT "
+				+ "(SELECT fourth FROM sixth UNION SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=third, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={fourth=[[@15,76:81='fourth',<381>,1:76]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}, fifth={third=[[@8,40:44='third',<381>,1:40]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@20,107:113='seventh',<381>,1:107]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,40:44='third',<381>,1:40]]}, query3={fourth=[[@15,76:81='fourth',<381>,1:76]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_intersect6={def_union2={def_query1={query_dictionary={third=[[@8,40:44='third',<381>,1:40]]}, table_dictionary={fifth={third=[[@8,40:44='third',<381>,1:40]]}}, setop=EXCEPT, interface={third=[{name=third, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={setop=INTERSECTION, interface={fourth=query_column}, def_query4={query_dictionary={seventh=[[@20,107:113='seventh',<381>,1:107]]}, table_dictionary={eighth={seventh=[[@20,107:113='seventh',<381>,1:107]]}}, setop=UNION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={fourth=[[@15,76:81='fourth',<381>,1:76]]}, table_dictionary={sixth={fourth=[[@15,76:81='fourth',<381>,1:76]]}}, interface={fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest() {
+		// Three-level nesting: left=UNION, mid=INTERSECT, right=EXCEPT; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third UNION SELECT third, extra FROM fifth)"
+				+ " INTERSECT "
+				+ "(SELECT fourth, extra FROM sixth EXCEPT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:39).",
+				null,
+				1,
+				39);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:82) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:? c:?) but there were 2 (extra, fourth) at (l:1 c:107).",
+				null,
+				1,
+				107);
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}, query3={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_intersect6={def_union2={def_query1={query_dictionary={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}, table_dictionary={fifth={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}}, setop=UNION, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={setop=INTERSECTION, interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=EXCEPT, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}, table_dictionary={sixth={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}}, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestUnionExceptIntersectColumnCountMismatchTest() {
+		// Three-level nesting: left=UNION, mid=EXCEPT, right=INTERSECT; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third UNION SELECT third, extra FROM fifth)"
+				+ " EXCEPT "
+				+ "(SELECT fourth, extra FROM sixth INTERSECT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:39).",
+				null,
+				1,
+				39);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:79) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (extra, fourth) at (l:1 c:87).",
+				null,
+				1,
+				87);
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={intersect={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}, query3={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_union2={def_query1={query_dictionary={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}, table_dictionary={fifth={third=[[@8,39:43='third',<381>,1:39]], extra=[[@10,46:50='extra',<381>,1:46]]}}, setop=UNION, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, def_intersect5={interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=INTERSECTION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}, table_dictionary={sixth={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}}, setop=EXCEPT, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}, interface={first=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestIntersectUnionExceptColumnCountMismatchTest() {
+		// Three-level nesting: left=INTERSECT, mid=UNION, right=EXCEPT; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third INTERSECT SELECT third, extra FROM fifth)"
+				+ " UNION "
+				+ "(SELECT fourth, extra FROM sixth EXCEPT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:43).",
+				null,
+				1,
+				43);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:82) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (extra, fourth) at (l:1 c:90).",
+				null,
+				1,
+				90);
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=UNION}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}, query3={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_intersect2={def_query1={query_dictionary={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}, table_dictionary={fifth={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}}, setop=INTERSECTION, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=EXCEPT, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}, table_dictionary={sixth={extra=[[@19,90:94='extra',<381>,1:90]], fourth=[[@17,82:87='fourth',<381>,1:82]]}}, setop=UNION, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestIntersectExceptUnionColumnCountMismatchTest() {
+		// Three-level nesting: left=INTERSECT, mid=EXCEPT, right=UNION; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third INTERSECT SELECT third, extra FROM fifth)"
+				+ " EXCEPT "
+				+ "(SELECT fourth, extra FROM sixth UNION SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:43).",
+				null,
+				1,
+				43);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:83) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (extra, fourth) at (l:1 c:91).",
+				null,
+				1,
+				91);
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={intersect={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}, query3={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_intersect2={def_query1={query_dictionary={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}, table_dictionary={fifth={third=[[@8,43:47='third',<381>,1:43]], extra=[[@10,50:54='extra',<381>,1:50]]}}, setop=INTERSECTION, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=UNION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}, table_dictionary={sixth={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}}, setop=EXCEPT, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestExceptUnionIntersectColumnCountMismatchTest() {
+		// Three-level nesting: left=EXCEPT, mid=UNION, right=INTERSECT; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third EXCEPT SELECT third, extra FROM fifth)"
+				+ " UNION "
+				+ "(SELECT fourth, extra FROM sixth INTERSECT SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:40).",
+				null,
+				1,
+				40);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:79) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (extra, fourth) at (l:1 c:87).",
+				null,
+				1,
+				87);
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={union={qualifier=null, operator=UNION}}, 3={intersect={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}, query3={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_union6={def_union2={def_query1={query_dictionary={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}, table_dictionary={fifth={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}}, setop=EXCEPT, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, def_intersect5={interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=INTERSECTION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}, table_dictionary={sixth={extra=[[@19,87:91='extra',<381>,1:87]], fourth=[[@17,79:84='fourth',<381>,1:79]]}}, setop=UNION, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}, interface={first=query_column}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void threeLevelSetOpNestExceptIntersectUnionColumnCountMismatchTest() {
+		// Three-level nesting: left=EXCEPT, mid=INTERSECT, right=UNION; one column-count mismatch per set-op site
+		final String query = "("
+				+ "(SELECT first FROM third EXCEPT SELECT third, extra FROM fifth)"
+				+ " INTERSECT "
+				+ "(SELECT fourth, extra FROM sixth UNION SELECT seventh FROM eighth)"
+				+ ")";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 1 columns (first) at (l:1 c:9) but there were 2 (third, extra) at (l:1 c:40).",
+				null,
+				1,
+				40);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 2 columns (fourth, extra) at (l:1 c:83) but there were 1 (seventh) at (l:1 c:121).",
+				null,
+				1,
+				121);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 1 columns (first) at (l:? c:?) but there were 2 (extra, fourth) at (l:1 c:108).",
+				null,
+				1,
+				108);
+		Assert.assertTrue("Expected setop=EXCEPT", extractor.getSymbolTable().toString().contains("setop=EXCEPT"));
+		Assert.assertTrue("Expected setop=INTERSECTION", extractor.getSymbolTable().toString().contains("setop=INTERSECTION"));
+		Assert.assertTrue("Expected setop=UNION", extractor.getSymbolTable().toString().contains("setop=UNION"));
+		Assert.assertEquals("AST is wrong", "{SQL={intersect={1={union={1={select={1={column={name=first, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=third, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={union={1={select={1={column={name=fourth, table_ref=null}}, 2={column={name=extra, table_ref=null}}}, from={table={alias=null, table=sixth}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=seventh, table_ref=null}}}, from={table={alias=null, table=eighth}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[first]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{sixth={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}, third={first=[[@3,9:13='first',<88>,1:9]]}, eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}, fifth={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={seventh=[[@24,121:127='seventh',<381>,1:121]]}, query0={first=[[@3,9:13='first',<88>,1:9]]}, query1={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}, query3={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+		 "{def_intersect6={def_union2={def_query1={query_dictionary={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}, table_dictionary={fifth={third=[[@8,40:44='third',<381>,1:40]], extra=[[@10,47:51='extra',<381>,1:47]]}}, setop=EXCEPT, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={setop=INTERSECTION, interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<381>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<381>,1:121]]}}, setop=UNION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}, table_dictionary={sixth={extra=[[@19,91:95='extra',<381>,1:91]], fourth=[[@17,83:88='fourth',<381>,1:83]]}}, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}}}",
+				extractor.getSymbolTable().toString());
+	}
 }
