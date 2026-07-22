@@ -848,6 +848,30 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 	}
 
 	@Test
+	public void insertSelectExceptSourceWithExplicitTargetColumnsV16() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select rank, score from perf_feed except select dept_id, new_quota from quota_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_feed}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_feed}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, quota_feed={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, query1={dept_id=[[@16,92:98='dept_id',<381>,1:92]], new_quota=[[@18,101:109='new_quota',<381>,1:101]]}, insert3={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert3={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, def_union2={def_query1={query_dictionary={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}, table_dictionary={quota_feed={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}}, setop=EXCEPT, interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}]}}, def_query0={query_dictionary={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, table_dictionary={perf_feed={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}}, interface={score=[{name=score, table_ref=perf_feed}], rank=[{name=rank, table_ref=perf_feed}]}}, interface={score=query_column, rank=query_column}}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union2}], rank_bucket=[{name=score, table_ref=union2}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void insertSelectThreeWayUnionSourceWithExplicitTargetColumnsV17() {
 		final String query = " insert into employees (score, rank_bucket)"
 				+ " select rank, score from perf_feed"
@@ -923,6 +947,32 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 	}
 
 	@Test
+	public void insertSelectThreeWayExceptSourceWithExplicitTargetColumnsV18() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " select rank, score from perf_feed"
+				+ " except select dept_id, new_quota from quota_feed"
+				+ " except select alpha_col, beta_col from third_feed";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_feed}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_feed}}}, 4={union={qualifier=null, operator=except}}, 5={select={1={column={name=alpha_col, table_ref=null}}, 2={column={name=beta_col, table_ref=null}}}, from={table={alias=null, table=third_feed}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{perf_feed={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, quota_feed={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}, third_feed={alpha_col=[[@23,141:149='alpha_col',<381>,1:141]], beta_col=[[@25,152:159='beta_col',<381>,1:152]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, insert4={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, query1={dept_id=[[@16,92:98='dept_id',<381>,1:92]], new_quota=[[@18,101:109='new_quota',<381>,1:101]]}, query2={alpha_col=[[@23,141:149='alpha_col',<381>,1:141]], beta_col=[[@25,152:159='beta_col',<381>,1:152]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_insert4={def_union3={def_query1={query_dictionary={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}, table_dictionary={quota_feed={new_quota=[[@18,101:109='new_quota',<381>,1:101]], dept_id=[[@16,92:98='dept_id',<381>,1:92]]}}, setop=EXCEPT, interface={new_quota=[{name=new_quota, table_ref=quota_feed}], dept_id=[{name=dept_id, table_ref=quota_feed}]}}, def_query0={query_dictionary={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}, table_dictionary={perf_feed={score=[[@11,57:61='score',<381>,1:57]], rank=[[@9,51:54='rank',<128>,1:51]]}}, interface={score=[{name=score, table_ref=perf_feed}], rank=[{name=rank, table_ref=perf_feed}]}}, interface={score=query_column, rank=query_column}, def_query2={query_dictionary={alpha_col=[[@23,141:149='alpha_col',<381>,1:141]], beta_col=[[@25,152:159='beta_col',<381>,1:152]]}, table_dictionary={third_feed={alpha_col=[[@23,141:149='alpha_col',<381>,1:141]], beta_col=[[@25,152:159='beta_col',<381>,1:152]]}}, setop=EXCEPT, interface={alpha_col=[{name=alpha_col, table_ref=third_feed}], beta_col=[{name=beta_col, table_ref=third_feed}]}}}, query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union3}], rank_bucket=[{name=score, table_ref=union3}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void insertSelectUnionOverTwoIntersectsWithExplicitTargetColumnsV19A() {
 		final String query = " insert into employees (score, rank_bucket)"
 				+ " (select rank, score from perf_a intersect select x_col, y_col from perf_b)"
@@ -945,6 +995,31 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				Assert.assertEquals("Symbol Table is wrong", "{def_insert7={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union6}], rank_bucket=[{name=score, table_ref=union6}]}, def_union6={def_intersect2={def_query1={query_dictionary={x_col=[[@17,93:97='x_col',<381>,1:93]], y_col=[[@19,100:104='y_col',<381>,1:100]]}, table_dictionary={perf_b={x_col=[[@17,93:97='x_col',<381>,1:93]], y_col=[[@19,100:104='y_col',<381>,1:100]]}}, setop=INTERSECTION, interface={x_col=[{name=x_col, table_ref=perf_b}], y_col=[{name=y_col, table_ref=perf_b}]}}, def_query0={query_dictionary={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, table_dictionary={perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}}, interface={score=[{name=score, table_ref=perf_a}], rank=[{name=rank, table_ref=perf_a}]}}, interface={score=query_column, rank=query_column}}, def_intersect5={interface={new_quota=query_column, dept_id=query_column}, def_query4={query_dictionary={p_col=[[@33,182:186='p_col',<381>,1:182]], q_col=[[@35,189:193='q_col',<381>,1:189]]}, table_dictionary={quota_b={p_col=[[@33,182:186='p_col',<381>,1:182]], q_col=[[@35,189:193='q_col',<381>,1:189]]}}, setop=INTERSECTION, interface={p_col=[{name=p_col, table_ref=quota_b}], q_col=[{name=q_col, table_ref=quota_b}]}}, def_query3={query_dictionary={new_quota=[[@28,142:150='new_quota',<381>,1:142]], dept_id=[[@26,133:139='dept_id',<381>,1:133]]}, table_dictionary={quota_a={new_quota=[[@28,142:150='new_quota',<381>,1:142]], dept_id=[[@26,133:139='dept_id',<381>,1:133]]}}, setop=UNION, interface={new_quota=[{name=new_quota, table_ref=quota_a}], dept_id=[{name=dept_id, table_ref=quota_a}]}}}, interface={score=query_column, rank=query_column}}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void insertSelectUnionOverTwoExceptsWithExplicitTargetColumnsV19A() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " (select rank, score from perf_a except select x_col, y_col from perf_b)"
+				+ " union (select dept_id, new_quota from quota_a except select p_col, q_col from quota_b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_a}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=x_col, table_ref=null}}, 2={column={name=y_col, table_ref=null}}}, from={table={alias=null, table=perf_b}}}}}, 2={union={qualifier=null, operator=union}}, 3={union={1={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_a}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=p_col, table_ref=null}}, 2={column={name=q_col, table_ref=null}}}, from={table={alias=null, table=quota_b}}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{quota_b={p_col=[[@33,176:180='p_col',<381>,1:176]], q_col=[[@35,183:187='q_col',<381>,1:183]]}, quota_a={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}, perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, perf_b={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={p_col=[[@33,176:180='p_col',<381>,1:176]], q_col=[[@35,183:187='q_col',<381>,1:183]]}, insert7={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, query0={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, query1={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}, query3={dept_id=[[@26,130:136='dept_id',<381>,1:130]], new_quota=[[@28,139:147='new_quota',<381>,1:139]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+				Assert.assertEquals("Symbol Table is wrong", "{def_insert7={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union6}], rank_bucket=[{name=score, table_ref=union6}]}, def_union6={def_union2={def_query1={query_dictionary={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}, table_dictionary={perf_b={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}}, setop=EXCEPT, interface={x_col=[{name=x_col, table_ref=perf_b}], y_col=[{name=y_col, table_ref=perf_b}]}}, def_query0={query_dictionary={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, table_dictionary={perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}}, interface={score=[{name=score, table_ref=perf_a}], rank=[{name=rank, table_ref=perf_a}]}}, interface={score=query_column, rank=query_column}}, interface={score=query_column, rank=query_column}, def_union5={interface={new_quota=query_column, dept_id=query_column}, def_query4={query_dictionary={p_col=[[@33,176:180='p_col',<381>,1:176]], q_col=[[@35,183:187='q_col',<381>,1:183]]}, table_dictionary={quota_b={p_col=[[@33,176:180='p_col',<381>,1:176]], q_col=[[@35,183:187='q_col',<381>,1:183]]}}, setop=EXCEPT, interface={p_col=[{name=p_col, table_ref=quota_b}], q_col=[{name=q_col, table_ref=quota_b}]}}, def_query3={query_dictionary={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}, table_dictionary={quota_a={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}}, setop=UNION, interface={new_quota=[{name=new_quota, table_ref=quota_a}], dept_id=[{name=dept_id, table_ref=quota_a}]}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void insertSelectExceptOverTwoIntersectsWithExplicitTargetColumnsV19A(){
@@ -995,6 +1070,31 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 	}
 
 	@Test
+	public void insertSelectExceptOverTwoExceptsWithExplicitTargetColumnsV19B() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " (select rank, score from perf_a except select x_col, y_col from perf_b)"
+				+ " except (select dept_id, new_quota from quota_a except select p_col, q_col from quota_b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_a}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=x_col, table_ref=null}}, 2={column={name=y_col, table_ref=null}}}, from={table={alias=null, table=perf_b}}}}}, 2={union={qualifier=null, operator=except}}, 3={union={1={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_a}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=p_col, table_ref=null}}, 2={column={name=q_col, table_ref=null}}}, from={table={alias=null, table=quota_b}}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{quota_b={p_col=[[@33,177:181='p_col',<381>,1:177]], q_col=[[@35,184:188='q_col',<381>,1:184]]}, quota_a={new_quota=[[@28,140:148='new_quota',<381>,1:140]], dept_id=[[@26,131:137='dept_id',<381>,1:131]]}, perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, perf_b={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={p_col=[[@33,177:181='p_col',<381>,1:177]], q_col=[[@35,184:188='q_col',<381>,1:184]]}, insert7={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, query0={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, query1={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}, query3={dept_id=[[@26,131:137='dept_id',<381>,1:131]], new_quota=[[@28,140:148='new_quota',<381>,1:140]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+				Assert.assertEquals("Symbol Table is wrong", "{def_insert7={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union6}], rank_bucket=[{name=score, table_ref=union6}]}, def_union6={def_union2={def_query1={query_dictionary={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}, table_dictionary={perf_b={x_col=[[@17,90:94='x_col',<381>,1:90]], y_col=[[@19,97:101='y_col',<381>,1:97]]}}, setop=EXCEPT, interface={x_col=[{name=x_col, table_ref=perf_b}], y_col=[{name=y_col, table_ref=perf_b}]}}, def_query0={query_dictionary={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, table_dictionary={perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}}, interface={score=[{name=score, table_ref=perf_a}], rank=[{name=rank, table_ref=perf_a}]}}, interface={score=query_column, rank=query_column}}, interface={score=query_column, rank=query_column}, def_union5={interface={new_quota=query_column, dept_id=query_column}, def_query4={query_dictionary={p_col=[[@33,177:181='p_col',<381>,1:177]], q_col=[[@35,184:188='q_col',<381>,1:184]]}, table_dictionary={quota_b={p_col=[[@33,177:181='p_col',<381>,1:177]], q_col=[[@35,184:188='q_col',<381>,1:184]]}}, setop=EXCEPT, interface={p_col=[{name=p_col, table_ref=quota_b}], q_col=[{name=q_col, table_ref=quota_b}]}}, def_query3={query_dictionary={new_quota=[[@28,140:148='new_quota',<381>,1:140]], dept_id=[[@26,131:137='dept_id',<381>,1:131]]}, table_dictionary={quota_a={new_quota=[[@28,140:148='new_quota',<381>,1:140]], dept_id=[[@26,131:137='dept_id',<381>,1:131]]}}, setop=EXCEPT, interface={new_quota=[{name=new_quota, table_ref=quota_a}], dept_id=[{name=dept_id, table_ref=quota_a}]}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void insertSelectIntersectOverTwoUnionsWithExplicitTargetColumnsV20A() {
 		final String query = " insert into employees (score, rank_bucket)"
 				+ " (select rank, score from perf_a union select x_col, y_col from perf_b)"
@@ -1017,6 +1117,31 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				Assert.assertEquals("Symbol Table is wrong", "{def_insert7={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, def_intersect6={def_union2={def_query1={query_dictionary={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}, table_dictionary={perf_b={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}}, setop=UNION, interface={x_col=[{name=x_col, table_ref=perf_b}], y_col=[{name=y_col, table_ref=perf_b}]}}, def_query0={query_dictionary={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, table_dictionary={perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}}, interface={score=[{name=score, table_ref=perf_a}], rank=[{name=rank, table_ref=perf_a}]}}, interface={score=query_column, rank=query_column}}, interface={score=query_column, rank=query_column}, def_union5={setop=INTERSECTION, interface={new_quota=query_column, dept_id=query_column}, def_query4={query_dictionary={p_col=[[@33,178:182='p_col',<381>,1:178]], q_col=[[@35,185:189='q_col',<381>,1:185]]}, table_dictionary={quota_b={p_col=[[@33,178:182='p_col',<381>,1:178]], q_col=[[@35,185:189='q_col',<381>,1:185]]}}, setop=UNION, interface={p_col=[{name=p_col, table_ref=quota_b}], q_col=[{name=q_col, table_ref=quota_b}]}}, def_query3={query_dictionary={new_quota=[[@28,142:150='new_quota',<381>,1:142]], dept_id=[[@26,133:139='dept_id',<381>,1:133]]}, table_dictionary={quota_a={new_quota=[[@28,142:150='new_quota',<381>,1:142]], dept_id=[[@26,133:139='dept_id',<381>,1:133]]}}, interface={new_quota=[{name=new_quota, table_ref=quota_a}], dept_id=[{name=dept_id, table_ref=quota_a}]}}}}, interface={score=[{name=rank, table_ref=intersect6}], rank_bucket=[{name=score, table_ref=intersect6}]}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void insertSelectExceptOverTwoUnionsWithExplicitTargetColumnsV20A() {
+		final String query = " insert into employees (score, rank_bucket)"
+				+ " (select rank, score from perf_a union select x_col, y_col from perf_b)"
+				+ " except (select dept_id, new_quota from quota_a union select p_col, q_col from quota_b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={union={1={union={1={select={1={column={name=rank, table_ref=null}}, 2={column={name=score, table_ref=null}}}, from={table={alias=null, table=perf_a}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=x_col, table_ref=null}}, 2={column={name=y_col, table_ref=null}}}, from={table={alias=null, table=perf_b}}}}}, 2={union={qualifier=null, operator=except}}, 3={union={1={select={1={column={name=dept_id, table_ref=null}}, 2={column={name=new_quota, table_ref=null}}}, from={table={alias=null, table=quota_a}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=p_col, table_ref=null}}, 2={column={name=q_col, table_ref=null}}}, from={table={alias=null, table=quota_b}}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{quota_b={p_col=[[@33,175:179='p_col',<381>,1:175]], q_col=[[@35,182:186='q_col',<381>,1:182]]}, quota_a={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}, perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, perf_b={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={p_col=[[@33,175:179='p_col',<381>,1:175]], q_col=[[@35,182:186='q_col',<381>,1:182]]}, insert7={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, query0={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, query1={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}, query3={dept_id=[[@26,130:136='dept_id',<381>,1:130]], new_quota=[[@28,139:147='new_quota',<381>,1:139]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+				Assert.assertEquals("Symbol Table is wrong", "{def_insert7={query_dictionary={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}, table_dictionary={employees={score=[[@4,24:28='score',<381>,1:24]], rank_bucket=[[@6,31:41='rank_bucket',<381>,1:31]]}}, interface={score=[{name=rank, table_ref=union6}], rank_bucket=[{name=score, table_ref=union6}]}, def_union6={def_union2={def_query1={query_dictionary={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}, table_dictionary={perf_b={x_col=[[@17,89:93='x_col',<381>,1:89]], y_col=[[@19,96:100='y_col',<381>,1:96]]}}, setop=UNION, interface={x_col=[{name=x_col, table_ref=perf_b}], y_col=[{name=y_col, table_ref=perf_b}]}}, def_query0={query_dictionary={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}, table_dictionary={perf_a={score=[[@12,58:62='score',<381>,1:58]], rank=[[@10,52:55='rank',<128>,1:52]]}}, interface={score=[{name=score, table_ref=perf_a}], rank=[{name=rank, table_ref=perf_a}]}}, interface={score=query_column, rank=query_column}}, interface={score=query_column, rank=query_column}, def_union5={interface={new_quota=query_column, dept_id=query_column}, def_query4={query_dictionary={p_col=[[@33,175:179='p_col',<381>,1:175]], q_col=[[@35,182:186='q_col',<381>,1:182]]}, table_dictionary={quota_b={p_col=[[@33,175:179='p_col',<381>,1:175]], q_col=[[@35,182:186='q_col',<381>,1:182]]}}, setop=UNION, interface={p_col=[{name=p_col, table_ref=quota_b}], q_col=[{name=q_col, table_ref=quota_b}]}}, def_query3={query_dictionary={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}, table_dictionary={quota_a={new_quota=[[@28,139:147='new_quota',<381>,1:139]], dept_id=[[@26,130:136='dept_id',<381>,1:130]]}}, setop=EXCEPT, interface={new_quota=[{name=new_quota, table_ref=quota_a}], dept_id=[{name=dept_id, table_ref=quota_a}]}}}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void insertSelectIntersectOverTwoExceptsWithExplicitTargetColumnsV20A(){
@@ -2298,6 +2423,49 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void insertComplexSubstitutionI3WithCteExceptOrderBySubstitution() {
+		final String query = "WITH branch_a AS ("
+				+ "\n  SELECT a.emp_id, a.<insert select col I3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Account Ledger I3]> a"
+				+ "\n  WHERE a.<insert where col I3> > 0"
+				+ "\n  ORDER BY a.<insert order col I3>"
+				+ "\n), branch_b AS ("
+				+ "\n  SELECT b.emp_id, b.<insert select col I3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Audit Ledger I3]> b"
+				+ "\n  WHERE b.<insert where col I3> > 0"
+				+ "\n  ORDER BY b.<insert order col I3>"
+				+ "\n), base AS ("
+				+ "\n  SELECT * FROM branch_a"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT * FROM branch_b"
+				+ "\n)"
+				+ "\nINSERT INTO employees (top_score, rank_bucket)"
+				+ "\nSELECT b.score_val, b.emp_id"
+				+ "\nFROM base b";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<insert select col I3>, type=column}, table_ref=a}, alias=score_val}}, orderby={1={null_order=null, predicand={column={substitution={name=<insert order col I3>, type=column}, table_ref=a}}, sort_order=ASC}}, from={table={alias=a, substitution={name=<[Ops Data].[Account Ledger I3]>, parts={1=[Ops Data], 2=[Account Ledger I3]}, type=tuple}}}, where={condition={left={column={substitution={name=<insert where col I3>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, alias=branch_a}, 2={cte={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<insert select col I3>, type=column}, table_ref=b}, alias=score_val}}, orderby={1={null_order=null, predicand={column={substitution={name=<insert order col I3>, type=column}, table_ref=b}}, sort_order=ASC}}, from={table={alias=b, substitution={name=<[Ops Data].[Audit Ledger I3]>, parts={1=[Ops Data], 2=[Audit Ledger I3]}, type=tuple}}}, where={condition={left={column={substitution={name=<insert where col I3>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}, alias=branch_b}, 3={cte={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=branch_a}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=branch_b}}}}}, alias=base}}, query={preamble=insert_into, from={from={table={alias=b, table=base}}, select={1={column={name=score_val, table_ref=b}}, 2={column={name=emp_id, table_ref=b}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=top_score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[top_score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Ops Data].[Account Ledger I3]>=tuple, <insert order col I3>=column, <insert where col I3>=column, <[Ops Data].[Audit Ledger I3]>=tuple, <insert select col I3>=column}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Ops Data].[Account Ledger I3]>={<insert order col I3>=[[@25,165:165='a',<381>,5:11]], <insert where col I3>=[[@18,126:126='a',<381>,4:8]], <insert select col I3>=[[@9,38:38='a',<381>,2:19]], emp_id=[[@5,28:28='a',<381>,2:9]]}, <[Ops Data].[Audit Ledger I3]>={<insert order col I3>=[[@54,350:350='b',<381>,10:11]], <insert where col I3>=[[@47,311:311='b',<381>,9:8]], <insert select col I3>=[[@38,225:225='b',<381>,7:19]], emp_id=[[@34,215:215='b',<381>,7:9]]}, employees={top_score=[[@76,471:479='top_score',<381>,16:23]], rank_bucket=[[@78,482:492='rank_bucket',<381>,16:34]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union4={score_val=[[@81,502:502='b',<381>,17:7]], emp_id=[[@85,515:515='b',<381>,17:20]]}, query5={score_val=[[@83,504:512='score_val',<381>,17:9]], emp_id=[[@87,517:522='emp_id',<381>,17:22]]}, insert6={top_score=[[@76,471:479='top_score',<381>,16:23]], rank_bucket=[[@78,482:492='rank_bucket',<381>,16:34]]}, query0={score_val=[[@13,66:74='score_val',<381>,2:47]], *=[[@63,396:396='*',<291>,12:9]], emp_id=[[@7,30:35='emp_id',<381>,2:11]]}, query1={score_val=[[@42,253:261='score_val',<381>,7:47]], *=[[@63,396:396='*',<291>,12:9]], emp_id=[[@36,217:222='emp_id',<381>,7:11]]}, query2={*=[[@63,396:396='*',<291>,12:9]]}, query3={*=[[@68,430:430='*',<291>,14:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert6={context_list={branch_a=query0, branch_b=query1, base=union4}, def_union4={context_list={branch_a=query0, branch_b=query1}, query_dictionary={score_val=[[@81,502:502='b',<381>,17:7]], emp_id=[[@85,515:515='b',<381>,17:20]]}, interface={*=query_column}, table_alias={branch_a=query0, branch_b=query1}, def_query3={context_list={branch_a=query0, branch_b=query1}, query_dictionary={*=[[@68,430:430='*',<291>,14:9]]}, setop=EXCEPT, interface={*=[{name=*, table_ref=*}]}, table_alias={branch_a=query0, branch_b=query1}}, def_query2={context_list={branch_a=query0, branch_b=query1}, query_dictionary={*=[[@63,396:396='*',<291>,12:9]]}, interface={*=[{name=*, table_ref=*}]}, table_alias={branch_a=query0, branch_b=query1}}}, query_dictionary={top_score=[[@76,471:479='top_score',<381>,16:23]], rank_bucket=[[@78,482:492='rank_bucket',<381>,16:34]]}, table_dictionary={employees={top_score=[[@76,471:479='top_score',<381>,16:23]], rank_bucket=[[@78,482:492='rank_bucket',<381>,16:34]]}}, def_query1={context_list={branch_a=query0}, query_dictionary={*=[[@63,396:396='*',<291>,12:9]], score_val=[[@42,253:261='score_val',<381>,7:47]], emp_id=[[@36,217:222='emp_id',<381>,7:11]]}, table_dictionary={<[Ops Data].[Audit Ledger I3]>={<insert order col I3>=[[@54,350:350='b',<381>,10:11]], <insert where col I3>=[[@47,311:311='b',<381>,9:8]], <insert select col I3>=[[@38,225:225='b',<381>,7:19]], emp_id=[[@34,215:215='b',<381>,7:9]]}}, ordered_by=[{substitution={name=<insert order col I3>, type=column}, table_ref=b}], filters=[{substitution={name=<insert where col I3>, type=column}, table_ref=b}], interface={score_val=[{substitution={name=<insert select col I3>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Ops Data].[Audit Ledger I3]>, branch_a=query0}}, def_query0={query_dictionary={*=[[@63,396:396='*',<291>,12:9]], score_val=[[@13,66:74='score_val',<381>,2:47]], emp_id=[[@7,30:35='emp_id',<381>,2:11]]}, table_dictionary={<[Ops Data].[Account Ledger I3]>={<insert order col I3>=[[@25,165:165='a',<381>,5:11]], <insert where col I3>=[[@18,126:126='a',<381>,4:8]], <insert select col I3>=[[@9,38:38='a',<381>,2:19]], emp_id=[[@5,28:28='a',<381>,2:9]]}}, ordered_by=[{substitution={name=<insert order col I3>, type=column}, table_ref=a}], filters=[{substitution={name=<insert where col I3>, type=column}, table_ref=a}], interface={score_val=[{substitution={name=<insert select col I3>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Ops Data].[Account Ledger I3]>}}, def_query5={context_list={branch_a=query0, branch_b=query1, base=union4, b=union4}, query_dictionary={score_val=[[@83,504:512='score_val',<381>,17:9]], emp_id=[[@87,517:522='emp_id',<381>,17:22]]}, interface={score_val=[{name=score_val, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=union4, branch_a=query0, branch_b=query1, base=union4}}, interface={top_score=[{name=score_val, table_ref=query5}], rank_bucket=[{name=emp_id, table_ref=query5}]}, table_alias={branch_a=query0, branch_b=query1, base=union4}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
 
 	@Test
 	public void insertComplexSubstitutionI4NestedWithInCteBody() {
@@ -2475,6 +2643,49 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				"{def_insert7={query_dictionary={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}, def_query6={query_dictionary={metric_val=[[@11,52:61='metric_val',<381>,2:9]], emp_id=[[@15,66:71='emp_id',<381>,2:23]]}, def_intersect5={query_dictionary={metric_val=[[@9,50:50='x',<381>,2:7]], emp_id=[[@13,64:64='x',<381>,2:21]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@79,472:481='metric_val',<381>,15:47]], emp_id=[[@73,436:441='emp_id',<381>,15:11]]}, table_dictionary={<[Blend Data].[Branch C I8]>={<insert select col I8>=[[@75,444:444='c',<381>,15:19]], <insert where col I8>=[[@84,529:529='c',<381>,17:8]], emp_id=[[@71,434:434='c',<381>,15:9]]}}, setop=INTERSECTION, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C I8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@23,99:99='u',<381>,4:19]], emp_id=[[@19,89:89='u',<381>,4:9]]}, def_query1={query_dictionary={metric_val=[[@57,318:327='metric_val',<381>,10:49]], emp_id=[[@51,282:287='emp_id',<381>,10:13]]}, table_dictionary={<[Blend Data].[Branch B I8]>={<insert select col I8>=[[@53,290:290='b',<381>,10:21]], <insert where col I8>=[[@62,379:379='b',<381>,12:10]], emp_id=[[@49,280:280='b',<381>,10:11]]}}, setop=UNION, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B I8]>}}, def_query0={query_dictionary={metric_val=[[@37,170:179='metric_val',<381>,6:49]], emp_id=[[@31,134:139='emp_id',<381>,6:13]]}, table_dictionary={<[Blend Data].[Branch A I8]>={<insert select col I8>=[[@33,142:142='a',<381>,6:21]], <insert where col I8>=[[@42,231:231='a',<381>,8:10]], emp_id=[[@29,132:132='a',<381>,6:11]]}}, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A I8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@25,101:110='metric_val',<381>,4:21]], emp_id=[[@21,91:96='emp_id',<381>,4:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, interface={metric_val=[{name=metric_val, table_ref=x}], emp_id=[{name=emp_id, table_ref=x}]}, table_alias={x=intersect5}}, table_dictionary={employees={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}}, interface={score=[{name=metric_val, table_ref=query6}], rank_bucket=[{name=emp_id, table_ref=query6}]}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void insertComplexSubstitutionI8UnionExceptNestedSubquery() {
+		final String query = "INSERT INTO employees (score, rank_bucket)"
+				+ "\nSELECT x.metric_val, x.emp_id"
+				+ "\nFROM ("
+				+ "\n  SELECT u.emp_id, u.metric_val"
+				+ "\n  FROM ("
+				+ "\n    SELECT a.emp_id, a.<insert select col I8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch A I8]> a"
+				+ "\n    WHERE a.<insert where col I8> > 0"
+				+ "\n    UNION"
+				+ "\n    SELECT b.emp_id, b.<insert select col I8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch B I8]> b"
+				+ "\n    WHERE b.<insert where col I8> > 0"
+				+ "\n  ) u"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT c.emp_id, c.<insert select col I8> AS metric_val"
+				+ "\n  FROM <[Blend Data].[Branch C I8]> c"
+				+ "\n  WHERE c.<insert where col I8> > 0"
+				+ "\n) x";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={from={table={alias=x, query={union={1={select={1={column={name=emp_id, table_ref=u}}, 2={column={name=metric_val, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<insert select col I8>, type=column}, table_ref=a}, alias=metric_val}}, from={table={alias=a, substitution={name=<[Blend Data].[Branch A I8]>, parts={1=[Blend Data], 2=[Branch A I8]}, type=tuple}}}, where={condition={left={column={substitution={name=<insert where col I8>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<insert select col I8>, type=column}, table_ref=b}, alias=metric_val}}, from={table={alias=b, substitution={name=<[Blend Data].[Branch B I8]>, parts={1=[Blend Data], 2=[Branch B I8]}, type=tuple}}}, where={condition={left={column={substitution={name=<insert where col I8>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=emp_id, table_ref=c}}, 2={column={substitution={name=<insert select col I8>, type=column}, table_ref=c}, alias=metric_val}}, from={table={alias=c, substitution={name=<[Blend Data].[Branch C I8]>, parts={1=[Blend Data], 2=[Branch C I8]}, type=tuple}}}, where={condition={left={column={substitution={name=<insert where col I8>, type=column}, table_ref=c}}, right={literal=0}, operator=>}}}}}}}, select={1={column={name=metric_val, table_ref=x}}, 2={column={name=emp_id, table_ref=x}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Blend Data].[Branch B I8]>=tuple, <insert select col I8>=column, <insert where col I8>=column, <[Blend Data].[Branch C I8]>=tuple, <[Blend Data].[Branch A I8]>=tuple}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Blend Data].[Branch B I8]>={<insert select col I8>=[[@53,290:290='b',<381>,10:21]], <insert where col I8>=[[@62,379:379='b',<381>,12:10]], emp_id=[[@49,280:280='b',<381>,10:11]]}, <[Blend Data].[Branch C I8]>={<insert select col I8>=[[@75,441:441='c',<381>,15:19]], <insert where col I8>=[[@84,526:526='c',<381>,17:8]], emp_id=[[@71,431:431='c',<381>,15:9]]}, employees={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}, <[Blend Data].[Branch A I8]>={<insert select col I8>=[[@33,142:142='a',<381>,6:21]], <insert where col I8>=[[@42,231:231='a',<381>,8:10]], emp_id=[[@29,132:132='a',<381>,6:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union5={metric_val=[[@9,50:50='x',<381>,2:7]], emp_id=[[@13,64:64='x',<381>,2:21]]}, union2={metric_val=[[@23,99:99='u',<381>,4:19]], emp_id=[[@19,89:89='u',<381>,4:9]]}, query4={metric_val=[[@79,469:478='metric_val',<381>,15:47]], emp_id=[[@73,433:438='emp_id',<381>,15:11]]}, insert7={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}, query6={metric_val=[[@11,52:61='metric_val',<381>,2:9]], emp_id=[[@15,66:71='emp_id',<381>,2:23]]}, query0={metric_val=[[@37,170:179='metric_val',<381>,6:49]], emp_id=[[@31,134:139='emp_id',<381>,6:13]]}, query1={metric_val=[[@57,318:327='metric_val',<381>,10:49]], emp_id=[[@51,282:287='emp_id',<381>,10:13]]}, query3={metric_val=[[@25,101:110='metric_val',<381>,4:21]], emp_id=[[@21,91:96='emp_id',<381>,4:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert7={query_dictionary={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}, def_query6={query_dictionary={metric_val=[[@11,52:61='metric_val',<381>,2:9]], emp_id=[[@15,66:71='emp_id',<381>,2:23]]}, interface={metric_val=[{name=metric_val, table_ref=x}], emp_id=[{name=emp_id, table_ref=x}]}, def_union5={query_dictionary={metric_val=[[@9,50:50='x',<381>,2:7]], emp_id=[[@13,64:64='x',<381>,2:21]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@79,469:478='metric_val',<381>,15:47]], emp_id=[[@73,433:438='emp_id',<381>,15:11]]}, table_dictionary={<[Blend Data].[Branch C I8]>={<insert select col I8>=[[@75,441:441='c',<381>,15:19]], <insert where col I8>=[[@84,526:526='c',<381>,17:8]], emp_id=[[@71,431:431='c',<381>,15:9]]}}, setop=EXCEPT, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C I8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@23,99:99='u',<381>,4:19]], emp_id=[[@19,89:89='u',<381>,4:9]]}, def_query1={query_dictionary={metric_val=[[@57,318:327='metric_val',<381>,10:49]], emp_id=[[@51,282:287='emp_id',<381>,10:13]]}, table_dictionary={<[Blend Data].[Branch B I8]>={<insert select col I8>=[[@53,290:290='b',<381>,10:21]], <insert where col I8>=[[@62,379:379='b',<381>,12:10]], emp_id=[[@49,280:280='b',<381>,10:11]]}}, setop=UNION, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B I8]>}}, def_query0={query_dictionary={metric_val=[[@37,170:179='metric_val',<381>,6:49]], emp_id=[[@31,134:139='emp_id',<381>,6:13]]}, table_dictionary={<[Blend Data].[Branch A I8]>={<insert select col I8>=[[@33,142:142='a',<381>,6:21]], <insert where col I8>=[[@42,231:231='a',<381>,8:10]], emp_id=[[@29,132:132='a',<381>,6:11]]}}, filters=[{substitution={name=<insert where col I8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<insert select col I8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A I8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@25,101:110='metric_val',<381>,4:21]], emp_id=[[@21,91:96='emp_id',<381>,4:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, table_alias={x=union5}}, table_dictionary={employees={score=[[@4,23:27='score',<381>,1:23]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]]}}, interface={score=[{name=metric_val, table_ref=query6}], rank_bucket=[{name=emp_id, table_ref=query6}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void insertComplexSubstitutionI8ExceptIntersectNestedSubquery(){
@@ -2775,6 +2986,44 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void updateComplexSubstitutionU3WithCteExceptOrderBySubstitution() {
+		final String query = "WITH base AS ("
+				+ "\n  SELECT a.emp_id, a.<update select col U3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Account Ledger U3]> a"
+				+ "\n  WHERE a.<update where col U3> > 0"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT b.emp_id, b.<update select col U3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Audit Ledger U3]> b"
+				+ "\n  WHERE b.<update where col U3> > 0"
+				+ "\n)"
+				+ "\nUPDATE employees e"
+				+ "\nSET score = b.score_val"
+				+ "\nFROM base b"
+				+ "\nWHERE e.emp_id = b.emp_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={union={1={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<update select col U3>, type=column}, table_ref=a}, alias=score_val}}, from={table={alias=a, substitution={name=<[Ops Data].[Account Ledger U3]>, parts={1=[Ops Data], 2=[Account Ledger U3]}, type=tuple}}}, where={condition={left={column={substitution={name=<update where col U3>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<update select col U3>, type=column}, table_ref=b}, alias=score_val}}, from={table={alias=b, substitution={name=<[Ops Data].[Audit Ledger U3]>, parts={1=[Ops Data], 2=[Audit Ledger U3]}, type=tuple}}}, where={condition={left={column={substitution={name=<update where col U3>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}}}, alias=base}}, query={update={from={table={alias=b, table=base}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=b}}, operator==}}, assignments={1={set={column={name=score, table_ref=null}}, to={column={name=score_val, table_ref=b}}}}, table={alias=e, table=employees}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<update select col U3>=column, <[Ops Data].[Audit Ledger U3]>=tuple, <[Ops Data].[Account Ledger U3]>=tuple, <update where col U3>=column}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Ops Data].[Audit Ledger U3]>={<update select col U3>=[[@29,178:178='b',<381>,6:19]], emp_id=[[@25,168:168='b',<381>,6:9]], <update where col U3>=[[@38,264:264='b',<381>,8:8]]}, <[Ops Data].[Account Ledger U3]>={<update select col U3>=[[@9,34:34='a',<381>,2:19]], emp_id=[[@5,24:24='a',<381>,2:9]], <update where col U3>=[[@18,122:122='a',<381>,4:8]]}, employees={score=[[@48,317:321='score',<381>,11:4]], emp_id=[[@57,355:355='e',<381>,13:6]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union2={score_val=[[@50,325:325='b',<381>,11:12]], emp_id=[[@61,366:366='b',<381>,13:17]]}, query0={score_val=[[@13,62:70='score_val',<381>,2:47]], emp_id=[[@7,26:31='emp_id',<381>,2:11]]}, update3={score=[[@48,317:321='score',<381>,11:4]]}, query1={score_val=[[@33,206:214='score_val',<381>,6:47]], emp_id=[[@27,170:175='emp_id',<381>,6:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update3={context_list={b=union2, base=union2}, assignments={score=[{name=score_val, table_ref=b}]}, def_union2={query_dictionary={score_val=[[@50,325:325='b',<381>,11:12]], emp_id=[[@61,366:366='b',<381>,13:17]]}, def_query1={query_dictionary={score_val=[[@33,206:214='score_val',<381>,6:47]], emp_id=[[@27,170:175='emp_id',<381>,6:11]]}, table_dictionary={<[Ops Data].[Audit Ledger U3]>={<update select col U3>=[[@29,178:178='b',<381>,6:19]], emp_id=[[@25,168:168='b',<381>,6:9]], <update where col U3>=[[@38,264:264='b',<381>,8:8]]}}, setop=EXCEPT, filters=[{substitution={name=<update where col U3>, type=column}, table_ref=b}], interface={score_val=[{substitution={name=<update select col U3>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Ops Data].[Audit Ledger U3]>}}, def_query0={query_dictionary={score_val=[[@13,62:70='score_val',<381>,2:47]], emp_id=[[@7,26:31='emp_id',<381>,2:11]]}, table_dictionary={<[Ops Data].[Account Ledger U3]>={<update select col U3>=[[@9,34:34='a',<381>,2:19]], emp_id=[[@5,24:24='a',<381>,2:9]], <update where col U3>=[[@18,122:122='a',<381>,4:8]]}}, filters=[{substitution={name=<update where col U3>, type=column}, table_ref=a}], interface={score_val=[{substitution={name=<update select col U3>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Ops Data].[Account Ledger U3]>}}, interface={score_val=query_column, emp_id=query_column}}, table_dictionary={employees={score=[[@48,317:321='score',<381>,11:4]], emp_id=[[@57,355:355='e',<381>,13:6]]}}, update_dictionary={score=[[@48,317:321='score',<381>,11:4]]}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=b}], table_alias={b=union2, e=employees, base=union2}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
 
 	@Test
 	public void updateComplexSubstitutionU4NestedWithInCteBody() {
@@ -2964,6 +3213,50 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				"{def_update6={assignments={score=[{name=metric_val, table_ref=x}]}, table_dictionary={employees={score=[[@4,23:27='score',<381>,2:4]], emp_id=[[@85,538:538='e',<381>,19:6]]}}, update_dictionary={score=[[@4,23:27='score',<381>,2:4]]}, def_intersect5={query_dictionary={metric_val=[[@6,31:31='x',<381>,2:12]], emp_id=[[@89,549:549='x',<381>,19:17]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@72,443:452='metric_val',<381>,15:47]], emp_id=[[@66,407:412='emp_id',<381>,15:11]]}, table_dictionary={<[Blend Data].[Branch C U8]>={<update where col U8>=[[@77,500:500='c',<381>,17:8]], <update select col U8>=[[@68,415:415='c',<381>,15:19]], emp_id=[[@64,405:405='c',<381>,15:9]]}}, setop=INTERSECTION, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C U8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@16,70:70='u',<381>,4:19]], emp_id=[[@12,60:60='u',<381>,4:9]]}, def_query1={query_dictionary={metric_val=[[@50,289:298='metric_val',<381>,10:49]], emp_id=[[@44,253:258='emp_id',<381>,10:13]]}, table_dictionary={<[Blend Data].[Branch B U8]>={<update where col U8>=[[@55,350:350='b',<381>,12:10]], <update select col U8>=[[@46,261:261='b',<381>,10:21]], emp_id=[[@42,251:251='b',<381>,10:11]]}}, setop=UNION, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B U8]>}}, def_query0={query_dictionary={metric_val=[[@30,141:150='metric_val',<381>,6:49]], emp_id=[[@24,105:110='emp_id',<381>,6:13]]}, table_dictionary={<[Blend Data].[Branch A U8]>={<update where col U8>=[[@35,202:202='a',<381>,8:10]], <update select col U8>=[[@26,113:113='a',<381>,6:21]], emp_id=[[@22,103:103='a',<381>,6:11]]}}, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A U8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@18,72:81='metric_val',<381>,4:21]], emp_id=[[@14,62:67='emp_id',<381>,4:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=x}], table_alias={e=employees, x=intersect5}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void updateComplexSubstitutionU8UnionExceptNestedSubquery() {
+		final String query = "UPDATE employees e"
+				+ "\nSET score = x.metric_val"
+				+ "\nFROM ("
+				+ "\n  SELECT u.emp_id, u.metric_val"
+				+ "\n  FROM ("
+				+ "\n    SELECT a.emp_id, a.<update select col U8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch A U8]> a"
+				+ "\n    WHERE a.<update where col U8> > 0"
+				+ "\n    UNION"
+				+ "\n    SELECT b.emp_id, b.<update select col U8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch B U8]> b"
+				+ "\n    WHERE b.<update where col U8> > 0"
+				+ "\n  ) u"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT c.emp_id, c.<update select col U8> AS metric_val"
+				+ "\n  FROM <[Blend Data].[Branch C U8]> c"
+				+ "\n  WHERE c.<update where col U8> > 0"
+				+ "\n) x"
+				+ "\nWHERE e.emp_id = x.emp_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={from={table={alias=x, query={union={1={select={1={column={name=emp_id, table_ref=u}}, 2={column={name=metric_val, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<update select col U8>, type=column}, table_ref=a}, alias=metric_val}}, from={table={alias=a, substitution={name=<[Blend Data].[Branch A U8]>, parts={1=[Blend Data], 2=[Branch A U8]}, type=tuple}}}, where={condition={left={column={substitution={name=<update where col U8>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<update select col U8>, type=column}, table_ref=b}, alias=metric_val}}, from={table={alias=b, substitution={name=<[Blend Data].[Branch B U8]>, parts={1=[Blend Data], 2=[Branch B U8]}, type=tuple}}}, where={condition={left={column={substitution={name=<update where col U8>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=emp_id, table_ref=c}}, 2={column={substitution={name=<update select col U8>, type=column}, table_ref=c}, alias=metric_val}}, from={table={alias=c, substitution={name=<[Blend Data].[Branch C U8]>, parts={1=[Blend Data], 2=[Branch C U8]}, type=tuple}}}, where={condition={left={column={substitution={name=<update where col U8>, type=column}, table_ref=c}}, right={literal=0}, operator=>}}}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=x}}, operator==}}, assignments={1={set={column={name=score, table_ref=null}}, to={column={name=metric_val, table_ref=x}}}}, table={alias=e, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<[Blend Data].[Branch A U8]>=tuple, <update where col U8>=column, <update select col U8>=column, <[Blend Data].[Branch C U8]>=tuple, <[Blend Data].[Branch B U8]>=tuple}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Blend Data].[Branch A U8]>={<update where col U8>=[[@35,202:202='a',<381>,8:10]], <update select col U8>=[[@26,113:113='a',<381>,6:21]], emp_id=[[@22,103:103='a',<381>,6:11]]}, <[Blend Data].[Branch C U8]>={<update where col U8>=[[@77,497:497='c',<381>,17:8]], <update select col U8>=[[@68,412:412='c',<381>,15:19]], emp_id=[[@64,402:402='c',<381>,15:9]]}, employees={score=[[@4,23:27='score',<381>,2:4]], emp_id=[[@85,535:535='e',<381>,19:6]]}, <[Blend Data].[Branch B U8]>={<update where col U8>=[[@55,350:350='b',<381>,12:10]], <update select col U8>=[[@46,261:261='b',<381>,10:21]], emp_id=[[@42,251:251='b',<381>,10:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union5={metric_val=[[@6,31:31='x',<381>,2:12]], emp_id=[[@89,546:546='x',<381>,19:17]]}, union2={metric_val=[[@16,70:70='u',<381>,4:19]], emp_id=[[@12,60:60='u',<381>,4:9]]}, query4={metric_val=[[@72,440:449='metric_val',<381>,15:47]], emp_id=[[@66,404:409='emp_id',<381>,15:11]]}, update6={score=[[@4,23:27='score',<381>,2:4]]}, query0={metric_val=[[@30,141:150='metric_val',<381>,6:49]], emp_id=[[@24,105:110='emp_id',<381>,6:13]]}, query1={metric_val=[[@50,289:298='metric_val',<381>,10:49]], emp_id=[[@44,253:258='emp_id',<381>,10:13]]}, query3={metric_val=[[@18,72:81='metric_val',<381>,4:21]], emp_id=[[@14,62:67='emp_id',<381>,4:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update6={assignments={score=[{name=metric_val, table_ref=x}]}, table_dictionary={employees={score=[[@4,23:27='score',<381>,2:4]], emp_id=[[@85,535:535='e',<381>,19:6]]}}, update_dictionary={score=[[@4,23:27='score',<381>,2:4]]}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=x}], def_union5={query_dictionary={metric_val=[[@6,31:31='x',<381>,2:12]], emp_id=[[@89,546:546='x',<381>,19:17]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@72,440:449='metric_val',<381>,15:47]], emp_id=[[@66,404:409='emp_id',<381>,15:11]]}, table_dictionary={<[Blend Data].[Branch C U8]>={<update where col U8>=[[@77,497:497='c',<381>,17:8]], <update select col U8>=[[@68,412:412='c',<381>,15:19]], emp_id=[[@64,402:402='c',<381>,15:9]]}}, setop=EXCEPT, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C U8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@16,70:70='u',<381>,4:19]], emp_id=[[@12,60:60='u',<381>,4:9]]}, def_query1={query_dictionary={metric_val=[[@50,289:298='metric_val',<381>,10:49]], emp_id=[[@44,253:258='emp_id',<381>,10:13]]}, table_dictionary={<[Blend Data].[Branch B U8]>={<update where col U8>=[[@55,350:350='b',<381>,12:10]], <update select col U8>=[[@46,261:261='b',<381>,10:21]], emp_id=[[@42,251:251='b',<381>,10:11]]}}, setop=UNION, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B U8]>}}, def_query0={query_dictionary={metric_val=[[@30,141:150='metric_val',<381>,6:49]], emp_id=[[@24,105:110='emp_id',<381>,6:13]]}, table_dictionary={<[Blend Data].[Branch A U8]>={<update where col U8>=[[@35,202:202='a',<381>,8:10]], <update select col U8>=[[@26,113:113='a',<381>,6:21]], emp_id=[[@22,103:103='a',<381>,6:11]]}}, filters=[{substitution={name=<update where col U8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<update select col U8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A U8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@18,72:81='metric_val',<381>,4:21]], emp_id=[[@14,62:67='emp_id',<381>,4:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, table_alias={e=employees, x=union5}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void updateComplexSubstitutionU8ExceptIntersectNestedSubquery(){
@@ -3262,6 +3555,43 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void deleteComplexSubstitutionD3WithCteExceptOrderBySubstitution() {
+		final String query = "WITH base AS ("
+				+ "\n  SELECT a.emp_id, a.<delete select col D3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Account Ledger D3]> a"
+				+ "\n  WHERE a.<delete where col D3> > 0"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT b.emp_id, b.<delete select col D3> AS score_val"
+				+ "\n  FROM <[Ops Data].[Audit Ledger D3]> b"
+				+ "\n  WHERE b.<delete where col D3> > 0"
+				+ "\n)"
+				+ "\nDELETE FROM employees e"
+				+ "\nUSING base b"
+				+ "\nWHERE e.emp_id = b.emp_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={union={1={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<delete select col D3>, type=column}, table_ref=a}, alias=score_val}}, from={table={alias=a, substitution={name=<[Ops Data].[Account Ledger D3]>, parts={1=[Ops Data], 2=[Account Ledger D3]}, type=tuple}}}, where={condition={left={column={substitution={name=<delete where col D3>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<delete select col D3>, type=column}, table_ref=b}, alias=score_val}}, from={table={alias=b, substitution={name=<[Ops Data].[Audit Ledger D3]>, parts={1=[Ops Data], 2=[Audit Ledger D3]}, type=tuple}}}, where={condition={left={column={substitution={name=<delete where col D3>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}}}, alias=base}}, query={delete={table={alias=e, table=employees}, using={1={table={alias=b, table=base}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=b}}, operator==}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<delete select col D3>=column, <delete where col D3>=column, <[Ops Data].[Audit Ledger D3]>=tuple, <[Ops Data].[Account Ledger D3]>=tuple}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Ops Data].[Audit Ledger D3]>={<delete select col D3>=[[@29,178:178='b',<381>,6:19]], <delete where col D3>=[[@38,264:264='b',<381>,8:8]], emp_id=[[@25,168:168='b',<381>,6:9]]}, <[Ops Data].[Account Ledger D3]>={<delete select col D3>=[[@9,34:34='a',<381>,2:19]], <delete where col D3>=[[@18,122:122='a',<381>,4:8]], emp_id=[[@5,24:24='a',<381>,2:9]]}, employees={emp_id=[[@52,337:337='e',<381>,12:6]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union2={emp_id=[[@56,348:348='b',<381>,12:17]]}, query0={score_val=[[@13,62:70='score_val',<381>,2:47]], emp_id=[[@7,26:31='emp_id',<381>,2:11]]}, query1={score_val=[[@33,206:214='score_val',<381>,6:47]], emp_id=[[@27,170:175='emp_id',<381>,6:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_delete3={context_list={base=union2}, query_dictionary={}, def_union2={query_dictionary={emp_id=[[@56,348:348='b',<381>,12:17]]}, def_query1={query_dictionary={score_val=[[@33,206:214='score_val',<381>,6:47]], emp_id=[[@27,170:175='emp_id',<381>,6:11]]}, table_dictionary={<[Ops Data].[Audit Ledger D3]>={<delete select col D3>=[[@29,178:178='b',<381>,6:19]], <delete where col D3>=[[@38,264:264='b',<381>,8:8]], emp_id=[[@25,168:168='b',<381>,6:9]]}}, setop=EXCEPT, filters=[{substitution={name=<delete where col D3>, type=column}, table_ref=b}], interface={score_val=[{substitution={name=<delete select col D3>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Ops Data].[Audit Ledger D3]>}}, def_query0={query_dictionary={score_val=[[@13,62:70='score_val',<381>,2:47]], emp_id=[[@7,26:31='emp_id',<381>,2:11]]}, table_dictionary={<[Ops Data].[Account Ledger D3]>={<delete select col D3>=[[@9,34:34='a',<381>,2:19]], <delete where col D3>=[[@18,122:122='a',<381>,4:8]], emp_id=[[@5,24:24='a',<381>,2:9]]}}, filters=[{substitution={name=<delete where col D3>, type=column}, table_ref=a}], interface={score_val=[{substitution={name=<delete select col D3>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Ops Data].[Account Ledger D3]>}}, interface={score_val=query_column, emp_id=query_column}}, table_dictionary={employees={emp_id=[[@52,337:337='e',<381>,12:6]]}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=b}], interface=null, table_alias={b=union2, e=employees, base=union2}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
 
 	@Test
 	public void deleteComplexSubstitutionD4NestedWithInCteBody() {
@@ -3446,6 +3776,49 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				"{def_delete6={query_dictionary={}, table_dictionary={employees={emp_id=[[@80,519:519='e',<381>,18:6]]}}, def_intersect5={query_dictionary={emp_id=[[@84,530:530='x',<381>,18:17]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@67,424:433='metric_val',<381>,14:47]], emp_id=[[@61,388:393='emp_id',<381>,14:11]]}, table_dictionary={<[Blend Data].[Branch C D8]>={<delete where col D8>=[[@72,481:481='c',<381>,16:8]], <delete select col D8>=[[@63,396:396='c',<381>,14:19]], emp_id=[[@59,386:386='c',<381>,14:9]]}}, setop=INTERSECTION, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C D8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@11,51:51='u',<381>,3:19]], emp_id=[[@7,41:41='u',<381>,3:9]]}, def_query1={query_dictionary={metric_val=[[@45,270:279='metric_val',<381>,9:49]], emp_id=[[@39,234:239='emp_id',<381>,9:13]]}, table_dictionary={<[Blend Data].[Branch B D8]>={<delete where col D8>=[[@50,331:331='b',<381>,11:10]], <delete select col D8>=[[@41,242:242='b',<381>,9:21]], emp_id=[[@37,232:232='b',<381>,9:11]]}}, setop=UNION, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B D8]>}}, def_query0={query_dictionary={metric_val=[[@25,122:131='metric_val',<381>,5:49]], emp_id=[[@19,86:91='emp_id',<381>,5:13]]}, table_dictionary={<[Blend Data].[Branch A D8]>={<delete where col D8>=[[@30,183:183='a',<381>,7:10]], <delete select col D8>=[[@21,94:94='a',<381>,5:21]], emp_id=[[@17,84:84='a',<381>,5:11]]}}, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A D8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@13,53:62='metric_val',<381>,3:21]], emp_id=[[@9,43:48='emp_id',<381>,3:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=x}], interface=null, table_alias={e=employees, x=intersect5}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void deleteComplexSubstitutionD8UnionExceptNestedSubquery() {
+		final String query = "DELETE FROM employees e"
+				+ "\nUSING ("
+				+ "\n  SELECT u.emp_id, u.metric_val"
+				+ "\n  FROM ("
+				+ "\n    SELECT a.emp_id, a.<delete select col D8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch A D8]> a"
+				+ "\n    WHERE a.<delete where col D8> > 0"
+				+ "\n    UNION"
+				+ "\n    SELECT b.emp_id, b.<delete select col D8> AS metric_val"
+				+ "\n    FROM <[Blend Data].[Branch B D8]> b"
+				+ "\n    WHERE b.<delete where col D8> > 0"
+				+ "\n  ) u"
+				+ "\n  EXCEPT"
+				+ "\n  SELECT c.emp_id, c.<delete select col D8> AS metric_val"
+				+ "\n  FROM <[Blend Data].[Branch C D8]> c"
+				+ "\n  WHERE c.<delete where col D8> > 0"
+				+ "\n) x"
+				+ "\nWHERE e.emp_id = x.emp_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={delete={table={alias=e, table=employees}, using={1={table={alias=x, query={union={1={select={1={column={name=emp_id, table_ref=u}}, 2={column={name=metric_val, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=emp_id, table_ref=a}}, 2={column={substitution={name=<delete select col D8>, type=column}, table_ref=a}, alias=metric_val}}, from={table={alias=a, substitution={name=<[Blend Data].[Branch A D8]>, parts={1=[Blend Data], 2=[Branch A D8]}, type=tuple}}}, where={condition={left={column={substitution={name=<delete where col D8>, type=column}, table_ref=a}}, right={literal=0}, operator=>}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=emp_id, table_ref=b}}, 2={column={substitution={name=<delete select col D8>, type=column}, table_ref=b}, alias=metric_val}}, from={table={alias=b, substitution={name=<[Blend Data].[Branch B D8]>, parts={1=[Blend Data], 2=[Branch B D8]}, type=tuple}}}, where={condition={left={column={substitution={name=<delete where col D8>, type=column}, table_ref=b}}, right={literal=0}, operator=>}}}}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=emp_id, table_ref=c}}, 2={column={substitution={name=<delete select col D8>, type=column}, table_ref=c}, alias=metric_val}}, from={table={alias=c, substitution={name=<[Blend Data].[Branch C D8]>, parts={1=[Blend Data], 2=[Branch C D8]}, type=tuple}}}, where={condition={left={column={substitution={name=<delete where col D8>, type=column}, table_ref=c}}, right={literal=0}, operator=>}}}}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=x}}, operator==}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<delete where col D8>=column, <[Blend Data].[Branch C D8]>=tuple, <[Blend Data].[Branch A D8]>=tuple, <[Blend Data].[Branch B D8]>=tuple, <delete select col D8>=column}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{<[Blend Data].[Branch C D8]>={<delete where col D8>=[[@72,478:478='c',<381>,16:8]], <delete select col D8>=[[@63,393:393='c',<381>,14:19]], emp_id=[[@59,383:383='c',<381>,14:9]]}, <[Blend Data].[Branch A D8]>={<delete where col D8>=[[@30,183:183='a',<381>,7:10]], <delete select col D8>=[[@21,94:94='a',<381>,5:21]], emp_id=[[@17,84:84='a',<381>,5:11]]}, <[Blend Data].[Branch B D8]>={<delete where col D8>=[[@50,331:331='b',<381>,11:10]], <delete select col D8>=[[@41,242:242='b',<381>,9:21]], emp_id=[[@37,232:232='b',<381>,9:11]]}, employees={emp_id=[[@80,516:516='e',<381>,18:6]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{union5={emp_id=[[@84,527:527='x',<381>,18:17]]}, union2={metric_val=[[@11,51:51='u',<381>,3:19]], emp_id=[[@7,41:41='u',<381>,3:9]]}, query4={metric_val=[[@67,421:430='metric_val',<381>,14:47]], emp_id=[[@61,385:390='emp_id',<381>,14:11]]}, query0={metric_val=[[@25,122:131='metric_val',<381>,5:49]], emp_id=[[@19,86:91='emp_id',<381>,5:13]]}, query1={metric_val=[[@45,270:279='metric_val',<381>,9:49]], emp_id=[[@39,234:239='emp_id',<381>,9:13]]}, query3={metric_val=[[@13,53:62='metric_val',<381>,3:21]], emp_id=[[@9,43:48='emp_id',<381>,3:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_delete6={query_dictionary={}, table_dictionary={employees={emp_id=[[@80,516:516='e',<381>,18:6]]}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=x}], interface=null, def_union5={query_dictionary={emp_id=[[@84,527:527='x',<381>,18:17]]}, interface={metric_val=query_column, emp_id=query_column}, def_query4={query_dictionary={metric_val=[[@67,421:430='metric_val',<381>,14:47]], emp_id=[[@61,385:390='emp_id',<381>,14:11]]}, table_dictionary={<[Blend Data].[Branch C D8]>={<delete where col D8>=[[@72,478:478='c',<381>,16:8]], <delete select col D8>=[[@63,393:393='c',<381>,14:19]], emp_id=[[@59,383:383='c',<381>,14:9]]}}, setop=EXCEPT, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=c}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=c}], emp_id=[{name=emp_id, table_ref=c}]}, table_alias={c=<[Blend Data].[Branch C D8]>}}, def_query3={def_union2={query_dictionary={metric_val=[[@11,51:51='u',<381>,3:19]], emp_id=[[@7,41:41='u',<381>,3:9]]}, def_query1={query_dictionary={metric_val=[[@45,270:279='metric_val',<381>,9:49]], emp_id=[[@39,234:239='emp_id',<381>,9:13]]}, table_dictionary={<[Blend Data].[Branch B D8]>={<delete where col D8>=[[@50,331:331='b',<381>,11:10]], <delete select col D8>=[[@41,242:242='b',<381>,9:21]], emp_id=[[@37,232:232='b',<381>,9:11]]}}, setop=UNION, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=b}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=b}], emp_id=[{name=emp_id, table_ref=b}]}, table_alias={b=<[Blend Data].[Branch B D8]>}}, def_query0={query_dictionary={metric_val=[[@25,122:131='metric_val',<381>,5:49]], emp_id=[[@19,86:91='emp_id',<381>,5:13]]}, table_dictionary={<[Blend Data].[Branch A D8]>={<delete where col D8>=[[@30,183:183='a',<381>,7:10]], <delete select col D8>=[[@21,94:94='a',<381>,5:21]], emp_id=[[@17,84:84='a',<381>,5:11]]}}, filters=[{substitution={name=<delete where col D8>, type=column}, table_ref=a}], interface={metric_val=[{substitution={name=<delete select col D8>, type=column}, table_ref=a}], emp_id=[{name=emp_id, table_ref=a}]}, table_alias={a=<[Blend Data].[Branch A D8]>}}, interface={metric_val=query_column, emp_id=query_column}}, query_dictionary={metric_val=[[@13,53:62='metric_val',<381>,3:21]], emp_id=[[@9,43:48='emp_id',<381>,3:11]]}, interface={metric_val=[{name=metric_val, table_ref=u}], emp_id=[{name=emp_id, table_ref=u}]}, table_alias={u=union2}}}, table_alias={e=employees, x=union5}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void deleteComplexSubstitutionD8ExceptIntersectNestedSubquery(){

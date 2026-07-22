@@ -1429,6 +1429,39 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	}
 
 	@Test
+	public void subqueryExceptJinjaSourceUnionInterfaceValidationV1Test() {
+		final String query = "select *\n"
+				+ "from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    except\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=paper_data, query={union={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query3={def_union2={def_query1={query_dictionary={audience=[[@46,329:336='audience',<381>,10:22]], *=[[@1,7:7='*',<291>,1:7]], stream_key=[[@50,360:369='stream_key',<381>,11:22]], eab_contact_id=[[@42,292:305='eab_contact_id',<381>,9:29]], valid_from_dt=[[@61,423:435='valid_from_dt',<381>,12:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,312:327='offset_marketing',<381>,10:5]], sent_dt=[[@54,381:396='offset_marketing',<381>,12:10]], stream_key=[[@48,343:358='offset_marketing',<381>,11:5]], eab_contact_id=[[@40,275:290='offset_marketing',<381>,9:12]]}}, setop=EXCEPT, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}, def_query0={query_dictionary={audience=[[@11,73:80='audience',<381>,4:19]], *=[[@1,7:7='*',<291>,1:7]], stream_key=[[@15,101:110='stream_key',<381>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<381>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<381>,6:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<381>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<381>,6:10]], stream_key=[[@13,87:99='mail_contacts',<381>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<381>,3:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}}, query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, interface={*=[{name=*, table_ref=*}]}, table_alias={paper_data=union2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@44,312:327='offset_marketing',<381>,10:5]], sent_dt=[[@54,381:396='offset_marketing',<381>,12:10]], stream_key=[[@48,343:358='offset_marketing',<381>,11:5]], eab_contact_id=[[@40,275:290='offset_marketing',<381>,9:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@9,59:71='mail_contacts',<381>,4:5]], intake_dt=[[@19,122:134='mail_contacts',<381>,6:10]], stream_key=[[@13,87:99='mail_contacts',<381>,5:5]], eab_contact_id=[[@5,25:37='mail_contacts',<381>,3:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={audience=[[@11,73:80='audience',<381>,4:19]], *=[[@1,7:7='*',<291>,1:7]], stream_key=[[@15,101:110='stream_key',<381>,5:19]], eab_contact_id=[[@7,39:52='eab_contact_id',<381>,3:25]], valid_from_dt=[[@26,163:175='valid_from_dt',<381>,6:51]]}, query1={audience=[[@46,329:336='audience',<381>,10:22]], *=[[@1,7:7='*',<291>,1:7]], stream_key=[[@50,360:369='stream_key',<381>,11:22]], eab_contact_id=[[@42,292:305='eab_contact_id',<381>,9:29]], valid_from_dt=[[@61,423:435='valid_from_dt',<381>,12:52]]}, query3={*=[[@1,7:7='*',<291>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+
+	@Test
 	public void subqueryIntersectJinjaSourceUnionInterfaceValidationV2Test() {
 		final String query = "select paper_data.eab_contact_id\n" 
 				+ "       ,paper_data.audience\n" 
@@ -1463,6 +1496,43 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={audience=[[@5,41:50='paper_data',<381>,2:8]], stream_key=[[@9,69:78='paper_data',<381>,3:8], [@28,190:199='paper_data',<381>,5:66]], eab_contact_id=[[@1,7:16='paper_data',<381>,1:7], [@24,164:173='paper_data',<381>,5:40]], valid_from_dt=[[@13,99:108='paper_data',<381>,4:8], [@33,221:230='paper_data',<381>,5:97]]}, query0={audience=[[@49,323:330='audience',<381>,7:19]], stream_key=[[@53,351:360='stream_key',<381>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<381>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<381>,9:51]]}, query1={audience=[[@84,582:589='audience',<381>,13:22]], stream_key=[[@88,613:622='stream_key',<381>,14:22]], eab_contact_id=[[@80,545:558='eab_contact_id',<381>,12:29]], valid_from_dt=[[@99,676:688='valid_from_dt',<381>,15:52]]}, query3={audience=[[@7,52:59='audience',<381>,2:19]], rno=[[@39,255:257='rno',<381>,5:131]], stream_key=[[@11,80:89='stream_key',<381>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<381>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<381>,4:19]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void subqueryExceptJinjaSourceUnionInterfaceValidationV2Test() {
+		final String query = "select paper_data.eab_contact_id\n" 
+				+ "       ,paper_data.audience\n" 
+				+ "       ,paper_data.stream_key\n" 
+				+ "       ,paper_data.valid_from_dt\n" 
+				+ "       ,row_number() over (partition by paper_data.eab_contact_id,paper_data.stream_key order by paper_data.valid_from_dt desc) as rno"
+				+ " from\n"
+				+ "(   select mail_contacts.eab_contact_id\n"
+				+ "    ,mail_contacts.audience\n"
+				+ "    ,mail_contacts.stream_key\n"
+				+ "    ,cast(mail_contacts.intake_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_mail_contacts') }} as mail_contacts\n"
+				+ "    except\n"
+				+ "    select  offset_marketing.eab_contact_id\n"
+				+ "    ,offset_marketing.audience\n"
+				+ "    ,offset_marketing.stream_key\n"
+				+ "    ,cast(offset_marketing.sent_dt as TIMESTAMP) as valid_from_dt\n"
+				+ "    from {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }} as offset_marketing\n"
+				+ ") as paper_data";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=audience, table_ref=paper_data}}, 3={column={name=stream_key, table_ref=paper_data}}, 4={column={name=valid_from_dt, table_ref=paper_data}}, 5={alias=rno, window_function={over={partition_by={1={column={name=eab_contact_id, table_ref=paper_data}}, 2={column={name=stream_key, table_ref=paper_data}}}, orderby={1={null_order=null, predicand={column={name=valid_from_dt, table_ref=paper_data}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=paper_data, query={union={1={select={1={column={name=eab_contact_id, table_ref=mail_contacts}}, 2={column={name=audience, table_ref=mail_contacts}}, 3={column={name=stream_key, table_ref=mail_contacts}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=intake_dt, table_ref=mail_contacts}}}, alias=valid_from_dt}}, from={table={alias=mail_contacts, substitution={name={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_mail_contacts'}}}}, type=tuple}}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=eab_contact_id, table_ref=offset_marketing}}, 2={column={name=audience, table_ref=offset_marketing}}, 3={column={name=stream_key, table_ref=offset_marketing}}, 4={function={function_name=cast, data_type={type=TIMESTAMP}, type=CAST, value={column={name=sent_dt, table_ref=offset_marketing}}}, alias=valid_from_dt}}, from={table={alias=offset_marketing, substitution={name={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}, parts={jinja_table={function_name=source, parameters={1={literal='PDP_AMS'}, 2={literal='pdp_ams_offset_marketing'}}}}, type=tuple}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[audience, rno, stream_key, eab_contact_id, valid_from_dt]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query3={def_union2={query_dictionary={audience=[[@5,41:50='paper_data',<381>,2:8]], stream_key=[[@9,69:78='paper_data',<381>,3:8], [@28,190:199='paper_data',<381>,5:66]], eab_contact_id=[[@1,7:16='paper_data',<381>,1:7], [@24,164:173='paper_data',<381>,5:40]], valid_from_dt=[[@13,99:108='paper_data',<381>,4:8], [@33,221:230='paper_data',<381>,5:97]]}, def_query1={query_dictionary={audience=[[@84,579:586='audience',<381>,13:22]], stream_key=[[@88,610:619='stream_key',<381>,14:22]], eab_contact_id=[[@80,542:555='eab_contact_id',<381>,12:29]], valid_from_dt=[[@99,673:685='valid_from_dt',<381>,15:52]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,562:577='offset_marketing',<381>,13:5]], sent_dt=[[@92,631:646='offset_marketing',<381>,15:10]], stream_key=[[@86,593:608='offset_marketing',<381>,14:5]], eab_contact_id=[[@78,525:540='offset_marketing',<381>,12:12]]}}, setop=EXCEPT, interface={audience=[{name=audience, table_ref=offset_marketing}], stream_key=[{name=stream_key, table_ref=offset_marketing}], eab_contact_id=[{name=eab_contact_id, table_ref=offset_marketing}], valid_from_dt=[{name=sent_dt, table_ref=offset_marketing}]}, table_alias={offset_marketing={{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}}}, def_query0={query_dictionary={audience=[[@49,323:330='audience',<381>,7:19]], stream_key=[[@53,351:360='stream_key',<381>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<381>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<381>,9:51]]}, table_dictionary={{{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<381>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<381>,9:10]], stream_key=[[@51,337:349='mail_contacts',<381>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<381>,6:11]]}}, interface={audience=[{name=audience, table_ref=mail_contacts}], stream_key=[{name=stream_key, table_ref=mail_contacts}], eab_contact_id=[{name=eab_contact_id, table_ref=mail_contacts}], valid_from_dt=[{name=intake_dt, table_ref=mail_contacts}]}, table_alias={mail_contacts={{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}}}, interface={audience=query_column, stream_key=query_column, eab_contact_id=query_column, valid_from_dt=query_column}}, query_dictionary={audience=[[@7,52:59='audience',<381>,2:19]], rno=[[@39,255:257='rno',<381>,5:131]], stream_key=[[@11,80:89='stream_key',<381>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<381>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<381>,4:19]]}, interface={audience=[{name=audience, table_ref=paper_data}], rno=[{name=eab_contact_id, table_ref=paper_data}, {name=stream_key, table_ref=paper_data}, {name=valid_from_dt, table_ref=paper_data}], stream_key=[{name=stream_key, table_ref=paper_data}], eab_contact_id=[{name=eab_contact_id, table_ref=paper_data}], valid_from_dt=[{name=valid_from_dt, table_ref=paper_data}]}, table_alias={paper_data=union2}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{{{ source('pdp_ams', 'pdp_ams_offset_marketing') }}={audience=[[@82,562:577='offset_marketing',<381>,13:5]], sent_dt=[[@92,631:646='offset_marketing',<381>,15:10]], stream_key=[[@86,593:608='offset_marketing',<381>,14:5]], eab_contact_id=[[@78,525:540='offset_marketing',<381>,12:12]]}, {{ source('pdp_ams', 'pdp_ams_mail_contacts') }}={audience=[[@47,309:321='mail_contacts',<381>,7:5]], intake_dt=[[@57,372:384='mail_contacts',<381>,9:10]], stream_key=[[@51,337:349='mail_contacts',<381>,8:5]], eab_contact_id=[[@43,275:287='mail_contacts',<381>,6:11]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{{{ source('PDP_AMS', 'pdp_ams_mail_contacts') }}=tuple, {{ source('PDP_AMS', 'pdp_ams_offset_marketing') }}=tuple}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={audience=[[@5,41:50='paper_data',<381>,2:8]], stream_key=[[@9,69:78='paper_data',<381>,3:8], [@28,190:199='paper_data',<381>,5:66]], eab_contact_id=[[@1,7:16='paper_data',<381>,1:7], [@24,164:173='paper_data',<381>,5:40]], valid_from_dt=[[@13,99:108='paper_data',<381>,4:8], [@33,221:230='paper_data',<381>,5:97]]}, query0={audience=[[@49,323:330='audience',<381>,7:19]], stream_key=[[@53,351:360='stream_key',<381>,8:19]], eab_contact_id=[[@45,289:302='eab_contact_id',<381>,6:25]], valid_from_dt=[[@64,413:425='valid_from_dt',<381>,9:51]]}, query1={audience=[[@84,579:586='audience',<381>,13:22]], stream_key=[[@88,610:619='stream_key',<381>,14:22]], eab_contact_id=[[@80,542:555='eab_contact_id',<381>,12:29]], valid_from_dt=[[@99,673:685='valid_from_dt',<381>,15:52]]}, query3={audience=[[@7,52:59='audience',<381>,2:19]], rno=[[@39,255:257='rno',<381>,5:131]], stream_key=[[@11,80:89='stream_key',<381>,3:19]], eab_contact_id=[[@3,18:31='eab_contact_id',<381>,1:18]], valid_from_dt=[[@15,110:122='valid_from_dt',<381>,4:19]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 
 	@Test
 	public void multipleIntersectSubqueryInterfaceValidationV1Test() {
@@ -1507,6 +1577,51 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect5={d=[[@7,13:13='d',<381>,1:13]]}, query4={b=[[@46,150:150='b',<381>,6:11]], c=[[@48,152:152='c',<381>,6:13]], d=[[@50,154:154='d',<381>,6:15]]}, query6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@11,32:32='a',<381>,2:11]], b=[[@13,34:34='b',<381>,2:13]], c=[[@15,36:36='c',<381>,2:15]]}, query1={a=[[@26,76:76='a',<381>,3:17]], b=[[@20,70:70='b',<381>,3:11]], c=[[@22,72:72='c',<381>,3:13]], d=[[@24,74:74='d',<381>,3:15]]}, query3={a=[[@35,110:110='a',<381>,5:11]], b=[[@37,112:112='b',<381>,5:13]], c=[[@39,114:114='c',<381>,5:15]], d=[[@41,116:116='d',<381>,5:17]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void multipleExceptSubqueryInterfaceValidationV1Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "(   select a,b,c from t1"
+				+ "    except\n"
+				+ "    select b,c,d,a from t2"
+				+ ") as i1\n"
+				+ "join \n"
+				+ "(   select a,b,c,d from t1"
+				+ "    except\n"
+				+ "    select b,c,d from t2"
+				+ ") as i2\n";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
+
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (a, b, c)",
+				null,
+				3,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 4 columns (a, b, c, d)",
+				null,
+				6,
+				11);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={join={1={table={alias=i1, query={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}, 2={join=join}, 3={table={alias=i2, query={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query6={def_union2={def_query1={query_dictionary={a=[[@26,73:73='a',<381>,3:17]], b=[[@20,67:67='b',<381>,3:11]], c=[[@22,69:69='c',<381>,3:13]], d=[[@24,71:71='d',<381>,3:15]]}, table_dictionary={t2={a=[[@26,73:73='a',<381>,3:17]], b=[[@20,67:67='b',<381>,3:11], [@46,144:144='b',<381>,6:11]], c=[[@22,69:69='c',<381>,3:13], [@48,146:146='c',<381>,6:13]], d=[[@24,71:71='d',<381>,3:15], [@50,148:148='d',<381>,6:15]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@11,32:32='a',<381>,2:11]], b=[[@13,34:34='b',<381>,2:13]], c=[[@15,36:36='c',<381>,2:15]]}, table_dictionary={t1={a=[[@11,32:32='a',<381>,2:11], [@35,107:107='a',<381>,5:11]], b=[[@13,34:34='b',<381>,2:13], [@37,109:109='b',<381>,5:13]], c=[[@15,36:36='c',<381>,2:15], [@39,111:111='c',<381>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}}, query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, interface={a=[{name=a, table_ref=null}], b=[{name=b, table_ref=null}], c=[{name=c, table_ref=null}], d=[{name=d, table_ref=union5}]}, def_union5={query_dictionary={d=[[@7,13:13='d',<381>,1:13]]}, interface={a=query_column, b=query_column, c=query_column, d=query_column}, def_query4={query_dictionary={b=[[@46,144:144='b',<381>,6:11]], c=[[@48,146:146='c',<381>,6:13]], d=[[@50,148:148='d',<381>,6:15]]}, table_dictionary={t2={b=[[@46,144:144='b',<381>,6:11]], c=[[@48,146:146='c',<381>,6:13]], d=[[@50,148:148='d',<381>,6:15]]}}, setop=EXCEPT, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query3={query_dictionary={a=[[@35,107:107='a',<381>,5:11]], b=[[@37,109:109='b',<381>,5:13]], c=[[@39,111:111='c',<381>,5:15]], d=[[@41,113:113='d',<381>,5:17]]}, table_dictionary={t1={a=[[@35,107:107='a',<381>,5:11]], b=[[@37,109:109='b',<381>,5:13]], c=[[@39,111:111='c',<381>,5:15]], d=[[@41,113:113='d',<381>,5:17]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}, table_alias={i1=union2, i2=union5}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@11,32:32='a',<381>,2:11], [@35,107:107='a',<381>,5:11]], b=[[@13,34:34='b',<381>,2:13], [@37,109:109='b',<381>,5:13]], c=[[@15,36:36='c',<381>,2:15], [@39,111:111='c',<381>,5:15]], d=[[@41,113:113='d',<381>,5:17]]}, t2={a=[[@26,73:73='a',<381>,3:17]], b=[[@20,67:67='b',<381>,3:11], [@46,144:144='b',<381>,6:11]], c=[[@22,69:69='c',<381>,3:13], [@48,146:146='c',<381>,6:13]], d=[[@24,71:71='d',<381>,3:15], [@50,148:148='d',<381>,6:15]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union5={d=[[@7,13:13='d',<381>,1:13]]}, query4={b=[[@46,144:144='b',<381>,6:11]], c=[[@48,146:146='c',<381>,6:13]], d=[[@50,148:148='d',<381>,6:15]]}, query6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@11,32:32='a',<381>,2:11]], b=[[@13,34:34='b',<381>,2:13]], c=[[@15,36:36='c',<381>,2:15]]}, query1={a=[[@26,73:73='a',<381>,3:17]], b=[[@20,67:67='b',<381>,3:11]], c=[[@22,69:69='c',<381>,3:13]], d=[[@24,71:71='d',<381>,3:15]]}, query3={a=[[@35,107:107='a',<381>,5:11]], b=[[@37,109:109='b',<381>,5:13]], c=[[@39,111:111='c',<381>,5:15]], d=[[@41,113:113='d',<381>,5:17]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 
 
 	@Test
@@ -1570,6 +1685,69 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query8={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query4={a=[[@44,144:144='a',<381>,5:11]], b=[[@46,146:146='b',<381>,5:13]], c=[[@48,148:148='c',<381>,5:15]], d=[[@50,150:150='d',<381>,5:17]]}, query5={b=[[@55,184:184='b',<381>,6:11]], c=[[@57,186:186='c',<381>,6:13]], d=[[@59,188:188='d',<381>,6:15]]}, query0={i=[[@11,28:28='i',<381>,1:28]]}, query1={a=[[@20,64:64='a',<381>,2:12]], b=[[@22,66:66='b',<381>,2:14]], c=[[@24,68:68='c',<381>,2:16]]}, query2={a=[[@35,108:108='a',<381>,3:17]], b=[[@29,102:102='b',<381>,3:11]], c=[[@31,104:104='c',<381>,3:13]], d=[[@33,106:106='d',<381>,3:15]]}, union7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void multipleExceptSubqueryInterfaceValidationV2Test() {
+		final String query = "select a,b,c,d from (select i from tab1) tab1 join \n"
+				+ "((   select a,b,c from t1"
+				+ "    except\n"
+				+ "    select b,c,d,a from t2"
+				+ ") as i1\n"
+				+ " union \n"
+				+ "(   select a,b,c,d from t1"
+				+ "    except\n"
+				+ "    select b,c,d from t2"
+				+ ") as i2)\n where d > 0";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 4);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (a, b, c)",
+				null,
+				3,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 4 columns (a, b, c, d)",
+				null,
+				6,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c)",
+				null,
+				5,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				ParseDiagnostic.Severity.FATAL,
+				"Unqualified column 'd' at (l:1 c:13) was not found",
+				"d",
+				1,
+				13);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={join={1={table={alias=tab1, query={select={1={column={name=i, table_ref=null}}}, from={table={alias=null, table=tab1}}}}}, 2={join=join}, 3={table={query={union={1={alias=i1, union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=union}}, 3={alias=i2, union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}, alias=null}}}}, where={condition={left={column={name=d, table_ref=null}}, right={literal=0}, operator=>}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query8={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, def_query0={query_dictionary={i=[[@11,28:28='i',<381>,1:28]]}, table_dictionary={tab1={i=[[@11,28:28='i',<381>,1:28]]}}, interface={i=[{name=i, table_ref=tab1}]}}, filters=[{name=d, table_ref=null}], def_union7={def_union3={def_query1={query_dictionary={a=[[@20,64:64='a',<381>,2:12]], b=[[@22,66:66='b',<381>,2:14]], c=[[@24,68:68='c',<381>,2:16]]}, table_dictionary={t1={a=[[@20,64:64='a',<381>,2:12], [@44,141:141='a',<381>,5:11]], b=[[@22,66:66='b',<381>,2:14], [@46,143:143='b',<381>,5:13]], c=[[@24,68:68='c',<381>,2:16], [@48,145:145='c',<381>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}, def_query2={query_dictionary={a=[[@35,105:105='a',<381>,3:17]], b=[[@29,99:99='b',<381>,3:11]], c=[[@31,101:101='c',<381>,3:13]], d=[[@33,103:103='d',<381>,3:15]]}, table_dictionary={t2={a=[[@35,105:105='a',<381>,3:17]], b=[[@29,99:99='b',<381>,3:11], [@55,178:178='b',<381>,6:11]], c=[[@31,101:101='c',<381>,3:13], [@57,180:180='c',<381>,6:13]], d=[[@33,103:103='d',<381>,3:15], [@59,182:182='d',<381>,6:15]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}}, query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, interface={a=query_column, b=query_column, c=query_column}, def_union6={def_query5={query_dictionary={b=[[@55,178:178='b',<381>,6:11]], c=[[@57,180:180='c',<381>,6:13]], d=[[@59,182:182='d',<381>,6:15]]}, table_dictionary={t2={b=[[@55,178:178='b',<381>,6:11]], c=[[@57,180:180='c',<381>,6:13]], d=[[@59,182:182='d',<381>,6:15]]}}, setop=EXCEPT, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, interface={a=query_column, b=query_column, c=query_column, d=query_column}, def_query4={query_dictionary={a=[[@44,141:141='a',<381>,5:11]], b=[[@46,143:143='b',<381>,5:13]], c=[[@48,145:145='c',<381>,5:15]], d=[[@50,147:147='d',<381>,5:17]]}, table_dictionary={t1={a=[[@44,141:141='a',<381>,5:11]], b=[[@46,143:143='b',<381>,5:13]], c=[[@48,145:145='c',<381>,5:15]], d=[[@50,147:147='d',<381>,5:17]]}}, setop=UNION, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}}, interface={a=[{name=a, table_ref=union7}], b=[{name=b, table_ref=union7}], c=[{name=c, table_ref=union7}], d=[{name=d, table_ref=null}]}, table_alias={tab1=query0, union7=union7}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={i=[[@11,28:28='i',<381>,1:28]]}, t1={a=[[@20,64:64='a',<381>,2:12], [@44,141:141='a',<381>,5:11]], b=[[@22,66:66='b',<381>,2:14], [@46,143:143='b',<381>,5:13]], c=[[@24,68:68='c',<381>,2:16], [@48,145:145='c',<381>,5:15]], d=[[@50,147:147='d',<381>,5:17]]}, t2={a=[[@35,105:105='a',<381>,3:17]], b=[[@29,99:99='b',<381>,3:11], [@55,178:178='b',<381>,6:11]], c=[[@31,101:101='c',<381>,3:13], [@57,180:180='c',<381>,6:13]], d=[[@33,103:103='d',<381>,3:15], [@59,182:182='d',<381>,6:15]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query8={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query4={a=[[@44,141:141='a',<381>,5:11]], b=[[@46,143:143='b',<381>,5:13]], c=[[@48,145:145='c',<381>,5:15]], d=[[@50,147:147='d',<381>,5:17]]}, query5={b=[[@55,178:178='b',<381>,6:11]], c=[[@57,180:180='c',<381>,6:13]], d=[[@59,182:182='d',<381>,6:15]]}, query0={i=[[@11,28:28='i',<381>,1:28]]}, query1={a=[[@20,64:64='a',<381>,2:12]], b=[[@22,66:66='b',<381>,2:14]], c=[[@24,68:68='c',<381>,2:16]]}, query2={a=[[@35,105:105='a',<381>,3:17]], b=[[@29,99:99='b',<381>,3:11]], c=[[@31,101:101='c',<381>,3:13]], d=[[@33,103:103='d',<381>,3:15]]}, union7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 
 	@Test
 	public void multipleIntersectSubqueryInterfaceValidationV2ExceptTest(){
@@ -1695,6 +1873,68 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	}
 
 	@Test
+	public void multipleUnionedExceptSubqueryInterfaceValidationWOAliasesV3Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "((   select a,b,c from t1"
+				+ "    except\n"
+				+ "    select b,c,d,a from t2"
+				+ ")\n"
+				+ "union \n"
+				+ "(   select a,b,c,d from t3"
+				+ "    except\n"
+				+ "    select b,c,d from t4"
+				+ "))\n";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 4);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 3 columns (a, b, c) at (l:2 c:12) but there were 4 (b, c, d, a) at (l:3 c:11).",
+				null,
+				3,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"EXCEPT has different column counts. Expected 4 columns (a, b, c, d) at (l:5 c:11) but there were 3 (b, c, d) at (l:6 c:11).",
+				null,
+				6,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c) at (l:2 c:12) but there were 4 (a, b, c, d) at (l:5 c:11).",
+				null,
+				5,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				ParseDiagnostic.Severity.FATAL,
+				"Unqualified column 'd' at (l:1 c:13) was not found in output interface of any visible query alias [union6].",
+				"d",
+				1,
+				13);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={query={union={1={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=union}}, 3={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t3}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t4}}}}}}}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query7={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, interface={a=[{name=a, table_ref=union6}], b=[{name=b, table_ref=union6}], c=[{name=c, table_ref=union6}], d=[{name=d, table_ref=null}]}, table_alias={union6=union6}, def_union6={def_union2={def_query1={query_dictionary={a=[[@27,74:74='a',<381>,3:17]], b=[[@21,68:68='b',<381>,3:11]], c=[[@23,70:70='c',<381>,3:13]], d=[[@25,72:72='d',<381>,3:15]]}, table_dictionary={t2={a=[[@27,74:74='a',<381>,3:17]], b=[[@21,68:68='b',<381>,3:11]], c=[[@23,70:70='c',<381>,3:13]], d=[[@25,72:72='d',<381>,3:15]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, table_dictionary={t1={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}}, query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, interface={a=query_column, b=query_column, c=query_column}, def_union5={interface={a=query_column, b=query_column, c=query_column, d=query_column}, def_query4={query_dictionary={b=[[@45,140:140='b',<381>,6:11]], c=[[@47,142:142='c',<381>,6:13]], d=[[@49,144:144='d',<381>,6:15]]}, table_dictionary={t4={b=[[@45,140:140='b',<381>,6:11]], c=[[@47,142:142='c',<381>,6:13]], d=[[@49,144:144='d',<381>,6:15]]}}, setop=EXCEPT, interface={b=[{name=b, table_ref=t4}], c=[{name=c, table_ref=t4}], d=[{name=d, table_ref=t4}]}}, def_query3={query_dictionary={a=[[@34,103:103='a',<381>,5:11]], b=[[@36,105:105='b',<381>,5:13]], c=[[@38,107:107='c',<381>,5:15]], d=[[@40,109:109='d',<381>,5:17]]}, table_dictionary={t3={a=[[@34,103:103='a',<381>,5:11]], b=[[@36,105:105='b',<381>,5:13]], c=[[@38,107:107='c',<381>,5:15]], d=[[@40,109:109='d',<381>,5:17]]}}, setop=UNION, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}], c=[{name=c, table_ref=t3}], d=[{name=d, table_ref=t3}]}}}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t4={b=[[@45,140:140='b',<381>,6:11]], c=[[@47,142:142='c',<381>,6:13]], d=[[@49,144:144='d',<381>,6:15]]}, t1={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, t2={a=[[@27,74:74='a',<381>,3:17]], b=[[@21,68:68='b',<381>,3:11]], c=[[@23,70:70='c',<381>,3:13]], d=[[@25,72:72='d',<381>,3:15]]}, t3={a=[[@34,103:103='a',<381>,5:11]], b=[[@36,105:105='b',<381>,5:13]], c=[[@38,107:107='c',<381>,5:15]], d=[[@40,109:109='d',<381>,5:17]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, query4={b=[[@45,140:140='b',<381>,6:11]], c=[[@47,142:142='c',<381>,6:13]], d=[[@49,144:144='d',<381>,6:15]]}, query7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, query1={a=[[@27,74:74='a',<381>,3:17]], b=[[@21,68:68='b',<381>,3:11]], c=[[@23,70:70='c',<381>,3:13]], d=[[@25,72:72='d',<381>,3:15]]}, query3={a=[[@34,103:103='a',<381>,5:11]], b=[[@36,105:105='b',<381>,5:13]], c=[[@38,107:107='c',<381>,5:15]], d=[[@40,109:109='d',<381>,5:17]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
+
+	@Test
 	public void multipleExceptedIntersectSubqueryInterfaceValidationWOAliasesV3Test(){
 		final String query = "select a,b,c,d from \n"
 				+ "((   select a,b,c from t1"
@@ -1792,7 +2032,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
 				ParseDiagnostic.Severity.FATAL,
-				"INTERSECTION has different column counts. Expected 3 columns (a, b, c)",
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c) at (l:? c:?) but there were 4 (a, b, c, d) at (l:5 c:30).",
 				"def_union5",
 				5,
 				30);
@@ -1817,6 +2057,69 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, query4={b=[[@47,149:149='b',<381>,6:11]], c=[[@49,151:151='c',<381>,6:13]], d=[[@51,153:153='d',<381>,6:15]]}, query7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, query1={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, query3={a=[[@36,113:113='a',<381>,5:11]], b=[[@38,115:115='b',<381>,5:13]], c=[[@40,117:117='c',<381>,5:15]], d=[[@42,119:119='d',<381>,5:17]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void multipleExceptedUnionSubqueryInterfaceValidationV4Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "((   select a,b,c from t1"
+				+ "    union\n"
+				+ "    select b,c,d,a from t2"
+				+ ") as i1\n"
+				+ " except \n"
+				+ "(   select a,b,c,d from t1"
+				+ "    union\n"
+				+ "    select b,c,d from t2"
+				+ ") as i2)\n";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 4);
+
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 3 columns (a, b, c)",
+				null,
+				3,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 4 columns (a, b, c, d)",
+				null,
+				6,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c) at (l:2 c:12) but there were 4 (a, b, c, d) at (l:5 c:11).",
+				"union5",
+				5,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				ParseDiagnostic.Severity.FATAL,
+				"Unqualified column 'd' at (l:1 c:13) was not found",
+				"d",
+				1,
+				13);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={query={union={1={alias=i1, union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=except}}, 3={alias=i2, union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t2}}}}}}}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query7={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, interface={a=[{name=a, table_ref=union6}], b=[{name=b, table_ref=union6}], c=[{name=c, table_ref=union6}], d=[{name=d, table_ref=null}]}, table_alias={union6=union6}, def_union6={def_union2={def_query1={query_dictionary={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, table_dictionary={t2={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11], [@47,146:146='b',<381>,6:11]], c=[[@23,69:69='c',<381>,3:13], [@49,148:148='c',<381>,6:13]], d=[[@25,71:71='d',<381>,3:15], [@51,150:150='d',<381>,6:15]]}}, setop=UNION, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, table_dictionary={t1={a=[[@12,33:33='a',<381>,2:12], [@36,110:110='a',<381>,5:11]], b=[[@14,35:35='b',<381>,2:14], [@38,112:112='b',<381>,5:13]], c=[[@16,37:37='c',<381>,2:16], [@40,114:114='c',<381>,5:15]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}}, query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, interface={a=query_column, b=query_column, c=query_column}, def_union5={interface={a=query_column, b=query_column, c=query_column, d=query_column}, def_query4={query_dictionary={b=[[@47,146:146='b',<381>,6:11]], c=[[@49,148:148='c',<381>,6:13]], d=[[@51,150:150='d',<381>,6:15]]}, table_dictionary={t2={b=[[@47,146:146='b',<381>,6:11]], c=[[@49,148:148='c',<381>,6:13]], d=[[@51,150:150='d',<381>,6:15]]}}, setop=UNION, interface={b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query3={query_dictionary={a=[[@36,110:110='a',<381>,5:11]], b=[[@38,112:112='b',<381>,5:13]], c=[[@40,114:114='c',<381>,5:15]], d=[[@42,116:116='d',<381>,5:17]]}, table_dictionary={t1={a=[[@36,110:110='a',<381>,5:11]], b=[[@38,112:112='b',<381>,5:13]], c=[[@40,114:114='c',<381>,5:15]], d=[[@42,116:116='d',<381>,5:17]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}], d=[{name=d, table_ref=t1}]}}}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@12,33:33='a',<381>,2:12], [@36,110:110='a',<381>,5:11]], b=[[@14,35:35='b',<381>,2:14], [@38,112:112='b',<381>,5:13]], c=[[@16,37:37='c',<381>,2:16], [@40,114:114='c',<381>,5:15]], d=[[@42,116:116='d',<381>,5:17]]}, t2={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11], [@47,146:146='b',<381>,6:11]], c=[[@23,69:69='c',<381>,3:13], [@49,148:148='c',<381>,6:13]], d=[[@25,71:71='d',<381>,3:15], [@51,150:150='d',<381>,6:15]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, query4={b=[[@47,146:146='b',<381>,6:11]], c=[[@49,148:148='c',<381>,6:13]], d=[[@51,150:150='d',<381>,6:15]]}, query7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, query1={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, query3={a=[[@36,110:110='a',<381>,5:11]], b=[[@38,112:112='b',<381>,5:13]], c=[[@40,114:114='c',<381>,5:15]], d=[[@42,116:116='d',<381>,5:17]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 
 	@Test
 	public void multipleIntersectedExceptSubqueryInterfaceValidationV4Test(){
@@ -1854,7 +2157,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet,
 				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
 				ParseDiagnostic.Severity.FATAL,
-				"INTERSECTION has different column counts. Expected 3 columns (a, b, c)",
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c) at (l:? c:?) but there were 4 (a, b, c, d) at (l:5 c:30).",
 				"def_union5",
 				5,
 				30);
@@ -1941,6 +2244,68 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, query4={b=[[@45,144:144='b',<381>,6:11]], c=[[@47,146:146='c',<381>,6:13]], d=[[@49,148:148='d',<381>,6:15]]}, query7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, query1={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, query3={a=[[@34,108:108='a',<381>,5:11]], b=[[@36,110:110='b',<381>,5:13]], c=[[@38,112:112='c',<381>,5:15]], d=[[@40,114:114='d',<381>,5:17]]}}",
 			snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void multipleExceptedUnionSubqueryInterfaceValidationWOAliasesV5Test() {
+		final String query = "select a,b,c,d from \n"
+				+ "((   select a,b,c from t1"
+				+ "    union\n"
+				+ "    select b,c,d,a from t2"
+				+ ") \n"
+				+ " except \n"
+				+ "(   select a,b,c,d from t3"
+				+ "    union\n"
+				+ "    select b,c,d from t4"
+				+ "))";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 4);
+
+		assertFatalDiagnosticCount(snippet, null, null, null, 4);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 3 columns (a, b, c) at (l:2 c:12) but there were 4 (b, c, d, a) at (l:3 c:11).",
+				null,
+				3,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION has different column counts. Expected 4 columns (a, b, c, d) at (l:5 c:11) but there were 3 (b, c, d) at (l:6 c:11).",
+				null,
+				6,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				ParseDiagnostic.Severity.FATAL,
+				"INTERSECTION has different column counts. Expected 3 columns (a, b, c) at (l:2 c:12) but there were 4 (a, b, c, d) at (l:5 c:11).",
+				null,
+				5,
+				11);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				ParseDiagnostic.Severity.FATAL,
+				"Unqualified column 'd' at (l:1 c:13) was not found in output interface of any visible query alias [union6].",
+				"d",
+				1,
+				13);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={query={union={1={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}, 4={column={name=a, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=except}}, 3={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={column={name=d, table_ref=null}}}, from={table={alias=null, table=t3}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=b, table_ref=null}}, 2={column={name=c, table_ref=null}}, 3={column={name=d, table_ref=null}}}, from={table={alias=null, table=t4}}}}}}}, alias=null}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, d]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query7={query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, interface={a=[{name=a, table_ref=union6}], b=[{name=b, table_ref=union6}], c=[{name=c, table_ref=union6}], d=[{name=d, table_ref=null}]}, table_alias={union6=union6}, def_union6={def_union2={def_query1={query_dictionary={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, table_dictionary={t2={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}}, setop=UNION, interface={a=[{name=a, table_ref=t2}], b=[{name=b, table_ref=t2}], c=[{name=c, table_ref=t2}], d=[{name=d, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, table_dictionary={t1={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}}, interface={a=[{name=a, table_ref=t1}], b=[{name=b, table_ref=t1}], c=[{name=c, table_ref=t1}]}}, interface={a=query_column, b=query_column, c=query_column}}, query_dictionary={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, interface={a=query_column, b=query_column, c=query_column}, def_union5={interface={a=query_column, b=query_column, c=query_column, d=query_column}, def_query4={query_dictionary={b=[[@45,141:141='b',<381>,6:11]], c=[[@47,143:143='c',<381>,6:13]], d=[[@49,145:145='d',<381>,6:15]]}, table_dictionary={t4={b=[[@45,141:141='b',<381>,6:11]], c=[[@47,143:143='c',<381>,6:13]], d=[[@49,145:145='d',<381>,6:15]]}}, setop=UNION, interface={b=[{name=b, table_ref=t4}], c=[{name=c, table_ref=t4}], d=[{name=d, table_ref=t4}]}}, def_query3={query_dictionary={a=[[@34,105:105='a',<381>,5:11]], b=[[@36,107:107='b',<381>,5:13]], c=[[@38,109:109='c',<381>,5:15]], d=[[@40,111:111='d',<381>,5:17]]}, table_dictionary={t3={a=[[@34,105:105='a',<381>,5:11]], b=[[@36,107:107='b',<381>,5:13]], c=[[@38,109:109='c',<381>,5:15]], d=[[@40,111:111='d',<381>,5:17]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}], c=[{name=c, table_ref=t3}], d=[{name=d, table_ref=t3}]}}}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t4={b=[[@45,141:141='b',<381>,6:11]], c=[[@47,143:143='c',<381>,6:13]], d=[[@49,145:145='d',<381>,6:15]]}, t1={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, t2={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, t3={a=[[@34,105:105='a',<381>,5:11]], b=[[@36,107:107='b',<381>,5:13]], c=[[@38,109:109='c',<381>,5:15]], d=[[@40,111:111='d',<381>,5:17]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union6={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]]}, query4={b=[[@45,141:141='b',<381>,6:11]], c=[[@47,143:143='c',<381>,6:13]], d=[[@49,145:145='d',<381>,6:15]]}, query7={a=[[@1,7:7='a',<381>,1:7]], b=[[@3,9:9='b',<381>,1:9]], c=[[@5,11:11='c',<381>,1:11]], d=[[@7,13:13='d',<381>,1:13]]}, query0={a=[[@12,33:33='a',<381>,2:12]], b=[[@14,35:35='b',<381>,2:14]], c=[[@16,37:37='c',<381>,2:16]]}, query1={a=[[@27,73:73='a',<381>,3:17]], b=[[@21,67:67='b',<381>,3:11]], c=[[@23,69:69='c',<381>,3:13]], d=[[@25,71:71='d',<381>,3:15]]}, query3={a=[[@34,105:105='a',<381>,5:11]], b=[[@36,107:107='b',<381>,5:13]], c=[[@38,109:109='c',<381>,5:15]], d=[[@40,111:111='d',<381>,5:17]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+	}
+
 
 	@Test
 	public void multipleIntersectedExceptSubqueryInterfaceValidationWOAliasesV5Test(){
@@ -2240,6 +2605,34 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	}
 
 	@Test
+	public void coverageDrivenSetOperationInterfaceMismatchTopLevelSiblingTestIntersectAsExcept() {
+		final String query = "(SELECT a FROM t1 UNION SELECT b FROM t2) EXCEPT (SELECT a,b FROM t3)";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={union={1={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=t3}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union4={def_union2={def_query1={query_dictionary={b=[[@7,31:31='b',<381>,1:31]]}, table_dictionary={t2={b=[[@7,31:31='b',<381>,1:31]]}}, setop=UNION, interface={b=[{name=b, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@2,8:8='a',<381>,1:8]]}, table_dictionary={t1={a=[[@2,8:8='a',<381>,1:8]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={a=query_column}}, interface={a=query_column}, def_query3={query_dictionary={a=[[@14,57:57='a',<381>,1:57]], b=[[@16,59:59='b',<381>,1:59]]}, table_dictionary={t3={a=[[@14,57:57='a',<381>,1:57]], b=[[@16,59:59='b',<381>,1:59]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}]}}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@2,8:8='a',<381>,1:8]]}, t2={b=[[@7,31:31='b',<381>,1:31]]}, t3={a=[[@14,57:57='a',<381>,1:57]], b=[[@16,59:59='b',<381>,1:59]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={a=[[@2,8:8='a',<381>,1:8]]}, query1={b=[[@7,31:31='b',<381>,1:31]]}, query3={a=[[@14,57:57='a',<381>,1:57]], b=[[@16,59:59='b',<381>,1:59]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+			ParseDiagnostic.Severity.FATAL,
+			"EXCEPT has different column counts",
+			"query3");
+		assertFatalDiagnosticCount(snippet, "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH", null, null, 1);
+	}
+
+
+	@Test
 	public void coverageDrivenSetOperationInterfaceMismatchTopLevelSiblingExceptTest(){
 		final String query = "(SELECT a FROM t1 EXCEPT SELECT b FROM t2) INTERSECT (SELECT a,b FROM t3)";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
@@ -2292,6 +2685,34 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 			"query3");
 		assertFatalDiagnosticCount(snippet, "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH", null, null, 1);
 	}
+
+	@Test
+	public void coverageDrivenSetOperationInterfaceMismatchNestedSubqueryTestIntersectAsExcept() {
+		final String query = "SELECT * FROM ((SELECT a FROM t1 UNION SELECT b FROM t2) EXCEPT (SELECT a,b FROM t3)) x";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=x, query={union={1={union={1={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=t2}}}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=t3}}}}}}}}}",
+			snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+			snippet.getQueryInterface().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query5={def_union4={def_union2={def_query1={query_dictionary={b=[[@11,46:46='b',<381>,1:46]], *=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t2={b=[[@11,46:46='b',<381>,1:46]]}}, setop=UNION, interface={b=[{name=b, table_ref=t2}]}}, def_query0={query_dictionary={a=[[@6,23:23='a',<381>,1:23]], *=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t1={a=[[@6,23:23='a',<381>,1:23]]}}, interface={a=[{name=a, table_ref=t1}]}}, interface={a=query_column}}, interface={a=query_column}, def_query3={query_dictionary={a=[[@18,72:72='a',<381>,1:72]], b=[[@20,74:74='b',<381>,1:74]], *=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={t3={a=[[@18,72:72='a',<381>,1:72]], b=[[@20,74:74='b',<381>,1:74]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=t3}], b=[{name=b, table_ref=t3}]}}}, query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, interface={*=[{name=*, table_ref=*}]}, table_alias={x=union4}}}",
+			snippet.getSymbolTable().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{t1={a=[[@6,23:23='a',<381>,1:23]]}, t2={b=[[@11,46:46='b',<381>,1:46]]}, t3={a=[[@18,72:72='a',<381>,1:72]], b=[[@20,74:74='b',<381>,1:74]]}}",
+			snippet.getTableDictionary().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+			snippet.getSubstitutionsMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={*=[[@1,7:7='*',<291>,1:7]]}, query0={a=[[@6,23:23='a',<381>,1:23]], *=[[@1,7:7='*',<291>,1:7]]}, query1={b=[[@11,46:46='b',<381>,1:46]], *=[[@1,7:7='*',<291>,1:7]]}, query3={a=[[@18,72:72='a',<381>,1:72]], b=[[@20,74:74='b',<381>,1:74]], *=[[@1,7:7='*',<291>,1:7]]}}",
+			snippet.getQueryColumnDictionaryMap().toString());
+
+		assertDiagnosticByCode(
+			snippet,
+			"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+			ParseDiagnostic.Severity.FATAL,
+			"EXCEPT has different column counts",
+			"query3");
+		assertFatalDiagnosticCount(snippet, "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH", null, null, 1);
+	}
+
 
 	@Test
 	public void coverageDrivenSetOperationInterfaceMismatchNestedSubqueryExceptTest(){
@@ -2869,6 +3290,25 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	}
 
 	@Test
+	public void coverageDrivenSelectIntoExceptSecondMemberFatalTest() {
+		final String query = "SELECT INTO out1 a FROM t1 EXCEPT SELECT INTO out2 a FROM t2";
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
+		assertDiagnosticByCode(
+				snippet,
+				"INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER",
+				ParseDiagnostic.Severity.FATAL,
+				"UNION member 2 contains INTO",
+				"INTO");
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 1);
+		Assert.assertTrue("First INTO target projection should be preserved for EXCEPT",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		Assert.assertFalse("Second INTO target projection should be skipped for EXCEPT",
+				snippet.getSymbolTable().toString().contains("target_table={out2="));
+	}
+
+
+	@Test
 	public void coverageDrivenSelectIntoIntersectFirstMemberAllowedTest() {
 		final String query = "SELECT INTO out1 a FROM t1 INTERSECT SELECT a FROM t2";
 		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
@@ -2879,6 +3319,19 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				snippet.getSymbolTable().toString().contains("target_table={out1="));
 		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 0);
 	}
+
+	@Test
+	public void coverageDrivenSelectIntoExceptFirstMemberAllowedTest() {
+		final String query = "SELECT INTO out1 a FROM t1 EXCEPT SELECT a FROM t2";
+		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
+
+		Assert.assertTrue("AST should preserve INTO in the first set member",
+				snippet.getSqlAbstractTree().toString().contains("into={1={table=out1}}"));
+		Assert.assertTrue("First-member INTO should still project target table columns",
+				snippet.getSymbolTable().toString().contains("target_table={out1="));
+		assertFatalDiagnosticCount(snippet, "INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER", null, null, 0);
+	}
+
 
 	@Test
 	public void coverageDrivenSelectAliasBackedByQueryMixedValidAndMissingColumnsTest() {

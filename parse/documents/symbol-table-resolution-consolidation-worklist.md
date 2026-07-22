@@ -1544,7 +1544,7 @@ mvn -Psmoketest-quality-gate test
 
 - [x] Clone every UNION test to an EXCEPT variant placed next to the original (per-file; `parse/tools/clone_union_tests_to_except.py`).
 - [x] Refresh goldens for all EXCEPT clones (AST `operator=except`, symbol-tree `setop=EXCEPT` on non-anchor participants; token offsets adjusted after `union` → `except`).
-- [ ] Clone INTERSECT tests to EXCEPT variants (13.1.1b — after user approves EXCEPT sampling).
+- [x] Clone INTERSECT tests to EXCEPT variants (13.1.1b — **70** clones; skipped queries with both INTERSECT and EXCEPT; `parse/tools/clone_intersect_tests_to_except.py`; goldens refreshed; `mvn test` **1383/1383** green).
 - [ ] Add three-level UNION/INTERSECT/EXCEPT nesting suite (6 permutation tests).
 - [ ] Gate candidacy for representative EXCEPT clones.
 

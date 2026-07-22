@@ -1490,6 +1490,33 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 	}
 
 	@Test
+	public void simplifiedQualifiedWildcardOverExceptionInMiddleLayerTest() {
+		final String query = "select mid.id, mid.c1 "
+				+ "\n from (select u.* from ("
+				+ "\n select t1.id, t1.c1, t1.c2 from tab1 t1 "
+				+ "\n except "
+				+ "\n select t2.id, t2.c1, t2.c2 from tab2 t2"
+				+ "\n ) u) mid "
+				+ "\n where mid.id > 0";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=id, table_ref=mid}}, 2={column={name=c1, table_ref=mid}}}, from={table={alias=mid, query={select={1={column={name=*, table_ref=u}}}, from={table={alias=u, query={union={1={select={1={column={name=id, table_ref=t1}}, 2={column={name=c1, table_ref=t1}}, 3={column={name=c2, table_ref=t1}}}, from={table={alias=t1, table=tab1}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=id, table_ref=t2}}, 2={column={name=c1, table_ref=t2}}, 3={column={name=c2, table_ref=t2}}}, from={table={alias=t2, table=tab2}}}}}}}}}}, where={condition={left={column={name=id, table_ref=mid}}, right={literal=0}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id, c1]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab1={id=[[@17,56:57='t1',<381>,3:8]], c1=[[@21,63:64='t1',<381>,3:15]], c2=[[@25,70:71='t1',<381>,3:22]]}, tab2={id=[[@33,107:108='t2',<381>,5:8]], c1=[[@37,114:115='t2',<381>,5:15]], c2=[[@41,121:122='t2',<381>,5:22]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{union2={*=[[@11,37:37='u',<381>,2:14]]}, query4={c1=[[@7,19:20='c1',<381>,1:19]], id=[[@3,11:12='id',<381>,1:11]]}, query0={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, query1={id=[[@35,110:111='id',<381>,5:11]], c1=[[@39,117:118='c1',<381>,5:18]], c2=[[@43,124:125='c2',<381>,5:25]]}, query3={*=[[@13,39:39='*',<291>,2:16]], c1=[[@5,15:17='mid',<381>,1:15]], id=[[@1,7:9='mid',<381>,1:7], [@52,158:160='mid',<381>,7:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query4={query_dictionary={id=[[@3,11:12='id',<381>,1:11]], c1=[[@7,19:20='c1',<381>,1:19]]}, filters=[{name=id, table_ref=mid}], interface={id=[{name=id, table_ref=mid}], c1=[{name=c1, table_ref=mid}]}, def_query3={def_union2={query_dictionary={*=[[@11,37:37='u',<381>,2:14]]}, def_query1={query_dictionary={id=[[@35,110:111='id',<381>,5:11]], c1=[[@39,117:118='c1',<381>,5:18]], c2=[[@43,124:125='c2',<381>,5:25]]}, table_dictionary={tab2={id=[[@33,107:108='t2',<381>,5:8]], c1=[[@37,114:115='t2',<381>,5:15]], c2=[[@41,121:122='t2',<381>,5:22]]}}, setop=EXCEPT, interface={id=[{name=id, table_ref=t2}], c1=[{name=c1, table_ref=t2}], c2=[{name=c2, table_ref=t2}]}, table_alias={t2=tab2}}, def_query0={query_dictionary={id=[[@19,59:60='id',<381>,3:11]], c1=[[@23,66:67='c1',<381>,3:18]], c2=[[@27,73:74='c2',<381>,3:25]]}, table_dictionary={tab1={id=[[@17,56:57='t1',<381>,3:8]], c1=[[@21,63:64='t1',<381>,3:15]], c2=[[@25,70:71='t1',<381>,3:22]]}}, interface={id=[{name=id, table_ref=t1}], c1=[{name=c1, table_ref=t1}], c2=[{name=c2, table_ref=t1}]}, table_alias={t1=tab1}}, interface={id=query_column, c1=query_column, c2=query_column, *=wildcard}}, query_dictionary={*=[[@13,39:39='*',<291>,2:16]], id=[[@1,7:9='mid',<381>,1:7], [@52,158:160='mid',<381>,7:7]], c1=[[@5,15:17='mid',<381>,1:15]]}, interface={*=[{name=*, table_ref=u}]}, table_alias={u=union2}}, table_alias={mid=query3}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void simplifiedQualifiedWildcardOverJoinInMiddleLayerTest() {
 		final String query = "select mid.id, mid.c1 "
 				+ "\n from (select u.* from ("

@@ -2079,6 +2079,29 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 	}
 
 	@Test
+	public void unionSubstitutionV1IntersectAsExcept() {
+		final String query = " SELECT * FROM third union <fourth>  except <sixth>  union <fifth>";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=union}}, 3={substitution={name=<fourth>, type=query}}, 4={union={qualifier=null, operator=except}}, 5={substitution={name=<sixth>, type=query}}, 6={union={qualifier=null, operator=union}}, 7={substitution={name=<fifth>, type=query}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<sixth>=query, <fifth>=query, <fourth>=query}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{third={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_union1={setop=UNION, def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={third={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void exceptSubstitutionV1(){
 		final String query = " SELECT * FROM third except <fourth>  intersect <sixth>  except <fifth>";
 

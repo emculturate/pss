@@ -1040,6 +1040,36 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 							extractor.getSymbolTable().toString());
 		}
 
+	@Test
+	public void getSubstitutionColumnVariableV8SelfExceptSecondSubqueryQualifiedColumnReferencesTest() {
+			// Column Variable Test - self-INTERSECT variant
+			String query = " select cec.<select column> " +
+					"\nfrom <[Enrollment Services].[Client Entering Class]> cec " +
+					"\nwhere cec.non_variable_col is not null and cec.<where column> = 'abc' " +
+					"\nintersect " +
+					"\nselect cec.<select column> " +
+					"\nfrom <[Enrollment Services].[Client Entering Class]> cec " +
+					"\nwhere cec.non_variable_col is not null and cec.<where column> = 'abc'";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			assertNoWalkerDiagnostics(extractor);
+
+			// broken purposefully until we come back to generate a suite of tests around variable column recognition
+			Assert.assertEquals("AST is wrong", "{SQL={intersect={1={select={1={column={substitution={name=<select column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={condition={left={column={name=non_variable_col, table_ref=cec}}, operator=is not null}}, 2={condition={left={column={substitution={name=<where column>, type=column}, table_ref=cec}}, right={literal='abc'}, operator==}}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={substitution={name=<select column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={condition={left={column={name=non_variable_col, table_ref=cec}}, operator=is not null}}, 2={condition={left={column={substitution={name=<where column>, type=column}, table_ref=cec}}, right={literal='abc'}, operator==}}}}}}}}",
+							extractor.getAsTree().toString());
+			Assert.assertEquals("Interface is wrong", "[<select column>]",
+							extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{<[Enrollment Services].[Client Entering Class]>=tuple, <select column>=column, <where column>=column}",
+							extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{<[Enrollment Services].[Client Entering Class]>={<select column>=[[@1,8:10='cec',<381>,1:8], [@22,176:178='cec',<381>,5:7]], non_variable_col=[[@8,93:95='cec',<381>,3:6], [@29,261:263='cec',<381>,7:6]], <where column>=[[@15,130:132='cec',<381>,3:43], [@36,298:300='cec',<381>,7:43]]}}",
+							extractor.getTableColumnDictionaryMap().toString());
+			Assert.assertEquals("Query Column Dictionary is wrong", "{query0={<select column>=[[@3,12:26='<select column>',<327>,1:12]]}, query1={<select column>=[[@24,180:194='<select column>',<327>,5:11]]}}",
+							extractor.getQueryColumnDictionaryMap().toString());
+			Assert.assertEquals("Symbol Table is wrong", "{def_intersect2={def_query1={query_dictionary={<select column>=[[@24,180:194='<select column>',<327>,5:11]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@22,176:178='cec',<381>,5:7]], non_variable_col=[[@29,261:263='cec',<381>,7:6]], <where column>=[[@36,298:300='cec',<381>,7:43]]}}, setop=INTERSECTION, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, def_query0={query_dictionary={<select column>=[[@3,12:26='<select column>',<327>,1:12]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@1,8:10='cec',<381>,1:8], [@22,176:178='cec',<381>,5:7]], non_variable_col=[[@8,93:95='cec',<381>,3:6], [@29,261:263='cec',<381>,7:6]], <where column>=[[@15,130:132='cec',<381>,3:43], [@36,298:300='cec',<381>,7:43]]}}, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, interface={<select column>=query_column}}}",
+							extractor.getSymbolTable().toString());
+		}
+
+
 		@Test
 		public void getSubstitutionColumnVariableV9CteWrappedWhereVariantWithJoinOnSelectColumnTest() {
 			// Column Variable Test - V1 wrapped as a CTE with outer wildcard select
@@ -1296,6 +1326,38 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{def_query3={context_list={wrapped=intersect2, cec=intersect2}, query_dictionary={<select column>=[[@49,357:371='<select column>',<327>,8:11]], dummy_col2=[[@53,376:385='dummy_col2',<381>,8:30]]}, table_dictionary={dummy_table={dummy_col=[[@65,448:448='d',<381>,8:102]], dummy_col2=[[@51,374:374='d',<381>,8:28]]}}, def_intersect2={query_dictionary={<select column>=[[@47,353:355='cec',<381>,8:7], [@61,426:428='cec',<381>,8:80]]}, def_query1={query_dictionary={<select column>=[[@28,198:212='<select column>',<327>,5:11]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@26,194:196='cec',<381>,5:7]], non_variable_col=[[@33,279:281='cec',<381>,7:6]], <where column>=[[@40,316:318='cec',<381>,7:43]]}}, setop=INTERSECTION, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, def_query0={query_dictionary={<select column>=[[@7,30:44='<select column>',<327>,1:30]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@5,26:28='cec',<381>,1:26], [@26,194:196='cec',<381>,5:7]], non_variable_col=[[@12,111:113='cec',<381>,3:6], [@33,279:281='cec',<381>,7:6]], <where column>=[[@19,148:150='cec',<381>,3:43], [@40,316:318='cec',<381>,7:43]]}}, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, interface={<select column>=query_column}}, filters=[{substitution={name=<select column>, type=column}, table_ref=cec}, {name=dummy_col, table_ref=d}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}], dummy_col2=[{name=dummy_col2, table_ref=d}]}, table_alias={cec=intersect2, d=dummy_table, wrapped=intersect2}}}",
 				extractor.getSymbolTable().toString());
 		}
+
+	@Test
+	public void getSubstitutionColumnVariableV16CteWrappedSelfExceptVariantWithJoinOnSelectColumnTest() {
+			// Column Variable Test - V8 wrapped as a CTE with outer wildcard select
+			String query = "with wrapped as ( " +
+					" select cec.<select column> " +
+					"\nfrom <[Enrollment Services].[Client Entering Class]> cec " +
+					"\nwhere cec.non_variable_col is not null and cec.<where column> = 'abc' " +
+					"\nintersect " +
+					"\nselect cec.<select column> " +
+					"\nfrom <[Enrollment Services].[Client Entering Class]> cec " +
+					"\nwhere cec.non_variable_col is not null and cec.<where column> = 'abc' " +
+					") " +
+					"\nselect cec.<select column>, d.dummy_col2 from wrapped cec join dummy_table d on cec.<select column> = d.dummy_col";
+			final SQLSelectParserParser parser = parse(query);
+			SqlParseEventWalker extractor = runParsertest(query, parser);
+			assertNoWalkerDiagnostics(extractor);
+			Assert.assertEquals("AST is wrong", "{SQL={with={1={cte={intersect={1={select={1={column={substitution={name=<select column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={condition={left={column={name=non_variable_col, table_ref=cec}}, operator=is not null}}, 2={condition={left={column={substitution={name=<where column>, type=column}, table_ref=cec}}, right={literal='abc'}, operator==}}}}}, 2={intersect={qualifier=null, operator=intersect}}, 3={select={1={column={substitution={name=<select column>, type=column}, table_ref=cec}}}, from={table={alias=cec, substitution={name=<[Enrollment Services].[Client Entering Class]>, parts={1=[Enrollment Services], 2=[Client Entering Class]}, type=tuple}}}, where={and={1={condition={left={column={name=non_variable_col, table_ref=cec}}, operator=is not null}}, 2={condition={left={column={substitution={name=<where column>, type=column}, table_ref=cec}}, right={literal='abc'}, operator==}}}}}}}, alias=wrapped}}, query={select={1={column={substitution={name=<select column>, type=column}, table_ref=cec}}, 2={column={name=dummy_col2, table_ref=d}}}, from={join={1={table={alias=cec, table=wrapped}}, 2={join=join, on={condition={left={column={substitution={name=<select column>, type=column}, table_ref=cec}}, right={column={name=dummy_col, table_ref=d}}, operator==}}}, 3={table={alias=d, table=dummy_table}}}}}}}",
+							extractor.getAsTree().toString());
+			Assert.assertEquals("Interface is wrong", "[<select column>, dummy_col2]",
+							extractor.getInterface().toString());
+			Assert.assertEquals("Substitution List is wrong", "{<[Enrollment Services].[Client Entering Class]>=tuple, <select column>=column, <where column>=column}",
+							extractor.getSubstitutionsMap().toString());
+			Assert.assertEquals("Table Dictionary is wrong", "{<[Enrollment Services].[Client Entering Class]>={<select column>=[[@5,26:28='cec',<381>,1:26], [@26,194:196='cec',<381>,5:7]], non_variable_col=[[@12,111:113='cec',<381>,3:6], [@33,279:281='cec',<381>,7:6]], <where column>=[[@19,148:150='cec',<381>,3:43], [@40,316:318='cec',<381>,7:43]]}, dummy_table={dummy_col=[[@65,448:448='d',<381>,8:102]], dummy_col2=[[@51,374:374='d',<381>,8:28]]}}",
+							extractor.getTableColumnDictionaryMap().toString());
+			Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={<select column>=[[@47,353:355='cec',<381>,8:7], [@61,426:428='cec',<381>,8:80]]}, query0={<select column>=[[@7,30:44='<select column>',<327>,1:30]]}, query1={<select column>=[[@28,198:212='<select column>',<327>,5:11]]}, query3={<select column>=[[@49,357:371='<select column>',<327>,8:11]], dummy_col2=[[@53,376:385='dummy_col2',<381>,8:30]]}}",
+							extractor.getQueryColumnDictionaryMap().toString());
+			Assert.assertEquals("Symbol Table is wrong",
+				"{def_query3={context_list={wrapped=intersect2, cec=intersect2}, query_dictionary={<select column>=[[@49,357:371='<select column>',<327>,8:11]], dummy_col2=[[@53,376:385='dummy_col2',<381>,8:30]]}, table_dictionary={dummy_table={dummy_col=[[@65,448:448='d',<381>,8:102]], dummy_col2=[[@51,374:374='d',<381>,8:28]]}}, def_intersect2={query_dictionary={<select column>=[[@47,353:355='cec',<381>,8:7], [@61,426:428='cec',<381>,8:80]]}, def_query1={query_dictionary={<select column>=[[@28,198:212='<select column>',<327>,5:11]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@26,194:196='cec',<381>,5:7]], non_variable_col=[[@33,279:281='cec',<381>,7:6]], <where column>=[[@40,316:318='cec',<381>,7:43]]}}, setop=INTERSECTION, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, def_query0={query_dictionary={<select column>=[[@7,30:44='<select column>',<327>,1:30]]}, table_dictionary={<[Enrollment Services].[Client Entering Class]>={<select column>=[[@5,26:28='cec',<381>,1:26], [@26,194:196='cec',<381>,5:7]], non_variable_col=[[@12,111:113='cec',<381>,3:6], [@33,279:281='cec',<381>,7:6]], <where column>=[[@19,148:150='cec',<381>,3:43], [@40,316:318='cec',<381>,7:43]]}}, filters=[{name=non_variable_col, table_ref=cec}, {substitution={name=<where column>, type=column}, table_ref=cec}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}]}, table_alias={cec=<[Enrollment Services].[Client Entering Class]>}}, interface={<select column>=query_column}}, filters=[{substitution={name=<select column>, type=column}, table_ref=cec}, {name=dummy_col, table_ref=d}], interface={<select column>=[{substitution={name=<select column>, type=column}, table_ref=cec}], dummy_col2=[{name=dummy_col2, table_ref=d}]}, table_alias={cec=intersect2, d=dummy_table, wrapped=intersect2}}}",
+				extractor.getSymbolTable().toString());
+		}
+
 
 	@Test
 	public void descAsColumnTest() {
@@ -2191,6 +2253,37 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	}
 
 	@Test
+	public void correlatedScalarPredicandIntersectExceptContextSubqueryTest() {
+		final String query = "SELECT oi.oi1,"
+		    + "\n       (SELECT max(ii.px1) FROM ("
+		    + "\nSELECT id.px1 FROM tab_d AS id"
+		    + "\n        WHERE id.px2 = oi.oi1"
+		    + "\nINTERSECT SELECT ie.px1 FROM tab_e AS ie"
+		    + "\n        WHERE ie.px3 = oi.oi2) AS ii) AS px_max"
+		    + "\nFROM tab_o AS oi";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+		
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=oi1, table_ref=oi}}, 2={lookup={from={table={alias=ii, query={intersect={1={select={1={column={name=px1, table_ref=id}}}, from={table={alias=id, table=tab_d}}, where={condition={left={column={name=px2, table_ref=id}}, right={column={name=oi1, table_ref=oi}}, operator==}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=px1, table_ref=ie}}}, from={table={alias=ie, table=tab_e}}, where={condition={left={column={name=px3, table_ref=ie}}, right={column={name=oi2, table_ref=oi}}, operator==}}}}}}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=px1, table_ref=ii}}}}}}, alias=px_max}}, from={table={alias=oi, table=tab_o}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[oi1, px_max]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_o={oi1=[[@1,7:8='oi',<381>,1:7], [@28,103:104='oi',<381>,4:23]], oi2=[[@45,174:175='oi',<381>,6:23]]}, tab_d={px1=[[@16,56:57='id',<381>,3:7]], px2=[[@24,94:95='id',<381>,4:14]]}, tab_e={px1=[[@33,127:128='ie',<381>,5:17]], px3=[[@41,165:166='ie',<381>,6:14]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={px1=[[@9,34:35='ii',<381>,2:19]]}, query5={oi1=[[@3,10:12='oi1',<381>,1:10]], px_max=[[@53,192:197='px_max',<381>,6:41]]}, query0={px1=[[@18,59:61='px1',<381>,3:10]]}, query1={px1=[[@35,130:132='px1',<381>,5:20]]}, query3={unnamed_0=[[@12,40:40=')',<288>,2:25]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query5={query_dictionary={oi1=[[@3,10:12='oi1',<381>,1:10]], px_max=[[@53,192:197='px_max',<381>,6:41]]}, table_dictionary={tab_o={oi1=[[@1,7:8='oi',<381>,1:7], [@28,103:104='oi',<381>,4:23]], oi2=[[@45,174:175='oi',<381>,6:23]]}}, dependent_queries={predicand4={query=query3, type=interface}}, interface={oi1=[{name=oi1, table_ref=oi}], px_max=[{name=px1, table_ref=id}, {name=px2, table_ref=id}, {name=oi1, table_ref=oi}, {name=px1, table_ref=ie}, {name=px3, table_ref=ie}, {name=oi2, table_ref=oi}, {name=px1, table_ref=ii}]}, def_query3={query_dictionary={unnamed_0=[[@12,40:40=')',<288>,2:25]]}, def_intersect2={query_dictionary={px1=[[@9,34:35='ii',<381>,2:19]]}, def_query1={query_dictionary={px1=[[@35,130:132='px1',<381>,5:20]]}, table_dictionary={tab_e={px1=[[@33,127:128='ie',<381>,5:17]], px3=[[@41,165:166='ie',<381>,6:14]]}}, setop=INTERSECTION, filters=[{name=px3, table_ref=ie}, {name=oi2, table_ref=oi}], interface={px1=[{name=px1, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={px1=[[@18,59:61='px1',<381>,3:10]]}, table_dictionary={tab_d={px1=[[@16,56:57='id',<381>,3:7]], px2=[[@24,94:95='id',<381>,4:14]]}}, filters=[{name=px2, table_ref=id}, {name=oi1, table_ref=oi}], interface={px1=[{name=px1, table_ref=id}]}, table_alias={id=tab_d}}, interface={px1=query_column}}, interface={unnamed_0=[{name=px1, table_ref=ii}]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void correlatedScalarPredicandWithNestedInSubqueryTest() {
 		final String query = "SELECT sa.sv1 FROM tab_s AS sa"
 		    + "\nWHERE (SELECT max(ia.iv1) FROM tab_i AS ia"
@@ -2573,6 +2666,35 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	}
 
 	@Test
+	public void correlatedInSubqueryIntersectExceptContextTest() {
+		final String query = "SELECT oi.ix1 FROM tab_o AS oi"
+		    + "\nWHERE oi.ix2 IN (SELECT ii.ix9 FROM ("
+		    + "\nSELECT id.ix9 FROM tab_d AS id"
+		    + "\n        WHERE id.ix3 = oi.ix1"
+		    + "\nINTERSECT SELECT ie.ix9 FROM tab_e AS ie"
+		    + "\n        WHERE ie.ix4 = oi.ix2) AS ii)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ix1, table_ref=oi}}}, from={table={alias=oi, table=tab_o}}, where={in={item={column={name=ix2, table_ref=oi}}, in_list={select={1={column={name=ix9, table_ref=ii}}}, from={table={alias=ii, query={intersect={1={select={1={column={name=ix9, table_ref=id}}}, from={table={alias=id, table=tab_d}}, where={condition={left={column={name=ix3, table_ref=id}}, right={column={name=ix1, table_ref=oi}}, operator==}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=ix9, table_ref=ie}}}, from={table={alias=ie, table=tab_e}}, where={condition={left={column={name=ix4, table_ref=ie}}, right={column={name=ix2, table_ref=oi}}, operator==}}}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[ix1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_o={ix2=[[@50,194:195='oi',<381>,6:23], [@9,37:38='oi',<381>,2:6]], ix1=[[@33,123:124='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ix3=[[@29,114:115='id',<381>,4:14]], ix9=[[@21,76:77='id',<381>,3:7]]}, tab_e={ix4=[[@46,185:186='ie',<381>,6:14]], ix9=[[@38,147:148='ie',<381>,5:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={ix9=[[@15,55:56='ii',<381>,2:24]]}, query5={ix1=[[@3,10:12='ix1',<381>,1:10]]}, query0={ix9=[[@23,79:81='ix9',<381>,3:10]]}, query1={ix9=[[@40,150:152='ix9',<381>,5:20]]}, query3={ix9=[[@17,58:60='ix9',<381>,2:27]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query5={query_dictionary={ix1=[[@3,10:12='ix1',<381>,1:10]]}, table_dictionary={tab_o={ix2=[[@9,37:38='oi',<381>,2:6], [@50,194:195='oi',<381>,6:23]], ix1=[[@1,7:8='oi',<381>,1:7], [@33,123:124='oi',<381>,4:23]]}}, dependent_queries={in_list4={query=query3, type=filters}}, filters=[{name=ix2, table_ref=oi}], interface={ix1=[{name=ix1, table_ref=oi}]}, def_query3={query_dictionary={ix9=[[@17,58:60='ix9',<381>,2:27]]}, def_intersect2={query_dictionary={ix9=[[@15,55:56='ii',<381>,2:24]]}, def_query1={query_dictionary={ix9=[[@40,150:152='ix9',<381>,5:20]]}, table_dictionary={tab_o={ix2=[[@50,194:195='oi',<381>,6:23], [@9,37:38='oi',<381>,2:6]]}, tab_e={ix4=[[@46,185:186='ie',<381>,6:14]], ix9=[[@38,147:148='ie',<381>,5:17]]}}, setop=INTERSECTION, filters=[{name=ix4, table_ref=ie}, {name=ix2, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={ix9=[[@23,79:81='ix9',<381>,3:10]]}, table_dictionary={tab_o={ix1=[[@33,123:124='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ix3=[[@29,114:115='id',<381>,4:14]], ix9=[[@21,76:77='id',<381>,3:7]]}}, filters=[{name=ix3, table_ref=id}, {name=ix1, table_ref=oi}], interface={ix9=[{name=ix9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ix9=query_column}}, interface={ix9=[{name=ix9, table_ref=ii}]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void correlatedInSubqueryWithNestedScalarPredicandTest() {
 		final String query = "SELECT sa.in1 FROM tab_s AS sa"
 		    + "\nWHERE sa.in2 IN (SELECT ia.in9 FROM tab_i AS ia"
@@ -2882,6 +3004,37 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				"{def_query5={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oi}]}, def_query3={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, def_intersect2={query_dictionary={ex9=[[@52,214:215='ii',<381>,7:14]]}, def_query1={query_dictionary={ex9=[[@35,142:144='ex9',<381>,5:20]]}, table_dictionary={tab_o={ex2=[[@45,186:187='oi',<381>,6:23]]}, tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}, setop=INTERSECTION, filters=[{name=ex4, table_ref=ie}, {name=ex2, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={ex9=[[@18,71:73='ex9',<381>,3:10]]}, table_dictionary={tab_o={ex1=[[@28,115:116='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}}, filters=[{name=ex3, table_ref=id}, {name=ex1, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ex9=query_column}}, filters=[{name=ex9, table_ref=ii}, {name=ex3, table_ref=oi}], interface={unnamed_0=[]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void correlatedExistsSubqueryIntersectExceptContextTest() {
+		final String query = "SELECT oi.ex1 FROM tab_o AS oi"
+		    + "\nWHERE EXISTS (SELECT 1 FROM ("
+		    + "\nSELECT id.ex9 FROM tab_d AS id"
+		    + "\n        WHERE id.ex3 = oi.ex1"
+		    + "\nINTERSECT SELECT ie.ex9 FROM tab_e AS ie"
+		    + "\n        WHERE ie.ex4 = oi.ex2) AS ii"
+		    + "\n        WHERE ii.ex9 = oi.ex3)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=ex1, table_ref=oi}}}, from={table={alias=oi, table=tab_o}}, where={exists={select={1={literal=1}}, from={table={alias=ii, query={intersect={1={select={1={column={name=ex9, table_ref=id}}}, from={table={alias=id, table=tab_d}}, where={condition={left={column={name=ex3, table_ref=id}}, right={column={name=ex1, table_ref=oi}}, operator==}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=ex9, table_ref=ie}}}, from={table={alias=ie, table=tab_e}}, where={condition={left={column={name=ex4, table_ref=ie}}, right={column={name=ex2, table_ref=oi}}, operator==}}}}}}}, where={condition={left={column={name=ex9, table_ref=ii}}, right={column={name=ex3, table_ref=oi}}, operator==}}, operator=EXISTS}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[ex1]", 
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", 
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex2=[[@45,186:187='oi',<381>,6:23]], ex1=[[@28,115:116='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}, tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{intersect2={ex9=[[@52,214:215='ii',<381>,7:14]]}, query5={ex1=[[@3,10:12='ex1',<381>,1:10]]}, query0={ex9=[[@18,71:73='ex9',<381>,3:10]]}, query1={ex9=[[@35,142:144='ex9',<381>,5:20]]}, query3={unnamed_0=[[@12,52:52='1',<300>,2:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query5={query_dictionary={ex1=[[@3,10:12='ex1',<381>,1:10]]}, table_dictionary={tab_o={ex3=[[@56,223:224='oi',<381>,7:23]], ex1=[[@1,7:8='oi',<381>,1:7], [@28,115:116='oi',<381>,4:23]]}}, dependent_queries={exists4={query=query3, type=filters}}, filters=[], interface={ex1=[{name=ex1, table_ref=oi}]}, def_query3={query_dictionary={unnamed_0=[[@12,52:52='1',<300>,2:21]]}, def_intersect2={query_dictionary={ex9=[[@52,214:215='ii',<381>,7:14]]}, def_query1={query_dictionary={ex9=[[@35,142:144='ex9',<381>,5:20]]}, table_dictionary={tab_o={ex2=[[@45,186:187='oi',<381>,6:23]]}, tab_e={ex4=[[@41,177:178='ie',<381>,6:14]], ex9=[[@33,139:140='ie',<381>,5:17]]}}, setop=INTERSECTION, filters=[{name=ex4, table_ref=ie}, {name=ex2, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=ie}]}, table_alias={ie=tab_e}}, def_query0={query_dictionary={ex9=[[@18,71:73='ex9',<381>,3:10]]}, table_dictionary={tab_o={ex1=[[@28,115:116='oi',<381>,4:23], [@1,7:8='oi',<381>,1:7]]}, tab_d={ex3=[[@24,106:107='id',<381>,4:14]], ex9=[[@16,68:69='id',<381>,3:7]]}}, filters=[{name=ex3, table_ref=id}, {name=ex1, table_ref=oi}], interface={ex9=[{name=ex9, table_ref=id}]}, table_alias={id=tab_d}}, interface={ex9=query_column}}, filters=[{name=ex9, table_ref=ii}, {name=ex3, table_ref=oi}], interface={unnamed_0=[]}, table_alias={ii=intersect2}}, table_alias={oi=tab_o}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 
 	@Test
 	public void correlatedExistsSubqueryWithNestedScalarPredicandTest() {
