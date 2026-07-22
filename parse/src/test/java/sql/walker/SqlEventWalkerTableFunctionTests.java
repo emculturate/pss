@@ -1398,7 +1398,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		 "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-		"{unresolved_column={}}",
+		"{}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1479,7 +1479,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		 "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-		"{unresolved_column={}}",
+		"{}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -1506,7 +1506,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		 "{}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-		"{unresolved_column={}}",
+		"{}",
 				extractor.getSymbolTable().toString());
 	}
 
