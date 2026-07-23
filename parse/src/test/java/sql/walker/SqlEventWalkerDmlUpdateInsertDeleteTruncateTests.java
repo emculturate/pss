@@ -4274,7 +4274,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_update0={assignments={score=[]}, query_dictionary={updated_id=[[@12,55:64='updated_id',<381>,1:55]], score=[[@16,69:73='score',<381>,1:69]]}, table_dictionary={employees={score=[[@14,67:67='e',<381>,1:67]], emp_id=[[@8,43:43='e',<381>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], updated_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
+				"{def_update0={assignments={score=[]}, query_dictionary={score=[[@16,69:73='score',<381>,1:69]], updated_id=[[@12,55:64='updated_id',<381>,1:55]]}, table_dictionary={employees={score=[[@14,67:67='e',<381>,1:67]], emp_id=[[@8,43:43='e',<381>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], updated_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -4313,6 +4313,141 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_update0={assignments={score=[]}, query_dictionary={<returning predicand>=[[@12,53:73='<returning predicand>',<327>,1:53]], emp_id=[[@10,45:50='emp_id',<381>,1:45]]}, table_dictionary={employees={emp_id=[[@8,43:43='e',<381>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], <returning predicand>=[{name=<returning predicand>, type=predicand}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertReturningSelectListInterfaceTest() {
+		final String query = "INSERT INTO employees (score, rank_bucket) VALUES (100, 1) RETURNING score, emp_id AS updated_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}, returning={1={column={name=score, table_ref=employees}}, 2={column={name=emp_id, table_ref=employees}, alias=updated_id}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rank_bucket, updated_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert1={query_dictionary={score=[[@4,23:27='score',<381>,1:23], [@15,69:73='score',<381>,1:69], [@15,69:73='score',<381>,1:69]], updated_id=[[@19,86:95='updated_id',<381>,1:86]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]], emp_id=[[@17,76:81='emp_id',<381>,1:76]]}, table_dictionary={employees={score=[[@4,23:27='score',<381>,1:23], [@15,69:73='score',<381>,1:69], [@15,69:73='score',<381>,1:69]], rank_bucket=[[@6,30:40='rank_bucket',<381>,1:30]], emp_id=[[@17,76:81='emp_id',<381>,1:76]]}}, def_values0={query_dictionary={$1=[[@9,50:50='(',<287>,1:50]], $2=[[@9,50:50='(',<287>,1:50]]}, interface={$1=[], $2=[]}}, _tmp_insert_source_select_sequence=[score, updated_id], interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}], updated_id=[{name=emp_id, table_ref=employees}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertOnConflictDoNothingTest() {
+		final String query = "INSERT INTO employees (emp_id, score) VALUES (1, 100) ON CONFLICT (emp_id) DO NOTHING";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=100}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}, on_conflict={target={1={column={name=emp_id, table_ref=employees}}}, action={do=NOTHING}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert1={query_dictionary={score=[[@6,31:35='score',<381>,1:31]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}}, def_values0={query_dictionary={$1=[[@9,45:45='(',<287>,1:45]], $2=[[@9,45:45='(',<287>,1:45]]}, interface={$1=[], $2=[]}}, interface={emp_id=[{name=$1, table_ref=values0}], score=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertOnConflictDoNothingWithoutTargetTest() {
+		final String query = "INSERT INTO employees (emp_id, score) VALUES (1, 100) ON CONFLICT DO NOTHING";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=100}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}, on_conflict={action={do=NOTHING}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert1={query_dictionary={score=[[@6,31:35='score',<381>,1:31]], emp_id=[[@4,23:28='emp_id',<381>,1:23]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31]], emp_id=[[@4,23:28='emp_id',<381>,1:23]]}}, def_values0={query_dictionary={$1=[[@9,45:45='(',<287>,1:45]], $2=[[@9,45:45='(',<287>,1:45]]}, interface={$1=[], $2=[]}}, interface={emp_id=[{name=$1, table_ref=values0}], score=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertOnConflictDoUpdateTest() {
+		final String query = "INSERT INTO employees (emp_id, score) VALUES (1, 100)"
+				+ " ON CONFLICT (emp_id) DO UPDATE SET score = EXCLUDED.score";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=100}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}, on_conflict={target={1={column={name=emp_id, table_ref=employees}}}, action={do=UPDATE, assignments={1={set={column={name=score, table_ref=employees}}, to={column={name=score, table_ref=EXCLUDED}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert2={query_dictionary={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}}, def_update1={assignments={score=[{name=score, table_ref=EXCLUDED}]}, query_dictionary={score=[[@22,89:93='score',<381>,1:89]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}}, update_dictionary={score=[[@22,89:93='score',<381>,1:89]]}, target_table={employees={}}, lhs_unresolved_columns={employees.score={name=score, table_ref=employees}}}, def_values0={query_dictionary={$1=[[@9,45:45='(',<287>,1:45]], $2=[[@9,45:45='(',<287>,1:45]]}, interface={$1=[], $2=[]}}, interface={emp_id=[{name=$1, table_ref=values0}], score=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertOnConflictDoUpdateWithWhereTest() {
+		final String query = "INSERT INTO employees (emp_id, score) VALUES (1, 100)"
+				+ " ON CONFLICT (emp_id) DO UPDATE SET score = EXCLUDED.score WHERE employees.score < 50";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=100}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=emp_id, table_ref=null}}, 2={column={name=score, table_ref=null}}}, on_conflict={target={1={column={name=emp_id, table_ref=employees}}}, action={do=UPDATE, assignments={1={set={column={name=score, table_ref=employees}}, to={column={name=score, table_ref=EXCLUDED}}}}, where={condition={left={column={name=score, table_ref=employees}}, right={literal=50}, operator=<}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert2={query_dictionary={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}}, def_update1={assignments={score=[{name=score, table_ref=EXCLUDED}]}, query_dictionary={score=[[@22,89:93='score',<381>,1:89]]}, table_dictionary={employees={score=[[@6,31:35='score',<381>,1:31], [@22,89:93='score',<381>,1:89]], emp_id=[[@4,23:28='emp_id',<381>,1:23], [@17,67:72='emp_id',<381>,1:67]]}}, update_dictionary={score=[[@22,89:93='score',<381>,1:89]]}, target_table={employees={}}, filters=[{name=score, table_ref=employees}], lhs_unresolved_columns={employees.score={name=score, table_ref=employees}}}, def_values0={query_dictionary={$1=[[@9,45:45='(',<287>,1:45]], $2=[[@9,45:45='(',<287>,1:45]]}, interface={$1=[], $2=[]}}, interface={emp_id=[{name=$1, table_ref=values0}], score=[{name=$2, table_ref=values0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertDefaultValuesTest() {
+		final String query = "INSERT INTO employees DEFAULT VALUES";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={preamble=insert_into, from={default_values=true}, target_table={table={alias=null, table=employees}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_insert0={table_dictionary={employees={}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void postgresInsertWithCteBodyTest() {
+		final String query = "WITH ins AS (INSERT INTO employees (score, rank_bucket) VALUES (100, 1) RETURNING score, emp_id) SELECT score FROM ins";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}, returning={1={column={name=score, table_ref=employees}}, 2={column={name=emp_id, table_ref=employees}}}}, alias=ins}}, query={select={1={column={name=score, table_ref=null}}}, from={table={alias=null, table=ins}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={context_list={ins=insert1}, query_dictionary={score=[[@24,104:108='score',<381>,1:104]]}, def_insert1={query_dictionary={score=[[@8,36:40='score',<381>,1:36], [@19,82:86='score',<381>,1:82], [@19,82:86='score',<381>,1:82]], rank_bucket=[[@10,43:53='rank_bucket',<381>,1:43]], emp_id=[[@21,89:94='emp_id',<381>,1:89], [@21,89:94='emp_id',<381>,1:89]]}, table_dictionary={employees={score=[[@8,36:40='score',<381>,1:36], [@19,82:86='score',<381>,1:82], [@19,82:86='score',<381>,1:82]], rank_bucket=[[@10,43:53='rank_bucket',<381>,1:43]], emp_id=[[@21,89:94='emp_id',<381>,1:89], [@21,89:94='emp_id',<381>,1:89]]}}, def_values0={query_dictionary={$1=[[@13,63:63='(',<287>,1:63]], $2=[[@13,63:63='(',<287>,1:63]]}, interface={$1=[], $2=[]}}, _tmp_insert_source_select_sequence=[score, emp_id], interface={score=[{name=$1, table_ref=values0}], rank_bucket=[{name=$2, table_ref=values0}], emp_id=[{name=emp_id, table_ref=employees}]}}, _tmp_insert_source_select_sequence=[score], interface={score=[{name=score, table_ref=insert1}]}, table_alias={ins=insert1}}}",
 				extractor.getSymbolTable().toString());
 	}
 }

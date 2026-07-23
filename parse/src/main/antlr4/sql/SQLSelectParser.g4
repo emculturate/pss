@@ -559,7 +559,13 @@ postgres_insert
   ;
 
 on_conflict_clause
-  : ON CONFLICT conflict_target? conflict_action
+  : ON conflict_keyword conflict_target? conflict_action
+  ;
+
+// Late-added lexer keywords (CONFLICT/DO/NOTHING) sit after Identifier; accept Identifier as fallback.
+conflict_keyword
+  : CONFLICT
+  | Identifier
   ;
 
 conflict_target
@@ -567,8 +573,18 @@ conflict_target
   ;
 
 conflict_action
-  : DO NOTHING
-  | DO UPDATE SET assignment_expression_list where_clause?
+  : do_keyword nothing_keyword
+  | do_keyword UPDATE SET assignment_expression_list where_clause?
+  ;
+
+do_keyword
+  : DO
+  | Identifier
+  ;
+
+nothing_keyword
+  : NOTHING
+  | Identifier
   ;
 
 insert_default_values_statement

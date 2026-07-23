@@ -3019,6 +3019,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String insertTargetTableRef = symbolTreeHelper.getInsertTargetTableReference(insertNode);
+		if (insertTargetTableRef != null && !insertTargetTableRef.isBlank()) {
+			walker.symbolTable.put(SqlParseSymbolTreeHelper.TEMP_INSERT_TARGET_TABLE_REF_KEY, insertTargetTableRef);
+		}
 		if (sourceNode != null && Boolean.TRUE.equals(sourceNode.get(MUMBLE_DEFAULT_VALUES_KEY))) {
 			symbolTreeHelper.wrapInsertTargetFromDefaultValues(insertTargetTableRef, insertColumns);
 		} else {
@@ -3338,6 +3341,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void enterConflict_action(SQLSelectParserParser.Conflict_actionContext ctx) {
+		symbolTreeHelper.beginInsertOnConflictUpdateScope();
+	}
+
+	@Override
 	public void exitOn_conflict_clause( SQLSelectParserParser.On_conflict_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -3372,12 +3380,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		Map<String, Object> actionNode = new LinkedHashMap<String, Object>();
 
-		if (ctx.DO() != null && ctx.NOTHING() != null) {
+		if (ctx.nothing_keyword() != null) {
 			actionNode.put("do", "NOTHING");
-		} else if (ctx.DO() != null && ctx.UPDATE() != null) {
+			walker.popSymbolTableDiscardFrame();
+		} else if (ctx.UPDATE() != null) {
 			actionNode.put("do", "UPDATE");
 			for (String key : subMap.keySet()) {
 				Object obj = subMap.get(key);
@@ -3398,10 +3407,41 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					actionNode.put(MUMBLE_WHERE_KEY, item);
 				}
 			}
+			String insertTargetTableRef = (String) walker.symbolTable.get(
+					SqlParseSymbolTreeHelper.TEMP_INSERT_TARGET_TABLE_REF_KEY);
+			Map<String, Object> updateNode = symbolTreeHelper.buildInsertOnConflictUpdateNode(
+					insertTargetTableRef,
+					actionNode);
+			symbolTreeHelper.finalizeUpdateScopeSymbolTable(updateNode);
+		} else {
+			walker.popSymbolTableDiscardFrame();
 		}
 
 		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
-		newMap.put("conflict_action", actionNode);
+		newMap.put(type.toString(), actionNode);
+	}
+
+	@Override
+	public void exitConflict_target(SQLSelectParserParser.Conflict_targetContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object segment = subMap.get("1");
+		if (segment instanceof Map<?, ?> segmentMap) {
+			Map<String, Object> typedSegment = (Map<String, Object>) segmentMap;
+			Object childType = typedSegment.get(ASTWALKER_RULE_TYPE_KEY);
+			if (childType != null) {
+				Object flattened = typedSegment.get(childType.toString());
+				if (flattened != null) {
+					segment = flattened;
+				}
+			}
+		}
+
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put(type.toString(), segment);
 	}
 
 	@Override

@@ -585,6 +585,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		popFlagMap();
 	}
 
+	/** Drops the current symbol-table frame without publishing it (e.g. ON CONFLICT DO NOTHING). */
+	@SuppressWarnings("unchecked")
+	public void popSymbolTableDiscardFrame() {
+		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
+		popFlagMap();
+	}
+
 	@SuppressWarnings("unchecked")
 	public void popFlagMap() {
 		// Pop Flags and reset them
@@ -713,6 +720,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
+		if (tryResolveInsertTargetScopedColumn(tableReference, unresolvedColumnEntry, item)) {
+			return;
+		}
+
 		Object qryTableDictObject = symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
 		if (!(qryTableDictObject instanceof Map<?, ?>)) {
 			qryTableDictObject = new HashMap<String, Object>();
@@ -797,6 +808,68 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
 		}
 		mergeResolvedColumnIntoDictionary(queryDictionary, interfaceKey, unresolvedColumnEntry);
+		return true;
+	}
+
+	/**
+	 * After the insert source is resolved, unqualified column refs in RETURNING / ON CONFLICT
+	 * clauses bind to the insert target table (mirrors DELETE RETURNING target binding).
+	 */
+	@SuppressWarnings("unchecked")
+	private boolean tryResolveInsertTargetScopedColumn(
+			Object tableReference,
+			HashMap<String, Object> unresolvedColumnEntry,
+			Object item) {
+		if (normalizeUnresolvedTableRef(tableReference) != null) {
+			return false;
+		}
+
+		Object insertTargetRefObj = symbolTable.get("_tmp_insert_target_table_ref");
+		if (!(insertTargetRefObj instanceof String insertTargetRef) || insertTargetRef.isBlank()) {
+			return false;
+		}
+
+		Object columnMetaObj = unresolvedColumnEntry.get(MUMBLE_COLUMN_KEY);
+		if (!(columnMetaObj instanceof Map<?, ?> columnMeta)) {
+			return false;
+		}
+		String columnName = (String) ((Map<String, Object>) columnMeta).get(MUMBLE_NAME_KEY);
+		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+			return false;
+		}
+
+		((Map<String, Object>) columnMeta).put(MUMBLE_TABLE_REF_KEY, insertTargetRef);
+		if (item instanceof Map<?, ?> itemMap) {
+			((Map<String, Object>) itemMap).put(MUMBLE_TABLE_REF_KEY, insertTargetRef);
+		}
+
+		Object queryDictObj = symbolTable.get(MUMBLE_QUERY_DICTIONARY_KEY);
+		HashMap<String, Object> queryDictionary;
+		if (queryDictObj instanceof HashMap<?, ?> existingDictionary) {
+			queryDictionary = (HashMap<String, Object>) existingDictionary;
+		} else {
+			queryDictionary = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
+		}
+		mergeResolvedColumnIntoDictionary(queryDictionary, columnName, unresolvedColumnEntry);
+
+		Object tableDictObj = symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		HashMap<String, Object> tableDictionary;
+		if (tableDictObj instanceof HashMap<?, ?> existingTableDictionary) {
+			tableDictionary = (HashMap<String, Object>) existingTableDictionary;
+		} else {
+			tableDictionary = new HashMap<String, Object>();
+			symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionary);
+		}
+		Object targetTableDictObj = tableDictionary.get(insertTargetRef);
+		HashMap<String, Object> targetTableDictionary;
+		if (targetTableDictObj instanceof HashMap<?, ?> existingTargetTableDictionary) {
+			targetTableDictionary = (HashMap<String, Object>) existingTargetTableDictionary;
+		} else {
+			targetTableDictionary = new HashMap<String, Object>();
+			tableDictionary.put(insertTargetRef, targetTableDictionary);
+		}
+		mergeResolvedColumnIntoDictionary(targetTableDictionary, columnName, unresolvedColumnEntry);
 		return true;
 	}
 

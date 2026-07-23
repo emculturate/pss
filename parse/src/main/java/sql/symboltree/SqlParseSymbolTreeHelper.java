@@ -43,6 +43,8 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY = "_tmp_insert_source_select_sequence";
 	public static final String INSERT_SOURCE_REF_KEY = "insert_source_ref";
 	public static final String TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY = "_tmp_insert_target_column_list_location";
+	public static final String TEMP_INSERT_TARGET_INTERFACE_KEY = "_tmp_insert_target_interface";
+	public static final String TEMP_INSERT_TARGET_TABLE_REF_KEY = "_tmp_insert_target_table_ref";
 	public static final String TEMP_DELETE_TARGET_TABLE_REF_KEY = "_tmp_delete_target_table_ref";
 	public static final String TEMP_DELETE_TARGET_ALIAS_KEY = "_tmp_delete_target_alias";
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_KEY = "_tmp_update_nodefrom_target";
@@ -3585,7 +3587,63 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
+	/**
+	 * Opens a nested UPDATE scope for {@code ON CONFLICT DO UPDATE}: seeds the insert target
+	 * table so assignment/WHERE resolution matches a no-FROM UPDATE against that table.
+	 */
 	@SuppressWarnings("unchecked")
+	public void beginInsertOnConflictUpdateScope() {
+		String insertTargetTableRef = (String) walker.symbolTable.get(TEMP_INSERT_TARGET_TABLE_REF_KEY);
+		HashMap<String, Object> seededTableDictionary = copyInsertTargetTableDictionary(insertTargetTableRef);
+		walker.pushSymbolTable();
+		if (insertTargetTableRef != null && !insertTargetTableRef.isBlank()) {
+			walker.symbolTable.put(TEMP_INSERT_TARGET_TABLE_REF_KEY, insertTargetTableRef);
+			initializeUpdateTargetTableSubtree(insertTargetTableRef);
+		}
+		if (seededTableDictionary != null && !seededTableDictionary.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, seededTableDictionary);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> copyInsertTargetTableDictionary(String insertTargetTableRef) {
+		if (insertTargetTableRef == null || insertTargetTableRef.isBlank()) {
+			return null;
+		}
+		Object parentTableDictionaryObj = walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (!(parentTableDictionaryObj instanceof HashMap<?, ?> parentTableDictionaryMapObj)) {
+			return null;
+		}
+		Object targetEntryObj = ((HashMap<String, Object>) parentTableDictionaryMapObj).get(insertTargetTableRef);
+		if (!(targetEntryObj instanceof Map<?, ?>)) {
+			return null;
+		}
+		HashMap<String, Object> seededTableDictionary = new HashMap<String, Object>();
+		seededTableDictionary.put(insertTargetTableRef, targetEntryObj);
+		return seededTableDictionary;
+	}
+
+	public Map<String, Object> buildInsertOnConflictUpdateNode(
+			String insertTargetTableRef,
+			Map<String, Object> actionNode) {
+		Map<String, Object> updateNode = new LinkedHashMap<String, Object>();
+		if (insertTargetTableRef != null && !insertTargetTableRef.isBlank()) {
+			Map<String, Object> tableNode = new LinkedHashMap<String, Object>();
+			tableNode.put("table", insertTargetTableRef);
+			tableNode.put("alias", null);
+			updateNode.put(MUMBLE_TABLE_KEY, tableNode);
+		}
+		Object assignmentsObj = actionNode == null ? null : actionNode.get(MUMBLE_ASSIGNMENTS_KEY);
+		if (assignmentsObj != null) {
+			updateNode.put(MUMBLE_ASSIGNMENTS_KEY, assignmentsObj);
+		}
+		Object whereObj = actionNode == null ? null : actionNode.get(MUMBLE_WHERE_KEY);
+		if (whereObj != null) {
+			updateNode.put(MUMBLE_WHERE_KEY, whereObj);
+		}
+		return updateNode;
+	}
+
 	public void initializeUpdateTargetTableSubtree(String updateTargetTableRef) {
 		if (updateTargetTableRef == null || updateTargetTableRef.isBlank()) {
 			return;
@@ -4372,7 +4430,7 @@ public class SqlParseSymbolTreeHelper {
 		if (!(value instanceof HashMap<?, ?> valueMap)) {
 			return null;
 		}
-		return new HashMap<String, Object>((Map<String, Object>) valueMap);
+		return new LinkedHashMap<String, Object>((Map<String, Object>) valueMap);
 	}
 
 	/**
@@ -4745,18 +4803,29 @@ public class SqlParseSymbolTreeHelper {
 		finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
 
 		boolean insertHasReturning = insertNode != null && insertNode.get(MUMBLE_RETURNING_KEY) != null;
+		HashMap<String, Object> targetInterface = copyHashMapValueIfPresent(
+				walker.symbolTable,
+				TEMP_INSERT_TARGET_INTERFACE_KEY);
+		walker.symbolTable.remove(TEMP_INSERT_TARGET_INTERFACE_KEY);
+		walker.symbolTable.remove(TEMP_INSERT_TARGET_TABLE_REF_KEY);
 		HashMap<String, Object> returningInterface = null;
 		HashMap<String, Object> returningQueryDictionary = null;
 		if (insertHasReturning) {
 			returningInterface = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_INTERFACE_KEY);
 			returningQueryDictionary = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_QUERY_DICTIONARY_KEY);
+		} else if (targetInterface != null && !targetInterface.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, targetInterface);
 		}
 
 		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
 		publishQueryLikeScope(insertScopeKey, walker.symbolTable);
 		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
 		if (insertHasReturning) {
-			publishInsertReturningScopeArtifacts(insertScopeKey, returningInterface, returningQueryDictionary);
+			publishInsertReturningScopeArtifacts(
+					insertScopeKey,
+					targetInterface,
+					returningInterface,
+					returningQueryDictionary);
 		}
 		publishInsertScopeQueryDictionary(insertScopeKey);
 	}
@@ -4764,6 +4833,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private void publishInsertReturningScopeArtifacts(
 			String insertScopeKey,
+			HashMap<String, Object> targetInterface,
 			HashMap<String, Object> returningInterface,
 			HashMap<String, Object> returningQueryDictionary) {
 		if (insertScopeKey == null || insertScopeKey.isBlank()) {
@@ -4799,7 +4869,7 @@ public class SqlParseSymbolTreeHelper {
 				insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, returningQueryDictionary);
 			}
 		}
-		HashMap<String, Object> mergedInterface = buildInsertScopeInterfaceFromScope(insertScopeMap);
+		HashMap<String, Object> mergedInterface = buildInsertScopeInterfaceFromTargetStaging(targetInterface);
 		mergeMissingInterfaceEntries(mergedInterface, returningInterface);
 		if (!mergedInterface.isEmpty()) {
 			insertScopeMap.put(MUMBLE_INTERFACE_KEY, mergedInterface);
@@ -4807,18 +4877,16 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	private HashMap<String, Object> buildInsertScopeInterfaceFromScope(Map<String, Object> insertScopeMap) {
+	private HashMap<String, Object> buildInsertScopeInterfaceFromTargetStaging(
+			HashMap<String, Object> targetInterface) {
 		HashMap<String, Object> interfaceMap = new HashMap<String, Object>();
-		if (insertScopeMap == null) {
+		if (targetInterface == null || targetInterface.isEmpty()) {
 			return interfaceMap;
 		}
-		Object interfaceObj = insertScopeMap.get(MUMBLE_INTERFACE_KEY);
-		if (interfaceObj instanceof Map<?, ?> interfaceMapObj) {
-			for (Map.Entry<String, Object> entry : ((Map<String, Object>) interfaceMapObj).entrySet()) {
-				String interfaceKey = entry.getKey();
-				if (interfaceKey != null && !interfaceKey.isBlank()) {
-					interfaceMap.put(interfaceKey, entry.getValue());
-				}
+		for (Map.Entry<String, Object> entry : targetInterface.entrySet()) {
+			String interfaceKey = entry.getKey();
+			if (interfaceKey != null && !interfaceKey.isBlank()) {
+				interfaceMap.put(interfaceKey, entry.getValue());
 			}
 		}
 		return interfaceMap;
@@ -5282,7 +5350,7 @@ public class SqlParseSymbolTreeHelper {
 				null,
 				insertTargetTableRef);
 		if (!insertInterface.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, insertInterface);
+			walker.symbolTable.put(TEMP_INSERT_TARGET_INTERFACE_KEY, insertInterface);
 		}
 	}
 
@@ -5302,7 +5370,7 @@ public class SqlParseSymbolTreeHelper {
 				insertSourceScopeKey,
 				insertTargetTableRef);
 		if (!insertInterface.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, insertInterface);
+			walker.symbolTable.put(TEMP_INSERT_TARGET_INTERFACE_KEY, insertInterface);
 		}
 
 		clearInsertSourceColumnSequence(insertSourceDefinition);
@@ -10627,6 +10695,8 @@ public class SqlParseSymbolTreeHelper {
 				|| normalizedSourceRef.startsWith(MUMBLE_INTERSECT_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_VALUES_KEY)
 				|| normalizedSourceRef.startsWith(MUMBLE_DELETE_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_INSERT_KEY)
+				|| normalizedSourceRef.startsWith(MUMBLE_UPDATE_KEY)
 				|| MUMBLE_VALUES_KEY.equals(normalizedSourceRef);
 	}
 
@@ -12717,6 +12787,8 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 		scopePayload.remove(TEMP_INSERT_TARGET_COLUMN_LIST_LOCATION_KEY);
+		scopePayload.remove(TEMP_INSERT_TARGET_INTERFACE_KEY);
+		scopePayload.remove(TEMP_INSERT_TARGET_TABLE_REF_KEY);
 		scopePayload.remove(TEMP_UPDATE_NODEFROM_TARGET_KEY);
 		scopePayload.remove(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
 		scopePayload.remove(TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY);

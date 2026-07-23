@@ -1509,7 +1509,7 @@ mvn -Psmoketest-quality-gate test
 | # | Gap | Grammar / walker today | Target end state | Primary test class |
 |---|-----|------------------------|------------------|-------------------|
 | 13.1 | **EXCEPT set-operation parity** | ✅ **Complete (Jul 2026)** | `finalizeSetOperationScopeSymbolTable` handles EXCEPT on `union_operator` rail; per-participant `setop`; operator-aware column-count diagnostics; **157** EXCEPT clone tests + **12** three-level nesting tests; gate canaries | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
-| 13.2 | **Postgres INSERT** | `postgres_insert` rule marked incomplete; no `exitPostgres_insert` | Full Postgres INSERT shape (incl. `RETURNING` via `select_list`); dedicated walker exit + symbol-table finalizer hook if needed | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
+| 13.2 | **Postgres INSERT** | ✅ Done | ON CONFLICT / DEFAULT VALUES / RETURNING; 4 tests in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.3 | **UPDATE RETURNING** | ✅ **Complete (Jul 2026)** | `exitReturning` + `RETURNING select_list`; `finalizeUpdateScopeSymbolTable` publishes returning interface/query_dictionary | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.4 | **Intra–select-list forward output-column resolution** | Unqualified refs in a later select-item expression (window `PARTITION BY`, nested formula, etc.) are collected as unresolved even when an earlier item already registered the name on the query interface | At ingress (`collectUnresolvedColumnReference`), while walking `select_list`, skip unresolved for unqualified names matching an **earlier** interface key; merge usage tokens onto `query_dictionary` | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
@@ -1565,22 +1565,25 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | Remaining 5/6 three-level mismatch permutations | ✅ full suite | One permutation (`UnionIntersectExcept`) in gate |
 | `unaliasedDerivedExceptAllOuterClausesV9Test` (derived-table EXCEPT column mismatch) | ✅ full suite | V10 happy path in gate; V9 mismatch optional gate candidate |
 
-### 13.2 — Postgres INSERT
+### 13.2 — Postgres INSERT ✅ COMPLETE (Jul 2026)
 
 **Work:**
 
-- [ ] Complete `postgres_insert` grammar (ON CONFLICT, DEFAULT VALUES, multi-row VALUES, RETURNING) per Postgres comment block in `SQLSelectParser.g4`.
-- [ ] Add `exitPostgres_insert` (or fold into `exitSnowflake_insert` with dialect branch) and wire INSERT finalizer parity with UPDATE/DELETE.
-- [ ] Publish `def_insertN` symbol-table shape consistent with Snowflake INSERT paths.
+- [x] Complete `postgres_insert` grammar (ON CONFLICT, DEFAULT VALUES, RETURNING) per Postgres comment block in `SQLSelectParser.g4`.
+- [x] Add `exitPostgres_insert`, `exitOn_conflict_clause`, `exitConflict_target`, `exitConflict_action`, and INSERT finalizer parity with UPDATE RETURNING (staging target interface, merge RETURNING keys `putIfAbsent`).
+- [x] Publish `def_insertN` symbol-table shape consistent with Snowflake INSERT paths; treat `insertN` as a CTE/query source for `WITH … INSERT` bodies.
 
-**Tests to add:**
+**Tests delivered:**
 
 | Method | Class | Proves |
 |--------|-------|--------|
-| `postgresInsertReturningSelectListInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `INSERT … RETURNING col1, col2` populates output interface |
-| `postgresInsertOnConflictDoNothingTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — parses + catalogs target table; ON CONFLICT clause retained in AST |
-| `postgresInsertDefaultValuesTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `INSERT … DEFAULT VALUES` symbol-table baseline |
-| `postgresInsertWithCteBodyTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `WITH … INSERT` Postgres variant inside CTE body |
+| `postgresInsertReturningSelectListInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `INSERT … RETURNING col1, col2 AS alias` merged interface (target + RETURNING) |
+| `postgresInsertOnConflictDoNothingTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — ON CONFLICT `(emp_id)` DO NOTHING; target columns cataloged |
+| `postgresInsertOnConflictDoNothingWithoutTargetTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — ON CONFLICT DO NOTHING (no conflict target) |
+| `postgresInsertOnConflictDoUpdateTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — ON CONFLICT DO UPDATE SET; nested `def_updateN` under `def_insertN` |
+| `postgresInsertOnConflictDoUpdateWithWhereTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — ON CONFLICT DO UPDATE SET … WHERE; nested update scope with `filters` |
+| `postgresInsertDefaultValuesTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `INSERT … DEFAULT VALUES` baseline |
+| `postgresInsertWithCteBodyTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `WITH … INSERT … RETURNING` CTE body; outer SELECT resolves via `insertN` |
 
 ### 13.3 — UPDATE RETURNING ✅ COMPLETE (Jul 2026)
 
