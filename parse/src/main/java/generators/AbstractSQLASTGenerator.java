@@ -18,6 +18,7 @@ import static mumble.MumbleConstants.MUMBLE_COLUMNS_KEY;
 import static mumble.MumbleConstants.MUMBLE_COLUMN_KEY;
 import static mumble.MumbleConstants.MUMBLE_CONCATENATE_KEY;
 import static mumble.MumbleConstants.MUMBLE_CONDITION_KEY;
+import static mumble.MumbleConstants.MUMBLE_CTE_KEY;
 import static mumble.MumbleConstants.MUMBLE_DATABASE_NAME_KEY;
 import static mumble.MumbleConstants.MUMBLE_DATATYPE_KEY;
 import static mumble.MumbleConstants.MUMBLE_DELETE_KEY;
@@ -78,6 +79,7 @@ import static mumble.MumbleConstants.MUMBLE_PRECISION_KEY;
 import static mumble.MumbleConstants.MUMBLE_PREDICAND_KEY;
 import static mumble.MumbleConstants.MUMBLE_PUML_CONSTANT_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUALIFIER_KEY;
+import static mumble.MumbleConstants.MUMBLE_QUALIFY_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUERY_DICTIONARY_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUERY_KEY;
 import static mumble.MumbleConstants.MUMBLE_RANGE_BEGIN_KEY;
@@ -164,6 +166,8 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
             case mumble.SQLParserEndPoints.SQLPARSER_TUPLE_TREE_KEY -> onSQLParserTuple(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY -> onSQLParserSQL(node, sql);
             case mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY -> onSQLParserQuery(node, sql);
+            case mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY -> onSQLParserDdl(node, sql);
+            case mumble.SQLParserEndPoints.SQLPARSER_SCRIPT_TREE_KEY -> onSQLParserScript(node, sql);
             // ...existing code...
             case MUMBLE_ALIAS_KEY -> onAlias(node, sql);
             case MUMBLE_AND_KEY -> onAnd(node, sql);
@@ -178,6 +182,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
             case MUMBLE_COLUMNS_KEY -> onColumns(node, sql);
             case MUMBLE_CONCATENATE_KEY -> onConcatenate(node, sql);
             case MUMBLE_CONDITION_KEY -> onCondition(node, sql);
+            case MUMBLE_CTE_KEY -> onCte(node, sql);
             case MUMBLE_DATATYPE_KEY -> onDatatype(node, sql);
             case MUMBLE_DATABASE_NAME_KEY -> onDatabaseName(node, sql);
             case MUMBLE_DELETE_KEY -> onDelete(node, sql);
@@ -237,6 +242,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
             case MUMBLE_PREDICAND_KEY -> onPredicand(node, sql);
             case MUMBLE_PUML_CONSTANT_KEY -> onPumlConstant(node, sql);
             case MUMBLE_QUALIFIER_KEY -> onQualifier(node, sql);
+            case MUMBLE_QUALIFY_KEY -> onQualify(node, sql);
             case MUMBLE_QUERY_KEY -> onQuery(node, sql);
             case MUMBLE_QUERY_DICTIONARY_KEY -> onQueryDictionary(node, sql);
             case MUMBLE_RANGE_BEGIN_KEY -> onRangeBegin(node, sql);
@@ -354,6 +360,8 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
     protected void onSQLParserTuple(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserSQL(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onSQLParserQuery(Object node, StringBuilder sql) { handleStructured(node, sql); }
+    protected void onSQLParserDdl(Object node, StringBuilder sql) { handleStructured(node, sql); }
+    protected void onSQLParserScript(Object node, StringBuilder sql) { handleStructured(node, sql); }
 
     // ---------------------------------------------------------------------------------------------
     // MUMBLE CONSTANT handlers (to be overridden by subclasses if needed)
@@ -371,6 +379,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
     protected void onColumns(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onConcatenate(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onCondition(Object node, StringBuilder sql) { handleStructured(node, sql); }
+    protected void onCte(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onDatatype(Object node, StringBuilder sql) { handleTerminalOrRecursive(node, sql); }
     protected void onDatabaseName(Object node, StringBuilder sql) { handleTerminalOrRecursive(node, sql); }
     protected void onDelete(Object node, StringBuilder sql) { handleKeywordWithNode("DELETE", node, sql); }
@@ -430,6 +439,7 @@ public abstract class AbstractSQLASTGenerator extends AbstractASTGenerator {
     protected void onPredicand(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onPumlConstant(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onQualifier(Object node, StringBuilder sql) { handleTerminalOrRecursive(node, sql); }
+    protected void onQualify(Object node, StringBuilder sql) { handleKeywordWithNode("QUALIFY", node, sql); }
     protected void onQuery(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onQueryDictionary(Object node, StringBuilder sql) { handleStructured(node, sql); }
     protected void onRangeBegin(Object node, StringBuilder sql) { handleTerminalOrRecursive(node, sql); }

@@ -511,7 +511,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		List<Object> children = new ArrayList<Object>();
 		for (int index = 1; subMap.containsKey(String.valueOf(index)); index++) {
 			Object child = subMap.remove(String.valueOf(index));
-			if (child instanceof Map<?, ?>) {
+			if (child != null) {
 				children.add(child);
 			}
 		}

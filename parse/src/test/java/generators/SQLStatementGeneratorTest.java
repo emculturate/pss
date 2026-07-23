@@ -9,7 +9,10 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import sql.SQLSelectParserParser;
+import sql.SQLSelectParserParser.DdlContext;
+import sql.SQLSelectParserParser.ScriptContext;
 import sql.SQLSelectParserParser.SqlContext;
+import sql.SQLSelectParserParser.Truncate_end_pointContext;
 import sql.factory.SQLSelectParserFactory;
 import sql.walker.SqlParseEventWalker;
 
@@ -310,6 +313,389 @@ public class SQLStatementGeneratorTest {
         Assert.assertTrue(generated.contains("1"));
     }
 
+    // ===== UPDATE / DELETE round-trip tests (§13.6) =====
+
+    @Test
+    public void roundTripUpdateBasicTest() {
+        final String query = "UPDATE employees SET score = 1";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("UPDATE"));
+        Assert.assertTrue(upper.contains("EMPLOYEES"));
+        Assert.assertTrue(upper.contains("SET"));
+        Assert.assertTrue(generated.contains("score"));
+        Assert.assertTrue(generated.contains("1"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("update="));
+    }
+
+    @Test
+    public void roundTripUpdateWithWhereTest() {
+        final String query = "UPDATE employees SET score = 1 WHERE emp_id = 1";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("UPDATE"));
+        Assert.assertTrue(upper.contains("WHERE"));
+        Assert.assertTrue(generated.contains("emp_id"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("update="));
+    }
+
+    @Test
+    public void roundTripUpdateWithFromTest() {
+        final String query = "UPDATE employees e SET score = src.col1, rank_bucket = src.col2"
+                + " FROM (SELECT col1, col2 FROM (VALUES (100, 1)) AS value_src (col1, col2)) src"
+                + " WHERE e.emp_id = 1";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("UPDATE"));
+        Assert.assertTrue(upper.contains("SET"));
+        Assert.assertTrue(upper.contains("FROM"));
+        Assert.assertTrue(upper.contains("WHERE"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("update="));
+    }
+
+    @Test
+    public void roundTripUpdateWithReturningTest() {
+        final String query = "UPDATE employees e SET score = 1 RETURNING e.emp_id";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("UPDATE"));
+        Assert.assertTrue(upper.contains("RETURNING"));
+        Assert.assertTrue(generated.contains("emp_id"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("update="));
+    }
+
+    @Test
+    public void roundTripDeleteBasicTest() {
+        final String query = "DELETE FROM employees";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("DELETE FROM"));
+        Assert.assertTrue(upper.contains("EMPLOYEES"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("delete="));
+    }
+
+    @Test
+    public void roundTripDeleteWithWhereTest() {
+        final String query = "DELETE FROM employees WHERE emp_id = 1";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("DELETE FROM"));
+        Assert.assertTrue(upper.contains("WHERE"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("delete="));
+    }
+
+    @Test
+    public void roundTripDeleteWithUsingReturningTest() {
+        final String query = "DELETE FROM tab1 aaa USING tab2 bbb"
+                + " WHERE aaa.a1 = bbb.b1 AND aaa.a2 = bbb.b2"
+                + " RETURNING aaa.a1, aaa.a2, aaa.a3";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("DELETE FROM"));
+        Assert.assertTrue(upper.contains("USING"));
+        Assert.assertTrue(upper.contains("WHERE"));
+        Assert.assertTrue(upper.contains("RETURNING"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("delete="));
+    }
+
+    // ===== SCRIPT / DDL round-trip tests (§13.6) =====
+
+    @Test
+    public void roundTripScriptMixedStatementsTest() {
+        final String query = ""
+                + "CREATE TABLE demo.t (id INT);\n"
+                + "TRUNCATE TABLE demo.t;\n"
+                + "DELETE FROM demo.t WHERE id = 1;\n"
+                + "INSERT INTO demo.t (id) SELECT 1;\n"
+                + "UPDATE demo.t SET id = 2 WHERE id = 1;\n"
+                + "SELECT id FROM demo.t;";
+        HashMap<String, Object> ast = parseScriptToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("CREATE TABLE"));
+        Assert.assertTrue(upper.contains("TRUNCATE TABLE"));
+        Assert.assertTrue(upper.contains("DELETE FROM"));
+        Assert.assertTrue(upper.contains("INSERT INTO"));
+        Assert.assertTrue(upper.contains("UPDATE"));
+        Assert.assertTrue(upper.contains("SELECT"));
+
+        HashMap<String, Object> reparsed = parseScriptToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("SCRIPT"));
+    }
+
+    @Test
+    public void roundTripDdlCreateTableAsSelectTest() {
+        final String query = "create table tab1 as select * from table(flatten(input=>parse_json('[1,2]'))) f";
+        HashMap<String, Object> ast = parseDdlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("CREATE TABLE"));
+        Assert.assertTrue(upper.contains("TAB1"));
+        Assert.assertTrue(upper.contains("AS"));
+        Assert.assertTrue(upper.contains("SELECT"));
+
+        HashMap<String, Object> reparsed = parseDdlToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("DDL"));
+    }
+
+    @Test
+    public void roundTripDdlCreateTableQualifiedTest() {
+        final String query = "create table mydb.myschema.tab2 as select src.col1 from mydb.myschema.source_tab src";
+        HashMap<String, Object> ast = parseDdlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("CREATE TABLE"));
+        Assert.assertTrue(upper.contains("MYDB.MYSCHEMA.TAB2"));
+        Assert.assertTrue(upper.contains("SELECT"));
+        Assert.assertTrue(generated.contains("col1"));
+
+        HashMap<String, Object> reparsed = parseDdlToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("DDL"));
+    }
+
+    @Test
+    public void roundTripDdlAlterTableTest() {
+        final String query = "alter table mydb.myschema.tab1 rename to tab2";
+        HashMap<String, Object> ast = parseDdlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("ALTER TABLE"));
+        Assert.assertTrue(upper.contains("MYDB.MYSCHEMA.TAB1"));
+        Assert.assertTrue(upper.contains("RENAME TO TAB2"));
+
+        HashMap<String, Object> reparsed = parseDdlToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("DDL"));
+    }
+
+    @Test
+    public void roundTripDdlDropTableTest() {
+        final String query = "drop table mydb.myschema.tab1 if exists";
+        HashMap<String, Object> ast = parseDdlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("DROP TABLE"));
+        Assert.assertTrue(upper.contains("MYDB.MYSCHEMA.TAB1"));
+        Assert.assertTrue(upper.contains("IF EXISTS"));
+
+        HashMap<String, Object> reparsed = parseDdlToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("DDL"));
+    }
+
+    @Test
+    public void roundTripTruncateEndpointTest() {
+        final String query = "TRUNCATE TABLE tab1";
+        HashMap<String, Object> ast = parseTruncateToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("TRUNCATE TABLE"));
+        Assert.assertTrue(upper.contains("TAB1"));
+
+        HashMap<String, Object> reparsed = parseTruncateToAst(generated);
+        Assert.assertTrue(reparsed.containsKey("TRUNCATE"));
+    }
+
+    // ===== PIVOT / UNPIVOT round-trip tests (§13.6) =====
+
+    @Test
+    public void roundTripPivotTest() {
+        final String query = "select *, A_sum from tab1 "
+                + " pivot (sum(col1), avg(col2), count(col3), max(col4), min(col5) "
+                + " for col2 in ('A', 'B'))";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("SELECT"));
+        Assert.assertTrue(upper.contains("FROM"));
+        Assert.assertTrue(upper.contains("TAB1"));
+        Assert.assertTrue(upper.contains("PIVOT"));
+        Assert.assertTrue(upper.contains("FOR"));
+        Assert.assertTrue(upper.contains("IN"));
+        Assert.assertTrue(generated.contains("sum(col1)"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("pivot="));
+    }
+
+    @Test
+    public void roundTripUnpivotTest() {
+        final String query = "SELECT id, metric_name, jan_sales, feb_sales, mar_sales, metric_value"
+                + " FROM my_table"
+                + " UNPIVOT (metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales))";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("SELECT"));
+        Assert.assertTrue(upper.contains("FROM"));
+        Assert.assertTrue(upper.contains("MY_TABLE"));
+        Assert.assertTrue(upper.contains("UNPIVOT"));
+        Assert.assertTrue(generated.contains("jan_sales"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("unpivot="));
+    }
+
+    @Test
+    public void roundTripUnpivotWithLabelsTest() {
+        final String query = "SELECT empid, month_name, sales_amount FROM monthly_sales"
+                + " UNPIVOT (sales_amount FOR month_name IN (jan_sales AS 'JAN', feb_sales AS 'FEB'))";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        Assert.assertTrue(generated.toUpperCase().contains("UNPIVOT"));
+        Assert.assertTrue(generated.contains("jan_sales AS 'JAN'"));
+        Assert.assertTrue(generated.contains("feb_sales AS 'FEB'"));
+    }
+
+    @Test
+    public void roundTripScriptWithCteTest() {
+        final String query = "WITH picked AS (SELECT id FROM demo.stg) SELECT id FROM picked;";
+        HashMap<String, Object> ast = parseScriptToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("WITH"));
+        Assert.assertTrue(upper.contains("PICKED"));
+        Assert.assertTrue(upper.contains("SELECT"));
+        Assert.assertTrue(upper.contains("FROM"));
+
+        HashMap<String, Object> reparsed = parseScriptToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("with="));
+    }
+
+    @Test
+    public void roundTripScriptValuesOnlyTest() {
+        final String query = "(VALUES (10), (20));";
+        HashMap<String, Object> ast = parseScriptToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        Assert.assertTrue(generated.toUpperCase().contains("VALUES"));
+        Assert.assertTrue(generated.contains("(10)"));
+        Assert.assertTrue(generated.contains("(20)"));
+
+        HashMap<String, Object> reparsed = parseScriptToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("values="));
+    }
+
+    @Test
+    public void roundTripCreateTableWithColumnsTest() {
+        final String query = "CREATE TABLE demo.stage (id INT);";
+        HashMap<String, Object> ast = parseDdlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("CREATE TABLE"));
+        Assert.assertTrue(upper.contains("DEMO.STAGE"));
+        Assert.assertTrue(upper.contains("(ID INT)"));
+
+        HashMap<String, Object> reparsed = parseDdlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("columns=id int"));
+    }
+
+    @Test
+    public void roundTripPivotJoinWithClausesTest() {
+        final String query = "SELECT empid, jan_sales, feb_sales\n"
+                + "FROM monthly_sales_long PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) u\n"
+                + "JOIN targets t ON u.empid = t.empid AND u.jan_sales >= t.target_amount WHERE jan_sales > 100;";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("PIVOT"));
+        Assert.assertTrue(upper.contains("SUM("));
+        Assert.assertTrue(upper.contains("JOIN"));
+        Assert.assertTrue(upper.contains("WHERE"));
+        Assert.assertTrue(generated.contains("jan_sales"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("pivot="));
+        Assert.assertTrue(reparsed.toString().contains("join="));
+    }
+
+    @Test
+    public void roundTripPivotJoinFullClauseEgressTest() {
+        final String query = "SELECT q.src\n"
+                + "FROM (SELECT src, col1, col2 FROM tab1) q\n"
+                + "PIVOT (SUM(col1) sum FOR col2 IN ('A'))\n"
+                + "JOIN targets t ON A_sum >= t.target_amount\n"
+                + "WHERE A_sum > 0\n"
+                + "GROUP BY q.src, A_sum\n"
+                + "HAVING A_sum > 0\n"
+                + "QUALIFY A_sum > 0\n"
+                + "ORDER BY A_sum;";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("PIVOT"));
+        Assert.assertTrue(upper.contains("JOIN"));
+        Assert.assertTrue(upper.contains("WHERE"));
+        Assert.assertTrue(upper.contains("GROUP BY"));
+        Assert.assertTrue(upper.contains("HAVING"));
+        Assert.assertTrue(upper.contains("QUALIFY"));
+        Assert.assertTrue(upper.contains("ORDER BY"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("having="));
+        Assert.assertTrue(reparsed.toString().contains("qualify="));
+        Assert.assertTrue(reparsed.toString().contains("groupby="));
+    }
+
+    @Test
+    public void roundTripUnpivotJoinWithClausesTest() {
+        final String query = "SELECT empid, month_name, sales_amount\n"
+                + "FROM monthly_sales\n"
+                + "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+                + "JOIN targets t ON u.month_name = t.month_name AND u.sales_amount >= t.target_amount\n"
+                + "WHERE sales_amount > 100;";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse(generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("UNPIVOT"));
+        Assert.assertTrue(upper.contains("JOIN"));
+        Assert.assertTrue(upper.contains("WHERE"));
+        Assert.assertTrue(generated.contains("jan_sales"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue(reparsed.toString().contains("unpivot="));
+        Assert.assertTrue(reparsed.toString().contains("join="));
+    }
 
 
     
@@ -317,6 +703,33 @@ public class SQLStatementGeneratorTest {
         SQLSelectParserFactory factory = new SQLSelectParserFactory();
         SQLSelectParserParser parser = factory.buildParser(query);
         SqlContext tree = parser.sql();
+        SqlParseEventWalker extractor = new SqlParseEventWalker();
+        ParseTreeWalker.DEFAULT.walk(extractor, tree);
+        return extractor.getAsTree();
+    }
+
+    private HashMap<String, Object> parseScriptToAst(String query) {
+        SQLSelectParserFactory factory = new SQLSelectParserFactory();
+        SQLSelectParserParser parser = factory.buildParser(query);
+        ScriptContext tree = parser.script();
+        SqlParseEventWalker extractor = new SqlParseEventWalker();
+        ParseTreeWalker.DEFAULT.walk(extractor, tree);
+        return extractor.getAsTree();
+    }
+
+    private HashMap<String, Object> parseDdlToAst(String query) {
+        SQLSelectParserFactory factory = new SQLSelectParserFactory();
+        SQLSelectParserParser parser = factory.buildParser(query);
+        DdlContext tree = parser.ddl();
+        SqlParseEventWalker extractor = new SqlParseEventWalker();
+        ParseTreeWalker.DEFAULT.walk(extractor, tree);
+        return extractor.getAsTree();
+    }
+
+    private HashMap<String, Object> parseTruncateToAst(String query) {
+        SQLSelectParserFactory factory = new SQLSelectParserFactory();
+        SQLSelectParserParser parser = factory.buildParser(query);
+        Truncate_end_pointContext tree = parser.truncate_end_point();
         SqlParseEventWalker extractor = new SqlParseEventWalker();
         ParseTreeWalker.DEFAULT.walk(extractor, tree);
         return extractor.getAsTree();

@@ -1852,6 +1852,11 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 **Work:**
 
 - [x] INSERT round-trip — `emitInsertStatement` in `SQLStatementGenerator` for `insert={}` AST (VALUES, INSERT SELECT, DEFAULT VALUES, ON CONFLICT, RETURNING); `roundTripInsert*` tests in `SQLStatementGeneratorTest`.
+- [x] UPDATE/DELETE round-trip — `emitUpdateStatement` / `emitDeleteStatement` for `update={}` / `delete={}` AST (SET, FROM, USING, WHERE, RETURNING); `roundTripUpdate*` / `roundTripDelete*` tests.
+- [x] SCRIPT/DDL round-trip — `emitScriptStatement` / `emitDdlStatement` (CREATE TABLE AS SELECT, TRUNCATE, multi-statement script); `roundTripScript*` / `roundTripDdl*` tests.
+- [x] PIVOT/UNPIVOT round-trip — `emitPivotClause` / `emitUnpivotClause` in FROM; `roundTripPivot*` / `roundTripUnpivot*` tests.
+- [x] TRUNCATE endpoint — `onSQLParserTruncate` + `emitTruncateStatement`; `roundTripTruncateEndpointTest`.
+- [x] ALTER/DROP DDL — `emitAlterStatement` / `emitDropStatement`; `roundTripDdlAlterTableTest` / `roundTripDdlDropTableTest`.
 - [ ] Complete `SQLStatementGenerator` handlers for all `SQLParserEndPoints` keys (SCRIPT, DDL, UPDATE, DELETE, TRUNCATE, PIVOT/UNPIVOT, table functions).
 - [ ] Accept external substitution map for round-trip of `<variable>` and Jinja tokens.
 - [ ] Document non-goals (formatting/comment preservation).
@@ -1863,8 +1868,15 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 | `roundTripInsertValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — parse → AST (`insert={}`) → regenerate → re-parse retains insert wrapper |
 | `roundTripInsertSelectTest` | `generators.SQLStatementGeneratorTest` | **New** — INSERT SELECT round-trip |
 | `roundTripInsertDefaultValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — DEFAULT VALUES round-trip |
-| `roundTripUpdateWithFromTest` | `generators.SQLStatementGeneratorTest` (new) | **New** — parse → AST → regenerate → re-parse equivalence |
+| `roundTripUpdateWithFromTest` | `generators.SQLStatementGeneratorTest` | **New** — UPDATE with FROM subquery round-trip |
+| `roundTripDeleteWithUsingReturningTest` | `generators.SQLStatementGeneratorTest` | **New** — DELETE USING + RETURNING round-trip |
 | `roundTripScriptMixedStatementsTest` | `generators.SQLStatementGeneratorTest` | **New** — multi-statement script round-trip |
+| `roundTripDdlCreateTableAsSelectTest` | `generators.SQLStatementGeneratorTest` | **New** — CREATE TABLE AS SELECT round-trip |
+| `roundTripDdlAlterTableTest` | `generators.SQLStatementGeneratorTest` | **New** — ALTER TABLE round-trip |
+| `roundTripDdlDropTableTest` | `generators.SQLStatementGeneratorTest` | **New** — DROP TABLE IF EXISTS round-trip |
+| `roundTripTruncateEndpointTest` | `generators.SQLStatementGeneratorTest` | **New** — TRUNCATE endpoint round-trip |
+| `roundTripPivotTest` | `generators.SQLStatementGeneratorTest` | **New** — PIVOT FROM-clause round-trip |
+| `roundTripUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — UNPIVOT FROM-clause round-trip |
 | `roundTripPivotUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — relational modifier round-trip |
 
 ### Phase 13 closeout checklist
