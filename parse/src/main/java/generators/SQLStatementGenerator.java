@@ -1,28 +1,45 @@
 package generators;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import static mumble.MumbleConstants.MUMBLE_ALIAS_KEY;
+import static mumble.MumbleConstants.MUMBLE_ASSIGNMENTS_KEY;
+import static mumble.MumbleConstants.MUMBLE_COLUMN_KEY;
+import static mumble.MumbleConstants.MUMBLE_COLUMNS_KEY;
+import static mumble.MumbleConstants.MUMBLE_CONDITION_KEY;
 import static mumble.MumbleConstants.MUMBLE_DATABASE_NAME_KEY;
 import static mumble.MumbleConstants.MUMBLE_DATATYPE_KEY;
+import static mumble.MumbleConstants.MUMBLE_DEFAULT_VALUES_KEY;
 import static mumble.MumbleConstants.MUMBLE_FROM_KEY;
 import static mumble.MumbleConstants.MUMBLE_FUNCTION_NAME_KEY;
 import static mumble.MumbleConstants.MUMBLE_GROUPBY_KEY;
+import static mumble.MumbleConstants.MUMBLE_INSERT_INTO_KEY;
+import static mumble.MumbleConstants.MUMBLE_INSERT_KEY;
+import static mumble.MumbleConstants.MUMBLE_INSERT_PREAMBLE_KEY;
 import static mumble.MumbleConstants.MUMBLE_JOIN_KEY;
+import static mumble.MumbleConstants.MUMBLE_MATRIX_KEY;
 import static mumble.MumbleConstants.MUMBLE_NAME_KEY;
 import static mumble.MumbleConstants.MUMBLE_NULL_HANDLING_KEY;
+import static mumble.MumbleConstants.MUMBLE_ON_CONFLICT_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERBY_KEY;
 import static mumble.MumbleConstants.MUMBLE_PARAMETERS_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUALIFIER_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUERY_KEY;
+import static mumble.MumbleConstants.MUMBLE_RETURNING_KEY;
+import static mumble.MumbleConstants.MUMBLE_ROW_KEY;
 import static mumble.MumbleConstants.MUMBLE_SCHEMA_KEY;
 import static mumble.MumbleConstants.MUMBLE_SELECT_KEY;
+import static mumble.MumbleConstants.MUMBLE_SET_KEY;
 import static mumble.MumbleConstants.MUMBLE_SUBSTITUTION_KEY;
 import static mumble.MumbleConstants.MUMBLE_TABLE_KEY;
 import static mumble.MumbleConstants.MUMBLE_TABLE_REF_KEY;
+import static mumble.MumbleConstants.MUMBLE_TARGET_TABLE_KEY;
+import static mumble.MumbleConstants.MUMBLE_TO_KEY;
 import static mumble.MumbleConstants.MUMBLE_TYPE_KEY;
 import static mumble.MumbleConstants.MUMBLE_VALUE_KEY;
+import static mumble.MumbleConstants.MUMBLE_VALUES_KEY;
 import static mumble.MumbleConstants.MUMBLE_WHERE_KEY;
 
 
@@ -47,6 +64,22 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
         System.out.println("Unexpected node: " + node.toString());
     }
 
+    @Override
+    protected void appendLeafText(String text, StringBuilder sql) {
+        if (text != null && !text.isBlank()) {
+            sql.append(text);
+        }
+    }
+
+    @Override
+    protected void onLiteral(Object node, StringBuilder sql) {
+        if (node instanceof String text) {
+            sql.append(text);
+            return;
+        }
+        super.onLiteral(node, sql);
+    }
+
     // ---------------------------------------------------------------------------------------------
     // SQLParserEndPoints handlers (to be overridden by subclasses if needed)
     // ---------------------------------------------------------------------------------------------
@@ -58,7 +91,15 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
     protected void onSQLParserJoinExtension(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
 
     @Override
-    protected void onSQLParserInsert(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
+    protected void onSQLParserInsert(Object node, StringBuilder sql) {
+        if (node instanceof Map<?, ?> nodeMap && nodeMap.containsKey(MUMBLE_INSERT_KEY)) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> insertMap = (Map<String, Object>) nodeMap.get(MUMBLE_INSERT_KEY);
+            emitInsertStatement(insertMap, sql);
+        } else {
+            handleEndPoint(node, sql);
+        }
+    }
 
     @Override
     protected void onSQLParserUpdate(Object node, StringBuilder sql) { handleEndPoint(node, sql); }
@@ -90,7 +131,11 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
             appendNode(node, sql);
             return;
         }
-        if (nodeMap.containsKey(MUMBLE_SELECT_KEY)) {
+        if (nodeMap.containsKey(MUMBLE_INSERT_KEY)) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> insertMap = (Map<String, Object>) nodeMap.get(MUMBLE_INSERT_KEY);
+            emitInsertStatement(insertMap, sql);
+        } else if (nodeMap.containsKey(MUMBLE_SELECT_KEY)) {
             @SuppressWarnings("unchecked")
             Map<String, Object> lookupMapCasted = (Map<String, Object>) nodeMap;
             emitSelectStatement(lookupMapCasted, sql);
@@ -511,6 +556,295 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
                 generateStatement(MUMBLE_ORDERBY_KEY, orderByMap, sql);
         }
 
+    }
+
+    @Override
+    protected void onInsert(Object node, StringBuilder sql) {
+        if (node instanceof Map<?, ?> insertMap) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> insertMapCasted = (Map<String, Object>) insertMap;
+            emitInsertStatement(insertMapCasted, sql);
+        } else {
+            super.onInsert(node, sql);
+        }
+    }
+
+    /**
+     * Emits a complete INSERT statement from an {@code insert={...}} AST map.
+     */
+    @SuppressWarnings("unchecked")
+    private void emitInsertStatement(Map<String, Object> insertMap, StringBuilder sql) {
+        if (insertMap == null) {
+            return;
+        }
+
+        Object preamble = insertMap.get(MUMBLE_INSERT_PREAMBLE_KEY);
+        if (MUMBLE_INSERT_INTO_KEY.equals(preamble)) {
+            sql.append("INSERT INTO");
+        } else if (preamble instanceof String preambleText) {
+            sql.append(preambleText.replace('_', ' ').toUpperCase());
+        } else {
+            sql.append("INSERT INTO");
+        }
+
+        Object targetTableObj = insertMap.get(MUMBLE_TARGET_TABLE_KEY);
+        if (targetTableObj instanceof Map<?, ?> targetWrapper) {
+            sql.append(' ');
+            emitInsertTargetTable((Map<String, Object>) targetWrapper, sql);
+        }
+
+        Object columnsObj = insertMap.get(MUMBLE_COLUMNS_KEY);
+        if (columnsObj instanceof Map<?, ?> columnsMap) {
+            sql.append(' ');
+            emitInsertColumnList((Map<String, Object>) columnsMap, sql);
+        }
+
+        Object fromObj = insertMap.get(MUMBLE_FROM_KEY);
+        if (fromObj != null) {
+            sql.append(' ');
+            emitInsertSource(fromObj, sql);
+        }
+
+        Object onConflictObj = insertMap.get(MUMBLE_ON_CONFLICT_KEY);
+        if (onConflictObj != null) {
+            sql.append(' ');
+            emitOnConflict(onConflictObj, sql);
+        }
+
+        Object returningObj = insertMap.get(MUMBLE_RETURNING_KEY);
+        if (returningObj != null) {
+            sql.append(' ');
+            emitReturningClause(returningObj, sql);
+        }
+    }
+
+    private void emitInsertTargetTable(Map<String, Object> targetWrapper, StringBuilder sql) {
+        Object tableObj = targetWrapper.get(MUMBLE_TABLE_KEY);
+        if (tableObj != null) {
+            onTable(tableObj, sql);
+            return;
+        }
+        for (Map.Entry<String, Object> entry : targetWrapper.entrySet()) {
+            generateStatement(entry.getKey(), entry.getValue(), sql);
+        }
+    }
+
+    private void emitInsertColumnList(Map<String, Object> columnsMap, StringBuilder sql) {
+        List<Object> columns = orderedNumericKeyedList(columnsMap);
+        if (columns.isEmpty()) {
+            return;
+        }
+        sql.append('(');
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            Object columnEntry = columns.get(i);
+            if (columnEntry instanceof Map<?, ?> columnEntryMap) {
+                Object columnObj = columnEntryMap.get(MUMBLE_COLUMN_KEY);
+                if (columnObj != null) {
+                    onColumn(columnObj, sql);
+                }
+            }
+        }
+        sql.append(')');
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitInsertSource(Object fromObj, StringBuilder sql) {
+        if (!(fromObj instanceof Map<?, ?> fromMap)) {
+            appendNode(fromObj, sql);
+            return;
+        }
+
+        if (Boolean.TRUE.equals(fromMap.get(MUMBLE_DEFAULT_VALUES_KEY))) {
+            sql.append("DEFAULT VALUES");
+            return;
+        }
+
+        Object valuesObj = fromMap.get(MUMBLE_VALUES_KEY);
+        if (valuesObj instanceof Map<?, ?> valuesMap) {
+            sql.append("VALUES");
+            emitValuesMatrix(valuesMap.get(MUMBLE_MATRIX_KEY), sql);
+            return;
+        }
+
+        if (fromMap.containsKey(MUMBLE_SELECT_KEY)) {
+            emitInsertSelectSource((Map<String, Object>) fromMap, sql);
+        }
+    }
+
+    private void emitInsertSelectSource(Map<String, Object> fromMap, StringBuilder sql) {
+        Map<String, Object> selectStmt = new LinkedHashMap<>();
+        selectStmt.put(MUMBLE_SELECT_KEY, fromMap.get(MUMBLE_SELECT_KEY));
+        Object fromClause = fromMap.get(MUMBLE_FROM_KEY);
+        if (fromClause != null) {
+            selectStmt.put(MUMBLE_FROM_KEY, fromClause);
+        }
+        emitSelectStatement(selectStmt, sql);
+    }
+
+    private void emitValuesMatrix(Object matrixObj, StringBuilder sql) {
+        List<Object> rows = orderedNumericKeyedList(matrixObj);
+        for (int i = 0; i < rows.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append('(');
+            if (rows.get(i) instanceof Map<?, ?> rowWrapper) {
+                emitValuesRow(rowWrapper.get(MUMBLE_ROW_KEY), sql);
+            }
+            sql.append(')');
+        }
+    }
+
+    private void emitValuesRow(Object rowObj, StringBuilder sql) {
+        List<Object> cells = orderedNumericKeyedList(rowObj);
+        for (int i = 0; i < cells.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            emitValueExpression(cells.get(i), sql);
+        }
+    }
+
+    private void emitValueExpression(Object valueObj, StringBuilder sql) {
+        if (!(valueObj instanceof Map<?, ?> valueMap)) {
+            appendNode(valueObj, sql);
+            return;
+        }
+        for (Map.Entry<?, ?> entry : valueMap.entrySet()) {
+            generateStatement(entry.getKey().toString(), entry.getValue(), sql);
+            return;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitOnConflict(Object onConflictObj, StringBuilder sql) {
+        if (!(onConflictObj instanceof Map<?, ?> conflictMap)) {
+            appendNode(onConflictObj, sql);
+            return;
+        }
+
+        sql.append("ON CONFLICT");
+        Object targetObj = conflictMap.get("target");
+        if (targetObj != null) {
+            sql.append(" (");
+            List<Object> targetColumns = orderedNumericKeyedList(targetObj);
+            for (int i = 0; i < targetColumns.size(); i++) {
+                if (i > 0) {
+                    sql.append(", ");
+                }
+                emitConflictTargetColumn(targetColumns.get(i), sql);
+            }
+            sql.append(')');
+        }
+
+        Object actionObj = conflictMap.get("action");
+        if (!(actionObj instanceof Map<?, ?> actionMap)) {
+            return;
+        }
+
+        Object doAction = actionMap.get("do");
+        if ("NOTHING".equals(doAction)) {
+            sql.append(" DO NOTHING");
+            return;
+        }
+        if (!"UPDATE".equals(doAction)) {
+            return;
+        }
+
+        sql.append(" DO UPDATE SET ");
+        emitOnConflictAssignments(actionMap.get(MUMBLE_ASSIGNMENTS_KEY), sql);
+
+        Object whereObj = actionMap.get(MUMBLE_WHERE_KEY);
+        if (whereObj != null) {
+            sql.append(" WHERE ");
+            emitWhereCondition(whereObj, sql);
+        }
+    }
+
+    private void emitConflictTargetColumn(Object columnEntry, StringBuilder sql) {
+        if (!(columnEntry instanceof Map<?, ?> columnEntryMap)) {
+            appendNode(columnEntry, sql);
+            return;
+        }
+        if (columnEntryMap.containsKey(MUMBLE_COLUMN_KEY)) {
+            onColumn(columnEntryMap.get(MUMBLE_COLUMN_KEY), sql);
+            return;
+        }
+        emitValueExpression(columnEntry, sql);
+    }
+
+    private void emitOnConflictAssignments(Object assignmentsObj, StringBuilder sql) {
+        List<Object> assignments = orderedNumericKeyedList(assignmentsObj);
+        for (int i = 0; i < assignments.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            if (!(assignments.get(i) instanceof Map<?, ?> assignmentMap)) {
+                continue;
+            }
+            Object setObj = assignmentMap.get(MUMBLE_SET_KEY);
+            Object toObj = assignmentMap.get(MUMBLE_TO_KEY);
+            emitAssignmentSide(setObj, sql);
+            sql.append(" = ");
+            emitAssignmentSide(toObj, sql);
+        }
+    }
+
+    private void emitAssignmentSide(Object sideObj, StringBuilder sql) {
+        if (!(sideObj instanceof Map<?, ?> sideMap)) {
+            appendNode(sideObj, sql);
+            return;
+        }
+        if (sideMap.containsKey(MUMBLE_COLUMN_KEY)) {
+            onColumn(sideMap.get(MUMBLE_COLUMN_KEY), sql);
+            return;
+        }
+        emitValueExpression(sideObj, sql);
+    }
+
+    private void emitWhereCondition(Object whereObj, StringBuilder sql) {
+        if (!(whereObj instanceof Map<?, ?> whereMap)) {
+            appendNode(whereObj, sql);
+            return;
+        }
+        if (whereMap.containsKey(MUMBLE_CONDITION_KEY)) {
+            emitSimpleCondition(whereMap.get(MUMBLE_CONDITION_KEY), sql);
+            return;
+        }
+        emitValueExpression(whereObj, sql);
+    }
+
+    private void emitSimpleCondition(Object conditionObj, StringBuilder sql) {
+        if (!(conditionObj instanceof Map<?, ?> conditionMap)) {
+            appendNode(conditionObj, sql);
+            return;
+        }
+        Object left = conditionMap.get("left");
+        Object operator = conditionMap.get("operator");
+        Object right = conditionMap.get("right");
+        emitValueExpression(left, sql);
+        if (operator != null) {
+            sql.append(' ').append(operator).append(' ');
+        }
+        emitValueExpression(right, sql);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitReturningClause(Object returningObj, StringBuilder sql) {
+        sql.append("RETURNING");
+        List<Object> items = orderedNumericKeyedList(returningObj);
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            if (items.get(i) instanceof Map<?, ?> itemMap) {
+                Map<String, Object> itemCopy = new LinkedHashMap<>((Map<String, Object>) itemMap);
+                applyAliasToItem(sql, itemCopy);
+            }
+        }
     }
 
 }

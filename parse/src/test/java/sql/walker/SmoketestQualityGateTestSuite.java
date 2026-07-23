@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (204 tests):
+ * Gate composition (208 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -36,6 +36,7 @@ import org.junit.Test;
  *   <li>Query-dictionary external alias routing (8): {@code nestedSubqueryWithColumnsV0}; {@code subqueryDictionaryExtensionWhereClauseV12}, {@code subqueryDictionaryExtensionHavingClauseV13}, {@code subqueryDictionaryExtensionQualifyClauseV14}, {@code subqueryDictionaryExtensionAggregateGroupByV15}, {@code subqueryDictionaryExtensionOrderByV16}, {@code subqueryDictionaryExtensionJoinClauseSubqueryJoinV31}, {@code subqueryDictionaryExtensionWhereClauseSubqueryJoinV32}</li>
  *   <li>Query-dictionary diagnostic routing (6): qualified missing on subquery alias V22/V25/V26 ({@code QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS}); ambiguous unqualified V36/V37/V38 ({@code UNRESOLVED_UNQUALIFIED_COLUMNS} + {@code AMBIGUOUS_COLUMN_REFERENCE})</li>
  *   <li>DML INSERT V1–V8 (8): {@code insertValues*} V1–V8</li>
+ *   <li>Postgres INSERT canaries (4): {@code postgresInsertOnConflictDoUpdateTest}, {@code postgresInsertWithCteBodyTest}, {@code postgresInsertDefaultValuesTest}, {@code postgresInsertReturningSelectListInterfaceTest}</li>
  *   <li>DML VALUES source golden examples (7): explicit column names (SELECT, UPDATE, DELETE) + implicit column names (UPDATE V2-V3, DELETE V2-V3) — establish correct QCD structure for all VALUES source patterns</li>
  *   <li>Unaliased derived table V1–V16 (16)</li>
  *   <li>CTE unqualified column refs CTEV1–CTEV15 (15): full {@code SqlEventWalkerSubqueriesAndClauseSemanticsTests} WITH/CTE unqualified-ref matrix</li>
@@ -710,6 +711,28 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void insertValuesSourceAliasOnlyV8() {
 		dmlTests.insertValuesSourceAliasOnlyV8();
+	}
+
+	// --- Postgres INSERT canaries (4) ---
+
+	@Test
+	public void postgresInsertOnConflictDoUpdateTest() {
+		dmlTests.postgresInsertOnConflictDoUpdateTest();
+	}
+
+	@Test
+	public void postgresInsertWithCteBodyTest() {
+		dmlTests.postgresInsertWithCteBodyTest();
+	}
+
+	@Test
+	public void postgresInsertDefaultValuesTest() {
+		dmlTests.postgresInsertDefaultValuesTest();
+	}
+
+	@Test
+	public void postgresInsertReturningSelectListInterfaceTest() {
+		dmlTests.postgresInsertReturningSelectListInterfaceTest();
 	}
 
 	// --- DML VALUES source golden examples (7) ---

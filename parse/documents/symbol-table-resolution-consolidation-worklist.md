@@ -13,7 +13,7 @@ Use this document as the single handoff for consolidating column resolution in t
 
 ## Quality gate (run before every consolidation change)
 
-**204 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**208 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
 
 **Full module suite (2026-07-22):** `mvn test` → **1399/1399** passing across all walker, access, CLI, and generator test classes.
 
@@ -1851,6 +1851,7 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 
 **Work:**
 
+- [x] INSERT round-trip — `emitInsertStatement` in `SQLStatementGenerator` for `insert={}` AST (VALUES, INSERT SELECT, DEFAULT VALUES, ON CONFLICT, RETURNING); `roundTripInsert*` tests in `SQLStatementGeneratorTest`.
 - [ ] Complete `SQLStatementGenerator` handlers for all `SQLParserEndPoints` keys (SCRIPT, DDL, UPDATE, DELETE, TRUNCATE, PIVOT/UNPIVOT, table functions).
 - [ ] Accept external substitution map for round-trip of `<variable>` and Jinja tokens.
 - [ ] Document non-goals (formatting/comment preservation).
@@ -1859,6 +1860,9 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 
 | Method | Class | Proves |
 |--------|-------|--------|
+| `roundTripInsertValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — parse → AST (`insert={}`) → regenerate → re-parse retains insert wrapper |
+| `roundTripInsertSelectTest` | `generators.SQLStatementGeneratorTest` | **New** — INSERT SELECT round-trip |
+| `roundTripInsertDefaultValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — DEFAULT VALUES round-trip |
 | `roundTripUpdateWithFromTest` | `generators.SQLStatementGeneratorTest` (new) | **New** — parse → AST → regenerate → re-parse equivalence |
 | `roundTripScriptMixedStatementsTest` | `generators.SQLStatementGeneratorTest` | **New** — multi-statement script round-trip |
 | `roundTripPivotUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — relational modifier round-trip |
@@ -1866,7 +1870,7 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 ### Phase 13 closeout checklist
 
 - [x] All Phase 13.4 gate tests green (donor-email + self-reference V1–V4).
-- [x] Smoketest quality gate **204/204** (verified Jul 2026 after 13.4 gate additions)
+- [x] Smoketest quality gate **208/208** (verified Jul 2026 after Postgres INSERT canaries)
 - [x] `insert-refactor-skip-tests.md` updated — donor-email skip removed; PIVOT class confirmed green (67/67).
 - [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
 - [x] Phase 13.2 Postgres INSERT complete — ON CONFLICT nested `def_updateN`, `insert={}` AST wrap, `InsertAstWrapGateTests` (Jul 2026).

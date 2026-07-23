@@ -4,8 +4,14 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.junit.Assert;
 import org.junit.Test;
+
+import sql.SQLSelectParserParser;
+import sql.SQLSelectParserParser.SqlContext;
+import sql.factory.SQLSelectParserFactory;
+import sql.walker.SqlParseEventWalker;
 
 public class SQLStatementGeneratorTest {
 
@@ -237,9 +243,85 @@ public class SQLStatementGeneratorTest {
         Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
     }
 
+    // ===== INSERT round-trip tests (§13.6) =====
+
+    @Test
+    public void roundTripInsertValuesTest() {
+        final String query = "INSERT INTO employees (score, rank_bucket) VALUES (100, 1)";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("INSERT INTO"));
+        Assert.assertTrue(upper.contains("EMPLOYEES"));
+        Assert.assertTrue(upper.contains("VALUES"));
+        Assert.assertTrue(generated.contains("100"));
+        Assert.assertTrue(generated.contains("1"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue("Re-parsed AST should retain insert wrapper",
+                reparsed.toString().contains("insert="));
+    }
+
+    @Test
+    public void roundTripInsertSelectTest() {
+        final String query = "INSERT INTO employees SELECT emp_id, score FROM perf_feed";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("INSERT INTO"));
+        Assert.assertTrue(upper.contains("EMPLOYEES"));
+        Assert.assertTrue(upper.contains("SELECT"));
+        Assert.assertTrue(upper.contains("FROM"));
+        Assert.assertTrue(upper.contains("PERF_FEED"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue("Re-parsed AST should retain insert wrapper",
+                reparsed.toString().contains("insert="));
+    }
+
+    @Test
+    public void roundTripInsertDefaultValuesTest() {
+        final String query = "INSERT INTO employees DEFAULT VALUES";
+        HashMap<String, Object> ast = parseSqlToAst(query);
+        String generated = new SQLStatementGenerator().generateStatement(ast);
+        Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
+        String upper = generated.toUpperCase();
+        Assert.assertTrue(upper.contains("INSERT INTO"));
+        Assert.assertTrue(upper.contains("EMPLOYEES"));
+        Assert.assertTrue(upper.contains("DEFAULT VALUES"));
+
+        HashMap<String, Object> reparsed = parseSqlToAst(generated);
+        Assert.assertTrue("Re-parsed AST should retain insert wrapper",
+                reparsed.toString().contains("insert="));
+    }
+
+    @Test
+    public void roundTripInsertValuesFromAstStringTest() {
+        final String astString = "{SQL={insert={preamble=insert_into, from={values={matrix={1={row={1={literal=100}, 2={literal=1}}}}}}, target_table={table={alias=null, table=employees}}, columns={1={column={name=score, table_ref=null}}, 2={column={name=rank_bucket, table_ref=null}}}}}";
+        String generated = runGenerationBasic("roundTripInsertValuesFromAstStringTest", astString,
+                "INSERT INTO employees (score, rank_bucket) VALUES (100, 1)");
+        Assert.assertTrue(generated.toUpperCase().contains("INSERT INTO"));
+        Assert.assertTrue(generated.contains("employees"));
+        Assert.assertTrue(generated.contains("score"));
+        Assert.assertTrue(generated.contains("rank_bucket"));
+        Assert.assertTrue(generated.contains("100"));
+        Assert.assertTrue(generated.contains("1"));
+    }
+
 
 
     
+    private HashMap<String, Object> parseSqlToAst(String query) {
+        SQLSelectParserFactory factory = new SQLSelectParserFactory();
+        SQLSelectParserParser parser = factory.buildParser(query);
+        SqlContext tree = parser.sql();
+        SqlParseEventWalker extractor = new SqlParseEventWalker();
+        ParseTreeWalker.DEFAULT.walk(extractor, tree);
+        return extractor.getAsTree();
+    }
+
     private String runGenerationBasic(String testName, String astString, String query) {
         SQLStatementGenerator generator = new SQLStatementGenerator();
         Map<String, Object> ast = astStringToHashMap(astString);
