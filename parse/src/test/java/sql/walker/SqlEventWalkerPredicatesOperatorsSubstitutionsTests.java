@@ -467,6 +467,90 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getSubstitutionsMap().toString());
 	}
 
+	@Test
+	public void filterArithmeticSubtractionComparisonPredicandTest() {
+		final String query = "SELECT apple FROM tab1 WHERE <a> - 20 >= 50";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={calc={left={substitution={name=<a>, type=predicand}}, right={literal=20}, operator=-}}, right={literal=50}, operator=>=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void filterArithmeticDivisionComparisonPredicandTest() {
+		final String query = "SELECT apple FROM tab1 WHERE ((<a>) / (<b>)) >= 1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={parentheses={calc={left={parentheses={substitution={name=<a>, type=predicand}}}, right={parentheses={substitution={name=<b>, type=predicand}}}, operator=/}}}, right={literal=1}, operator=>=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void groupByArithmeticPredicandSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 GROUP BY <a> - <b>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, groupby={1={calc={left={substitution={name=<a>, type=predicand}}, right={substitution={name=<b>, type=predicand}}, operator=-}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void orderByArithmeticPredicandSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 ORDER BY (<a>) + (<b>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={calc={left={parentheses={substitution={name=<a>, type=predicand}}}, right={parentheses={substitution={name=<b>, type=predicand}}}, operator=+}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<b>=predicand, <a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void havingArithmeticSubtractionComparisonPredicandTest() {
+		final String query = "SELECT apple FROM tab1 GROUP BY apple HAVING <a> - 20 >= 50";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, having={condition={left={calc={left={substitution={name=<a>, type=predicand}}, right={literal=20}, operator=-}}, right={literal=50}, operator=>=}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void qualifyArithmeticSubtractionComparisonPredicandTest() {
+		final String query = "SELECT apple FROM tab1 QUALIFY ((<a>) - 20) >= 50";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, qualify={condition={left={parentheses={calc={left={parentheses={substitution={name=<a>, type=predicand}}}, right={literal=20}, operator=-}}}, right={literal=50}, operator=>=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
 
 	@Test
 	public void whereConditionWithParentheticalConditionVariableInOrTest() {

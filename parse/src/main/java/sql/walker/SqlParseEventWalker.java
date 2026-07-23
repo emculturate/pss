@@ -8542,12 +8542,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(MUMBLE_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
+					calc.put(MUMBLE_LEFT_FACTOR_KEY,
+							walker.stampPredicandSubstitutionsInValueSubtree(subMap.remove("" + indx++)));
 				else {
 					calc.put(MUMBLE_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(MUMBLE_RIGHT_FACTOR_KEY,
+						walker.stampPredicandSubstitutionsInValueSubtree(subMap.remove("" + indx++)));
 				calc.put(MUMBLE_OPERATOR_KEY, ctx.getChild(x).getText());
 				item.put(MUMBLE_CALCULATION_KEY, calc);
 			}
@@ -8574,12 +8576,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			for (int x = 1; subMap.size() > 0; x = x + 2) {
 				Map<String, Object> calc = new HashMap<String, Object>();
 				if (x == 1)
-					calc.put(MUMBLE_LEFT_FACTOR_KEY, subMap.remove("" + indx++));
+					calc.put(MUMBLE_LEFT_FACTOR_KEY,
+							walker.stampPredicandSubstitutionsInValueSubtree(subMap.remove("" + indx++)));
 				else {
 					calc.put(MUMBLE_LEFT_FACTOR_KEY, item);
 					item = new HashMap<String, Object>();
 				}
-				calc.put(MUMBLE_RIGHT_FACTOR_KEY, subMap.remove("" + indx++));
+				calc.put(MUMBLE_RIGHT_FACTOR_KEY,
+						walker.stampPredicandSubstitutionsInValueSubtree(subMap.remove("" + indx++)));
 				calc.put(MUMBLE_OPERATOR_KEY, ctx.getChild(x).getText());
 				item.put(MUMBLE_CALCULATION_KEY, calc);
 			}

@@ -7,7 +7,7 @@ Use this document as the single handoff for consolidating column resolution in t
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-20 (Phase **15.6** + **19** roadmap; Phase 15 **NEXT** at 15.1)
+**Last updated:** 2026-07-23 (§ Final actions for rolling out the parser)
 
 ---
 
@@ -1641,7 +1641,7 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 |-------------------|----------------------------|-----------|
 | Comparison operators (`=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, …) | **predicand** (both sides) | Operands are values being compared; substituting boolean condition vars yields nonsense (`true >= false`). Same rule in SELECT and WHERE. |
 | Arithmetic (`+`, `-`, `*`, `/`, `%`) | **predicand** | Scalar calc operands. |
-| Function scalar args, casts, CASE THEN/ELSE results | **predicand** | Value positions. |
+| Function scalar args, casts, CASE THEN/ELSE results | **predicand** | Scalar expression operands. |
 | Boolean connectives (`AND`, `OR`) between substitutions | **condition** (each operand) | Each sub is a boolean fragment: `WHERE <a> AND <b>`, `SELECT <a> AND <b> AS truth`. |
 | Bare substitution replacing entire filter / ON / WHEN | **condition** | `WHERE <filter>`, `ON <join_cond>`, `CASE WHEN <cond>`. |
 | `NOT` wrapping a condition sub | **condition** | Unary boolean negation of a condition variable. |
@@ -1653,18 +1653,18 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 - `SELECT <a> AND <b> AS truth` / `WHERE <a> AND <b>` → `<a>`, `<b>` are **condition** (boolean composition).
 - `WHERE <filter>` → `<filter>` is **condition** (bare filter substitution).
 
-**Gap (Jul 2026):** ~~Delivered resolver is **clause-tier only**~~ **Operator-walk resolver delivered (13.4.1d + 13.4.1a, Jul 2026).** Strong operators (comparison, between, …) → predicand everywhere; boolean composition (AND/OR, bare filter sub) → condition; weak calc-chain operators (additive/multiplicative) → predicand only in value slots (select list, GROUP BY, PARTITION BY), not bare parenthesized filter wrappers.
+**Gap (Jul 2026):** ~~Delivered resolver is **clause-tier only**~~ **Operator-walk resolver delivered (13.4.1d + 13.4.1a, Jul 2026).** Comparison / between / IN / NULL-check operands → **predicand** everywhere; arithmetic (`+`, `-`, `*`, `/`) operands → **predicand** everywhere (including WHERE, HAVING, QUALIFY, JOIN ON); boolean composition (AND/OR, bare filter sub) → **condition**. Grammar-only `additive_expression` chains under filter boolean context (no real operator) are skipped so bare `WHERE <filter>` / `ON (<cond>)` still type as **condition**.
 
 **Delivered (Jul 2026 — 13.4.1d + 13.4.1a):**
 
-- [x] Operator-walk `resolveSubstitutionValueTypeFromContext(ctx)` — strong vs weak predicand operators; filter-context fallback for bare parenthesized condition subs.
+- [x] Operator-walk `resolveSubstitutionValueTypeFromContext(ctx)` — operator-semantics first; real arithmetic → predicand in every clause; filter-context fallback for bare parenthesized condition subs.
 - [x] `stampSubstitutionVariableFromContext` helper; all value-expression / predicate / select-item exit paths routed through resolver.
-- [x] Tests: `selectListArithmeticPredicandSubstitutionTest`, `selectListComparisonPredicandSubstitutionTest`, `selectListBooleanAndConditionSubstitutionTest`, `whereComparisonPredicandSameAsSelectTest`.
-- [x] Full suite green (1409/1409).
+- [x] Tests: `selectListArithmeticPredicandSubstitutionTest`, `selectListComparisonPredicandSubstitutionTest`, `selectListBooleanAndConditionSubstitutionTest`, `whereComparisonPredicandSameAsSelectTest`, `filterArithmeticSubtractionComparisonPredicandTest`, `filterArithmeticDivisionComparisonPredicandTest`, `groupByArithmeticPredicandSubstitutionTest`, `orderByArithmeticPredicandSubstitutionTest`, `havingArithmeticSubtractionComparisonPredicandTest`, `qualifyArithmeticSubtractionComparisonPredicandTest`, `joinOnArithmeticSubtractionComparisonPredicandTest`.
+- [x] Full suite green (1411/1411).
 
 **Delivered (Jul 2026 — partial 13.4.1):**
 
-- [x] `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext(ctx)` — walks ancestors; returns `condition` if a filter/predicate-root rule is hit first, `predicand` if a value-expression-root rule is hit first.
+- [x] `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext(ctx)` — walks ancestors; returns `predicand` when a comparison, arithmetic, or other strong operator rule is hit first; `condition` for boolean-composition or bare filter roots.
 - [x] `exitValue_expression`: split `RULE_parenthesized_value_expression` out of the blanket condition branch; parenthesized operands use the resolver.
 - [x] V3/V4 goldens refreshed (`<a>`, `<b>` → `predicand`; symbol-table interface lists predicand deps on `y`/`z`).
 - [x] Full suite green (1605/1605); WHERE parenthesis regression tests unchanged.
@@ -1745,18 +1745,24 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 | `selectListBooleanAndConditionSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT <a> AND <b> AS truth` |
 | `selectListArithmeticPredicandSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT (<a>) + (<b>)` |
 | `whereComparisonPredicandSameAsSelectTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `WHERE <a> >= <b>` |
-| `groupByArithmeticPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** — `GROUP BY <a> + <b>` |
+| `filterArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `WHERE ((<a>) - 20) >= 50` |
+| `filterArithmeticDivisionComparisonPredicandTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `WHERE ((<a>) / (<b>)) >= 1` |
+| `groupByArithmeticPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `GROUP BY (<a>) - (<b>)` |
+| `orderByArithmeticPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `ORDER BY (<a>) + (<b>)` |
+| `havingArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `HAVING ((<a>) - 20) >= 50` |
+| `qualifyArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `QUALIFY ((<a>) - 20) >= 50` |
+| `joinOnArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Delivered** — `ON ((<a>) - 20) >= 50` |
 
 #### 13.4.1d — Operator-based resolution (clause-agnostic)
 
 **Work:**
 
-- [x] Operator-walk `resolveSubstitutionValueTypeFromContext` — strong predicand operators (comparison, between, …) everywhere; weak calc-chain operators only in value slots; filter-context fallback for bare parenthesized condition subs.
-- [x] **Clause-agnostic:** `SELECT <a> >= <b>` and `WHERE <a> >= <b>` produce identical types.
+- [x] Operator-walk `resolveSubstitutionValueTypeFromContext` — comparison / between / … operands and real arithmetic (`+`, `-`, `*`, `/`) operands → predicand in every clause; filter-context fallback for bare parenthesized condition subs.
+- [x] **Clause-agnostic:** `SELECT <a> >= <b>` and `WHERE <a> >= <b>` (and HAVING / QUALIFY / ON) produce identical types; `WHERE ((<a>) - 20) >= 50` stamps `<a>` as predicand.
 - [x] Route operand stamping through `stampSubstitutionVariableFromContext(subMap, ctx)`.
 - [ ] Optional grammar: extend `row_value_predicand` for boolean compositions in GROUP BY/ORDER BY if needed.
 
-**Gate:** delivered tests + `whereConditionComparingPredicandVariablesTest`, parenthesized filter/ON condition tests, V3/V4 — all green (1404/1404).
+**Gate:** delivered tests + `whereConditionComparingPredicandVariablesTest`, parenthesized filter/ON condition tests, V3/V4 — all green (1411/1411).
 
 #### 13.4.1c — Shared grammar-context classifier
 
@@ -2085,6 +2091,74 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
 **Phase 15.1 is the recommended immediate next step.** Phases **16–18** complete relational-modifier namespaces after Phase 15 closeout; **15.6** builds `ConvertEgressScopeBundle`; **Phase 19** consolidates query-dict publish ingress after **15.6**. See Phases 15–19 sections.
+
+---
+
+## Final actions for rolling out the parser
+
+**When to run:** After consolidation closeout (Phases 15–19 and any additional phases listed below) and a green full module gate — **before** treating the modified parser as production-safe.
+
+**Why:** This effort has changed parser, walker, symbol-table, and substitution-typing behavior in large, small, and subtle ways (clause-agnostic predicand typing, `def_*` canonicalization, `context_list` / alias maps, convert egress, relational-modifier namespaces, unparenthesized calc operands, etc.). Unit and gate tests prove correctness for covered scenarios; production validation must confirm end-to-end consumers still work on real bound query text.
+
+### Additional consolidation phases (reserve — add here if needed)
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| _(open)_ | _Add rows here if closeout discovers more consolidation work before rollout_ | ⏸️ |
+
+Do **not** start the production validation checklist until this table is empty or every row is ✅.
+
+---
+
+### Production validation checklist
+
+Run against production or production-equivalent data and tooling. Record environment, sample size, and pass/fail per item.
+
+#### 1. Query tool — extractor presentation
+
+- [ ] Confirm the **query tool** can properly **display and present** changes in the **extractor object strings** (AST tree, substitutions map, dictionaries, diagnostics) after parser/walker changes.
+- [ ] Spot-check queries that exercise new symbol-table shapes (`def_*` payloads, `context_list`, nested scopes, substitution typing).
+
+#### 2. RMCP Extension — symbol table and lineage
+
+- [ ] Confirm the **RMCP Extension** can **display and use** the modified **symbol table** for production-like queries.
+- [ ] Verify **lineage tracing** through the new logic and statement types (nested queries, CTEs, DML, set-ops, modifiers).
+- [ ] Verify **`def_*` labelling**, **table alias** maps, and **`context_list`** entries resolve and display as expected in the extension UI/workflows.
+
+#### 3. Query generator — AST consumption
+
+- [ ] Confirm the **query generator** can **read and use** the changed **AST** (including calc shapes without redundant `parentheses` wrappers, updated substitution `type=` fields, clause egress shapes).
+- [ ] Round-trip a representative sample: parse → generate → re-parse without structural drift on supported constructs.
+
+#### 4. Production substitution discovery and typing (100% active bound queries)
+
+- [ ] Using **100% of unique, active bound query text** in production, prove that **every substitution variable** is:
+  - discovered,
+  - added to the **substitutions list**, and
+  - **appropriately typed** — especially **condition** vs **predicand** (also column, tuple, query, join_extension, in_list where applicable).
+- [ ] Flag and triage any mismatches against the operator/grammar-context typing model (§13.4.1); do not ship until unexplained diffs are zero or explicitly accepted.
+
+#### 5. Production parse coverage (100% active snippets)
+
+- [ ] Confirm that **100% of production snippets** (bound query fragments / snippet endpoints) **parse successfully** with zero unexpected syntax errors under the new grammar (including unparenthesized predicand arithmetic where applicable).
+- [ ] Categorize any failures: grammar gap, legacy workaround removal, or data issue.
+
+#### 6. Reconstruction and execution parity
+
+- [ ] Confirm that **reconstructed bound query + snippets** produce the **same query text** as the source binding.
+- [ ] Confirm that reconstructed query **parses** under the new parser and **executes** successfully against the target engine (or approved execution stub).
+- [ ] Document any intentional non-parity (unsupported constructs, known generator gaps).
+
+---
+
+### Rollout sign-off
+
+| Gate | Owner | Date | Notes |
+|------|-------|------|-------|
+| Checklist items 1–6 complete | | | |
+| Full module test gate green (`mvn test`) | | | |
+| Smoketest quality gate green (`mvn -Psmoketest-quality-gate test`) | | | |
+| Production sample audit attached | | | |
 
 ---
 

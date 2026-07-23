@@ -1209,6 +1209,7 @@ parenthesized_value_expression
 nonparenthesized_value_expression_primary
   : unsigned_literal
   | column_reference
+  | variable_identifier
   | aggregate_function
   | case_expression
   | cast_function_expression

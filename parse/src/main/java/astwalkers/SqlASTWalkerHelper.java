@@ -2630,10 +2630,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
  * @return The modified map structure with properly typed substitution variable
  */
 	public String resolveSubstitutionValueTypeFromContext(ParserRuleContext ctx) {
-		boolean underSearchCondition = hasAncestorRule(ctx, SQLSelectParserParser.RULE_search_condition);
-		boolean underValueSlot = hasAncestorRule(ctx, SQLSelectParserParser.RULE_select_item)
-				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_row_value_predicand)
-				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_partition_by_clause);
+		boolean underFilterBoolean = isUnderFilterBooleanContext(ctx);
 		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
 			int ruleIndex = walk.getRuleIndex();
 			if (ruleIndex == SQLSelectParserParser.RULE_substitution_predicate) {
@@ -2645,20 +2642,26 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (isSubstitutionConditionOperatorRule(ruleIndex)) {
 				return MUMBLE_CONDITION_KEY;
 			}
-			if (isWeakSubstitutionPredicandOperatorRule(ruleIndex) && underValueSlot && !underSearchCondition) {
-				return MUMBLE_PREDICAND_KEY;
-			}
-			if (isWeakSubstitutionPredicandOperatorRule(ruleIndex) && underValueSlot && underSearchCondition) {
-				// Scalar calc inside a subquery select list that also has a WHERE clause.
-				if (hasAncestorRuleBetween(ctx, walk, SQLSelectParserParser.RULE_select_item)) {
+			if (isArithmeticOperatorRule(ruleIndex)) {
+				if (isRealArithmeticOperator(walk)) {
 					return MUMBLE_PREDICAND_KEY;
 				}
+				if (!underFilterBoolean) {
+					return MUMBLE_PREDICAND_KEY;
+				}
+				continue;
 			}
 		}
-		if (underSearchCondition) {
+		if (underFilterBoolean) {
 			return MUMBLE_CONDITION_KEY;
 		}
 		return MUMBLE_PREDICAND_KEY;
+	}
+
+	private static boolean isUnderFilterBooleanContext(ParserRuleContext ctx) {
+		return hasAncestorRule(ctx, SQLSelectParserParser.RULE_search_condition)
+				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_having_clause)
+				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_qualify_clause);
 	}
 
 	private static boolean hasAncestorRule(ParserRuleContext ctx, int ruleIndex) {
@@ -2670,11 +2673,62 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return false;
 	}
 
-	private static boolean hasAncestorRuleBetween(ParserRuleContext ctx, ParserRuleContext stop, int ruleIndex) {
-		for (ParserRuleContext walk = ctx.getParent(); walk != null && walk != stop; walk = walk.getParent()) {
-			if (walk.getRuleIndex() == ruleIndex) {
-				return true;
+	/**
+	 * Stamp predicand on substitution nodes in a value subtree. Call from arithmetic rule exits
+	 * ({@code additive_expression}, {@code multiplicative_expression}) where the grammar itself
+	 * determines operand type — not from {@code variable_identifier} collection.
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> stampPredicandSubstitutionsInValueSubtree(Map<String, Object> node) {
+		if (node == null) {
+			return null;
+		}
+		if (node.containsKey(getASTWALKER_SUBSTITUTION_KEY())) {
+			return checkForSubstitutionVariable(node, MUMBLE_PREDICAND_KEY);
+		}
+		Object parentheses = node.get(MUMBLE_PARENTHESES_KEY);
+		if (parentheses instanceof Map<?, ?>) {
+			node.put(MUMBLE_PARENTHESES_KEY,
+					stampPredicandSubstitutionsInValueSubtree((Map<String, Object>) parentheses));
+		}
+		Object calculation = node.get(MUMBLE_CALCULATION_KEY);
+		if (calculation instanceof Map<?, ?>) {
+			Map<String, Object> calcMap = (Map<String, Object>) calculation;
+			Object left = calcMap.get(MUMBLE_LEFT_FACTOR_KEY);
+			if (left instanceof Map<?, ?>) {
+				calcMap.put(MUMBLE_LEFT_FACTOR_KEY,
+						stampPredicandSubstitutionsInValueSubtree((Map<String, Object>) left));
 			}
+			Object right = calcMap.get(MUMBLE_RIGHT_FACTOR_KEY);
+			if (right instanceof Map<?, ?>) {
+				calcMap.put(MUMBLE_RIGHT_FACTOR_KEY,
+						stampPredicandSubstitutionsInValueSubtree((Map<String, Object>) right));
+			}
+			node.put(MUMBLE_CALCULATION_KEY, calcMap);
+		}
+		return node;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Object stampPredicandSubstitutionsInValueSubtree(Object node) {
+		if (node instanceof Map<?, ?>) {
+			return stampPredicandSubstitutionsInValueSubtree((Map<String, Object>) node);
+		}
+		return node;
+	}
+
+	/** Arithmetic (+, -, *, /) operands are predicands in every clause. */
+	private static boolean isArithmeticOperatorRule(int ruleIndex) {
+		return ruleIndex == SQLSelectParserParser.RULE_additive_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_multiplicative_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_common_value_expression;
+	}
+
+	private static boolean isRealArithmeticOperator(ParserRuleContext operatorNode) {
+		int ruleIndex = operatorNode.getRuleIndex();
+		if (ruleIndex == SQLSelectParserParser.RULE_additive_expression
+				|| ruleIndex == SQLSelectParserParser.RULE_multiplicative_expression) {
+			return operatorNode.getChildCount() >= 3;
 		}
 		return false;
 	}
@@ -2692,13 +2746,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				|| ruleIndex == SQLSelectParserParser.RULE_trim_operands
 				|| ruleIndex == SQLSelectParserParser.RULE_sql_argument_list
 				|| ruleIndex == SQLSelectParserParser.RULE_row_value_predicand;
-	}
-
-	/** Calc grammar chain links; predicand only in value slots, not bare filter wrappers. */
-	private static boolean isWeakSubstitutionPredicandOperatorRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_additive_expression
-				|| ruleIndex == SQLSelectParserParser.RULE_multiplicative_expression
-				|| ruleIndex == SQLSelectParserParser.RULE_common_value_expression;
 	}
 
 	/** Boolean-composition contexts: AND/OR/NOT, bare filter substitution, standalone condition subs. */
