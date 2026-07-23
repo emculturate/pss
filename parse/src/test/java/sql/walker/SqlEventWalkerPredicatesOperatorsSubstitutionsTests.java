@@ -524,6 +524,21 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 	}
 
 	@Test
+	public void orderByParenthesizedPredicandSubstitutionTest() {
+		// Regression: ORDER BY (<a>) parsed via predicand_subquery was mis-typed as query (not predicand).
+		final String query = "SELECT apple FROM tab1 ORDER BY (<a>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<a>, type=predicand}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
 	public void havingArithmeticSubtractionComparisonPredicandTest() {
 		final String query = "SELECT apple FROM tab1 GROUP BY apple HAVING <a> - 20 >= 50";
 		final SQLSelectParserParser parser = parse(query);
@@ -546,6 +561,77 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, qualify={condition={left={parentheses={calc={left={parentheses={substitution={name=<a>, type=predicand}}}, right={literal=20}, operator=-}}}, right={literal=50}, operator=>=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void havingParenthesizedConditionSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 GROUP BY apple HAVING (<subject code>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, having={parentheses={substitution={name=<subject code>, type=condition}}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void qualifyParenthesizedConditionSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 QUALIFY (<subject code>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, qualify={parentheses={substitution={name=<subject code>, type=condition}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void havingBareConditionSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 GROUP BY apple HAVING <subject code>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, having={substitution={name=<subject code>, type=condition}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=apple, table_ref=null}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void qualifyBareConditionSubstitutionTest() {
+		final String query = "SELECT apple FROM tab1 QUALIFY <subject code>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, qualify={substitution={name=<subject code>, type=condition}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<subject code>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void groupByParenthesizedPredicandSubstitutionTest() {
+		// Regression: GROUP BY (<a>) parsed via predicand_subquery was mis-typed as query (not predicand).
+		final String query = "SELECT apple FROM tab1 GROUP BY (<a>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=apple, table_ref=null}}}, from={table={alias=null, table=tab1}}, groupby={1={substitution={name=<a>, type=predicand}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
 				extractor.getSubstitutionsMap().toString());

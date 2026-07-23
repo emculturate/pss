@@ -3716,7 +3716,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> source = (Map<String, Object>) subMap.remove("1");
-		walker.checkForSubstitutionVariable(source, MUMBLE_QUERY_KEY);
+		if (source != null && source.containsKey(MUMBLE_SUBSTITUTION_KEY)
+				&& walker.isUnderPredicandSubqueryFrame(ctx)) {
+			walker.stampSubstitutionVariableFromContext(source, ctx);
+		} else {
+			walker.checkForSubstitutionVariable(source, MUMBLE_QUERY_KEY);
+		}
 
 		if (subMap.isEmpty()) {
 			walker.collect(ruleIndex, stackLevel, source);

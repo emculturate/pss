@@ -54,6 +54,27 @@ The `<parser_end_point>` argument specifies the parsing rule to start with. Here
 | `VALUES`         | Parses the `VALUES` clause of an `INSERT` statement (e.g., `VALUES (1, 'a'), (2, 'b')`).                |
 | `TUPLE`          | Parses a tuple of values, like `(1, 'a', 'b')`.                                                         |
 
+## Substitution variables in DML (alpha)
+
+Substitution variables (`<name>`) in **INSERT**, **UPDATE**, and **DELETE** statements are supported in an **alpha** state. Behavior is exercised by tests, but coverage is not yet complete and some placements you might expect from SELECT-shaped SQL may not parse or type the way you want. Treat DML substitution support as evolving.
+
+**Tested patterns that work today:**
+
+| Statement | Example | Variable role | Type |
+|-----------|---------|---------------|------|
+| INSERT | `INSERT INTO tab1 <query variable>` | entire insert source | `query` |
+| UPDATE | `UPDATE employees e SET e.<target col> = <source predicand>` | SET target column (qualified) | `column` |
+| UPDATE | `UPDATE employees SET score = <source predicand>` | SET expression (RHS) | `predicand` |
+| UPDATE | `UPDATE employees SET score = (<source predicand>)` | SET expression (RHS, parenthesized) | `predicand` |
+| UPDATE | `UPDATE employees SET score = 1 WHERE <filter>` | WHERE filter | `condition` |
+| UPDATE | `UPDATE t SET a = 1 FROM <query variable> src` | FROM source (alias required) | `tuple` |
+| DELETE | `DELETE FROM employees WHERE <filter>` | WHERE filter | `condition` |
+| DELETE | `DELETE FROM t USING <query variable> src` | USING source (alias required) | `tuple` |
+
+The `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` suite also includes complex **I1–I10** / **U1–U10** scenarios with column-type substitutions inside nested SELECT sources (WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY, JOIN ON, and related clauses).
+
+For SELECT-shaped substitution typing (predicand vs condition vs query), see `parse/documents/symbol-table-resolution-consolidation-worklist.md` §13.4.1b.
+
 ## JaCoCo Before/After Helper
 
 Use `tools/run-jacoco-with-previous.sh` when you want a before/after coverage comparison without losing the prior report.

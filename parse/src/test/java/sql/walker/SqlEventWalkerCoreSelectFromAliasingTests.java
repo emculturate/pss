@@ -3513,6 +3513,21 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	}
 
 	@Test
+	public void selectListStandaloneParenthesizedPredicandTest() {
+		// Regression: SELECT (<a>) parsed via predicand_subquery must remain predicand (not query).
+		final String query = "SELECT (<a>) FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={parentheses={substitution={name=<a>, type=predicand}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<a>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
 	public void selectListComparisonPredicandSubstitutionTest() {
 		final String query = "SELECT <a> >= <b> AS truth FROM tab1";
 		final SQLSelectParserParser parser = parse(query);

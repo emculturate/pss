@@ -4140,4 +4140,103 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 		Assert.assertEquals("Symbol Table is wrong", "{def_delete3={query_dictionary={}, table_dictionary={employees={emp_id=[[@5,32:32='e',<381>,2:7]]}}, def_query1={query_dictionary={col1=[[@13,62:65='col1',<381>,3:16]]}, def_values0={query_dictionary={$1=[[@17,80:80='(',<287>,3:34], [@21,87:87='(',<287>,3:41]]}, interface={$1=[]}}, interface={col1=[]}, table_alias={values0=values0}}, dependent_queries={in_list2={query=query1, type=filters}}, filters=[{name=emp_id, table_ref=e}], interface=null, table_alias={e=employees}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	@Test
+	public void updateSetQualifiedColumnLhsPredicandRhsTest() {
+		final String query = "UPDATE employees e SET e.<target col> = <source predicand>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=e, table=employees}, assignments={1={set={column={substitution={name=<target col>, type=column}, table_ref=e}}, to={substitution={name=<source predicand>, type=predicand}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<target col>=column, <source predicand>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void updateSetLiteralLhsPredicandRhsTest() {
+		final String query = "UPDATE employees SET score = <source predicand>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=employees}, assignments={1={set={column={name=score, table_ref=null}}, to={substitution={name=<source predicand>, type=predicand}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<source predicand>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void updateSetPredicandRhsParenthesizedTest() {
+		final String query = "UPDATE employees SET score = (<source predicand>)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=employees}, assignments={1={set={column={name=score, table_ref=null}}, to={substitution={name=<source predicand>, type=predicand}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<source predicand>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void updateWhereBareConditionSubstitutionTest() {
+		final String query = "UPDATE employees SET score = 1 WHERE <filter>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=employees}, where={substitution={name=<filter>, type=condition}}, assignments={1={set={column={name=score, table_ref=null}}, to={literal=1}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<filter>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void deleteWhereBareConditionSubstitutionTest() {
+		final String query = "DELETE FROM employees WHERE <filter>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={delete={table={alias=null, table=employees}, where={substitution={name=<filter>, type=condition}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<filter>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void updateFromBareQueryVariableTest() {
+		// table_source_primary variable_identifier in FROM is typed tuple per grammar (requires alias).
+		final String query = "UPDATE t SET a = 1 FROM <query variable> src";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=null, table=t}, from={table={alias=src, substitution={name=<query variable>, type=tuple}}}, assignments={1={set={column={name=a, table_ref=null}}, to={literal=1}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<query variable>=tuple}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void deleteUsingBareQueryVariableTest() {
+		final String query = "DELETE FROM t USING <query variable> src";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={delete={table={alias=null, table=t}, using={1={table={alias=src, substitution={name=<query variable>, type=tuple}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<query variable>=tuple}",
+				extractor.getSubstitutionsMap().toString());
+	}
 }

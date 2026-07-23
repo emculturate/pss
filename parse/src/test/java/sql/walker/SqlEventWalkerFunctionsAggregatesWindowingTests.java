@@ -1793,6 +1793,66 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 
 
 	@Test
+	public void caseWhenParenthesizedConditionSubstitutionTest() {
+		final String sql = "select case when (<column1>) then 'Y' else 'N' end from tab1";
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={case={clauses={1={then={literal='Y'}, when={parentheses={substitution={name=<column1>, type=condition}}}}}, else={literal='N'}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<column1>=condition}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+
+	@Test
+	public void windowFunctionArgParenthesizedPredicandTest() {
+		final String query = "SELECT rank((<columnParam>)) OVER (partition by k_stfd, kppi order by row_num desc) from tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={parentheses={substitution={name=<columnParam>, type=predicand}}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<columnParam>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+
+	@Test
+	public void windowPartitionByParenthesizedPredicandTest() {
+		final String query = "SELECT rank(column) OVER (partition by (<k_stfd>), kppi order by row_num desc) from tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={window_function={over={partition_by={1={parentheses={substitution={name=<k_stfd>, type=predicand}}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=row_num, table_ref=null}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<k_stfd>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+
+	@Test
+	public void windowOrderByParenthesizedPredicandTest() {
+		final String query = "SELECT rank(column) OVER (partition by k_stfd, kppi order by (<row_num>) desc) from tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={window_function={over={partition_by={1={column={name=k_stfd, table_ref=null}}, 2={column={name=kppi, table_ref=null}}}, orderby={1={null_order=null, predicand={substitution={name=<row_num>, type=predicand}}, sort_order=desc}}}, function={function_name=rank, parameters={1={column={name=column, table_ref=null}}}}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<row_num>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
+
+	@Test
 	public void windowWithUnboundedBoundingFrameTest() {
 		final String query = " SELECT "
 				+ " rank(parm) OVER (partition by k_stfd order by OBSERVATION_TM desc "

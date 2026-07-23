@@ -14,6 +14,7 @@ import static mumble.MumbleConstants.*;
 import static mumble.ASTWalkerHelperConstants.*;
 
 import sql.SQLSelectParserParser;
+import sql.grammar.SqlGrammarContextClassifier;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
@@ -2630,19 +2631,31 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
  * @return The modified map structure with properly typed substitution variable
  */
 	public String resolveSubstitutionValueTypeFromContext(ParserRuleContext ctx) {
-		boolean underFilterBoolean = isUnderFilterBooleanContext(ctx);
+		boolean underFilterBoolean = SqlGrammarContextClassifier.isUnderFilterBooleanContext(ctx);
+		if (SqlGrammarContextClassifier.hasAncestorRule(ctx, SQLSelectParserParser.RULE_searched_when_clause)) {
+			for (ParserRuleContext walk = ctx.getParent(); walk != null; walk = walk.getParent()) {
+				int ruleIndex = walk.getRuleIndex();
+				if (ruleIndex == SQLSelectParserParser.RULE_searched_when_clause) {
+					return MUMBLE_CONDITION_KEY;
+				}
+				if (SqlGrammarContextClassifier.isStrongSubstitutionPredicandOperatorRule(ruleIndex)
+						&& ruleIndex != SQLSelectParserParser.RULE_row_value_predicand) {
+					break;
+				}
+			}
+		}
 		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
 			int ruleIndex = walk.getRuleIndex();
 			if (ruleIndex == SQLSelectParserParser.RULE_substitution_predicate) {
 				return isTruthValuePredicateOperand(walk) ? MUMBLE_PREDICAND_KEY : MUMBLE_CONDITION_KEY;
 			}
-			if (isStrongSubstitutionPredicandOperatorRule(ruleIndex)) {
+			if (SqlGrammarContextClassifier.isStrongSubstitutionPredicandOperatorRule(ruleIndex)) {
 				return MUMBLE_PREDICAND_KEY;
 			}
-			if (isSubstitutionConditionOperatorRule(ruleIndex)) {
+			if (SqlGrammarContextClassifier.isSubstitutionConditionOperatorRule(ruleIndex)) {
 				return MUMBLE_CONDITION_KEY;
 			}
-			if (isArithmeticOperatorRule(ruleIndex)) {
+			if (SqlGrammarContextClassifier.isArithmeticOperatorRule(ruleIndex)) {
 				if (isRealArithmeticOperator(walk)) {
 					return MUMBLE_PREDICAND_KEY;
 				}
@@ -2658,19 +2671,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return MUMBLE_PREDICAND_KEY;
 	}
 
-	private static boolean isUnderFilterBooleanContext(ParserRuleContext ctx) {
-		return hasAncestorRule(ctx, SQLSelectParserParser.RULE_search_condition)
-				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_having_clause)
-				|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_qualify_clause);
-	}
-
-	private static boolean hasAncestorRule(ParserRuleContext ctx, int ruleIndex) {
-		for (ParserRuleContext walk = ctx.getParent(); walk != null; walk = walk.getParent()) {
-			if (walk.getRuleIndex() == ruleIndex) {
-				return true;
-			}
-		}
-		return false;
+	/** Parenthesized scalar value parsed as {@code predicand_subquery} → {@code subquery}. */
+	public boolean isUnderPredicandSubqueryFrame(ParserRuleContext ctx) {
+		return SqlGrammarContextClassifier.isUnderPredicandSubqueryFrame(ctx);
 	}
 
 	/**
@@ -2717,13 +2720,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return node;
 	}
 
-	/** Arithmetic (+, -, *, /) operands are predicands in every clause. */
-	private static boolean isArithmeticOperatorRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_additive_expression
-				|| ruleIndex == SQLSelectParserParser.RULE_multiplicative_expression
-				|| ruleIndex == SQLSelectParserParser.RULE_common_value_expression;
-	}
-
 	private static boolean isRealArithmeticOperator(ParserRuleContext operatorNode) {
 		int ruleIndex = operatorNode.getRuleIndex();
 		if (ruleIndex == SQLSelectParserParser.RULE_additive_expression
@@ -2731,32 +2727,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return operatorNode.getChildCount() >= 3;
 		}
 		return false;
-	}
-
-	/** Definite value-position operators (comparison operands, etc.). */
-	private static boolean isStrongSubstitutionPredicandOperatorRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_comparison_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_between_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_like_any_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_null_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_in_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_case_result
-				|| ruleIndex == SQLSelectParserParser.RULE_when_value_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_aggregate_function
-				|| ruleIndex == SQLSelectParserParser.RULE_trim_operands
-				|| ruleIndex == SQLSelectParserParser.RULE_sql_argument_list
-				|| ruleIndex == SQLSelectParserParser.RULE_row_value_predicand;
-	}
-
-	/** Boolean-composition contexts: AND/OR/NOT, bare filter substitution, standalone condition subs. */
-	private static boolean isSubstitutionConditionOperatorRule(int ruleIndex) {
-		return ruleIndex == SQLSelectParserParser.RULE_or_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_and_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_negative_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_exists_predicate
-				|| ruleIndex == SQLSelectParserParser.RULE_searched_when_clause
-				|| ruleIndex == SQLSelectParserParser.RULE_search_condition
-				|| ruleIndex == SQLSelectParserParser.RULE_condition_value;
 	}
 
 	/** {@code <var> IS TRUE|FALSE} left operand — predicand, not a boolean-composition condition sub. */

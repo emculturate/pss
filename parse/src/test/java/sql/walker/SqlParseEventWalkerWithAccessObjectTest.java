@@ -844,6 +844,18 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}",
         	snippet.getQueryColumnDictionaryMap().toString());
 	}
+
+	@Test
+	public void insertFromParenthesizedQueryVariableTest() {
+		// Parentheses around insert source variable parse as the same query substitution as bare form.
+		final String query = "insert into tab1 (<query variable>)";
+        final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
+
+		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}}}",
+        	snippet.getSqlAbstractTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<query variable>=query}",
+        	snippet.getSubstitutionsMap().toString());
+	}
     
 	@Test
 	public void basicInsertFromValuesTest() {

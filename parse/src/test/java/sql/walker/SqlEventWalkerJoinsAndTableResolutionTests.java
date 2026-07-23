@@ -139,6 +139,20 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getSubstitutionsMap().toString());
 	}
 
+	@Test
+	public void joinOnComparisonPredicandOperandTest() {
+		final String query = "SELECT a.* FROM third a JOIN fourth b ON a.col1 = <predicand>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={join=JOIN, on={condition={left={column={name=col1, table_ref=a}}, right={substitution={name=<predicand>, type=predicand}}, operator==}}}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<predicand>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+	}
+
 
 	@Test
 	public void basicJoinWithOnConditionVariableInParenthesisTest() {

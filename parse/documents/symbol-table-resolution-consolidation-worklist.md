@@ -1660,14 +1660,14 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 - [x] Operator-walk `resolveSubstitutionValueTypeFromContext(ctx)` — operator-semantics first; real arithmetic → predicand in every clause; filter-context fallback for bare parenthesized condition subs.
 - [x] `stampSubstitutionVariableFromContext` helper; all value-expression / predicate / select-item exit paths routed through resolver.
 - [x] Tests: `selectListArithmeticPredicandSubstitutionTest`, `selectListComparisonPredicandSubstitutionTest`, `selectListBooleanAndConditionSubstitutionTest`, `whereComparisonPredicandSameAsSelectTest`, `filterArithmeticSubtractionComparisonPredicandTest`, `filterArithmeticDivisionComparisonPredicandTest`, `groupByArithmeticPredicandSubstitutionTest`, `orderByArithmeticPredicandSubstitutionTest`, `havingArithmeticSubtractionComparisonPredicandTest`, `qualifyArithmeticSubtractionComparisonPredicandTest`, `joinOnArithmeticSubtractionComparisonPredicandTest`.
-- [x] Full suite green (1411/1411).
+- [x] Full suite green (1431/1431).
 
 **Delivered (Jul 2026 — partial 13.4.1):**
 
 - [x] `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext(ctx)` — walks ancestors; returns `predicand` when a comparison, arithmetic, or other strong operator rule is hit first; `condition` for boolean-composition or bare filter roots.
 - [x] `exitValue_expression`: split `RULE_parenthesized_value_expression` out of the blanket condition branch; parenthesized operands use the resolver.
 - [x] V3/V4 goldens refreshed (`<a>`, `<b>` → `predicand`; symbol-table interface lists predicand deps on `y`/`z`).
-- [x] Full suite green (1605/1605); WHERE parenthesis regression tests unchanged.
+- [x] Full suite green (1431/1431); WHERE parenthesis regression tests unchanged.
 
 **Condition-context rules (resolver):** `search_condition`, `where_clause`, `having_clause`, `qualify_clause`, `searched_when_clause`, `condition_value`, `substitution_predicate`.
 
@@ -1684,19 +1684,6 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 
 JOIN `ON` resolves through `search_condition` in the ancestor chain (not a separate `join_condition` rule in the resolver). `exitJoin_condition` strips outermost parentheses from the AST only — it does not assign types.
 
-**Remaining fragmentation (pre-consolidation audit):**
-
-| Site | Current typing | Target |
-|------|----------------|--------|
-| `exitSelect_item` | hardcoded `predicand` | resolver (should agree) |
-| `exitValue_expression` (`search_condition`, `case_*`, `aggregate_function`, `sql_argument_list`) | hardcoded per branch | resolver |
-| `exitComparison_predicate` | hardcoded `predicand` on operands | resolver |
-| `exitSubstitution_predicate` | hardcoded `condition` | resolver |
-| `exitBasic_predicate_clause` | manual relabel predicand | retire once resolver covers grammar path |
-| `exitRow_value_predicand` | hardcoded `predicand` | resolver |
-| `exitColumn_reference` | `column` | keep separate (different type family) |
-| FROM / table exits | `tuple`, `query`, `join_extension` | keep separate |
-
 #### 13.4.1a — Route remaining value-expression paths through resolver
 
 **Work:**
@@ -1710,7 +1697,9 @@ JOIN `ON` resolves through `search_condition` in the ancestor chain (not a separ
 
 #### 13.4.1b — Clause × context test matrix
 
-Use `SUBSTITUTION_VARIABLE_TEST_TEMPLATES.md` as scaffold. Add gate or near-gate tests proving resolver coverage:
+Use `SUBSTITUTION_VARIABLE_TEST_TEMPLATES.md` as scaffold. Add gate or near-gate tests proving resolver coverage.
+
+**Expected types (operator-context rows):**
 
 | Clause | Bare substitution | Parenthesized substitution | Comparison (`<a> >= <b>`) | Arithmetic (`<a> + <b>`) | AND/OR (`<a> AND <b>`) |
 |--------|-------------------|---------------------------|---------------------------|-------------------------|-------------------------|
@@ -1718,13 +1707,47 @@ Use `SUBSTITUTION_VARIABLE_TEST_TEMPLATES.md` as scaffold. Add gate or near-gate
 | WHERE | condition | condition | predicand (both) | predicand (both) | condition (both) |
 | HAVING | condition | condition | predicand (both) | predicand (both) | condition (both) |
 | QUALIFY | condition | condition | predicand (both) | predicand (both) | condition (both) |
-| GROUP BY | predicand | predicand | predicand (both) | predicand (both) | condition (both)† |
-| ORDER BY | predicand | predicand | predicand (both) | predicand (both) | condition (both)† |
+| GROUP BY | predicand | predicand | predicand (both) | predicand (both) | N/A |
+| ORDER BY | predicand | predicand | predicand (both) | predicand (both) | N/A |
 | JOIN ON | condition | condition | predicand (both) | predicand (both) | condition (both) |
 | CASE WHEN | condition | condition | predicand (operands) | — | condition |
 
-\*Bare `SELECT <var>`: predicand per grammar (`variable_identifier` in value_expression).  
-†Requires `boolean_value_expression` in `row_value_predicand` if not already parseable.
+\*Bare `SELECT <var>`: predicand per grammar (`variable_identifier` in value_expression).
+
+**Bare ↔ parenthesized coverage (SELECT-shaped clauses):**
+
+| Clause / slot | Expected alone | Bare test | Parenthesized test |
+|---------------|----------------|-----------|-------------------|
+| SELECT list | predicand | ✅ `querySubstitutionVariableForPredicandV1` | ✅ `selectListStandaloneParenthesizedPredicandTest` |
+| WHERE | condition | ✅ `whereConditionWithSingleConditionVariableTest` | ✅ `whereConditionWithParentheticalConditionVariableTest` |
+| HAVING | condition | ✅ `havingBareConditionSubstitutionTest` | ✅ `havingParenthesizedConditionSubstitutionTest` |
+| QUALIFY | condition | ✅ `qualifyBareConditionSubstitutionTest` | ✅ `qualifyParenthesizedConditionSubstitutionTest` |
+| GROUP BY | predicand | ✅ `basicAggregateQueryWithPredicandVariableTest` | ✅ `groupByParenthesizedPredicandSubstitutionTest` |
+| ORDER BY | predicand | ✅ `basicOrderByWithPredicandVariableTest` | ✅ `orderByParenthesizedPredicandSubstitutionTest` |
+| JOIN ON | condition | ✅ `basicJoinWithOnOnConditionVariableTest` | ✅ `basicJoinWithOnConditionVariableInParenthesisTest` |
+| CASE WHEN | condition | ✅ `complexCaseExplicitConditionExpressionWithPredicandSubstitutionInQueryTest` | ✅ `caseWhenParenthesizedConditionSubstitutionTest` |
+
+**Window function OVER — bare ↔ parenthesized coverage (predicand substitutions):**
+
+| OVER slot | Expected | Bare test | Parenthesized test |
+|-----------|----------|-----------|-------------------|
+| Function arg | predicand | ✅ `windowFunctionPredicandVariableP1Test`; ✅ `sqlModeExcludesPredicandSubstitutionsFromTableDictionaryRegressionTest` | ✅ `windowFunctionArgParenthesizedPredicandTest` |
+| PARTITION BY | predicand | ✅ `windowFunctionPredicandVariableP2Test`; ✅ regression test above | ✅ `windowPartitionByParenthesizedPredicandTest` |
+| ORDER BY (inside OVER) | predicand | ✅ `windowFunctionPredicandVariableP3Test`; ✅ regression test above | ✅ `windowOrderByParenthesizedPredicandTest` |
+
+Column-type subs in OVER (`a.<col>` in partition/order/arg) are covered separately: `windowFunctionColumnVariableP1/P2/P3`, `windowOrderByNullsLastInOverStatementTest`, DML complex-substitution OVER paths.
+
+**Source-position substitutions (not predicand/condition — separate typing family):**
+
+| Role | Type | Bare test | Parenthesized test |
+|------|------|-----------|-------------------|
+| UNION / INTERSECT / EXCEPT member | `query` | ✅ `unionSubstitutionV1`, `V2`, parser-shape tests | N/A (member is whole subquery) |
+| INSERT … FROM `<var>` | `query` | ✅ `basicInsertFromVariableTest` | ✅ `insertFromParenthesizedQueryVariableTest` |
+| CTE body = `<var>` | `query` | ✅ `withQueryFromNavigateV2StudentSubstitution` | N/A |
+| FROM / JOIN table source | `tuple` | ✅ `CoreSelectFromAliasingTests` tuple-variable family | N/A |
+| IN / LIKE ANY list | `in_list` | ✅ `inListEmbeddedVariablecConditionTest` | N/A |
+| JOIN extension tail | `join_extension` | ✅ `NonSqlEndpointParserTests` join-extension family | N/A |
+| UPDATE FROM / DELETE USING `<var>` alias | `tuple` | ✅ `updateFromBareQueryVariableTest`, `deleteUsingBareQueryVariableTest` | N/A (grammar requires alias; no parenthesized form) |
 
 Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface` / `filters` where applicable.
 
@@ -1737,10 +1760,11 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 | `caseWhenComparisonPredicandOperandTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Exists** — predicand in WHEN comparison |
 | `joinOnBareConditionSubstitutionTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Exists** — bare + parenthesized ON |
 | `joinOnAndOrConditionSubstitutionsTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Exists** — AND/OR targets |
-| `havingParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
-| `qualifyParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
-| `groupByParenthesizedPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **New** |
-| `joinOnComparisonPredicandOperandTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **New** — `ON a = <predicand>` |
+| `havingParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** |
+| `qualifyParenthesizedConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** |
+| `groupByParenthesizedPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `GROUP BY (<a>)` (predicand_subquery regression) |
+| `orderByParenthesizedPredicandSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `ORDER BY (<a>)` (predicand_subquery regression) |
+| `joinOnComparisonPredicandOperandTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Delivered** — `ON a.col1 = <predicand>` |
 | `selectListComparisonPredicandSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT <a> >= <b> AS truth` |
 | `selectListBooleanAndConditionSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT <a> AND <b> AS truth` |
 | `selectListArithmeticPredicandSubstitutionTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT (<a>) + (<b>)` |
@@ -1753,6 +1777,30 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 | `qualifyArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `QUALIFY ((<a>) - 20) >= 50` |
 | `joinOnArithmeticSubtractionComparisonPredicandTest` | `SqlEventWalkerJoinsAndTableResolutionTests` | **Delivered** — `ON ((<a>) - 20) >= 50` |
 
+**Tests to add (bare ↔ parenthesized parity — follow-up batch):**
+
+| Method | Class | Proves |
+|--------|-------|--------|
+| `havingBareConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `HAVING <subject code>` alone types as condition |
+| `qualifyBareConditionSubstitutionTest` | `SqlEventWalkerPredicatesOperatorsSubstitutionsTests` | **Delivered** — `QUALIFY <subject code>` alone types as condition |
+| `selectListStandaloneParenthesizedPredicandTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | **Delivered** — `SELECT (<a>) FROM tab1` (predicand_subquery path) |
+| `caseWhenParenthesizedConditionSubstitutionTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Delivered** — `CASE WHEN (<cond>) THEN …` types as condition |
+| `windowFunctionArgParenthesizedPredicandTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Delivered** — `rank((<columnParam>))` |
+| `windowPartitionByParenthesizedPredicandTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Delivered** — `partition by (<k_stfd>)` |
+| `windowOrderByParenthesizedPredicandTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | **Delivered** — `order by (<row_num>)` inside OVER |
+| `insertFromParenthesizedQueryVariableTest` | `SqlParseEventWalkerWithAccessObjectTest` | **Delivered** — `INSERT INTO tab1 (<var>)` types as `query` |
+| `updateFromBareQueryVariableTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `UPDATE … FROM <var> alias` types as `tuple` |
+| `deleteUsingBareQueryVariableTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `DELETE … USING <var> alias` types as `tuple` |
+| `updateSetQualifiedColumnLhsPredicandRhsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `SET e.<col> = <predicand>` (LHS column, RHS predicand) |
+| `updateSetLiteralLhsPredicandRhsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `SET score = <predicand>` |
+| `updateSetPredicandRhsParenthesizedTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `SET score = (<predicand>)` |
+| `updateWhereBareConditionSubstitutionTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `WHERE <filter>` on UPDATE |
+| `deleteWhereBareConditionSubstitutionTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `WHERE <filter>` on DELETE |
+
+**Will not pursue:** INSERT target column list with bare `(<var>)` before `SELECT` — use qualified `tab1.<var>` in column list if needed; not on roadmap.
+
+**Status (Jul 2026):** ✅ **Complete** — bare↔parenthesized parity grid closed for SELECT-shaped clauses, OVER predicand slots, and DML source-position subs. `resolveSubstitutionValueTypeFromContext` routes parenthesized `CASE WHEN (<cond>)` through `searched_when_clause` (predicand_subquery path). Full suite **1431/1431** green; smoketest gate **204/204**.
+
 #### 13.4.1d — Operator-based resolution (clause-agnostic)
 
 **Work:**
@@ -1760,16 +1808,17 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 - [x] Operator-walk `resolveSubstitutionValueTypeFromContext` — comparison / between / … operands and real arithmetic (`+`, `-`, `*`, `/`) operands → predicand in every clause; filter-context fallback for bare parenthesized condition subs.
 - [x] **Clause-agnostic:** `SELECT <a> >= <b>` and `WHERE <a> >= <b>` (and HAVING / QUALIFY / ON) produce identical types; `WHERE ((<a>) - 20) >= 50` stamps `<a>` as predicand.
 - [x] Route operand stamping through `stampSubstitutionVariableFromContext(subMap, ctx)`.
-- [ ] Optional grammar: extend `row_value_predicand` for boolean compositions in GROUP BY/ORDER BY if needed.
 
-**Gate:** delivered tests + `whereConditionComparingPredicandVariablesTest`, parenthesized filter/ON condition tests, V3/V4 — all green (1411/1411).
+**Gate:** delivered tests + `whereConditionComparingPredicandVariablesTest`, parenthesized filter/ON condition tests, V3/V4 — all green (1431/1431 full suite; 204/204 smoketest gate).
 
-#### 13.4.1c — Shared grammar-context classifier
+#### 13.4.1c — Shared grammar-context classifier (optional refactor)
+
+**What it accomplishes:** Today `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext` and `SqlParseSymbolTreeHelper.inferDependentQueryContext` each walk the same ANTLR ancestor chain with overlapping rule-index sets (filters vs interface vs GROUP BY, etc.) but separate implementations. Extracting a shared `SqlGrammarContextClassifier` (or shared rule-index constants) gives one authoritative map of “what clause am I in?” consumed by both substitution typing and dependent-query recording. **Benefit:** easier to follow (one place to read grammar-context rules), and less drift risk when adding a new clause — you update the classifier once instead of hunting two parallel walks. **Not a behavior change** if done correctly; no new tests required beyond regression. **Low urgency** now that 13.4.1a–d are green.
 
 **Work:**
 
-- [ ] Extract rule-index sets from `resolveSubstitutionValueTypeFromContext` and `SqlParseSymbolTreeHelper.inferDependentQueryContext` into one `SqlGrammarContextClassifier` (or shared constants) — same ancestor walk, two consumers (substitution typing + dependent-query context).
-- [ ] Document non-goals: `column`, `tuple`, `in_list`, `join_extension`, `query` types remain on dedicated exits.
+- [x] Extract rule-index sets from `resolveSubstitutionValueTypeFromContext` and `SqlParseSymbolTreeHelper.inferDependentQueryContext` into one `SqlGrammarContextClassifier` (or shared constants) — same ancestor walk, two consumers (substitution typing + dependent-query context).
+- [x] Document non-goals: `column`, `tuple`, `in_list`, `join_extension`, `query` types remain on dedicated exits.
 
 **Relationship to column-resolution consolidation:** Phases 9–13 unified **reference resolution** (ingress, dictionaries, forward aliases). This sub-phase unifies **substitution typing** using the same “walk ancestors, nearest clause wins” pattern already used for dependent-query context.
 

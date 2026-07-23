@@ -20,6 +20,7 @@ import static mumble.SQLParserEndPoints.*;
 import astwalkers.SqlASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
+import sql.grammar.SqlGrammarContextClassifier;
 
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseSymbolTreeHelper {
@@ -12292,36 +12293,13 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	public void pushDependentQueryContextForFrame(ParserRuleContext ctx) {
-		dependentQueryContextStack.push(inferDependentQueryContext(ctx));
+		dependentQueryContextStack.push(SqlGrammarContextClassifier.inferDependentQueryContext(ctx));
 	}
 
 	public void popDependentQueryContextForFrame() {
 		if (!dependentQueryContextStack.isEmpty()) {
 			dependentQueryContextStack.pop();
 		}
-	}
-
-	private String inferDependentQueryContext(ParserRuleContext ctx) {
-		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
-			int ruleIndex = walk.getRuleIndex();
-			if (ruleIndex == SQLSelectParserParser.RULE_select_list
-					|| ruleIndex == SQLSelectParserParser.RULE_select_item) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE;
-			}
-			if (ruleIndex == SQLSelectParserParser.RULE_groupby_clause) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY;
-			}
-			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY;
-			}
-			if (ruleIndex == SQLSelectParserParser.RULE_where_clause
-					|| ruleIndex == SQLSelectParserParser.RULE_having_clause
-					|| ruleIndex == SQLSelectParserParser.RULE_qualify_clause
-					|| ruleIndex == SQLSelectParserParser.RULE_search_condition) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
-			}
-		}
-		return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
 	}
 
 	@SuppressWarnings("unchecked")
