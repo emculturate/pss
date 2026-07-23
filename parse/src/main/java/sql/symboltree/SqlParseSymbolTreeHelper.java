@@ -4741,13 +4741,87 @@ public class SqlParseSymbolTreeHelper {
 	 * publish the scope payload, merge local table dictionary into global, then export
 	 * {@code query_dictionary} for the insert scope.
 	 */
-	public void finalizeInsertScopeSymbolTable() {
+	public void finalizeInsertScopeSymbolTable(Map<String, Object> insertNode) {
 		finalizeTopLevelUnresolvedColumnsAtInsertBoundary();
+
+		boolean insertHasReturning = insertNode != null && insertNode.get(MUMBLE_RETURNING_KEY) != null;
+		HashMap<String, Object> returningInterface = null;
+		HashMap<String, Object> returningQueryDictionary = null;
+		if (insertHasReturning) {
+			returningInterface = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_INTERFACE_KEY);
+			returningQueryDictionary = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_QUERY_DICTIONARY_KEY);
+		}
 
 		String insertScopeKey = MUMBLE_INSERT_KEY + walker.queryCount;
 		publishQueryLikeScope(insertScopeKey, walker.symbolTable);
 		mergeInsertScopeTableDictionaryIntoGlobal(insertScopeKey);
+		if (insertHasReturning) {
+			publishInsertReturningScopeArtifacts(insertScopeKey, returningInterface, returningQueryDictionary);
+		}
 		publishInsertScopeQueryDictionary(insertScopeKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void publishInsertReturningScopeArtifacts(
+			String insertScopeKey,
+			HashMap<String, Object> returningInterface,
+			HashMap<String, Object> returningQueryDictionary) {
+		if (insertScopeKey == null || insertScopeKey.isBlank()) {
+			return;
+		}
+		String insertDefinitionScopeKey = toDefinitionScopeKey(insertScopeKey);
+		Object insertScopeObj = walker.symbolTable.get(insertDefinitionScopeKey);
+		if (!(insertScopeObj instanceof HashMap<?, ?> insertScopeMapObj)) {
+			return;
+		}
+		HashMap<String, Object> insertScopeMap = (HashMap<String, Object>) insertScopeMapObj;
+		if (returningQueryDictionary != null) {
+			sanitizeQueryDictionaryForGlobalExport(returningQueryDictionary);
+			mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(insertDefinitionScopeKey), returningQueryDictionary);
+			Object existingQueryDictionaryObj = insertScopeMap.get(MUMBLE_QUERY_DICTIONARY_KEY);
+			if (existingQueryDictionaryObj instanceof HashMap<?, ?> existingQueryDictionaryMapObj) {
+				HashMap<String, Object> mergedQueryDictionary =
+						new HashMap<String, Object>((Map<String, Object>) existingQueryDictionaryMapObj);
+				for (Map.Entry<String, Object> entry : returningQueryDictionary.entrySet()) {
+					String columnName = entry.getKey();
+					if (columnName == null) {
+						continue;
+					}
+					Object existingRefs = mergedQueryDictionary.get(columnName);
+					if (existingRefs == null) {
+						mergedQueryDictionary.put(columnName, entry.getValue());
+					} else {
+						mergedQueryDictionary.put(columnName, mergeReferenceCollections(existingRefs, entry.getValue()));
+					}
+				}
+				insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, mergedQueryDictionary);
+			} else {
+				insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, returningQueryDictionary);
+			}
+		}
+		HashMap<String, Object> mergedInterface = buildInsertScopeInterfaceFromScope(insertScopeMap);
+		mergeMissingInterfaceEntries(mergedInterface, returningInterface);
+		if (!mergedInterface.isEmpty()) {
+			insertScopeMap.put(MUMBLE_INTERFACE_KEY, mergedInterface);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildInsertScopeInterfaceFromScope(Map<String, Object> insertScopeMap) {
+		HashMap<String, Object> interfaceMap = new HashMap<String, Object>();
+		if (insertScopeMap == null) {
+			return interfaceMap;
+		}
+		Object interfaceObj = insertScopeMap.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof Map<?, ?> interfaceMapObj) {
+			for (Map.Entry<String, Object> entry : ((Map<String, Object>) interfaceMapObj).entrySet()) {
+				String interfaceKey = entry.getKey();
+				if (interfaceKey != null && !interfaceKey.isBlank()) {
+					interfaceMap.put(interfaceKey, entry.getValue());
+				}
+			}
+		}
+		return interfaceMap;
 	}
 
 	/**
@@ -5197,6 +5271,19 @@ public class SqlParseSymbolTreeHelper {
 				: String.format(diagTemplate, targetCount, sourceCount, line, charPosition);
 
 		walker.addWalkerFatal(diagCode, diagMessage, line, charPosition, null);
+	}
+
+	public void wrapInsertTargetFromDefaultValues(
+			String insertTargetTableRef,
+			Map<String, Object> insertColumns) {
+		Map<String, Object> insertInterface = mapInsertTargetInterfaceFromResolvedSource(
+				new HashMap<String, Object>(),
+				insertColumns,
+				null,
+				insertTargetTableRef);
+		if (!insertInterface.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_INTERFACE_KEY, insertInterface);
+		}
 	}
 
 	/**

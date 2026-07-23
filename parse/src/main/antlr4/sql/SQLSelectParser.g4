@@ -540,8 +540,7 @@ INSERT [ OVERWRITE ] INTO <target_table> [ ( <target_col_name> [ , ... ] ) ]
        }
  */
 insert_expression
-  : snowflake_insert
-//   | postgres_insert
+  : postgres_insert
 ;
 
 snowflake_insert
@@ -555,8 +554,25 @@ insert_target_table_primary
   : (db_object_name | variable_identifier | jinja_identifier) (LEFT_PAREN column_reference_list RIGHT_PAREN)? relation_as_clause?
   ;
   
-postgres_insert // this syntax is not complete for POSTGRES
-  : snowflake_insert  returning? // Returning clause for Postgres
+postgres_insert
+  : snowflake_insert on_conflict_clause? returning?
+  ;
+
+on_conflict_clause
+  : ON CONFLICT conflict_target? conflict_action
+  ;
+
+conflict_target
+  : LEFT_PAREN column_reference_list RIGHT_PAREN
+  ;
+
+conflict_action
+  : DO NOTHING
+  | DO UPDATE SET assignment_expression_list where_clause?
+  ;
+
+insert_default_values_statement
+  : DEFAULT VALUES
   ;
 
 insert_preamble
@@ -567,6 +583,7 @@ insert_source_primary
   : query_expression
   | variable_identifier
   | insert_values_statement
+  | insert_default_values_statement
   ;
 
 
@@ -3370,6 +3387,17 @@ Space
 White_Space
   :	( Control_Characters  | Extended_Control_Characters )+ -> skip
   ;
+
+/*
+===============================================================================
+  Late-added keywords (Postgres INSERT ON CONFLICT, etc.)
+  Keep near the end to avoid renumbering legacy token IDs used in tests.
+===============================================================================
+*/
+CONFLICT : C O N F L I C T;
+CONSTRAINT : C O N S T R A I N T;
+DO : D O;
+NOTHING : N O T H I N G;
 
 /*
 ===============================================================================

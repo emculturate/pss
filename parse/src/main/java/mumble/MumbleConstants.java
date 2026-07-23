@@ -50,6 +50,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_DATABASE_NAME_KEY = "dbname";
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DELETE_KEY = "delete";
+    public static final String MUMBLE_DEFAULT_VALUES_KEY = "default_values";
     /** Submap grouping predicandN, in_listN, and existsN query references on a scope. */
     public static final String MUMBLE_DEPENDENT_QUERIES_KEY = "dependent_queries";
     /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). */
@@ -117,6 +118,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_NULL_HANDLING_KEY = "null_handle";
     public static final String MUMBLE_NULL_LITERAL_KEY = "null_literal";
     public static final String MUMBLE_NULL_ORDER_KEY = "null_order";
+    public static final String MUMBLE_ON_CONFLICT_KEY = "on_conflict";
     public static final String MUMBLE_NULLS_POLICY_KEY = "nulls";
     public static final String MUMBLE_OFFSET_KEY = "offset";
     public static final String MUMBLE_OPERAND_KEY = "operand";

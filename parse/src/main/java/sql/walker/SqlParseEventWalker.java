@@ -2907,17 +2907,65 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitInsert_expression( SQLSelectParserParser.Insert_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_QUERY_KEY);
 
+		Map<String, Object> insertNode = extractInsertNodeFromScopeMap(subMap);
 		walker.handleOneChild(ruleIndex);
-		symbolTreeHelper.finalizeInsertScopeSymbolTable();
+		symbolTreeHelper.finalizeInsertScopeSymbolTable(insertNode);
 	}
 
 	@Override
 	public void exitSnowflake_insert( SQLSelectParserParser.Snowflake_insertContext ctx) {
+		Map<String, Object> insertNode = assembleInsertNodeFromSnowflakeContext(ctx);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		walker.addToParent(parentRuleIndex, parentStackLevel, insertNode);
+	}
+
+	@Override
+	public void exitPostgres_insert( SQLSelectParserParser.Postgres_insertContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		Map<String, Object> insertNode = new LinkedHashMap<String, Object>();
+
+		for (String key : subMap.keySet()) {
+			if (key == null) {
+				continue;
+			}
+			Object obj = subMap.get(key);
+			if (!(obj instanceof Map<?, ?> valueMapObj)) {
+				continue;
+			}
+			Map<String, Object> value = (Map<String, Object>) valueMapObj;
+			if (value.containsKey(MUMBLE_INSERT_PREAMBLE_KEY)
+					|| value.containsKey(MUMBLE_TARGET_TABLE_KEY)
+					|| value.containsKey(MUMBLE_FROM_KEY)) {
+				insertNode.putAll(value);
+				continue;
+			}
+			Object childTypeObj = value.get(ASTWALKER_RULE_TYPE_KEY);
+			if (!(childTypeObj instanceof Integer childKey)) {
+				continue;
+			}
+			Object segment = value.get(childKey.toString());
+			if (childKey.equals((Integer) SQLSelectParserParser.RULE_on_conflict_clause)) {
+				insertNode.put(MUMBLE_ON_CONFLICT_KEY, segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_returning)) {
+				insertNode.put(MUMBLE_RETURNING_KEY, segment);
+			}
+		}
+
+		subMap.clear();
+		subMap.put("1", insertNode);
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> assembleInsertNodeFromSnowflakeContext(
+			SQLSelectParserParser.Snowflake_insertContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
@@ -2971,14 +3019,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String insertTargetTableRef = symbolTreeHelper.getInsertTargetTableReference(insertNode);
+		if (sourceNode != null && Boolean.TRUE.equals(sourceNode.get(MUMBLE_DEFAULT_VALUES_KEY))) {
+			symbolTreeHelper.wrapInsertTargetFromDefaultValues(insertTargetTableRef, insertColumns);
+		} else {
+			// Source (SELECT / VALUES / TVF) is already resolved in def_queryN / def_valuesN; this only maps target columns.
+			symbolTreeHelper.wrapInsertTargetFromResolvedSource(insertTargetTableRef, insertColumns);
+		}
+		return insertNode;
+	}
 
-		// Source (SELECT / VALUES / TVF) is already resolved in def_queryN / def_valuesN; this only maps target columns.
-		symbolTreeHelper.wrapInsertTargetFromResolvedSource(insertTargetTableRef, insertColumns);
-
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-		walker.addToParent(parentRuleIndex, parentStackLevel, insertNode);
-		
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractInsertNodeFromScopeMap(Map<String, Object> subMap) {
+		if (subMap == null || subMap.isEmpty()) {
+			return new LinkedHashMap<String, Object>();
+		}
+		Object insertNodeObj = subMap.get("1");
+		if (insertNodeObj instanceof Map<?, ?> insertNodeMapObj) {
+			return new LinkedHashMap<String, Object>((Map<String, Object>) insertNodeMapObj);
+		}
+		return new LinkedHashMap<String, Object>();
 	}
 
 	
@@ -3269,6 +3328,82 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
+	@Override
+	public void exitInsert_default_values_statement(
+			SQLSelectParserParser.Insert_default_values_statementContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put(MUMBLE_DEFAULT_VALUES_KEY, Boolean.TRUE);
+	}
+
+	@Override
+	public void exitOn_conflict_clause( SQLSelectParserParser.On_conflict_clauseContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> onConflictNode = new LinkedHashMap<String, Object>();
+
+		for (String key : subMap.keySet()) {
+			Object obj = subMap.get(key);
+			if (!(obj instanceof Map<?, ?> valueMapObj)) {
+				continue;
+			}
+			Map<String, Object> value = (Map<String, Object>) valueMapObj;
+			Integer childKey = (Integer) value.get(ASTWALKER_RULE_TYPE_KEY);
+			if (childKey == null) {
+				continue;
+			}
+			Object segment = value.get(childKey.toString());
+			if (childKey.equals((Integer) SQLSelectParserParser.RULE_conflict_target)) {
+				onConflictNode.put("target", segment);
+			} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_conflict_action)) {
+				onConflictNode.put("action", segment);
+			}
+		}
+
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put(type.toString(), onConflictNode);
+	}
+
+	@Override
+	public void exitConflict_action( SQLSelectParserParser.Conflict_actionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> actionNode = new LinkedHashMap<String, Object>();
+
+		if (ctx.DO() != null && ctx.NOTHING() != null) {
+			actionNode.put("do", "NOTHING");
+		} else if (ctx.DO() != null && ctx.UPDATE() != null) {
+			actionNode.put("do", "UPDATE");
+			for (String key : subMap.keySet()) {
+				Object obj = subMap.get(key);
+				if (!(obj instanceof Map<?, ?> valueMapObj)) {
+					continue;
+				}
+				Map<String, Object> value = (Map<String, Object>) valueMapObj;
+				Integer childKey = (Integer) value.get(ASTWALKER_RULE_TYPE_KEY);
+				if (childKey == null) {
+					continue;
+				}
+				Object segment = value.get(childKey.toString());
+				if (childKey.equals((Integer) SQLSelectParserParser.RULE_assignment_expression_list)) {
+					actionNode.put(MUMBLE_ASSIGNMENTS_KEY, segment);
+				} else if (childKey.equals((Integer) SQLSelectParserParser.RULE_where_clause)) {
+					HashMap<String, Object> item = (HashMap<String, Object>) segment;
+					item = (HashMap<String, Object>) item.remove("1");
+					actionNode.put(MUMBLE_WHERE_KEY, item);
+				}
+			}
+		}
+
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put("conflict_action", actionNode);
+	}
+
 	@Override
 	public void exitReturning( SQLSelectParserParser.ReturningContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -5516,12 +5651,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					MUMBLE_TUPLE_KEY);
+		Map<String, Object> reference = walker.checkForSubstitutionVariable(
+				(Map<String, Object>) subMap.remove("1"),
+				MUMBLE_TUPLE_KEY);
+		if (reference == null) {
+			reference = new HashMap<String, Object>();
+		}
 
 		Map<String, Object> sourceNode = new HashMap<String, Object>();
 
-		if (reference.containsKey(MUMBLE_VALUES_KEY)) {
+		if (Boolean.TRUE.equals(reference.get(MUMBLE_DEFAULT_VALUES_KEY))) {
+			sourceNode.put(MUMBLE_DEFAULT_VALUES_KEY, Boolean.TRUE);
+		} else if (reference.containsKey(MUMBLE_VALUES_KEY)) {
 			sourceNode.putAll(reference);
 
 		} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
@@ -5537,7 +5678,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.put(MUMBLE_FROM_KEY, sourceNode);
 
 		HashMap<String, Object> symbols = walker.symbolTable;
-		symbolTreeHelper.finalizeInsertSourceAtPrimaryExit(symbols);
+		if (!Boolean.TRUE.equals(sourceNode.get(MUMBLE_DEFAULT_VALUES_KEY))) {
+			symbolTreeHelper.finalizeInsertSourceAtPrimaryExit(symbols);
+		}
 		symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
