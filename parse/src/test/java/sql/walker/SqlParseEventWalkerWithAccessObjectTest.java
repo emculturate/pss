@@ -811,7 +811,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query,SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a, b]", 
         	snippet.getQueryInterface().toString());
@@ -831,7 +831,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]", 
         	snippet.getQueryInterface().toString());
@@ -851,7 +851,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "insert into tab1 (<query variable>)";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<query variable>=query}",
         	snippet.getSubstitutionsMap().toString());
@@ -863,7 +863,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, target_table={table={alias=null, table=tab1}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, target_table={table={alias=null, table=tab1}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[$1, $2, $3]", 
         	snippet.getQueryInterface().toString());
@@ -884,7 +884,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=null, table=tab2}}, select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
@@ -904,7 +904,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "insert into tab1 (c ,d) select a,b from tab2 union select c,d from tab3";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
@@ -923,7 +923,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "insert into tab1 (c ,d) select a,b from tab2 except select c,d from tab3";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=tab3}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
@@ -943,7 +943,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "insert into tab1 (c ,d) select ff.a, gg.b from tab2 ff join tab3 gg on ff.id = gg.id";
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={from={join={1={table={alias=ff, table=tab2}}, 2={join=join, on={condition={left={column={name=id, table_ref=ff}}, right={column={name=id, table_ref=gg}}, operator==}}}, 3={table={alias=gg, table=tab3}}}}, select={1={column={name=a, table_ref=ff}}, 2={column={name=b, table_ref=gg}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={join={1={table={alias=ff, table=tab2}}, 2={join=join, on={condition={left={column={name=id, table_ref=ff}}, right={column={name=id, table_ref=gg}}, operator==}}}, 3={table={alias=gg, table=tab3}}}}, select={1={column={name=a, table_ref=ff}}, 2={column={name=b, table_ref=gg}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
@@ -963,7 +963,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
         final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}, 3={column={name=e, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={substitution={name=<query variable>, type=query}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}, 3={column={name=e, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d, e]", 
         	snippet.getQueryInterface().toString());
@@ -994,7 +994,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				18);
 
 		
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={values={matrix={1={row={1={literal=1}, 2={literal=2}, 3={literal=3}}}, 2={row={1={literal=2}, 2={literal=3}, 3={literal=4}}}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
         	snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]", 
         	snippet.getQueryInterface().toString());
@@ -1019,7 +1019,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
 		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
-		Assert.assertEquals("AST is wrong", "{INSERT={preamble=insert_into, from={from={table={alias=b, query={select={1={column={name=col1, table_ref=a}, alias=att1}, 2={column={name=col2, table_ref=a}, alias=att2}}, from={table={schema=subj, alias=a, dbname=sch, table=tab1}}, where={condition={left={column={name=col1, table_ref=a}}, right={column={name=col3, table_ref=a}}, operator=<>}}}}}, select={1={column={name=att1, table_ref=b}}, 2={column={name=att2, table_ref=b}}}}, target_table={table={schema=subj, alias=values, dbname=sch, table=tbl}}, columns={1={column={name=newcol1, table_ref=null}}, 2={column={name=newcol2, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=b, query={select={1={column={name=col1, table_ref=a}, alias=att1}, 2={column={name=col2, table_ref=a}, alias=att2}}, from={table={schema=subj, alias=a, dbname=sch, table=tab1}}, where={condition={left={column={name=col1, table_ref=a}}, right={column={name=col3, table_ref=a}}, operator=<>}}}}}, select={1={column={name=att1, table_ref=b}}, 2={column={name=att2, table_ref=b}}}}, target_table={table={schema=subj, alias=values, dbname=sch, table=tbl}}, columns={1={column={name=newcol1, table_ref=null}}, 2={column={name=newcol2, table_ref=null}}}}}}",
 				snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[newcol2, newcol1]",
 				snippet.getQueryInterface().toString());
@@ -2758,7 +2758,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "INSERT INTO tab1(c,d) SELECT x,y FROM (SELECT a AS x, b AS y FROM t2 UNION SELECT c AS x, d AS y FROM t3) s";
 		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=s, query={union={1={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}}, from={table={alias=null, table=t2}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=c, table_ref=null}, alias=x}, 2={column={name=d, table_ref=null}, alias=y}}, from={table={alias=null, table=t3}}}}}}}, select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={insert={preamble=insert_into, from={from={table={alias=s, query={union={1={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}}, from={table={alias=null, table=t2}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=c, table_ref=null}, alias=x}, 2={column={name=d, table_ref=null}, alias=y}}, from={table={alias=null, table=t3}}}}}}}, select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]",
 			snippet.getQueryInterface().toString());
@@ -2777,7 +2777,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "INSERT INTO tab1(c,d) SELECT x,y FROM (SELECT a AS x, b AS y FROM t2 EXCEPT SELECT c AS x, d AS y FROM t3) s";
 		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_SQL_TREE_KEY);
 
-		Assert.assertEquals("AST is wrong", "{SQL={preamble=insert_into, from={from={table={alias=s, query={union={1={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}}, from={table={alias=null, table=t2}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=c, table_ref=null}, alias=x}, 2={column={name=d, table_ref=null}, alias=y}}, from={table={alias=null, table=t3}}}}}}}, select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={insert={preamble=insert_into, from={from={table={alias=s, query={union={1={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}}, from={table={alias=null, table=t2}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=c, table_ref=null}, alias=x}, 2={column={name=d, table_ref=null}, alias=y}}, from={table={alias=null, table=t3}}}}}}}, select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}, target_table={table={alias=null, table=tab1}}, columns={1={column={name=c, table_ref=null}}, 2={column={name=d, table_ref=null}}}}}}",
 			snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[c, d]",
 			snippet.getQueryInterface().toString());

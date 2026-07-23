@@ -2909,9 +2909,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_QUERY_KEY);
-
 		Map<String, Object> insertNode = extractInsertNodeFromScopeMap(subMap);
+		walker.checkForSubstitutionVariable(insertNode, MUMBLE_QUERY_KEY);
+
+		Map<String, Object> wrappedInsertNode = new LinkedHashMap<String, Object>();
+		wrappedInsertNode.put(MUMBLE_INSERT_KEY, insertNode);
+		subMap.clear();
+		subMap.put("1", wrappedInsertNode);
+
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.finalizeInsertScopeSymbolTable(insertNode);
 	}

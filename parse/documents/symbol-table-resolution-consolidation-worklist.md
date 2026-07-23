@@ -1509,7 +1509,7 @@ mvn -Psmoketest-quality-gate test
 | # | Gap | Grammar / walker today | Target end state | Primary test class |
 |---|-----|------------------------|------------------|-------------------|
 | 13.1 | **EXCEPT set-operation parity** | ✅ **Complete (Jul 2026)** | `finalizeSetOperationScopeSymbolTable` handles EXCEPT on `union_operator` rail; per-participant `setop`; operator-aware column-count diagnostics; **157** EXCEPT clone tests + **12** three-level nesting tests; gate canaries | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
-| 13.2 | **Postgres INSERT** | ✅ Done | ON CONFLICT / DEFAULT VALUES / RETURNING; 4 tests in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
+| 13.2 | **Postgres INSERT** | ✅ **Complete (Jul 2026)** | ON CONFLICT (all variants), DEFAULT VALUES, RETURNING; nested `def_updateN` for DO UPDATE; `insert={}` AST wrap (parity with `update={}` / `delete={}`); **7** Postgres tests + **81** INSERT AST golden refreshes + `InsertAstWrapGateTests` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`, `InsertAstWrapGateTests` |
 | 13.3 | **UPDATE RETURNING** | ✅ **Complete (Jul 2026)** | `exitReturning` + `RETURNING select_list`; `finalizeUpdateScopeSymbolTable` publishes returning interface/query_dictionary | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.4 | **Intra–select-list forward output-column resolution** | Unqualified refs in a later select-item expression (window `PARTITION BY`, nested formula, etc.) are collected as unresolved even when an earlier item already registered the name on the query interface | At ingress (`collectUnresolvedColumnReference`), while walking `select_list`, skip unresolved for unqualified names matching an **earlier** interface key; merge usage tokens onto `query_dictionary` | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
@@ -1572,6 +1572,8 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 - [x] Complete `postgres_insert` grammar (ON CONFLICT, DEFAULT VALUES, RETURNING) per Postgres comment block in `SQLSelectParser.g4`.
 - [x] Add `exitPostgres_insert`, `exitOn_conflict_clause`, `exitConflict_target`, `exitConflict_action`, and INSERT finalizer parity with UPDATE RETURNING (staging target interface, merge RETURNING keys `putIfAbsent`).
 - [x] Publish `def_insertN` symbol-table shape consistent with Snowflake INSERT paths; treat `insertN` as a CTE/query source for `WITH … INSERT` bodies.
+- [x] ON CONFLICT DO UPDATE publishes nested `def_updateN` under `def_insertN` (assignments / `update_dictionary` / `filters` — not flattened onto insert scope).
+- [x] Wrap all INSERT AST nodes in `insert={...}` at `exitInsert_expression` (parity with `update={}` / `delete={}`); refresh **81** INSERT AST goldens across DML, access-object, and table-function tests; script assertions use `insertStmt.containsKey("insert")`.
 
 **Tests delivered:**
 
@@ -1584,6 +1586,9 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | `postgresInsertOnConflictDoUpdateWithWhereTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — ON CONFLICT DO UPDATE SET … WHERE; nested update scope with `filters` |
 | `postgresInsertDefaultValuesTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `INSERT … DEFAULT VALUES` baseline |
 | `postgresInsertWithCteBodyTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `WITH … INSERT … RETURNING` CTE body; outer SELECT resolves via `insertN` |
+| `InsertAstWrapGateTests` (6 methods) | `InsertAstWrapGateTests` | **Delivered** — Snowflake VALUES/SELECT, Postgres ON CONFLICT + DEFAULT VALUES, WITH CTE-body INSERT, WITH outer INSERT; all assert `insert={}` wrapper |
+
+**Gate:** `mvn -Pinsert-ast-gate test` (6/6). Full suite **1,448/1,448**; smoketest **204/204** (Jul 2026).
 
 ### 13.3 — UPDATE RETURNING ✅ COMPLETE (Jul 2026)
 
@@ -1864,7 +1869,7 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 - [x] Smoketest quality gate **204/204** (verified Jul 2026 after 13.4 gate additions)
 - [x] `insert-refactor-skip-tests.md` updated — donor-email skip removed; PIVOT class confirmed green (67/67).
 - [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
-- [x] Phase 11 donor-email TODO B row marked ✅ — delivered in Phase 13.4 (Jul 2026).
+- [x] Phase 13.2 Postgres INSERT complete — ON CONFLICT nested `def_updateN`, `insert={}` AST wrap, `InsertAstWrapGateTests` (Jul 2026).
 
 ### Phase 13 execution order
 
@@ -1872,7 +1877,7 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 13.4 (intra–select-list forward output-column resolution — gate probe already exists)
   → 13.3 (UPDATE RETURNING — mirrors DELETE RETURNING pattern)
   → 13.1 (EXCEPT parity) ✅ DONE Jul 2026
-  → 13.2 (Postgres INSERT — larger grammar surface)
+  → 13.2 (Postgres INSERT — larger grammar surface) ✅ DONE Jul 2026
   → 13.6 (SQL generator — independent track; can parallelize after 13.1–13.3)
   → 13.5 (DDL detail — optional last)
 ```
@@ -2118,7 +2123,7 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**current Jul 2026** 
 **Moved to Phase 13 (start after consolidation closeout):**
 
 - ~~EXCEPT set-operation parity → Phase 13.1~~ ✅ **Done (Jul 2026)**
-- Postgres INSERT completion → Phase 13.2
+- ~~Postgres INSERT completion → Phase 13.2~~ ✅ **Done (Jul 2026)** — ON CONFLICT, RETURNING, `insert={}` AST wrap
 - UPDATE RETURNING walker → Phase 13.3
 - Same-select-list forward alias (donor-email) → Phase 13.4
 - DDL option detail parsing (optional) → Phase 13.5

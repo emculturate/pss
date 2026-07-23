@@ -13,6 +13,7 @@ import static mumble.MumbleConstants.MUMBLE_CREATE_KEY;
 import static mumble.MumbleConstants.MUMBLE_DELETE_KEY;
 import static mumble.MumbleConstants.MUMBLE_DROP_KEY;
 import static mumble.MumbleConstants.MUMBLE_FROM_KEY;
+import static mumble.MumbleConstants.MUMBLE_INSERT_KEY;
 import static mumble.MumbleConstants.MUMBLE_INSERT_PREAMBLE_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUERY_KEY;
 import static mumble.MumbleConstants.MUMBLE_SELECT_KEY;
@@ -157,12 +158,16 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertTrue("Statement 3 should be DELETE",
 				deleteStmt.containsKey(MUMBLE_DELETE_KEY));
 
-		Assert.assertTrue("Statement 4 should be INSERT (preamble + target + source)",
-				insertStmt.containsKey(MUMBLE_INSERT_PREAMBLE_KEY)
-						&& insertStmt.containsKey(MUMBLE_TARGET_TABLE_KEY)
-						&& insertStmt.containsKey(MUMBLE_FROM_KEY));
-		Assert.assertEquals("insert_into", insertStmt.get(MUMBLE_INSERT_PREAMBLE_KEY));
-		Map<String, Object> insertTarget = (Map<String, Object>) ((Map<String, Object>) insertStmt.get(MUMBLE_TARGET_TABLE_KEY))
+		Assert.assertTrue("Statement 4 should be INSERT",
+				insertStmt.containsKey(MUMBLE_INSERT_KEY));
+		@SuppressWarnings("unchecked")
+		Map<String, Object> insertBody = (Map<String, Object>) insertStmt.get(MUMBLE_INSERT_KEY);
+		Assert.assertTrue("Statement 4 INSERT should include preamble + target + source",
+				insertBody.containsKey(MUMBLE_INSERT_PREAMBLE_KEY)
+						&& insertBody.containsKey(MUMBLE_TARGET_TABLE_KEY)
+						&& insertBody.containsKey(MUMBLE_FROM_KEY));
+		Assert.assertEquals("insert_into", insertBody.get(MUMBLE_INSERT_PREAMBLE_KEY));
+		Map<String, Object> insertTarget = (Map<String, Object>) ((Map<String, Object>) insertBody.get(MUMBLE_TARGET_TABLE_KEY))
 				.get(MUMBLE_TABLE_KEY);
 		Assert.assertEquals("demo", insertTarget.get("schema"));
 		Assert.assertEquals("t", insertTarget.get("table"));
@@ -257,7 +262,11 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		Assert.assertTrue("Statement 4 should be TRUNCATE", truncateStmt.containsKey(MUMBLE_TRUNCATE_KEY));
 
 		Assert.assertTrue("Statement 5 should be INSERT",
-				insertStmt.containsKey(MUMBLE_INSERT_PREAMBLE_KEY) && insertStmt.containsKey(MUMBLE_FROM_KEY));
+				insertStmt.containsKey(MUMBLE_INSERT_KEY));
+		@SuppressWarnings("unchecked")
+		Map<String, Object> insertBody = (Map<String, Object>) insertStmt.get(MUMBLE_INSERT_KEY);
+		Assert.assertTrue("Statement 5 INSERT should include preamble + source",
+				insertBody.containsKey(MUMBLE_INSERT_PREAMBLE_KEY) && insertBody.containsKey(MUMBLE_FROM_KEY));
 
 		Assert.assertTrue("Statement 6 should be UPDATE", updateStmt.containsKey(MUMBLE_UPDATE_KEY));
 

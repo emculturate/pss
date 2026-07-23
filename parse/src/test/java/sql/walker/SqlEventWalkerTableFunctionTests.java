@@ -845,7 +845,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong",
-				"{SQL={preamble=insert_into, from={from={table_function={function_name=GENERATOR, parameters={rowcount={literal=10}}}}, select={1={column={name=*, table_ref=*}}}}, target_table={table={alias=null, table=my_table}}}}",
+				"{SQL={insert={preamble=insert_into, from={from={table_function={function_name=GENERATOR, parameters={rowcount={literal=10}}}}, select={1={column={name=*, table_ref=*}}}}, target_table={table={alias=null, table=my_table}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]",
 				extractor.getInterface().toString());
@@ -1126,7 +1126,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		assertNoWalkerDiagnostics(extractor);
 
 		Assert.assertEquals("AST is wrong",
-				"{SQL={preamble=insert_into, from={from={table_function={function_name=GENERATOR, parameters={rowcount={literal=10}}}}, select={1={column={name=*, table_ref=*}}}}, target_table={table={alias=null, table=my_table}}}}",
+				"{SQL={insert={preamble=insert_into, from={from={table_function={function_name=GENERATOR, parameters={rowcount={literal=10}}}}, select={1={column={name=*, table_ref=*}}}}, target_table={table={alias=null, table=my_table}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]",
 				extractor.getInterface().toString());
