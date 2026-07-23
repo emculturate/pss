@@ -640,8 +640,9 @@ delete_using_clause
   : USING table_reference_list
   ;
 
+// Postgres/Snowflake UPDATE RETURNING: reuses select_list so exitSelect_item populates the output interface.
 returning
-  : RETURNING MULTIPLY
+  : RETURNING select_list
   ;
   
 assignment_expression_list

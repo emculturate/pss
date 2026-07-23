@@ -4282,6 +4282,13 @@ public class SqlParseSymbolTreeHelper {
 	public void finalizeUpdateScopeSymbolTable(Map<String, Object> updateNode) {
 		String updateTargetTableRef = getUpdateTargetTableReference(updateNode);
 		boolean updateHasFromClause = updateNode != null && updateNode.get(MUMBLE_FROM_KEY) != null;
+		boolean updateHasReturning = updateNode != null && updateNode.get(MUMBLE_RETURNING_KEY) != null;
+		HashMap<String, Object> returningInterface = null;
+		HashMap<String, Object> returningQueryDictionary = null;
+		if (updateHasReturning) {
+			returningInterface = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_INTERFACE_KEY);
+			returningQueryDictionary = copyHashMapValueIfPresent(walker.symbolTable, MUMBLE_QUERY_DICTIONARY_KEY);
+		}
 		initializeUpdateTargetTableSubtree(updateTargetTableRef);
 		convertSymbolTableToTableDictionary(false, false, updateTargetTableRef, updateHasFromClause);
 		finalizeUpdateScopeUnresolvedColumnsAtExit(updateHasFromClause, updateNode);
@@ -4289,7 +4296,83 @@ public class SqlParseSymbolTreeHelper {
 		String updateScopeKey = MUMBLE_UPDATE_KEY + walker.queryCount;
 		stripUnresolvedFromScopePayload(walker.symbolTable);
 		publishQueryLikeScope(updateScopeKey, walker.symbolTable);
+		if (updateHasReturning) {
+			publishUpdateReturningScopeArtifacts(updateScopeKey, returningInterface, returningQueryDictionary);
+		}
 		publishUpdateScopeQueryDictionary(updateScopeKey);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void publishUpdateReturningScopeArtifacts(
+			String updateScopeKey,
+			HashMap<String, Object> returningInterface,
+			HashMap<String, Object> returningQueryDictionary) {
+		if (updateScopeKey == null || updateScopeKey.isBlank()) {
+			return;
+		}
+		String updateDefinitionScopeKey = toDefinitionScopeKey(updateScopeKey);
+		Object updateScopeObj = walker.symbolTable.get(updateDefinitionScopeKey);
+		if (!(updateScopeObj instanceof HashMap<?, ?> updateScopeMapObj)) {
+			return;
+		}
+		HashMap<String, Object> updateScopeMap = (HashMap<String, Object>) updateScopeMapObj;
+		if (returningQueryDictionary != null) {
+			sanitizeQueryDictionaryForGlobalExport(returningQueryDictionary);
+			mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(updateDefinitionScopeKey), returningQueryDictionary);
+			updateScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, returningQueryDictionary);
+		}
+		HashMap<String, Object> mergedInterface = buildUpdateScopeInterfaceFromAssignments(updateScopeMap);
+		mergeMissingInterfaceEntries(mergedInterface, returningInterface);
+		if (!mergedInterface.isEmpty()) {
+			updateScopeMap.put(MUMBLE_INTERFACE_KEY, mergedInterface);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildUpdateScopeInterfaceFromAssignments(Map<String, Object> updateScopeMap) {
+		HashMap<String, Object> interfaceMap = new HashMap<String, Object>();
+		if (updateScopeMap == null) {
+			return interfaceMap;
+		}
+		Object assignmentsObj = updateScopeMap.get(MUMBLE_ASSIGNMENTS_KEY);
+		if (assignmentsObj instanceof Map<?, ?> assignmentsMap) {
+			for (Map.Entry<String, Object> entry : ((Map<String, Object>) assignmentsMap).entrySet()) {
+				String assignmentKey = entry.getKey();
+				if (assignmentKey != null && !assignmentKey.isBlank()) {
+					interfaceMap.put(assignmentKey, entry.getValue());
+				}
+			}
+		}
+		return interfaceMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeMissingInterfaceEntries(
+			HashMap<String, Object> targetInterface,
+			HashMap<String, Object> returningInterface) {
+		if (targetInterface == null || returningInterface == null || returningInterface.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, Object> entry : returningInterface.entrySet()) {
+			String interfaceKey = entry.getKey();
+			if (interfaceKey != null && !interfaceKey.isBlank()) {
+				targetInterface.putIfAbsent(interfaceKey, entry.getValue());
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static HashMap<String, Object> copyHashMapValueIfPresent(
+			HashMap<String, Object> source,
+			String key) {
+		if (source == null || key == null) {
+			return null;
+		}
+		Object value = source.get(key);
+		if (!(value instanceof HashMap<?, ?> valueMap)) {
+			return null;
+		}
+		return new HashMap<String, Object>((Map<String, Object>) valueMap);
 	}
 
 	/**

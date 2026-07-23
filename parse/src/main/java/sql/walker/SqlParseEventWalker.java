@@ -798,6 +798,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return false;
 	}
 
+	private boolean treeContainsDmlStatement(Map<String, Object> treeRoot, String dmlKey) {
+		if (treeRoot == null || treeRoot.isEmpty() || dmlKey == null) {
+			return false;
+		}
+		for (String key : treeRoot.keySet()) {
+			if (key != null && key.startsWith(dmlKey)) {
+				return true;
+			}
+		}
+		Object queryObj = treeRoot.get(MUMBLE_QUERY_KEY);
+		if (queryObj instanceof Map<?, ?> queryMapObj) {
+			for (String key : ((Map<String, Object>) queryMapObj).keySet()) {
+				if (key != null && key.startsWith(dmlKey)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private boolean isTopLevelDeleteTree() {
+		Object sqlTreeObj = walker.asTree.get(SQLPARSER_SQL_TREE_KEY);
+		if (sqlTreeObj instanceof Map<?, ?> sqlTreeMapObj
+				&& treeContainsDmlStatement((Map<String, Object>) sqlTreeMapObj, MUMBLE_DELETE_KEY)) {
+			return true;
+		}
+		Object deleteTreeObj = walker.asTree.get(SQLPARSER_DELETE_TREE_KEY);
+		if (deleteTreeObj instanceof Map<?, ?> deleteTreeMapObj
+				&& treeContainsDmlStatement((Map<String, Object>) deleteTreeMapObj, MUMBLE_DELETE_KEY)) {
+			return true;
+		}
+		return false;
+	}
+
 	public HashMap<String, Object> getQueryColumnDictionaryMap() {
 		HashMap<String, Object> exposed = new HashMap<String, Object>();
 		if (walker.queryColumnDictionaryMap == null || walker.queryColumnDictionaryMap.isEmpty()) {
@@ -839,13 +873,54 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return interfac;
 		}
 
-		for (String key : walker.symbolTable.keySet()) {
-			if (key == null) {
-				continue;
+		if (isTopLevelDeleteTree()) {
+			Map<String, Object> topDeleteMap = null;
+			int topDeleteIndex = -1;
+			for (String key : walker.symbolTable.keySet()) {
+				if (key == null) {
+					continue;
+				}
+
+				String normalizedDeleteKey = null;
+				if (key.startsWith(MUMBLE_DELETE_KEY)) {
+					normalizedDeleteKey = key;
+				} else if (key.startsWith("def_" + MUMBLE_DELETE_KEY)) {
+					normalizedDeleteKey = key.substring("def_".length());
+				}
+				if (normalizedDeleteKey == null) {
+					continue;
+				}
+
+				Object scopedObject = walker.symbolTable.get(key);
+				if (!(scopedObject instanceof Map<?, ?>)) {
+					continue;
+				}
+
+				String numericSuffix = normalizedDeleteKey.replaceFirst("^[^0-9]+", "");
+				int scopeIndex;
+				try {
+					scopeIndex = Integer.parseInt(numericSuffix);
+				} catch (NumberFormatException ex) {
+					continue;
+				}
+
+				if (scopeIndex > topDeleteIndex) {
+					topDeleteIndex = scopeIndex;
+					topDeleteMap = (Map<String, Object>) scopedObject;
+				}
 			}
-			if (key.startsWith(MUMBLE_DELETE_KEY) || key.startsWith("def_" + MUMBLE_DELETE_KEY)) {
-				return interfac;
+
+			if (topDeleteMap != null) {
+				Object interfaceObject = topDeleteMap.get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObject instanceof Map<?, ?> interfaceMap) {
+					for (Object keyObj : interfaceMap.keySet()) {
+						if (keyObj instanceof String key && !key.isBlank()) {
+							interfac.add(key);
+						}
+					}
+				}
 			}
+			return interfac;
 		}
 
 		if (isTopLevelUpdateTree()) {
@@ -891,6 +966,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					for (Object assignmentKeyObj : assignmentsMap.keySet()) {
 						if (assignmentKeyObj instanceof String assignmentKey && !assignmentKey.isBlank()) {
 							interfac.add(assignmentKey);
+						}
+					}
+				}
+				Object interfaceObject = topUpdateMap.get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObject instanceof Map<?, ?> interfaceMap) {
+					for (Object keyObj : interfaceMap.keySet()) {
+						if (keyObj instanceof String key && !key.isBlank()) {
+							interfac.add(key);
 						}
 					}
 				}
@@ -3051,6 +3134,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_UPDATE_KEY, updateNode);
 
+		// RETURNING columns were already registered as query interface entries by exitSelect_item.
 		symbolTreeHelper.normalizeFromClauseCteAliasMappings(updateNode);
 		symbolTreeHelper.finalizeUpdateScopeSymbolTable(updateNode);
 	}
@@ -3185,11 +3269,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
-	// TODO: Add to AST
-//	@Override
-//	public void exitReturning( SQLSelectParserParser.ReturningContext ctx) {
-//	}
-	
+	@Override
+	public void exitReturning( SQLSelectParserParser.ReturningContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object segment = subMap.get("1");
+		if (segment instanceof Map<?, ?> segmentMap) {
+			Map<String, Object> typedSegment = (Map<String, Object>) segmentMap;
+			Object childType = typedSegment.get(ASTWALKER_RULE_TYPE_KEY);
+			if (childType != null) {
+				Object flattened = typedSegment.get(childType.toString());
+				if (flattened != null) {
+					segment = flattened;
+				}
+			}
+		}
+
+		Map<String, Object> newMap = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		newMap.put(type.toString(), segment);
+	}
+
 	@Override
 	public void exitAssignment_expression_list( SQLSelectParserParser.Assignment_expression_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();

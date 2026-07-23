@@ -776,7 +776,7 @@ Handoff detail: `parse/docs/qualified-column-table-dict-handoff-prompt.md` (note
 | DML clause probe | ✅ | Routed through convert probe; tests green |
 | EXCEPT set-op parity | ✅ | **Done** — Phase 13.1 complete (Jul 2026): `setop` stamping, operator-aware diagnostics, UNION/INTERSECT→EXCEPT clone matrices, three-level nesting suite, gate canaries |
 | Retire late-pass fallbacks (as scopes self-contain) | ✅ | **Done** — `mergeSelectList` + early bulk (C1a/C1b) + late drains (C2a/C2b) + orphan helpers (C2 closeout) retired |
-| Donor-email forward alias (TODO B) | ⏸️ | **Moved to Phase 13.4** |
+| Donor-email forward alias (TODO B) | ✅ | **Done** — Phase 13.4 same-select-list forward alias resolution |
 
 **INSERT note:** INSERT **source** resolves like SELECT; insert wrap only maps target columns. Orphan promotion to target table is **incorrect** for INSERT (removed in `0ec0b75`).
 
@@ -1510,7 +1510,7 @@ mvn -Psmoketest-quality-gate test
 |---|-----|------------------------|------------------|-------------------|
 | 13.1 | **EXCEPT set-operation parity** | ✅ **Complete (Jul 2026)** | `finalizeSetOperationScopeSymbolTable` handles EXCEPT on `union_operator` rail; per-participant `setop`; operator-aware column-count diagnostics; **157** EXCEPT clone tests + **12** three-level nesting tests; gate canaries | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` |
 | 13.2 | **Postgres INSERT** | `postgres_insert` rule marked incomplete; no `exitPostgres_insert` | Full Postgres INSERT shape (incl. `RETURNING` via `select_list`); dedicated walker exit + symbol-table finalizer hook if needed | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
-| 13.3 | **UPDATE RETURNING** | `returning` rule on `update_expression`; `exitReturning` commented out in walker | Active `exitReturning`; output interface populated like Postgres DELETE RETURNING | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
+| 13.3 | **UPDATE RETURNING** | ✅ **Complete (Jul 2026)** | `exitReturning` + `RETURNING select_list`; `finalizeUpdateScopeSymbolTable` publishes returning interface/query_dictionary | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.4 | **Intra–select-list forward output-column resolution** | Unqualified refs in a later select-item expression (window `PARTITION BY`, nested formula, etc.) are collected as unresolved even when an earlier item already registered the name on the query interface | At ingress (`collectUnresolvedColumnReference`), while walking `select_list`, skip unresolved for unqualified names matching an **earlier** interface key; merge usage tokens onto `query_dictionary` | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
 | 13.6 | **SQL statement generator** | `SQLStatementGenerator` partial; not production-ready | Round-trip SQL regeneration for all `SQLParserEndPoints` keys from AST + substitution map | New or extended generator test class |
@@ -1582,21 +1582,22 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | `postgresInsertDefaultValuesTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `INSERT … DEFAULT VALUES` symbol-table baseline |
 | `postgresInsertWithCteBodyTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `WITH … INSERT` Postgres variant inside CTE body |
 
-### 13.3 — UPDATE RETURNING
+### 13.3 — UPDATE RETURNING ✅ COMPLETE (Jul 2026)
 
 **Work:**
 
-- [ ] Uncomment and implement `exitReturning` in `SqlParseEventWalker.java`.
-- [ ] Route RETURNING output through same interface path as `exitDelete_returning` (`select_list` → interface tokens).
-- [ ] Extend `finalizeUpdateScopeSymbolTable` if RETURNING columns need query-dictionary attribution.
+- [x] Implement `exitReturning` in `SqlParseEventWalker.java` (mirrors `exitDelete_returning`).
+- [x] Extend `returning` grammar to `RETURNING select_list` (supports `*`, qualified columns, aliases).
+- [x] Extend `finalizeUpdateScopeSymbolTable` to publish RETURNING `interface` + `query_dictionary` on `def_updateN`, **merging** RETURNING-only keys into the assignment-seeded update-scope `interface` (no separate RETURNING sub-map).
 
-**Tests to add:**
+**Tests delivered:**
 
 | Method | Class | Proves |
 |--------|-------|--------|
-| `updateReturningStarInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `UPDATE … RETURNING *` interface wildcard |
-| `updateReturningQualifiedColumnsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — `RETURNING t.col AS alias` table-dict + interface |
-| `updateReturningWithFromSubqueryTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **New** — UPDATE FROM + RETURNING combined |
+| `updateReturningStarInterfaceTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `RETURNING *`; merged SET+RETURNING interface (`score`, `*`) |
+| `updateReturningQualifiedColumnsTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — `RETURNING t.col AS alias`; merged interface includes SET target + alias |
+| `updateReturningWithFromSubqueryTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — UPDATE FROM + RETURNING; merged interface (`score`, `rn`, `emp_id`) |
+| `updateReturningPredicandSubstitutionTest` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | **Delivered** — RETURNING predicand substitution on merged update interface |
 
 ### 13.4 — Intra–select-list forward output-column resolution
 
@@ -1857,10 +1858,10 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 ### Phase 13 closeout checklist
 
 - [x] All Phase 13.4 gate tests green (donor-email + self-reference V1–V4).
-- [ ] Smoketest quality gate **204/204** (verified Jul 2026 after 13.4 gate additions)
-- [ ] `insert-refactor-skip-tests.md` updated — remove donor-email skip; confirm PIVOT class is not on skip list (`SqlEventWalkerPivotUnpivotTests` is 62/62 green as of Jul 2026).
+- [x] Smoketest quality gate **204/204** (verified Jul 2026 after 13.4 gate additions)
+- [x] `insert-refactor-skip-tests.md` updated — donor-email skip removed; PIVOT class confirmed green (67/67).
 - [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
-- [ ] Phase 11 donor-email TODO B row marked ✅ when 13.4 lands.
+- [x] Phase 11 donor-email TODO B row marked ✅ — delivered in Phase 13.4 (Jul 2026).
 
 ### Phase 13 execution order
 
@@ -2090,7 +2091,7 @@ mvn test -Dtest=SqlEventWalkerDmlUpdateInsertDeleteTruncateTests
 
 ### Known skip list (unrelated failures)
 
-Document: `parse/documents/insert-refactor-skip-tests.md` (**stale as of Jul 2026** — PIVOT class is green; donor-email defect tracked in **Phase 13.4**)
+Document: `parse/documents/insert-refactor-skip-tests.md` (**current Jul 2026** — no classes on skip list; PIVOT 67/67; donor-email fixed in Phase 13.4)
 
 - ~~15 × `SqlEventWalkerPivotUnpivotTests`~~ — **resolved** (**67/67** pass as of Jul 2026; do not skip)
 - 1 × donor-email live sample — **Phase 13.4** (`source_partner_system_name` / same-select-list forward alias)

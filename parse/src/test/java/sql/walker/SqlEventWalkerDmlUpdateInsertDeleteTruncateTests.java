@@ -1928,7 +1928,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ddd, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}, 3={alias=ccc, window_function={over={partition_by={1={column={name=b1, table_ref=bbb}}}, orderby={1={null_order=null, predicand={column={name=b3, table_ref=bbb}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=bbb, table=tab2}}, where={condition={left={column={name=b2, table_ref=bbb}}, right={literal=0}, operator=>}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=ddd}}, operator==}}, 2={condition={left={column={name=ccc, table_ref=ddd}}, right={literal=1}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -1953,7 +1953,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=bbb, query={select={1={column={name=b1, table_ref=null}}, 2={column={name=b2, table_ref=null}}, 3={column={name=b3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a2, table_ref=aaa}}, right={column={name=b2, table_ref=bbb}}, operator==}}, 3={condition={left={column={name=b3, table_ref=bbb}}, right={literal=0}, operator=>}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -1980,7 +1980,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}}, orderby={1={null_order=null, predicand={column={name=b3, table_ref=bbb}}, sort_order=desc}}, from={table={alias=bbb, table=tab2}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=ccc}}, operator==}}, 2={condition={left={column={name=b2, table_ref=ccc}}, right={literal=0}, operator=>}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2007,7 +2007,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}}, from={join={1={table={alias=bbb, table=tab2}}, 2={join=join, on={and={1={condition={left={column={name=a1, table_ref=eee}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a3, table_ref=eee}}, right={column={name=b3, table_ref=bbb}}, operator==}}}}}, 3={table={alias=eee, table=tab1}}}}}}}}, where={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=ccc}}, operator==}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2032,7 +2032,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=bbb, table=tab2}}}, where={and={1={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a2, table_ref=aaa}}, right={column={name=b2, table_ref=bbb}}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2059,7 +2059,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}, 3={column={name=b3, table_ref=bbb}}}, from={table={alias=bbb, table=tab2}}, where={condition={left={column={name=b3, table_ref=bbb}}, right={literal=0}, operator=>}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=aaa}}, right={column={name=b1, table_ref=ccc}}, operator==}}, 2={condition={left={column={name=a2, table_ref=aaa}}, right={column={name=b2, table_ref=ccc}}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=aaa}}, 2={column={name=a2, table_ref=aaa}}, 3={column={name=a3, table_ref=aaa}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2087,7 +2087,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ddd, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}, 3={alias=ccc, window_function={over={partition_by={1={column={name=b1, table_ref=bbb}}}, orderby={1={null_order=null, predicand={column={name=b3, table_ref=bbb}}, sort_order=desc}}}, function={function_name=row_number, parameters=null}}}}, from={table={alias=bbb, table=tab2}}, where={condition={left={column={name=b2, table_ref=bbb}}, right={literal=0}, operator=>}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=ddd}}, operator==}}, 2={condition={left={column={name=ccc, table_ref=ddd}}, right={literal=1}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2112,7 +2112,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=bbb, query={select={1={column={name=b1, table_ref=null}}, 2={column={name=b2, table_ref=null}}, 3={column={name=b3, table_ref=null}}}, from={table={alias=null, table=tab2}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a2, table_ref=null}}, right={column={name=b2, table_ref=bbb}}, operator==}}, 3={condition={left={column={name=b3, table_ref=bbb}}, right={literal=0}, operator=>}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2139,7 +2139,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}}, orderby={1={null_order=null, predicand={column={name=b3, table_ref=bbb}}, sort_order=desc}}, from={table={alias=bbb, table=tab2}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=ccc}}, operator==}}, 2={condition={left={column={name=b2, table_ref=ccc}}, right={literal=0}, operator=>}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2166,7 +2166,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}}, from={join={1={table={alias=bbb, table=tab2}}, 2={join=join, on={and={1={condition={left={column={name=a1, table_ref=eee}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a3, table_ref=eee}}, right={column={name=b3, table_ref=bbb}}, operator==}}}}}, 3={table={alias=eee, table=tab1}}}}}}}}, where={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=ccc}}, operator==}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2191,7 +2191,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=bbb, table=tab2}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=bbb}}, operator==}}, 2={condition={left={column={name=a2, table_ref=null}}, right={column={name=b2, table_ref=bbb}}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2218,7 +2218,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}, 3={column={name=b3, table_ref=bbb}}}, from={table={alias=bbb, table=tab2}}, where={condition={left={column={name=b3, table_ref=bbb}}, right={literal=0}, operator=>}}}}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=ccc}}, operator==}}, 2={condition={left={column={name=a2, table_ref=null}}, right={column={name=b2, table_ref=ccc}}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, a2, a3]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -2245,7 +2245,7 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 
 		Assert.assertEquals("AST is wrong", "{SQL={delete={using={1={join={1={table={alias=ccc, query={select={1={column={name=b1, table_ref=bbb}}, 2={column={name=b2, table_ref=bbb}}, 3={column={name=b3, table_ref=bbb}}}, from={table={alias=bbb, table=tab2}}, where={condition={left={column={name=b3, table_ref=bbb}}, right={literal=0}, operator=>}}}}}, 2={table={alias=uuu, table=users}}}}}, where={and={1={condition={left={column={name=a1, table_ref=null}}, right={column={name=b1, table_ref=ccc}}, operator==}}, 2={condition={left={column={name=a2, table_ref=null}}, right={column={name=b2, table_ref=ccc}}, operator==}}, 3={condition={left={column={name=id, table_ref=uuu}}, right={column={name=b3, table_ref=ccc}}, operator==}}}}, table={alias=aaa, table=tab1}, returning={1={column={name=a1, table_ref=null}}, 2={column={name=a2, table_ref=null}}, 3={column={name=a3, table_ref=null}}, 4={column={name=b1, table_ref=ccc}}, 5={column={name=b2, table_ref=ccc}}, 6={column={name=b3, table_ref=ccc}}}}}}",
 				extractor.getAsTree().toString());
-		Assert.assertEquals("Interface is wrong", "[]",
+		Assert.assertEquals("Interface is wrong", "[a1, b2, a2, b3, a3, b1]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
@@ -4238,5 +4238,81 @@ public class SqlEventWalkerDmlUpdateInsertDeleteTruncateTests extends AbstractSq
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{<query variable>=tuple}",
 				extractor.getSubstitutionsMap().toString());
+	}
+
+	@Test
+	public void updateReturningStarInterfaceTest() {
+		final String query = "UPDATE employees e SET score = 1 RETURNING *";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=e, table=employees}, returning={1={column={name=*, table_ref=*}}}, assignments={1={set={column={name=score, table_ref=null}}, to={literal=1}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, *]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update0={assignments={score=[]}, query_dictionary={*=[[@8,43:43='*',<291>,1:43]]}, table_dictionary={employees={*=[[@8,43:43='*',<291>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], *=[{name=*, table_ref=*}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateReturningQualifiedColumnsTest() {
+		final String query = "UPDATE employees e SET score = 1 RETURNING e.emp_id AS updated_id, e.score";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=e, table=employees}, returning={1={column={name=emp_id, table_ref=e}, alias=updated_id}, 2={column={name=score, table_ref=e}}}, assignments={1={set={column={name=score, table_ref=null}}, to={literal=1}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, updated_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update0={assignments={score=[]}, query_dictionary={updated_id=[[@12,55:64='updated_id',<381>,1:55]], score=[[@16,69:73='score',<381>,1:69]]}, table_dictionary={employees={score=[[@14,67:67='e',<381>,1:67]], emp_id=[[@8,43:43='e',<381>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], updated_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateReturningWithFromSubqueryTest() {
+		final String query = "UPDATE employees e SET score = 1 FROM (SELECT emp_id, row_number() OVER () AS rn FROM employees) src WHERE e.emp_id = src.emp_id RETURNING src.rn, e.emp_id";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={from={table={alias=src, query={select={1={column={name=emp_id, table_ref=null}}, 2={alias=rn, window_function={over=null, function={function_name=row_number, parameters=null}}}}, from={table={alias=null, table=employees}}}}}, where={condition={left={column={name=emp_id, table_ref=e}}, right={column={name=emp_id, table_ref=src}}, operator==}}, assignments={1={set={column={name=score, table_ref=null}}, to={literal=1}}}, table={alias=e, table=employees}, returning={1={column={name=rn, table_ref=src}}, 2={column={name=emp_id, table_ref=e}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, rn, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update1={assignments={score=[]}, query_dictionary={rn=[[@35,143:144='rn',<381>,1:143]], emp_id=[[@39,149:154='emp_id',<381>,1:149]]}, table_dictionary={employees={score=[[@4,23:27='score',<381>,1:23]], emp_id=[[@25,107:107='e',<381>,1:107], [@37,147:147='e',<381>,1:147]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, def_query0={query_dictionary={rn=[[@19,78:79='rn',<381>,1:78], [@33,139:141='src',<381>,1:139]], emp_id=[[@10,46:51='emp_id',<381>,1:46], [@29,118:120='src',<381>,1:118]]}, table_dictionary={employees={emp_id=[[@10,46:51='emp_id',<381>,1:46], [@25,107:107='e',<381>,1:107], [@37,147:147='e',<381>,1:147]]}}, interface={rn=[], emp_id=[{name=emp_id, table_ref=employees}]}}, filters=[{name=emp_id, table_ref=e}, {name=emp_id, table_ref=src}], interface={score=[], rn=[{name=rn, table_ref=src}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees, src=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void updateReturningPredicandSubstitutionTest() {
+		final String query = "UPDATE employees e SET score = 1 RETURNING e.emp_id, <returning predicand>";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={update={table={alias=e, table=employees}, returning={1={column={name=emp_id, table_ref=e}}, 2={substitution={name=<returning predicand>, type=predicand}}}, assignments={1={set={column={name=score, table_ref=null}}, to={literal=1}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score, <returning predicand>, emp_id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<returning predicand>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_update0={assignments={score=[]}, query_dictionary={<returning predicand>=[[@12,53:73='<returning predicand>',<327>,1:53]], emp_id=[[@10,45:50='emp_id',<381>,1:45]]}, table_dictionary={employees={emp_id=[[@8,43:43='e',<381>,1:43]]}}, update_dictionary={score=[[@4,23:27='score',<381>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<381>,1:23]]}}, interface={score=[], <returning predicand>=[{name=<returning predicand>, type=predicand}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<381>,1:23]]}}}}",
+				extractor.getSymbolTable().toString());
 	}
 }

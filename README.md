@@ -70,6 +70,22 @@ Substitution variables (`<name>`) in **INSERT**, **UPDATE**, and **DELETE** stat
 | UPDATE | `UPDATE t SET a = 1 FROM <query variable> src` | FROM source (alias required) | `tuple` |
 | DELETE | `DELETE FROM employees WHERE <filter>` | WHERE filter | `condition` |
 | DELETE | `DELETE FROM t USING <query variable> src` | USING source (alias required) | `tuple` |
+| DELETE | `DELETE FROM tab1 t RETURNING t.col1, t.col2` | RETURNING output column | (column ref) |
+| UPDATE | `UPDATE employees SET score = 1 RETURNING e.emp_id, <returning predicand>` | RETURNING output column / predicand | `predicand` |
+
+**DML statements with RETURNING:** **UPDATE** and **DELETE** (Postgres variant) support `RETURNING select_list` today. **INSERT RETURNING** is defined in the grammar (`postgres_insert`) but not yet enabled on the main `insert_expression` path (see Phase 13.2).
+
+**Interface behavior for RETURNING:**
+
+| Statement | Scope `interface` | Top-level `getInterface()` |
+|-----------|-------------------|------------------------------|
+| UPDATE without RETURNING | SET assignment targets only | SET targets |
+| UPDATE with RETURNING | SET targets + RETURNING-only keys merged (`putIfAbsent`) | same merged set |
+| DELETE without RETURNING | none (`interface=null`) | `[]` |
+| DELETE with RETURNING (Postgres) | RETURNING output columns | RETURNING keys |
+| INSERT (current) | source/VALUES output when present | scope `interface` keys |
+
+For UPDATE with RETURNING, the update-scope `interface` map intermingles SET assignment-target columns with RETURNING output columns in a single flat namespace — there is no separate sub-map distinguishing SET targets from RETURNING values. DELETE RETURNING is RETURNING-only (no SET clause). This mixed-use / flat interface is alpha behavior.
 
 The `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` suite also includes complex **I1–I10** / **U1–U10** scenarios with column-type substitutions inside nested SELECT sources (WHERE, GROUP BY, HAVING, QUALIFY, ORDER BY, JOIN ON, and related clauses).
 
