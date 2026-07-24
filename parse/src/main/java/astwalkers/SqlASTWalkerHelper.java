@@ -29,6 +29,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER = "SQL_INTO_ONLY_ALLOWED_ON_FIRST_SET_MEMBER";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_REFERENCE = "SQL_PIVOT_IN_IDENTIFIER_REFERENCE";
 		public static final String DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED = "SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED";
+		public static final String DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT =
+				"SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT";
+		public static final String DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID =
+				"SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
@@ -224,6 +228,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED,
 				 "PIVOT_IN_IDENTIFIER_UNRESOLVED",
 				 "PIVOT IN identifier \"%s\" at (l:%s c:%s) cannot be resolved against the PIVOT source. Identifier-form PIVOT IN values are only supported when the PIVOT source is a subquery exposing that column or a wildcard interface.");
+		 registerDiagnostic(
+				 DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT,
+				 "RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
+				 "Qualified %s operand '%s.%s' at (l:%s c:%s) is redundant; operands are resolved against the immediate %s source '%s'.");
+		 registerDiagnostic(
+				 DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID,
+				 "RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID",
+				 "Qualified %s operand '%s.%s' at (l:%s c:%s) does not match the immediate %s source '%s'.");
 	 }
 
 	@SuppressWarnings("unchecked")

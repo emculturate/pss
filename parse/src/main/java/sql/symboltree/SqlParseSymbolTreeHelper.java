@@ -885,13 +885,9 @@ public class SqlParseSymbolTreeHelper {
 			return localPhysicalTableCollection.keySet().iterator().next();
 		}
 
-		String pivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
-		String pivotSourcePhysicalRef = pivotSourceRef;
-		if (pivotSourceRef != null
-				&& (isQuerySourceReference(pivotSourceRef)
-						|| walker.isNonTableQuerySourceReference(pivotSourceRef))) {
-			pivotSourcePhysicalRef = null;
-		}
+		String pivotSourcePhysicalRef = resolvePivotSourcePhysicalTableRef(
+				resolvePivotHintSourceRef(hintMap, localTableAliasMap),
+				localTableAliasMap);
 
 		for (String physicalTableRef : localPhysicalTableCollection.keySet()) {
 			if (physicalTableRef == null || physicalTableRef.isBlank()) {
@@ -905,6 +901,27 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return localPhysicalTableCollection.keySet().iterator().next();
+	}
+
+	/**
+	 * Resolve a pivot source ref (alias or physical name) to the physical table key used in
+	 * {@link #buildLocalPhysicalFromTableCollection}. Returns null for query/subquery pivot sources.
+	 */
+	private String resolvePivotSourcePhysicalTableRef(
+			String pivotSourceRef,
+			HashMap<String, Object> localTableAliasMap) {
+		if (pivotSourceRef == null || pivotSourceRef.isBlank()) {
+			return null;
+		}
+		if (isQuerySourceReference(pivotSourceRef)
+				|| walker.isNonTableQuerySourceReference(pivotSourceRef)) {
+			return null;
+		}
+		String resolvedPhysicalRef = walker.resolveAliasToTableName(pivotSourceRef, localTableAliasMap);
+		if (resolvedPhysicalRef != null && !resolvedPhysicalRef.isBlank()) {
+			return resolvedPhysicalRef;
+		}
+		return pivotSourceRef;
 	}
 
 	private Object consumePivotOperandUnresolvedEntry(
@@ -1854,8 +1871,8 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localCurrentQueryDictionary);
 
-		// Resolve PIVOT aggregate/FOR operand columns before wildcard fallback can
-		// materialize them into physical table dictionaries.
+		// Phase 16.2: single PIVOT operand materialization pass (post-wildcard, pre-egress).
+		// Stragglers are drained by RESOLVED_PIVOT_OPERAND in resolveColumnRefAtConvertEgress (16.1).
 		HashMap<String, Object> localFromTableCollection =
 				buildLocalPhysicalFromTableCollection(localTableCollection);
 		resolvePivotOperandColumnsFromUnresolvedMap(
@@ -1870,12 +1887,6 @@ public class SqlParseSymbolTreeHelper {
 				localInterface,
 				localCurrentQueryDictionary,
 				localTableCollection);
-		resolvePivotOperandColumnsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localUnresolvedColumnMap,
-				localTableCollection,
-				localFromTableCollection,
-				localTableAliasMap);
 		activeConvertEgressScopeBundle = buildConvertEgressScopeBundle(
 				localTableAliasMap,
 				localCurrentQueryDictionary);
@@ -1899,12 +1910,6 @@ public class SqlParseSymbolTreeHelper {
 					localRelationalModifierInterfaceHints);
 			walker.symbolTable.remove(TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY);
 		}
-		resolvePivotOperandColumnsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localUnresolvedColumnMap,
-				localTableCollection,
-				localFromTableCollection,
-				localTableAliasMap);
 		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
 		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
 

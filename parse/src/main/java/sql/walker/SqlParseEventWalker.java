@@ -75,6 +75,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final SqlParseSymbolTreeHelper symbolTreeHelper;
 	private final Set<String> invalidVariableDiagnosticKeys;
 	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
+	private static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
 	private final ArrayDeque<Integer> setOperationWrapAnchorStackLevels;
 	private int tableSourcePrimaryNestingDepth;
 
@@ -178,6 +179,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	private void enterRelationalModifierClauseScope(String modifierKey) {
 		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		walker.symbolTable.put(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY, new HashMap<String, Object>());
 		if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
 			walker.symbolTable.put(PIVOT_IN_IDENTIFIER_REFERENCES_KEY, new HashMap<String, Object>());
 		}
@@ -216,6 +218,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (pivotIdentifiersObj instanceof HashMap<?, ?> pivotIdentifierMapObj
 				&& !((HashMap<String, Object>) pivotIdentifierMapObj).isEmpty()) {
 			pivotIdentifiersForParent = new HashMap<String, Object>((HashMap<String, Object>) pivotIdentifierMapObj);
+		}
+
+		Object operandReferencesObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+		HashMap<String, Object> operandReferencesForParent = null;
+		if (operandReferencesObj instanceof HashMap<?, ?> operandReferenceMapObj
+				&& !((HashMap<String, Object>) operandReferenceMapObj).isEmpty()) {
+			operandReferencesForParent = new HashMap<String, Object>((HashMap<String, Object>) operandReferenceMapObj);
 		}
 
 		walker.popSymbolTable("_tmp_relational_modifier_scope", new HashMap<String, Object>());
@@ -309,6 +318,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				walker.symbolTable.put(PIVOT_IN_IDENTIFIER_REFERENCES_KEY, parentPivotIdentifiers);
 			}
 			parentPivotIdentifiers.putAll(pivotIdentifiersForParent);
+		}
+
+		if (operandReferencesForParent != null) {
+			Object parentOperandReferencesObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+			HashMap<String, Object> parentOperandReferences;
+			if (parentOperandReferencesObj instanceof HashMap<?, ?>) {
+				parentOperandReferences = (HashMap<String, Object>) parentOperandReferencesObj;
+			} else {
+				parentOperandReferences = new HashMap<String, Object>();
+				walker.symbolTable.put(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY, parentOperandReferences);
+			}
+			parentOperandReferences.putAll(operandReferencesForParent);
 		}
 	}
 
@@ -4643,6 +4664,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		   }
 
 		   if (modifier != null && modifierKey != null) {
+			   validateRelationalModifierOperandQualifiers(modifierKey, modifier, sourceResult);
+			   walker.symbolTable.remove(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
 			   sourceResult.put(modifierKey, modifier);
 			   if (relationAlias != null) {
 				   sourceResult.put(MUMBLE_ALIAS_KEY, relationAlias);
@@ -4988,8 +5011,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		Object valueObj = unpivotMap.get(MUMBLE_VALUE_KEY);
-		if (!(valueObj instanceof String valueColumn) || valueColumn.isBlank()) {
+		String valueColumn = extractRelationalModifierOperandColumnName(unpivotMap.get(MUMBLE_VALUE_KEY));
+		if (valueColumn == null || valueColumn.isBlank()) {
 			return;
 		}
 
@@ -5008,8 +5031,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Also store the FOR column so the unresolved-map cleanup can mark it as resolved
 		ArrayList<String> derivedColumns = new ArrayList<String>();
 		derivedColumns.add(valueColumn);
-		Object forObj = unpivotMap.get(MUMBLE_FOR_KEY);
-		if (forObj instanceof String forColumn && !forColumn.isBlank()) {
+		String forColumn = extractRelationalModifierOperandColumnName(unpivotMap.get(MUMBLE_FOR_KEY));
+		if (forColumn != null && !forColumn.isBlank()) {
 			hint.put(MUMBLE_FOR_KEY, forColumn);
 			if (!containsStringIgnoreCase(derivedColumns, forColumn)) {
 				derivedColumns.add(forColumn);
@@ -5018,6 +5041,385 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		hint.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY, derivedColumns);
 
 		addRelationalModifierHint(hint);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void validateRelationalModifierOperandQualifiers(
+			String modifierKey,
+			Map<String, Object> modifier,
+			Map<String, Object> sourceResult) {
+		if (modifier == null || modifier.isEmpty() || sourceResult == null) {
+			return;
+		}
+
+		String immediateSourceRef = resolveRelationalModifierSourceReference(sourceResult);
+		if (immediateSourceRef == null || immediateSourceRef.isBlank()) {
+			return;
+		}
+
+		String operatorLabel = MUMBLE_UNPIVOT_KEY.equals(modifierKey) ? "UNPIVOT" : "PIVOT";
+		ArrayList<Map<String, Object>> operandColumns = collectRelationalModifierOperandColumnMaps(modifier);
+		for (Map<String, Object> columnMap : operandColumns) {
+			if (columnMap == null || columnMap.isEmpty()) {
+				continue;
+			}
+
+			Object tableRefObj = columnMap.get(MUMBLE_TABLE_REF_KEY);
+			if (!(tableRefObj instanceof String operandTableRef) || operandTableRef.isBlank()) {
+				continue;
+			}
+
+			String columnName = (String) columnMap.get(MUMBLE_NAME_KEY);
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+
+			Integer[] tokenPosition = lookupRelationalModifierOperandTokenPosition(
+					columnName,
+					operandTableRef,
+					sourceResult);
+			Integer line = tokenPosition[0];
+			Integer charPos = tokenPosition[1];
+
+			if (qualifierMatchesImmediateRelationalModifierSource(operandTableRef, immediateSourceRef, sourceResult)) {
+				String diagCode = walker.getDiagnosticCode(
+						SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT);
+				String diagTemplate = walker.getDiagnosticMessage(
+						SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT);
+				String diagMessage = (diagTemplate == null)
+						? String.format(
+								"Qualified %s operand '%s.%s' at (l:%s c:%s) is redundant; operands are resolved against the immediate %s source '%s'.",
+								operatorLabel,
+								operandTableRef,
+								columnName,
+								String.valueOf(line),
+								String.valueOf(charPos),
+								operatorLabel,
+								immediateSourceRef)
+						: String.format(
+								diagTemplate,
+								operatorLabel,
+								operandTableRef,
+								columnName,
+								String.valueOf(line),
+								String.valueOf(charPos),
+								operatorLabel,
+								immediateSourceRef);
+				walker.addWalkerWarning(diagCode, diagMessage, line, charPos);
+				continue;
+			}
+
+			String diagCode = walker.getDiagnosticCode(
+					SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID);
+			String diagTemplate = walker.getDiagnosticMessage(
+					SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID);
+			String diagMessage = (diagTemplate == null)
+					? String.format(
+							"Qualified %s operand '%s.%s' at (l:%s c:%s) does not match the immediate %s source '%s'.",
+							operatorLabel,
+							operandTableRef,
+							columnName,
+							String.valueOf(line),
+							String.valueOf(charPos),
+							operatorLabel,
+							immediateSourceRef)
+					: String.format(
+							diagTemplate,
+							operatorLabel,
+							operandTableRef,
+							columnName,
+							String.valueOf(line),
+							String.valueOf(charPos),
+							operatorLabel,
+							immediateSourceRef);
+			walker.addWalkerFatal(diagCode, diagMessage, line, charPos, operandTableRef + "." + columnName);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean qualifierMatchesImmediateRelationalModifierSource(
+			String operandTableRef,
+			String immediateSourceRef,
+			Map<String, Object> sourceResult) {
+		if (operandTableRef == null || operandTableRef.isBlank()) {
+			return true;
+		}
+		if (immediateSourceRef != null && operandTableRef.equalsIgnoreCase(immediateSourceRef)) {
+			return true;
+		}
+
+		String physicalTableRef = resolvePhysicalTableRefFromRelationalModifierSource(sourceResult);
+		if (physicalTableRef != null && operandTableRef.equalsIgnoreCase(physicalTableRef)) {
+			return true;
+		}
+
+		HashMap<String, Object> aliasMap = null;
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasMapObj instanceof HashMap<?, ?> aliasMapRaw) {
+			aliasMap = (HashMap<String, Object>) aliasMapRaw;
+		}
+		if (aliasMap != null && !aliasMap.isEmpty()) {
+			String resolvedOperandRef = walker.resolveAliasToTableName(operandTableRef, aliasMap);
+			String resolvedImmediateRef = walker.resolveAliasToTableName(immediateSourceRef, aliasMap);
+			if (resolvedOperandRef != null
+					&& resolvedImmediateRef != null
+					&& resolvedOperandRef.equalsIgnoreCase(resolvedImmediateRef)) {
+				return true;
+			}
+			if (resolvedOperandRef != null
+					&& physicalTableRef != null
+					&& resolvedOperandRef.equalsIgnoreCase(physicalTableRef)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolvePhysicalTableRefFromRelationalModifierSource(Map<String, Object> sourceResult) {
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (!(tableObj instanceof Map<?, ?> tableMapObj)) {
+			return null;
+		}
+		return symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMapObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<Map<String, Object>> collectRelationalModifierOperandColumnMaps(Map<String, Object> modifier) {
+		ArrayList<Map<String, Object>> operandColumns = new ArrayList<Map<String, Object>>();
+		if (modifier == null || modifier.isEmpty()) {
+			return operandColumns;
+		}
+
+		collectRelationalModifierOperandColumnMapsFromSubtree(modifier.get(MUMBLE_VALUE_KEY), operandColumns);
+		collectRelationalModifierOperandColumnMapsFromSubtree(modifier.get(MUMBLE_FOR_KEY), operandColumns);
+		collectRelationalModifierOperandColumnMapsFromInList(modifier.get(MUMBLE_IN_KEY), operandColumns);
+		return operandColumns;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectRelationalModifierOperandColumnMapsFromSubtree(
+			Object operandObj,
+			ArrayList<Map<String, Object>> operandColumns) {
+		if (operandObj == null) {
+			return;
+		}
+
+		ArrayList<Object> refs = new ArrayList<Object>();
+		if (operandObj instanceof Map<?, ?> operandMapObj) {
+			symbolTreeHelper.flattenSubTreeForDependencyColumns(
+					new HashMap<String, Object>((Map<String, Object>) operandMapObj),
+					refs);
+		}
+
+		for (Object refObj : refs) {
+			Map<String, Object> columnMap = extractRelationalModifierOperandColumnMap(refObj);
+			if (columnMap != null && !columnMap.isEmpty()) {
+				operandColumns.add(columnMap);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectRelationalModifierOperandColumnMapsFromInList(
+			Object inListObj,
+			ArrayList<Map<String, Object>> operandColumns) {
+		if (!(inListObj instanceof Map<?, ?> inListMapObj)) {
+			return;
+		}
+
+		Map<String, Object> inListMap = (Map<String, Object>) inListMapObj;
+		for (int index = 1; inListMap.containsKey(String.valueOf(index)); index++) {
+			Object inItemObj = inListMap.get(String.valueOf(index));
+			if (!(inItemObj instanceof Map<?, ?> inItemMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> inItemMap = (Map<String, Object>) inItemMapObj;
+			if (inItemMap.containsKey(MUMBLE_PIVOT_LITERAL_KEY) || inItemMap.containsKey(MUMBLE_PIVOT_PREFIX_KEY)) {
+				continue;
+			}
+
+			Map<String, Object> columnMap = extractRelationalModifierOperandColumnMap(inItemMap);
+			if (columnMap != null && !columnMap.isEmpty()) {
+				operandColumns.add(columnMap);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractRelationalModifierOperandColumnMap(Object refObj) {
+		if (refObj instanceof Map<?, ?> refMapObj) {
+			Map<String, Object> refMap = (Map<String, Object>) refMapObj;
+			if (refMap.containsKey(MUMBLE_NAME_KEY)) {
+				return refMap;
+			}
+			if (refMap.containsKey(MUMBLE_COLUMN_KEY)
+					&& refMap.get(MUMBLE_COLUMN_KEY) instanceof Map<?, ?> nestedColumnMapObj) {
+				return (Map<String, Object>) nestedColumnMapObj;
+			}
+		}
+		return null;
+	}
+
+	private boolean isRelationalModifierOperandColumnEntry(Map<?, ?> entryMap) {
+		if (entryMap == null || entryMap.isEmpty()) {
+			return false;
+		}
+		if (entryMap.containsKey(MUMBLE_COLUMN_KEY)) {
+			return true;
+		}
+		return entryMap.containsKey(MUMBLE_NAME_KEY) && !entryMap.containsKey("1");
+	}
+
+	private String extractRelationalModifierOperandColumnName(Object operandObj) {
+		Map<String, Object> columnMap = extractRelationalModifierOperandColumnMap(operandObj);
+		if (columnMap != null) {
+			Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String columnName && !columnName.isBlank()) {
+				return columnName;
+			}
+		}
+		return extractPivotForColumnName(operandObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Integer[] lookupRelationalModifierOperandTokenPosition(
+			String columnName,
+			String tableRef,
+			Map<String, Object> sourceResult) {
+		Integer[] fromOperandReferences = lookupRelationalModifierOperandTokenPositionInReferenceMap(
+				columnName,
+				tableRef);
+		if (fromOperandReferences[0] != null) {
+			return fromOperandReferences;
+		}
+
+		Integer[] fromDictionary = lookupRelationalModifierOperandTokenPositionInDictionary(
+				walker.getWalkerTableDictionary(),
+				columnName,
+				tableRef,
+				sourceResult);
+		if (fromDictionary[0] != null) {
+			return fromDictionary;
+		}
+		return lookupRelationalModifierOperandTokenPositionInDictionary(
+				getQueryColumnDictionaryMap(),
+				columnName,
+				tableRef,
+				sourceResult);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Integer[] lookupRelationalModifierOperandTokenPositionInReferenceMap(
+			String columnName,
+			String tableRef) {
+		Integer[] result = new Integer[] { null, null };
+		if (columnName == null || columnName.isBlank() || tableRef == null || tableRef.isBlank()) {
+			return result;
+		}
+
+		Object refsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+		if (!(refsObj instanceof Map<?, ?> refsMapObj)) {
+			return result;
+		}
+
+		String qualifiedKey = tableRef + "." + columnName;
+		Object tokenListObj = ((Map<String, Object>) refsMapObj).get(qualifiedKey);
+		Integer[] tokenPosition = extractLineAndCharFromFirstTokenListEntry(tokenListObj);
+		if (tokenPosition[0] != null) {
+			return tokenPosition;
+		}
+
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void recordRelationalModifierOperandReference(String tableRef, String columnName, Token startToken) {
+		if (tableRef == null
+				|| tableRef.isBlank()
+				|| columnName == null
+				|| columnName.isBlank()
+				|| startToken == null) {
+			return;
+		}
+
+		Object refsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+		if (!(refsObj instanceof Map<?, ?> refsMapObj)) {
+			return;
+		}
+
+		Map<String, Object> refsMap = (Map<String, Object>) refsMapObj;
+		String qualifiedKey = tableRef + "." + columnName;
+		Object tokenListObj = refsMap.get(qualifiedKey);
+		ArrayList<String> tokenRefs;
+		if (tokenListObj instanceof ArrayList<?>) {
+			tokenRefs = (ArrayList<String>) tokenListObj;
+		} else {
+			tokenRefs = new ArrayList<String>();
+			refsMap.put(qualifiedKey, tokenRefs);
+		}
+
+		String tokenString = startToken.toString();
+		if (tokenString != null && !tokenRefs.contains(tokenString)) {
+			tokenRefs.add(tokenString);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private Integer[] lookupRelationalModifierOperandTokenPositionInDictionary(
+			HashMap<String, Object> dictionary,
+			String columnName,
+			String tableRef,
+			Map<String, Object> sourceResult) {
+		Integer[] result = new Integer[] { null, null };
+		if (dictionary == null || dictionary.isEmpty() || columnName == null || columnName.isBlank()) {
+			return result;
+		}
+
+		ArrayList<String> tableKeys = new ArrayList<String>();
+		if (tableRef != null && !tableRef.isBlank()) {
+			tableKeys.add(tableRef);
+		}
+		String physicalTableRef = resolvePhysicalTableRefFromRelationalModifierSource(sourceResult);
+		if (physicalTableRef != null
+				&& !physicalTableRef.isBlank()
+				&& !containsStringIgnoreCase(tableKeys, physicalTableRef)) {
+			tableKeys.add(physicalTableRef);
+		}
+
+		for (String tableKey : tableKeys) {
+			Object tableEntryObj = dictionary.get(tableKey);
+			if (!(tableEntryObj instanceof Map<?, ?> tableEntryMapObj)) {
+				continue;
+			}
+			Object tokenListObj = ((Map<String, Object>) tableEntryMapObj).get(columnName);
+			Integer[] tokenPosition = extractLineAndCharFromFirstTokenListEntry(tokenListObj);
+			if (tokenPosition[0] != null) {
+				return tokenPosition;
+			}
+		}
+
+		for (Object tableEntryObj : dictionary.values()) {
+			if (!(tableEntryObj instanceof Map<?, ?> tableEntryMapObj)) {
+				continue;
+			}
+			Object tokenListObj = ((Map<String, Object>) tableEntryMapObj).get(columnName);
+			Integer[] tokenPosition = extractLineAndCharFromFirstTokenListEntry(tokenListObj);
+			if (tokenPosition[0] != null) {
+				return tokenPosition;
+			}
+		}
+
+		return result;
+	}
+
+	private Integer[] extractLineAndCharFromFirstTokenListEntry(Object tokenListObj) {
+		if (!(tokenListObj instanceof List<?> tokenList) || tokenList.isEmpty()) {
+			return new Integer[] { null, null };
+		}
+		return extractLineAndCharFromTokenString(tokenList.get(0) == null ? null : tokenList.get(0).toString());
 	}
 
 	private String resolveRelationalModifierSourceReference(Map<String, Object> sourceResult) {
@@ -5881,8 +6283,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	//   - unpivot_null_policy  → Map containing MUMBLE_NULLS_POLICY_KEY
 	//   - unpivot_list         → numbered map whose "1" entry is a flattened in-item map
 	//                            (name/table_ref[/alias])
-	//   - value / name columns → plain String (alias_identifier collapses via handleOneChild)
-	//                            first String = value column, second = name column
+	//   - value / name columns → column_reference map ({column={name, table_ref}})
 	@Override
 	public void enterUnpivot_clause( SQLSelectParserParser.Unpivot_clauseContext ctx) {
 		// Mirror PIVOT behavior: isolate UNPIVOT artifacts in a short-lived local scope.
@@ -5910,6 +6311,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (entry instanceof Map<?, ?> entryMap) {
 				if (entryMap.containsKey(MUMBLE_NULLS_POLICY_KEY)) {
 					nullPolicy = entry;
+				} else if (isRelationalModifierOperandColumnEntry(entryMap)) {
+					nameSlots.add(entry);
 				} else if (entryMap.containsKey("1")
 						&& entryMap.get("1") instanceof Map<?, ?> firstItem
 						&& (((Map<?, ?>) firstItem).containsKey(MUMBLE_NAME_KEY)
@@ -5918,7 +6321,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					inList = entry;
 				}
 			} else {
-				nameSlots.add(entry);   // plain String identifier — value_col, then name_col
+				nameSlots.add(entry);
 			}
 		}
 
@@ -5960,7 +6363,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 	}
 
-	// relational_modifier_value_column and relational_modifier_name_column each wrap a single alias_identifier — propagate directly.
+	// relational_modifier_operand_column wraps column_reference — propagate directly.
+	@Override
+	public void exitRelational_modifier_operand_column( SQLSelectParserParser.Relational_modifier_operand_columnContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	// relational_modifier_value_column and relational_modifier_name_column each wrap operand_column — propagate directly.
 	@Override
 	public void exitRelational_modifier_value_column( SQLSelectParserParser.Relational_modifier_value_columnContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -6743,6 +7153,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
+			if (tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName && !columnName.isBlank()) {
+				recordRelationalModifierOperandReference(tableRef, columnName, ctx.getStart());
+			}
 		}
 	}
 

@@ -919,12 +919,16 @@ unpivot_null_policy
   | EXCLUDE NULLS
   ;
 
+relational_modifier_operand_column
+  : column_reference
+  ;
+
 relational_modifier_value_column
-  : alias_identifier
+  : relational_modifier_operand_column
   ;
 
 relational_modifier_name_column
-  : alias_identifier
+  : relational_modifier_operand_column
   ;
 
 
@@ -959,7 +963,7 @@ pivot_aggregate_clause
 
 // <aggregate_function>(<pivot_column>) [[AS] <alias>]
 pivot_aggregate
-  : set_function_type LEFT_PAREN column_reference RIGHT_PAREN relation_as_clause?
+  : set_function_type LEFT_PAREN relational_modifier_operand_column RIGHT_PAREN relation_as_clause?
   ;
 
 // Snowflake official PIVOT aggregate list support: AVG, COUNT, MAX, MIN, SUM.
@@ -968,7 +972,7 @@ snowflake_pivot_aggregate_list
   ;
 
 snowflake_pivot_aggregate
-  : snowflake_pivot_aggregate_function LEFT_PAREN column_reference RIGHT_PAREN relation_as_clause?
+  : snowflake_pivot_aggregate_function LEFT_PAREN relational_modifier_operand_column RIGHT_PAREN relation_as_clause?
   ;
 
 snowflake_pivot_aggregate_function
@@ -981,7 +985,7 @@ snowflake_pivot_aggregate_function
 
 // Snowflake: FOR <value_column>
 pivot_value_column
-  : column_reference
+  : relational_modifier_operand_column
   ;
 
 // Snowflake: IN ( <value-list> | ANY [ORDER BY ...] | <subquery> )
