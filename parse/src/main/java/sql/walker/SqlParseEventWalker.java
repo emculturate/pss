@@ -544,122 +544,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
-	private Map<String, Object> normalizeNamedObjectNode(Object nodeObj) {
-		Map<String, Object> normalized = new LinkedHashMap<String, Object>();
-		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
-			if (nodeObj != null) {
-				normalized.put(MUMBLE_NAME_KEY, nodeObj.toString());
-			}
-			return normalized;
-		}
-
-		Map<String, Object> node = (Map<String, Object>) mapObj;
-		if (node.containsKey(MUMBLE_NAME_KEY)
-				|| node.containsKey(MUMBLE_FUNCTION_NAME_KEY)
-				|| node.containsKey(MUMBLE_TABLE_KEY)) {
-			normalized.putAll(node);
-			if (!normalized.containsKey(MUMBLE_NAME_KEY)) {
-				Object functionNameObj = normalized.get(MUMBLE_FUNCTION_NAME_KEY);
-				Object tableNameObj = normalized.get(MUMBLE_TABLE_KEY);
-				if (functionNameObj != null) {
-					normalized.put(MUMBLE_NAME_KEY, functionNameObj);
-				} else if (tableNameObj != null) {
-					normalized.put(MUMBLE_NAME_KEY, tableNameObj);
-				}
-			}
-			return normalized;
-		}
-
-		List<Object> parts = new ArrayList<Object>();
-		for (int index = 1; node.containsKey(String.valueOf(index)); index++) {
-			parts.add(node.get(String.valueOf(index)));
-		}
-
-		if (parts.size() == 1) {
-			normalized.put(MUMBLE_NAME_KEY, parts.get(0));
-		} else if (parts.size() == 2) {
-			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(0));
-			normalized.put(MUMBLE_NAME_KEY, parts.get(1));
-		} else if (parts.size() >= 3) {
-			normalized.put(MUMBLE_DATABASE_NAME_KEY, parts.get(0));
-			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(1));
-			normalized.put(MUMBLE_NAME_KEY, parts.get(2));
-		}
-
-		return normalized;
-	}
-
-	
-	private Map<String, Object> normalizeTableNode(Object nodeObj) {
-		Map<String, Object> normalized = new LinkedHashMap<String, Object>();
-		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
-			if (nodeObj != null) {
-				normalized.put(MUMBLE_TABLE_KEY, nodeObj.toString());
-			}
-			return normalized;
-		}
-
-		Map<String, Object> node = (Map<String, Object>) mapObj;
-		if (node.containsKey(MUMBLE_TABLE_KEY)) {
-			normalized.putAll(node);
-			return normalized;
-		}
-
-		if (node.containsKey(MUMBLE_NAME_KEY)) {
-			normalized.putAll(node);
-			normalized.put(MUMBLE_TABLE_KEY, node.get(MUMBLE_NAME_KEY));
-			return normalized;
-		}
-
-		List<Object> parts = new ArrayList<Object>();
-		for (int index = 1; node.containsKey(String.valueOf(index)); index++) {
-			parts.add(node.get(String.valueOf(index)));
-		}
-
-		if (parts.size() == 1) {
-			normalized.put(MUMBLE_TABLE_KEY, parts.get(0));
-		} else if (parts.size() == 2) {
-			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(0));
-			normalized.put(MUMBLE_TABLE_KEY, parts.get(1));
-		} else if (parts.size() >= 3) {
-			normalized.put(MUMBLE_DATABASE_NAME_KEY, parts.get(0));
-			normalized.put(MUMBLE_SCHEMA_KEY, parts.get(1));
-			normalized.put(MUMBLE_TABLE_KEY, parts.get(2));
-		}
-
-		return normalized;
-	}
-
-	private Object extractPreferredName(Map<String, Object> objectNode) {
-		if (objectNode == null || objectNode.isEmpty()) {
-			return null;
-		}
-
-		Object name = objectNode.get(MUMBLE_NAME_KEY);
-		if (name != null) {
-			return name;
-		}
-
-		Object functionName = objectNode.get(MUMBLE_FUNCTION_NAME_KEY);
-		if (functionName != null) {
-			return functionName;
-		}
-
-		return objectNode.get(MUMBLE_TABLE_KEY);
-	}
-
-	private boolean hasTableIdentity(Map<String, Object> tableNode) {
-		if (tableNode == null || tableNode.isEmpty()) {
-			return false;
-		}
-
-		return tableNode.containsKey(MUMBLE_TABLE_KEY)
-				|| tableNode.containsKey(MUMBLE_NAME_KEY)
-				|| tableNode.containsKey(MUMBLE_SCHEMA_KEY)
-				|| tableNode.containsKey(MUMBLE_DATABASE_NAME_KEY);
-	}
-
-	
 	private boolean isDdlCreateAsQueryParent(ParserRuleContext parentCtx) {
 		return parentCtx instanceof SQLSelectParserParser.Create_table_expressionContext
 				|| parentCtx instanceof SQLSelectParserParser.Create_view_expressionContext
@@ -683,31 +567,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> parentMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
 		parentMap.put(MUMBLE_QUERY_KEY, queryBody);
 		walker.asTree.put("SKIP", "TRUE");
-	}
-
-	private Map<String, Object> buildFallbackTableNodeFromText(String tableText) {
-		Map<String, Object> fallback = new LinkedHashMap<String, Object>();
-		if (tableText == null || tableText.isBlank()) {
-			return fallback;
-		}
-
-		String[] parts = tableText.split("\\.");
-		if (parts.length == 1) {
-			fallback.put(MUMBLE_TABLE_KEY, parts[0]);
-		} else if (parts.length == 2) {
-			fallback.put(MUMBLE_SCHEMA_KEY, parts[0]);
-			fallback.put(MUMBLE_TABLE_KEY, parts[1]);
-		} else {
-			fallback.put(MUMBLE_DATABASE_NAME_KEY, parts[0]);
-			fallback.put(MUMBLE_SCHEMA_KEY, parts[1]);
-			StringBuilder tableBuilder = new StringBuilder(parts[2]);
-			for (int i = 3; i < parts.length; i++) {
-				tableBuilder.append('.').append(parts[i]);
-			}
-			fallback.put(MUMBLE_TABLE_KEY, tableBuilder.toString());
-		}
-
-		return fallback;
 	}
 
 	// Getters and Setters
@@ -1975,28 +1834,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "table", 1));
 
-		Map<String, Object> tableNode = null;
 		Object queryNode = null;
-
 		if (ctx.query_expression() != null) {
 			queryNode = subMap.remove(MUMBLE_QUERY_KEY);
 			if (!children.isEmpty()) {
-				tableNode = normalizeTableNode(children.get(0));
-			}
-
-			if ((tableNode == null || !hasTableIdentity(tableNode)) && ctx.db_object_name() != null) {
-				tableNode = buildFallbackTableNodeFromText(ctx.db_object_name().getText());
-			}
-
-			if (tableNode != null && hasTableIdentity(tableNode)) {
-				createNode.put(MUMBLE_TABLE_KEY, tableNode);
+				createNode.put(MUMBLE_TABLE_KEY, children.get(0));
 			}
 			if (queryNode != null) {
 				createNode.put(MUMBLE_QUERY_KEY, queryNode);
 			}
 		} else {
 			if (!children.isEmpty()) {
-				createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(children.get(0)));
+				createNode.put(MUMBLE_TABLE_KEY, children.get(0));
 			}
 			if (children.size() >= 2) {
 				createNode.put(MUMBLE_COLUMNS_KEY, children.get(1));
@@ -2027,16 +1876,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "index", 1));
 
 		if (indexNameChild != null) {
-			Map<String, Object> indexNameNode = normalizeNamedObjectNode(indexNameChild);
-			Object indexName = extractPreferredName(indexNameNode);
-			if (indexName != null) {
-				createNode.put(MUMBLE_NAME_KEY, indexName);
-			}
+			createNode.put(MUMBLE_NAME_KEY, indexNameChild);
 		}
-		if (ctx.db_object_name(1) != null) {
-			createNode.put(MUMBLE_TABLE_KEY, buildFallbackTableNodeFromText(ctx.db_object_name(1).getText()));
-		} else if (tableChild != null) {
-			createNode.put(MUMBLE_TABLE_KEY, normalizeTableNode(tableChild));
+		if (tableChild != null) {
+			createNode.put(MUMBLE_TABLE_KEY, tableChild);
 		}
 		if (columnsChild != null) {
 			createNode.put(MUMBLE_COLUMNS_KEY, columnsChild);
@@ -2058,11 +1901,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "view", 1));
 
 		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, children.get(0));
 		}
 		Object queryNode = subMap.remove(MUMBLE_QUERY_KEY);
 		if (queryNode != null) {
@@ -2085,11 +1924,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "materialized view", 1, 2));
 
 		if (children.size() >= 1) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, children.get(0));
 		}
 		Object queryNode = subMap.remove(MUMBLE_QUERY_KEY);
 		if (queryNode != null) {
@@ -2115,11 +1950,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "function", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 
 		if (ctx.generic_ddl_paren_content() != null && argContentChild != null) {
@@ -2150,11 +1981,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "procedure", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 
 		if (ctx.generic_ddl_paren_content() != null && argContentChild != null) {
@@ -2182,11 +2009,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
 
 		if (!children.isEmpty()) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, children.get(0));
 		}
 
 		if (ctx.generic_ddl_paren_content() != null) {
@@ -2215,11 +2038,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "sequence", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2242,11 +2061,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "schema", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2269,11 +2084,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "database", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2296,11 +2107,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "role", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2323,11 +2130,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "user", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2350,11 +2153,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "stage", 1));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2377,11 +2176,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "file format", 1, 2));
 
 		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
-			Object name = extractPreferredName(nameNode);
-			if (name != null) {
-				createNode.put(MUMBLE_NAME_KEY, name);
-			}
+			createNode.put(MUMBLE_NAME_KEY, nameChild);
 		}
 		if (clausesChild != null) {
 			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
@@ -2412,9 +2207,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> dropNode = new LinkedHashMap<String, Object>();
 		dropNode.put(MUMBLE_TYPE_KEY, extractDdlObjectTypeText(ctx.ddl_object_type()));
 
-		if (ctx.db_object_name() != null) {
-			dropNode.put(MUMBLE_NAME_KEY, buildFallbackTableNodeFromText(ctx.db_object_name().getText()));
-		} else if (subMap.containsKey("2")) {
+		if (subMap.containsKey("2")) {
 			dropNode.put(MUMBLE_NAME_KEY, subMap.get("2"));
 		}
 
@@ -2493,9 +2286,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> alterNode = new LinkedHashMap<String, Object>();
 		alterNode.put(MUMBLE_TYPE_KEY, extractDdlObjectTypeText(ctx.ddl_object_type()));
 
-		if (ctx.db_object_name() != null) {
-			alterNode.put(MUMBLE_NAME_KEY, buildFallbackTableNodeFromText(ctx.db_object_name().getText()));
-		} else if (subMap.containsKey("2")) {
+		if (subMap.containsKey("2")) {
 			alterNode.put(MUMBLE_NAME_KEY, subMap.get("2"));
 		}
 
@@ -2513,6 +2304,58 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitTruncate_snowflake_expression( SQLSelectParserParser.Truncate_snowflake_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		if (!children.isEmpty()) {
+			walker.addToParent(parentRuleIndex, parentStackLevel, children.get(0));
+			walker.asTree.put("SKIP", "TRUE");
+		}
+	}
+
+	@Override
+	public void exitTruncate_postgres_expression( SQLSelectParserParser.Truncate_postgres_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		List<Object> nameChildren = extractOrderedRuleChildren(subMap);
+		if (nameChildren.isEmpty()) {
+			return;
+		}
+
+		Object promoted = nameChildren.get(0);
+		if (nameChildren.size() > 1) {
+			Map<String, Object> names = new LinkedHashMap<String, Object>();
+			int index = 1;
+			for (Object nameChild : nameChildren) {
+				names.put(Integer.toString(index++), nameChild);
+			}
+			promoted = names;
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, promoted);
+		walker.asTree.put("SKIP", "TRUE");
+	}
+
+	@Override
 	public void enterTruncate_statement_primary( SQLSelectParserParser.Truncate_statement_primaryContext ctx) {
 		walker.pushSymbolTable();
 	}
@@ -2527,23 +2370,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> truncateNode = new LinkedHashMap<String, Object>();
 		truncateNode.put(MUMBLE_TYPE_KEY, "TABLE");
 
-		ArrayList<SQLSelectParserParser.Db_object_nameContext> nameContexts = new ArrayList<SQLSelectParserParser.Db_object_nameContext>();
-		if (ctx.truncate_snowflake_expression() != null && ctx.truncate_snowflake_expression().db_object_name() != null) {
-			nameContexts.add(ctx.truncate_snowflake_expression().db_object_name());
-		}
-		if (ctx.truncate_postgres_expression() != null && ctx.truncate_postgres_expression().db_object_name() != null) {
-			nameContexts.addAll(ctx.truncate_postgres_expression().db_object_name());
-		}
-
-		if (nameContexts.size() == 1) {
-			truncateNode.put(MUMBLE_NAME_KEY, buildFallbackTableNodeFromText(nameContexts.get(0).getText()));
-		} else {
-			Map<String, Object> names = new LinkedHashMap<String, Object>();
-			int index = 1;
-			for (SQLSelectParserParser.Db_object_nameContext nameCtx : nameContexts) {
-				names.put(Integer.toString(index++), buildFallbackTableNodeFromText(nameCtx.getText()));
+		List<Object> nameChildren = extractOrderedRuleChildren(subMap);
+		if (nameChildren.size() == 1) {
+			Object nameChild = nameChildren.get(0);
+			if (nameChild instanceof Map<?, ?> nameMapObj) {
+				Map<String, Object> nameMap = (Map<String, Object>) nameMapObj;
+				if (nameMap.containsKey("1") && !nameMap.containsKey(MUMBLE_TABLE_KEY)) {
+					truncateNode.put(MUMBLE_LIST_KEY, nameMap);
+				} else {
+					truncateNode.put(MUMBLE_NAME_KEY, nameChild);
+				}
 			}
-			truncateNode.put(MUMBLE_LIST_KEY, names);
 		}
 
 		subMap.clear();
@@ -5878,9 +5715,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitDb_object_name( SQLSelectParserParser.Db_object_nameContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
 			String table = (String) subMap.remove("1");
@@ -5897,9 +5740,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(MUMBLE_SCHEMA_KEY, schema);
 			String table = (String) subMap.remove("3");
 			subMap.put(MUMBLE_TABLE_KEY, table);
-		} else {
-			// Wrong number of entries
 		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	@Override
