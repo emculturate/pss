@@ -169,6 +169,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **17** UNPIVOT synthetic columns | ⏸️ Not started | 0% | After Phase 15 — walk + convert UNPIVOT paths; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
+| **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
 
 **Recent wins (Jul 2026):**
@@ -195,7 +196,8 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Phase **15.1–15.4** (Jul 2026): derived-aware bridge + `resolveColumnRefAtConvertEgress` shared helper; interface loop, clause probe, and `resolveRemaining…` routed through it; `-Pphase15-derived-gate` **67/67**, gate **195/195**
 - Phase 14 **Step F** (Jul 2026): removed unused table-function field getters; `ArchivedClauseColumnRefResult.satisfied()` already absent
 - Phase **5** closeout (Jul 2026): strict `def_*` payload lookup audit; renamed ancestor walk to **`resolveDefinitionSymbolInScopeChain`** (definition scope chain resolution); deleted dead `findInCurrentOrAncestorSymbolTablesRecursive` + `findInScopeTreeByKeyRecursive`
-- Phases **15–19** roadmap added: unified egress loop + operand / UNPIVOT / IN-list namespaces + egress scope bundle + query-dict publish consolidation
+- Phases **15–20** roadmap added: unified egress loop + operand / UNPIVOT / IN-list namespaces + egress scope bundle + query-dict publish consolidation + DDL walker hygiene
+- Partial **Phase 20** prep (Jul 2026): `633812b` — CREATE-as-query `query={}` via `exitQuery_expression`; `4ae7e8e` — qualified names from walked `db_object_name`; removed `buildFallbackTableNodeFromText` / name normalizers
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
@@ -1496,7 +1498,81 @@ Step D closed **backfill repair** (post-hoc sweeps). These **ingress** paths sti
 | **Phase 17** | Walker modifier exit + convert | After 15 — UNPIVOT walk/convert boundary |
 | **Phase 18** | Walker + convert + interface derivations | After 15 — IN-list output + IN-identifier; completes 15.4b deferrals |
 | **Phase 19** | Finalizers + walker end sync | After **15.6** — single query-dict publish ingress |
+| **Phase 20** | `SqlParseEventWalker` DDL exit handlers only | After **19** (or parallel with **13** if gate green) — no symbol-table/convert changes; see Phase 20 |
 | **Phase 13** | Low unless feature work edits convert | ~~EXCEPT (13.1)~~ ✅; RETURNING, forward-alias (13.4) — prefer **15.1–15.3** before 13.4 clause work |
+
+---
+
+## Phase 20 — DDL event-walker AST construction hygiene
+
+**Goal:** Eliminate DDL-specific **ctx re-scrape** and **fallback recovery** in `SqlParseEventWalker` so every DDL subtree that the grammar already walks is attached to the statement AST at the natural rule-exit point — the same pattern as `exitDb_object_name`, `exitQuery_expression` (CREATE-as-query), and the rest of the walker.
+
+**Prerequisite:** Phases **15–19** remain on the critical path for symbol-table consolidation. Phase **20** is **walker-only** (DDL exit handlers + `SqlEventWalkerScriptsAndDDLTests` goldens). Safe to run **after Phase 19** or **in parallel with Phase 13** once the gate stays green — it does not touch `SqlParseSymbolTreeHelper` convert egress.
+
+**Partial progress (Jul 2026 — `633812b`, `4ae7e8e`):**
+
+| Done | Detail |
+|------|--------|
+| ✅ | CREATE-as-query bodies under `query={}` via `exitQuery_expression` + parent create exits (no flatten / fallback search) |
+| ✅ | Qualified object names from walked `db_object_name` (`exitDb_object_name` promotes with `addToParent` + `SKIP`) |
+| ✅ | DROP/ALTER/TRUNCATE names from walked children (removed `buildFallbackTableNodeFromText`) |
+| ✅ | `exitTruncate_snowflake_expression` / `exitTruncate_postgres_expression` promote walked name(s) |
+
+**Gate:** `SqlEventWalkerScriptsAndDDLTests` **20/20**; truncate endpoint tests (`truncateStatementEndpointMatchesDdlEndpointTest`, `truncateEndpointAccessObjectTest`); SCRIPT DDL items in `mixedScriptStatementTypesTest` / `fullScriptPrimaryCoverageTest`.
+
+**Explicitly out of scope for Phase 20 (see Phase 13.5):** Structured parsing of `generic_ddl_options` / `generic_ddl_paren_content` into clause-specific mumble keys (`IF NOT EXISTS`, `OR REPLACE`, …). Phase 20 still emits **opaque option/parameter blobs** — but those blobs must be **joined from walked `subMap` terminal children**, not re-read from `ctx.getChild(i).getText()`.
+
+### Problem today — parallel AST construction paths
+
+DDL handlers still bypass the walked tree in several places:
+
+| Anti-pattern | Locations | Issue |
+|--------------|-----------|-------|
+| **`extractDdlObjectTypeText(ctx)`** | `exitDrop_statement_primary`, `exitAlter_statement_primary`, `exitDdl_object_type`, `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content`, `exitCreate_macro_expression` | Iterates `ctx.getChild(i).getText()` instead of joining walked `subMap` entries |
+| **`extractCreateTypeText(ctx, …)`** | All 14 `exitCreate_*_expression` handlers | Reads CREATE keyword tokens from ctx child indices; terminals are already in parent `subMap` via `exitEveryRule` |
+| **Discard walked `subMap`** | `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content` | `removeNodeMap` then ignore; re-scrape ctx for blob text |
+| **`ctx.generic_ddl_paren_content() != null` guards** | `exitCreate_function_expression`, `exitCreate_procedure_expression`, `exitCreate_macro_expression` | Child index arithmetic from ctx introspection instead of walked child count/order |
+| **`passThroughDdlRuleValueToParent`** | Defined, never called | Dead code |
+
+**Acceptable (no change):** `ctx.query_expression() != null` in `exitCreate_table_expression` — branch selector only (AS-select vs column-def form), not AST recovery.
+
+### Phase 20 end state
+
+1. **No `extractDdlObjectTypeText` / `extractCreateTypeText`** — deleted; replaced by `joinWalkedTerminalChildren(subMap)` (or equivalent inline) on the rule's walked node map before promotion.
+2. **`exitDdl_object_type`** — join walked terminals → type string → `addToParent` + `SKIP` (DROP/ALTER read `subMap.get("1")`).
+3. **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`** — join walked `"1"`, `"2"`, … token children → opaque blob string → `addToParent` + `SKIP`; never discard walked map then scrape ctx.
+4. **CREATE exits** — `type` from walked keyword terminals; `parameters` / `clauses` / `options` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
+5. **Function/procedure** — optional-arg layout inferred from walked `subMap` child count, not `ctx.generic_ddl_paren_content() != null`.
+6. **Dead code removed** — `passThroughDdlRuleValueToParent`.
+
+### Phase 20 substeps
+
+| Sub-step | Action | Primary files | Verify | Status |
+|----------|--------|---------------|--------|--------|
+| **20.0** | Inventory: grep `extractDdlObjectTypeText`, `extractCreateTypeText`, `ctx.generic_ddl_paren_content`, `ctx.ddl_object_type`, `passThroughDdlRuleValueToParent` in DDL section | worklist + `SqlParseEventWalker.java` | Matrix in this section | ✅ |
+| **20.1** | Add `joinWalkedTerminalChildren(Map)` helper (joins numbered `"1"`, `"2"`, … string entries only) | `SqlParseEventWalker.java` | Unit: no ctx args | ⏸️ |
+| **20.2** | **`exitDdl_object_type`**: join walked terminals → promote type string with `addToParent` + `SKIP` | Walker | DROP/ALTER type from `subMap.get("1")` | ⏸️ |
+| **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: join walked `subMap` → promote blob; stop `removeNodeMap` + ctx scrape | Walker | CREATE function/procedure/macro/sequence clauses; macro parameters | ⏸️ |
+| **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | `simpleDdlDropTableExpressionV1Test`, `simpleDdlAlterTableExpressionV1Test` | ⏸️ |
+| **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with walked keyword join from create-rule `subMap` (before `extractOrderedRuleChildren` consumes indices) | All `exitCreate_*_expression` | All CREATE DDL tests | ⏸️ |
+| **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro tests | ⏸️ |
+| **20.7** | Delete `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` | Walker | Grep clean | ⏸️ |
+| **20.8** | Golden refresh if blob/key order shifts; full DDL + script + truncate endpoint gate | Tests | **20/20** + truncate endpoints + script DDL statements | ⏸️ |
+
+### Phase 20 closeout checklist
+
+- [ ] All DDL object names, query bodies, types, and opaque option/parameter blobs come from walked grammar children — **20.2–20.6**
+- [ ] No `extractDdlObjectTypeText` / `extractCreateTypeText` / `buildFallbackTableNodeFromText` / ctx child-index scraping in DDL handlers — **20.7**
+- [ ] `generic_ddl_*` remains opaque blob (Phase 13.5 deferral unchanged) but blob text is walker-joined, not ctx-joined — **20.3**
+- [ ] `SqlEventWalkerScriptsAndDDLTests` **20/20** + truncate endpoint tests + script DDL coverage — **20.8**
+- [ ] No symbol-table / convert egress changes (confirm diff scope: `SqlParseEventWalker.java` + DDL tests only)
+
+### Phase 20 vs Phase 13.5
+
+| Track | Relationship |
+|-------|----------------|
+| **Phase 13.5** | Structured DDL option parsing (`IF NOT EXISTS`, …) — **deferred long term** |
+| **Phase 20** | **Walker hygiene only** — same opaque blobs, correct collection path; does not expand grammar |
 
 ---
 
@@ -2199,20 +2275,21 @@ Phases 1–4 ✅  →  5  →  6  →  7  →  8  →  9  →  10  →  11  → 
        →  Phase 15.6 (ConvertEgressScopeBundle — pre-resolved def_* at convert exit)
        →  Phase 16 (PIVOT operands) → Phase 17 (UNPIVOT synthetic) → Phase 18 (IN-list output + IN-identifier)
        →  Phase 19 (query-dict publish ingress consolidation — after 15.6)
-       →  Phase 13 (language features — can overlap Phases 15–19 once gate stays green)
+       →  Phase 20 (DDL event-walker AST hygiene — after 19 or parallel with 13)
+       →  Phase 13 (language features — can overlap Phases 15–20 once gate stays green)
 ```
 
 Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so the egress helper targets one convert implementation.
 
 **Phase 13 starts when ready** (Phases 9–12 test closeout complete as of 2026-07-19: 1203/1203 full suite, 195/195 gate).
 
-**Phase 15.4 is the recommended immediate next step** (shared per-key convert egress helper). Phases **16–18** complete relational-modifier namespaces after Phase 15 closeout; **15.6** builds `ConvertEgressScopeBundle`; **Phase 19** consolidates query-dict publish ingress after **15.6**. See Phases 15–19 sections.
+**Phase 15.4 is the recommended immediate next step** (shared per-key convert egress helper). Phases **16–18** complete relational-modifier namespaces after Phase 15 closeout; **15.6** builds `ConvertEgressScopeBundle`; **Phase 19** consolidates query-dict publish ingress after **15.6**; **Phase 20** cleans up DDL walker ctx re-scrape after **19** (walker-only; safe in parallel with **13**). See Phases 15–20 sections.
 
 ---
 
 ## Final actions for rolling out the parser
 
-**When to run:** After consolidation closeout (Phases 15–19 and any additional phases listed below) and a green full module gate — **before** treating the modified parser as production-safe.
+**When to run:** After consolidation closeout (Phases 15–20 and any additional phases listed below) and a green full module gate — **before** treating the modified parser as production-safe.
 
 **Why:** This effort has changed parser, walker, symbol-table, and substitution-typing behavior in large, small, and subtle ways (clause-agnostic predicand typing, `def_*` canonicalization, `context_list` / alias maps, convert egress, relational-modifier namespaces, unparenthesized calc operands, etc.). Unit and gate tests prove correctness for covered scenarios; production validation must confirm end-to-end consumers still work on real bound query text.
 
@@ -2220,9 +2297,9 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| _(open)_ | _Add rows here if closeout discovers more consolidation work before rollout_ | ⏸️ |
+| **20** | DDL event-walker AST construction hygiene (`SqlParseEventWalker` — retire ctx re-scrape; walked `subMap` only) | ⏸️ See Phase 20 (~25% — names + query bodies done) |
 
-Do **not** start the production validation checklist until this table is empty or every row is ✅.
+Do **not** start the production validation checklist until Phase **20** closeout is ✅ (or explicitly deferred) and every row in the table above is ✅.
 
 ---
 
@@ -2288,6 +2365,7 @@ Read parse/documents/symbol-table-resolution-consolidation-worklist.md first —
 - Phase 15 — Unified convert egress loop (15.1–15.6; **15.6** = ConvertEgressScopeBundle)
 - Phase 14 Step E — **E.5 CLOSED** in Phase 15.3
 - Phase 19 — Query dictionary publish path consolidation (after 15.6)
+- Phase 20 — DDL event-walker AST construction hygiene (after 19; partial progress Jul 2026)
 - Shortest path to dead-code removal
 - Published scope vs global dictionary rules
 - Phase 8 unified resolver (RESOLVED_DERIVED_COLUMN, isPhysicalTableRefVisibleInScope)
