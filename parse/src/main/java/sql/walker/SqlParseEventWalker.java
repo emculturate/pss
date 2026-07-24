@@ -76,6 +76,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final Set<String> invalidVariableDiagnosticKeys;
 	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
 	private static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
+
+	private enum RelationalModifierOperandRole {
+		VALUE,
+		FOR,
+		IN_LIST
+	}
+
+	private static final class RelationalModifierOperandReference {
+		private final RelationalModifierOperandRole role;
+		private final Map<String, Object> columnMap;
+
+		private RelationalModifierOperandReference(
+				RelationalModifierOperandRole role,
+				Map<String, Object> columnMap) {
+			this.role = role;
+			this.columnMap = columnMap;
+		}
+	}
+
 	private final ArrayDeque<Integer> setOperationWrapAnchorStackLevels;
 	private int tableSourcePrimaryNestingDepth;
 
@@ -5058,8 +5077,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		String operatorLabel = MUMBLE_UNPIVOT_KEY.equals(modifierKey) ? "UNPIVOT" : "PIVOT";
-		ArrayList<Map<String, Object>> operandColumns = collectRelationalModifierOperandColumnMaps(modifier);
-		for (Map<String, Object> columnMap : operandColumns) {
+		ArrayList<RelationalModifierOperandReference> operandReferences =
+				collectRelationalModifierOperandReferences(modifier);
+		for (RelationalModifierOperandReference operandReference : operandReferences) {
+			Map<String, Object> columnMap = operandReference.columnMap;
 			if (columnMap == null || columnMap.isEmpty()) {
 				continue;
 			}
@@ -5080,6 +5101,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					sourceResult);
 			Integer line = tokenPosition[0];
 			Integer charPos = tokenPosition[1];
+
+			if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)
+					&& (operandReference.role == RelationalModifierOperandRole.VALUE
+							|| operandReference.role == RelationalModifierOperandRole.FOR)) {
+				emitRelationalModifierDerivedOperandQualifiedFatal(
+						operandTableRef,
+						columnName,
+						line,
+						charPos);
+				continue;
+			}
 
 			if (qualifierMatchesImmediateRelationalModifierSource(operandTableRef, immediateSourceRef, sourceResult)) {
 				String diagCode = walker.getDiagnosticCode(
@@ -5136,6 +5168,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 	}
 
+	private void emitRelationalModifierDerivedOperandQualifiedFatal(
+			String operandTableRef,
+			String columnName,
+			Integer line,
+			Integer charPos) {
+		String diagCode = walker.getDiagnosticCode(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED);
+		String diagTemplate = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Qualified UNPIVOT operand '%s.%s' at (l:%s c:%s) is not permitted; derived output columns in VALUE and FOR positions must be unqualified.",
+						operandTableRef,
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos))
+				: String.format(
+						diagTemplate,
+						operandTableRef,
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos));
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, operandTableRef + "." + columnName);
+	}
+
 	@SuppressWarnings("unchecked")
 	private boolean qualifierMatchesImmediateRelationalModifierSource(
 			String operandTableRef,
@@ -5186,22 +5243,33 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
-	private ArrayList<Map<String, Object>> collectRelationalModifierOperandColumnMaps(Map<String, Object> modifier) {
-		ArrayList<Map<String, Object>> operandColumns = new ArrayList<Map<String, Object>>();
+	private ArrayList<RelationalModifierOperandReference> collectRelationalModifierOperandReferences(
+			Map<String, Object> modifier) {
+		ArrayList<RelationalModifierOperandReference> operandReferences =
+				new ArrayList<RelationalModifierOperandReference>();
 		if (modifier == null || modifier.isEmpty()) {
-			return operandColumns;
+			return operandReferences;
 		}
 
-		collectRelationalModifierOperandColumnMapsFromSubtree(modifier.get(MUMBLE_VALUE_KEY), operandColumns);
-		collectRelationalModifierOperandColumnMapsFromSubtree(modifier.get(MUMBLE_FOR_KEY), operandColumns);
-		collectRelationalModifierOperandColumnMapsFromInList(modifier.get(MUMBLE_IN_KEY), operandColumns);
-		return operandColumns;
+		collectRelationalModifierOperandReferencesFromSubtree(
+				modifier.get(MUMBLE_VALUE_KEY),
+				RelationalModifierOperandRole.VALUE,
+				operandReferences);
+		collectRelationalModifierOperandReferencesFromSubtree(
+				modifier.get(MUMBLE_FOR_KEY),
+				RelationalModifierOperandRole.FOR,
+				operandReferences);
+		collectRelationalModifierOperandReferencesFromInList(
+				modifier.get(MUMBLE_IN_KEY),
+				operandReferences);
+		return operandReferences;
 	}
 
 	@SuppressWarnings("unchecked")
-	private void collectRelationalModifierOperandColumnMapsFromSubtree(
+	private void collectRelationalModifierOperandReferencesFromSubtree(
 			Object operandObj,
-			ArrayList<Map<String, Object>> operandColumns) {
+			RelationalModifierOperandRole role,
+			ArrayList<RelationalModifierOperandReference> operandReferences) {
 		if (operandObj == null) {
 			return;
 		}
@@ -5216,15 +5284,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		for (Object refObj : refs) {
 			Map<String, Object> columnMap = extractRelationalModifierOperandColumnMap(refObj);
 			if (columnMap != null && !columnMap.isEmpty()) {
-				operandColumns.add(columnMap);
+				operandReferences.add(new RelationalModifierOperandReference(role, columnMap));
 			}
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private void collectRelationalModifierOperandColumnMapsFromInList(
+	private void collectRelationalModifierOperandReferencesFromInList(
 			Object inListObj,
-			ArrayList<Map<String, Object>> operandColumns) {
+			ArrayList<RelationalModifierOperandReference> operandReferences) {
 		if (!(inListObj instanceof Map<?, ?> inListMapObj)) {
 			return;
 		}
@@ -5243,7 +5311,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> columnMap = extractRelationalModifierOperandColumnMap(inItemMap);
 			if (columnMap != null && !columnMap.isEmpty()) {
-				operandColumns.add(columnMap);
+				operandReferences.add(
+						new RelationalModifierOperandReference(RelationalModifierOperandRole.IN_LIST, columnMap));
 			}
 		}
 	}

@@ -2062,7 +2062,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	/*
 	 * Phase 16 / 17 operand qualifier coverage:
 	 * - Phase 16.4 — PIVOT physical operands: redundant correct prefix → WARNING; wrong prefix → FATAL.
-	 * - Phase 17.0b — UNPIVOT VALUE/FOR derived columns: any prefix → FATAL (pending).
+	 * - Phase 17.0b — UNPIVOT VALUE/FOR derived columns: any prefix → FATAL (DERIVED_OPERAND_QUALIFIED).
 	 * - UNPIVOT IN-list physical operands follow the Phase 16 redundant/invalid policy.
 	 * Unqualified outer references to pivot output columns (jan_sales, empid) remain
 	 * Phase 18 IN-list / join-resolution territory and are tested separately below.
@@ -2876,7 +2876,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotQualifiedOperandsRedundantWarningTest() {
+	public void unpivotQualifiedDerivedOperandsFatalTest() {
 		final String query =
 			"SELECT empid, month_name, sales_amount\n"
 				+ "FROM monthly_sales msl\n"
@@ -2885,19 +2885,18 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		assertNoFatalErrors(extractor);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
-				ParseDiagnostic.Severity.WARNING,
-				"Qualified UNPIVOT operand 'msl.sales_amount'",
+				"RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
+				ParseDiagnostic.Severity.FATAL,
+				"derived output columns in VALUE and FOR positions must be unqualified",
 				"msl.sales_amount",
 				3,
 				9);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
-				ParseDiagnostic.Severity.WARNING,
+				"RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
+				ParseDiagnostic.Severity.FATAL,
 				"Qualified UNPIVOT operand 'msl.month_name'",
 				"msl.month_name",
 				3,
@@ -2932,7 +2931,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID",
+				"RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
 				ParseDiagnostic.Severity.FATAL,
 				"Qualified UNPIVOT operand 'wrong.sales_amount'",
 				"wrong.sales_amount",
@@ -2940,8 +2939,8 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				9);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
-				ParseDiagnostic.Severity.WARNING,
+				"RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
+				ParseDiagnostic.Severity.FATAL,
 				"Qualified UNPIVOT operand 'msl.month_name'",
 				"msl.month_name",
 				3,
@@ -2962,6 +2961,34 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={query_dictionary={empid=[[@1,7:11='empid',<381>,1:7]]}, table_dictionary={monthly_sales={jan_sales=[[@16,87:95='jan_sales',<381>,3:51]], empid=[[@1,7:11='empid',<381>,1:7]]}}, interface={empid=[{name=empid, table_ref=monthly_sales}]}, derived_columns={month_name=[{name=jan_sales, table_ref=msl}], sales_amount=[{name=jan_sales, table_ref=msl}]}, table_alias={msl=monthly_sales}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void unpivotQualifiedValueDerivedOperandFatalTest() {
+		final String query =
+			"SELECT empid, month_name, sales_amount\n"
+				+ "FROM monthly_sales msl\n"
+				+ "UNPIVOT (msl.sales_amount FOR month_name IN (jan_sales, feb_sales));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
+				ParseDiagnostic.Severity.FATAL,
+				"Qualified UNPIVOT operand 'msl.sales_amount'",
+				"msl.sales_amount",
+				3,
+				9);
+		Assert.assertEquals("Redundant qualifier warnings should be absent",
+				0,
+				extractor.getSnippet().getDiagnosticCountBySeverity(ParseDiagnostic.Severity.WARNING));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value={column={name=sales_amount, table_ref=msl}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, table={alias=msl, table=monthly_sales}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid, month_name, sales_amount]",
+				extractor.getInterface().toString());
 	}
 
 	@Test

@@ -165,8 +165,8 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green |
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
-| **16** PIVOT operand materialization | 🔄 In progress | ~65% | **16.0–16.2** done — see Phase 16 |
-| **17** UNPIVOT derived columns | ⏸️ Not started | 0% | **17.0b** operand qualifier guard first; then walk + convert UNPIVOT paths — see Phase 17 |
+| **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~15% | **17.0b** done — walk/convert UNPIVOT paths remain; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -1377,10 +1377,11 @@ Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled
 
 **19 tests fail** when all three calls are disabled (full list: `pivotBasicMonthSalesJoinV8Test`, `pivotJoinTargetsWithFilterV5Test`, `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest`, `pivotSameQueryJoinDerivedColumnFromTableTest`, `pivotNestedSelectStarV1Test` family, `pivotBasicMonthSalesV7Test`, clause-surface probes, etc.).
 
-**Next (16.3):** Grep clean; confirm `resolvePivotOperandColumnsFromUnresolvedMap` has exactly one convert call site.
+**Next (16.3):** Grep clean; confirm `resolvePivotOperandColumnsFromUnresolvedMap` has exactly one convert call site. ✅ **Jul 2026** — definition at `SqlParseSymbolTreeHelper` ~L667; sole convert call at ~L1878 (post-wildcard, pre-egress).
 
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
+| **16.3** | Grep clean; confirm single `resolvePivotOperandColumnsFromUnresolvedMap` convert call site | Pivot suite + gate | ✅ **Jul 2026** |
 | **16.4** | **PIVOT physical-operand qualifier policy** — document landed behavior; keep out of UNPIVOT derived-column scope | Pivot qualified-operand + unqualified parity tests in `SqlEventWalkerPivotUnpivotTests` | ✅ **Jul 2026** |
 
 **16.4 scope (landed):**
@@ -1395,8 +1396,9 @@ Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled
 
 - [x] Operand materialization runs once (or has documented single re-pass rule) — **16.2** ✅
 - [x] `RESOLVED_PIVOT_OPERAND` (or shared materialize branch) in unified egress path — **16.1** ✅
-- [ ] Triple `resolvePivotOperandColumnsFromUnresolvedMap` calls retired — **16.3** (single call site ✅ in **16.2**)
-- [ ] Pivot **67/67** + gate **195/195** + full suite **1209/1209**
+- [x] Triple `resolvePivotOperandColumnsFromUnresolvedMap` calls retired — **16.3** (single call site at ~L1878) ✅
+- [x] PIVOT physical-operand qualifier policy documented — **16.4** ✅
+- [x] Pivot suite **92/92** (`SqlEventWalkerPivotUnpivotTests`) + `-Pphase15-derived-gate` + `-Psmoketest-quality-gate` **195/195** ✅ **Jul 2026**
 
 ---
 
@@ -1409,7 +1411,7 @@ Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled
 | Layer | Handler | What it does |
 |-------|---------|-------------|
 | **Walk** (modifier exit) | `resolveUnpivotGeneratedColumnsFromUnresolvedMap` (`SqlParseEventWalker` ~L5059) | At UNPIVOT primary exit: strip VALUE/FOR from `unresolved_column`; materialize IN cols; sweep query-source interface cols from unresolved map |
-| **Walk** (modifier exit) | `validateRelationalModifierOperandQualifiers` (~L5047) | **Gap (17.0b):** treats UNPIVOT VALUE/FOR like physical operands — emits redundant WARNING when prefix matches source; should FATAL on any qualifier (derived column names) |
+| **Walk** (modifier exit) | `validateRelationalModifierOperandQualifiers` (~L5047) | UNPIVOT VALUE/FOR qualifiers → `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` (FATAL); IN-list retains redundant/invalid physical-operand policy — **17.0b** ✅ |
 | **Convert** | `applyUnpivotValueInterfaceDerivations` | Rewrites interface refs from VALUE column → IN-list physical refs |
 | **Convert** | `applyUnpivotValueDerivationsToReferenceListObject` | **Stub** — returns `referenceListObject` unchanged (~L314) |
 | **Convert** | `materializeSelectedUnpivotInColumnsIntoSourceDictionary` | Materializes selected UNPIVOT IN columns into source dictionary |
@@ -1437,7 +1439,7 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
 | **17.0** | Inventory UNPIVOT handlers (table above); map each UNPIVOT test to namespace + handler | Worklist + test matrix | ⏸️ |
-| **17.0b** | **Derived-column operand qualifier guard** (early slice — ship before 17.1) | UNPIVOT qualifier tests + parity | ⏸️ |
+| **17.0b** | **Derived-column operand qualifier guard** (early slice — ship before 17.1) | UNPIVOT qualifier tests + parity | ✅ **Jul 2026** |
 | **17.1** | Document chosen walk vs convert ownership; add UNPIVOT outcomes to shared resolver | UNPIVOT V1 + multi-source ambiguity tests | ⏸️ |
 | **17.2** | Retire duplicate strip if walk + convert both handle VALUE/FOR (keep one path) | Pivot UNPIVOT subset + gate | ⏸️ |
 | **17.3** | Implement or replace `applyUnpivotValueDerivationsToReferenceListObject` stub; clause lists use shared policy | UNPIVOT clause tests if any; gate | ⏸️ |
@@ -1465,19 +1467,18 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 
 **Test matrix (17.0b):**
 
-| Test | Current | Target |
-|------|---------|--------|
-| `unpivotQualifiedOperandsRedundantWarningTest` | 2× WARNING | 2× FATAL `DERIVED_OPERAND_QUALIFIED` |
-| `unpivotWrongQualifierOperandFatalTest` | INVALID + redundant WARNING | 2× FATAL `DERIVED_OPERAND_QUALIFIED` (VALUE + FOR) |
-| `unpivotQualifiedInListOperandsRedundantWarningTest` | 2× WARNING on IN cols | **Unchanged** (physical IN operands) |
-| `unpivotQualifiedOperandsUnqualifiedParityTest` | clean | **Unchanged** |
-| All PIVOT qualified-operand + parity tests | per 16.4 | **Unchanged** |
-
-**Suggested edge-case additions:** VALUE qualified / FOR unqualified (single FATAL); IN-list wrong prefix still `INVALID`.
+| Test | Status |
+|------|--------|
+| `unpivotQualifiedDerivedOperandsFatalTest` | 2× FATAL `DERIVED_OPERAND_QUALIFIED` ✅ |
+| `unpivotWrongQualifierOperandFatalTest` | 2× FATAL `DERIVED_OPERAND_QUALIFIED` (VALUE + FOR) ✅ |
+| `unpivotQualifiedValueDerivedOperandFatalTest` | VALUE qualified only → single FATAL ✅ |
+| `unpivotQualifiedInListOperandsRedundantWarningTest` | 2× WARNING on IN cols (unchanged) ✅ |
+| `unpivotQualifiedOperandsUnqualifiedParityTest` | clean ✅ |
+| All PIVOT qualified-operand + parity tests | per 16.4 (unchanged) ✅ |
 
 ### Phase 17 closeout checklist
 
-- [ ] **17.0b** — UNPIVOT VALUE/FOR derived-column qualifiers rejected with `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED`; IN-list + PIVOT physical policy unchanged
+- [x] **17.0b** — UNPIVOT VALUE/FOR derived-column qualifiers rejected with `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED`; IN-list + PIVOT physical policy unchanged
 - [ ] Walk vs convert UNPIVOT ownership documented and enforced (single owner per derived-column category)
 - [ ] VALUE/FOR/IN namespace outcomes in shared resolver or documented convert-prep equivalent
 - [ ] `applyUnpivotValueDerivationsToReferenceListObject` stub resolved (implement or delete)
@@ -2277,14 +2278,15 @@ Phase 15 — Unified convert egress loop                             ✅ DONE (J
   15.5 collapse steps 5–9; delete consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap ✅ (Jul 2026)
   15.6 ConvertEgressScopeBundle — pre-resolved def_* payloads; retire egress-time scope-chain walks ✅ (Jul 2026)
 
-Phase 16 — PIVOT operand materialization                               🔄 IN PROGRESS (16.0 ✅)
-  16.0 operand inventory + triple-call audit ✅ (Jul 2026) — one pass sufficient; prefer call-1 site
-  16.1 RESOLVED_PIVOT_OPERAND in shared egress helper ✅ (Jul 2026)
-  16.2 single operand pass at convert (post-wildcard) ✅ (Jul 2026)
-  16.4 PIVOT physical-operand qualifier policy ✅ (Jul 2026) — UNPIVOT VALUE/FOR → 17.0b
+Phase 16 — PIVOT operand materialization                               ✅ DONE (Jul 2026)
+  16.0 operand inventory + triple-call audit ✅
+  16.1 RESOLVED_PIVOT_OPERAND in shared egress helper ✅
+  16.2 single operand pass at convert (post-wildcard) ✅
+  16.3 grep clean — single convert call site ✅
+  16.4 PIVOT physical-operand qualifier policy ✅
 
-Phase 17 — UNPIVOT derived columns                                     ⏸️ after Phase 15
-  17.0b derived-column operand qualifier guard (early slice — ship first)
+Phase 17 — UNPIVOT derived columns                                     🔄 IN PROGRESS
+  17.0b derived-column operand qualifier guard ✅ (Jul 2026)
   17.0–17.5: walk vs convert ownership; VALUE/FOR/IN outcomes; stub clause derivations
 
 Phase 18 — PIVOT IN-list output + IN-identifier                        ⏸️ after Phase 15
