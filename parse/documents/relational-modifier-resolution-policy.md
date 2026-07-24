@@ -47,8 +47,8 @@ Derived columns introduced by UNPIVOT (and analogously PIVOT registry keys) use 
 |---------|-----------------------------------|--------|
 | Modifier phrase operands | `exitUnpivot_clause` | Record hint contract (VALUE, FOR, IN list) |
 | Derived identity + unresolved hygiene | `exitTable_primary` | Stamp source refs; tier-1 identity; strip VALUE/FOR/IN from `unresolved_column`; materialize IN physical cols |
-| SELECT `interface` | `exitQuery_specification` | Tier-2 rewrite (SELECT captured before FROM) |
-| WHERE / HAVING / QUALIFY / GROUP BY / ORDER BY / JOIN ON | `exitQuery_specification` | Tier-2 rewrite via **same helper** as SELECT |
+| SELECT `interface` VALUE expansion | Convert exit, **after** interface egress loop | Tier-2 `applyUnpivotDerivationsToQueryScope` — VALUE must not be consumed as derived before expansion (`treatDerivedRegistryKeys=false` on interface loop) |
+| WHERE / HAVING / QUALIFY / GROUP BY / ORDER BY / JOIN ON | Convert egress with `treatDerivedRegistryKeys=true` | `RESOLVED_UNPIVOT_VALUE` / `RESOLVED_UNPIVOT_FOR` consume; clause list rewrite deferred to **17.3** |
 | Published artifacts | Convert egress | `RESOLVED_UNPIVOT_VALUE`, `RESOLVED_UNPIVOT_FOR`, `RESOLVED_UNPIVOT_IN_SOURCE` — mechanical only |
 
 Optional: if a clause is walked **after** FROM and hints are complete, tier-2 may run at that clause exit — but only by calling the **same** scope helper, not duplicate logic.

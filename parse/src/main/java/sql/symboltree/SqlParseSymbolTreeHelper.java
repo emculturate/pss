@@ -121,6 +121,9 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED,
 		RESOLVED_DERIVED_COLUMN,
 		RESOLVED_PIVOT_OPERAND,
+		RESOLVED_UNPIVOT_VALUE,
+		RESOLVED_UNPIVOT_FOR,
+		RESOLVED_UNPIVOT_IN_SOURCE,
 		DEFERRED,
 		AMBIGUOUS,
 		UNRESOLVED
@@ -161,6 +164,27 @@ public class SqlParseSymbolTreeHelper {
 					null);
 		}
 
+		static UnqualifiedScopeResolutionResult resolvedUnpivotValue() {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE,
+					null,
+					null);
+		}
+
+		static UnqualifiedScopeResolutionResult resolvedUnpivotFor() {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR,
+					null,
+					null);
+		}
+
+		static UnqualifiedScopeResolutionResult resolvedUnpivotInSource(String materializeTableRef) {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE,
+					materializeTableRef,
+					null);
+		}
+
 		static UnqualifiedScopeResolutionResult deferred() {
 			return new UnqualifiedScopeResolutionResult(
 					UnqualifiedScopeResolutionStatus.DEFERRED,
@@ -190,6 +214,9 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED_PHYSICAL_SOURCE,
 		RESOLVED_DERIVED_COLUMN,
 		RESOLVED_PIVOT_OPERAND,
+		RESOLVED_UNPIVOT_VALUE,
+		RESOLVED_UNPIVOT_FOR,
+		RESOLVED_UNPIVOT_IN_SOURCE,
 		DEFERRED,
 		UNRESOLVED_QUERY_SOURCE,
 		UNRESOLVED_PHYSICAL_SOURCE
@@ -255,6 +282,32 @@ public class SqlParseSymbolTreeHelper {
 				String sourceTableRef) {
 			return new QualifiedScopeResolutionResult(
 					QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND,
+					null,
+					materializeTableRef,
+					sourceTableRef);
+		}
+
+		static QualifiedScopeResolutionResult resolvedUnpivotValue(String sourceTableRef) {
+			return new QualifiedScopeResolutionResult(
+					QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE,
+					null,
+					null,
+					sourceTableRef);
+		}
+
+		static QualifiedScopeResolutionResult resolvedUnpivotFor(String sourceTableRef) {
+			return new QualifiedScopeResolutionResult(
+					QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR,
+					null,
+					null,
+					sourceTableRef);
+		}
+
+		static QualifiedScopeResolutionResult resolvedUnpivotInSource(
+				String materializeTableRef,
+				String sourceTableRef) {
+			return new QualifiedScopeResolutionResult(
+					QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE,
 					null,
 					materializeTableRef,
 					sourceTableRef);
@@ -411,11 +464,15 @@ public class SqlParseSymbolTreeHelper {
 				return true;
 			}
 			if (qualified != null
-					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+					&& (qualified.status == QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
+							|| qualified.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
+							|| qualified.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR)) {
 				return true;
 			}
 			return unqualified != null
-					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN;
+					&& (unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
+							|| unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
+							|| unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR);
 		}
 
 		boolean isPivotOperandColumn() {
@@ -427,13 +484,24 @@ public class SqlParseSymbolTreeHelper {
 					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND;
 		}
 
+		boolean isUnpivotInSourceColumn() {
+			if (qualified != null
+					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE) {
+				return true;
+			}
+			return unqualified != null
+					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE;
+		}
+
 		String pivotOperandMaterializeTableRef() {
 			if (qualified != null
-					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND) {
+					&& (qualified.status == QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND
+							|| qualified.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE)) {
 				return qualified.resolvedPhysicalTableRef;
 			}
 			if (unqualified != null
-					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND) {
+					&& (unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND
+							|| unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_IN_SOURCE)) {
 				return unqualified.resolvedSourceRef;
 			}
 			return null;
@@ -452,6 +520,31 @@ public class SqlParseSymbolTreeHelper {
 	// Methods moved from SqlParseEventWalker
 
 	// --- UNPIVOT / convertSymbolTable resolution (canonical from event walker) ---
+
+	/**
+	 * Phase 17.1: tier-2 UNPIVOT interface rewrite on the active walker symbol-table frame.
+	 * Prefer {@link #applyUnpivotDerivationsToQueryScope(HashMap, ArrayList)} at convert exit
+	 * after the interface egress loop (VALUE expansion must run after derived consume is skipped).
+	 */
+	@SuppressWarnings("unchecked")
+	public void applyUnpivotDerivationsToQueryScope() {
+		Object hintsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		if (!(hintsObj instanceof ArrayList<?> hintListObj) || hintListObj.isEmpty()) {
+			return;
+		}
+		Object interfaceObj = walker.symbolTable.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof HashMap<?, ?> interfaceMapObj) {
+			applyUnpivotDerivationsToQueryScope(
+					(HashMap<String, Object>) interfaceMapObj,
+					(ArrayList<Object>) hintListObj);
+		}
+	}
+
+	public void applyUnpivotDerivationsToQueryScope(
+			HashMap<String, Object> localInterface,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		applyUnpivotValueInterfaceDerivations(localInterface, relationalModifierInterfaceHints);
+	}
 
 	public void applyUnpivotValueInterfaceDerivations(
 			HashMap<String, Object> localInterface,
@@ -724,6 +817,140 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	/** Phase 17.1: UNPIVOT namespace bind target for convert egress. */
+	private enum UnpivotBindingKind {
+		VALUE,
+		FOR,
+		IN_SOURCE
+	}
+
+	private static final class UnpivotBinding {
+		final UnpivotBindingKind kind;
+		final String materializeTableRef;
+		final String unpivotSourceRef;
+
+		private UnpivotBinding(
+				UnpivotBindingKind kind,
+				String materializeTableRef,
+				String unpivotSourceRef) {
+			this.kind = kind;
+			this.materializeTableRef = materializeTableRef;
+			this.unpivotSourceRef = unpivotSourceRef;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private UnpivotBinding resolveUnpivotBindingAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ArrayList<Object> relationalModifierInterfaceHints,
+			HashMap<String, Object> localPhysicalTableCollection,
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> aliasMapForHintMatch) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| relationalModifierInterfaceHints == null
+				|| relationalModifierInterfaceHints.isEmpty()) {
+			return null;
+		}
+
+		HashMap<String, Object> hintAliasMap = aliasMapForHintMatch != null
+				? aliasMapForHintMatch
+				: localTableAliasMap;
+		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (!(operatorObj instanceof String operator) || !MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
+				continue;
+			}
+
+			String unpivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
+
+			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+			if (valueObj instanceof String valueColumn
+					&& !valueColumn.isBlank()
+					&& valueColumn.equalsIgnoreCase(columnName)) {
+				if (qualifiedShape
+						&& !hintSourceRefMatches(hintMap, tableRef, hintAliasMap)) {
+					continue;
+				}
+				return new UnpivotBinding(UnpivotBindingKind.VALUE, null, unpivotSourceRef);
+			}
+
+			Object forObj = hintMap.get(MUMBLE_FOR_KEY);
+			if (forObj instanceof String forColumn
+					&& !forColumn.isBlank()
+					&& forColumn.equalsIgnoreCase(columnName)) {
+				if (qualifiedShape
+						&& !hintSourceRefMatches(hintMap, tableRef, hintAliasMap)) {
+					continue;
+				}
+				return new UnpivotBinding(UnpivotBindingKind.FOR, null, unpivotSourceRef);
+			}
+
+			Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
+			if (inColumnsObj instanceof ArrayList<?> inColumns) {
+				for (Object inColumnObj : inColumns) {
+					if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
+						continue;
+					}
+					if (!inColumn.equalsIgnoreCase(columnName)) {
+						continue;
+					}
+					if (qualifiedShape
+							&& !hintSourceRefMatches(hintMap, tableRef, hintAliasMap)) {
+						continue;
+					}
+					String materializeTableRef = resolveUnpivotInSourceMaterializationTableRef(
+							hintMap,
+							localPhysicalTableCollection,
+							localTableAliasMap);
+					if (materializeTableRef == null || materializeTableRef.isBlank()) {
+						continue;
+					}
+					return new UnpivotBinding(
+							UnpivotBindingKind.IN_SOURCE,
+							materializeTableRef,
+							unpivotSourceRef);
+				}
+			}
+		}
+		return null;
+	}
+
+	private String resolveUnpivotInSourceMaterializationTableRef(
+			Map<String, Object> hintMap,
+			HashMap<String, Object> localPhysicalTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		if (hintMap == null || hintMap.isEmpty()) {
+			return null;
+		}
+
+		Object dictionarySourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
+		if (dictionarySourceRefObj instanceof String dictionarySourceRef
+				&& !dictionarySourceRef.isBlank()) {
+			String resolvedTargetRef = walker.resolveAliasToTableName(
+					dictionarySourceRef,
+					localTableAliasMap);
+			if (resolvedTargetRef == null || resolvedTargetRef.isBlank()) {
+				resolvedTargetRef = dictionarySourceRef;
+			}
+			if (!walker.isNonTableQuerySourceReference(resolvedTargetRef)) {
+				return normalizeTableRef(resolvedTargetRef);
+			}
+		}
+
+		return resolvePivotOperandMaterializationTableRef(
+				hintMap,
+				localPhysicalTableCollection,
+				localTableAliasMap);
+	}
+
 	@SuppressWarnings("unchecked")
 	private PivotOperandBinding resolvePivotOperandBindingAtConvertEgress(
 			String columnName,
@@ -852,6 +1079,40 @@ public class SqlParseSymbolTreeHelper {
 				tableRef,
 				egressResult.pivotOperandMaterializeTableRef(),
 				pivotSourceRef,
+				unresolvedColumnMap,
+				localTableCollection,
+				localTableAliasMap);
+	}
+
+	private void applyConvertEgressUnpivotInSourceMaterialization(
+			ConvertEgressColumnResolutionResult egressResult,
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localTableCollection,
+			ArrayList<Object> relationalModifierInterfaceHints,
+			HashMap<String, Object> localTableAliasMap) {
+		if (!egressResult.isUnpivotInSourceColumn()) {
+			return;
+		}
+		String unpivotSourceRef = null;
+		if (relationalModifierInterfaceHints != null) {
+			UnpivotBinding binding = resolveUnpivotBindingAtConvertEgress(
+					columnName,
+					tableRef,
+					relationalModifierInterfaceHints,
+					buildLocalPhysicalFromTableCollection(localTableCollection),
+					localTableAliasMap,
+					localTableAliasMap);
+			if (binding != null) {
+				unpivotSourceRef = binding.unpivotSourceRef;
+			}
+		}
+		materializePivotOperandColumnAtConvertEgress(
+				columnName,
+				tableRef,
+				egressResult.pivotOperandMaterializeTableRef(),
+				unpivotSourceRef,
 				unresolvedColumnMap,
 				localTableCollection,
 				localTableAliasMap);
@@ -2101,6 +2362,23 @@ public class SqlParseSymbolTreeHelper {
 							}
 							continue;
 						}
+						if (egressResult.isUnpivotInSourceColumn()) {
+							applyConvertEgressUnpivotInSourceMaterialization(
+									egressResult,
+									columnName,
+									tableRef,
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localRelationalModifierInterfaceHints,
+									localTableAliasMap);
+							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
+							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+										refObj,
+										materializeTableRef));
+							}
+							continue;
+						}
 
 						QualifiedScopeResolutionResult resolutionResult = egressResult.qualified();
 						if (resolutionResult == null) {
@@ -2153,8 +2431,30 @@ public class SqlParseSymbolTreeHelper {
 											tokenPayload);
 								}
 							}
+							case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
+								consumeDerivedColumnUnknownEntry(
+										localUnresolvedColumnMap,
+										tableRef,
+										columnName);
+							}
 							case RESOLVED_PIVOT_OPERAND -> {
 								applyConvertEgressPivotOperandMaterialization(
+										egressResult,
+										columnName,
+										tableRef,
+										localUnresolvedColumnMap,
+										localTableCollection,
+										localRelationalModifierInterfaceHints,
+										localTableAliasMap);
+								String materializeTableRef = resolutionResult.resolvedPhysicalTableRef;
+								if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+									refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+											refObj,
+											materializeTableRef));
+								}
+							}
+							case RESOLVED_UNPIVOT_IN_SOURCE -> {
+								applyConvertEgressUnpivotInSourceMaterialization(
 										egressResult,
 										columnName,
 										tableRef,
@@ -2263,6 +2563,23 @@ public class SqlParseSymbolTreeHelper {
 							}
 							continue;
 						}
+						if (egressResult.isUnpivotInSourceColumn()) {
+							applyConvertEgressUnpivotInSourceMaterialization(
+									egressResult,
+									columnName,
+									null,
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localRelationalModifierInterfaceHints,
+									localTableAliasMap);
+							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
+							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+										refObj,
+										materializeTableRef));
+							}
+							continue;
+						}
 
 						UnqualifiedScopeResolutionResult resolutionResult = egressResult.unqualified();
 						if (resolutionResult == null) {
@@ -2319,9 +2636,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 		}
 
-		applyUnpivotValueInterfaceDerivations(
-				localInterface,
-				localRelationalModifierInterfaceHints);
+		applyUnpivotDerivationsToQueryScope(localInterface, localRelationalModifierInterfaceHints);
 
 		materializeSelectedUnpivotInColumnsIntoSourceDictionary(
 				localCurrentQueryDictionary,
@@ -2331,16 +2646,6 @@ public class SqlParseSymbolTreeHelper {
 
 		applyPivotValueInterfaceDerivations(
 				localInterface,
-				localRelationalModifierInterfaceHints);
-
-		filtersList = applyUnpivotValueDerivationsToReferenceListObject(
-				filtersList,
-				localRelationalModifierInterfaceHints);
-		groupedByList = applyUnpivotValueDerivationsToReferenceListObject(
-				groupedByList,
-				localRelationalModifierInterfaceHints);
-		orderedByList = applyUnpivotValueDerivationsToReferenceListObject(
-				orderedByList,
 				localRelationalModifierInterfaceHints);
 
 		// Resolve ingress-captured unqualified entries (nested-scope merges, UPDATE no-FROM, etc.).
@@ -6410,10 +6715,10 @@ public class SqlParseSymbolTreeHelper {
 						visibleAliasMap,
 						localTableCollectionOverride);
 			}
-			case RESOLVED_DERIVED_COLUMN -> {
+			case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
 				return true;
 			}
-			case RESOLVED_PIVOT_OPERAND -> {
+			case RESOLVED_PIVOT_OPERAND, RESOLVED_UNPIVOT_IN_SOURCE -> {
 				HashMap<String, Object> targetCollection = localTableCollectionOverride != null
 						? localTableCollectionOverride
 						: visibleTableCollection;
@@ -7892,6 +8197,17 @@ public class SqlParseSymbolTreeHelper {
 							tableAliasMap);
 					continue;
 				}
+				if (updateRhsEgressResult.isUnpivotInSourceColumn()) {
+					applyConvertEgressUnpivotInSourceMaterialization(
+							updateRhsEgressResult,
+							columnName,
+							tableRef,
+							unresolvedColumnMap,
+							tableCollection,
+							relationalModifierInterfaceHints,
+							tableAliasMap);
+					continue;
+				}
 
 				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
 					continue;
@@ -9161,7 +9477,9 @@ public class SqlParseSymbolTreeHelper {
 							null,
 							null,
 							false);
-			if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+			if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
+					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
+					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR) {
 				consumeDerivedColumnUnknownEntry(unqualifiedUnresolvedForLocal, null, columnName);
 				continue;
 			}
@@ -9316,6 +9634,28 @@ public class SqlParseSymbolTreeHelper {
 
 		if (isNonTupleSubstitutionReference(tableRef)) {
 			return QualifiedScopeResolutionResult.unresolvedPhysicalSource(null, tableRef);
+		}
+
+		UnpivotBinding unpivotBinding = resolveUnpivotBindingAtConvertEgress(
+				columnName,
+				tableRef,
+				relationalModifierInterfaceHints,
+				buildLocalPhysicalFromTableCollection(visibleTableCollection),
+				visibleAliasMap,
+				visibleAliasMap);
+		if (unpivotBinding != null && unpivotBinding.kind == UnpivotBindingKind.IN_SOURCE) {
+			return QualifiedScopeResolutionResult.resolvedUnpivotInSource(
+					unpivotBinding.materializeTableRef,
+					tableRef);
+		}
+		if (localDerivedColumns != null && unpivotBinding != null) {
+			return switch (unpivotBinding.kind) {
+				case VALUE -> QualifiedScopeResolutionResult.resolvedUnpivotValue(tableRef);
+				case FOR -> QualifiedScopeResolutionResult.resolvedUnpivotFor(tableRef);
+				case IN_SOURCE -> QualifiedScopeResolutionResult.resolvedUnpivotInSource(
+						unpivotBinding.materializeTableRef,
+						tableRef);
+			};
 		}
 
 		if (isRelationalModifierDerivedColumnReference(
@@ -9501,7 +9841,9 @@ public class SqlParseSymbolTreeHelper {
 						false,
 						getScopeDerivedColumnsFromSymbolTable(),
 						getScopeRelationalModifierHintsFromSymbolTable());
-		if (resolutionResult.status == QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+		if (resolutionResult.status == QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
+				|| resolutionResult.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
+				|| resolutionResult.status == QualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR) {
 			return;
 		}
 		if (resolutionResult.status == QualifiedScopeResolutionStatus.UNRESOLVED_QUERY_SOURCE) {
@@ -9746,9 +10088,31 @@ public class SqlParseSymbolTreeHelper {
 		if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)) {
 			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
 		}
-		if (treatDerivedRegistryKeysAsDerivedColumn
-				&& containsKeyIgnoreCase(localDerivedColumns, columnName)) {
-			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
+
+		UnpivotBinding unpivotBinding = resolveUnpivotBindingAtConvertEgress(
+				columnName,
+				null,
+				relationalModifierInterfaceHints,
+				localPhysicalTableCollection,
+				localTableAliasMap,
+				localTableAliasMap);
+		if (unpivotBinding != null && unpivotBinding.kind == UnpivotBindingKind.IN_SOURCE) {
+			return UnqualifiedScopeResolutionResult.resolvedUnpivotInSource(
+					unpivotBinding.materializeTableRef);
+		}
+
+		if (treatDerivedRegistryKeysAsDerivedColumn) {
+			if (unpivotBinding != null) {
+				return switch (unpivotBinding.kind) {
+					case VALUE -> UnqualifiedScopeResolutionResult.resolvedUnpivotValue();
+					case FOR -> UnqualifiedScopeResolutionResult.resolvedUnpivotFor();
+					case IN_SOURCE -> UnqualifiedScopeResolutionResult.resolvedUnpivotInSource(
+							unpivotBinding.materializeTableRef);
+				};
+			}
+			if (containsKeyIgnoreCase(localDerivedColumns, columnName)) {
+				return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
+			}
 		}
 
 		PivotOperandBinding pivotOperandBinding = resolvePivotOperandBindingAtConvertEgress(
@@ -9917,10 +10281,20 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		switch (result.status) {
-			case RESOLVED_DERIVED_COLUMN -> {
+			case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
 				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 			}
 			case RESOLVED_PIVOT_OPERAND -> {
+				materializePivotOperandColumnAtConvertEgress(
+						columnName,
+						null,
+						result.resolvedSourceRef,
+						null,
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap);
+			}
+			case RESOLVED_UNPIVOT_IN_SOURCE -> {
 				materializePivotOperandColumnAtConvertEgress(
 						columnName,
 						null,
@@ -10087,6 +10461,17 @@ public class SqlParseSymbolTreeHelper {
 			}
 			if (egressResult.isPivotOperandColumn()) {
 				applyConvertEgressPivotOperandMaterialization(
+						egressResult,
+						columnName,
+						null,
+						unresolvedColumnMap,
+						localTableCollection,
+						relationalModifierInterfaceHints,
+						localTableAliasMap);
+				continue;
+			}
+			if (egressResult.isUnpivotInSourceColumn()) {
+				applyConvertEgressUnpivotInSourceMaterialization(
 						egressResult,
 						columnName,
 						null,
@@ -10421,6 +10806,17 @@ public class SqlParseSymbolTreeHelper {
 					localTableAliasMap);
 			return ArchivedClauseColumnRefResult.skip();
 		}
+		if (clauseEgressResult.isUnpivotInSourceColumn()) {
+			applyConvertEgressUnpivotInSourceMaterialization(
+					clauseEgressResult,
+					columnName,
+					tableRef,
+					localUnresolvedColumnMap,
+					localTableCollection,
+					relationalModifierInterfaceHints,
+					localTableAliasMap);
+			return ArchivedClauseColumnRefResult.skip();
+		}
 		if (clauseEgressResult.isDerivedColumn()) {
 			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.skip();
@@ -10475,11 +10871,22 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		switch (resolutionResult.status) {
-			case RESOLVED_DERIVED_COLUMN -> {
+			case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
 				consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 				return ArchivedClauseColumnRefResult.skip();
 			}
 			case RESOLVED_PIVOT_OPERAND -> {
+				materializePivotOperandColumnAtConvertEgress(
+						columnName,
+						tableRef,
+						resolutionResult.resolvedSourceRef,
+						null,
+						localUnresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap);
+				return ArchivedClauseColumnRefResult.skip();
+			}
+			case RESOLVED_UNPIVOT_IN_SOURCE -> {
 				materializePivotOperandColumnAtConvertEgress(
 						columnName,
 						tableRef,
@@ -11637,7 +12044,7 @@ public class SqlParseSymbolTreeHelper {
 							relationalModifierInterfaceHints);
 
 			switch (resolutionResult.status) {
-				case RESOLVED_DERIVED_COLUMN -> {
+				case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
 					if (isPhysicalTableQualifierForDerivedLineage(
 							tableRef,
 							localTableCollection,
