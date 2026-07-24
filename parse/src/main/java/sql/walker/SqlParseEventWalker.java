@@ -660,17 +660,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
-	private boolean looksLikeQueryNode(Object nodeObj) {
-		if (!(nodeObj instanceof Map<?, ?> mapObj)) {
-			return false;
+	private boolean isDdlCreateAsQueryParent(ParserRuleContext parentCtx) {
+		return parentCtx instanceof SQLSelectParserParser.Create_table_expressionContext
+				|| parentCtx instanceof SQLSelectParserParser.Create_view_expressionContext
+				|| parentCtx instanceof SQLSelectParserParser.Create_materialized_view_expressionContext
+				|| parentCtx instanceof SQLSelectParserParser.Create_macro_expressionContext;
+	}
+
+	private void attachQueryExpressionToDdlCreateParent(int ruleIndex, int parentRuleIndex) {
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> queryMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		queryMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object queryBody;
+		if (queryMap.size() == 1 && queryMap.containsKey("1")) {
+			queryBody = queryMap.remove("1");
+		} else {
+			queryBody = queryMap;
 		}
 
-		Map<String, Object> node = (Map<String, Object>) mapObj;
-		return node.containsKey(MUMBLE_SELECT_KEY)
-				|| node.containsKey(MUMBLE_WITH_KEY)
-				|| node.containsKey(MUMBLE_UNION_KEY)
-				|| node.containsKey(MUMBLE_INTERSECT_KEY)
-				|| node.containsKey(MUMBLE_QUERY_KEY);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		Map<String, Object> parentMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
+		parentMap.put(MUMBLE_QUERY_KEY, queryBody);
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	private Map<String, Object> buildFallbackTableNodeFromText(String tableText) {
@@ -1967,17 +1979,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object queryNode = null;
 
 		if (ctx.query_expression() != null) {
-			if (children.size() >= 2) {
+			queryNode = subMap.remove(MUMBLE_QUERY_KEY);
+			if (!children.isEmpty()) {
 				tableNode = normalizeTableNode(children.get(0));
-				queryNode = children.get(1);
-			} else if (children.size() == 1) {
-				Object loneChild = children.get(0);
-				Map<String, Object> normalizedLoneTable = normalizeTableNode(loneChild);
-				if (hasTableIdentity(normalizedLoneTable) && !looksLikeQueryNode(loneChild)) {
-					tableNode = normalizedLoneTable;
-				} else {
-					queryNode = loneChild;
-				}
 			}
 
 			if ((tableNode == null || !hasTableIdentity(tableNode)) && ctx.db_object_name() != null) {
@@ -2060,8 +2064,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				createNode.put(MUMBLE_NAME_KEY, name);
 			}
 		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		Object queryNode = subMap.remove(MUMBLE_QUERY_KEY);
+		if (queryNode != null) {
+			createNode.put(MUMBLE_QUERY_KEY, queryNode);
 		}
 
 		subMap.clear();
@@ -2086,8 +2091,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				createNode.put(MUMBLE_NAME_KEY, name);
 			}
 		}
-		if (children.size() >= 2) {
-			createNode.put(MUMBLE_QUERY_KEY, children.get(1));
+		Object queryNode = subMap.remove(MUMBLE_QUERY_KEY);
+		if (queryNode != null) {
+			createNode.put(MUMBLE_QUERY_KEY, queryNode);
 		}
 
 		subMap.clear();
@@ -2169,26 +2175,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		List<Object> children = extractOrderedRuleChildren(new LinkedHashMap<String, Object>(subMap));
-		Object nameChild = subMap.get("1");
-		Object argContentChild = subMap.get("2");
-		Object queryChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "3" : "2");
-		if (queryChild == null && children.size() >= 2) {
-			queryChild = children.get(children.size() - 1);
-		}
+		List<Object> children = extractOrderedRuleChildren(subMap);
+		Object queryChild = subMap.remove(MUMBLE_QUERY_KEY);
+
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
 		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
 
-		if (nameChild != null) {
-			Map<String, Object> nameNode = normalizeNamedObjectNode(nameChild);
+		if (!children.isEmpty()) {
+			Map<String, Object> nameNode = normalizeNamedObjectNode(children.get(0));
 			Object name = extractPreferredName(nameNode);
 			if (name != null) {
 				createNode.put(MUMBLE_NAME_KEY, name);
 			}
 		}
 
-		if (ctx.generic_ddl_paren_content() != null && argContentChild != null) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, argContentChild);
+		if (ctx.generic_ddl_paren_content() != null) {
+			createNode.put(
+					MUMBLE_PARAMETERS_KEY,
+					extractDdlObjectTypeText(ctx.generic_ddl_paren_content()));
 		}
 		if (queryChild != null) {
 			createNode.put(MUMBLE_QUERY_KEY, queryChild);
@@ -3794,8 +3798,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitQuery_expression(SQLSelectParserParser.Query_expressionContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-		walker.handleListList(ruleIndex, parentRuleIndex);
+		ParserRuleContext parentCtx = (ParserRuleContext) ctx.getParent();
+		int parentRuleIndex = parentCtx.getRuleIndex();
+		if (isDdlCreateAsQueryParent(parentCtx)) {
+			attachQueryExpressionToDdlCreateParent(ruleIndex, parentRuleIndex);
+		} else {
+			walker.handleListList(ruleIndex, parentRuleIndex);
+		}
 
 		String location = ctx.getStart().toString();
 
