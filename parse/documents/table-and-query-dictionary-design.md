@@ -45,7 +45,7 @@ The global table dictionary is intentionally **cross-scope**: `tab_a.pd1` tokens
 
 - Not keyed by query output column names.
 - Not used for query-alias / subquery interface columns (those are query-backed).
-- PIVOT/UNPIVOT **derived** columns that are not physical table columns belong in relational-modifier derived-column metadata, not invented as physical table keys without a real backing table column.
+- PIVOT/UNPIVOT **derived** columns that are not physical table columns belong in relational-modifier derived-column metadata, not invented as physical table keys without a real backing table column. See [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) for walk vs convert ownership and two-tier binding.
 
 ---
 
@@ -61,7 +61,7 @@ Each `queryN` / `def_queryN.query_dictionary` is **locked to that query only**. 
 
 Only names that appear in the query's **projected interface** (select list, INSERT column list, VALUES row shape, UPDATE projection, etc.) may be keys.
 
-**Exception — relational modifiers:** PIVOT/UNPIVOT can synthesize **derived columns** tracked in local `derived_columns` / hint metadata. Those generated names must **not** widen the pure query dictionary unless they are also genuine interface outputs. Keep derived-column lineage separate so the query dictionary stays a clean record of declared outputs.
+**Exception — relational modifiers:** PIVOT/UNPIVOT can synthesize **derived columns** tracked in local `derived_columns` / hint metadata. Resolution policy: [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md). Those generated names must **not** widen the pure query dictionary unless they are also genuine interface outputs. Keep derived-column lineage separate so the query dictionary stays a clean record of declared outputs.
 
 ### When token strings are collected (values)
 

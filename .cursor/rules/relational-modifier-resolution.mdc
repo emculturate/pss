@@ -1,0 +1,19 @@
+---
+description: PIVOT/UNPIVOT resolution — walk vs convert ownership and two-tier binding
+globs: parse/src/main/java/sql/**/*.java,parse/documents/**/*.md
+alwaysApply: false
+---
+
+# Relational modifier resolution
+
+**Authoritative policy:** `parse/documents/relational-modifier-resolution-policy.md`
+
+## Rules (do not re-litigate in agent chats)
+
+1. **Walk decides; convert publishes** — no convert-time rediscovery of PIVOT/UNPIVOT semantics.
+2. **Two-tier UNPIVOT binding:** tier-1 **identity** at `exitTable_primary` (record derived column in hints); tier-2 **ref rewrite** at `exitQuery_specification` (SELECT is visited before FROM).
+3. **One helper** — `rewriteReferenceListForSingleUnpivotHint` → scope-level `applyUnpivotDerivationsToQueryScope`; retire duplicate convert hooks in Phase 17.2–17.4.
+4. **Context-dependent** — same token (`sales_amount`) may be unbound at `exitColumn` in SELECT, identity-known at modifier exit, fully rewritten at query closeout.
+5. **Defer within walk**, not to convert fallbacks (`probeArchivedScopeClauseColumns`, ambiguity suppressors).
+
+Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–18.

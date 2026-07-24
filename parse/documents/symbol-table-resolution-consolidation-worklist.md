@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~15% | **17.0b** done — walk/convert UNPIVOT paths remain; see Phase 17 |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~35% | **17.0** + **17.0b** + **17.1 policy** done — implementation 17.1–17.5 remains |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -1404,6 +1404,8 @@ Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled
 
 ## Phase 17 — UNPIVOT derived column rationalization
 
+**Policy (signed Jul 2026):** [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) — walk vs convert ownership, two-tier binding, single helper consolidation. Cursor rule: `.cursor/rules/relational-modifier-resolution.mdc`.
+
 **Goal:** Unify **walk-time** and **convert-time** UNPIVOT derived-column handling under one namespace policy — VALUE/FOR derived columns consumed, IN-list source columns materialized, query-backed source interface sweep — instead of parallel hooks at modifier exit and scattered convert passes.
 
 **Problem today:**
@@ -1430,7 +1432,7 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
    - UNPIVOT **VALUE** / **FOR** → **derived columns**; consume from `unresolved_column`; no physical `table_dictionary` entry; **no table qualifier permitted** in phrase (17.0b)
    - UNPIVOT **IN** source columns → physical operands; materialize lineage onto `dictionarySourceRef`; optional qualifier → redundant WARNING / invalid FATAL (same as PIVOT physical operands)
    - Query-backed UNPIVOT source → interface column sweep policy documented and single-owned
-2. **Walk vs convert boundary clear:** either (a) all UNPIVOT resolution at modifier exit, with convert only shaping interface output, or (b) walk captures only, convert unified loop resolves — **pick one**; retire the other path
+2. **Walk vs convert boundary clear:** ✅ **Signed Jul 2026** — walk owns semantics (tier-1 identity at modifier exit, tier-2 ref rewrite at `exitQuery_specification`); convert publishes only via `RESOLVED_UNPIVOT_*`. One shared helper; retire duplicate convert paths in **17.2–17.4**. See [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md).
 3. Implement `applyUnpivotValueDerivationsToReferenceListObject` for `filters` / `grouped_by` / `ordered_by` **or** route clause lists through shared resolver (replace stub)
 4. New outcomes: `RESOLVED_UNPIVOT_VALUE`, `RESOLVED_UNPIVOT_FOR`, `RESOLVED_UNPIVOT_IN_SOURCE` (names TBD) in shared resolver
 
@@ -1438,9 +1440,9 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
-| **17.0** | Inventory UNPIVOT handlers (table above); map each UNPIVOT test to namespace + handler | Worklist + test matrix | ⏸️ |
+| **17.0** | Inventory UNPIVOT handlers (table above); map each UNPIVOT test to namespace + handler | Worklist + test matrix | ✅ **Jul 2026** |
 | **17.0b** | **Derived-column operand qualifier guard** (early slice — ship before 17.1) | UNPIVOT qualifier tests + parity | ✅ **Jul 2026** |
-| **17.1** | Document chosen walk vs convert ownership; add UNPIVOT outcomes to shared resolver | UNPIVOT V1 + multi-source ambiguity tests | ⏸️ |
+| **17.1** | Enforce signed ownership policy; add `RESOLVED_UNPIVOT_*` egress outcomes; introduce `applyUnpivotDerivationsToQueryScope` at `exitQuery_specification` | UNPIVOT V1 + multi-source ambiguity tests | ⏸️ |
 | **17.2** | Retire duplicate strip if walk + convert both handle VALUE/FOR (keep one path) | Pivot UNPIVOT subset + gate | ⏸️ |
 | **17.3** | Implement or replace `applyUnpivotValueDerivationsToReferenceListObject` stub; clause lists use shared policy | UNPIVOT clause tests if any; gate | ⏸️ |
 | **17.4** | Fold `materializeSelectedUnpivotInColumnsIntoSourceDictionary` + ambiguity suppression into unified materialize/consume rules | Full pivot suite | ⏸️ |
@@ -1476,10 +1478,136 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 | `unpivotQualifiedOperandsUnqualifiedParityTest` | clean ✅ |
 | All PIVOT qualified-operand + parity tests | per 16.4 (unchanged) ✅ |
 
+#### Phase 17.0 — UNPIVOT handler inventory and test matrix (Jul 2026)
+
+**Scope:** 26 UNPIVOT methods in `SqlEventWalkerPivotUnpivotTests` (21 legacy + 5 Phase 17.0b qualifier tests) + gate smoke `unpivotV1Test` in `SmoketestQualityGateTestSuite`.
+
+##### Namespace model (Phase 17)
+
+| Namespace | Phrase / surface | Symbol-table home | Walk owner | Convert owner | Target outcome (17.1+) |
+|-----------|------------------|-------------------|------------|---------------|------------------------|
+| **VALUE derived** | `UNPIVOT (sales_amount …)` | `derived_columns[sales_amount]` → IN physical refs; hint `MUMBLE_VALUE_KEY` | Tier-1 identity + unresolved consume at `exitTable_primary`; tier-2 ref rewrite at `exitQuery_specification` | Publish only: `RESOLVED_UNPIVOT_VALUE` → consume | `RESOLVED_UNPIVOT_VALUE` → consume |
+| **FOR derived** | `… FOR month_name …` | Same pattern for FOR name; hint `MUMBLE_FOR_KEY` | Same two-tier walk path | Publish only: `RESOLVED_UNPIVOT_FOR` → consume | `RESOLVED_UNPIVOT_FOR` → consume |
+| **IN-list physical** | `IN (jan_sales, feb_sales)` | `table_dictionary` on source; hint `MUMBLE_IN_KEY` / `RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY` | Materialize + consume at `exitTable_primary` (tier-1) | Publish only: `RESOLVED_UNPIVOT_IN_SOURCE` → materialize | `RESOLVED_UNPIVOT_IN_SOURCE` → materialize |
+| **Query-backed source** | `FROM (SELECT …) UNPIVOT …` | Subquery `def_queryN` interface sweep | Walk strip at `exitTable_primary` (tier-1) | Publish only — no second inference | Documented in policy doc |
+| **Passthrough source** | `SELECT empid, units` (not in phrase) | Ordinary `unresolved_column` → physical materialize | Standard walk capture | Standard convert egress | Unchanged (not UNPIVOT-derived) |
+| **Modifier result alias** | `UNPIVOT (…) up` / `outer_up` | `table_alias` + qualified outer refs | `resolveUnpivotScopeAtPrimaryExit` sets hint `MUMBLE_TABLE_REF_KEY` | Alias map in convert | Unchanged |
+| **Operand qualifiers** | `msl.sales_amount`, `msl.jan_sales` | Diagnostics only | `validateRelationalModifierOperandQualifiers` | — | **17.0b** ✅ derived FATAL; IN-list physical WARNING/INVALID |
+
+**Distinct from Phase 15 derived registry:** UNPIVOT VALUE/FOR names are **output column identifiers** (like `sales_amount` / `month_name` in the result), not PIVOT-style `{inValue}_{aggregate}` registry keys (`jan_sales_SUM`).
+
+##### Handler inventory (complete)
+
+**Walk — `SqlParseEventWalker`**
+
+| Handler | ~Line | When | Namespace / effect |
+|---------|-------|------|-------------------|
+| `enterUnpivot_clause` / `exitUnpivot_clause` | ~6357–6415 | Parse UNPIVOT phrase | Builds AST `value` / `for` / `in`; calls `registerUnpivotValueInterfaceHint` |
+| `registerUnpivotValueInterfaceHint` | ~5028 | `exitUnpivot_clause` | Populates hint: `operator=unpivot`, `MUMBLE_VALUE_KEY`, `MUMBLE_FOR_KEY`, `MUMBLE_IN_KEY`, `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY`, `RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY` |
+| `validateRelationalModifierOperandQualifiers` | ~5065 | `exitTable_primary` | Phrase operand qualifiers — **17.0b** ✅ |
+| `resolveUnpivotScopeAtPrimaryExit` | ~5642 | UNPIVOT on `exitTable_primary` | Stamps `MUMBLE_TABLE_REF_KEY` + `RELATIONAL_MODIFIER_SOURCE_REF_KEY` on hints; calls walk strip |
+| `resolveRelationalModifierScopeAtPrimaryExit` | ~5683 | Tuple + table primary | Dispatches UNPIVOT → `resolveUnpivotScopeAtPrimaryExit` |
+| `exitRelational_modifier_operand_column` (+ value/name column) | ~6436+ | Operand parse | Captures operand refs for diagnostics / AST |
+
+**Walk — `SqlParseSymbolTreeHelper` (called from walker at primary exit)**
+
+| Handler | ~Line | Namespace / effect |
+|---------|-------|-------------------|
+| `resolveUnpivotGeneratedColumnsFromUnresolvedMap` | ~594 | VALUE/FOR → `removeUnpivotGeneratedColumnReference`; IN cols → `removeAndMaterializeUnpivotResolvedColumn`; query source → interface sweep |
+| `removeUnpivotGeneratedColumnReference` | ~1101 | VALUE or FOR: consume from `unresolved_column` (optional ambiguity suppress) |
+| `removeAndMaterializeUnpivotResolvedColumn` | ~1136 | IN-list physical: materialize lineage + consume |
+
+**Convert — `convertSymbolTableToTableDictionary` call order (~L2322–2394)**
+
+| # | Handler | ~Line | Namespace / effect | 17.x note |
+|---|---------|-------|-------------------|-----------|
+| 1 | `resolvePivotOperandColumnsFromUnresolvedMap` | ~1878 | PIVOT only — **not UNPIVOT** | Phase 16 |
+| 2 | `applyUnpivotValueInterfaceDerivations` | ~2322 | Rewrites `localInterface` VALUE refs → IN-list physical refs via `rewriteReferenceListForSingleUnpivotHint` | **17.2** — overlap with walk strip |
+| 3 | `materializeSelectedUnpivotInColumnsIntoSourceDictionary` | ~2326 | IN-list cols appearing in `query_dictionary` → `table_dictionary` on source | **17.4** — fold into unified materialize |
+| 4 | `applyUnpivotValueDerivationsToReferenceListObject` | ~2336 | **STUB** — `filters` / `grouped_by` / `ordered_by` unchanged | **17.3** |
+| 5 | `registerUnpivotGeneratedColumnAmbiguitySuppressions` | ~2394 | Suppresses ambiguous-unqualified diagnostic for VALUE/FOR tokens in `query_dictionary` | **17.4** |
+
+**Convert — egress / derived registry**
+
+| Handler | ~Line | Namespace / effect |
+|---------|-------|-------------------|
+| `buildDerivedColumnsMapFromHints` | ~1403 | Builds `derived_columns` map; `mergeUnpivotDerivedRefsIfPresent` maps VALUE/FOR → IN physical refs |
+| `mergeUnpivotDerivedRefsIfPresent` | ~1598 | Per derived name: `{name=jan_sales, table_ref=source}` entries |
+| `isRelationalModifierDerivedColumnReference` | ~8758 | Qualified/unqualified derived proof at egress |
+| `resolveColumnRefAtConvertEgress` | — | `RESOLVED_DERIVED_COLUMN` → consume (Phase 15; covers UNPIVOT VALUE/FOR in SELECT) |
+| `resolveUnpivotGeneratedColumnSourceRef` | ~1721 | Multi-source ambiguity disambiguation for VALUE/FOR in `resolveUnqualifiedColumnAgainstVisibleScope` (~L9806) |
+| `probeArchivedScopeClauseColumns` | ~2362 | Clause-list resolution (WHERE/GROUP BY/…); does **not** use UNPIVOT clause stub today |
+
+##### Overlap audit (feeds 17.1)
+
+| Concern | Walk path | Convert path | Risk |
+|---------|-----------|--------------|------|
+| VALUE/FOR consume | `resolveUnpivotGeneratedColumnsFromUnresolvedMap` at primary exit | `RESOLVED_DERIVED_COLUMN` in egress loop | Double-consume is safe today; ownership unclear |
+| VALUE interface shape | Hint only at walk | `applyUnpivotValueInterfaceDerivations` rewrites to IN refs | Walk `interface` in symbol tree vs published `table_dictionary` may disagree until convert |
+| IN-list lineage | Walk `removeAndMaterializeUnpivotResolvedColumn` | `materializeSelectedUnpivotInColumnsIntoSourceDictionary` | **Duplicate materialize** candidates for **17.2/17.4** |
+| Clause VALUE/FOR refs | — | Stub `applyUnpivotValueDerivationsToReferenceListObject` | GROUP BY / HAVING / ORDER BY / JOIN ON tests rely on `probeArchivedScopeClauseColumns` + ambiguity suppressor instead |
+
+**17.1 ownership decision (signed Jul 2026):** Walk owns semantics in two tiers — **tier-1** derived identity + unresolved hygiene at `exitTable_primary`; **tier-2** ref rewrite for all query surfaces at `exitQuery_specification` via one `applyUnpivotDerivationsToQueryScope` helper (evolved from `rewriteReferenceListForSingleUnpivotHint`). Convert egress publishes only (`RESOLVED_UNPIVOT_*`); retire duplicate convert rewrites in **17.2–17.4**. Full rationale: [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md).
+
+##### Test matrix — 26 UNPIVOT methods → namespace + primary handlers
+
+| Test | Category | Namespaces exercised | Primary handlers under test |
+|------|----------|---------------------|----------------------------|
+| `unpivotV1Test` | A Baseline | VALUE, FOR, IN, passthrough `id` | Full stack; gate smoke |
+| `unpivotBasicMonthSalesV7Test` | A Baseline | VALUE, FOR, IN | Walk strip + interface rewrite + derived map |
+| `unpivotBasicMonthSalesV8Test` | F Multi-source | + JOIN on `month_name` | `resolveUnpivotGeneratedColumnSourceRef`; join filter probe |
+| `unpivotBasicMonthSalesV9Test` | B Modifier alias | + pivot alias `up` | Hint `MUMBLE_TABLE_REF_KEY`; qualified join |
+| `unpivotPostModifierAliasV1Test` | B Modifier alias | Outer `outer_up.feb_sales` | Modifier alias + passthrough wide col in SELECT |
+| `unpivotTableWithInAliasesJanFebMarV2Test` | C IN labels | IN `AS 'JAN'` labels | IN-list capture; WHERE on VALUE |
+| `unpivotTableWithInAliasesJanFebMarV2WithTabAliasTest` | C + B | + alias `unpvt` | As above + modifier alias |
+| `unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderTest` | D Clauses | GROUP BY / ORDER BY on VALUE | Stub clause derivations; `probeArchivedScopeClauseColumns` |
+| `unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderTest` | D Clauses | HAVING / ORDER BY | As GROUP BY row |
+| `unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest` | D Clauses | JOIN ON VALUE | Multi-source + clause probe |
+| `unpivotTableJoinOnWithUnqualifiedSalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableWithQualifySalesAmountProbeTest` | D Clauses | QUALIFY on VALUE | Clause probe |
+| `unpivotTableWithQualifySalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableWithOrderByExpressionSalesAmountProbeTest` | D Clauses | ORDER BY expr with VALUE | Clause probe |
+| `unpivotTableWithOrderByExpressionSalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotFromDerivedAdjustedColumnsV3Test` | E Query-backed | Subquery source + IN identifiers | Query interface sweep in walk strip |
+| `unpivotWithTaxAndWhereV4Test` | D Clauses | WHERE on VALUE; calc column | Clause + passthrough |
+| `unpivotJoinTargetsWithFilterV5Test` | F Multi-source | JOIN + WHERE; alias `u` | Join + filter + ambiguity paths |
+| `unpivotKeepingOriginalMonthColumnsV6Test` | G Passthrough | SELECT wide `jan_sales`/`feb_sales` alongside UNPIVOT | Passthrough vs derived boundary |
+| `unpivotQualifiedDerivedOperandsFatalTest` | H Qualifiers | VALUE+FOR qualified | `validateRelationalModifierOperandQualifiers` — **17.0b** |
+| `unpivotWrongQualifierOperandFatalTest` | H Qualifiers | Wrong VALUE + matching FOR | **17.0b** |
+| `unpivotQualifiedValueDerivedOperandFatalTest` | H Qualifiers | VALUE only qualified | **17.0b** |
+| `unpivotQualifiedInListOperandsRedundantWarningTest` | H Qualifiers | IN-list physical qualified | Physical-operand policy (16.4-style) |
+| `unpivotQualifiedOperandsUnqualifiedParityTest` | H Qualifiers | Clean phrase | Parity baseline for qualifier tests |
+
+**Category legend:** A baseline · B modifier alias · C IN labels · D clause surfaces (stub gap) · E query-backed source · F multi-source join · G passthrough wide columns · H operand qualifiers (**17.0b**).
+
+#### Phase 17.1 — Walk vs convert ownership (signed Jul 2026)
+
+**Decision record** — also canonical in [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md).
+
+| Question | Answer |
+|----------|--------|
+| Who decides UNPIVOT semantics? | **Walk** — never convert rediscovery |
+| When is `sales_amount` known to be UNPIVOT VALUE derived? | **Immediately** at modifier tuple finalize (`exitTable_primary`) — tier-1 identity in hints |
+| When are refs to `sales_amount` rewritten in SELECT / WHERE / GROUP BY / …? | **`exitQuery_specification`** — tier-2; SELECT is visited before FROM so query closeout is earliest common moment |
+| Why not bind at every `exitColumn`? | Grammar context: SELECT columns appear before FROM; clause handling is **context-dependent** |
+| How avoid walk/convert drift? | **One shared helper** for tier-2; convert only `RESOLVED_UNPIVOT_*` publish |
+| What to retire? | Convert duplicates: `applyUnpivotValueInterfaceDerivations`, clause stub, duplicate IN materialize, ambiguity suppressor band-aids (**17.2–17.4**) |
+
+**17.1 implementation checklist:**
+
+1. Add `applyUnpivotDerivationsToQueryScope` — call from `finalizeQueryScopeSymbolTable` / `exitQuery_specification`
+2. Add `RESOLVED_UNPIVOT_VALUE`, `RESOLVED_UNPIVOT_FOR`, `RESOLVED_UNPIVOT_IN_SOURCE` to `resolveColumnRefAtConvertEgress`
+3. Prove on canary set (below); then **17.2–17.5** retire legacy convert hooks
+
+**17.1 canary set:** `unpivotV1Test`, `unpivotFromDerivedAdjustedColumnsV3Test`, `unpivotJoinTargetsWithFilterV5Test`, `unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderTest`, `unpivotQualifiedOperandsUnqualifiedParityTest`.
+
 ### Phase 17 closeout checklist
 
+- [x] **17.0** — Handler inventory + 26-test namespace matrix documented (overlap audit for 17.1)
 - [x] **17.0b** — UNPIVOT VALUE/FOR derived-column qualifiers rejected with `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED`; IN-list + PIVOT physical policy unchanged
-- [ ] Walk vs convert UNPIVOT ownership documented and enforced (single owner per derived-column category)
+- [x] Walk vs convert UNPIVOT ownership **documented** (signed policy + Cursor rule) — **enforcement** in 17.1–17.5
 - [ ] VALUE/FOR/IN namespace outcomes in shared resolver or documented convert-prep equivalent
 - [ ] `applyUnpivotValueDerivationsToReferenceListObject` stub resolved (implement or delete)
 - [ ] Pivot suite + gate **195/195** + full suite **1209/1209**
@@ -2286,8 +2414,9 @@ Phase 16 — PIVOT operand materialization                               ✅ DON
   16.4 PIVOT physical-operand qualifier policy ✅
 
 Phase 17 — UNPIVOT derived columns                                     🔄 IN PROGRESS
+  17.0 handler inventory + 26-test matrix ✅ (Jul 2026)
   17.0b derived-column operand qualifier guard ✅ (Jul 2026)
-  17.0–17.5: walk vs convert ownership; VALUE/FOR/IN outcomes; stub clause derivations
+  17.1–17.5: enforce signed ownership policy; VALUE/FOR/IN outcomes; retire duplicate convert hooks
 
 Phase 18 — PIVOT IN-list output + IN-identifier                        ⏸️ after Phase 15
   18.0–18.5: RESOLVED_PIVOT_IN_LIST_OUTPUT; retire isPivotDerivedInterfaceOutputColumn; IN-identifier contract
