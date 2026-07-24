@@ -116,6 +116,7 @@ public class SqlParseSymbolTreeHelper {
 	/** Outcome of a single unqualified column bind attempt at scope exit (Phase 8 egress). */
 	private enum UnqualifiedScopeResolutionStatus {
 		RESOLVED,
+		RESOLVED_DERIVED_COLUMN,
 		DEFERRED,
 		AMBIGUOUS,
 		UNRESOLVED
@@ -139,6 +140,13 @@ public class SqlParseSymbolTreeHelper {
 			return new UnqualifiedScopeResolutionResult(
 					UnqualifiedScopeResolutionStatus.RESOLVED,
 					resolvedSourceRef,
+					null);
+		}
+
+		static UnqualifiedScopeResolutionResult resolvedDerivedColumn() {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN,
+					null,
 					null);
 		}
 
@@ -1876,8 +1884,15 @@ public class SqlParseSymbolTreeHelper {
 										deleteTargetTableRef,
 										true,
 										!emitFinalUnresolvedUnknownFatal,
-										localRelationalModifierInterfaceHints);
-						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
+										localRelationalModifierInterfaceHints,
+										localDerivedColumns,
+										false);
+						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+							consumeDerivedColumnUnknownEntry(
+									localUnresolvedColumnMap,
+									null,
+									columnName);
+						} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 									refObj,
 									resolutionResult.resolvedSourceRef));
@@ -8602,7 +8617,13 @@ public class SqlParseSymbolTreeHelper {
 							null,
 							true,
 							false,
-							null);
+							null,
+							null,
+							false);
+			if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+				consumeDerivedColumnUnknownEntry(unqualifiedUnresolvedForLocal, null, columnName);
+				continue;
+			}
 			if (resolutionResult.status != UnqualifiedScopeResolutionStatus.RESOLVED) {
 				continue;
 			}
@@ -9093,7 +9114,17 @@ public class SqlParseSymbolTreeHelper {
 			String deleteTargetTableRef,
 			boolean allowQuerySourceFallback,
 			boolean deferWhenQueryAliasOnlyWithoutParentFatal,
-			ArrayList<Object> relationalModifierInterfaceHints) {
+			ArrayList<Object> relationalModifierInterfaceHints,
+			HashMap<String, Object> localDerivedColumns,
+			boolean treatDerivedRegistryKeysAsDerivedColumn) {
+		if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)) {
+			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
+		}
+		if (treatDerivedRegistryKeysAsDerivedColumn
+				&& containsKeyIgnoreCase(localDerivedColumns, columnName)) {
+			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
+		}
+
 		ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
 				columnName,
 				localPhysicalTableCollection,
@@ -9248,6 +9279,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		switch (result.status) {
+			case RESOLVED_DERIVED_COLUMN -> {
+				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
+			}
 			case RESOLVED -> {
 				if (clauseLocations != null && !clauseLocations.isEmpty()) {
 					updateTrackedClauseLocationsWithResolvedTableRef(
@@ -9389,7 +9423,9 @@ public class SqlParseSymbolTreeHelper {
 							deleteTargetTableRef,
 							true,
 							false,
-							null);
+							null,
+							null,
+							false);
 
 			Integer[] refLocation = resolveUnqualifiedReferenceLocation(
 					columnName,
@@ -9751,9 +9787,15 @@ public class SqlParseSymbolTreeHelper {
 						deleteTargetTableRef,
 						true,
 						false,
-						relationalModifierInterfaceHints);
+						relationalModifierInterfaceHints,
+						localDerivedColumns,
+						true);
 
 		switch (resolutionResult.status) {
+			case RESOLVED_DERIVED_COLUMN -> {
+				consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
+				return ArchivedClauseColumnRefResult.skip();
+			}
 			case RESOLVED -> {
 				if (requiresOutputColumnProof
 						&& !isQueryOutputColumnProofForClause(
