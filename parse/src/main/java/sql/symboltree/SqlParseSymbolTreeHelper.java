@@ -265,6 +265,102 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	/**
+	 * Phase 15.4: bundled scope inputs for {@link #resolveColumnRefAtConvertEgress}.
+	 */
+	private static final class ConvertEgressResolutionContext {
+		final HashMap<String, Object> localDerivedColumns;
+		final ArrayList<Object> relationalModifierInterfaceHints;
+		final HashMap<String, Object> localPhysicalTableCollection;
+		final HashMap<String, Object> localTableCollection;
+		final HashMap<String, Object> visibleQuerySourceCollection;
+		final HashMap<String, Object> localTableAliasMap;
+		final HashMap<String, Object> effectiveAliasMap;
+		final HashMap<String, Object> effectiveTableCollection;
+		final String deleteTargetTableRef;
+		final String clauseProbeKey;
+		final boolean treatDerivedRegistryKeysAsDerivedColumn;
+		final boolean allowQuerySourceFallback;
+		final boolean deferWhenQueryAliasOnlyWithoutParentFatal;
+		final boolean deferUnresolvedQualifiedPhysicalSources;
+		final boolean resolveQualifiedWhenTableRefPresent;
+
+		private ConvertEgressResolutionContext(
+				HashMap<String, Object> localDerivedColumns,
+				ArrayList<Object> relationalModifierInterfaceHints,
+				HashMap<String, Object> localPhysicalTableCollection,
+				HashMap<String, Object> localTableCollection,
+				HashMap<String, Object> visibleQuerySourceCollection,
+				HashMap<String, Object> localTableAliasMap,
+				HashMap<String, Object> effectiveAliasMap,
+				HashMap<String, Object> effectiveTableCollection,
+				String deleteTargetTableRef,
+				String clauseProbeKey,
+				boolean treatDerivedRegistryKeysAsDerivedColumn,
+				boolean allowQuerySourceFallback,
+				boolean deferWhenQueryAliasOnlyWithoutParentFatal,
+				boolean deferUnresolvedQualifiedPhysicalSources,
+				boolean resolveQualifiedWhenTableRefPresent) {
+			this.localDerivedColumns = localDerivedColumns;
+			this.relationalModifierInterfaceHints = relationalModifierInterfaceHints;
+			this.localPhysicalTableCollection = localPhysicalTableCollection;
+			this.localTableCollection = localTableCollection;
+			this.visibleQuerySourceCollection = visibleQuerySourceCollection;
+			this.localTableAliasMap = localTableAliasMap;
+			this.effectiveAliasMap = effectiveAliasMap;
+			this.effectiveTableCollection = effectiveTableCollection;
+			this.deleteTargetTableRef = deleteTargetTableRef;
+			this.clauseProbeKey = clauseProbeKey;
+			this.treatDerivedRegistryKeysAsDerivedColumn = treatDerivedRegistryKeysAsDerivedColumn;
+			this.allowQuerySourceFallback = allowQuerySourceFallback;
+			this.deferWhenQueryAliasOnlyWithoutParentFatal = deferWhenQueryAliasOnlyWithoutParentFatal;
+			this.deferUnresolvedQualifiedPhysicalSources = deferUnresolvedQualifiedPhysicalSources;
+			this.resolveQualifiedWhenTableRefPresent = resolveQualifiedWhenTableRefPresent;
+		}
+	}
+
+	/** Phase 15.4: unified convert-egress resolution outcome (derived, qualified, or unqualified). */
+	private static final class ConvertEgressColumnResolutionResult {
+		private final boolean derivedColumn;
+		private final QualifiedScopeResolutionResult qualified;
+		private final UnqualifiedScopeResolutionResult unqualified;
+
+		private ConvertEgressColumnResolutionResult(
+				boolean derivedColumn,
+				QualifiedScopeResolutionResult qualified,
+				UnqualifiedScopeResolutionResult unqualified) {
+			this.derivedColumn = derivedColumn;
+			this.qualified = qualified;
+			this.unqualified = unqualified;
+		}
+
+		static ConvertEgressColumnResolutionResult derivedColumn() {
+			return new ConvertEgressColumnResolutionResult(true, null, null);
+		}
+
+		static ConvertEgressColumnResolutionResult fromQualified(
+				QualifiedScopeResolutionResult qualified) {
+			return new ConvertEgressColumnResolutionResult(false, qualified, null);
+		}
+
+		static ConvertEgressColumnResolutionResult fromUnqualified(
+				UnqualifiedScopeResolutionResult unqualified) {
+			return new ConvertEgressColumnResolutionResult(false, null, unqualified);
+		}
+
+		boolean isDerivedColumn() {
+			return derivedColumn;
+		}
+
+		QualifiedScopeResolutionResult qualified() {
+			return qualified;
+		}
+
+		UnqualifiedScopeResolutionResult unqualified() {
+			return unqualified;
+		}
+	}
+
 	// =========================================================================
 	// Methods moved from SqlParseEventWalker
 
@@ -1764,24 +1860,42 @@ public class SqlParseSymbolTreeHelper {
 					}
 
 					if (tableRef != null) {
-						QualifiedScopeResolutionResult resolutionResult =
-								resolveQualifiedColumnAgainstVisibleScope(
-										tableRef,
-										columnName,
+						ConvertEgressResolutionContext interfaceQualifiedCtx =
+								new ConvertEgressResolutionContext(
+										localDerivedColumns,
+										localRelationalModifierInterfaceHints,
+										localFromTableCollection,
+										localFromTableCollection,
+										visibleQuerySourceCollection,
+										localTableAliasMap,
 										effectiveAliasMap,
 										effectiveTableCollection,
-										visibleQuerySourceCollection,
+										deleteTargetTableRef,
+										null,
+										false,
+										true,
+										!emitFinalUnresolvedUnknownFatal,
 										deferCorrelatedValueSubqueryQualifiedUnknowns,
-										localDerivedColumns,
-										localRelationalModifierInterfaceHints);
+										true);
+						ConvertEgressColumnResolutionResult egressResult =
+								resolveColumnRefAtConvertEgress(
+										columnName,
+										tableRef,
+										interfaceQualifiedCtx);
+						if (egressResult.isDerivedColumn()) {
+							consumeDerivedColumnUnknownEntry(
+									localUnresolvedColumnMap,
+									tableRef,
+									columnName);
+							continue;
+						}
+
+						QualifiedScopeResolutionResult resolutionResult = egressResult.qualified();
+						if (resolutionResult == null) {
+							continue;
+						}
 
 						switch (resolutionResult.status) {
-							case RESOLVED_DERIVED_COLUMN -> {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										tableRef,
-										columnName);
-							}
 							case RESOLVED_QUERY_SOURCE -> {
 								materializeResolvedQualifiedQuerySourceReference(
 										tableRef,
@@ -1874,25 +1988,41 @@ public class SqlParseSymbolTreeHelper {
 								localCurrentQueryDictionary,
 								outputCol);
 
-						UnqualifiedScopeResolutionResult resolutionResult =
-								resolveUnqualifiedColumnAgainstVisibleScope(
-										columnName,
+						ConvertEgressResolutionContext interfaceUnqualifiedCtx =
+								new ConvertEgressResolutionContext(
+										localDerivedColumns,
+										localRelationalModifierInterfaceHints,
 										localFromTableCollection,
 										localFromTableCollection,
 										visibleQuerySourceCollection,
 										localTableAliasMap,
+										null,
+										null,
 										deleteTargetTableRef,
+										null,
+										false,
 										true,
 										!emitFinalUnresolvedUnknownFatal,
-										localRelationalModifierInterfaceHints,
-										localDerivedColumns,
+										false,
 										false);
-						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+						ConvertEgressColumnResolutionResult egressResult =
+								resolveColumnRefAtConvertEgress(
+										columnName,
+										null,
+										interfaceUnqualifiedCtx);
+						if (egressResult.isDerivedColumn()) {
 							consumeDerivedColumnUnknownEntry(
 									localUnresolvedColumnMap,
 									null,
 									columnName);
-						} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
+							continue;
+						}
+
+						UnqualifiedScopeResolutionResult resolutionResult = egressResult.unqualified();
+						if (resolutionResult == null) {
+							continue;
+						}
+						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 									refObj,
 									resolutionResult.resolvedSourceRef));
@@ -1972,7 +2102,9 @@ public class SqlParseSymbolTreeHelper {
 					localTableAliasMap,
 					localCurrentQueryDictionary,
 					localInterface,
-					deleteTargetTableRef);
+					deleteTargetTableRef,
+					localDerivedColumns,
+					localRelationalModifierInterfaceHints);
 		}
 
 		probeArchivedScopeClauseColumns(
@@ -9102,6 +9234,76 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * Phase 15.4: shared derived-column proof for convert egress (clause probe, interface loop,
+	 * {@code resolveRemaining…}). PIVOT interface-output skip on UPDATE RHS is clause-key scoped.
+	 */
+	private boolean isConvertEgressDerivedColumnReference(
+			String columnName,
+			String tableRef,
+			ConvertEgressResolutionContext ctx) {
+		if (ctx.treatDerivedRegistryKeysAsDerivedColumn
+				&& isRelationalModifierDerivedColumnReference(
+						ctx.localDerivedColumns,
+						ctx.relationalModifierInterfaceHints,
+						tableRef,
+						columnName)) {
+			return true;
+		}
+		return ctx.clauseProbeKey != null
+				&& UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(ctx.clauseProbeKey)
+				&& isPivotDerivedInterfaceOutputColumn(
+						columnName,
+						ctx.relationalModifierInterfaceHints);
+	}
+
+	/**
+	 * Phase 15.4: single convert-egress decision tree — derived first, then qualified or
+	 * unqualified unified resolver. Callers apply consume / materialize / diagnostics.
+	 */
+	private ConvertEgressColumnResolutionResult resolveColumnRefAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ConvertEgressResolutionContext ctx) {
+		if (isConvertEgressDerivedColumnReference(columnName, tableRef, ctx)) {
+			return ConvertEgressColumnResolutionResult.derivedColumn();
+		}
+
+		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+		if (qualifiedShape && ctx.resolveQualifiedWhenTableRefPresent) {
+			HashMap<String, Object> aliasMap = ctx.effectiveAliasMap != null
+					? ctx.effectiveAliasMap
+					: ctx.localTableAliasMap;
+			HashMap<String, Object> tableCollection = ctx.effectiveTableCollection != null
+					? ctx.effectiveTableCollection
+					: ctx.localTableCollection;
+			return ConvertEgressColumnResolutionResult.fromQualified(
+					resolveQualifiedColumnAgainstVisibleScope(
+							tableRef,
+							columnName,
+							aliasMap,
+							tableCollection,
+							ctx.visibleQuerySourceCollection,
+							ctx.deferUnresolvedQualifiedPhysicalSources,
+							ctx.localDerivedColumns,
+							ctx.relationalModifierInterfaceHints));
+		}
+
+		return ConvertEgressColumnResolutionResult.fromUnqualified(
+				resolveUnqualifiedColumnAgainstVisibleScope(
+						columnName,
+						ctx.localPhysicalTableCollection,
+						ctx.localTableCollection,
+						ctx.visibleQuerySourceCollection,
+						ctx.localTableAliasMap,
+						ctx.deleteTargetTableRef,
+						ctx.allowQuerySourceFallback,
+						ctx.deferWhenQueryAliasOnlyWithoutParentFatal,
+						ctx.relationalModifierInterfaceHints,
+						ctx.localDerivedColumns,
+						ctx.treatDerivedRegistryKeysAsDerivedColumn));
+	}
+
+	/**
 	 * Phase 8: single decision tree for binding one unqualified column name against visible
 	 * scope sources (physical tables, query-backed aliases, optional query-dictionary fallback).
 	 */
@@ -9368,7 +9570,9 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localInterface,
-			String deleteTargetTableRef) {
+			String deleteTargetTableRef,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
 		// Check if we're in UPDATE with no FROM clause - if so, resolve against UPDATE target first
 		String updateTargetTableRef = (String) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_KEY);
 		HashMap<String, Object> updateTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.get(TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY);
@@ -9413,19 +9617,33 @@ public class SqlParseSymbolTreeHelper {
 					? unresolvedColumnLocations.get(columnName)
 					: null;
 
-			UnqualifiedScopeResolutionResult resolutionResult =
-					resolveUnqualifiedColumnAgainstVisibleScope(
-							columnName,
-							localPhysicalTableCollection,
-							localTableCollection,
-							visibleQuerySourceCollection,
-							localTableAliasMap,
-							deleteTargetTableRef,
-							true,
-							false,
-							null,
-							null,
-							false);
+			ConvertEgressResolutionContext remainingIngressCtx = new ConvertEgressResolutionContext(
+					localDerivedColumns,
+					relationalModifierInterfaceHints,
+					localPhysicalTableCollection,
+					localTableCollection,
+					visibleQuerySourceCollection,
+					localTableAliasMap,
+					null,
+					null,
+					deleteTargetTableRef,
+					null,
+					true,
+					true,
+					false,
+					false,
+					false);
+			ConvertEgressColumnResolutionResult egressResult =
+					resolveColumnRefAtConvertEgress(columnName, null, remainingIngressCtx);
+			if (egressResult.isDerivedColumn()) {
+				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
+				continue;
+			}
+
+			UnqualifiedScopeResolutionResult resolutionResult = egressResult.unqualified();
+			if (resolutionResult == null) {
+				continue;
+			}
 
 			Integer[] refLocation = resolveUnqualifiedReferenceLocation(
 					columnName,
@@ -9716,15 +9934,24 @@ public class SqlParseSymbolTreeHelper {
 		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
 			return ArchivedClauseColumnRefResult.skip();
 		}
-		if (isRelationalModifierDerivedColumnReference(
+
+		ConvertEgressResolutionContext clauseProbeCtx = new ConvertEgressResolutionContext(
 				localDerivedColumns,
 				relationalModifierInterfaceHints,
-				tableRef,
-				columnName)
-				|| (UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(clauseKey)
-						&& isPivotDerivedInterfaceOutputColumn(
-								columnName,
-								relationalModifierInterfaceHints))) {
+				localFromTableCollection,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				effectiveAliasMap,
+				effectiveTableCollection,
+				deleteTargetTableRef,
+				clauseKey,
+				true,
+				true,
+				false,
+				deferCorrelatedValueSubqueryQualifiedUnknowns,
+				false);
+		if (resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx).isDerivedColumn()) {
 			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.skip();
 		}
@@ -9773,18 +10000,10 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		UnqualifiedScopeResolutionResult resolutionResult =
-				resolveUnqualifiedColumnAgainstVisibleScope(
-						columnName,
-						localFromTableCollection,
-						localTableCollection,
-						visibleQuerySourceCollection,
-						localTableAliasMap,
-						deleteTargetTableRef,
-						true,
-						false,
-						relationalModifierInterfaceHints,
-						localDerivedColumns,
-						true);
+				resolveColumnRefAtConvertEgress(columnName, null, clauseProbeCtx).unqualified();
+		if (resolutionResult == null) {
+			return ArchivedClauseColumnRefResult.unresolved();
+		}
 
 		switch (resolutionResult.status) {
 			case RESOLVED_DERIVED_COLUMN -> {
