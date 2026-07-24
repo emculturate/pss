@@ -578,57 +578,6 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Remove PIVOT/UNPIVOT derived-column keys from {@code unresolved_column} before
-	 * qualified-unknown diagnostics and interface egress so they are not materialized
-	 * into physical table dictionaries.
-	 */
-	private void consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap(
-			ArrayList<Object> relationalModifierInterfaceHints,
-			HashMap<String, Object> derivedColumns,
-			HashMap<String, Object> unresolvedColumnMap) {
-		if (derivedColumns == null || derivedColumns.isEmpty()
-				|| unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
-			return;
-		}
-
-		ArrayList<String> resolvedKeys = new ArrayList<String>();
-		for (String unresolvedKey : new ArrayList<String>(unresolvedColumnMap.keySet())) {
-			if (unresolvedKey == null || unresolvedKey.isBlank()) {
-				continue;
-			}
-
-			String tableRef = null;
-			String columnName = unresolvedKey;
-			int separatorIndex = unresolvedKey.lastIndexOf('.');
-			if (separatorIndex >= 0 && separatorIndex + 1 < unresolvedKey.length()) {
-				tableRef = unresolvedKey.substring(0, separatorIndex);
-				columnName = unresolvedKey.substring(separatorIndex + 1);
-			}
-
-			if (columnName == null || columnName.isBlank()) {
-				continue;
-			}
-
-			boolean matchesDerived = (tableRef == null || tableRef.isBlank())
-					? containsKeyIgnoreCase(derivedColumns, columnName)
-					: isRelationalModifierDerivedColumnReference(
-							derivedColumns,
-							relationalModifierInterfaceHints,
-							tableRef,
-							columnName);
-
-			if (matchesDerived) {
-				resolvedKeys.add(unresolvedKey);
-			}
-		}
-
-		for (String resolvedKey : resolvedKeys) {
-			unresolvedColumnMap.remove(resolvedKey);
-			releaseResolvedQualifiedGlobalLocationIfQualified(resolvedKey);
-		}
-	}
-
-	/**
 	 * Materialize PIVOT aggregate/FOR operand columns captured as unqualified refs and
 	 * clear them from {@code unresolved_column} so scope exit does not emit false
 	 * unresolved diagnostics. Operand tokens bind to the local physical table that is
@@ -1736,11 +1685,6 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
 		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
 
-		consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap(
-				localRelationalModifierInterfaceHints,
-				localDerivedColumns,
-				localUnresolvedColumnMap);
-
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			// Check for explicitly qualified columns whose table qualifiers do not exist
 			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
@@ -2050,14 +1994,20 @@ public class SqlParseSymbolTreeHelper {
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 									refObj,
 									resolutionResult.resolvedSourceRef));
-							materializeInterfaceOutputSourceLineage(
-									resolutionResult.resolvedSourceRef,
-									columnName,
-									refObj,
-									localUnresolvedColumnMap,
-									localFromTableCollection,
-									localTableAliasMap,
-									visibleQuerySourceCollection);
+							if (!isRelationalModifierDerivedColumnReference(
+									localDerivedColumns,
+									localRelationalModifierInterfaceHints,
+									null,
+									columnName)) {
+								materializeInterfaceOutputSourceLineage(
+										resolutionResult.resolvedSourceRef,
+										columnName,
+										refObj,
+										localUnresolvedColumnMap,
+										localFromTableCollection,
+										localTableAliasMap,
+										visibleQuerySourceCollection);
+							}
 						} else {
 							if (resolutionResult.status == UnqualifiedScopeResolutionStatus.AMBIGUOUS) {
 								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
@@ -2185,7 +2135,9 @@ public class SqlParseSymbolTreeHelper {
 
 		materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit(
 				localUnresolvedColumnMap,
-				localTableCollection);
+				localTableCollection,
+				localDerivedColumns,
+				localRelationalModifierInterfaceHints);
 
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
@@ -8468,6 +8420,29 @@ public class SqlParseSymbolTreeHelper {
 		return false;
 	}
 
+	/**
+	 * True when a qualified derived ref uses a physical {@code FROM} table name directly
+	 * (not a PIVOT/UNPIVOT/subquery alias). Allows qualifier-token lineage for cases like
+	 * {@code tab1.A_sum} while suppressing modifier-alias refs such as {@code pvt.A_sum}.
+	 */
+	private boolean isPhysicalTableQualifierForDerivedLineage(
+			String tableRef,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> tableAliasCollection) {
+		if (tableRef == null || tableRef.isBlank() || localTableCollection == null) {
+			return false;
+		}
+		if (tableAliasCollection != null
+				&& (tableAliasCollection.containsKey(tableRef)
+						|| containsKeyIgnoreCase(tableAliasCollection, tableRef))) {
+			return false;
+		}
+
+		String normalizedRef = normalizeTableRef(tableRef);
+		return localTableCollection.containsKey(normalizedRef)
+				|| containsKeyIgnoreCase(localTableCollection, normalizedRef);
+	}
+
 	private boolean derivedColumnSourceRefMatchesTableRef(
 			String tableRef,
 			String derivedSourceRef,
@@ -8686,7 +8661,9 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	private void materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit(
 			HashMap<String, Object> unresolvedColumnMap,
-			HashMap<String, Object> tableCollection) {
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
 		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()
 				|| tableCollection == null || tableCollection.size() != 1) {
 			return;
@@ -8699,6 +8676,18 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String columnKey : new ArrayList<String>(unresolvedColumnMap.keySet())) {
 			if (columnKey == null || columnKey.isBlank() || columnKey.contains(".")) {
+				continue;
+			}
+
+			if (isRelationalModifierDerivedColumnReference(
+					localDerivedColumns,
+					relationalModifierInterfaceHints,
+					null,
+					columnKey)
+					|| isPivotDerivedInterfaceOutputColumn(
+							columnKey,
+							relationalModifierInterfaceHints)) {
+				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnKey);
 				continue;
 			}
 
@@ -11163,13 +11152,22 @@ public class SqlParseSymbolTreeHelper {
 
 			switch (resolutionResult.status) {
 				case RESOLVED_DERIVED_COLUMN -> {
-					materializeQualifiedUnresolvedEntry(
-							unresolvedKey,
-							unknownEntry.getValue(),
-							tableAliasCollection,
+					if (isPhysicalTableQualifierForDerivedLineage(
+							tableRef,
 							localTableCollection,
-							localCurrentQueryDictionary,
-							localInterface);
+							tableAliasCollection)) {
+						materializeQualifiedUnresolvedEntry(
+								unresolvedKey,
+								unknownEntry.getValue(),
+								tableAliasCollection,
+								localTableCollection,
+								localCurrentQueryDictionary,
+								localInterface);
+					}
+					consumeDerivedColumnUnknownEntry(
+							unresolvedCollector,
+							tableRef,
+							columnName);
 					continue;
 				}
 				case RESOLVED_WILDCARD_QUERY_SOURCE -> {
