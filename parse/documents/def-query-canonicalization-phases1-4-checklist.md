@@ -177,7 +177,7 @@ This section summarizes where we are after the def-key canonicalization follow-o
 ## Phase 5 Closeout (Jul 2026)
 
 - **Strict payload lookup** enforced in `getQueryDefinitionSymbol` — `def_*` via **`resolveDefinitionSymbolInScopeChain`** (definition scope chain resolution); no recursive nested-map fallback.
-- **Renamed (Jul 2026):** `findInCurrentOrAncestorSymbolTables` → private `resolveDefinitionSymbolInScopeChain`; egress bundle migration → Phase **15.6**.
+- **Renamed (Jul 2026):** `findInCurrentOrAncestorSymbolTables` → private `resolveDefinitionSymbolInScopeChain`; egress bundle migration → Phase **15.6** ✅ (Jul 2026).
 - **Dead code removed:** `findInCurrentOrAncestorSymbolTablesRecursive`, `findInScopeTreeByKeyRecursive` (zero call sites).
 - **Verification:** unaliased-derived V1–V16 + gate **195/195** + full suite **1209/1209**.
 - **Query-dict dual-write consolidation** → Phase **19** (backfill repair closed in Step D; two-store model remains intentional).

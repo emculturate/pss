@@ -35,6 +35,9 @@ public class SqlParseSymbolTreeHelper {
 	private final ArrayDeque<String> pendingUnionSetOperatorsForNextParticipants = new ArrayDeque<>();
 	private final ArrayDeque<String> pendingIntersectSetOperatorsForNextParticipants = new ArrayDeque<>();
 
+	/** Phase 15.6: active only during {@link #convertSymbolTableToTableDictionary}. */
+	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
+
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
 	}
@@ -316,6 +319,42 @@ public class SqlParseSymbolTreeHelper {
 			this.deferWhenQueryAliasOnlyWithoutParentFatal = deferWhenQueryAliasOnlyWithoutParentFatal;
 			this.deferUnresolvedQualifiedPhysicalSources = deferUnresolvedQualifiedPhysicalSources;
 			this.resolveQualifiedWhenTableRefPresent = resolveQualifiedWhenTableRefPresent;
+		}
+	}
+
+	/**
+	 * Phase 15.6: frozen scope visibility built once at convert exit so egress readers do not
+	 * repeat {@link #resolveDefinitionSymbolInScopeChain} walks.
+	 */
+	private static final class ConvertEgressScopeBundle {
+		final HashMap<String, Object> visibleDefinitionPayloads;
+		final HashMap<String, Object> visibleQuerySourceRefs;
+		final HashMap<String, Object> localQueryDictionary;
+		final HashMap<String, Object> globalQueryDictionaryRefs;
+
+		private ConvertEgressScopeBundle(
+				HashMap<String, Object> visibleDefinitionPayloads,
+				HashMap<String, Object> visibleQuerySourceRefs,
+				HashMap<String, Object> localQueryDictionary,
+				HashMap<String, Object> globalQueryDictionaryRefs) {
+			this.visibleDefinitionPayloads = visibleDefinitionPayloads;
+			this.visibleQuerySourceRefs = visibleQuerySourceRefs;
+			this.localQueryDictionary = localQueryDictionary;
+			this.globalQueryDictionaryRefs = globalQueryDictionaryRefs;
+		}
+
+		Object getDefinitionPayload(String definitionKey) {
+			if (definitionKey == null || definitionKey.isBlank()) {
+				return null;
+			}
+			return visibleDefinitionPayloads.get(definitionKey);
+		}
+
+		Object getGlobalQueryDictionary(String liveQueryRef) {
+			if (liveQueryRef == null || liveQueryRef.isBlank()) {
+				return null;
+			}
+			return globalQueryDictionaryRefs.get(liveQueryRef);
 		}
 	}
 
@@ -1658,7 +1697,12 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localFromTableCollection,
 				localTableAliasMap);
-		HashMap<String, Object> visibleQuerySourceCollection = collectVisibleQuerySourceCollection(localTableAliasMap);
+		activeConvertEgressScopeBundle = buildConvertEgressScopeBundle(
+				localTableAliasMap,
+				localCurrentQueryDictionary);
+		try {
+		HashMap<String, Object> visibleQuerySourceCollection =
+				activeConvertEgressScopeBundle.visibleQuerySourceRefs;
 		if (isUpdateScope && updateHasFromClause) {
 			HashMap<String, Object> fromInputTableCollection = new HashMap<String, Object>(localTableCollection);
 			pruneUpdateTargetFromInputTableCollection(
@@ -2210,6 +2254,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return walker.symbolTable;
+		} finally {
+			activeConvertEgressScopeBundle = null;
+		}
 	}
 
 	/**
@@ -2245,6 +2292,91 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return ancestors;
+	}
+
+	/**
+	 * Phase 15.6: one-shot scope visibility for convert egress. Closest {@code def_*} payload wins
+	 * (current symbol table, then ancestors nearest-to-farthest).
+	 */
+	@SuppressWarnings("unchecked")
+	private ConvertEgressScopeBundle buildConvertEgressScopeBundle(
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		HashMap<String, Object> visibleDefinitionPayloads = new HashMap<String, Object>();
+		List<Map<String, Object>> ancestors = getAncestorSymbolTables();
+		for (int ancestorIndex = ancestors.size() - 1; ancestorIndex >= 0; ancestorIndex--) {
+			mergeDefinitionPayloadsFromSymbolTable(ancestors.get(ancestorIndex), visibleDefinitionPayloads);
+		}
+		mergeDefinitionPayloadsFromSymbolTable(walker.symbolTable, visibleDefinitionPayloads);
+
+		HashMap<String, Object> localQueryDictionary = localCurrentQueryDictionary != null
+				? new HashMap<String, Object>(localCurrentQueryDictionary)
+				: new HashMap<String, Object>();
+
+		LinkedHashSet<String> liveQueryRefs = new LinkedHashSet<String>();
+		if (localTableAliasMap != null && !localTableAliasMap.isEmpty()) {
+			for (Object mappedSourceObj : localTableAliasMap.values()) {
+				if (mappedSourceObj instanceof String mappedSource
+						&& isQuerySourceReference(mappedSource)) {
+					liveQueryRefs.add(mappedSource);
+				}
+			}
+		}
+		for (String definitionKey : visibleDefinitionPayloads.keySet()) {
+			String liveRef = toLiveScopeKey(definitionKey);
+			if (liveRef != null && isQuerySourceReference(liveRef)) {
+				liveQueryRefs.add(liveRef);
+			}
+		}
+
+		HashMap<String, Object> globalQueryDictionaryRefs = new HashMap<String, Object>();
+		for (String liveQueryRef : liveQueryRefs) {
+			Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(liveQueryRef);
+			if (queryDictionaryObj != null) {
+				globalQueryDictionaryRefs.put(liveQueryRef, queryDictionaryObj);
+			}
+		}
+
+		HashMap<String, Object> visibleQuerySourceRefs = new HashMap<String, Object>();
+		if (localTableAliasMap != null && !localTableAliasMap.isEmpty()) {
+			for (Object mappedSourceObj : localTableAliasMap.values()) {
+				if (!(mappedSourceObj instanceof String mappedSource) || !isQuerySourceReference(mappedSource)) {
+					continue;
+				}
+
+				String defQueryRef = toDefinitionScopeKey(mappedSource);
+				Object queryDefinitionObj = visibleDefinitionPayloads.get(defQueryRef);
+				if (queryDefinitionObj instanceof Map<?, ?>) {
+					visibleQuerySourceRefs.put(mappedSource, queryDefinitionObj);
+					continue;
+				}
+
+				Object queryDictionaryObj = globalQueryDictionaryRefs.get(mappedSource);
+				if (queryDictionaryObj instanceof Map<?, ?>) {
+					visibleQuerySourceRefs.put(mappedSource, queryDictionaryObj);
+				}
+			}
+		}
+
+		return new ConvertEgressScopeBundle(
+				visibleDefinitionPayloads,
+				visibleQuerySourceRefs,
+				localQueryDictionary,
+				globalQueryDictionaryRefs);
+	}
+
+	private void mergeDefinitionPayloadsFromSymbolTable(
+			Map<String, Object> symbolTable,
+			HashMap<String, Object> visibleDefinitionPayloads) {
+		if (symbolTable == null || symbolTable.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, Object> entry : symbolTable.entrySet()) {
+			String key = entry.getKey();
+			if (key != null && isDefinitionScopeKey(key)) {
+				visibleDefinitionPayloads.put(key, entry.getValue());
+			}
+		}
 	}
 
 	public String getQualifiedTableReference(Map<String, Object> tableNode) {
@@ -10697,6 +10829,10 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> collectVisibleQuerySourceCollection(HashMap<String, Object> tableAliasCollection) {
+		if (activeConvertEgressScopeBundle != null) {
+			return new HashMap<String, Object>(activeConvertEgressScopeBundle.visibleQuerySourceRefs);
+		}
+
 		HashMap<String, Object> visibleQuerySources = new HashMap<String, Object>();
 		
 		// ONLY add sources from the current query's local table alias collection
@@ -10929,6 +11065,15 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
+		if (activeConvertEgressScopeBundle != null) {
+			Object fromVisibleRefs =
+					activeConvertEgressScopeBundle.visibleQuerySourceRefs.get(normalizedQueryRef);
+			if (fromVisibleRefs instanceof Map<?, ?>) {
+				return fromVisibleRefs;
+			}
+			return activeConvertEgressScopeBundle.getDefinitionPayload(defQueryRef);
+		}
+
 		Object queryObj = resolveDefinitionSymbolInScopeChain(defQueryRef);
 		if (queryObj instanceof Map<?, ?>) {
 			return queryObj;
@@ -10946,6 +11091,15 @@ public class SqlParseSymbolTreeHelper {
 	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
 		String liveQueryRef = normalizeQuerySourceReference(queryRef);
 		if (liveQueryRef == null || !isQuerySourceReference(liveQueryRef)) {
+			return null;
+		}
+
+		if (activeConvertEgressScopeBundle != null) {
+			Object queryDictionaryObj =
+					activeConvertEgressScopeBundle.getGlobalQueryDictionary(liveQueryRef);
+			if (queryDictionaryObj instanceof Map<?, ?>) {
+				return queryDictionaryObj;
+			}
 			return null;
 		}
 
@@ -11561,6 +11715,9 @@ public class SqlParseSymbolTreeHelper {
 	private Object resolveDefinitionSymbolInScopeChain(String key) {
 		if (key == null || key.isBlank()) {
 			return null;
+		}
+		if (activeConvertEgressScopeBundle != null) {
+			return activeConvertEgressScopeBundle.getDefinitionPayload(key);
 		}
 		Object found = walker.symbolTable.get(key);
 		if (found != null) {
