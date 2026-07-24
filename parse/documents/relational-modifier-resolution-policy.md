@@ -35,7 +35,7 @@ Derived columns introduced by UNPIVOT (and analogously PIVOT registry keys) use 
 
 **Why two tiers:** At `exitColumn` inside SELECT, `sales_amount` cannot yet be tied to the UNPIVOT tuple — FROM has not been walked. At modifier exit (lower, inner context), identity **is** knowable and must be recorded **immediately**. Clause refs encountered later (WHERE, JOIN ON, GROUP BY, …) still batch their rewrite at query closeout because SELECT was also captured before FROM; one scope-finalize pass keeps all surfaces consistent.
 
-**Anti-pattern:** Leaving identity unrecorded at modifier exit and relying on `probeArchivedScopeClauseColumns`, ambiguity suppressors, or convert-only `applyUnpivotValueInterfaceDerivations` to rediscover meaning.
+**Anti-pattern:** Leaving identity unrecorded at modifier exit and relying on `probeArchivedScopeClauseColumns`, ambiguity suppressors, or duplicate convert-only interface rewrites to rediscover meaning.
 
 ---
 
@@ -63,10 +63,16 @@ Optional: if a clause is walked **after** FROM and hints are complete, tier-2 ma
 
 **Retire at convert (after parity):**
 
-- `applyUnpivotValueInterfaceDerivations` (duplicate rewrite)
-- `applyUnpivotValueDerivationsToReferenceListObject` stub → folded into walk helper
-- `materializeSelectedUnpivotInColumnsIntoSourceDictionary` where walk already materialized
-- `registerUnpivotGeneratedColumnAmbiguitySuppressions` (band-aid once tier-1 + tier-2 are correct)
+**Retired (17.2–17.5 Jul 2026):**
+
+- `applyUnpivotValueInterfaceDerivations` — inlined into `applyUnpivotDerivationsToQueryScope`
+- `applyUnpivotValueDerivationsToReferenceListObject` stub — deleted; clauses use `probeArchivedScopeClauseColumns` + `RESOLVED_UNPIVOT_*`
+- `registerUnpivotGeneratedColumnAmbiguitySuppressions` — deleted; walk tier-1 suppress + egress outcomes suffice
+- `resolveUnpivotGeneratedColumnSourceRef` — renamed `resolveUnpivotHintModifierTableRef`
+
+**Retained convert hook (17.4):**
+
+- `materializeSelectedUnpivotInColumnsIntoSourceDictionary` — SELECT-listed IN columns in `query_dictionary` merged into `table_dictionary` (passthrough wide columns; walk tier-1 handles `unresolved_column` only)
 
 ---
 
@@ -80,6 +86,20 @@ Optional: if a clause is walked **after** FROM and hints are complete, tier-2 ma
 | Phrase qualifiers | Diagnostics | `validateRelationalModifierOperandQualifiers` (17.0b) | — | — |
 
 PIVOT uses the same principles; operand materialization is Phase **16**; derived registry consume is Phase **15**; IN-list output aliases are Phase **18**.
+
+---
+
+## Multi-sibling modifiers (Phase 17.6)
+
+When multiple PIVOT or UNPIVOT operators are **siblings** in the same `query_specification` FROM clause (join chain), each tuple exposes derived column names into the same query scope.
+
+| Ref context | Rule |
+|-------------|------|
+| **Alias-qualified** (`u2.sales_amount`, `p.jan_sales_SUM`) | Resolve to the named modifier tuple's hint / derived lineage. |
+| **Unqualified in WHERE / JOIN ON / GROUP BY / …** | Same ambiguity rules as other multi-source columns — multiple visible modifier aliases → diagnostic. |
+| **Unqualified in SELECT list** | **Must not** silently pick one tuple when ≥2 sibling modifiers expose the same derived name. Emit `AMBIGUOUS_COLUMN_REFERENCE` (see **17.6.2**). |
+
+Walk-time hints remain **per-operator** (append-only list); consolidation to published `derived_columns` / `table_dictionary` happens at scope exit only. Structural separation of hints list vs derived map is tracked as **17.6.4–17.6.6**.
 
 ---
 

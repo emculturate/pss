@@ -4684,7 +4684,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		   if (modifier != null && modifierKey != null) {
 			   validateRelationalModifierOperandQualifiers(modifierKey, modifier, sourceResult);
-			   walker.symbolTable.remove(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+			   String interfaceSourceRef = (relationAlias != null && !relationAlias.isBlank())
+					   ? relationAlias
+					   : resolveRelationalModifierSourceReference(sourceResult);
+			   String dictionarySourceRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
+			   symbolTreeHelper.snapshotRelationalModifierOperandReferencesIntoLatestHint(
+					   interfaceSourceRef,
+					   dictionarySourceRef);
+			   walker.symbolTable.remove(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
 			   sourceResult.put(modifierKey, modifier);
 			   if (relationAlias != null) {
 				   sourceResult.put(MUMBLE_ALIAS_KEY, relationAlias);
@@ -5599,12 +5606,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	private void resolvePivotScopeAtPrimaryExit(Map<String, Object> sourceResult, String relationAlias) {
-		String sourceRef = (relationAlias != null && !relationAlias.isBlank())
+		String interfaceSourceRef = (relationAlias != null && !relationAlias.isBlank())
 				? relationAlias
 				: resolveRelationalModifierSourceReference(sourceResult);
-		addRelationalModifierSourceReferenceToHints(sourceRef);
+		String dictionarySourceRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
+		addRelationalModifierSourceReferenceToHints(interfaceSourceRef, dictionarySourceRef);
 		Map<String, Object> sourceInterfaceMap = resolvePrimarySourceInterface(sourceResult);
-		enrichPivotAggregateHintReferencesForQuerySource(walker.symbolTable, sourceRef, sourceInterfaceMap);
+		enrichPivotAggregateHintReferencesForQuerySource(walker.symbolTable, interfaceSourceRef, sourceInterfaceMap);
 
 		Object identifiersObj = walker.symbolTable.get(PIVOT_IN_IDENTIFIER_REFERENCES_KEY);
 		HashMap<String, Object> pivotIdentifierMap = (identifiersObj instanceof HashMap<?, ?>)
@@ -5652,18 +5660,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 
-		String dictionarySourceRef = resolveRelationalModifierSourceReference(sourceResult);
+		String dictionarySourceRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
+		if (dictionarySourceRef == null || dictionarySourceRef.isBlank()) {
+			dictionarySourceRef = resolveRelationalModifierSourceReference(sourceResult);
+		}
 		if (dictionarySourceRef == null || dictionarySourceRef.isBlank()) {
 			dictionarySourceRef = interfaceSourceRef;
 		}
 
-		for (Object hintObj : (ArrayList<Object>) hintListObj) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
-			hintMap.put(MUMBLE_TABLE_REF_KEY, interfaceSourceRef);
-			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionarySourceRef);
+		Object latestHintObj = ((ArrayList<Object>) hintListObj).get(hintListObj.size() - 1);
+		if (latestHintObj instanceof Map<?, ?> latestHintMapObj) {
+			Map<String, Object> latestHintMap = (Map<String, Object>) latestHintMapObj;
+			latestHintMap.put(MUMBLE_TABLE_REF_KEY, interfaceSourceRef);
+			latestHintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionarySourceRef);
 		}
 
 		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
@@ -5692,22 +5701,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void addRelationalModifierSourceReferenceToHints(String sourceRef) {
-		if (sourceRef == null || sourceRef.isBlank()) {
+	private void addRelationalModifierSourceReferenceToHints(
+			String interfaceSourceRef,
+			String dictionaryPhysicalSourceRef) {
+		if (interfaceSourceRef == null || interfaceSourceRef.isBlank()) {
 			return;
 		}
 		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
-		if (!(hintsObj instanceof ArrayList<?> hintListObj)) {
+		if (!(hintsObj instanceof ArrayList<?> hintListObj) || hintListObj.isEmpty()) {
 			return;
 		}
-		for (Object hintObj : (ArrayList<Object>) hintListObj) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
-			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, sourceRef);
-			hintMap.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+		ArrayList<Object> hintList = (ArrayList<Object>) hintListObj;
+		Object latestHintObj = hintList.get(hintList.size() - 1);
+		if (!(latestHintObj instanceof Map<?, ?> hintMapObj)) {
+			return;
 		}
+		Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+		if (dictionaryPhysicalSourceRef != null && !dictionaryPhysicalSourceRef.isBlank()) {
+			hintMap.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionaryPhysicalSourceRef);
+		}
+		hintMap.put(MUMBLE_TABLE_REF_KEY, interfaceSourceRef);
+	}
+
+	private String resolveRelationalModifierPhysicalSourceReference(Map<String, Object> sourceResult) {
+		String sourceRef = resolveRelationalModifierSourceReference(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+		@SuppressWarnings("unchecked")
+		HashMap<String, Object> aliasMap = null;
+		Object tableAliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof Map<?, ?> tableAliasMapObj && !tableAliasMapObj.isEmpty()) {
+			aliasMap = new HashMap<String, Object>((Map<String, Object>) tableAliasMapObj);
+		}
+		return walker.resolveCanonicalPhysicalTableRef(sourceRef, aliasMap);
 	}
 
 	@SuppressWarnings("unchecked")

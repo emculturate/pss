@@ -3451,6 +3451,67 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return resolveDefinitionBackedNonTableSourceRef(tableRef);
 	}
 
+	/**
+	 * Walk the alias map to the canonical physical table name used as a table-dictionary key.
+	 * Returns null for query-backed / non-physical sources. Never returns an intermediate alias.
+	 */
+	public String resolveCanonicalPhysicalTableRef(
+			String tableRef,
+			HashMap<String, Object> tableAliasCollection) {
+		if (tableRef == null || tableRef.isBlank()) {
+			return null;
+		}
+
+		String current = tableRef;
+		HashSet<String> visited = new HashSet<String>();
+		for (int hop = 0; hop < 32; hop++) {
+			String normalized = normalizeTableReference(current);
+			if (normalized == null || normalized.isBlank()) {
+				return null;
+			}
+			String visitKey = normalized.toLowerCase(java.util.Locale.ROOT);
+			if (visited.contains(visitKey)) {
+				return normalized;
+			}
+			visited.add(visitKey);
+
+			if (isNonTableQuerySourceReference(normalized)) {
+				return null;
+			}
+
+			String mappedAlias = null;
+			if (tableAliasCollection != null && !tableAliasCollection.isEmpty()) {
+				Object direct = tableAliasCollection.get(current);
+				if (direct instanceof String directMapped && !directMapped.isBlank()) {
+					mappedAlias = directMapped;
+				} else {
+					for (Map.Entry<String, Object> entry : tableAliasCollection.entrySet()) {
+						if (entry.getKey() != null
+								&& entry.getKey().equalsIgnoreCase(current)
+								&& entry.getValue() instanceof String aliasMapped
+								&& !aliasMapped.isBlank()) {
+							mappedAlias = aliasMapped;
+							break;
+						}
+					}
+				}
+			}
+
+			if (mappedAlias == null
+					|| mappedAlias.isBlank()
+					|| mappedAlias.equalsIgnoreCase(current)) {
+				return normalized;
+			}
+
+			if (isNonTableQuerySourceReference(mappedAlias)) {
+				return null;
+			}
+			current = mappedAlias;
+		}
+
+		return normalizeTableReference(current);
+	}
+
 	public boolean canResolveQualifiedUnknownInScope(
 			String unresolvedQualifiedKey,
 			HashMap<String, Object> tableAliasCollection,
@@ -4095,28 +4156,23 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				continue;
 			}
 
-			String resolvedSource = resolveAliasToTableName(aliasRef, tableAliasCollection);
-			if (resolvedSource == null || resolvedSource.equalsIgnoreCase(aliasRef)) {
+			String canonicalPhysicalRef = resolveCanonicalPhysicalTableRef(aliasRef, tableAliasCollection);
+			if (canonicalPhysicalRef == null
+					|| canonicalPhysicalRef.isBlank()
+					|| canonicalPhysicalRef.equalsIgnoreCase(aliasRef)) {
 				continue;
 			}
 
-			if (!isTupleSubstitutionReference(resolvedSource)) {
+			if (isNonTableQuerySourceReference(canonicalPhysicalRef)) {
 				continue;
 			}
 
-			boolean queryOrSetBackedAlias = resolvedSource.startsWith("query")
-					|| resolvedSource.startsWith(MUMBLE_UNION_KEY)
-					|| resolvedSource.startsWith(MUMBLE_INTERSECT_KEY)
-					|| resolvedSource.startsWith(MUMBLE_VALUES_KEY)
-					|| MUMBLE_VALUES_KEY.equals(resolvedSource);
-			if (queryOrSetBackedAlias) {
-				continue;
-			}
-
-			HashMap<String, Object> resolvedTableDictionary = getTableDictionaryForReference(resolvedSource, tableCollection);
+			HashMap<String, Object> resolvedTableDictionary = getTableDictionaryForReference(
+					canonicalPhysicalRef,
+					tableCollection);
 			if (resolvedTableDictionary == null) {
 				resolvedTableDictionary = new HashMap<String, Object>();
-				tableCollection.put(resolvedSource, resolvedTableDictionary);
+				tableCollection.put(canonicalPhysicalRef, resolvedTableDictionary);
 			}
 
 			for (Map.Entry<?, ?> aliasColumnEntry : aliasColumns.entrySet()) {

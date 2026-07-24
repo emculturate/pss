@@ -37,6 +37,8 @@ public class SqlParseSymbolTreeHelper {
 
 	/** Phase 15.6: active only during {@link #convertSymbolTableToTableDictionary}. */
 	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
+	private HashMap<String, Object> activeConvertEgressDerivedColumns;
+	private ArrayList<Object> activeConvertEgressRelationalModifierHints;
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -69,6 +71,8 @@ public class SqlParseSymbolTreeHelper {
 			SqlASTWalkerHelper.TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY;
 	public static final String RELATIONAL_MODIFIER_OPERATOR_KEY = "operator";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
+	public static final String RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY = "modifier_operand_token_refs";
+	public static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
 	public static final String RELATIONAL_MODIFIER_SOURCE_REF_KEY = "source_ref";
 
@@ -83,6 +87,16 @@ public class SqlParseSymbolTreeHelper {
 
 	public static String normalizeTableRef(String tableRef) {
 		return SqlASTWalkerHelper.normalizeTableReference(tableRef);
+	}
+
+	/**
+	 * Canonical physical table name for table-dictionary keys (full alias-chain walk).
+	 * Returns null for query-backed sources.
+	 */
+	public String resolveCanonicalPhysicalTableRef(
+			String tableRef,
+			HashMap<String, Object> tableAliasCollection) {
+		return walker.resolveCanonicalPhysicalTableRef(tableRef, tableAliasCollection);
 	}
 
 	// --- Wrapper classes for tracking unresolved column locations ---
@@ -543,12 +557,6 @@ public class SqlParseSymbolTreeHelper {
 	public void applyUnpivotDerivationsToQueryScope(
 			HashMap<String, Object> localInterface,
 			ArrayList<Object> relationalModifierInterfaceHints) {
-		applyUnpivotValueInterfaceDerivations(localInterface, relationalModifierInterfaceHints);
-	}
-
-	public void applyUnpivotValueInterfaceDerivations(
-			HashMap<String, Object> localInterface,
-			ArrayList<Object> relationalModifierInterfaceHints) {
 		if (localInterface == null || localInterface.isEmpty()
 				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
 			return;
@@ -592,12 +600,6 @@ public class SqlParseSymbolTreeHelper {
 				}
 			}
 		}
-	}
-
-	public Object applyUnpivotValueDerivationsToReferenceListObject(
-			Object referenceListObject,
-			ArrayList<Object> relationalModifierInterfaceHints) {
-		return referenceListObject;
 	}
 
 	public ArrayList<Object> rewriteReferenceListForSingleUnpivotHint(
@@ -695,6 +697,11 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			Map<String, Object> hint = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hint.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (!(operatorObj instanceof String operator)
+					|| !MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
+				continue;
+			}
 			Object sourceRefObj = hint.get(MUMBLE_TABLE_REF_KEY);
 			if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
 				continue;
@@ -721,8 +728,18 @@ public class SqlParseSymbolTreeHelper {
 
 			Object inColumnsObj = hint.get(MUMBLE_IN_KEY);
 			if (inColumnsObj instanceof ArrayList<?> inColumns) {
+				String canonicalSourceRef = resolveCanonicalPhysicalTableRef(
+						dictionarySourceRef,
+						getTableAliasMapFromSymbolTable());
+				if (canonicalSourceRef == null || canonicalSourceRef.isBlank()) {
+					canonicalSourceRef = dictionarySourceRef;
+				}
 				for (Object inColumnObj : inColumns) {
 					if (inColumnObj instanceof String inColumn && !inColumn.isBlank()) {
+						materializeUnpivotInColumnFromHintOperandRefs(
+								hint,
+								canonicalSourceRef,
+								inColumn);
 						removeAndMaterializeUnpivotResolvedColumn(unresolvedColumnMap, dictionarySourceRef, inColumn, false);
 					}
 				}
@@ -765,12 +782,14 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableAliasMap) {
 		if (relationalModifierInterfaceHints == null
 				|| relationalModifierInterfaceHints.isEmpty()
-				|| unresolvedColumnMap == null
-				|| unresolvedColumnMap.isEmpty()
 				|| localTableCollection == null
 				|| localPhysicalTableCollection == null
 				|| localPhysicalTableCollection.isEmpty()) {
 			return;
+		}
+
+		if (unresolvedColumnMap == null) {
+			unresolvedColumnMap = new HashMap<String, Object>();
 		}
 
 		for (Object hintObj : relationalModifierInterfaceHints) {
@@ -793,6 +812,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 
 			String pivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
+			materializePivotOperandColumnsFromHintTokenRefs(
+					hintMap,
+					materializeTableRef,
+					localTableCollection);
 			for (String operandColumnName : collectPivotOperandColumnNames(hintMap)) {
 				materializePivotOperandColumnAtConvertEgress(
 						operandColumnName,
@@ -934,21 +957,16 @@ public class SqlParseSymbolTreeHelper {
 		Object dictionarySourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
 		if (dictionarySourceRefObj instanceof String dictionarySourceRef
 				&& !dictionarySourceRef.isBlank()) {
-			String resolvedTargetRef = walker.resolveAliasToTableName(
+			String canonicalPhysicalRef = resolveCanonicalPhysicalTableRef(
 					dictionarySourceRef,
 					localTableAliasMap);
-			if (resolvedTargetRef == null || resolvedTargetRef.isBlank()) {
-				resolvedTargetRef = dictionarySourceRef;
-			}
-			if (!walker.isNonTableQuerySourceReference(resolvedTargetRef)) {
-				return normalizeTableRef(resolvedTargetRef);
+			if (canonicalPhysicalRef != null && !canonicalPhysicalRef.isBlank()) {
+				return canonicalPhysicalRef;
 			}
 		}
 
-		return resolvePivotOperandMaterializationTableRef(
-				hintMap,
-				localPhysicalTableCollection,
-				localTableAliasMap);
+		String unpivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
+		return resolveCanonicalPhysicalTableRef(unpivotSourceRef, localTableAliasMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1139,50 +1157,30 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> hintMap,
 			HashMap<String, Object> localPhysicalTableCollection,
 			HashMap<String, Object> localTableAliasMap) {
+		String pivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
+		String canonicalPhysicalRef = resolveCanonicalPhysicalTableRef(pivotSourceRef, localTableAliasMap);
+		if (canonicalPhysicalRef != null && !canonicalPhysicalRef.isBlank()) {
+			return canonicalPhysicalRef;
+		}
+
 		if (localPhysicalTableCollection == null || localPhysicalTableCollection.isEmpty()) {
 			return null;
 		}
 		if (localPhysicalTableCollection.size() == 1) {
-			return localPhysicalTableCollection.keySet().iterator().next();
+			String onlyKey = localPhysicalTableCollection.keySet().iterator().next();
+			return resolveCanonicalPhysicalTableRef(onlyKey, localTableAliasMap);
 		}
-
-		String pivotSourcePhysicalRef = resolvePivotSourcePhysicalTableRef(
-				resolvePivotHintSourceRef(hintMap, localTableAliasMap),
-				localTableAliasMap);
-
-		for (String physicalTableRef : localPhysicalTableCollection.keySet()) {
-			if (physicalTableRef == null || physicalTableRef.isBlank()) {
-				continue;
-			}
-			if (pivotSourcePhysicalRef != null
-					&& physicalTableRef.equalsIgnoreCase(pivotSourcePhysicalRef)) {
-				continue;
-			}
-			return physicalTableRef;
-		}
-
-		return localPhysicalTableCollection.keySet().iterator().next();
+		return null;
 	}
 
 	/**
-	 * Resolve a pivot source ref (alias or physical name) to the physical table key used in
+	 * Resolve a pivot source ref (alias or physical name) to the canonical physical table key used in
 	 * {@link #buildLocalPhysicalFromTableCollection}. Returns null for query/subquery pivot sources.
 	 */
 	private String resolvePivotSourcePhysicalTableRef(
 			String pivotSourceRef,
 			HashMap<String, Object> localTableAliasMap) {
-		if (pivotSourceRef == null || pivotSourceRef.isBlank()) {
-			return null;
-		}
-		if (isQuerySourceReference(pivotSourceRef)
-				|| walker.isNonTableQuerySourceReference(pivotSourceRef)) {
-			return null;
-		}
-		String resolvedPhysicalRef = walker.resolveAliasToTableName(pivotSourceRef, localTableAliasMap);
-		if (resolvedPhysicalRef != null && !resolvedPhysicalRef.isBlank()) {
-			return resolvedPhysicalRef;
-		}
-		return pivotSourceRef;
+		return resolveCanonicalPhysicalTableRef(pivotSourceRef, localTableAliasMap);
 	}
 
 	private Object consumePivotOperandUnresolvedEntry(
@@ -1257,6 +1255,206 @@ public class SqlParseSymbolTreeHelper {
 		return operandColumns;
 	}
 
+	private void materializePivotOperandColumnsFromHintTokenRefs(
+			Map<String, Object> hintMap,
+			String materializeTableRef,
+			HashMap<String, Object> localTableCollection) {
+		if (hintMap == null
+				|| hintMap.isEmpty()
+				|| materializeTableRef == null
+				|| materializeTableRef.isBlank()
+				|| localTableCollection == null) {
+			return;
+		}
+
+		Object operandRefsObj = hintMap.get(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY);
+		if (!(operandRefsObj instanceof Map<?, ?> operandRefsMapObj) || operandRefsMapObj.isEmpty()) {
+			return;
+		}
+
+		Map<String, Object> operandRefsMap = (Map<String, Object>) operandRefsMapObj;
+		for (String operandColumnName : collectPivotOperandColumnNames(hintMap)) {
+			Object tokenPayload = operandRefsMap.get(operandColumnName);
+			if (tokenPayload == null) {
+				for (Map.Entry<String, Object> entry : operandRefsMap.entrySet()) {
+					String key = entry.getKey();
+					if (key == null || !key.contains(".")) {
+						continue;
+					}
+					String keyColumn = key.substring(key.lastIndexOf('.') + 1);
+					if (keyColumn.equalsIgnoreCase(operandColumnName)) {
+						tokenPayload = entry.getValue();
+						break;
+					}
+				}
+			}
+			if (tokenPayload != null) {
+				mergeSourceLineageIntoPhysicalTableDictionary(
+						localTableCollection,
+						materializeTableRef,
+						operandColumnName,
+						tokenPayload);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getTableAliasMapFromSymbolTable() {
+		Object tableAliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof Map<?, ?> tableAliasMapObj && !tableAliasMapObj.isEmpty()) {
+			return new HashMap<String, Object>((Map<String, Object>) tableAliasMapObj);
+		}
+		return new HashMap<String, Object>();
+	}
+
+	private void materializeUnpivotInColumnFromHintOperandRefs(
+			Map<String, Object> hint,
+			String canonicalSourceRef,
+			String inColumn) {
+		if (hint == null || canonicalSourceRef == null || canonicalSourceRef.isBlank()
+				|| inColumn == null || inColumn.isBlank()) {
+			return;
+		}
+
+		Object operandRefsObj = hint.get(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY);
+		if (!(operandRefsObj instanceof Map<?, ?> operandRefsMapObj) || operandRefsMapObj.isEmpty()) {
+			return;
+		}
+
+		Object tokenPayload = ((Map<String, Object>) operandRefsMapObj).get(inColumn);
+		if (tokenPayload == null) {
+			for (Map.Entry<String, Object> entry : ((Map<String, Object>) operandRefsMapObj).entrySet()) {
+				String key = entry.getKey();
+				if (key == null || !key.contains(".")) {
+					continue;
+				}
+				String keyColumn = key.substring(key.lastIndexOf('.') + 1);
+				if (keyColumn.equalsIgnoreCase(inColumn)) {
+					tokenPayload = entry.getValue();
+					break;
+				}
+			}
+		}
+		if (tokenPayload == null) {
+			return;
+		}
+
+		HashMap<String, Object> localTableDictionary = walker.getCurrentTableDictionary();
+		mergeSourceLineageIntoPhysicalTableDictionary(
+				localTableDictionary,
+				canonicalSourceRef,
+				inColumn,
+				tokenPayload);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void snapshotRelationalModifierOperandReferencesIntoLatestHint(
+			String interfaceSourceRef,
+			String dictionarySourceRef) {
+		Object hintsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		if (!(hintsObj instanceof ArrayList<?> hintListObj) || hintListObj.isEmpty()) {
+			return;
+		}
+
+		ArrayList<Object> hintList = (ArrayList<Object>) hintListObj;
+		Object latestHintObj = hintList.get(hintList.size() - 1);
+		if (!(latestHintObj instanceof Map<?, ?> latestHintMapObj)) {
+			return;
+		}
+
+		Map<String, Object> latestHintMap = (Map<String, Object>) latestHintMapObj;
+		HashMap<String, Object> snapshot = new HashMap<String, Object>();
+		HashMap<String, Object> localTableAliasMap = getTableAliasMapFromSymbolTable();
+
+		Object refsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
+		if (refsObj instanceof Map<?, ?> refsMapObj && !refsMapObj.isEmpty()) {
+			for (Map.Entry<?, ?> entry : refsMapObj.entrySet()) {
+				if (!(entry.getKey() instanceof String key) || entry.getValue() == null) {
+					continue;
+				}
+				if (key.contains(".")) {
+					int dotIndex = key.lastIndexOf('.');
+					String qualifier = key.substring(0, dotIndex);
+					String columnName = key.substring(dotIndex + 1);
+					if (!operandQualifierMatchesRelationalModifierSource(
+							qualifier,
+							interfaceSourceRef,
+							dictionarySourceRef,
+							localTableAliasMap)) {
+						continue;
+					}
+					snapshot.put(columnName, entry.getValue());
+				} else {
+					snapshot.put(key, entry.getValue());
+				}
+			}
+		}
+
+		ArrayList<String> operandColumns = new ArrayList<String>();
+		Object operatorObj = latestHintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+		if (operatorObj instanceof String operator && MUMBLE_PIVOT_KEY.equals(operator)) {
+			operandColumns.addAll(collectPivotOperandColumnNames(latestHintMap));
+		} else if (operatorObj instanceof String operator
+				&& MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
+			Object inColumnsObj = latestHintMap.get(MUMBLE_IN_KEY);
+			if (inColumnsObj instanceof ArrayList<?> inColumns) {
+				for (Object inColumnObj : inColumns) {
+					if (inColumnObj instanceof String inColumn && !inColumn.isBlank()) {
+						operandColumns.add(inColumn);
+					}
+				}
+			}
+		}
+
+		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (unresolvedObj instanceof HashMap<?, ?> unresolvedMapObj && !operandColumns.isEmpty()) {
+			HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
+			for (String operandColumn : operandColumns) {
+				if (snapshot.containsKey(operandColumn)) {
+					continue;
+				}
+				Object unresolvedEntry = getUnqualifiedUnknownEntry(unresolvedMap, operandColumn);
+				if (unresolvedEntry != null) {
+					snapshot.put(operandColumn, unresolvedEntry);
+				}
+			}
+		}
+
+		if (!snapshot.isEmpty()) {
+			latestHintMap.put(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY, snapshot);
+		}
+	}
+
+	private boolean operandQualifierMatchesRelationalModifierSource(
+			String qualifier,
+			String interfaceSourceRef,
+			String dictionarySourceRef,
+			HashMap<String, Object> localTableAliasMap) {
+		if (qualifier == null || qualifier.isBlank()) {
+			return true;
+		}
+		if (interfaceSourceRef != null && qualifier.equalsIgnoreCase(interfaceSourceRef)) {
+			return true;
+		}
+		if (dictionarySourceRef != null && qualifier.equalsIgnoreCase(dictionarySourceRef)) {
+			return true;
+		}
+
+		String canonicalQualifier = resolveCanonicalPhysicalTableRef(qualifier, localTableAliasMap);
+		if (canonicalQualifier != null
+				&& dictionarySourceRef != null
+				&& canonicalQualifier.equalsIgnoreCase(dictionarySourceRef)) {
+			return true;
+		}
+
+		String canonicalInterfaceSourceRef = resolveCanonicalPhysicalTableRef(
+				interfaceSourceRef,
+				localTableAliasMap);
+		return canonicalQualifier != null
+				&& canonicalInterfaceSourceRef != null
+				&& canonicalQualifier.equalsIgnoreCase(canonicalInterfaceSourceRef);
+	}
+
 	private String extractRelationalModifierHintColumnName(Object columnObj) {
 		if (columnObj instanceof String columnName && !columnName.isBlank()) {
 			return columnName;
@@ -1277,88 +1475,6 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void materializeSelectedUnpivotInColumnsIntoSourceDictionary(
-			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> localTableCollection,
-			HashMap<String, Object> localTableAliasMap,
-			ArrayList<Object> relationalModifierInterfaceHints) {
-		if (localCurrentQueryDictionary == null || localCurrentQueryDictionary.isEmpty()
-				|| localTableCollection == null
-				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
-			return;
-		}
-
-		for (Object hintObj : relationalModifierInterfaceHints) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
-			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-			if (!(operatorObj instanceof String operator)
-					|| !MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
-				continue;
-			}
-
-			Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
-			if (!(inColumnsObj instanceof ArrayList<?> inColumns) || inColumns.isEmpty()) {
-				continue;
-			}
-
-			String dictionaryTargetRef = null;
-			Object dictionarySourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
-			if (dictionarySourceRefObj instanceof String dictionarySourceRef
-					&& !dictionarySourceRef.isBlank()) {
-				dictionaryTargetRef = dictionarySourceRef;
-			} else {
-				Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
-				if (sourceRefObj instanceof String sourceRef && !sourceRef.isBlank()) {
-					dictionaryTargetRef = sourceRef;
-				}
-			}
-
-			if (dictionaryTargetRef == null || dictionaryTargetRef.isBlank()) {
-				continue;
-			}
-
-			String resolvedTargetRef = walker.resolveAliasToTableName(dictionaryTargetRef, localTableAliasMap);
-			if (resolvedTargetRef != null
-					&& !resolvedTargetRef.isBlank()
-					&& !walker.isNonTableQuerySourceReference(resolvedTargetRef)) {
-				dictionaryTargetRef = resolvedTargetRef;
-			}
-
-			Object sourceDictionaryObj = localTableCollection.get(dictionaryTargetRef);
-			if (!(sourceDictionaryObj instanceof HashMap<?, ?>)) {
-				String normalizedSourceRef = normalizeTableRef(dictionaryTargetRef);
-				sourceDictionaryObj = localTableCollection.get(normalizedSourceRef);
-				if (!(sourceDictionaryObj instanceof HashMap<?, ?>)) {
-					sourceDictionaryObj = new HashMap<String, Object>();
-					localTableCollection.put(normalizedSourceRef, sourceDictionaryObj);
-				}
-			}
-			HashMap<String, Object> sourceDictionary = (HashMap<String, Object>) sourceDictionaryObj;
-
-			for (Object inColumnObj : inColumns) {
-				if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
-					continue;
-				}
-
-				String queryColumnKey = findKeyIgnoreCase(localCurrentQueryDictionary, inColumn);
-				if (queryColumnKey == null) {
-					continue;
-				}
-
-				Object queryColumnRefs = localCurrentQueryDictionary.get(queryColumnKey);
-				if (queryColumnRefs == null) {
-					continue;
-				}
-
-				walker.mergeResolvedColumnIntoDictionary(sourceDictionary, inColumn, queryColumnRefs);
-			}
-		}
-	}
-
 	private void removeUnpivotGeneratedColumnReference(
 			HashMap<String, Object> unresolvedColumnMap,
 			String sourceRef,
@@ -1410,11 +1526,9 @@ public class SqlParseSymbolTreeHelper {
 		if (tableAliasObj instanceof Map<?, ?> tableAliasMapObj && !tableAliasMapObj.isEmpty()) {
 			tableAliasMap = new HashMap<String, Object>((Map<String, Object>) tableAliasMapObj);
 		}
-		String resolvedSourceRef = walker.resolveAliasToTableName(sourceRef, tableAliasMap);
-		if (resolvedSourceRef != null
-				&& !resolvedSourceRef.isBlank()
-				&& !walker.isNonTableQuerySourceReference(resolvedSourceRef)) {
-			dictionaryTargetRef = resolvedSourceRef;
+		String canonicalTargetRef = resolveCanonicalPhysicalTableRef(sourceRef, tableAliasMap);
+		if (canonicalTargetRef != null && !canonicalTargetRef.isBlank()) {
+			dictionaryTargetRef = canonicalTargetRef;
 		}
 
 		Object matchedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, sourceRef, columnName);
@@ -1476,6 +1590,89 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
+	}
+
+	@SuppressWarnings("unchecked")
+	public void materializeSelectedUnpivotInColumnsIntoSourceDictionary(
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localTableAliasMap,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (localCurrentQueryDictionary == null || localCurrentQueryDictionary.isEmpty()
+				|| localTableCollection == null
+				|| relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+			return;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (!(operatorObj instanceof String operator)
+					|| !MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
+				continue;
+			}
+
+			Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
+			if (!(inColumnsObj instanceof ArrayList<?> inColumns) || inColumns.isEmpty()) {
+				continue;
+			}
+
+			String dictionaryTargetRef = null;
+			Object dictionarySourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
+			if (dictionarySourceRefObj instanceof String dictionarySourceRef
+					&& !dictionarySourceRef.isBlank()) {
+				dictionaryTargetRef = dictionarySourceRef;
+			} else {
+				Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+				if (sourceRefObj instanceof String sourceRef && !sourceRef.isBlank()) {
+					dictionaryTargetRef = sourceRef;
+				}
+			}
+
+			if (dictionaryTargetRef == null || dictionaryTargetRef.isBlank()) {
+				continue;
+			}
+
+			String canonicalTargetRef = resolveCanonicalPhysicalTableRef(
+					dictionaryTargetRef,
+					localTableAliasMap);
+			if (canonicalTargetRef != null && !canonicalTargetRef.isBlank()) {
+				dictionaryTargetRef = canonicalTargetRef;
+			}
+
+			Object sourceDictionaryObj = localTableCollection.get(dictionaryTargetRef);
+			if (!(sourceDictionaryObj instanceof HashMap<?, ?>)) {
+				String normalizedSourceRef = normalizeTableRef(dictionaryTargetRef);
+				sourceDictionaryObj = localTableCollection.get(normalizedSourceRef);
+				if (!(sourceDictionaryObj instanceof HashMap<?, ?>)) {
+					sourceDictionaryObj = new HashMap<String, Object>();
+					localTableCollection.put(normalizedSourceRef, sourceDictionaryObj);
+				}
+			}
+			HashMap<String, Object> sourceDictionary = (HashMap<String, Object>) sourceDictionaryObj;
+
+			for (Object inColumnObj : inColumns) {
+				if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
+					continue;
+				}
+
+				String queryColumnKey = findKeyIgnoreCase(localCurrentQueryDictionary, inColumn);
+				if (queryColumnKey == null) {
+					continue;
+				}
+
+				Object queryColumnRefs = localCurrentQueryDictionary.get(queryColumnKey);
+				if (queryColumnRefs == null) {
+					continue;
+				}
+
+				walker.mergeResolvedColumnIntoDictionary(sourceDictionary, inColumn, queryColumnRefs);
+			}
+		}
 	}
 
 	/**
@@ -1831,9 +2028,9 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Object sourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
+		Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
 		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
-			sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			sourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
 		}
 		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
 			return;
@@ -1954,32 +2151,7 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void registerUnpivotGeneratedColumnAmbiguitySuppressions(
-			ArrayList<Object> hints,
-			HashMap<String, Object> localCurrentQueryDictionary) {
-		if (hints == null || hints.isEmpty()
-				|| localCurrentQueryDictionary == null || localCurrentQueryDictionary.isEmpty()) {
-			return;
-		}
-
-		for (Object hintObj : hints) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-			Map<String, Object> hint = (Map<String, Object>) hintMapObj;
-			Object valueObj = hint.get(MUMBLE_VALUE_KEY);
-			if (valueObj instanceof String valueColumn && !valueColumn.isBlank()) {
-				registerUnqualifiedSuppressionFromQueryDictionary(localCurrentQueryDictionary, valueColumn);
-			}
-			Object forObj = hint.get(MUMBLE_FOR_KEY);
-			if (forObj instanceof String forColumn && !forColumn.isBlank()) {
-				registerUnqualifiedSuppressionFromQueryDictionary(localCurrentQueryDictionary, forColumn);
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private String resolveUnpivotGeneratedColumnSourceRef(
+	private String resolveUnpivotHintModifierTableRef(
 			String columnName,
 			ArrayList<Object> hints) {
 		if (columnName == null || columnName.isBlank() || hints == null || hints.isEmpty()) {
@@ -2010,18 +2182,6 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
-	private void registerUnqualifiedSuppressionFromQueryDictionary(
-			HashMap<String, Object> localCurrentQueryDictionary,
-			String columnName) {
-		Object refEntry = localCurrentQueryDictionary.get(columnName);
-		Integer[] refLocation = walker.getLineAndCharacterFromEntry(refEntry);
-		if (refLocation == null || refLocation.length < 2 || refLocation[0] == null || refLocation[1] == null) {
-			return;
-		}
-		suppressedAmbiguousUnqualifiedKeys.add(
-				buildUnqualifiedSuppressionKey(columnName, refLocation[0], refLocation[1]));
-	}
-
 	/**
 	 * Canonical scope-exit column resolution for the active symbol-table frame.
 	 * <p>
@@ -2042,6 +2202,7 @@ public class SqlParseSymbolTreeHelper {
 				emitFinalUnresolvedUnknownFatal,
 				deferCorrelatedValueSubqueryQualifiedUnknowns,
 				updateTargetTableRef,
+				false,
 				false);
 	}
 
@@ -2050,6 +2211,20 @@ public class SqlParseSymbolTreeHelper {
 			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
 			String updateTargetTableRef,
 			boolean updateHasFromClause) {
+		return convertSymbolTableToTableDictionary(
+				emitFinalUnresolvedUnknownFatal,
+				deferCorrelatedValueSubqueryQualifiedUnknowns,
+				updateTargetTableRef,
+				updateHasFromClause,
+				false);
+	}
+
+	public HashMap<String, Object> convertSymbolTableToTableDictionary(
+			boolean emitFinalUnresolvedUnknownFatal,
+			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
+			String updateTargetTableRef,
+			boolean updateHasFromClause,
+			boolean retainRelationalModifierHintsForContinuedFrom) {
 	
 		// deconstruct current symbol table into components for analysis
 		Object preservedInsertSourceSelectSequence = null;
@@ -2082,6 +2257,8 @@ public class SqlParseSymbolTreeHelper {
 				(ArrayList<Object>) walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
 		HashMap<String, Object> localDerivedColumns =
 				buildDerivedColumnsMapFromHints(localRelationalModifierInterfaceHints);
+		activeConvertEgressDerivedColumns = localDerivedColumns;
+		activeConvertEgressRelationalModifierHints = localRelationalModifierInterfaceHints;
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		String deleteTargetAlias = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 
@@ -2696,12 +2873,14 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		registerUnpivotGeneratedColumnAmbiguitySuppressions(
-				localRelationalModifierInterfaceHints,
-				localCurrentQueryDictionary);
-
 		// Late unqualified-reference resolution can materialize new entries (for example,
 		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
+		canonicalizeLocalTableCollection(
+				localTableCollection,
+				localTableAliasMap,
+				localDerivedColumns,
+				localRelationalModifierInterfaceHints);
+
 		if (localTableCollection != null && localTableCollection.size() > 0) {
 			for (String tab_ref : localTableCollection.keySet()) {
 				String reference = normalizeTableRef(tab_ref);
@@ -2719,6 +2898,17 @@ public class SqlParseSymbolTreeHelper {
 		materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit(
 				localUnresolvedColumnMap,
 				localTableCollection,
+				localDerivedColumns,
+				localRelationalModifierInterfaceHints);
+
+		canonicalizeLocalTableCollection(
+				localTableCollection,
+				localTableAliasMap,
+				localDerivedColumns,
+				localRelationalModifierInterfaceHints);
+		canonicalizeLocalTableCollection(
+				currentTableDictionary,
+				localTableAliasMap,
 				localDerivedColumns,
 				localRelationalModifierInterfaceHints);
 
@@ -2770,7 +2960,12 @@ public class SqlParseSymbolTreeHelper {
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
 		}
-		if (!localDerivedColumns.isEmpty()) {
+		if (retainRelationalModifierHintsForContinuedFrom) {
+			if (localRelationalModifierInterfaceHints != null
+					&& !localRelationalModifierInterfaceHints.isEmpty()) {
+				walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localRelationalModifierInterfaceHints);
+			}
+		} else if (!localDerivedColumns.isEmpty()) {
 			walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localDerivedColumns);
 		}
 		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
@@ -2792,9 +2987,20 @@ public class SqlParseSymbolTreeHelper {
 			walker.mergeTableDictionaryIntoWalkerTableDictionary(localTableCollection);
 		}
 
+		HashMap<String, Object> globalTableDictionary = walker.getWalkerTableDictionary();
+		if (globalTableDictionary != null && !globalTableDictionary.isEmpty()) {
+			canonicalizeLocalTableCollection(
+					globalTableDictionary,
+					localTableAliasMap,
+					localDerivedColumns,
+					localRelationalModifierInterfaceHints);
+		}
+
 		return walker.symbolTable;
 		} finally {
 			activeConvertEgressScopeBundle = null;
+			activeConvertEgressDerivedColumns = null;
+			activeConvertEgressRelationalModifierHints = null;
 		}
 	}
 
@@ -2810,7 +3016,7 @@ public class SqlParseSymbolTreeHelper {
 	 * statement-boundary fatals ({@code emitFinalUnresolvedUnknownFatal=false}).
 	 */
 	public void reconcileJoinExtensionSymbolTable() {
-		convertSymbolTableToTableDictionary(false, false, null);
+		convertSymbolTableToTableDictionary(false, false, null, false, true);
 	}
 
 	// =========================================================================
@@ -6565,6 +6771,16 @@ public class SqlParseSymbolTreeHelper {
 		int dotIndex = unresolvedKey.indexOf('.');
 		String sourceRef = unresolvedKey.substring(0, dotIndex);
 		String columnName = unresolvedKey.substring(dotIndex + 1);
+		HashMap<String, Object> scopeDerivedColumns = getScopeDerivedColumnsFromSymbolTable();
+		ArrayList<Object> scopeRelationalModifierHints = getScopeRelationalModifierHintsFromSymbolTable();
+		if (isRelationalModifierDerivedColumnReference(
+				scopeDerivedColumns,
+				scopeRelationalModifierHints,
+				sourceRef,
+				columnName,
+				visibleAliasMap)) {
+			return false;
+		}
 		if (hasCteListSymbolMap()) {
 			String cteScopeRef = resolveCteScopeReference(sourceRef, visibleAliasMap);
 			if (cteScopeRef != null && !cteScopeRef.isBlank()) {
@@ -6583,7 +6799,14 @@ public class SqlParseSymbolTreeHelper {
 		if (resolvedTableRef == null || resolvedTableRef.isBlank()) {
 			resolvedTableRef = sourceRef;
 		}
-		if (walker.isNonTableQuerySourceReference(resolvedTableRef)
+		String canonicalTableRef = resolveCanonicalPhysicalTableRef(resolvedTableRef, visibleAliasMap);
+		if (canonicalTableRef == null || canonicalTableRef.isBlank()) {
+			canonicalTableRef = normalizeTableRef(resolvedTableRef);
+		}
+		if (canonicalTableRef == null || canonicalTableRef.isBlank()) {
+			return false;
+		}
+		if (walker.isNonTableQuerySourceReference(canonicalTableRef)
 				|| walker.isNonTableQuerySourceReference(sourceRef)) {
 			return false;
 		}
@@ -6616,7 +6839,7 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 
-		String normalizedTableRef = normalizeTableRef(resolvedTableRef);
+		String normalizedTableRef = canonicalTableRef;
 		if (localTableCollection == null) {
 			return false;
 		}
@@ -8849,16 +9072,29 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		HashMap<String, Object> tableAliasMap = null;
+		Object tableAliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof Map<?, ?> tableAliasMapObj && !tableAliasMapObj.isEmpty()) {
+			tableAliasMap = new HashMap<String, Object>((Map<String, Object>) tableAliasMapObj);
+		}
+		String dictionaryKey = resolveCanonicalPhysicalTableRef(canonicalSourceRef, tableAliasMap);
+		if (dictionaryKey == null || dictionaryKey.isBlank()) {
+			dictionaryKey = normalizeTableRef(canonicalSourceRef);
+		}
+		if (dictionaryKey == null || dictionaryKey.isBlank()) {
+			return;
+		}
+
 		HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
-				canonicalSourceRef,
+				dictionaryKey,
 				tableCollection);
 		if (indicatedTableDictionary == null) {
-			Object existing = tableCollection.get(canonicalSourceRef);
+			Object existing = tableCollection.get(dictionaryKey);
 			if (existing instanceof HashMap<?, ?> existingMapObj) {
 				indicatedTableDictionary = (HashMap<String, Object>) existingMapObj;
 			} else {
 				indicatedTableDictionary = new HashMap<String, Object>();
-				tableCollection.put(canonicalSourceRef, indicatedTableDictionary);
+				tableCollection.put(dictionaryKey, indicatedTableDictionary);
 			}
 		}
 
@@ -9182,6 +9418,9 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> getScopeDerivedColumnsFromSymbolTable() {
+		if (activeConvertEgressDerivedColumns != null && !activeConvertEgressDerivedColumns.isEmpty()) {
+			return activeConvertEgressDerivedColumns;
+		}
 		Object derivedObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
 		if (derivedObj instanceof HashMap<?, ?> derivedMap && !derivedMap.isEmpty()) {
 			return (HashMap<String, Object>) derivedMap;
@@ -9194,6 +9433,10 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	private ArrayList<Object> getScopeRelationalModifierHintsFromSymbolTable() {
+		if (activeConvertEgressRelationalModifierHints != null
+				&& !activeConvertEgressRelationalModifierHints.isEmpty()) {
+			return activeConvertEgressRelationalModifierHints;
+		}
 		Object derivedObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
 		if (derivedObj instanceof ArrayList<?> hintsList && !hintsList.isEmpty()) {
 			return (ArrayList<Object>) hintsList;
@@ -10167,11 +10410,11 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (sourceRefs.size() > 1) {
-			String unpivotGeneratedSourceRef = resolveUnpivotGeneratedColumnSourceRef(
+			String unpivotModifierTableRef = resolveUnpivotHintModifierTableRef(
 					columnName,
 					relationalModifierInterfaceHints);
-			if (unpivotGeneratedSourceRef != null && !unpivotGeneratedSourceRef.isBlank()) {
-				return UnqualifiedScopeResolutionResult.resolved(normalizeTableRef(unpivotGeneratedSourceRef));
+			if (unpivotModifierTableRef != null && !unpivotModifierTableRef.isBlank()) {
+				return UnqualifiedScopeResolutionResult.resolved(normalizeTableRef(unpivotModifierTableRef));
 			}
 			return UnqualifiedScopeResolutionResult.ambiguous(sourceRefs.toString());
 		}
@@ -11336,6 +11579,169 @@ public class SqlParseSymbolTreeHelper {
 			localPhysical.put(tableRef, entry.getValue());
 		}
 		return localPhysical;
+	}
+
+	/**
+	 * Fold alias-keyed table-dictionary buckets into canonical physical table keys and strip
+	 * relational-modifier derived columns that must not appear in the table dictionary.
+	 */
+	@SuppressWarnings("unchecked")
+	private void canonicalizeLocalTableCollection(
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (localTableCollection == null || localTableCollection.isEmpty()) {
+			return;
+		}
+
+		for (String tableKey : new ArrayList<String>(localTableCollection.keySet())) {
+			if (tableKey == null || tableKey.isBlank()) {
+				continue;
+			}
+			if (isQuerySourceReference(tableKey)
+					|| isTableFunctionSourceReference(tableKey)
+					|| walker.isNonTableQuerySourceReference(tableKey)) {
+				continue;
+			}
+
+			String canonicalKey = resolveCanonicalPhysicalTableRef(tableKey, localTableAliasMap);
+			if (canonicalKey == null || canonicalKey.isBlank()) {
+				canonicalKey = normalizeTableRef(tableKey);
+			}
+			if (canonicalKey == null || canonicalKey.isBlank()) {
+				continue;
+			}
+
+			Object tableColumnsObj = localTableCollection.get(tableKey);
+			if (!(tableColumnsObj instanceof HashMap<?, ?> tableColumnsMapObj)) {
+				continue;
+			}
+			HashMap<String, Object> tableColumns = (HashMap<String, Object>) tableColumnsMapObj;
+
+			pruneRelationalModifierDerivedColumnsFromTableDictionary(
+					tableColumns,
+					localDerivedColumns,
+					relationalModifierInterfaceHints);
+
+			if (tableKey.equalsIgnoreCase(canonicalKey)) {
+				continue;
+			}
+
+			HashMap<String, Object> canonicalColumns = walker.getTableDictionaryForReference(
+					canonicalKey,
+					localTableCollection);
+			if (canonicalColumns == null) {
+				canonicalColumns = new HashMap<String, Object>();
+				localTableCollection.put(canonicalKey, canonicalColumns);
+			}
+			for (Map.Entry<String, Object> columnEntry : tableColumns.entrySet()) {
+				walker.mergeResolvedColumnIntoDictionary(
+						canonicalColumns,
+						columnEntry.getKey(),
+						columnEntry.getValue());
+			}
+			localTableCollection.remove(tableKey);
+		}
+
+		for (String tableKey : new ArrayList<String>(localTableCollection.keySet())) {
+			Object tableColumnsObj = localTableCollection.get(tableKey);
+			if (tableColumnsObj instanceof HashMap<?, ?> tableColumnsMapObj) {
+				pruneRelationalModifierDerivedColumnsFromTableDictionary(
+						(HashMap<String, Object>) tableColumnsMapObj,
+						localDerivedColumns,
+						relationalModifierInterfaceHints);
+			}
+		}
+	}
+
+	private boolean isRelationalModifierPhysicalOperandColumn(
+			String columnName,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| relationalModifierInterfaceHints == null
+				|| relationalModifierInterfaceHints.isEmpty()) {
+			return false;
+		}
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (operatorObj instanceof String operator && MUMBLE_PIVOT_KEY.equals(operator)) {
+				if (containsStringIgnoreCase(collectPivotOperandColumnNames(hintMap), columnName)) {
+					return true;
+				}
+			} else if (operatorObj instanceof String operator
+					&& MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
+				Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
+				if (inColumnsObj instanceof ArrayList<?> inColumns) {
+					for (Object inColumnObj : inColumns) {
+						if (inColumnObj instanceof String inColumn
+								&& inColumn.equalsIgnoreCase(columnName)) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void pruneRelationalModifierDerivedColumnsFromTableDictionary(
+			HashMap<String, Object> tableColumns,
+			HashMap<String, Object> localDerivedColumns,
+			ArrayList<Object> relationalModifierInterfaceHints) {
+		if (tableColumns == null || tableColumns.isEmpty()) {
+			return;
+		}
+
+		for (String columnKey : new ArrayList<String>(tableColumns.keySet())) {
+			if (columnKey == null || columnKey.isBlank()) {
+				continue;
+			}
+			if (containsKeyIgnoreCase(localDerivedColumns, columnKey)) {
+				if (!isRelationalModifierPhysicalOperandColumn(
+						columnKey,
+						relationalModifierInterfaceHints)) {
+					tableColumns.remove(columnKey);
+					continue;
+				}
+			}
+			if (relationalModifierInterfaceHints == null || relationalModifierInterfaceHints.isEmpty()) {
+				continue;
+			}
+			for (Object hintObj : relationalModifierInterfaceHints) {
+				if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+					continue;
+				}
+				Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+				if (!hintDefinesDerivedColumn(hintMap, columnKey)) {
+					continue;
+				}
+				Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+				boolean isPivotHint = operatorObj instanceof String operator && MUMBLE_PIVOT_KEY.equals(operator);
+				if (isPivotHint) {
+					tableColumns.remove(columnKey);
+					break;
+				}
+				Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
+				Object forObj = hintMap.get(MUMBLE_FOR_KEY);
+				if ((valueObj instanceof String valueColumn && valueColumn.equalsIgnoreCase(columnKey))
+						|| (forObj instanceof String forColumn && forColumn.equalsIgnoreCase(columnKey))) {
+					if (!isRelationalModifierPhysicalOperandColumn(
+							columnKey,
+							relationalModifierInterfaceHints)) {
+						tableColumns.remove(columnKey);
+					}
+					break;
+				}
+			}
+		}
 	}
 
 	public boolean hasLocalPhysicalFromTables(HashMap<String, Object> localPhysicalTables) {
