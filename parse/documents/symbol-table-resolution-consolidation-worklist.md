@@ -165,7 +165,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green |
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
-| **16** PIVOT operand materialization | ⏸️ Not started | 0% | After Phase 15 — physical operand cols; see Phase 16 |
+| **16** PIVOT operand materialization | 🔄 In progress | ~10% | **16.0** inventory done — see Phase 16 |
 | **17** UNPIVOT synthetic columns | ⏸️ Not started | 0% | After Phase 15 — walk + convert UNPIVOT paths; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
@@ -201,7 +201,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 16** (PIVOT operand materialization). **Phase 19** (query-dict publish) is unblocked; **Phase 13** can run in parallel.
+**Suggested next focus:** **Phase 16.1** (`RESOLVED_PIVOT_OPERAND` in shared egress helper). **Phase 19** unblocked; **Phase 13** can run in parallel.
 
 ---
 
@@ -1311,10 +1311,73 @@ PIVOT/UNPIVOT touch **four distinct column namespaces**. Phase 15 rationalizes o
 
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
-| **16.0** | Inventory operand keys in `unresolved_column` across pivot JOIN tests; document why ×3 calls were needed (wildcard / UPDATE RHS re-entry) | Test notes in worklist | ⏸️ |
+| **16.0** | Inventory operand keys in `unresolved_column` across pivot JOIN tests; document why ×3 calls were needed (wildcard / UPDATE RHS re-entry) | Test notes in worklist | ✅ **Jul 2026** |
 | **16.1** | Add `RESOLVED_PIVOT_OPERAND` (or equivalent) to unified resolver / shared egress helper; operand materialize + consume | `pivotBasicMonthSalesJoinV8Test` + gate | ⏸️ |
 | **16.2** | Collapse to **one** convert call site; prove wildcard + UPDATE RHS no longer require re-pass (or document minimal re-pass rule) | Pivot **67/67** + full suite | ⏸️ |
 | **16.3** | Delete standalone triple-call pattern; grep clean | Gate + full suite | ⏸️ |
+
+### Phase 16.0 inventory — operand keys and triple-call audit (Jul 2026)
+
+**Operand namespace (distinct from Phase 15 derived registry):** PIVOT aggregate/FOR **input** columns are real physical columns on the pivot source table (or its JOIN partner for lineage). They are **not** `derived_columns` keys (`jan_sales_SUM`). They must be **materialized** onto the correct physical `table_dictionary` entry and **consumed** from `unresolved_column`.
+
+#### Operand key sources (`collectPivotOperandColumnNames`)
+
+| Hint field | Example keys | Role |
+|------------|--------------|------|
+| `RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY` | `sales_amount`, `col1` | Aggregate function parameter columns |
+| `MUMBLE_FOR_KEY` | `month_name`, `col2` | PIVOT `FOR` column |
+| `pivot_aggregate_dependency_columns` | per-agg deps | Multi-aggregate PIVOT dependency names |
+
+**Ingress:** walk captures operands as unqualified (or pivot-source-qualified) entries in `unresolved_column`.
+
+**Materialize target (`resolvePivotOperandMaterializationTableRef`):**
+
+| FROM shape | Pivot source | Lineage lands on |
+|------------|--------------|-------------------|
+| Single physical table | `tab1` / `monthly_sales_long` | That table |
+| PIVOT … JOIN | `monthly_sales_long` (pivot) | **Non-pivot** partner (`metrics_table`, `targets`, …) |
+| PIVOT on subquery alias | `queryN` | Sole physical table in `localPhysicalTableCollection` |
+
+#### Triple call sites today (`convertSymbolTableToTableDictionary`)
+
+| # | After | ~Line | Historical rationale |
+|---|-------|-------|----------------------|
+| **1** | `processWildcardUnknownEntries` | ~1682 | Materialize operands before wildcard/egress mis-binds them to wrong table |
+| **2** | `propagateUnqualifiedSelectStarToScopeTables` | ~1694 | Re-materialize if SELECT `*` propagation disturbed operand state |
+| **3** | `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` | ~1724 | Re-materialize after UPDATE FROM RHS resolution |
+
+#### Empirical audit (Jul 2026)
+
+Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled and the other two commented out:
+
+| Configuration | Result |
+|---------------|--------|
+| Call **1** only | **67/67** ✅ |
+| Call **2** only | **67/67** ✅ |
+| Call **3** only | **67/67** ✅ |
+| **All disabled** | **19 failures** — operand lineage missing from `table_dictionary` |
+
+**Conclusion for 16.2:** The ×3 pattern is **redundant** on the current test corpus — **one pass is sufficient**. Re-entry hypotheses are **not supported**:
+
+- **`propagateUnqualifiedSelectStarToScopeTables`** merges `*` token refs into existing table dict entries only; it does **not** re-insert operand keys into `unresolved_column`.
+- **`resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable`** does **not** re-introduce aggregate/FOR operand keys; `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` passes with call 1 or call 3 alone.
+
+**Recommended single site for 16.2:** **Call 1 position** (post-`processWildcardUnknownEntries`, pre-`propagateUnqualifiedSelectStar` and pre-egress bundle) — earliest point where wildcard-expanded operands exist and before qualified/unqualified diagnostics run.
+
+#### Test matrix (failure modes when operand pass disabled)
+
+| Category | Canary test | Operand keys | Materialize target | Symptom without pass |
+|----------|-------------|--------------|-------------------|----------------------|
+| PIVOT + JOIN | `pivotBasicMonthSalesJoinV8Test` | `sales_amount`, `month_name` | `metrics_table` | Join partner dict missing operands; `empid` JOIN bind fails |
+| PIVOT single-table | `pivotBasicMonthSalesV7Test` | `sales_amount`, `month_name` | `monthly_sales_long` | Source table dict incomplete |
+| PIVOT + JOIN + clauses | `pivotJoinTargetsWithFilterV5Test` | operands + clause cols | `targets` | `table_dictionary` / `filters` lineage wrong |
+| UPDATE FROM + PIVOT | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` | `sales_amount`, `month_name` | `targets` | Target dict missing operand cols |
+| SELECT `*` + PIVOT | `pivotNestedSelectStarV1Test` | `col1`, `col2` | `tab1` | Operand cols not on physical dict |
+| Same-query simple | `pivotSameQuerySelectDerivedColumnFromTableTest` | `col1`, `col2` | `tab1` | `tab1` dict missing `col1`/`col2` |
+
+**19 tests fail** when all three calls are disabled (full list: `pivotBasicMonthSalesJoinV8Test`, `pivotJoinTargetsWithFilterV5Test`, `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest`, `pivotSameQueryJoinDerivedColumnFromTableTest`, `pivotNestedSelectStarV1Test` family, `pivotBasicMonthSalesV7Test`, clause-surface probes, etc.).
+
+**Next (16.1):** Add `RESOLVED_PIVOT_OPERAND` branch to `resolveColumnRefAtConvertEgress` (materialize + consume) and retire the standalone helper call pattern.
 
 ### Phase 16 closeout checklist
 
@@ -2168,8 +2231,8 @@ Phase 15 — Unified convert egress loop                             ✅ DONE (J
   15.5 collapse steps 5–9; delete consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap ✅ (Jul 2026)
   15.6 ConvertEgressScopeBundle — pre-resolved def_* payloads; retire egress-time scope-chain walks ✅ (Jul 2026)
 
-Phase 16 — PIVOT operand materialization                               ⏸️ NEXT
-  16.0–16.3: RESOLVED_PIVOT_OPERAND; collapse triple resolvePivotOperandColumnsFromUnresolvedMap
+Phase 16 — PIVOT operand materialization                               🔄 IN PROGRESS (16.0 ✅)
+  16.0 operand inventory + triple-call audit ✅ (Jul 2026) — one pass sufficient; prefer call-1 site
 
 Phase 17 — UNPIVOT synthetic columns                                   ⏸️ after Phase 15
   17.0–17.5: walk vs convert ownership; VALUE/FOR/IN outcomes; stub clause derivations
