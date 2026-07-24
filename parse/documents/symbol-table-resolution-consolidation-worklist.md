@@ -165,7 +165,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green |
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
-| **16** PIVOT operand materialization | 🔄 In progress | ~10% | **16.0** inventory done — see Phase 16 |
+| **16** PIVOT operand materialization | 🔄 In progress | ~35% | **16.0–16.1** done — see Phase 16 |
 | **17** UNPIVOT synthetic columns | ⏸️ Not started | 0% | After Phase 15 — walk + convert UNPIVOT paths; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
@@ -201,7 +201,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 16.1** (`RESOLVED_PIVOT_OPERAND` in shared egress helper). **Phase 19** unblocked; **Phase 13** can run in parallel.
+**Suggested next focus:** **Phase 16.2** (collapse triple operand pass to one call site).
 
 ---
 
@@ -1312,7 +1312,7 @@ PIVOT/UNPIVOT touch **four distinct column namespaces**. Phase 15 rationalizes o
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
 | **16.0** | Inventory operand keys in `unresolved_column` across pivot JOIN tests; document why ×3 calls were needed (wildcard / UPDATE RHS re-entry) | Test notes in worklist | ✅ **Jul 2026** |
-| **16.1** | Add `RESOLVED_PIVOT_OPERAND` (or equivalent) to unified resolver / shared egress helper; operand materialize + consume | `pivotBasicMonthSalesJoinV8Test` + gate | ⏸️ |
+| **16.1** | Add `RESOLVED_PIVOT_OPERAND` to unified resolver / shared egress helper; operand materialize + consume | `pivotBasicMonthSalesJoinV8Test` + gate | ✅ **Jul 2026** |
 | **16.2** | Collapse to **one** convert call site; prove wildcard + UPDATE RHS no longer require re-pass (or document minimal re-pass rule) | Pivot **67/67** + full suite | ⏸️ |
 | **16.3** | Delete standalone triple-call pattern; grep clean | Gate + full suite | ⏸️ |
 
@@ -1377,12 +1377,12 @@ Ran `SqlEventWalkerPivotUnpivotTests` (**67/67**) with **one** call site enabled
 
 **19 tests fail** when all three calls are disabled (full list: `pivotBasicMonthSalesJoinV8Test`, `pivotJoinTargetsWithFilterV5Test`, `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest`, `pivotSameQueryJoinDerivedColumnFromTableTest`, `pivotNestedSelectStarV1Test` family, `pivotBasicMonthSalesV7Test`, clause-surface probes, etc.).
 
-**Next (16.1):** Add `RESOLVED_PIVOT_OPERAND` branch to `resolveColumnRefAtConvertEgress` (materialize + consume) and retire the standalone helper call pattern.
+**Next (16.2):** Collapse triple `resolvePivotOperandColumnsFromUnresolvedMap` to **one** call at post-wildcard site (16.0 proved any single pass suffices).
 
 ### Phase 16 closeout checklist
 
 - [ ] Operand materialization runs once (or has documented single re-pass rule)
-- [ ] `RESOLVED_PIVOT_OPERAND` (or shared materialize branch) in unified egress path
+- [x] `RESOLVED_PIVOT_OPERAND` (or shared materialize branch) in unified egress path — **16.1** ✅
 - [ ] Triple `resolvePivotOperandColumnsFromUnresolvedMap` calls retired
 - [ ] Pivot **67/67** + gate **195/195** + full suite **1209/1209**
 
@@ -2233,6 +2233,7 @@ Phase 15 — Unified convert egress loop                             ✅ DONE (J
 
 Phase 16 — PIVOT operand materialization                               🔄 IN PROGRESS (16.0 ✅)
   16.0 operand inventory + triple-call audit ✅ (Jul 2026) — one pass sufficient; prefer call-1 site
+  16.1 RESOLVED_PIVOT_OPERAND in shared egress helper ✅ (Jul 2026)
 
 Phase 17 — UNPIVOT synthetic columns                                   ⏸️ after Phase 15
   17.0–17.5: walk vs convert ownership; VALUE/FOR/IN outcomes; stub clause derivations

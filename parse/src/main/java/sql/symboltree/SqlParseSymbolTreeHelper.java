@@ -120,6 +120,7 @@ public class SqlParseSymbolTreeHelper {
 	private enum UnqualifiedScopeResolutionStatus {
 		RESOLVED,
 		RESOLVED_DERIVED_COLUMN,
+		RESOLVED_PIVOT_OPERAND,
 		DEFERRED,
 		AMBIGUOUS,
 		UNRESOLVED
@@ -153,6 +154,13 @@ public class SqlParseSymbolTreeHelper {
 					null);
 		}
 
+		static UnqualifiedScopeResolutionResult resolvedPivotOperand(String materializeTableRef) {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND,
+					materializeTableRef,
+					null);
+		}
+
 		static UnqualifiedScopeResolutionResult deferred() {
 			return new UnqualifiedScopeResolutionResult(
 					UnqualifiedScopeResolutionStatus.DEFERRED,
@@ -181,6 +189,7 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED_WILDCARD_QUERY_SOURCE,
 		RESOLVED_PHYSICAL_SOURCE,
 		RESOLVED_DERIVED_COLUMN,
+		RESOLVED_PIVOT_OPERAND,
 		DEFERRED,
 		UNRESOLVED_QUERY_SOURCE,
 		UNRESOLVED_PHYSICAL_SOURCE
@@ -238,6 +247,16 @@ public class SqlParseSymbolTreeHelper {
 					QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN,
 					null,
 					null,
+					sourceTableRef);
+		}
+
+		static QualifiedScopeResolutionResult resolvedPivotOperand(
+				String materializeTableRef,
+				String sourceTableRef) {
+			return new QualifiedScopeResolutionResult(
+					QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND,
+					null,
+					materializeTableRef,
 					sourceTableRef);
 		}
 
@@ -397,6 +416,27 @@ public class SqlParseSymbolTreeHelper {
 			}
 			return unqualified != null
 					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN;
+		}
+
+		boolean isPivotOperandColumn() {
+			if (qualified != null
+					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND) {
+				return true;
+			}
+			return unqualified != null
+					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND;
+		}
+
+		String pivotOperandMaterializeTableRef() {
+			if (qualified != null
+					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND) {
+				return qualified.resolvedPhysicalTableRef;
+			}
+			if (unqualified != null
+					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_PIVOT_OPERAND) {
+				return unqualified.resolvedSourceRef;
+			}
+			return null;
 		}
 
 		QualifiedScopeResolutionResult qualified() {
@@ -661,21 +701,160 @@ public class SqlParseSymbolTreeHelper {
 
 			String pivotSourceRef = resolvePivotHintSourceRef(hintMap, localTableAliasMap);
 			for (String operandColumnName : collectPivotOperandColumnNames(hintMap)) {
-				Object unresolvedEntry = consumePivotOperandUnresolvedEntry(
-						unresolvedColumnMap,
+				materializePivotOperandColumnAtConvertEgress(
 						operandColumnName,
-						pivotSourceRef,
-						localTableAliasMap);
-				if (unresolvedEntry == null) {
-					continue;
-				}
-				mergeSourceLineageIntoPhysicalTableDictionary(
-						localTableCollection,
+						null,
 						materializeTableRef,
-						operandColumnName,
-						unresolvedEntry);
+						pivotSourceRef,
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap);
 			}
 		}
+	}
+
+	/** Phase 16.1: pivot operand bind target for convert egress. */
+	private static final class PivotOperandBinding {
+		final String materializeTableRef;
+		final String pivotSourceRef;
+
+		private PivotOperandBinding(String materializeTableRef, String pivotSourceRef) {
+			this.materializeTableRef = materializeTableRef;
+			this.pivotSourceRef = pivotSourceRef;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private PivotOperandBinding resolvePivotOperandBindingAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ArrayList<Object> relationalModifierInterfaceHints,
+			HashMap<String, Object> localPhysicalTableCollection,
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> aliasMapForHintMatch) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| relationalModifierInterfaceHints == null
+				|| relationalModifierInterfaceHints.isEmpty()
+				|| localPhysicalTableCollection == null
+				|| localPhysicalTableCollection.isEmpty()) {
+			return null;
+		}
+
+		HashMap<String, Object> hintAliasMap = aliasMapForHintMatch != null
+				? aliasMapForHintMatch
+				: localTableAliasMap;
+		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+
+		for (Object hintObj : relationalModifierInterfaceHints) {
+			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
+			if (!(operatorObj instanceof String operator) || !MUMBLE_PIVOT_KEY.equals(operator)) {
+				continue;
+			}
+			if (!containsStringIgnoreCase(collectPivotOperandColumnNames(hintMap), columnName)) {
+				continue;
+			}
+			if (qualifiedShape
+					&& !hintSourceRefMatches(hintMap, tableRef, hintAliasMap)) {
+				continue;
+			}
+
+			String materializeTableRef = resolvePivotOperandMaterializationTableRef(
+					hintMap,
+					localPhysicalTableCollection,
+					localTableAliasMap);
+			if (materializeTableRef == null || materializeTableRef.isBlank()) {
+				continue;
+			}
+			return new PivotOperandBinding(
+					materializeTableRef,
+					resolvePivotHintSourceRef(hintMap, localTableAliasMap));
+		}
+		return null;
+	}
+
+	private void materializePivotOperandColumnAtConvertEgress(
+			String columnName,
+			String tableRef,
+			String materializeTableRef,
+			String pivotSourceRef,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		if (materializeTableRef == null
+				|| materializeTableRef.isBlank()
+				|| unresolvedColumnMap == null
+				|| localTableCollection == null) {
+			return;
+		}
+
+		Object unresolvedEntry;
+		if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
+			unresolvedEntry = consumeQualifiedUnknownEntry(unresolvedColumnMap, tableRef, columnName);
+			if (unresolvedEntry == null) {
+				String resolvedSourceRef = walker.resolveAliasToTableName(tableRef, localTableAliasMap);
+				if (resolvedSourceRef != null
+						&& !resolvedSourceRef.isBlank()
+						&& !resolvedSourceRef.equalsIgnoreCase(tableRef)) {
+					unresolvedEntry = consumeQualifiedUnknownEntry(
+							unresolvedColumnMap,
+							resolvedSourceRef,
+							columnName);
+				}
+			}
+		} else {
+			unresolvedEntry = consumePivotOperandUnresolvedEntry(
+					unresolvedColumnMap,
+					columnName,
+					pivotSourceRef,
+					localTableAliasMap);
+		}
+		if (unresolvedEntry == null) {
+			return;
+		}
+		mergeSourceLineageIntoPhysicalTableDictionary(
+				localTableCollection,
+				materializeTableRef,
+				columnName,
+				unresolvedEntry);
+	}
+
+	private void applyConvertEgressPivotOperandMaterialization(
+			ConvertEgressColumnResolutionResult egressResult,
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localTableCollection,
+			ArrayList<Object> relationalModifierInterfaceHints,
+			HashMap<String, Object> localTableAliasMap) {
+		if (!egressResult.isPivotOperandColumn()) {
+			return;
+		}
+		String pivotSourceRef = null;
+		if (relationalModifierInterfaceHints != null) {
+			PivotOperandBinding binding = resolvePivotOperandBindingAtConvertEgress(
+					columnName,
+					tableRef,
+					relationalModifierInterfaceHints,
+					buildLocalPhysicalFromTableCollection(localTableCollection),
+					localTableAliasMap,
+					localTableAliasMap);
+			if (binding != null) {
+				pivotSourceRef = binding.pivotSourceRef;
+			}
+		}
+		materializePivotOperandColumnAtConvertEgress(
+				columnName,
+				tableRef,
+				egressResult.pivotOperandMaterializeTableRef(),
+				pivotSourceRef,
+				unresolvedColumnMap,
+				localTableCollection,
+				localTableAliasMap);
 	}
 
 	private String resolvePivotHintSourceRef(
@@ -1900,6 +2079,23 @@ public class SqlParseSymbolTreeHelper {
 									columnName);
 							continue;
 						}
+						if (egressResult.isPivotOperandColumn()) {
+							applyConvertEgressPivotOperandMaterialization(
+									egressResult,
+									columnName,
+									tableRef,
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localRelationalModifierInterfaceHints,
+									localTableAliasMap);
+							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
+							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+										refObj,
+										materializeTableRef));
+							}
+							continue;
+						}
 
 						QualifiedScopeResolutionResult resolutionResult = egressResult.qualified();
 						if (resolutionResult == null) {
@@ -1950,6 +2146,22 @@ public class SqlParseSymbolTreeHelper {
 											physicalRef,
 											columnName,
 											tokenPayload);
+								}
+							}
+							case RESOLVED_PIVOT_OPERAND -> {
+								applyConvertEgressPivotOperandMaterialization(
+										egressResult,
+										columnName,
+										tableRef,
+										localUnresolvedColumnMap,
+										localTableCollection,
+										localRelationalModifierInterfaceHints,
+										localTableAliasMap);
+								String materializeTableRef = resolutionResult.resolvedPhysicalTableRef;
+								if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+									refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+											refObj,
+											materializeTableRef));
 								}
 							}
 							case DEFERRED -> {
@@ -2027,6 +2239,23 @@ public class SqlParseSymbolTreeHelper {
 									localUnresolvedColumnMap,
 									null,
 									columnName);
+							continue;
+						}
+						if (egressResult.isPivotOperandColumn()) {
+							applyConvertEgressPivotOperandMaterialization(
+									egressResult,
+									columnName,
+									null,
+									localUnresolvedColumnMap,
+									localTableCollection,
+									localRelationalModifierInterfaceHints,
+									localTableAliasMap);
+							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
+							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
+								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+										refObj,
+										materializeTableRef));
+							}
 							continue;
 						}
 
@@ -6179,6 +6408,20 @@ public class SqlParseSymbolTreeHelper {
 			case RESOLVED_DERIVED_COLUMN -> {
 				return true;
 			}
+			case RESOLVED_PIVOT_OPERAND -> {
+				HashMap<String, Object> targetCollection = localTableCollectionOverride != null
+						? localTableCollectionOverride
+						: visibleTableCollection;
+				if (resolutionResult.resolvedPhysicalTableRef != null
+						&& !resolutionResult.resolvedPhysicalTableRef.isBlank()) {
+					mergeSourceLineageIntoPhysicalTableDictionary(
+							targetCollection,
+							resolutionResult.resolvedPhysicalTableRef,
+							columnName,
+							entryValue);
+				}
+				return true;
+			}
 			default -> {
 			}
 		}
@@ -7627,8 +7870,21 @@ public class SqlParseSymbolTreeHelper {
 						false,
 						false,
 						false);
-				if (resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx).isDerivedColumn()) {
+				ConvertEgressColumnResolutionResult updateRhsEgressResult =
+						resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx);
+				if (updateRhsEgressResult.isDerivedColumn()) {
 					consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
+					continue;
+				}
+				if (updateRhsEgressResult.isPivotOperandColumn()) {
+					applyConvertEgressPivotOperandMaterialization(
+							updateRhsEgressResult,
+							columnName,
+							tableRef,
+							unresolvedColumnMap,
+							tableCollection,
+							relationalModifierInterfaceHints,
+							tableAliasMap);
 					continue;
 				}
 
@@ -9066,6 +9322,21 @@ public class SqlParseSymbolTreeHelper {
 			return QualifiedScopeResolutionResult.resolvedDerivedColumn(tableRef);
 		}
 
+		HashMap<String, Object> localPhysicalTableCollection =
+				buildLocalPhysicalFromTableCollection(visibleTableCollection);
+		PivotOperandBinding pivotOperandBinding = resolvePivotOperandBindingAtConvertEgress(
+				columnName,
+				tableRef,
+				relationalModifierInterfaceHints,
+				localPhysicalTableCollection,
+				visibleAliasMap,
+				visibleAliasMap);
+		if (pivotOperandBinding != null) {
+			return QualifiedScopeResolutionResult.resolvedPivotOperand(
+					pivotOperandBinding.materializeTableRef,
+					tableRef);
+		}
+
 		String resolvedTableRef = walker.resolveAliasToTableName(tableRef, visibleAliasMap);
 		String resolvedNonTableSourceRef = resolveAliasToQuerySourceRefPreferDefinition(
 				tableRef,
@@ -9475,6 +9746,18 @@ public class SqlParseSymbolTreeHelper {
 			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
 		}
 
+		PivotOperandBinding pivotOperandBinding = resolvePivotOperandBindingAtConvertEgress(
+				columnName,
+				null,
+				relationalModifierInterfaceHints,
+				localPhysicalTableCollection,
+				localTableAliasMap,
+				localTableAliasMap);
+		if (pivotOperandBinding != null) {
+			return UnqualifiedScopeResolutionResult.resolvedPivotOperand(
+					pivotOperandBinding.materializeTableRef);
+		}
+
 		ArrayList<String> sourceRefs = collectUnqualifiedSourceReferences(
 				columnName,
 				localPhysicalTableCollection,
@@ -9632,6 +9915,16 @@ public class SqlParseSymbolTreeHelper {
 			case RESOLVED_DERIVED_COLUMN -> {
 				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 			}
+			case RESOLVED_PIVOT_OPERAND -> {
+				materializePivotOperandColumnAtConvertEgress(
+						columnName,
+						null,
+						result.resolvedSourceRef,
+						null,
+						unresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap);
+			}
 			case RESOLVED -> {
 				if (clauseLocations != null && !clauseLocations.isEmpty()) {
 					updateTrackedClauseLocationsWithResolvedTableRef(
@@ -9785,6 +10078,17 @@ public class SqlParseSymbolTreeHelper {
 					resolveColumnRefAtConvertEgress(columnName, null, remainingIngressCtx);
 			if (egressResult.isDerivedColumn()) {
 				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
+				continue;
+			}
+			if (egressResult.isPivotOperandColumn()) {
+				applyConvertEgressPivotOperandMaterialization(
+						egressResult,
+						columnName,
+						null,
+						unresolvedColumnMap,
+						localTableCollection,
+						relationalModifierInterfaceHints,
+						localTableAliasMap);
 				continue;
 			}
 
@@ -10099,7 +10403,20 @@ public class SqlParseSymbolTreeHelper {
 				false,
 				deferCorrelatedValueSubqueryQualifiedUnknowns,
 				false);
-		if (resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx).isDerivedColumn()) {
+		ConvertEgressColumnResolutionResult clauseEgressResult =
+				resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx);
+		if (clauseEgressResult.isPivotOperandColumn()) {
+			applyConvertEgressPivotOperandMaterialization(
+					clauseEgressResult,
+					columnName,
+					tableRef,
+					localUnresolvedColumnMap,
+					localTableCollection,
+					relationalModifierInterfaceHints,
+					localTableAliasMap);
+			return ArchivedClauseColumnRefResult.skip();
+		}
+		if (clauseEgressResult.isDerivedColumn()) {
 			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.skip();
 		}
@@ -10147,8 +10464,7 @@ public class SqlParseSymbolTreeHelper {
 			return ArchivedClauseColumnRefResult.deferred();
 		}
 
-		UnqualifiedScopeResolutionResult resolutionResult =
-				resolveColumnRefAtConvertEgress(columnName, null, clauseProbeCtx).unqualified();
+		UnqualifiedScopeResolutionResult resolutionResult = clauseEgressResult.unqualified();
 		if (resolutionResult == null) {
 			return ArchivedClauseColumnRefResult.unresolved();
 		}
@@ -10156,6 +10472,17 @@ public class SqlParseSymbolTreeHelper {
 		switch (resolutionResult.status) {
 			case RESOLVED_DERIVED_COLUMN -> {
 				consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
+				return ArchivedClauseColumnRefResult.skip();
+			}
+			case RESOLVED_PIVOT_OPERAND -> {
+				materializePivotOperandColumnAtConvertEgress(
+						columnName,
+						tableRef,
+						resolutionResult.resolvedSourceRef,
+						null,
+						localUnresolvedColumnMap,
+						localTableCollection,
+						localTableAliasMap);
 				return ArchivedClauseColumnRefResult.skip();
 			}
 			case RESOLVED -> {
