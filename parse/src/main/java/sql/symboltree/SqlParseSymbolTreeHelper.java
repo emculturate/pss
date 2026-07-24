@@ -349,7 +349,15 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		boolean isDerivedColumn() {
-			return derivedColumn;
+			if (derivedColumn) {
+				return true;
+			}
+			if (qualified != null
+					&& qualified.status == QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+				return true;
+			}
+			return unqualified != null
+					&& unqualified.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN;
 		}
 
 		QualifiedScopeResolutionResult qualified() {
@@ -1819,28 +1827,43 @@ public class SqlParseSymbolTreeHelper {
 									|| MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
 						if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)
 								&& columnName != null && !columnName.isBlank()) {
-							QualifiedScopeResolutionResult substitutionResolutionResult =
-									resolveQualifiedColumnAgainstVisibleScope(
-											tableRef,
-											columnName,
+							ConvertEgressResolutionContext substitutionCtx =
+									new ConvertEgressResolutionContext(
+											localDerivedColumns,
+											localRelationalModifierInterfaceHints,
+											localFromTableCollection,
+											localFromTableCollection,
+											visibleQuerySourceCollection,
+											localTableAliasMap,
 											effectiveAliasMap,
 											effectiveTableCollection,
-											visibleQuerySourceCollection,
+											deleteTargetTableRef,
+											null,
+											true,
+											true,
 											deferCorrelatedValueSubqueryQualifiedUnknowns,
-											localDerivedColumns,
-											localRelationalModifierInterfaceHints);
-							if (substitutionResolutionResult.status
-									== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE
-									|| substitutionResolutionResult.status
-											== QualifiedScopeResolutionStatus.RESOLVED_PHYSICAL_SOURCE
-									|| substitutionResolutionResult.status
-											== QualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN) {
+											deferCorrelatedValueSubqueryQualifiedUnknowns,
+											true);
+							ConvertEgressColumnResolutionResult substitutionEgressResult =
+									resolveColumnRefAtConvertEgress(
+											columnName,
+											tableRef,
+											substitutionCtx);
+							if (substitutionEgressResult.isDerivedColumn()
+									|| (substitutionEgressResult.qualified() != null
+											&& (substitutionEgressResult.qualified().status
+													== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE
+													|| substitutionEgressResult.qualified().status
+															== QualifiedScopeResolutionStatus.RESOLVED_PHYSICAL_SOURCE))) {
 								Object qualifiedTokens = consumeQualifiedUnknownEntry(
 										localUnresolvedColumnMap,
 										tableRef,
 										columnName);
-								if (substitutionResolutionResult.status
-										== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE) {
+								QualifiedScopeResolutionResult substitutionResolutionResult =
+										substitutionEgressResult.qualified();
+								if (substitutionResolutionResult != null
+										&& substitutionResolutionResult.status
+												== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE) {
 									materializeResolvedQualifiedQuerySourceReference(
 											tableRef,
 											columnName,
@@ -1975,6 +1998,7 @@ public class SqlParseSymbolTreeHelper {
 							}
 						}
 					} else {
+						// Phase 18 deferral: PIVOT IN-list output aliases still skip interface bind here.
 						if (isPivotDerivedInterfaceOutputColumn(
 								columnName,
 								localRelationalModifierInterfaceHints)) {
@@ -7502,26 +7526,29 @@ public class SqlParseSymbolTreeHelper {
 				if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
 					continue;
 				}
-				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
-					if (isRelationalModifierDerivedColumnReference(
-							localDerivedColumns,
-							relationalModifierInterfaceHints,
-							tableRef,
-							columnName,
-							tableAliasMap)) {
-						consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
-						continue;
-					}
+
+				ConvertEgressResolutionContext updateRhsCtx = new ConvertEgressResolutionContext(
+						localDerivedColumns,
+						relationalModifierInterfaceHints,
+						buildLocalPhysicalFromTableCollection(tableCollection),
+						tableCollection,
+						visibleQuerySourceCollection,
+						tableAliasMap,
+						tableAliasMap,
+						tableCollection,
+						updateTargetTableRef,
+						UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY,
+						true,
+						true,
+						false,
+						false,
+						false);
+				if (resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx).isDerivedColumn()) {
+					consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
 					continue;
 				}
 
-				if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)
-						|| isRelationalModifierDerivedColumnReference(
-								localDerivedColumns,
-								relationalModifierInterfaceHints,
-								null,
-								columnName)) {
-					consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+				if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
 					continue;
 				}
 
