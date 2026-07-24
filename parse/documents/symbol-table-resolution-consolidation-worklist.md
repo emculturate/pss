@@ -1512,8 +1512,8 @@ mvn -Psmoketest-quality-gate test
 | 13.2 | **Postgres INSERT** | ✅ **Complete (Jul 2026)** | ON CONFLICT (all variants), DEFAULT VALUES, RETURNING; nested `def_updateN` for DO UPDATE; `insert={}` AST wrap (parity with `update={}` / `delete={}`); **7** Postgres tests + **81** INSERT AST golden refreshes + `InsertAstWrapGateTests` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`, `InsertAstWrapGateTests` |
 | 13.3 | **UPDATE RETURNING** | ✅ **Complete (Jul 2026)** | `exitReturning` + `RETURNING select_list`; `finalizeUpdateScopeSymbolTable` publishes returning interface/query_dictionary | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | 13.4 | **Intra–select-list forward output-column resolution** | Unqualified refs in a later select-item expression (window `PARTITION BY`, nested formula, etc.) are collected as unresolved even when an earlier item already registered the name on the query interface | At ingress (`collectUnresolvedColumnReference`), while walking `select_list`, skip unresolved for unqualified names matching an **earlier** interface key; merge usage tokens onto `query_dictionary` | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerFunctionsAggregatesWindowingTests` |
-| 13.5 | **DDL option detail parsing** | `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs | *Optional:* parse high-value clauses (e.g. `IF NOT EXISTS`, `OR REPLACE`, `CLUSTER BY`) without full dialect coverage | `SqlEventWalkerScriptsAndDDLTests` |
-| 13.6 | **SQL statement generator** | `SQLStatementGenerator` partial; not production-ready | Round-trip SQL regeneration for all `SQLParserEndPoints` keys from AST + substitution map | New or extended generator test class |
+| 13.5 | **DDL option detail parsing** | ⏸️ **Deferred (long term)** — `generic_ddl_options` / `generic_ddl_paren_content` capture opaque token blobs; statement type + object identity are reliable | *Future:* structured sub-rules for high-value clauses (`IF NOT EXISTS`, `OR REPLACE`, etc.) when product needs catalog metadata beyond name/type | `SqlEventWalkerScriptsAndDDLTests` |
+| 13.6 | **SQL statement generator** | ⏸️ **Deferred (Jul 2026)** — partial round-trip coverage in `SQLStatementGeneratorTest` (51 tests); see §13.6 milestone + deferred prompt | Full rule-aligned generator + substitution round-trip + per-rule progress tracker | `generators.SQLStatementGeneratorTest` |
 
 ### 13.1 — EXCEPT set-operation parity ✅ COMPLETE (Jul 2026)
 
@@ -1831,53 +1831,87 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 
 **Relationship to column-resolution consolidation:** Phases 9–13 unified **reference resolution** (ingress, dictionaries, forward aliases). This sub-phase unifies **substitution typing** using the same “walk ancestors, nearest clause wins” pattern already used for dependent-query context.
 
-### 13.5 — DDL option detail parsing (optional)
+### 13.5 — DDL option detail parsing ⏸️ DEFERRED (long term)
 
-**Work (only if product needs catalog metadata beyond object name):**
+**Decision (Jul 2026):** Defer structured DDL option parsing indefinitely. This is **not** blocking Phase 13 closeout, script cataloging, or the §13.6 SQL generator track.
 
-- [ ] Replace opaque `generic_ddl_options` blobs with targeted sub-rules for common Snowflake/Postgres clauses (`IF NOT EXISTS`, `OR REPLACE`, `COPY GRANTS`, etc.).
+**Rationale — opaque blobs are sufficient for now:**
+
+1. **Statement classification is the bar.** Walkers already reliably recognize *what kind* of DDL ran: `CREATE` / `ALTER` / `DROP` / `TRUNCATE`, plus object type (`table`, `view`, `index`, …) and qualified object name. That is enough for script isolation, per-statement symbol-table snapshots, and access-object routing (`DDL` endpoint vs `SCRIPT` statement items).
+
+2. **Detail lives in wholesale text captures.** Unmodeled tail clauses and parenthesized bodies are stored via `generic_ddl_options` and `generic_ddl_paren_content` as **opaque token blobs** (e.g. `options=if exists`, `columns=id int`). We do not need to decompose every dialect variant into typed AST nodes today.
+
+3. **Round-trip without structure is acceptable.** If we later choose to *generate* DDL from AST, the generator can **re-emit those blobs verbatim** — the same strings that were captured at parse time — without ever having parsed `IF NOT EXISTS` or `OR REPLACE` into separate mumble keys. Structured parsing becomes worthwhile only when product needs to *query* or *transform* individual option clauses (catalog rules, migration tooling, policy engines).
+
+4. **Timeline.** Revisit when a concrete product requirement appears; expect **months to years**. Until then, avoid grammar/walker churn on the long tail of Snowflake/Postgres DDL dialect surface.
+
+**Current behavior (keep):**
+
+- [x] `exitCreate_table_expression` and siblings publish `create={type=…, table=…, …}` with optional opaque `columns`, `options`, `parameters` children.
+- [x] `fullScriptPrimaryCoverageTest` proves per-statement DDL typing in multi-statement scripts.
+- [x] §13.6 generator emits opaque `options` strings and parenthesized column-definition text without requiring structured option nodes.
+
+**Future work (when/unless product demands it):**
+
+- [ ] Replace opaque `generic_ddl_options` blobs with targeted sub-rules for common clauses (`IF NOT EXISTS`, `OR REPLACE`, `COPY GRANTS`, …).
 - [ ] Keep fallback `generic_ddl_options` for unmodeled tail tokens.
 
-**Tests to add:**
+**Tests (deferred with 13.5):**
 
-| Method | Class | Proves |
-|--------|-------|--------|
-| `createTableIfNotExistsParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | **New** — AST retains `IF NOT EXISTS` node, not opaque blob |
-| `createViewOrReplaceParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | **New** — `OR REPLACE` captured structurally |
+| Method | Class | Would prove |
+|--------|-------|-------------|
+| `createTableIfNotExistsParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | AST retains `IF NOT EXISTS` node, not opaque blob |
+| `createViewOrReplaceParsedOptionsTest` | `SqlEventWalkerScriptsAndDDLTests` | `OR REPLACE` captured structurally |
 
-*Defer 13.5 if script cataloging only needs object name + type (current behavior is sufficient).*
+### 13.6 — SQL statement generator ⏸️ DEFERRED (Jul 2026)
 
-### 13.6 — SQL statement generator
+**Status:** Milestone delivery complete for DML / SCRIPT / DDL / PIVOT-UNPIVOT round-trip paths exercised in `SQLStatementGeneratorTest` (**51** tests, smoketest gate green). **Further generator work deferred** so Phase 15+ can proceed. Resume using the deferred prompt below.
 
-**Work:**
+**Milestone delivered (Jul 2026):**
 
-- [x] INSERT round-trip — `emitInsertStatement` in `SQLStatementGenerator` for `insert={}` AST (VALUES, INSERT SELECT, DEFAULT VALUES, ON CONFLICT, RETURNING); `roundTripInsert*` tests in `SQLStatementGeneratorTest`.
-- [x] UPDATE/DELETE round-trip — `emitUpdateStatement` / `emitDeleteStatement` for `update={}` / `delete={}` AST (SET, FROM, USING, WHERE, RETURNING); `roundTripUpdate*` / `roundTripDelete*` tests.
-- [x] SCRIPT/DDL round-trip — `emitScriptStatement` / `emitDdlStatement` (CREATE TABLE AS SELECT, TRUNCATE, multi-statement script); `roundTripScript*` / `roundTripDdl*` tests.
-- [x] PIVOT/UNPIVOT round-trip — `emitPivotClause` / `emitUnpivotClause` in FROM; `roundTripPivot*` / `roundTripUnpivot*` tests.
-- [x] TRUNCATE endpoint — `onSQLParserTruncate` + `emitTruncateStatement`; `roundTripTruncateEndpointTest`.
-- [x] ALTER/DROP DDL — `emitAlterStatement` / `emitDropStatement`; `roundTripDdlAlterTableTest` / `roundTripDdlDropTableTest`.
-- [ ] Complete `SQLStatementGenerator` handlers for all `SQLParserEndPoints` keys (SCRIPT, DDL, UPDATE, DELETE, TRUNCATE, PIVOT/UNPIVOT, table functions).
+- [x] INSERT round-trip — `emitInsertStatement` for `insert={}` AST (VALUES, INSERT SELECT, DEFAULT VALUES, ON CONFLICT, RETURNING); `roundTripInsert*` tests.
+- [x] UPDATE/DELETE round-trip — `emitUpdateStatement` / `emitDeleteStatement` (SET, FROM, USING, WHERE, RETURNING); `roundTripUpdate*` / `roundTripDelete*` tests.
+- [x] SCRIPT/DDL round-trip — `emitScriptStatement` / `emitDdlStatement` (CREATE TABLE AS SELECT, CREATE with column-def blobs, TRUNCATE, multi-statement script); `roundTripScript*` / `roundTripDdl*` tests.
+- [x] WITH-in-script + VALUES-only script statements — `emitWithQuery`, `emitValuesStatement`.
+- [x] PIVOT/UNPIVOT round-trip — `emitPivotClause` / `emitUnpivotClause`; nested joins + HAVING/QUALIFY/GROUP BY/ORDER BY egress; `roundTripPivot*` / `roundTripUnpivot*` tests.
+- [x] TRUNCATE endpoint — `onSQLParserTruncate` + `emitTruncateStatement`.
+- [x] ALTER/DROP DDL — `emitAlterStatement` / `emitDropStatement` (opaque `options` blob re-emission).
+- [x] Developer console inspection — `SQLStatementGeneratorTest.generateFromAst` prints delimited **Generated SQL** blocks to the test console for visual review.
+
+**Remaining (deferred — do not start until prompt below is executed):**
+
+- [ ] Complete `SQLStatementGenerator` handlers for all `SQLParserEndPoints` keys and expression surface (table functions, substitutions/Jinja, CASE, IN, concatenate, …).
 - [ ] Accept external substitution map for round-trip of `<variable>` and Jinja tokens.
 - [ ] Document non-goals (formatting/comment preservation).
+- [ ] **Deferred prompt — generator progress measurement & rule-aligned refactor** (see block below; **not yet performed**).
 
-**Tests to add:**
+#### Deferred prompt — §13.6 generator progress tracker (DO NOT EXECUTE YET)
+
+> **Prompt (parked Jul 2026 — run when resuming §13.6):**
+>
+> Try to measure our SQL generator progress and map out the entire work plan for completing the generation class. In order to do that, my supposition is that the generator ought to have ONE and ONLY ONE generating method PER GRAMMAR RULE. If a rule is at a leaf node for a LEXER item like a term or identifier, that can be a shared method or an inline method to emit the text, but especially any rule that contains other rules ought to have its own method — I THINK. Comment on this supposition and if you think its incorrect let me know before you proceed with the next part of my prompt here. If you proceed, then I want you to locate the rule constants generated by ANTLR and I want you to add a comment before each generation method you've already created in the class indicating which rule (or possibly set of rules) the method is handling directly (this should not include rules that are called by this generator method, but rules whose statements are directly emitted/constructed by the generator method. If you can do that I need you to finish this exercise by creating a detailed progress tracker here in the 13.6 markdown status where you list out every rule by its header and rule number, and indicate whether its complete, in progress, or still to be started. Finally, present this table to me so I can see where we are.
+
+**Tests delivered (milestone):**
 
 | Method | Class | Proves |
 |--------|-------|--------|
-| `roundTripInsertValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — parse → AST (`insert={}`) → regenerate → re-parse retains insert wrapper |
-| `roundTripInsertSelectTest` | `generators.SQLStatementGeneratorTest` | **New** — INSERT SELECT round-trip |
-| `roundTripInsertDefaultValuesTest` | `generators.SQLStatementGeneratorTest` | **New** — DEFAULT VALUES round-trip |
-| `roundTripUpdateWithFromTest` | `generators.SQLStatementGeneratorTest` | **New** — UPDATE with FROM subquery round-trip |
-| `roundTripDeleteWithUsingReturningTest` | `generators.SQLStatementGeneratorTest` | **New** — DELETE USING + RETURNING round-trip |
-| `roundTripScriptMixedStatementsTest` | `generators.SQLStatementGeneratorTest` | **New** — multi-statement script round-trip |
-| `roundTripDdlCreateTableAsSelectTest` | `generators.SQLStatementGeneratorTest` | **New** — CREATE TABLE AS SELECT round-trip |
-| `roundTripDdlAlterTableTest` | `generators.SQLStatementGeneratorTest` | **New** — ALTER TABLE round-trip |
-| `roundTripDdlDropTableTest` | `generators.SQLStatementGeneratorTest` | **New** — DROP TABLE IF EXISTS round-trip |
-| `roundTripTruncateEndpointTest` | `generators.SQLStatementGeneratorTest` | **New** — TRUNCATE endpoint round-trip |
-| `roundTripPivotTest` | `generators.SQLStatementGeneratorTest` | **New** — PIVOT FROM-clause round-trip |
-| `roundTripUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — UNPIVOT FROM-clause round-trip |
-| `roundTripPivotUnpivotTest` | `generators.SQLStatementGeneratorTest` | **New** — relational modifier round-trip |
+| `roundTripInsertValuesTest` | `generators.SQLStatementGeneratorTest` | INSERT VALUES round-trip |
+| `roundTripInsertSelectTest` | same | INSERT SELECT round-trip |
+| `roundTripInsertDefaultValuesTest` | same | DEFAULT VALUES round-trip |
+| `roundTripUpdateWithFromTest` | same | UPDATE with FROM subquery |
+| `roundTripDeleteWithUsingReturningTest` | same | DELETE USING + RETURNING |
+| `roundTripScriptMixedStatementsTest` | same | multi-statement script |
+| `roundTripScriptWithCteTest` | same | WITH … SELECT in script |
+| `roundTripScriptValuesOnlyTest` | same | `(VALUES …)` script statement |
+| `roundTripDdlCreateTableAsSelectTest` | same | CREATE TABLE AS SELECT |
+| `roundTripCreateTableWithColumnsTest` | same | CREATE TABLE with column-def blob |
+| `roundTripDdlAlterTableTest` | same | ALTER TABLE |
+| `roundTripDdlDropTableTest` | same | DROP TABLE IF EXISTS |
+| `roundTripTruncateEndpointTest` | same | TRUNCATE endpoint |
+| `roundTripPivotTest` / `roundTripUnpivotTest` | same | relational modifiers in FROM |
+| `roundTripPivotJoinWithClausesTest` | same | PIVOT in nested JOIN + WHERE |
+| `roundTripPivotJoinFullClauseEgressTest` | same | HAVING / QUALIFY / GROUP BY / ORDER BY |
+| `roundTripUnpivotJoinWithClausesTest` | same | UNPIVOT in nested JOIN + WHERE |
 
 ### Phase 13 closeout checklist
 
@@ -1886,16 +1920,18 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 - [x] `insert-refactor-skip-tests.md` updated — donor-email skip removed; PIVOT class confirmed green (67/67).
 - [x] Phase 11 EXCEPT deferral row marked ✅ — delivered in Phase 13.1 (Jul 2026).
 - [x] Phase 13.2 Postgres INSERT complete — ON CONFLICT nested `def_updateN`, `insert={}` AST wrap, `InsertAstWrapGateTests` (Jul 2026).
+- [x] Phase 13.5 DDL option detail parsing — **deferred long term** (Jul 2026); opaque `generic_ddl_*` blobs + reliable statement typing are sufficient; see §13.5 decision note.
+- [x] Phase 13.6 SQL generator — **milestone delivered, deferred** (Jul 2026); DML/SCRIPT/DDL/PIVOT round-trip tests green; full rule-aligned completion parked under §13.6 deferred prompt.
 
 ### Phase 13 execution order
 
 ```
-13.4 (intra–select-list forward output-column resolution — gate probe already exists)
-  → 13.3 (UPDATE RETURNING — mirrors DELETE RETURNING pattern)
+13.4 (intra–select-list forward output-column resolution — gate probe already exists) ✅
+  → 13.3 (UPDATE RETURNING) ✅ DONE Jul 2026
   → 13.1 (EXCEPT parity) ✅ DONE Jul 2026
-  → 13.2 (Postgres INSERT — larger grammar surface) ✅ DONE Jul 2026
-  → 13.6 (SQL generator — independent track; can parallelize after 13.1–13.3)
-  → 13.5 (DDL detail — optional last)
+  → 13.2 (Postgres INSERT) ✅ DONE Jul 2026
+  → 13.6 (SQL generator) ⏸️ DEFERRED Jul 2026 — milestone delivered; resume via §13.6 deferred prompt
+  → 13.5 (DDL structured options) ⏸️ DEFERRED long term — not on critical path
 ```
 
 **Do not start Phase 13 while:** a consolidation regression reopens the gate. Optional fallback retirement can proceed in parallel with Phase 13.
@@ -2140,10 +2176,9 @@ Document: `parse/documents/insert-refactor-skip-tests.md` (**current Jul 2026** 
 
 - ~~EXCEPT set-operation parity → Phase 13.1~~ ✅ **Done (Jul 2026)**
 - ~~Postgres INSERT completion → Phase 13.2~~ ✅ **Done (Jul 2026)** — ON CONFLICT, RETURNING, `insert={}` AST wrap
-- UPDATE RETURNING walker → Phase 13.3
-- Same-select-list forward alias (donor-email) → Phase 13.4
-- DDL option detail parsing (optional) → Phase 13.5
-- SQL statement generator round-trip → Phase 13.6
+- ~~Same-select-list forward alias (donor-email) → Phase 13.4~~ ✅ **Done (Jul 2026)**
+- ~~DDL option detail parsing → Phase 13.5~~ ⏸️ **Deferred long term (Jul 2026)** — opaque blobs + statement typing sufficient; see §13.5
+- ~~SQL statement generator round-trip → Phase 13.6~~ ⏸️ **Milestone delivered, deferred (Jul 2026)** — see §13.6
 
 ---
 

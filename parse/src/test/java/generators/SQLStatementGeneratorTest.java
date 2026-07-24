@@ -252,7 +252,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripInsertValuesTest() {
         final String query = "INSERT INTO employees (score, rank_bucket) VALUES (100, 1)";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("INSERT INTO"));
@@ -270,7 +270,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripInsertSelectTest() {
         final String query = "INSERT INTO employees SELECT emp_id, score FROM perf_feed";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("INSERT INTO"));
@@ -288,7 +288,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripInsertDefaultValuesTest() {
         final String query = "INSERT INTO employees DEFAULT VALUES";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse("Generated SQL should not be blank", generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("INSERT INTO"));
@@ -319,7 +319,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripUpdateBasicTest() {
         final String query = "UPDATE employees SET score = 1";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("UPDATE"));
@@ -336,7 +336,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripUpdateWithWhereTest() {
         final String query = "UPDATE employees SET score = 1 WHERE emp_id = 1";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("UPDATE"));
@@ -353,7 +353,7 @@ public class SQLStatementGeneratorTest {
                 + " FROM (SELECT col1, col2 FROM (VALUES (100, 1)) AS value_src (col1, col2)) src"
                 + " WHERE e.emp_id = 1";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("UPDATE"));
@@ -369,7 +369,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripUpdateWithReturningTest() {
         final String query = "UPDATE employees e SET score = 1 RETURNING e.emp_id";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("UPDATE"));
@@ -384,7 +384,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDeleteBasicTest() {
         final String query = "DELETE FROM employees";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("DELETE FROM"));
@@ -398,7 +398,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDeleteWithWhereTest() {
         final String query = "DELETE FROM employees WHERE emp_id = 1";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("DELETE FROM"));
@@ -414,7 +414,7 @@ public class SQLStatementGeneratorTest {
                 + " WHERE aaa.a1 = bbb.b1 AND aaa.a2 = bbb.b2"
                 + " RETURNING aaa.a1, aaa.a2, aaa.a3";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("DELETE FROM"));
@@ -438,7 +438,7 @@ public class SQLStatementGeneratorTest {
                 + "UPDATE demo.t SET id = 2 WHERE id = 1;\n"
                 + "SELECT id FROM demo.t;";
         HashMap<String, Object> ast = parseScriptToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("CREATE TABLE"));
@@ -456,7 +456,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDdlCreateTableAsSelectTest() {
         final String query = "create table tab1 as select * from table(flatten(input=>parse_json('[1,2]'))) f";
         HashMap<String, Object> ast = parseDdlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("CREATE TABLE"));
@@ -472,7 +472,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDdlCreateTableQualifiedTest() {
         final String query = "create table mydb.myschema.tab2 as select src.col1 from mydb.myschema.source_tab src";
         HashMap<String, Object> ast = parseDdlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("CREATE TABLE"));
@@ -488,7 +488,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDdlAlterTableTest() {
         final String query = "alter table mydb.myschema.tab1 rename to tab2";
         HashMap<String, Object> ast = parseDdlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("ALTER TABLE"));
@@ -503,7 +503,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripDdlDropTableTest() {
         final String query = "drop table mydb.myschema.tab1 if exists";
         HashMap<String, Object> ast = parseDdlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("DROP TABLE"));
@@ -518,7 +518,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripTruncateEndpointTest() {
         final String query = "TRUNCATE TABLE tab1";
         HashMap<String, Object> ast = parseTruncateToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("TRUNCATE TABLE"));
@@ -536,7 +536,7 @@ public class SQLStatementGeneratorTest {
                 + " pivot (sum(col1), avg(col2), count(col3), max(col4), min(col5) "
                 + " for col2 in ('A', 'B'))";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("SELECT"));
@@ -557,7 +557,7 @@ public class SQLStatementGeneratorTest {
                 + " FROM my_table"
                 + " UNPIVOT (metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales))";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("SELECT"));
@@ -575,7 +575,7 @@ public class SQLStatementGeneratorTest {
         final String query = "SELECT empid, month_name, sales_amount FROM monthly_sales"
                 + " UNPIVOT (sales_amount FOR month_name IN (jan_sales AS 'JAN', feb_sales AS 'FEB'))";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         Assert.assertTrue(generated.toUpperCase().contains("UNPIVOT"));
         Assert.assertTrue(generated.contains("jan_sales AS 'JAN'"));
@@ -586,7 +586,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripScriptWithCteTest() {
         final String query = "WITH picked AS (SELECT id FROM demo.stg) SELECT id FROM picked;";
         HashMap<String, Object> ast = parseScriptToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("WITH"));
@@ -602,7 +602,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripScriptValuesOnlyTest() {
         final String query = "(VALUES (10), (20));";
         HashMap<String, Object> ast = parseScriptToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         Assert.assertTrue(generated.toUpperCase().contains("VALUES"));
         Assert.assertTrue(generated.contains("(10)"));
@@ -616,7 +616,7 @@ public class SQLStatementGeneratorTest {
     public void roundTripCreateTableWithColumnsTest() {
         final String query = "CREATE TABLE demo.stage (id INT);";
         HashMap<String, Object> ast = parseDdlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("CREATE TABLE"));
@@ -633,7 +633,7 @@ public class SQLStatementGeneratorTest {
                 + "FROM monthly_sales_long PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) u\n"
                 + "JOIN targets t ON u.empid = t.empid AND u.jan_sales >= t.target_amount WHERE jan_sales > 100;";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("PIVOT"));
@@ -659,7 +659,7 @@ public class SQLStatementGeneratorTest {
                 + "QUALIFY A_sum > 0\n"
                 + "ORDER BY A_sum;";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("PIVOT"));
@@ -684,7 +684,7 @@ public class SQLStatementGeneratorTest {
                 + "JOIN targets t ON u.month_name = t.month_name AND u.sales_amount >= t.target_amount\n"
                 + "WHERE sales_amount > 100;";
         HashMap<String, Object> ast = parseSqlToAst(query);
-        String generated = new SQLStatementGenerator().generateStatement(ast);
+        String generated = generateFromAst(ast);
         Assert.assertFalse(generated.isBlank());
         String upper = generated.toUpperCase();
         Assert.assertTrue(upper.contains("UNPIVOT"));
@@ -736,16 +736,46 @@ public class SQLStatementGeneratorTest {
     }
 
     private String runGenerationBasic(String testName, String astString, String query) {
-        SQLStatementGenerator generator = new SQLStatementGenerator();
         Map<String, Object> ast = astStringToHashMap(astString);
         System.out.println("[" + testName + "] AST:  " + ast);
-
-        String generated = generator.generateStatement(ast);
-
         System.out.println("[" + testName + "] Expected query:  " + query);
-        System.out.println("[" + testName + "] Generated query: " + generated);
 
+        String generated = generateFromAst(testName, ast);
         return generated;
+    }
+
+    /**
+     * Runs {@link SQLStatementGenerator} and prints the produced SQL to the test console
+     * for developer visual inspection (IDE debug/console tab).
+     */
+    private String generateFromAst(Map<String, Object> ast) {
+        return generateFromAst(callingTestName(), ast);
+    }
+
+    private String generateFromAst(String testName, Map<String, Object> ast) {
+        SQLStatementGenerator generator = new SQLStatementGenerator();
+        String generated = generator.generateStatement(ast);
+        printGeneratedSql(testName, generated);
+        return generated;
+    }
+
+    private void printGeneratedSql(String testName, String generated) {
+        System.out.println();
+        System.out.println("----- SQLStatementGeneratorTest: " + testName + " -----");
+        System.out.println("Generated SQL:");
+        System.out.println(generated);
+        System.out.println("----- end " + testName + " -----");
+        System.out.println();
+    }
+
+    private String callingTestName() {
+        for (StackTraceElement frame : Thread.currentThread().getStackTrace()) {
+            if (SQLStatementGeneratorTest.class.getName().equals(frame.getClassName())
+                    && frame.getMethodName().endsWith("Test")) {
+                return frame.getMethodName();
+            }
+        }
+        return "unknownTest";
     }
 
     @SuppressWarnings("unchecked")
