@@ -16,4 +16,17 @@ alwaysApply: false
 4. **Context-dependent** — same token (`sales_amount`) may be unbound at `exitColumn` in SELECT, identity-known at modifier exit, fully rewritten at query closeout.
 5. **Defer within walk**, not to convert fallbacks (`probeArchivedScopeClauseColumns`, ambiguity suppressors).
 
+## Golden review policy (Phase 17.6 — through 17.6.1 + 17.6.7)
+
+**Do not auto-update test goldens** in `SqlEventWalkerPivotUnpivotTests` (especially triple-tuple / multi-modifier tests).
+
+- On failure: report **expected vs actual** for `table_dictionary`, `query_dictionary`, `symbol_table`, diagnostics.
+- Judge against `table-and-query-dictionary-design.md` and `relational-modifier-resolution-policy.md` — do not assume the existing golden is correct.
+- **Wait for user confirmation** before changing assertion strings. No bulk golden refresh scripts.
+- Prefer fixing resolution code when actual output matches contract.
+
+## Open work (Phase 17.6)
+
+See worklist **17.6.1–17.6.7**: SELECT ambiguity (17.6.2), golden audit (17.6.1), subquery-backed triple variants (17.6.7).
+
 Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–18.

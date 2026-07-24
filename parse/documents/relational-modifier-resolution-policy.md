@@ -101,6 +101,8 @@ When multiple PIVOT or UNPIVOT operators are **siblings** in the same `query_spe
 
 Walk-time hints remain **per-operator** (append-only list); consolidation to published `derived_columns` / `table_dictionary` happens at scope exit only. Structural separation of hints list vs derived map is tracked as **17.6.4–17.6.6**.
 
+**Query-backed sources (17.6.7):** When a modifier's immediate source is a subquery (`FROM (SELECT …) alias`), operand and derived-column semantics are unchanged — only the **source ref** is a `queryN` (or subquery alias) rather than a physical table. Triple-tuple tests must be duplicated with subquery-backed FROM slots to prove sibling-modifier logic does not assume physical-table-only sources.
+
 ---
 
 ## Do not

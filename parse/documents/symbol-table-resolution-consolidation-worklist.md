@@ -1623,11 +1623,22 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 
 ### Phase 17.6 — Sibling PIVOT/UNPIVOT hardening (Jul 2026)
 
-**Checkpoint (commit pending):** Canonical physical-table operand materialization for sibling modifiers at the same FROM level; per-hint source-ref stamping (latest hint only); `retainRelationalModifierHintsForContinuedFrom` preserves walk-time hints list across mid-FROM join reconciles; UNPIVOT VALUE/FOR prune guard via `isRelationalModifierPhysicalOperandColumn` (fixes `monthly_sales_long={}` wipe in triple-tuple tests). Pivot suite **98/98**; full suite **1505/1505**.
-
-**Root cause (confirmed):** Sibling PIVOT/UNPIVOT operators share one symbol-table namespace (`DERIVED_COLUMNS_HINTS_KEY`, `table_dictionary`, `derived_columns`). Mid-query convert/prune passes treated them as one blob — stamping all hints with the latest tuple source, replacing the hints `ArrayList` with the derived-columns `HashMap`, and cross-operator pruning (UNPIVOT VALUE/FOR names removed from pivot-source physical buckets).
+**Checkpoint:** Commit `3295166` — canonical physical-table operand materialization for sibling modifiers at the same FROM level; per-hint source-ref stamping (latest hint only); `retainRelationalModifierHintsForContinuedFrom` preserves walk-time hints list across mid-FROM join reconciles; UNPIVOT VALUE/FOR prune guard via `isRelationalModifierPhysicalOperandColumn` (fixes `monthly_sales_long={}` wipe in triple-tuple tests). Pivot suite **98/98**; full suite **1505/1505**.
 
 **Design contract (authoritative):** [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md) — physical operands on canonical physical table keys only; derived outputs in `derived_columns` only; PIVOT vs UNPIVOT operand namespaces stay separated.
+
+#### Agent / implementer policy — golden review (Jul 2026)
+
+**Do not trust current goldens** for `table_dictionary`, `query_dictionary`, `symbol_table`, or **diagnostics** in `SqlEventWalkerPivotUnpivotTests` triple-tuple / multi-modifier tests until **17.6.1** human review is complete.
+
+When a test fails after a code change:
+
+1. **Report the discrepancy** — show expected vs actual for each asserted artifact; explain whether the **new** output or the **old** golden looks correct per design contract.
+2. **Do not bulk-update goldens** to make tests pass. No scripts that blindly refresh expected strings.
+3. **Pause for joint review** when regression touches table_dictionary, derived_columns lineage, interface `table_ref`, or diagnostic presence/absence — present findings and wait for confirmation before changing assertions.
+4. **Code fix vs golden fix** — prefer fixing resolution logic when actual output matches contract; only update goldens after explicit agreement.
+
+This policy applies through **17.6.1** completion and **17.6.7** subquery variant authoring.
 
 #### Open issues (work one at a time after checkpoint)
 
@@ -1639,14 +1650,16 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 | **17.6.4** | **Separate symbol-table keys: hints list vs derived_columns map** | P2 | ⏸️ Deferred | Replace `DERIVED_COLUMNS_HINTS_KEY` dual use (`ArrayList` walk-time → `HashMap` egress) with distinct keys, e.g. `relational_modifier_hints` (list, walk only) vs `derived_columns` (map, egress only). Eliminates type collision that required `retainRelationalModifierHintsForContinuedFrom` band-aid. |
 | **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Deferred | Walk collects per-hint operand token snapshots only; `convertSymbolTableToTableDictionary` / `finalizeQueryScopeSymbolTable` applies each hint in order against canonical physical refs once. Reduces mid-FROM cross-contamination. |
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Deferred | Key operand collections by `(operator, source_physical_table, modifier_alias)` so `canonicalizeLocalTableCollection` / prune runs one hint at a time without cross-operator column-name collisions (`sales_amount` as UNPIVOT derived vs PIVOT physical operand on shared `monthly_sales_long`). |
+| **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | ⏸️ Open | For each triple join test (`triplePivot*`, `tripleUnpivot*`, `triplePivotUnpivot*`), add a **paired variant** that replaces each physical table in every FROM-join slot with a **subquery** presenting the columns that tuple's PIVOT/UNPIVOT needs. Verify sibling-modifier logic (operand materialization, per-hint lineage, SELECT ambiguity) works when source is `queryN` not a physical table. Pattern exists in suite for single-modifier cases (`FROM (SELECT … FROM monthly_sales_long) src` + PIVOT). Author goldens under **golden review policy** above — do not copy from physical-table variant assertions. |
 
 **Recommended sequencing:**
 
-1. **Checkpoint commit** — land 17.6 fixes + golden refresh (this branch).
-2. **17.6.2** — fix multi-sibling UNPIVOT SELECT ambiguity + flip `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` to expect diagnostic (split happy-path test with qualified SELECT if needed).
-3. **17.6.1** — golden audit pass across pivot/unpivot suite.
+1. ~~**Checkpoint commit**~~ — `3295166` ✅
+2. **17.6.2** — fix multi-sibling UNPIVOT SELECT ambiguity + flip/split `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` (joint golden review).
+3. **17.6.1** — golden audit pass across pivot/unpivot suite (with user; no auto-refresh).
 4. **17.6.3** — PIVOT parity test + fix if gap exists.
-5. **17.6.4–17.6.6** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
+5. **17.6.7** — subquery-backed triple-tuple variants (after 17.6.2 behavior is signed off; exercises query-backed UNPIVOT source path from policy).
+6. **17.6.4–17.6.6** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
 
 **17.6.2 expected behavior sketch:**
 
@@ -1659,6 +1672,23 @@ WHERE u1.sales_amount > 10            -- OK: alias-qualified
 ```
 
 Interface / derived_columns may still record all tuple lineages for qualified refs; **unqualified SELECT-list** refs must not pick a winner when ≥2 visible modifier aliases expose the same derived column name.
+
+**17.6.7 subquery variant sketch** (one slot — repeat per join arm):
+
+```sql
+-- Physical (existing):
+FROM monthly_sales_long p_src
+PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p
+
+-- Subquery-backed (new paired test):
+FROM (
+  SELECT empid, month_name, sales_amount
+  FROM monthly_sales_long
+) p_src
+PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p
+```
+
+For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `feb_sales`, …) plus any wide columns referenced elsewhere. Operand materialization should land on **query dictionary / query-backed source ref** per [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md), not alias-keyed physical buckets. Compare behavior to single-modifier subquery tests already in `SqlEventWalkerPivotUnpivotTests` (~L434, ~L1451, ~L1999).
 
 ---
 
