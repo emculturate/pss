@@ -9716,21 +9716,16 @@ public class SqlParseSymbolTreeHelper {
 		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
 			return ArchivedClauseColumnRefResult.skip();
 		}
-		if (UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(clauseKey)
-				&& (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierInterfaceHints)
-						|| isRelationalModifierDerivedColumnReference(
-								localDerivedColumns,
-								relationalModifierInterfaceHints,
-								tableRef,
-								columnName))) {
-			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
-			return ArchivedClauseColumnRefResult.skip();
-		}
 		if (isRelationalModifierDerivedColumnReference(
 				localDerivedColumns,
 				relationalModifierInterfaceHints,
 				tableRef,
-				columnName)) {
+				columnName)
+				|| (UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(clauseKey)
+						&& isPivotDerivedInterfaceOutputColumn(
+								columnName,
+								relationalModifierInterfaceHints))) {
+			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.skip();
 		}
 

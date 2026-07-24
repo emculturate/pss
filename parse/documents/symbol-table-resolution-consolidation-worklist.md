@@ -164,7 +164,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **11** downward `context_list` resolution | ✅ Done | 100% | Canary set + full suite green; closeout checklist signed off below |
 | **12** DML parity + fallback retirement | ✅ Done | 100% | All 103 DML class tests + 30 complex-substitution tests green |
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Phase **15** is NEXT |
-| **15** Unified convert egress loop | 🔄 In progress | ~15% | **15.1 done** — unqualified resolver derived-aware; see Phase 15 |
+| **15** Unified convert egress loop | 🔄 In progress | ~30% | **15.1–15.2 done** — unqualified resolver + clause probe derived consume; see Phase 15 |
 | **16** PIVOT operand materialization | ⏸️ Not started | 0% | After Phase 15 — physical operand cols; see Phase 16 |
 | **17** UNPIVOT synthetic columns | ⏸️ Not started | 0% | After Phase 15 — walk + convert UNPIVOT paths; see Phase 17 |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
@@ -197,7 +197,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None. All consolidation-phase tests are green.
 
-**Suggested next focus:** **Phase 15.2** (clause probe derived consume on all clause keys). Phases **16–18** follow Phase 15 closeout (operand → UNPIVOT → IN-list/identifier). **15.6** then **Phase 19** consolidate egress reads and publish writes. **Phase 14 Step F** and **Phase 13** can run in parallel.
+**Suggested next focus:** **Phase 15.3** (hints through `resolveRemainingUnresolvedAgainstQuerySources`). Phases **16–18** follow Phase 15 closeout (operand → UNPIVOT → IN-list/identifier). **15.6** then **Phase 19** consolidate egress reads and publish writes. **Phase 14 Step F** and **Phase 13** can run in parallel.
 
 ---
 
@@ -1185,7 +1185,7 @@ Tracks every **convert-egress** handler for true PIVOT/UNPIVOT **derived registr
 | **Unqualified resolver** (`resolveUnqualifiedColumnAgainstVisibleScope`) | No `derived_columns` check; can single-table bind derived names | Derived check before physical/query bind; PIVOT outputs + registry keys on egress paths; interface loop binds UNPIVOT output names | Same logic inside shared loop | **15.1** ✅, **15.5** |
 | **Interface loop** (`isPivotDerivedInterfaceOutputColumn` skip; qualified `RESOLVED_DERIVED_COLUMN` branch) | Ad-hoc skips + parallel qualified path | Derived-safe via 15.1 + qualified resolver; IN-list output deferred | **Calls shared loop**; registry skip branches **retired** in **15.4b**; IN-list output → **Phase 18** | **15.4**, **15.4b**, **18** |
 | **UPDATE RHS hook** (`resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` derived skip/consume) | Dedicated derived branches + `consumeDerivedColumnUnknownEntry` | Still dedicated; correct but duplicate of unified rule | **Derived branches retired** — UPDATE RHS refs handled by shared loop | **15.4**, **15.4a**, **15.5** |
-| **Clause probe** (`validateArchivedClauseColumnRef`) | Skips validation for derived; consumes only on UPDATE RHS clause key | Consumes derived on **all** clause keys | **Calls shared loop**; no separate derived skip tree | **15.2**, **15.4**, **15.5** |
+| **Clause probe** (`validateArchivedClauseColumnRef`) | Skips validation for derived; consumes only on UPDATE RHS clause key | Consumes derived on **all** clause keys | **Calls shared loop**; no separate derived skip tree | **15.2** ✅, **15.4**, **15.5** |
 | **`resolveRemainingUnresolvedAgainstQuerySources`** | Passes `null` hints; no derived check | Passes hints; derived → consume, no materialize | **Absorbed into unified loop** (or thin wrapper calling shared helper) | **15.3**, **15.5** |
 | **`emitExplicitQualifiedUnknownDiagnostics`** | Can mis-handle derived stragglers in batch | Safer once 15.1–15.3 consume stragglers; shim still pre-filters | **Diagnostics only** — fed by loop outcomes, not a resolution pipeline | **15.4**, **15.5** |
 | **`materializeUnqualifiedLineageForSingleSourceScopeAtConvertExit`** | Late merge; no derived guard | Should not see derived keys if 15.1–15.3 + shim work | **Derived keys never reach this pass** | **15.5** |
@@ -1205,15 +1205,15 @@ derived registry key in unresolved_column
 |----------|--------|---------------|--------|--------|
 | **15.0** | Gap audit, end-state doc, derived-column rationalization matrix (this section) | worklist | — | ✅ (Jul 2026) |
 | **15.1** | **Unqualified derived-awareness:** before single-table / single-query bind in `resolveUnqualifiedColumnAgainstVisibleScope`, check `derived_columns` + hints; return new status or short-circuit so derived keys are not resolved to physical sources | `SqlParseSymbolTreeHelper.java` ~`resolveUnqualifiedColumnAgainstVisibleScope` | Pivot **67/67** + gate; no new materialization of derived keys onto source tables | ✅ **Jul 2026** |
-| **15.2** | **Clause probe consume:** in `validateArchivedClauseColumnRef`, call `consumeDerivedColumnUnknownEntry` for **all** clause keys when `isRelationalModifierDerivedColumnReference` (not only `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY`) | ~`validateArchivedClauseColumnRef` | `pivotMonthlySalesLong*` WHERE/JOIN ON/ORDER BY derived tests + gate | ⏸️ **NEXT** |
-| **15.3** | **Hints through `resolveRemaining…`:** pass `localDerivedColumns` + `relationalModifierInterfaceHints`; on derived match → consume, do not materialize (folds retired **E.5**) | ~`resolveRemainingUnresolvedAgainstQuerySources` + call site ~L1950 | E0g + pivot **67/67** + gate | ⏸️ |
+| **15.2** | **Clause probe consume:** in `validateArchivedClauseColumnRef`, call `consumeDerivedColumnUnknownEntry` for **all** clause keys when `isRelationalModifierDerivedColumnReference` (not only `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY`) | ~`validateArchivedClauseColumnRef` | `pivotMonthlySalesLong*` WHERE/JOIN ON/ORDER BY derived tests + gate | ✅ **Jul 2026** |
+| **15.3** | **Hints through `resolveRemaining…`:** pass `localDerivedColumns` + `relationalModifierInterfaceHints`; on derived match → consume, do not materialize (folds retired **E.5**) | ~`resolveRemainingUnresolvedAgainstQuerySources` + call site ~L1950 | E0g + pivot **67/67** + gate | ⏸️ **NEXT** |
 | **15.4** | **Shared per-key egress helper:** introduce `resolveUnresolvedColumnAtConvertEgress` (name TBD) wrapping qualified + unqualified unified resolver + materialize/consume; route clause-probe and interface-loop refs through it incrementally | `convertSymbolTableToTableDictionary`, resolver helpers | Gate + nested demo + DML V13/V14 | ⏸️ |
 | **15.4a** | **Retire UPDATE RHS derived branches:** remove derived-specific skip/consume in `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` once shared loop handles UPDATE assignment RHS refs (keep non-derived UPDATE RHS target-table / single-FROM fallback logic) | ~`resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` + DML UPDATE spot + gate | ⏸️ |
 | **15.4b** | **Retire interface-loop ad-hoc derived skips:** remove redundant qualified-derived branches where shared resolver covers true `derived_columns` keys; **defer** full IN-list output-alias model to **Phase 18** (keep minimal skip until `RESOLVED_PIVOT_IN_LIST_OUTPUT` exists) | Interface loop ~L1696+ | Pivot **67/67** + gate | ⏸️ |
 | **15.5** | **Collapse + delete shim:** replace convert steps 5–9 with unified loop; delete `consumeRelationalModifierDerivedColumnUnknownsFromUnresolvedMap`; grep clean | `convertSymbolTableToTableDictionary` | Full suite **1209/1209**; rationalization matrix “end state” column all green | ⏸️ |
 | **15.6** | **Convert-egress scope bundle:** at convert exit (after **15.5** unified loop), build `ConvertEgressScopeBundle` with frozen maps: `visibleDefinitionPayloads` (`def_*` → published scope map), `visibleQuerySourceRefs` (live ref → payload / dict handle), `localQueryDictionary` snapshot for current scope. Route egress-time readers (`getQuerySourcePayloadPreferDefinition`, interface loop, wildcard promotion, `hasColumnInQueryOutputInterface`) through the bundle instead of `resolveDefinitionSymbolInScopeChain`. Walk-time / mid-convert may still use scope chain until bundle is built. | `convertSymbolTableToTableDictionary`, resolver helpers | `nestedQueryDemoTest`, `nestedQueryDemoWithCteTest`, substitution V9–V16, gate **195/195** | ⏸️ |
 
-**Recommended session order:** **15.2 → 15.3** (bridge — each consumer derived-safe) → **15.4 → 15.4a → 15.4b → 15.5** (collapse — shared loop, retire duplicate handlers, delete shim) → **15.6** (egress scope bundle — eliminate repeated definition scope chain walks).
+**Recommended session order:** **15.3** (bridge — `resolveRemaining…` derived-safe) → **15.4 → 15.4a → 15.4b → 15.5** (collapse — shared loop, retire duplicate handlers, delete shim) → **15.6** (egress scope bundle — eliminate repeated definition scope chain walks).
 
 **Quality gate:** `mvn -Pphase15-derived-gate test` runs all 67 `SqlEventWalkerPivotUnpivotTests` (superset of the 36 tests that failed in Phase 14 E.3 when the batch derived strip was removed without per-key consume).
 
@@ -1222,7 +1222,7 @@ derived registry key in unresolved_column
 ### Phase 15 closeout checklist
 
 - [x] Unqualified resolver checks derived before physical/query single-source bind — **15.1**
-- [ ] Clause probe removes derived keys from `unresolved_column` on all clause surfaces — **15.2**
+- [x] Clause probe removes derived keys from `unresolved_column` on all clause surfaces — **15.2**
 - [ ] `resolveRemainingUnresolvedAgainstQuerySources` passes derived hints and consumes derived keys — **15.3**
 - [ ] Shared per-key convert egress helper exists; clause probe + interface loop route through it — **15.4**
 - [ ] Derived-specific branches retired in `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` — **15.4a**
@@ -2080,11 +2080,11 @@ Step E — PIVOT/UNPIVOT derived ingress (Phase 14)                  ✅ DONE (J
 Step F — Dead-code hygiene (Phase 14)                              ✅ DONE (Jul 2026)
   removed table-function field getters; satisfied() audit N/A
 
-Phase 15 — Unified convert egress loop                             🔄 IN PROGRESS (15.1 ✅)
+Phase 15 — Unified convert egress loop                             🔄 IN PROGRESS (15.1–15.2 ✅)
   15.0 gap audit + rationalization matrix ✅
   15.1 unqualified derived-awareness ✅ (Jul 2026; `-Pphase15-derived-gate` = 67 pivot tests)
-  15.2 clause probe consume derived keys (NEXT)
-  15.3 hints through resolveRemaining…
+  15.2 clause probe consume derived keys ✅ (Jul 2026)
+  15.3 hints through resolveRemaining… (NEXT)
   15.4 shared per-key egress helper
   15.4a retire UPDATE RHS derived branches (resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable)
   15.4b retire interface-loop registry derived skips (IN-list output → Phase 18)
