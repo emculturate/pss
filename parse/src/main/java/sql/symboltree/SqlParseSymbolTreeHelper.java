@@ -101,11 +101,33 @@ public class SqlParseSymbolTreeHelper {
 	};
 
 	/**
+	 * True when convert egress for the current query frame has structured PIVOT/UNPIVOT
+	 * {@code derivation} state (bucketed derived/source columns). Plain SELECTs without a
+	 * relational modifier keep normal clause probe and unqualified resolution on archived
+	 * clause lists.
+	 */
+	private boolean convertEgressScopeHasRelationalModifierStructuredDerivation() {
+		if (hasRelationalModifierBucketDerivedColumns(activeConvertEgressDerivedColumns)) {
+			return true;
+		}
+		if (activeConvertEgressRelationalModifierSourceColumns != null
+				&& !activeConvertEgressRelationalModifierSourceColumns.isEmpty()) {
+			return true;
+		}
+		RelationalModifierConvertEgressContext modifierContext =
+				activeConvertEgressRelationalModifierContext;
+		return modifierContext != null && !modifierContext.isEmpty();
+	}
+
+	/**
 	 * Clause / assignment RHS lists that keep walk-captured tuple-qualified modifier refs through
 	 * convert egress until structured clause harvest ({@linkplain #ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS}
 	 * plus UPDATE assignment RHS probe bucket).
 	 */
 	private boolean defersRelationalModifierClauseHarvestColumnRefList(String containerKey) {
+		if (!convertEgressScopeHasRelationalModifierStructuredDerivation()) {
+			return false;
+		}
 		if (containerKey == null || containerKey.isBlank()) {
 			return false;
 		}
