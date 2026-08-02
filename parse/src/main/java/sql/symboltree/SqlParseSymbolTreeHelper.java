@@ -939,17 +939,8 @@ public class SqlParseSymbolTreeHelper {
 			if (!state.sourceColumnsByBucket.isEmpty()) {
 				derivationMap.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, state.sourceColumnsByBucket);
 			}
-			if (!state.pivotDerivedSourceBindingsByBucket.isEmpty()) {
-				derivationMap.put(
-						RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY,
-						state.pivotDerivedSourceBindingsByBucket);
-			}
-			if (state.interfaceSourceRef != null && !state.interfaceSourceRef.isBlank()) {
-				derivationMap.put(RELATIONAL_MODIFIER_INTERFACE_SOURCE_REF_KEY, state.interfaceSourceRef);
-			}
-			if (state.dictionaryPhysicalSourceRef != null && !state.dictionaryPhysicalSourceRef.isBlank()) {
-				derivationMap.put(RELATIONAL_MODIFIER_SOURCE_REF_KEY, state.dictionaryPhysicalSourceRef);
-			}
+			// Published derivation on def_query* retains only bucketed derived_columns and
+			// source_columns; pivot bindings and source refs stay in convert egress state only.
 			if (!derivationMap.isEmpty()) {
 				scopeSymbols.put(RELATIONAL_MODIFIER_DERIVATION_KEY, derivationMap);
 			}
