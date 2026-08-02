@@ -691,9 +691,6 @@ public class SqlParseSymbolTreeHelper {
 			if (!(keyObj instanceof String columnName) || columnName.isBlank()) {
 				continue;
 			}
-			if (RELATIONAL_MODIFIER_OPERATOR_KEY.equals(columnName)) {
-				continue;
-			}
 			names.add(columnName);
 		}
 		if (names.isEmpty()) {
@@ -1169,9 +1166,7 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> bucketMap = (Map<String, Object>) bucketObj;
 			for (Map.Entry<String, Object> columnEntry : bucketMap.entrySet()) {
 				String derivedColumnName = columnEntry.getKey();
-				if (derivedColumnName == null
-						|| derivedColumnName.isBlank()
-						|| RELATIONAL_MODIFIER_OPERATOR_KEY.equals(derivedColumnName)) {
+				if (derivedColumnName == null || derivedColumnName.isBlank()) {
 					continue;
 				}
 				String interfaceKey = findKeyIgnoreCase(localInterface, derivedColumnName);

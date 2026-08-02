@@ -450,9 +450,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		for (Map.Entry<String, Object> entry : derivedColumnMap.entrySet()) {
 			String columnKey = entry.getKey();
-			if (columnKey == null
-					|| columnKey.isBlank()
-					|| SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERATOR_KEY.equals(columnKey)) {
+			if (columnKey == null || columnKey.isBlank()) {
 				continue;
 			}
 			bucket.put(columnKey, entry.getValue());
@@ -487,9 +485,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		HashMap<String, Object> tableColumns = (HashMap<String, Object>) tableColumnsMapObj;
 		for (String derivedColumnName : derivedColumnMap.keySet()) {
-			if (derivedColumnName == null
-					|| derivedColumnName.isBlank()
-					|| SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERATOR_KEY.equals(derivedColumnName)) {
+			if (derivedColumnName == null || derivedColumnName.isBlank()) {
 				continue;
 			}
 			removeDictionaryColumnIgnoreCase(tableColumns, derivedColumnName);
@@ -4926,7 +4922,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		buildPivotStructuredDerivedColumns(aggregateObj, inListObj, nameColObj, pivotClauseCtx);
-		walker.symbolTable.put(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_OPERATOR_KEY, MUMBLE_PIVOT_KEY);
 	}
 
 	private boolean containsStringIgnoreCase(ArrayList<String> values, String candidate) {
