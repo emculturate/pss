@@ -426,65 +426,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		popRelationalModifierFrameAndMergeToParent(modifierKey);
 
-		if (derivedColumnBucketValue != null) {
-			upsertParentRelationalModifierDerivedColumnBucket(bucketKey, derivedColumnBucketValue);
-		}
-		if (sourceColumnBucketRefs != null && !sourceColumnBucketRefs.isEmpty()) {
-			upsertParentRelationalModifierSourceColumnBucket(bucketKey, sourceColumnBucketRefs);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private void upsertParentRelationalModifierDerivedColumnBucket(String bucketKey, Object bucketValue) {
-		if (bucketKey == null || bucketKey.isBlank() || bucketValue == null) {
-			return;
-		}
-
-		Object parentDerivedObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
-		HashMap<String, Object> parentDerived;
-		if (parentDerivedObj instanceof HashMap<?, ?> parentDerivedMapObj) {
-			parentDerived = (HashMap<String, Object>) parentDerivedMapObj;
-		} else {
-			parentDerived = new HashMap<String, Object>();
-			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, parentDerived);
-		}
-		parentDerived.put(bucketKey, bucketValue);
-	}
-
-	@SuppressWarnings("unchecked")
-	private void upsertParentRelationalModifierSourceColumnBucket(
-			String bucketKey,
-			ArrayList<Object> sourceColumnRefs) {
-		if (bucketKey == null || bucketKey.isBlank()
-				|| sourceColumnRefs == null || sourceColumnRefs.isEmpty()) {
-			return;
-		}
-
-		Object parentSourceObj =
-				walker.symbolTable.get(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
-		HashMap<String, Object> parentSourceColumns;
-		if (parentSourceObj instanceof HashMap<?, ?> parentSourceMapObj) {
-			parentSourceColumns = (HashMap<String, Object>) parentSourceMapObj;
-		} else {
-			parentSourceColumns = new HashMap<String, Object>();
-			walker.symbolTable.put(
-					SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,
-					parentSourceColumns);
-		}
-		parentSourceColumns.put(bucketKey, copyRelationalModifierSourceColumnInterfaceRefs(sourceColumnRefs));
-	}
-
-	@SuppressWarnings("unchecked")
-	private ArrayList<Object> copyRelationalModifierSourceColumnInterfaceRefs(ArrayList<Object> sourceColumnRefs) {
-		ArrayList<Object> copy = new ArrayList<Object>(sourceColumnRefs.size());
-		for (Object refObj : sourceColumnRefs) {
-			if (refObj instanceof Map<?, ?> refMapObj) {
-				copy.add(new HashMap<String, Object>((Map<String, Object>) refMapObj));
-			} else {
-				copy.add(refObj);
-			}
-		}
-		return copy;
+		symbolTreeHelper.mergeRelationalModifierDerivationBucketOnParentScope(
+				bucketKey,
+				derivedColumnBucketValue,
+				sourceColumnBucketRefs);
 	}
 
 	private HashMap<String, Object> copyUnpivotDerivedColumnBucketMap(Map<String, Object> derivedColumnMap) {

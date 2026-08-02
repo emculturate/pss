@@ -76,13 +76,21 @@ public class SqlParseSymbolTreeHelper {
 	public static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
 	public static final String RELATIONAL_MODIFIER_SOURCE_REF_KEY = "source_ref";
+	/** Parent-scope bucketed PIVOT/UNPIVOT lineage: {@code {derived_columns={...}, source_columns={...}}}. */
+	public static final String RELATIONAL_MODIFIER_DERIVATION_KEY = "derivation";
 
-	/** Archived scope keys whose flat column-ref lists are validated at scope exit. */
-	private static final String[] SCOPE_CLAUSE_COLUMN_LIST_KEYS = {
+	/**
+	 * Archived scope containers holding flat column-ref lists (WHERE, HAVING, QUALIFY, JOIN ON,
+	 * GROUP BY, ORDER BY, etc.) validated at scope exit via {@link #probeArchivedScopeClauseColumns}.
+	 */
+	private static final String[] ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS = {
 			MUMBLE_FILTERS_KEY,
 			MUMBLE_GROUPED_BY_KEY,
 			MUMBLE_ORDERED_BY_KEY,
 	};
+
+	/** @deprecated use {@link #ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS} */
+	private static final String[] SCOPE_CLAUSE_COLUMN_LIST_KEYS = ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS;
 
 	// --- normalizeTableRef delegate (mirrors event-walker static helper) ---
 
@@ -550,6 +558,237 @@ public class SqlParseSymbolTreeHelper {
 	// =========================================================================
 	// Methods moved from SqlParseEventWalker
 
+	// --- PIVOT/UNPIVOT derivation scope (bucketed derived_columns + source_columns) ---
+
+	static final class RelationalModifierDerivationScopeState {
+		final HashMap<String, Object> derivedColumnsByBucket = new HashMap<String, Object>();
+		final HashMap<String, Object> sourceColumnsByBucket = new HashMap<String, Object>();
+		ArrayList<Object> walkTimeInterfaceHints;
+
+		boolean hasStructuredBucketDerivation() {
+			if (!sourceColumnsByBucket.isEmpty()) {
+				return true;
+			}
+			for (Object bucketObj : derivedColumnsByBucket.values()) {
+				if (bucketObj instanceof Map<?, ?>) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		boolean isEmpty() {
+			return derivedColumnsByBucket.isEmpty()
+					&& sourceColumnsByBucket.isEmpty()
+					&& (walkTimeInterfaceHints == null || walkTimeInterfaceHints.isEmpty());
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void mergeRelationalModifierDerivationBucketOnParentScope(
+			String bucketKey,
+			Object derivedBucketValue,
+			ArrayList<Object> sourceColumnBucketRefs) {
+		if (bucketKey == null || bucketKey.isBlank()) {
+			return;
+		}
+		if (derivedBucketValue == null
+				&& (sourceColumnBucketRefs == null || sourceColumnBucketRefs.isEmpty())) {
+			return;
+		}
+
+		HashMap<String, Object> derivationMap = ensureRelationalModifierDerivationMapOnScope(walker.symbolTable);
+		if (derivedBucketValue != null) {
+			HashMap<String, Object> derivedColumnsMap = ensureRelationalModifierDerivationSubMap(
+					derivationMap,
+					DERIVED_COLUMNS_HINTS_KEY);
+			derivedColumnsMap.put(bucketKey, derivedBucketValue);
+		}
+		if (sourceColumnBucketRefs != null && !sourceColumnBucketRefs.isEmpty()) {
+			HashMap<String, Object> sourceColumnsMap = ensureRelationalModifierDerivationSubMap(
+					derivationMap,
+					RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+			sourceColumnsMap.put(bucketKey, copyInterfaceReferenceList(sourceColumnBucketRefs));
+		}
+
+		walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
+		walker.symbolTable.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	public RelationalModifierDerivationScopeState detachRelationalModifierDerivationFromScope(
+			HashMap<String, Object> scopeSymbols) {
+		RelationalModifierDerivationScopeState state = new RelationalModifierDerivationScopeState();
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return state;
+		}
+
+		Object derivationObj = scopeSymbols.remove(RELATIONAL_MODIFIER_DERIVATION_KEY);
+		if (derivationObj instanceof Map<?, ?> derivationMapObj) {
+			mergeDerivationSubMapIntoState(
+					state,
+					derivationMapObj.get(DERIVED_COLUMNS_HINTS_KEY),
+					true);
+			mergeDerivationSubMapIntoState(
+					state,
+					derivationMapObj.get(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY),
+					false);
+		}
+
+		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(DERIVED_COLUMNS_HINTS_KEY), true);
+		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY), false);
+		return state;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void publishRelationalModifierDerivationToScope(
+			HashMap<String, Object> scopeSymbols,
+			RelationalModifierDerivationScopeState state,
+			boolean retainWalkTimeHintsForContinuedFrom) {
+		if (scopeSymbols == null || state == null || state.isEmpty()) {
+			return;
+		}
+
+		if (retainWalkTimeHintsForContinuedFrom
+				&& state.walkTimeInterfaceHints != null
+				&& !state.walkTimeInterfaceHints.isEmpty()) {
+			scopeSymbols.put(DERIVED_COLUMNS_HINTS_KEY, state.walkTimeInterfaceHints);
+			return;
+		}
+
+		if (state.hasStructuredBucketDerivation()) {
+			HashMap<String, Object> derivationMap = new HashMap<String, Object>();
+			if (!state.derivedColumnsByBucket.isEmpty()) {
+				derivationMap.put(DERIVED_COLUMNS_HINTS_KEY, state.derivedColumnsByBucket);
+			}
+			if (!state.sourceColumnsByBucket.isEmpty()) {
+				derivationMap.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, state.sourceColumnsByBucket);
+			}
+			if (!derivationMap.isEmpty()) {
+				scopeSymbols.put(RELATIONAL_MODIFIER_DERIVATION_KEY, derivationMap);
+			}
+			return;
+		}
+
+		if (!state.derivedColumnsByBucket.isEmpty()) {
+			scopeSymbols.put(DERIVED_COLUMNS_HINTS_KEY, state.derivedColumnsByBucket);
+		}
+		if (!state.sourceColumnsByBucket.isEmpty()) {
+			scopeSymbols.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, state.sourceColumnsByBucket);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeDerivationSubMapIntoState(
+			RelationalModifierDerivationScopeState state,
+			Object subMapObj,
+			boolean derivedColumnsTarget) {
+		if (state == null || subMapObj == null) {
+			return;
+		}
+		if (subMapObj instanceof ArrayList<?> hintListObj && derivedColumnsTarget) {
+			state.walkTimeInterfaceHints = new ArrayList<Object>((ArrayList<Object>) hintListObj);
+			return;
+		}
+		if (!(subMapObj instanceof Map<?, ?> subMapObjCast)) {
+			return;
+		}
+		HashMap<String, Object> targetMap = derivedColumnsTarget
+				? state.derivedColumnsByBucket
+				: state.sourceColumnsByBucket;
+		for (Map.Entry<?, ?> entry : subMapObjCast.entrySet()) {
+			if (entry.getKey() instanceof String bucketKey && entry.getValue() != null) {
+				targetMap.put(bucketKey, entry.getValue());
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> ensureRelationalModifierDerivationMapOnScope(
+			HashMap<String, Object> scopeSymbols) {
+		Object derivationObj = scopeSymbols.get(RELATIONAL_MODIFIER_DERIVATION_KEY);
+		if (derivationObj instanceof HashMap<?, ?> derivationMapObj) {
+			return (HashMap<String, Object>) derivationMapObj;
+		}
+		HashMap<String, Object> derivationMap = new HashMap<String, Object>();
+		scopeSymbols.put(RELATIONAL_MODIFIER_DERIVATION_KEY, derivationMap);
+		return derivationMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> ensureRelationalModifierDerivationSubMap(
+			HashMap<String, Object> derivationMap,
+			String subMapKey) {
+		Object subMapObj = derivationMap.get(subMapKey);
+		if (subMapObj instanceof HashMap<?, ?> subMapObjCast) {
+			return (HashMap<String, Object>) subMapObjCast;
+		}
+		HashMap<String, Object> subMap = new HashMap<String, Object>();
+		derivationMap.put(subMapKey, subMap);
+		return subMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> getRelationalModifierDerivationSubMapFromScope(
+			HashMap<String, Object> scopeSymbols,
+			String subMapKey) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty() || subMapKey == null) {
+			return null;
+		}
+		Object derivationObj = scopeSymbols.get(RELATIONAL_MODIFIER_DERIVATION_KEY);
+		if (derivationObj instanceof Map<?, ?> derivationMapObj) {
+			Object subMapObj = derivationMapObj.get(subMapKey);
+			if (subMapObj instanceof Map<?, ?> subMapObjCast && !subMapObjCast.isEmpty()) {
+				return (HashMap<String, Object>) subMapObjCast;
+			}
+		}
+		Object legacyObj = scopeSymbols.get(subMapKey);
+		if (legacyObj instanceof Map<?, ?> legacyMapObj && !legacyMapObj.isEmpty()) {
+			return (HashMap<String, Object>) legacyMapObj;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void reconcileRelationalModifierDerivedColumnLineageForConvertScope(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object assignmentsObj,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return;
+		}
+
+		expandRelationalModifierDerivedColumnLineageInInterfaceMap(
+				localInterface,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				expandRelationalModifierDerivedColumnLineageInColumnRefList(
+						archivedScopeColumnReferenceContainers.get(containerKey),
+						localDerivedColumns,
+						localSourceColumnsByBucket,
+						localTableAliasMap);
+			}
+		}
+		if (assignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				expandRelationalModifierDerivedColumnLineageInColumnRefList(
+						rhsRefsObj,
+						localDerivedColumns,
+						localSourceColumnsByBucket,
+						localTableAliasMap);
+			}
+		}
+	}
+
 	// --- UNPIVOT / convertSymbolTable resolution (canonical from event walker) ---
 
 	/**
@@ -988,42 +1227,23 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localDerivedColumns,
 			HashMap<String, Object> localSourceColumnsByBucket,
 			HashMap<String, Object> localTableAliasMap) {
-		if (localDerivedColumns == null
-				|| localDerivedColumns.isEmpty()
-				|| localSourceColumnsByBucket == null
-				|| localSourceColumnsByBucket.isEmpty()) {
-			return;
+		HashMap<String, Object> archivedScopeColumnReferenceContainers = new HashMap<String, Object>();
+		if (filtersList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_FILTERS_KEY, filtersList);
 		}
-
-		expandRelationalModifierDerivedColumnLineageInInterfaceMap(
+		if (groupedByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
+		}
+		if (orderedByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		}
+		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
 				localInterface,
+				archivedScopeColumnReferenceContainers,
+				assignmentsObj,
 				localDerivedColumns,
 				localSourceColumnsByBucket,
 				localTableAliasMap);
-		expandRelationalModifierDerivedColumnLineageInColumnRefList(
-				filtersList,
-				localDerivedColumns,
-				localSourceColumnsByBucket,
-				localTableAliasMap);
-		expandRelationalModifierDerivedColumnLineageInColumnRefList(
-				groupedByList,
-				localDerivedColumns,
-				localSourceColumnsByBucket,
-				localTableAliasMap);
-		expandRelationalModifierDerivedColumnLineageInColumnRefList(
-				orderedByList,
-				localDerivedColumns,
-				localSourceColumnsByBucket,
-				localTableAliasMap);
-		if (assignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
-			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
-				expandRelationalModifierDerivedColumnLineageInColumnRefList(
-						rhsRefsObj,
-						localDerivedColumns,
-						localSourceColumnsByBucket,
-						localTableAliasMap);
-			}
-		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2705,25 +2925,22 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (localCurrentQueryDictionary == null)
 			localCurrentQueryDictionary = new HashMap<String, Object>();
-		Object localDerivedColumnsObj = walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
+		RelationalModifierDerivationScopeState relationalModifierDerivationScope =
+				detachRelationalModifierDerivationFromScope(walker.symbolTable);
 		ArrayList<Object> localRelationalModifierInterfaceHints = null;
 		HashMap<String, Object> localDerivedColumns;
-		if (localDerivedColumnsObj instanceof ArrayList<?> derivedHintsList) {
-			localRelationalModifierInterfaceHints = (ArrayList<Object>) derivedHintsList;
+		if (relationalModifierDerivationScope.walkTimeInterfaceHints != null
+				&& !relationalModifierDerivationScope.walkTimeInterfaceHints.isEmpty()) {
+			localRelationalModifierInterfaceHints = relationalModifierDerivationScope.walkTimeInterfaceHints;
 			localDerivedColumns = buildDerivedColumnsMapFromHints(localRelationalModifierInterfaceHints);
-		} else if (localDerivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj) {
-			localDerivedColumns = new HashMap<String, Object>((Map<String, Object>) derivedColumnsMapObj);
+		} else if (!relationalModifierDerivationScope.derivedColumnsByBucket.isEmpty()) {
+			localDerivedColumns = new HashMap<String, Object>(
+					relationalModifierDerivationScope.derivedColumnsByBucket);
 		} else {
 			localDerivedColumns = new HashMap<String, Object>();
 		}
-		Object localSourceColumnsObj = walker.symbolTable.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
-		HashMap<String, Object> localRelationalModifierSourceColumns;
-		if (localSourceColumnsObj instanceof Map<?, ?> localSourceColumnsMapObj) {
-			localRelationalModifierSourceColumns =
-					new HashMap<String, Object>((Map<String, Object>) localSourceColumnsMapObj);
-		} else {
-			localRelationalModifierSourceColumns = new HashMap<String, Object>();
-		}
+		HashMap<String, Object> localRelationalModifierSourceColumns =
+				new HashMap<String, Object>(relationalModifierDerivationScope.sourceColumnsByBucket);
 		activeConvertEgressDerivedColumns = localDerivedColumns;
 		activeConvertEgressRelationalModifierHints = localRelationalModifierInterfaceHints;
 		activeConvertEgressRelationalModifierSourceColumns = localRelationalModifierSourceColumns;
@@ -2735,6 +2952,16 @@ public class SqlParseSymbolTreeHelper {
         Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 		Object groupedByList = walker.symbolTable.remove(MUMBLE_GROUPED_BY_KEY);
 		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
+		HashMap<String, Object> archivedScopeColumnReferenceContainers = new HashMap<String, Object>();
+		if (filtersList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_FILTERS_KEY, filtersList);
+		}
+		if (groupedByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
+		}
+		if (orderedByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		}
 		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
 
 		// Resolve alias-backed table refs so tableCollection keys align with canonical table references.
@@ -3334,9 +3561,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		probeArchivedScopeClauseColumns(
-				filtersList,
-				groupedByList,
-				orderedByList,
+				archivedScopeColumnReferenceContainers,
 				localInterface,
 				localCurrentQueryDictionary,
 				localUnresolvedColumnMap,
@@ -3404,11 +3629,9 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localRelationalModifierInterfaceHints);
 
-		expandRelationalModifierDerivedColumnLineageAcrossArchivedScope(
+		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
 				localInterface,
-				filtersList,
-				groupedByList,
-				orderedByList,
+				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
 				localDerivedColumns,
 				localRelationalModifierSourceColumns,
@@ -3462,30 +3685,33 @@ public class SqlParseSymbolTreeHelper {
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, localUnresolvedColumnMap);
 		}
-		if (retainRelationalModifierHintsForContinuedFrom) {
-			if (localRelationalModifierInterfaceHints != null
-					&& !localRelationalModifierInterfaceHints.isEmpty()) {
-				walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localRelationalModifierInterfaceHints);
-			}
-		} else if (!localDerivedColumns.isEmpty()) {
-			walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localDerivedColumns);
+		relationalModifierDerivationScope.derivedColumnsByBucket.clear();
+		if (!localDerivedColumns.isEmpty()) {
+			relationalModifierDerivationScope.derivedColumnsByBucket.putAll(localDerivedColumns);
 		}
+		relationalModifierDerivationScope.sourceColumnsByBucket.clear();
 		if (!localRelationalModifierSourceColumns.isEmpty()) {
-			walker.symbolTable.put(
-					RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,
-					localRelationalModifierSourceColumns);
+			relationalModifierDerivationScope.sourceColumnsByBucket.putAll(localRelationalModifierSourceColumns);
 		}
+		relationalModifierDerivationScope.walkTimeInterfaceHints = localRelationalModifierInterfaceHints;
+		publishRelationalModifierDerivationToScope(
+				walker.symbolTable,
+				relationalModifierDerivationScope,
+				retainRelationalModifierHintsForContinuedFrom);
 		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
 		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
 		
 		if (localScalarSubqueryAliases != null)
 			walker.symbolTable.put(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY, localScalarSubqueryAliases);
-		if (filtersList != null)
+		if (filtersList != null) {
 			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
-		if (groupedByList != null)
+		}
+		if (groupedByList != null) {
 			walker.symbolTable.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
-		if (orderedByList != null)
+		}
+		if (orderedByList != null) {
 			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		}
 		if (preservedInsertSourceSelectSequence != null) {
 			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
 		}
@@ -10036,7 +10262,12 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		Object derivedColumnsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		Object derivedColumnsObj = getRelationalModifierDerivationSubMapFromScope(
+				walker.symbolTable,
+				DERIVED_COLUMNS_HINTS_KEY);
+		if (derivedColumnsObj == null) {
+			derivedColumnsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		}
 		if (!(derivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj)) {
 			return;
 		}
@@ -10080,12 +10311,26 @@ public class SqlParseSymbolTreeHelper {
 
 		derivedColumnsMap.remove(matchingBucketKey);
 		derivedColumnsMap.put(relationAlias, matchingBucketValue);
+
+		HashMap<String, Object> sourceColumnsMap = getRelationalModifierDerivationSubMapFromScope(
+				walker.symbolTable,
+				RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+		if (sourceColumnsMap != null && sourceColumnsMap.containsKey(matchingBucketKey)) {
+			Object sourceBucket = sourceColumnsMap.remove(matchingBucketKey);
+			sourceColumnsMap.put(relationAlias, sourceBucket);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> getScopeDerivedColumnsFromSymbolTable() {
 		if (activeConvertEgressDerivedColumns != null && !activeConvertEgressDerivedColumns.isEmpty()) {
 			return activeConvertEgressDerivedColumns;
+		}
+		HashMap<String, Object> derivedFromDerivation = getRelationalModifierDerivationSubMapFromScope(
+				walker.symbolTable,
+				DERIVED_COLUMNS_HINTS_KEY);
+		if (derivedFromDerivation != null && !derivedFromDerivation.isEmpty()) {
+			return derivedFromDerivation;
 		}
 		Object derivedObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
 		if (derivedObj instanceof HashMap<?, ?> derivedMap && !derivedMap.isEmpty()) {
@@ -11883,9 +12128,7 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	private void probeArchivedScopeClauseColumns(
-			Object filtersList,
-			Object groupedByList,
-			Object orderedByList,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localUnresolvedColumnMap,
@@ -11899,16 +12142,9 @@ public class SqlParseSymbolTreeHelper {
 			ArrayList<Object> relationalModifierInterfaceHints,
 			String deleteTargetTableRef,
 			boolean deferCorrelatedValueSubqueryQualifiedUnknowns) {
-		HashMap<String, Object> scopeSymbols = new HashMap<String, Object>();
-		if (filtersList != null) {
-			scopeSymbols.put(MUMBLE_FILTERS_KEY, filtersList);
-		}
-		if (groupedByList != null) {
-			scopeSymbols.put(MUMBLE_GROUPED_BY_KEY, groupedByList);
-		}
-		if (orderedByList != null) {
-			scopeSymbols.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
-		}
+		HashMap<String, Object> scopeSymbols = archivedScopeColumnReferenceContainers != null
+				? archivedScopeColumnReferenceContainers
+				: new HashMap<String, Object>();
 		ArchivedClauseProbeContext probeContext = new ArchivedClauseProbeContext(
 				scopeSymbols,
 				localInterface,
@@ -11956,7 +12192,7 @@ public class SqlParseSymbolTreeHelper {
 		if (probeContext == null || probeContext.scopeSymbols == null) {
 			return;
 		}
-		for (String clauseKey : SCOPE_CLAUSE_COLUMN_LIST_KEYS) {
+		for (String clauseKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
 			probeArchivedScopeClauseColumnList(
 					probeContext.scopeSymbols.get(clauseKey),
 					clauseKey,
