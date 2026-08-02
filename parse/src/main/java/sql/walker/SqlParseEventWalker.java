@@ -4907,6 +4907,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			} else {
 				walker.collectTableAlias(relationAlias, modifierKey);
 			}
+			symbolTreeHelper.recordLocalFromRegisteredAlias(relationAlias);
 		}
 
 		if (modifier != null && modifierKey != null) {

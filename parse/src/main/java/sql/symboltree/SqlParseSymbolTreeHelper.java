@@ -1161,6 +1161,10 @@ public class SqlParseSymbolTreeHelper {
 				localTableAliasMap);
 		if (archivedScopeColumnReferenceContainers != null) {
 			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				if (MUMBLE_FILTERS_KEY.equals(containerKey)) {
+					// Preserve JOIN ON / WHERE tuple-qualified refs until clause harvest (17.7.6).
+					continue;
+				}
 				expandRelationalModifierDerivedColumnLineageInColumnRefList(
 						archivedScopeColumnReferenceContainers.get(containerKey),
 						localDerivedColumns,
@@ -4232,6 +4236,10 @@ public class SqlParseSymbolTreeHelper {
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
 		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
+
+		enrichTableAliasMapWithRelationalModifierBucketAliases(
+				localTableAliasMap,
+				localRelationalModifierSourceColumns);
 
 		// Merge everything back together into the final symbol table for this level of the query, with table aliases first, 
 		// then symbol table entries, then query entries, then table entries, then the interface and current query dictionary 
@@ -7909,6 +7917,32 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		aliasMap.put(alias, targetRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void enrichTableAliasMapWithRelationalModifierBucketAliases(
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> localSourceColumnsByBucket) {
+		if (localTableAliasMap == null
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, Object> bucketEntry : localSourceColumnsByBucket.entrySet()) {
+			String bucketKey = bucketEntry.getKey();
+			if (bucketKey == null || bucketKey.isBlank()) {
+				continue;
+			}
+			Object refsObj = bucketEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+				continue;
+			}
+			String sourceTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refs.get(0));
+			if (sourceTableRef == null || sourceTableRef.isBlank()) {
+				continue;
+			}
+			localTableAliasMap.putIfAbsent(bucketKey, sourceTableRef);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -12893,6 +12927,9 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		for (String clauseKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+			if (MUMBLE_FILTERS_KEY.equals(clauseKey)) {
+				continue;
+			}
 			probeArchivedScopeClauseColumnList(
 					probeContext.scopeSymbols.get(clauseKey),
 					clauseKey,
@@ -13012,6 +13049,9 @@ public class SqlParseSymbolTreeHelper {
 
 		switch (result.disposition) {
 			case EXPANDED_DERIVED_SOURCE_LINEAGE -> {
+				if (MUMBLE_FILTERS_KEY.equals(clauseKey)) {
+					return;
+				}
 				if (result.expandedDerivedSourceLineage == null
 						|| result.expandedDerivedSourceLineage.isEmpty()) {
 					return;

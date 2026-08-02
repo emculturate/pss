@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~75% | **17.0–17.5** done; **17.6** sibling hardening + **17.7** structured derivation finalize (active) — see below |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~78% | **17.0–17.5** done; **17.6** sibling hardening; **17.7** structured derivation + **17.7.5b** convert derived-phase convergence (active) — see below |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -1707,10 +1707,13 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | **17.7.2** | **Derivation-only derived on parent** | ⏸️ Open | Publish only `derivation.derived_columns[bucketKey]` (+ `source_columns`) on parent `def_query*`; retire flat `derived_columns` / binding maps on published payload where contract allows. Modifier-local prune of **derived outputs** on **this primary’s physical row only** at finalize (not query-wide name match). |
 | **17.7.3** | **Convert harvest: structured `derivation` walk only** | ⏸️ Open | `canonicalizeLocalTableCollection` / clause egress: per-bucket context for sibling modifiers; **no** query-wide `isRelationalModifierDerivedOutputColumnName(name, entireDerivedMap)` table-dict removal. Transitional only until **17.7.8** — not a substitute for 17.7.1–17.7.2. |
 | **17.7.4** | **Diagnostic (1): missing source vs non-table interface** | ⏸️ Open | At pivot/unpivot finalize: all relational-modifier **source** operands (PIVOT aggregate/FOR, PIVOT IN identifiers, UNPIVOT VALUE/FOR/IN) must resolve against `resolvePrimarySourceInterface` when source is subquery/CTE — extend beyond `DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED` alone. |
-| **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | ✅ Done (Aug 2026) | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` fatal; possible sources formatted like `AMBIGUOUS_COLUMN_REFERENCE` (`[u1, u2]`). `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` contract; no modifier definition tokens on ambiguous interface columns in `query_dictionary`. |
-| **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. |
-| **17.7.7** | **Tests + golden review** | 🔄 In progress | `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` (17.7.5) green for table/query dict; `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, **17.7.4** diagnostics; suite golden refresh under **17.6 golden review policy**. |
+| **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | 🔄 In progress | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` across interface + clause egress via `forEachConvertEgressUnqualifiedColumnRefSite`; per-site locations on detached clause copies (`15b6f7b`). `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` + `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` (2× fatal) green. **Not converged:** interface loop still pre-consumes / expands derived before diagnose — see **17.7.5b**. |
+| **17.7.5b** | **Convert egress derived-phase convergence** | 🔄 Active | Single derived phase → single normal phase → strip + consolidate. **No** special-case sequencing for “one ref / one bucket” vs multi-bucket ambiguous. See subsection below. |
+| **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. **Depends on 17.7.5b** for dedupe/consolidate timing (after derived + normal phases). |
+| **17.7.7** | **Tests + golden review** | 🔄 In progress | `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` (17.7.5) green for table/query dict; `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` (17.7.5) green for 2× ambiguous derived; **17.7.4** diagnostics; pivot class golden refresh under **17.6 golden review policy** (many tests still expect pre-17.7 `query_dictionary` shapes). |
 | **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ⏸️ Open | **After** 17.7.1–17.7.2 green + **17.7.7** contract tests pass: **delete** `pruneRelationalModifierDerivedColumnsFromTableDictionary` and equivalents. Post-removal: misplaced derived outputs on physical keys = finalize bug, never restore convert stripping. **Closeout test matrix (add with 17.7.7):** four **pairs** (physical table + subquery-backed modifier source) for **derived vs non-derived** ambiguity — (1) unqualified SELECT column ambiguous between **PIVOT derived output** and same-named **physical** column on modifier source table; (2) same for **UNPIVOT derived** (VALUE/FOR) vs physical; repeat (1)–(2) when modifier immediate source is **`FROM (SELECT …) alias`** instead of physical table. Goldens per review policy; not bulk-copied from sibling tests. |
+| **17.7.9** *(optional)* | **Diagnostic (3): qualified derived column inside modifier scope** | ⏸️ Optional | **Not fully covered today.** **17.0b** ✅ FATAL `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` for **UNPIVOT VALUE/FOR** with any `table_ref` prefix. **PIVOT** phrase operands remain **physical** (WARNING `RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT` / FATAL `…_INVALID` per **16.4**). **Gap:** no finalize pass that rejects **any** qualified reference to a **relational-modifier derived output** collected under `derivation.derived_columns[bucket]` inside the PIVOT/UNPIVOT symbol scope (including PIVOT-derived names referenced inside the phrase, or qualified derived tokens in modifier-local maps). **Policy:** inside `table_primary` / `tuple_primary` modifier subtree, derived outputs must appear **unqualified** in SQL; published `interface` / `derivation` entries get `table_ref` = modifier alias, `tuple_N`, table name, or `queryN` — never the user’s `p_src`-style source alias on the in-phrase reference. Emit new diagnostic (severity TBD, likely FATAL) at modifier finalize or operand walk when a derived bucket name is captured with a non-blank qualifier. |
+| **17.7.10** *(optional)* | **Diagnostic (4): derived ref qualified with source alias outside primary** | ⏸️ Optional | **Not implemented.** When a column ref **outside** `table_primary` / `tuple_primary` names a **structured derived output** (`derivation.derived_columns`) and the qualifier matches the modifier’s **immediate source table alias** (`p_src`, `u_src`, … from `FROM … alias`) but **not** the relational-operator alias (`p`, `u`, `q`), emit **SEVERE_WARNING** (e.g. `RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS`). Example: `ON p_src.jan_sales_SUM = …` instead of `ON p.jan_sales_SUM = …` on a triple pivot/unpivot join. Do **not** warn when the qualifier is the modifier alias, a `queryN` ref, or an unrelated join alias. Hook: convert egress clause harvest (**17.7.6**) or dedicated visitor over archived `filters` / JOIN ON after structured `derivation` is visible. |
 
 **Recommended sequencing (17.7 track):**
 
@@ -1721,6 +1724,81 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 5. **17.7.8** — mandatory closeout: remove convert prune; full pivot/unpivot suite + gate.
 
 **Parallel with 17.6:** **17.6.8** egress token merge can continue in parallel; **17.6.2** should land via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
+
+### Phase 17.7.5b — Convert egress derived-phase convergence (strict parity)
+
+**Problem:** Convert still runs **two different sequences** for relational-modifier derived columns:
+
+| Path | When | Derived behavior today |
+|------|------|-------------------------|
+| **Interface loop** | Before `diagnoseAmbiguous…` | `resolveColumnRefAtConvertEgress` → lineage expand, `isDerivedColumn`, `consumeDerivedColumnUnknownEntry` (with `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose` only for multi-bucket ambiguous) |
+| **Clause lists** | Mostly after diagnose | Ambiguous derived diagnosed in `diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites`; probe **skips** ambiguous structured derived; lineage expand during `reconcileRelationalModifierDerivedColumnLineageForConvertScope` skips ambiguous |
+
+Single-bucket (unambiguous) derived names therefore follow **interface-first consume/expand**; multi-bucket ambiguous names follow **diagnose-then-consume** with a retain guard in the interface loop. That is the opposite of the product goal: **one algorithm** whether there is one modifier bucket or many.
+
+**Target invariant (end state):** At query convert exit, egress processing is always:
+
+```
+A. Prepare structured context
+   - Detach `derivation` / derived maps; build archived clause containers (filters, grouped_by, ordered_by, UPDATE RHS).
+   - Reconcile lineage maps on egress lists (expand unambiguous derived → source lineage refs only; never expand ambiguous unqualified structured derived).
+
+B. Derived phase (relational-modifier derived only — all buckets, one visitor)
+   - Visit every egress ref site with the same visitor used for ambiguous diagnose today
+     (`forEachConvertEgressUnqualifiedColumnRefSite` + qualified derived sites as needed).
+   - For each site, classify via `resolveColumnRefAtConvertEgress` (read-only / no consume):
+     - Ambiguous unqualified structured derived → emit `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` (per-site location).
+     - Unambiguous derived / expanded lineage → rewrite ref list entries in place (interface + archived lists).
+     - Pivot operand / UNPIVOT IN / etc. → outcomes that belong in derived phase per policy doc (no duplicate probe logic).
+   - After all sites diagnosed: `consumeDerivedColumnUnknownEntry` (and qualified analogs) for every derived name
+     fully handled in this phase — **no** `shouldRetain…` bridge.
+
+C. Normal resolution phase (non-derived-derived unknowns)
+   - `resolveRemainingUnresolvedAgainstQuerySources` (ingress unqualified + qualified cleanup).
+   - `probeArchivedScopeClauseColumns` (interface output validation, physical/query ambiguity, unresolved fatals).
+   - Interface loop **either retired** or reduced to non-derived outcomes only (substitution, scalar subquery, etc.).
+
+D. Publication hygiene (unchanged)
+   - `stripEphemeralLocationsFromConvertEgressColumnReferences`
+   - `consolidateConvertEgressColumnReferenceLists` (strip + semantic dedupe by `(name, table_ref)`)
+   - Merge back to `walker.symbolTable` / dictionaries.
+
+**AST rule (unchanged):** Never attach `locations` on walked AST `column` subtrees; ephemeral `locations` only on detached egress copies until step D.
+
+**Stepwise rollout (safe convergence):**
+
+| Step | Action | Safety gate |
+|------|--------|-------------|
+| **17.7.5b.1** | Inventory: grep all `consumeDerivedColumnUnknownEntry`, `applyConvertEgressExpandedDerivedSourceLineage`, `isDerivedColumn` branches in `convertSymbolTableToTableDictionary` + interface loop | Checklist in PR; no behavior change |
+| **17.7.5b.2** | Extract **read-only** `classifyColumnRefAtConvertEgress` (or flag on existing resolver) used by derived-phase visitor | Unit/canary: single derived bucket SELECT + WHERE — same goldens as today |
+| **17.7.5b.3** | Move **lineage expand** for interface + clauses to run only inside derived phase B (after classify, before consume) | `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` + `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` |
+| **17.7.5b.4** | Narrow interface loop: remove derived consume/expand; keep substitution + materialize paths that are not modifier-derived | Gate 195/195 + pivot class contract tests |
+| **17.7.5b.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch at end of phase B | Prove ambiguous + unambiguous both go through phase B |
+| **17.7.5b.6** | Add **parity tests**: same SQL with one PIVOT vs two PIVOTs producing same derived name — identical diagnostic count/locations and identical published `filters`/`interface` after consolidate | Closes “one ref vs many” regression class |
+| **17.7.5b.7** | Mark **17.7.5** ✅ when derived phase is the only derived path; refresh pivot class goldens under 17.6 policy | Full pivot/unpivot class green |
+
+**Relationship to other 17.7 items:**
+
+- **17.7.6** clause harvest should assume **B → C → D** ordering; no dedupe before phase B diagnostics.
+- **17.7.2** derivation-only publish changes *what* is on `def_query*`, not the phase order above.
+- **17.7.8** prune retirement remains after **17.7.7** contract matrix; convergence does not reintroduce convert prune.
+
+#### Phase 17.7 — Optional alias / qualifier diagnostics (closeout)
+
+These are **optional** additions after **17.7.4–17.7.6** (or alongside **17.7.7** test matrix). They clarify the distinction between **source primary aliases** (`p_src`, `u_src`, …) and **modifier result aliases** (`p`, `u`, `q`, …) seen in `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`.
+
+| ID | Surface | Existing coverage | Optional step |
+|----|---------|-------------------|---------------|
+| In-phrase derived qualifier | `UNPIVOT (u_src.sales_amount …)` | **17.0b** FATAL `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` (VALUE/FOR only) | **17.7.9** — generalize to all derived outputs inside modifier scope |
+| In-phrase physical qualifier | `PIVOT (SUM(p_src.sales_amount) …)` | WARNING/FATAL redundant/invalid operand (**16.4**) | unchanged |
+| Clause derived + source alias | `ON p_src.jan_sales_SUM = …` | none | **17.7.10** SEVERE_WARNING — prefer `p.jan_sales_SUM` |
+| Clause derived + modifier alias | `ON p.jan_sales_SUM = …` | allowed; `filters` / `table_alias` publish `table_ref=p` | unchanged |
+| Published `table_alias` | `p=p_src` plus `p_src=monthly_sales_long` | `enrichTableAliasMapWithRelationalModifierBucketAliases` + FROM registration | SQL may use only `p`/`u`/`q` on derived refs; map still lists both for resolution |
+
+**Suggested tests (when implemented):**
+
+- **17.7.9:** qualified PIVOT-derived name inside phrase (if grammatically allowed) or qualified derived token in modifier-local collection → FATAL.
+- **17.7.10:** `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` variant with `p_src.jan_sales_SUM` on ON line 6 → one SEVERE_WARNING; golden unchanged for symbol table aside from diagnostic list.
 
 ---
 
