@@ -1994,11 +1994,7 @@ public class SqlParseSymbolTreeHelper {
 	private ArrayList<Object> copyInterfaceReferenceList(ArrayList<Object> sourceRefs) {
 		ArrayList<Object> copy = new ArrayList<Object>(sourceRefs.size());
 		for (Object refObj : sourceRefs) {
-			if (refObj instanceof Map<?, ?> refMapObj) {
-				copy.add(new HashMap<String, Object>((Map<String, Object>) refMapObj));
-			} else {
-				copy.add(refObj);
-			}
+			copy.add(copyClauseColumnReferenceForEgress(refObj));
 		}
 		return copy;
 	}
@@ -2131,6 +2127,7 @@ public class SqlParseSymbolTreeHelper {
 					localDerivedColumns,
 					localSourceColumnsByBucket,
 					localTableAliasMap);
+			dedupeClauseColumnReferenceListInPlace(mutableRefs);
 		}
 	}
 
@@ -2149,6 +2146,7 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localSourceColumnsByBucket,
 				localTableAliasMap);
+		dedupeClauseColumnReferenceListInPlace((ArrayList<Object>) columnRefsObj);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2190,19 +2188,110 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		String candidateName = walker.extractReferenceNameFromInterfaceEntry(candidateRef);
-		String candidateTableRef = walker.extractReferenceTableRefFromInterfaceEntry(candidateRef);
+		Object egressRef = copyClauseColumnReferenceForEgress(candidateRef);
+		String candidateName = walker.extractReferenceNameFromInterfaceEntry(egressRef);
+		String candidateTableRef = walker.extractReferenceTableRefFromInterfaceEntry(egressRef);
 
 		for (Object existingRef : targetRefs) {
 			String existingName = walker.extractReferenceNameFromInterfaceEntry(existingRef);
 			String existingTableRef = walker.extractReferenceTableRefFromInterfaceEntry(existingRef);
 			if (equalsIgnoreCaseNullable(existingName, candidateName)
-					&& equalsIgnoreCaseNullable(existingTableRef, candidateTableRef)) {
+					&& equalsNullable(existingTableRef, candidateTableRef)) {
 				return;
 			}
 		}
 
-		targetRefs.add(candidateRef);
+		targetRefs.add(egressRef);
+	}
+
+	/**
+	 * Detached egress copy of a clause/interface column ref (never the AST {@code column} subtree).
+	 * Omits ephemeral {@code locations}; token payloads live on {@code unresolved_column_map} until materialized.
+	 */
+	@SuppressWarnings("unchecked")
+	public Object copyClauseColumnReferenceForEgress(Object columnRefObj) {
+		if (columnRefObj == null) {
+			return null;
+		}
+		if (!(columnRefObj instanceof Map<?, ?> sourceMapObj)) {
+			return columnRefObj;
+		}
+
+		Map<String, Object> sourceMap = (Map<String, Object>) sourceMapObj;
+		if (sourceMap.containsKey(MUMBLE_COLUMN_KEY)
+				&& sourceMap.get(MUMBLE_COLUMN_KEY) instanceof Map<?, ?>) {
+			return copyClauseColumnReferenceForEgress(sourceMap.get(MUMBLE_COLUMN_KEY));
+		}
+
+		HashMap<String, Object> egressMap = new HashMap<String, Object>();
+		for (Map.Entry<String, Object> entry : sourceMap.entrySet()) {
+			if ("locations".equals(entry.getKey())) {
+				continue;
+			}
+			egressMap.put(entry.getKey(), entry.getValue());
+		}
+		return egressMap.isEmpty() ? columnRefObj : egressMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void stripEphemeralLocationsFromColumnReferenceInPlace(Object refObj) {
+		if (!(refObj instanceof Map<?, ?> refMapObj)) {
+			return;
+		}
+		((Map<String, Object>) refMapObj).remove("locations");
+		Object columnObj = ((Map<String, Object>) refMapObj).get(MUMBLE_COLUMN_KEY);
+		if (columnObj instanceof Map<?, ?> columnMapObj) {
+			((Map<String, Object>) columnMapObj).remove("locations");
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void stripEphemeralLocationsFromColumnReferenceListInPlace(Object columnListObj) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefs)) {
+			return;
+		}
+		for (Object refObj : (ArrayList<Object>) columnRefs) {
+			stripEphemeralLocationsFromColumnReferenceInPlace(refObj);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void stripEphemeralLocationsFromConvertEgressColumnReferences(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj) {
+		if (localInterface != null) {
+			for (Object refsObj : localInterface.values()) {
+				stripEphemeralLocationsFromColumnReferenceListInPlace(refsObj);
+			}
+		}
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				stripEphemeralLocationsFromColumnReferenceListInPlace(
+						archivedScopeColumnReferenceContainers.get(containerKey));
+			}
+		}
+		if (updateAssignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				stripEphemeralLocationsFromColumnReferenceListInPlace(rhsRefsObj);
+			}
+		}
+	}
+
+	/**
+	 * Collapses a clause column-ref list ({@code filters}, {@code grouped_by}, {@code ordered_by},
+	 * UPDATE assignment RHS, etc.) to one entry per (name, table_ref), preserving first occurrence order.
+	 */
+	public void dedupeClauseColumnReferenceListInPlace(ArrayList<Object> columnRefs) {
+		if (columnRefs == null || columnRefs.isEmpty()) {
+			return;
+		}
+		ArrayList<Object> deduped = new ArrayList<Object>(columnRefs.size());
+		for (Object refObj : columnRefs) {
+			appendInterfaceReferenceIfMissing(deduped, refObj);
+		}
+		columnRefs.clear();
+		columnRefs.addAll(deduped);
 	}
 
 	public boolean equalsIgnoreCaseNullable(String left, String right) {
@@ -2213,6 +2302,16 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		return left.equalsIgnoreCase(right);
+	}
+
+	public boolean equalsNullable(String left, String right) {
+		if (left == null && right == null) {
+			return true;
+		}
+		if (left == null || right == null) {
+			return false;
+		}
+		return left.equals(right);
 	}
 
 	/**
@@ -3927,6 +4026,11 @@ public class SqlParseSymbolTreeHelper {
 				localCurrentQueryDictionary,
 				localUnresolvedColumnMap,
 				localDerivedColumns,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
+
+		stripEphemeralLocationsFromConvertEgressColumnReferences(
+				localInterface,
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
 
@@ -9133,9 +9237,7 @@ public class SqlParseSymbolTreeHelper {
 
 		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
 			Object col = subTree.get(MUMBLE_COLUMN_KEY);
-			if (!columnList.contains(col)) {
-				columnList.add(col);
-			}
+			appendInterfaceReferenceIfMissing(columnList, col);
 			return;
 		}
 		if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
@@ -9143,9 +9245,7 @@ public class SqlParseSymbolTreeHelper {
 			if (subst instanceof HashMap<?, ?> substMapObj) {
 				Object type = substMapObj.get("type");
 				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
-					if (!columnList.contains(subst)) {
-						columnList.add(subst);
-					}
+					appendInterfaceReferenceIfMissing(columnList, subst);
 				}
 			}
 			return;
@@ -10971,6 +11071,7 @@ public class SqlParseSymbolTreeHelper {
 
 		HashMap<String, Object> updatedRefMap = new HashMap<String, Object>(refMap);
 		updatedRefMap.put(MUMBLE_TABLE_REF_KEY, resolvedSourceRef);
+		updatedRefMap.remove("locations");
 		return updatedRefMap;
 	}
 
@@ -12705,6 +12806,7 @@ public class SqlParseSymbolTreeHelper {
 				index--;
 			}
 		}
+		dedupeClauseColumnReferenceListInPlace(columnRefs);
 	}
 
 	/**
@@ -14879,6 +14981,7 @@ public class SqlParseSymbolTreeHelper {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) clauseSubMap, flatList);
 		}
 
+		dedupeClauseColumnReferenceListInPlace(flatList);
 		walker.symbolTable.put(symbolTableKey, flatList);
 	}
 
@@ -14896,6 +14999,7 @@ public class SqlParseSymbolTreeHelper {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) onConditionMapObj, flatList);
 		}
 
+		dedupeClauseColumnReferenceListInPlace(flatList);
 		walker.symbolTable.put(MUMBLE_FILTERS_KEY, flatList);
 	}
 

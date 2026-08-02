@@ -993,6 +993,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (columnObj instanceof Map<?, ?>) {
 				HashMap<String, Object> columnMap = new HashMap<String, Object>();
 				columnMap.putAll((Map<String, Object>) columnObj);
+				columnMap.remove("locations");
 				if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)
 						&& !isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
 					return null;
@@ -1020,6 +1021,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (itemMap.containsKey(MUMBLE_NAME_KEY)) {
 			HashMap<String, Object> columnMap = new HashMap<String, Object>();
 			columnMap.putAll((Map<String, Object>) itemMap);
+			columnMap.remove("locations");
 			if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)
 					&& !isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
 				return null;

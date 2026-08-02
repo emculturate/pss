@@ -7663,12 +7663,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.clear();
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
-			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
-				ArrayList<String> tokenLocations = new ArrayList<String>();
-				tokenLocations.add(ctx.getStart().toString());
-				columnSubTree.put("locations", tokenLocations);
-			}
-
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
 			if (tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName && !columnName.isBlank()) {
@@ -7726,12 +7720,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			subMap.clear();
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
-
-			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
-				ArrayList<String> tokenLocations = new ArrayList<String>();
-				tokenLocations.add(ctx.getStart().toString());
-				columnSubTree.put("locations", tokenLocations);
-			}
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
