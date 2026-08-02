@@ -7665,6 +7665,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
+			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
+				symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
+						columnSubTree,
+						ctx.getStart().toString());
+			}
 			if (tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName && !columnName.isBlank()) {
 				recordRelationalModifierOperandReference(tableRef, columnName, ctx.getStart());
 			}
@@ -7723,6 +7728,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
+			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
+				symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
+						columnSubTree,
+						ctx.getStart().toString());
+			}
 		}
 	}
 

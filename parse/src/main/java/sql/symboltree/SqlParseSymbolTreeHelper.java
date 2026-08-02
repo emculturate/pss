@@ -2,6 +2,7 @@ package sql.symboltree;
 
 import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -35,6 +36,8 @@ public class SqlParseSymbolTreeHelper {
 	private final ArrayDeque<String> dependentQueryContextStack = new ArrayDeque<>();
 	private final ArrayDeque<String> pendingUnionSetOperatorsForNextParticipants = new ArrayDeque<>();
 	private final ArrayDeque<String> pendingIntersectSetOperatorsForNextParticipants = new ArrayDeque<>();
+	/** Parse token for a walked {@code column} subtree (clause egress only; never SELECT-list). */
+	private final IdentityHashMap<Object, String> clauseColumnSiteTokenBySubTree = new IdentityHashMap<>();
 
 	/** Phase 15.6: active only during {@link #convertSymbolTableToTableDictionary}. */
 	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
@@ -1219,16 +1222,27 @@ public class SqlParseSymbolTreeHelper {
 							localDerivedColumns);
 					String ambiguitySources = formatRelationalModifierDerivedColumnAmbiguitySources(
 							derivedBuckets);
-					String interfaceDictionaryKey = localInterface == null
-							? null
-							: findKeyIgnoreCase(localInterface, columnName);
-					Integer[] refLocation = resolveAmbiguousDerivedColumnRefSiteLocation(
-							refObj,
-							columnName,
-							localUnresolvedColumnMap,
-							localCurrentQueryDictionary,
-							interfaceDictionaryKey,
-							emittedDiagnosticLocations);
+					String interfaceDictionaryKey = MUMBLE_INTERFACE_KEY.equals(siteKey) && localInterface != null
+							? findKeyIgnoreCase(localInterface, columnName)
+							: null;
+					Integer[] refLocation;
+					if (MUMBLE_INTERFACE_KEY.equals(siteKey)) {
+						refLocation = resolveAmbiguousDerivedColumnRefSiteLocation(
+								refObj,
+								columnName,
+								localUnresolvedColumnMap,
+								localCurrentQueryDictionary,
+								interfaceDictionaryKey,
+								emittedDiagnosticLocations);
+					} else {
+						refLocation = resolveAmbiguousDerivedColumnRefSiteLocation(
+								refObj,
+								columnName,
+								localUnresolvedColumnMap,
+								null,
+								null,
+								emittedDiagnosticLocations);
+					}
 					emitAmbiguousDerivedColumnReferenceFatalIfNew(
 							columnName,
 							refLocation,
@@ -1354,6 +1368,16 @@ public class SqlParseSymbolTreeHelper {
 		return collectRelationalModifierStructuredDerivedColumnBucketKeys(
 				columnName,
 				localDerivedColumns).size() >= 2;
+	}
+
+	private boolean shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localDerivedColumns) {
+		return isAmbiguousUnqualifiedStructuredDerivedColumn(
+				columnName,
+				tableRef,
+				localDerivedColumns);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2127,8 +2151,47 @@ public class SqlParseSymbolTreeHelper {
 					localDerivedColumns,
 					localSourceColumnsByBucket,
 					localTableAliasMap);
-			dedupeClauseColumnReferenceListInPlace(mutableRefs);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void consolidateConvertEgressColumnReferenceLists(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj) {
+		if (localInterface != null) {
+			for (Object refsObj : localInterface.values()) {
+				consolidateClauseColumnReferenceListInPlace(refsObj);
+			}
+		}
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				consolidateClauseColumnReferenceListInPlace(
+						archivedScopeColumnReferenceContainers.get(containerKey));
+			}
+		}
+		if (updateAssignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				consolidateClauseColumnReferenceListInPlace(rhsRefsObj);
+			}
+		}
+	}
+
+	private void consolidateClauseColumnReferenceListInPlace(Object columnListObj) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
+			return;
+		}
+		ArrayList<Object> columnRefs = (ArrayList<Object>) columnRefsObj;
+		if (columnRefs.isEmpty()) {
+			return;
+		}
+		ArrayList<Object> consolidated = new ArrayList<Object>(columnRefs.size());
+		for (Object refObj : columnRefs) {
+			stripEphemeralLocationsFromColumnReferenceInPlace(refObj);
+			appendInterfaceReferenceIfMissing(consolidated, refObj);
+		}
+		columnRefs.clear();
+		columnRefs.addAll(consolidated);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2146,7 +2209,6 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localSourceColumnsByBucket,
 				localTableAliasMap);
-		dedupeClauseColumnReferenceListInPlace((ArrayList<Object>) columnRefsObj);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2202,6 +2264,51 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		targetRefs.add(egressRef);
+	}
+
+	/** Appends a detached egress copy for each convert-egress site (duplicates allowed until consolidate). */
+	public void appendClauseColumnReferenceForConvertEgress(
+			ArrayList<Object> targetRefs,
+			Object candidateRef) {
+		if (candidateRef == null) {
+			return;
+		}
+		Object egressRef = copyClauseColumnReferenceForEgress(candidateRef);
+		attachClauseColumnSiteTokenFromSourceSubTree(egressRef, candidateRef);
+		targetRefs.add(egressRef);
+	}
+
+	public void registerClauseColumnSiteTokenForColumnSubTree(Object columnSubTree, String tokenText) {
+		if (columnSubTree == null || tokenText == null || tokenText.isBlank()) {
+			return;
+		}
+		clauseColumnSiteTokenBySubTree.put(columnSubTree, tokenText);
+	}
+
+	public void clearClauseColumnSiteTokens() {
+		clauseColumnSiteTokenBySubTree.clear();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void attachClauseColumnSiteTokenFromSourceSubTree(Object egressRef, Object sourceColumnSubTree) {
+		if (egressRef == null || sourceColumnSubTree == null) {
+			return;
+		}
+		Object tokenSource = sourceColumnSubTree;
+		if (sourceColumnSubTree instanceof Map<?, ?> sourceMap
+				&& sourceMap.containsKey(MUMBLE_COLUMN_KEY)) {
+			tokenSource = sourceMap.get(MUMBLE_COLUMN_KEY);
+		}
+		String tokenText = clauseColumnSiteTokenBySubTree.remove(tokenSource);
+		if (tokenText == null || tokenText.isBlank()) {
+			return;
+		}
+		if (!(egressRef instanceof Map<?, ?> egressMapObj)) {
+			return;
+		}
+		ArrayList<String> locations = new ArrayList<String>(1);
+		locations.add(tokenText);
+		((Map<String, Object>) egressMapObj).put("locations", locations);
 	}
 
 	/**
@@ -3330,6 +3437,8 @@ public class SqlParseSymbolTreeHelper {
 			boolean updateHasFromClause,
 			boolean retainRelationalModifierHintsForContinuedFrom) {
 	
+		clearClauseColumnSiteTokens();
+
 		// deconstruct current symbol table into components for analysis
 		Object preservedInsertSourceSelectSequence = null;
 		if (walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null) {
@@ -3644,10 +3753,15 @@ public class SqlParseSymbolTreeHelper {
 										tableRef,
 										interfaceQualifiedCtx);
 						if (egressResult.hasExpandedDerivedSourceLineage()) {
-							consumeDerivedColumnUnknownEntry(
-									localUnresolvedColumnMap,
+							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
+									columnName,
 									tableRef,
-									columnName);
+									localDerivedColumns)) {
+								consumeDerivedColumnUnknownEntry(
+										localUnresolvedColumnMap,
+										tableRef,
+										columnName);
+							}
 							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
 									refs,
 									refIndex,
@@ -3656,10 +3770,15 @@ public class SqlParseSymbolTreeHelper {
 							continue;
 						}
 						if (egressResult.isDerivedColumn()) {
-							consumeDerivedColumnUnknownEntry(
-									localUnresolvedColumnMap,
+							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
+									columnName,
 									tableRef,
-									columnName);
+									localDerivedColumns)) {
+								consumeDerivedColumnUnknownEntry(
+										localUnresolvedColumnMap,
+										tableRef,
+										columnName);
+							}
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -3857,10 +3976,15 @@ public class SqlParseSymbolTreeHelper {
 										null,
 										interfaceUnqualifiedCtx);
 						if (egressResult.hasExpandedDerivedSourceLineage()) {
-							consumeDerivedColumnUnknownEntry(
-									localUnresolvedColumnMap,
+							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
+									columnName,
 									null,
-									columnName);
+									localDerivedColumns)) {
+								consumeDerivedColumnUnknownEntry(
+										localUnresolvedColumnMap,
+										null,
+										columnName);
+							}
 							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
 									refs,
 									refIndex,
@@ -3869,10 +3993,15 @@ public class SqlParseSymbolTreeHelper {
 							continue;
 						}
 						if (egressResult.isDerivedColumn()) {
-							consumeDerivedColumnUnknownEntry(
-									localUnresolvedColumnMap,
+							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
+									columnName,
 									null,
-									columnName);
+									localDerivedColumns)) {
+								consumeDerivedColumnUnknownEntry(
+										localUnresolvedColumnMap,
+										null,
+										columnName);
+							}
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -3989,6 +4118,14 @@ public class SqlParseSymbolTreeHelper {
 				localRelationalModifierSourceColumns,
 				localTableAliasMap);
 
+		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites(
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				localDerivedColumns,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
+
 		// Resolve ingress-captured unqualified entries (nested-scope merges, UPDATE no-FROM, etc.).
 		// Archived clause lists are validated separately via probeArchivedScopeClauseColumns.
 		if (!deferCorrelatedValueSubqueryQualifiedUnknowns) {
@@ -4021,15 +4158,12 @@ public class SqlParseSymbolTreeHelper {
 				deleteTargetTableRef,
 				deferCorrelatedValueSubqueryQualifiedUnknowns);
 
-		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites(
+		stripEphemeralLocationsFromConvertEgressColumnReferences(
 				localInterface,
-				localCurrentQueryDictionary,
-				localUnresolvedColumnMap,
-				localDerivedColumns,
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
 
-		stripEphemeralLocationsFromConvertEgressColumnReferences(
+		consolidateConvertEgressColumnReferenceLists(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
@@ -9237,7 +9371,7 @@ public class SqlParseSymbolTreeHelper {
 
 		if (subTree.containsKey(MUMBLE_COLUMN_KEY)) {
 			Object col = subTree.get(MUMBLE_COLUMN_KEY);
-			appendInterfaceReferenceIfMissing(columnList, col);
+			appendClauseColumnReferenceForConvertEgress(columnList, col);
 			return;
 		}
 		if (subTree.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
@@ -9245,7 +9379,7 @@ public class SqlParseSymbolTreeHelper {
 			if (subst instanceof HashMap<?, ?> substMapObj) {
 				Object type = substMapObj.get("type");
 				if (type != null && (MUMBLE_COLUMN_KEY.equals(type) || MUMBLE_PREDICAND_KEY.equals(type))) {
-					appendInterfaceReferenceIfMissing(columnList, subst);
+					appendClauseColumnReferenceForConvertEgress(columnList, subst);
 				}
 			}
 			return;
@@ -12806,7 +12940,6 @@ public class SqlParseSymbolTreeHelper {
 				index--;
 			}
 		}
-		dedupeClauseColumnReferenceListInPlace(columnRefs);
 	}
 
 	/**
@@ -14981,7 +15114,6 @@ public class SqlParseSymbolTreeHelper {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) clauseSubMap, flatList);
 		}
 
-		dedupeClauseColumnReferenceListInPlace(flatList);
 		walker.symbolTable.put(symbolTableKey, flatList);
 	}
 
@@ -14999,7 +15131,6 @@ public class SqlParseSymbolTreeHelper {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) onConditionMapObj, flatList);
 		}
 
-		dedupeClauseColumnReferenceListInPlace(flatList);
 		walker.symbolTable.put(MUMBLE_FILTERS_KEY, flatList);
 	}
 
