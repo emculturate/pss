@@ -3286,7 +3286,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final String query =
 			"SELECT jan_sales_SUM, sales_amount, month_name, feb_sales_SUM\n" +
 			"FROM monthly_sales_long p_src\n" +
-			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n" +
+			"PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) p\n" +
 			"JOIN monthly_sales u_src\n" +
 			"UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n" +
 			"  ON p.jan_sales_SUM = u.sales_amount AND u.month_name = 'jan_sales'\n" +
@@ -3295,7 +3295,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 			"  ON u.sales_amount = q.feb_sales_SUM\n" +
 			"WHERE p.jan_sales_SUM > 0\n" +
 			"  AND u.sales_amount > 0\n" +
-			"  AND q.feb_sales_SUM > 0;";
+			"  AND feb_sales_SUM > 0;";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);

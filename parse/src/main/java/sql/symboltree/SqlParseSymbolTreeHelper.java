@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -86,8 +87,9 @@ public class SqlParseSymbolTreeHelper {
 	public static final String RELATIONAL_MODIFIER_PIVOT_AGGREGATE_OPERAND_KEY = "pivot_aggregate_operand";
 
 	/**
-	 * Archived scope containers holding flat column-ref lists (WHERE, HAVING, QUALIFY, JOIN ON,
-	 * GROUP BY, ORDER BY, etc.) validated at scope exit via {@link #probeArchivedScopeClauseColumns}.
+	 * Archived scope containers holding flat column-ref lists (WHERE/HAVING/QUALIFY/JOIN ON,
+	 * GROUP BY, ORDER BY, etc.) validated at scope exit via {@link #probeArchivedScopeClauseColumns}
+	 * and included in {@link #forEachConvertEgressUnqualifiedColumnRefSite}.
 	 */
 	private static final String[] ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS = {
 			MUMBLE_FILTERS_KEY,
@@ -1180,47 +1182,178 @@ public class SqlParseSymbolTreeHelper {
 	 * SELECT-list origins are phase-1 ({@code exitSelect_item}); this is the modifier-definition
 	 * counterpart to {@link #recordInterfaceOutputClauseRefOnQueryDictionary} for clause usages.
 	 */
+	/**
+	 * Emits {@link SqlASTWalkerHelper#DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE} for every
+	 * unqualified convert-egress column ref site (SELECT interface, filters, GROUP BY, ORDER BY,
+	 * UPDATE assignment RHS, etc.) whose name is an ambiguous structured derived column.
+	 */
 	@SuppressWarnings("unchecked")
-	private void diagnoseAmbiguousUnqualifiedRelationalModifierDerivedInterfaceColumns(
+	private void diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites(
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localUnresolvedColumnMap,
-			HashMap<String, Object> localDerivedColumns) {
-		if (localInterface == null
-				|| localInterface.isEmpty()
-				|| localDerivedColumns == null
-				|| localDerivedColumns.isEmpty()) {
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj) {
+		if (localDerivedColumns == null || localDerivedColumns.isEmpty()) {
 			return;
 		}
 
-		for (String interfaceColumnName : new ArrayList<String>(localInterface.keySet())) {
-			if (interfaceColumnName == null || interfaceColumnName.isBlank()) {
-				continue;
-			}
-			ArrayList<String> derivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
-					interfaceColumnName,
-					localDerivedColumns);
-			if (derivedBuckets.size() < 2) {
-				continue;
-			}
+		HashSet<String> emittedDiagnosticLocations = new HashSet<String>();
+		LinkedHashSet<String> diagnosedAmbiguousColumnNames = new LinkedHashSet<String>();
 
-			Integer[] refLocation = null;
-			if (localCurrentQueryDictionary != null) {
-				refLocation = walker.getLineAndCharacterFromEntry(
-						localCurrentQueryDictionary.get(interfaceColumnName));
-			}
-			if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
-				refLocation = new Integer[] { null, null };
-			}
-			emitAmbiguousDerivedColumnReferenceFatal(
-					interfaceColumnName,
-					refLocation,
-					formatRelationalModifierDerivedColumnAmbiguitySources(derivedBuckets));
+		forEachConvertEgressUnqualifiedColumnRefSite(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				updateAssignmentsObj,
+				(siteKey, refObj, columnName) -> {
+					if (!isAmbiguousUnqualifiedStructuredDerivedColumn(
+							columnName,
+							null,
+							localDerivedColumns)) {
+						return;
+					}
+					diagnosedAmbiguousColumnNames.add(columnName);
+					ArrayList<String> derivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+							columnName,
+							localDerivedColumns);
+					String ambiguitySources = formatRelationalModifierDerivedColumnAmbiguitySources(
+							derivedBuckets);
+					String interfaceDictionaryKey = localInterface == null
+							? null
+							: findKeyIgnoreCase(localInterface, columnName);
+					Integer[] refLocation = resolveAmbiguousDerivedColumnRefSiteLocation(
+							refObj,
+							columnName,
+							localUnresolvedColumnMap,
+							localCurrentQueryDictionary,
+							interfaceDictionaryKey,
+							emittedDiagnosticLocations);
+					emitAmbiguousDerivedColumnReferenceFatalIfNew(
+							columnName,
+							refLocation,
+							ambiguitySources,
+							emittedDiagnosticLocations);
+				});
+
+		for (String columnName : diagnosedAmbiguousColumnNames) {
+			ArrayList<String> derivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+					columnName,
+					localDerivedColumns);
+			String ambiguitySources = formatRelationalModifierDerivedColumnAmbiguitySources(
+					derivedBuckets);
+			emitAmbiguousDerivedColumnReferenceFatalsFromUnresolvedLocations(
+					columnName,
+					localUnresolvedColumnMap,
+					ambiguitySources,
+					null,
+					emittedDiagnosticLocations);
 			consumeDerivedColumnUnknownEntry(
 					localUnresolvedColumnMap,
 					null,
-					interfaceColumnName);
+					columnName);
 		}
+	}
+
+	@FunctionalInterface
+	private interface ConvertEgressUnqualifiedColumnRefSiteVisitor {
+		void visit(String siteKey, Object refObj, String columnName);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void forEachConvertEgressUnqualifiedColumnRefSite(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj,
+			ConvertEgressUnqualifiedColumnRefSiteVisitor visitor) {
+		if (visitor == null) {
+			return;
+		}
+
+		if (localInterface != null && !localInterface.isEmpty()) {
+			for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+				String interfaceKey = interfaceEntry.getKey();
+				if (interfaceKey == null || interfaceKey.isBlank()) {
+					continue;
+				}
+				Object refsObj = interfaceEntry.getValue();
+				if (!(refsObj instanceof ArrayList<?> refs)) {
+					continue;
+				}
+				for (Object refObj : (ArrayList<Object>) refs) {
+					visitConvertEgressUnqualifiedColumnRefSite(
+							visitor,
+							MUMBLE_INTERFACE_KEY,
+							refObj);
+				}
+			}
+		}
+
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				visitConvertEgressUnqualifiedColumnRefList(
+						visitor,
+						containerKey,
+						archivedScopeColumnReferenceContainers.get(containerKey));
+			}
+		}
+
+		if (updateAssignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				visitConvertEgressUnqualifiedColumnRefList(
+						visitor,
+						UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY,
+						rhsRefsObj);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void visitConvertEgressUnqualifiedColumnRefList(
+			ConvertEgressUnqualifiedColumnRefSiteVisitor visitor,
+			String siteKey,
+			Object columnListObj) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
+			return;
+		}
+		for (Object refObj : (ArrayList<Object>) columnRefsObj) {
+			visitConvertEgressUnqualifiedColumnRefSite(visitor, siteKey, refObj);
+		}
+	}
+
+	private void visitConvertEgressUnqualifiedColumnRefSite(
+			ConvertEgressUnqualifiedColumnRefSiteVisitor visitor,
+			String siteKey,
+			Object refObj) {
+		if (visitor == null || refObj == null) {
+			return;
+		}
+		String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+		if (columnName == null
+				|| columnName.isBlank()
+				|| !isUnqualifiedColumnRef(tableRef)) {
+			return;
+		}
+		visitor.visit(siteKey, refObj, columnName);
+	}
+
+	private boolean isAmbiguousUnqualifiedStructuredDerivedColumn(
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localDerivedColumns) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return false;
+		}
+		if (!isUnqualifiedColumnRef(tableRef)) {
+			return false;
+		}
+		return collectRelationalModifierStructuredDerivedColumnBucketKeys(
+				columnName,
+				localDerivedColumns).size() >= 2;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1278,6 +1411,13 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> effectiveAliasMap,
 			HashMap<String, Object> visibleQuerySourceCollection,
 			HashMap<String, Object> localTableCollection) {
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(columnRefObj);
+		if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+				columnName,
+				tableRef,
+				activeConvertEgressDerivedColumns)) {
+			return;
+		}
 		if (!isInterfaceOutputColumnName(localInterface, columnName)) {
 			return;
 		}
@@ -2020,6 +2160,14 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableAliasMap) {
 		for (int index = 0; index < refs.size(); index++) {
 			Object refObj = refs.get(index);
+			String refColumnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			String refTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+			if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+					refColumnName,
+					refTableRef,
+					localDerivedColumns)) {
+				continue;
+			}
 			ArrayList<Object> singletonRefs = new ArrayList<Object>(1);
 			singletonRefs.add(refObj);
 			ArrayList<Object> expandedRefs = expandReferenceListForRelationalModifierDerivedColumn(
@@ -3686,12 +3834,14 @@ public class SqlParseSymbolTreeHelper {
 										visibleQuerySourceCollection);
 							}
 						} else {
+							if (resolutionResult.status == UnqualifiedScopeResolutionStatus.AMBIGUOUS_DERIVED_COLUMN) {
+								hasSpecificResolutionFatalForOutputColumn = true;
+								continue;
+							}
 							if (resolutionResult.status == UnqualifiedScopeResolutionStatus.AMBIGUOUS) {
 								if (shouldSuppressAmbiguousUnqualifiedDiagnostic(columnName, refLocation)) {
 									continue;
 								}
-								hasSpecificResolutionFatalForOutputColumn = true;
-							} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.AMBIGUOUS_DERIVED_COLUMN) {
 								hasSpecificResolutionFatalForOutputColumn = true;
 							} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.UNRESOLVED) {
 								hasSpecificResolutionFatalForOutputColumn = true;
@@ -3732,6 +3882,14 @@ public class SqlParseSymbolTreeHelper {
 				localInterface,
 				activeConvertEgressRelationalModifierContext);
 
+		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
+				localDerivedColumns,
+				localRelationalModifierSourceColumns,
+				localTableAliasMap);
+
 		// Resolve ingress-captured unqualified entries (nested-scope merges, UPDATE no-FROM, etc.).
 		// Archived clause lists are validated separately via probeArchivedScopeClauseColumns.
 		if (!deferCorrelatedValueSubqueryQualifiedUnknowns) {
@@ -3763,6 +3921,14 @@ public class SqlParseSymbolTreeHelper {
 				activeConvertEgressRelationalModifierContext,
 				deleteTargetTableRef,
 				deferCorrelatedValueSubqueryQualifiedUnknowns);
+
+		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites(
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				localDerivedColumns,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
 
 		// If UPDATE with no FROM was deferred, merge resolved target columns back into localTableCollection
 		if (isUpdateScope && !updateHasFromClause) {
@@ -3819,20 +3985,6 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localRelationalModifierSourceColumns,
 				activeConvertEgressRelationalModifierContext);
-
-		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
-				localInterface,
-				archivedScopeColumnReferenceContainers,
-				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
-				localDerivedColumns,
-				localRelationalModifierSourceColumns,
-				localTableAliasMap);
-
-		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedInterfaceColumns(
-				localInterface,
-				localCurrentQueryDictionary,
-				localUnresolvedColumnMap,
-				localDerivedColumns);
 
 		mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
 				localInterface,
@@ -10629,6 +10781,13 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
+			if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+					columnKey,
+					null,
+					localDerivedColumns)) {
+				continue;
+			}
+
 			if (isRelationalModifierDerivedColumnReference(
 					localDerivedColumns,
 					relationalModifierContext,
@@ -11273,6 +11432,21 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
+		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+		if (!qualifiedShape
+				&& ctx.localDerivedColumns != null
+				&& !ctx.localDerivedColumns.isEmpty()) {
+			ArrayList<String> ambiguousDerivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+					columnName,
+					ctx.localDerivedColumns);
+			if (ambiguousDerivedBuckets.size() >= 2) {
+				return ConvertEgressColumnResolutionResult.fromUnqualified(
+						UnqualifiedScopeResolutionResult.ambiguousDerivedColumn(
+								formatRelationalModifierDerivedColumnAmbiguitySources(
+										ambiguousDerivedBuckets)));
+			}
+		}
+
 		ArrayList<Object> expandedDerivedSourceLineage =
 				tryExpandRelationalModifierDerivedColumnSourceLineageAtConvertEgress(columnName, tableRef);
 		if (expandedDerivedSourceLineage != null) {
@@ -11284,7 +11458,6 @@ public class SqlParseSymbolTreeHelper {
 			return ConvertEgressColumnResolutionResult.derivedColumn();
 		}
 
-		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
 		if (qualifiedShape && ctx.resolveQualifiedWhenTableRefPresent) {
 			HashMap<String, Object> aliasMap = ctx.effectiveAliasMap != null
 					? ctx.effectiveAliasMap
@@ -11335,16 +11508,16 @@ public class SqlParseSymbolTreeHelper {
 			RelationalModifierConvertEgressContext relationalModifierContext,
 			HashMap<String, Object> localDerivedColumns,
 			boolean treatDerivedRegistryKeysAsDerivedColumn) {
-		if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierContext)) {
-			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
-		}
-
 		ArrayList<String> ambiguousDerivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
 				columnName,
 				localDerivedColumns);
 		if (ambiguousDerivedBuckets.size() >= 2) {
 			return UnqualifiedScopeResolutionResult.ambiguousDerivedColumn(
 					formatRelationalModifierDerivedColumnAmbiguitySources(ambiguousDerivedBuckets));
+		}
+
+		if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierContext)) {
+			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
 		}
 
 		UnpivotBinding unpivotBinding = resolveUnpivotBindingAtConvertEgress(
@@ -11543,6 +11716,117 @@ public class SqlParseSymbolTreeHelper {
 				columnName);
 	}
 
+	private static String formatAmbiguousDerivedDiagnosticLocationKey(Integer[] refLocation) {
+		if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
+			return null;
+		}
+		return refLocation[0] + ":" + refLocation[1];
+	}
+
+	private void emitAmbiguousDerivedColumnReferenceFatalIfNew(
+			String columnName,
+			Integer[] refLocation,
+			String possibleModifierSources,
+			HashSet<String> emittedDiagnosticLocations) {
+		String locationKey = formatAmbiguousDerivedDiagnosticLocationKey(refLocation);
+		if (locationKey == null) {
+			return;
+		}
+		if (emittedDiagnosticLocations != null && !emittedDiagnosticLocations.add(locationKey)) {
+			return;
+		}
+		emitAmbiguousDerivedColumnReferenceFatal(columnName, refLocation, possibleModifierSources);
+	}
+
+	private void emitAmbiguousDerivedColumnReferenceFatalsFromUnresolvedLocations(
+			String columnName,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			String possibleModifierSources,
+			Integer[] excludedLocation,
+			HashSet<String> emittedDiagnosticLocations) {
+		Object unresolvedEntry = getUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
+		if (!(unresolvedEntry instanceof Map<?, ?> unresolvedMap)) {
+			return;
+		}
+		Object locationsObj = unresolvedMap.get("locations");
+		if (!(locationsObj instanceof ArrayList<?> locations) || locations.isEmpty()) {
+			return;
+		}
+		for (Object locationObj : locations) {
+			if (locationObj == null) {
+				continue;
+			}
+			Integer[] location = walker.parseLineAndCharacterFromToken(locationObj.toString());
+			if (location == null || location.length < 2 || location[0] == null) {
+				continue;
+			}
+			if (excludedLocation != null
+					&& excludedLocation.length >= 2
+					&& excludedLocation[0] != null
+					&& excludedLocation[0].equals(location[0])
+					&& Objects.equals(excludedLocation[1], location[1])) {
+				continue;
+			}
+			emitAmbiguousDerivedColumnReferenceFatalIfNew(
+					columnName,
+					location,
+					possibleModifierSources,
+					emittedDiagnosticLocations);
+		}
+	}
+
+	private Integer[] resolveAmbiguousDerivedColumnRefSiteLocation(
+			Object refObj,
+			String columnName,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			String interfaceDictionaryKey,
+			HashSet<String> emittedDiagnosticLocations) {
+		Integer[] refLocation = walker.getLineAndCharacterFromEntry(refObj);
+		if (refLocation != null && refLocation.length >= 2 && refLocation[0] != null) {
+			return refLocation;
+		}
+		if (refObj instanceof Map<?, ?> refMap) {
+			Object columnObj = refMap.get(MUMBLE_COLUMN_KEY);
+			refLocation = walker.getLineAndCharacterFromEntry(columnObj);
+			if (refLocation != null && refLocation.length >= 2 && refLocation[0] != null) {
+				return refLocation;
+			}
+		}
+		if (interfaceDictionaryKey != null
+				&& localCurrentQueryDictionary != null
+				&& localCurrentQueryDictionary.containsKey(interfaceDictionaryKey)) {
+			refLocation = walker.getLineAndCharacterFromEntry(
+					localCurrentQueryDictionary.get(interfaceDictionaryKey));
+			if (refLocation != null && refLocation.length >= 2 && refLocation[0] != null) {
+				return refLocation;
+			}
+		}
+		Object unresolvedEntry = getUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
+		if (!(unresolvedEntry instanceof Map<?, ?> unresolvedMap)) {
+			return new Integer[] { null, null };
+		}
+		Object locationsObj = unresolvedMap.get("locations");
+		if (!(locationsObj instanceof ArrayList<?> locations)) {
+			return new Integer[] { null, null };
+		}
+		for (Object locationObj : locations) {
+			if (locationObj == null) {
+				continue;
+			}
+			Integer[] location = walker.parseLineAndCharacterFromToken(locationObj.toString());
+			String locationKey = formatAmbiguousDerivedDiagnosticLocationKey(location);
+			if (locationKey == null) {
+				continue;
+			}
+			if (emittedDiagnosticLocations != null && emittedDiagnosticLocations.contains(locationKey)) {
+				continue;
+			}
+			return location;
+		}
+		return new Integer[] { null, null };
+	}
+
 	/**
 	 * Apply a scope-exit unqualified resolution result: update tracked clause refs and
 	 * materialize tokens according to deferred vs immediate scope policy.
@@ -11732,6 +12016,10 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
+			if (isAmbiguousUnqualifiedStructuredDerivedColumn(columnName, null, localDerivedColumns)) {
+				continue;
+			}
+
 			HashMap<String, Object> localPhysicalTableCollection =
 					buildLocalPhysicalFromTableCollection(localTableCollection);
 			Set<ClauseRefLocation> clauseLocations = (unresolvedColumnLocations != null)
@@ -11824,6 +12112,7 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED,
 		DEFERRED,
 		AMBIGUOUS,
+		AMBIGUOUS_DERIVED_COLUMN,
 		UNRESOLVED,
 		EXPANDED_DERIVED_SOURCE_LINEAGE
 	}
@@ -11866,6 +12155,14 @@ public class SqlParseSymbolTreeHelper {
 		static ArchivedClauseColumnRefResult ambiguous(String ambiguousSourcesLabel) {
 			return new ArchivedClauseColumnRefResult(
 					ArchivedClauseColumnRefDisposition.AMBIGUOUS,
+					null,
+					ambiguousSourcesLabel,
+					null);
+		}
+
+		static ArchivedClauseColumnRefResult ambiguousDerivedColumn(String ambiguousSourcesLabel) {
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.AMBIGUOUS_DERIVED_COLUMN,
 					null,
 					ambiguousSourcesLabel,
 					null);
@@ -12096,6 +12393,13 @@ public class SqlParseSymbolTreeHelper {
 			return ArchivedClauseColumnRefResult.skip();
 		}
 
+		if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+				columnName,
+				tableRef,
+				localDerivedColumns)) {
+			return ArchivedClauseColumnRefResult.skip();
+		}
+
 		ConvertEgressResolutionContext clauseProbeCtx = new ConvertEgressResolutionContext(
 				localDerivedColumns,
 				relationalModifierContext,
@@ -12268,6 +12572,9 @@ public class SqlParseSymbolTreeHelper {
 			}
 			case AMBIGUOUS -> {
 				return ArchivedClauseColumnRefResult.ambiguous(resolutionResult.ambiguousSourcesLabel);
+			}
+			case AMBIGUOUS_DERIVED_COLUMN -> {
+				return ArchivedClauseColumnRefResult.skip();
 			}
 			case DEFERRED -> {
 				return ArchivedClauseColumnRefResult.deferred();

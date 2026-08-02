@@ -902,6 +902,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return level != null && level > 0;
 	}
 
+	/** True when the active parse frame is under {@code select_list} (not clause columns). */
+	public boolean isInsideSelectListScope() {
+		return isInsideSelectList();
+	}
+
 	private String findInterfaceKeyIgnoreCase(Map<String, Object> interfaceMap, String columnName) {
 		if (interfaceMap == null || interfaceMap.isEmpty() || columnName == null) {
 			return null;

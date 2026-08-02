@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (208 tests):
+ * Gate composition (210 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -28,6 +28,7 @@ import org.junit.Test;
  *   <li>Phase 13.4 intra–select-list forward alias (5): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}; {@code selfReferenceColumnAliasInSameSelectListHappyPathV1Test}, {@code selfReferenceColumnAliasReversedOrderUnresolvedV2Test}, {@code selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test}, {@code selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test}</li>
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
+ *   <li>PIVOT / UNPIVOT multi-modifier 17.7 gate (2): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}</li>
  *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
  *   <li>Endpoint parser extensions (2): {@code basicTupleSubstitutionVariableTest}, {@code inListVariableSubstitutionTest}</li>
  *   <li>JOIN duplicate-interface fatal (1): {@code handlingRepeatingColumnNamesInTheInterfaceV1}</li>
@@ -482,6 +483,18 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void pivotInIdentifierResolvedFromSubqueryWarningV1Test() {
 		pivotUnpivotTests.pivotInIdentifierResolvedFromSubqueryWarningV1Test();
+	}
+
+	// --- PIVOT / UNPIVOT multi-modifier 17.7 gate (2) ---
+
+	@Test
+	public void tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test() {
+		pivotUnpivotTests.tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test();
+	}
+
+	@Test
+	public void triplePivotUnpivotPivotJoinDerivedColumnsV1Test() {
+		pivotUnpivotTests.triplePivotUnpivotPivotJoinDerivedColumnsV1Test();
 	}
 
 	// --- Nested WITH clause / set-op matrix (4) ---
