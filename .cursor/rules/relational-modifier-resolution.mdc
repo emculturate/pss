@@ -25,8 +25,10 @@ alwaysApply: false
 - **Wait for user confirmation** before changing assertion strings. No bulk golden refresh scripts.
 - Prefer fixing resolution code when actual output matches contract.
 
-## Open work (Phase 17.6)
+## Open work (Phase 17.6 + 17.7)
 
-See worklist **17.6.1–17.6.8**: SELECT ambiguity (17.6.2), golden audit (17.6.1), subquery-backed triple variants (17.6.7), **convert egress completeness** (17.6.8 — window `OVER` clauses, derived `query_dictionary` token merge, tests).
+**17.6:** golden audit (17.6.1), subquery-backed triple variants (17.6.7), convert egress completeness (17.6.8). SELECT/PIVOT ambiguity (17.6.2–17.6.3) → implement via **17.7.5** ambiguous **derived** column diagnostic.
+
+**17.7 (active):** Structured `derivation` finalize — **17.7.1** parent `table_dictionary` commit for `source_columns` first. Closeout **17.7.8**: **remove** convert-time `pruneRelationalModifierDerivedColumnsFromTableDictionary` (and equivalents). **Invariant:** pivot/unpivot **output** names must never land on physical `table_dictionary` rows if finalize is correct; if they do, fix finalize — **do not** keep convert stripping as a safety net.
 
 Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–18.

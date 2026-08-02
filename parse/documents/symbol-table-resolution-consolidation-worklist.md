@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~75% | **17.0–17.5** done; **17.6** sibling-modifier hardening in progress — see below |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~75% | **17.0–17.5** done; **17.6** sibling hardening + **17.7** structured derivation finalize (active) — see below |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -1648,8 +1648,8 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 | **17.6.2** | **Multi-sibling UNPIVOT SELECT ambiguity** | P0 | ⏸️ Open | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test`: unqualified `sales_amount` / `month_name` in SELECT are ambiguous when three UNPIVOT tuples each expose the same derived names. WHERE correctly uses `u1.` / `u2.` / `u3.` qualifiers; SELECT should emit `AMBIGUOUS_COLUMN_REFERENCE` (or `UNRESOLVED_UNQUALIFIED_COLUMNS` with multiple modifier-alias sources), not silently bind to `u1`. Test currently asserts **no diagnostics** — wrong for SELECT-list refs. |
 | **17.6.3** | **Multi-sibling PIVOT SELECT ambiguity (parity)** | P1 | ⏸️ Open | Same rule for multiple sibling PIVOT derived registry keys when names collide in SELECT without tuple alias. Audit whether existing `pivotUnqualifiedOuterOutputsAfterJoinAmbiguousTest` coverage is sufficient or needs a triple-PIVOT join variant. |
 | **17.6.4** | **Separate symbol-table keys: hints list vs derived_columns map** | P2 | ⏸️ Deferred | Replace `DERIVED_COLUMNS_HINTS_KEY` dual use (`ArrayList` walk-time → `HashMap` egress) with distinct keys, e.g. `relational_modifier_hints` (list, walk only) vs `derived_columns` (map, egress only). Eliminates type collision that required `retainRelationalModifierHintsForContinuedFrom` band-aid. |
-| **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Deferred | Walk collects per-hint operand token snapshots only; `convertSymbolTableToTableDictionary` / `finalizeQueryScopeSymbolTable` applies each hint in order against canonical physical refs once. Reduces mid-FROM cross-contamination. |
-| **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Deferred | Key operand collections by `(operator, source_physical_table, modifier_alias)` so `canonicalizeLocalTableCollection` / prune runs one hint at a time without cross-operator column-name collisions (`sales_amount` as UNPIVOT derived vs PIVOT physical operand on shared `monthly_sales_long`). |
+| **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Superseded by **17.7** | Absorbed into **17.7.1** (parent table dict at modifier finalize) + **17.7.2**. |
+| **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | ⏸️ Open | For each triple join test (`triplePivot*`, `tripleUnpivot*`, `triplePivotUnpivot*`), add a **paired variant** that replaces each physical table in every FROM-join slot with a **subquery** presenting the columns that tuple's PIVOT/UNPIVOT needs. Verify sibling-modifier logic (operand materialization, per-hint lineage, SELECT ambiguity) works when source is `queryN` not a physical table. Pattern exists in suite for single-modifier cases (`FROM (SELECT … FROM monthly_sales_long) src` + PIVOT). Author goldens under **golden review policy** above — do not copy from physical-table variant assertions. |
 | **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | 🔄 In progress | Finish **one egress policy** for every place interface output column refs are collected or rewritten at scope exit. **(a) `query_dictionary` tokens for relational-modifier outputs:** phase-1 SELECT tokens plus UNPIVOT/PIVOT FOR/VALUE definition tokens and archived-clause usages must merge via `mergeResolvedColumnIntoDictionary` / `recordInterfaceOutputClauseRefOnQueryDictionary` (same as physical columns). `unpivotV0Test` is the contract test; add **WHERE/HAVING/QUALIFY** variants referencing `metric_name` / `metric_value` once (a) is green. **(b) Window `partition_by` and in-`over` `orderby`:** still nested AST only — not in `ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS`; derived-column lineage + token capture must route through walk-time flat lists (mirror `captureClauseDependencies`) or the same convert helper, not ad hoc AST walks. **(c) RETURNING:** DML RETURNING refs are normally on `interface` (already on interface egress); only revisit if a path keeps RETURNING-only lists off `interface`. **Test gap:** suite lacks derived-column refs inside `OVER (...)` and multi-site `query_dictionary` asserts for modifier outputs in clauses — add with 17.6.8, not as one-off fixes. |
 
@@ -1661,7 +1661,8 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 4. **17.6.3** — PIVOT parity test + fix if gap exists.
 5. **17.6.7** — subquery-backed triple-tuple variants (after 17.6.2 behavior is signed off; exercises query-backed UNPIVOT source path from policy).
 6. **17.6.8** — complete egress for derived `query_dictionary` + window archive keys + targeted tests (`unpivotV0` clause variant, optional `OVER` case).
-7. **17.6.4–17.6.6** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
+7. **17.6.4** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
+8. **17.7** — structured derivation finalize track (**17.7.1** first); mandatory closeout **17.7.8** removes convert derived-on-physical prune entirely.
 
 **17.6.2 expected behavior sketch:**
 
@@ -1690,7 +1691,36 @@ FROM (
 PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p
 ```
 
-For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `feb_sales`, …) plus any wide columns referenced elsewhere. Operand materialization should land on **query dictionary / query-backed source ref** per [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md), not alias-keyed physical buckets. Compare behavior to single-modifier subquery tests already in `SqlEventWalkerPivotUnpivotTests` (~L434, ~L1451, ~L1999).
+For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `feb_sales`, …) plus any wide columns referenced elsewhere. Operand materialization should land on **query dictionary / query-backed source ref** per [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md), not alias-keyed physical buckets. Compare behavior to single-modifier sibling subquery tests already in `SqlEventWalkerPivotUnpivotTests` (~L434, ~L1451, ~L1999).
+
+### Phase 17.7 — Structured `derivation` finalize (authoritative operands + derived buckets)
+
+**Goal:** PIVOT/UNPIVOT symbol-table finalization at `exitTable_primary` / tuple primary is the **only** place that decides which names are **physical source operands** vs **derived outputs** for each sibling modifier. Parent `table_dictionary` and parent `derivation.{source_columns,derived_columns}.{alias|tuple_N}` are authoritative. Convert egress **publishes and harvests** clause refs; it does **not** re-derive placement, does **not** use flat walk keys on `def_query*` for pivot/unpivot prune, and does **not** keep a convert-time “safety net” that strips wrongly placed derived names from physical tables.
+
+**Invariant (closeout gate for 17.7):** Under correct finalize, a pivot **output** name (e.g. `jan_sales_SUM`) must **never** be collected into `table_dictionary[monthly_sales_long]` (or any physical key) in the first place. Therefore **no** convert pass may be required to remove such names by matching derived buckets against physical dict keys. If a test shows `jan_sales_SUM` on `monthly_sales_long` after full walk+convert, treat it as a **finalize / structured-walk bug** and fix upstream — **do not** reintroduce global or bucket-scoped “strip derived output from physical table” logic at convert.
+
+**Supersedes / absorbs:** **17.6.5** (operand materialization at scope exit → **finalize at modifier exit**), **17.6.6** (per-hint buckets → **`derivation` subtree keyed by `alias|tuple_N`**). **17.6.4** remains related (hints list vs map) but is orthogonal until derivation-only publish is stable.
+
+| ID | Step | Status | Notes |
+|----|------|--------|-------|
+| **17.7.1** | **Finalize: merge `source_columns` into parent `table_dictionary`** | 🔄 Active | At `finalizeRelationalModifierScope` / primary exit: resolve physical `dictionarySourceRef`; commit operand + IN-list source columns to **parent** scope table dict (and walker global dict parity with other FROM primaries). Fixes `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` (`monthly_sales_long` empty while pivot operands exist). **Do first.** |
+| **17.7.2** | **Derivation-only derived on parent** | ⏸️ Open | Publish only `derivation.derived_columns[bucketKey]` (+ `source_columns`) on parent `def_query*`; retire flat `derived_columns` / binding maps on published payload where contract allows. Modifier-local prune of **derived outputs** on **this primary’s physical row only** at finalize (not query-wide name match). |
+| **17.7.3** | **Convert harvest: structured `derivation` walk only** | ⏸️ Open | `canonicalizeLocalTableCollection` / clause egress: per-bucket context for sibling modifiers; **no** query-wide `isRelationalModifierDerivedOutputColumnName(name, entireDerivedMap)` table-dict removal. Transitional only until **17.7.8** — not a substitute for 17.7.1–17.7.2. |
+| **17.7.4** | **Diagnostic (1): missing source vs non-table interface** | ⏸️ Open | At pivot/unpivot finalize: all relational-modifier **source** operands (PIVOT aggregate/FOR, PIVOT IN identifiers, UNPIVOT VALUE/FOR/IN) must resolve against `resolvePrimarySourceInterface` when source is subquery/CTE — extend beyond `DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED` alone. |
+| **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | ⏸️ Open | Before regular unqualified resolution: scan `derivation.derived_columns` buckets; **1** match → bind; **≥2** → emit **ambiguous derived column** diagnostic (list `tuple_N`/aliases); **always** remove from `unresolved_column` to avoid follow-on bogus errors. Align **17.6.2** / **17.6.3** tests (dedicated message id TBD; not silent SELECT bind). |
+| **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. |
+| **17.7.7** | **Tests + golden review** | ⏸️ Open | `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`, `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, diagnostic tests for **17.7.4–17.7.5**; suite golden refresh only under **17.6 golden review policy**. |
+| **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ⏸️ Open | **After** 17.7.1–17.7.2 green + 17.7.7 contract tests pass: **delete** `pruneRelationalModifierDerivedColumnsFromTableDictionary` and any equivalent convert-time logic whose purpose is “remove pivot/unpivot **output** names from physical `table_dictionary` rows.” Post-removal regression: if `jan_sales_SUM` (or any derived registry key) appears on a physical table key, **fail the test and fix finalize** — never restore convert stripping. |
+
+**Recommended sequencing (17.7 track):**
+
+1. **17.7.1** → verify triple u1/p/u2 table_dictionary.
+2. **17.7.2** → derivation-only publish + modifier-local derived prune at finalize.
+3. **17.7.3** (minimal / delete paths as 17.7.1–17.7.2 absorb behavior) → **17.7.5** + **17.7.4** diagnostics + **17.7.6** harvest.
+4. **17.7.7** — behavioral + diagnostic tests.
+5. **17.7.8** — mandatory closeout: remove convert prune; full pivot/unpivot suite + gate.
+
+**Parallel with 17.6:** **17.6.8** egress token merge can continue in parallel; **17.6.2** should land via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
 
 ---
 

@@ -99,7 +99,9 @@ When multiple PIVOT or UNPIVOT operators are **siblings** in the same `query_spe
 | **Unqualified in WHERE / JOIN ON / GROUP BY / …** | Same ambiguity rules as other multi-source columns — multiple visible modifier aliases → diagnostic. |
 | **Unqualified in SELECT list** | **Must not** silently pick one tuple when ≥2 sibling modifiers expose the same derived name. Emit `AMBIGUOUS_COLUMN_REFERENCE` (see **17.6.2**). |
 
-Walk-time hints remain **per-operator** (append-only list); consolidation to published `derived_columns` / `table_dictionary` happens at scope exit only. Structural separation of hints list vs derived map is tracked as **17.6.4–17.6.6**.
+Walk-time hints remain **per-operator** (append-only list); consolidation to published `derivation` buckets and parent `table_dictionary` happens at **modifier finalize** (`exitTable_primary` / tuple primary) and query scope exit for clause harvest — see **Phase 17.7** in the worklist. Structural separation of hints list vs derived map is tracked as **17.6.4**; per-sibling operand/derived buckets are **17.7** (`derivation.source_columns` / `derivation.derived_columns` keyed by `alias|tuple_N`).
+
+**Convert prune retirement (17.7.8):** Convert must not rely on stripping pivot/unpivot **output** names from physical `table_dictionary` entries (e.g. `jan_sales_SUM` on `monthly_sales_long`). Correct finalize prevents those names from being materialized on physical keys; any leak is a finalize bug, not something convert repairs.
 
 **Query-backed sources (17.6.7):** When a modifier's immediate source is a subquery (`FROM (SELECT …) alias`), operand and derived-column semantics are unchanged — only the **source ref** is a `queryN` (or subquery alias) rather than a physical table. Triple-tuple tests must be duplicated with subquery-backed FROM slots to prove sibling-modifier logic does not assume physical-table-only sources.
 
