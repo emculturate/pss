@@ -12,6 +12,34 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	// UNPIVOT RELATIONAL OPERATOR TESTS
 
 	@Test
+	public void unpivotV0Test() {
+		final String query = "SELECT id, metric_name, metric_value\n" 
+			+ " FROM my_table \n "
+			+ " UNPIVOT (\n" 
+			+ " metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=null}}, 2={column={name=metric_name, table_ref=null}}, 3={column={name=metric_value, table_ref=null}}}, from={unpivot={value={column={name=metric_value, table_ref=null}}, for={column={name=metric_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}, 3={name=mar_sales, table_ref=null}}}, table={alias=null, table=my_table}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[metric_name, metric_value, id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{my_table={jan_sales=[[@15,99:107='jan_sales',<381>,4:34]], mar_sales=[[@19,121:129='mar_sales',<381>,4:56]], id=[[@1,7:8='id',<381>,1:7]], feb_sales=[[@17,110:118='feb_sales',<381>,4:45]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={metric_value=[[@5,24:35='metric_value',<381>,1:24]], id=[[@1,7:8='id',<381>,1:7]], metric_name=[[@3,11:21='metric_name',<381>,1:11]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={metric_name=[[@3,11:21='metric_name',<381>,1:11]], metric_value=[[@5,24:35='metric_value',<381>,1:24]], id=[[@1,7:8='id',<381>,1:7]]}, table_dictionary={my_table={jan_sales=[[@15,99:107='jan_sales',<381>,4:34]], mar_sales=[[@19,121:129='mar_sales',<381>,4:56]], id=[[@1,7:8='id',<381>,1:7]], feb_sales=[[@17,110:118='feb_sales',<381>,4:45]]}}, interface={metric_name=[{name=metric_name, table_ref=my_table}], metric_value=[{name=metric_value, table_ref=my_table}], id=[{name=id, table_ref=my_table}]}, derived_columns={tuple_0={metric_value=[[@10,66:77='metric_value',<381>,4:1]], metric_name=[[@12,83:93='metric_name',<381>,4:18]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
 	public void unpivotV1Test() {
 		final String query = "SELECT id, metric_name, jan_sales, feb_sales, mar_sales, metric_value\n" 
 			+ " FROM my_table \n "

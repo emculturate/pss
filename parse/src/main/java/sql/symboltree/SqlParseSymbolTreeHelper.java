@@ -11793,6 +11793,34 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private boolean isRelationalModifierDerivedOutputColumnName(
+			String columnName,
+			HashMap<String, Object> localDerivedColumns) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return false;
+		}
+
+		for (Object bucketValue : localDerivedColumns.values()) {
+			if (!(bucketValue instanceof Map<?, ?> bucketMapObj)) {
+				continue;
+			}
+			Map<String, Object> bucketMap = (Map<String, Object>) bucketMapObj;
+			String bucketColumnKey = findKeyIgnoreCase(bucketMap, columnName);
+			if (bucketColumnKey == null) {
+				continue;
+			}
+			Object columnRefsObj = bucketMap.get(bucketColumnKey);
+			if (columnRefsObj instanceof ArrayList<?>) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private boolean isRelationalModifierPhysicalOperandColumn(
 			String columnName,
 			ArrayList<Object> relationalModifierInterfaceHints) {
@@ -11840,6 +11868,10 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String columnKey : new ArrayList<String>(tableColumns.keySet())) {
 			if (columnKey == null || columnKey.isBlank()) {
+				continue;
+			}
+			if (isRelationalModifierDerivedOutputColumnName(columnKey, localDerivedColumns)) {
+				tableColumns.remove(columnKey);
 				continue;
 			}
 			if (containsKeyIgnoreCase(localDerivedColumns, columnKey)) {
