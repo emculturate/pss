@@ -3318,20 +3318,19 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 
-		Assert.assertEquals(
-				"Interface is wrong",
+		Assert.assertEquals("AST is wrong",
+		 "{SQL={select={1={column={name=a, table_ref=null}}, 2={alias=aa, calc={left={column={name=b, table_ref=null}}, right={literal=1}, operator=+}}, 3={alias=x, calc={left={column={name=a, table_ref=null}}, right={column={name=b, table_ref=null}}, operator=+}}}, having={and={1={condition={left={column={name=a, table_ref=null}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=aa, table_ref=null}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=x, table_ref=null}}, right={literal=0}, operator=>}}}}, orderby={1={null_order=null, predicand={column={name=a, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=b, table_ref=null}}, sort_order=ASC}, 3={null_order=null, predicand={column={name=aa, table_ref=null}}, sort_order=ASC}, 4={null_order=null, predicand={column={name=x, table_ref=null}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}, where={and={1={condition={left={column={name=a, table_ref=null}}, right={literal=1}, operator==}}, 2={condition={left={column={name=b, table_ref=null}}, right={literal=2}, operator==}}, 3={condition={left={column={name=aa, table_ref=null}}, right={literal=3}, operator==}}, 4={condition={left={column={name=x, table_ref=null}}, right={literal=4}, operator==}}}}, groupby={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=aa, table_ref=null}}, 4={column={name=x, table_ref=null}}}, qualify={condition={left={window_function={over={partition_by={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=aa, table_ref=null}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=x, table_ref=null}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong",
 				"[aa, a, x]",
 				extractor.getInterface().toString());
-		Assert.assertEquals(
-				"Table Dictionary is wrong",
+		Assert.assertEquals("Table Dictionary is wrong",
 				"{tab1={a=[[@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23], [@17,50:50='a',<381>,3:6], [@34,96:96='a',<381>,4:9], [@42,115:115='a',<381>,5:7], [@61,182:182='a',<381>,6:40], [@74,216:216='a',<381>,7:9]], b=[[@3,10:10='b',<381>,1:10], [@11,27:27='b',<381>,1:27], [@21,60:60='b',<381>,3:16], [@36,99:99='b',<381>,4:12], [@63,185:185='b',<381>,6:43], [@76,219:219='b',<381>,7:12]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals(
-				"Query Column Dictionary is wrong",
+		Assert.assertEquals("Query Column Dictionary is wrong",
 				"{query0={aa=[[@7,19:20='aa',<381>,1:19], [@25,70:71='aa',<381>,3:26], [@38,102:103='aa',<381>,4:15], [@46,125:126='aa',<381>,5:17], [@66,196:197='aa',<381>,6:54], [@78,222:223='aa',<381>,7:15]], x=[[@13,32:32='x',<381>,1:32], [@29,81:81='x',<381>,3:37], [@40,106:106='x',<381>,4:19], [@50,136:136='x',<381>,5:28], [@68,200:200='x',<381>,6:58], [@80,226:226='x',<381>,7:19]], a=[[@1,7:7='a',<381>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals(
-				"Symbol Table is wrong",
+		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={query_dictionary={aa=[[@7,19:20='aa',<381>,1:19], [@25,70:71='aa',<381>,3:26], [@38,102:103='aa',<381>,4:15], [@46,125:126='aa',<381>,5:17], [@66,196:197='aa',<381>,6:54], [@78,222:223='aa',<381>,7:15]], a=[[@1,7:7='a',<381>,1:7]], x=[[@13,32:32='x',<381>,1:32], [@29,81:81='x',<381>,3:37], [@40,106:106='x',<381>,4:19], [@50,136:136='x',<381>,5:28], [@68,200:200='x',<381>,6:58], [@80,226:226='x',<381>,7:19]]}, table_dictionary={tab1={a=[[@1,7:7='a',<381>,1:7], [@9,23:23='a',<381>,1:23], [@17,50:50='a',<381>,3:6], [@34,96:96='a',<381>,4:9], [@42,115:115='a',<381>,5:7], [@61,182:182='a',<381>,6:40], [@74,216:216='a',<381>,7:9]], b=[[@3,10:10='b',<381>,1:10], [@11,27:27='b',<381>,1:27], [@21,60:60='b',<381>,3:16], [@36,99:99='b',<381>,4:12], [@63,185:185='b',<381>,6:43], [@76,219:219='b',<381>,7:12]]}}, grouped_by=[{name=a, table_ref=tab1}, {name=b, table_ref=null}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], ordered_by=[{name=a, table_ref=tab1}, {name=b, table_ref=null}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], filters=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}, {name=aa, table_ref=tab1}, {name=x, table_ref=tab1}], interface={aa=[{name=b, table_ref=tab1}], a=[{name=a, table_ref=tab1}], x=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
