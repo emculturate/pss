@@ -155,6 +155,7 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED_UNPIVOT_IN_SOURCE,
 		DEFERRED,
 		AMBIGUOUS,
+		AMBIGUOUS_DERIVED_COLUMN,
 		UNRESOLVED
 	}
 
@@ -224,6 +225,13 @@ public class SqlParseSymbolTreeHelper {
 		static UnqualifiedScopeResolutionResult ambiguous(String ambiguousSourcesLabel) {
 			return new UnqualifiedScopeResolutionResult(
 					UnqualifiedScopeResolutionStatus.AMBIGUOUS,
+					null,
+					ambiguousSourcesLabel);
+		}
+
+		static UnqualifiedScopeResolutionResult ambiguousDerivedColumn(String ambiguousSourcesLabel) {
+			return new UnqualifiedScopeResolutionResult(
+					UnqualifiedScopeResolutionStatus.AMBIGUOUS_DERIVED_COLUMN,
 					null,
 					ambiguousSourcesLabel);
 		}
@@ -1173,6 +1181,49 @@ public class SqlParseSymbolTreeHelper {
 	 * counterpart to {@link #recordInterfaceOutputClauseRefOnQueryDictionary} for clause usages.
 	 */
 	@SuppressWarnings("unchecked")
+	private void diagnoseAmbiguousUnqualifiedRelationalModifierDerivedInterfaceColumns(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localDerivedColumns) {
+		if (localInterface == null
+				|| localInterface.isEmpty()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return;
+		}
+
+		for (String interfaceColumnName : new ArrayList<String>(localInterface.keySet())) {
+			if (interfaceColumnName == null || interfaceColumnName.isBlank()) {
+				continue;
+			}
+			ArrayList<String> derivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+					interfaceColumnName,
+					localDerivedColumns);
+			if (derivedBuckets.size() < 2) {
+				continue;
+			}
+
+			Integer[] refLocation = null;
+			if (localCurrentQueryDictionary != null) {
+				refLocation = walker.getLineAndCharacterFromEntry(
+						localCurrentQueryDictionary.get(interfaceColumnName));
+			}
+			if (refLocation == null || refLocation.length < 2 || refLocation[0] == null) {
+				refLocation = new Integer[] { null, null };
+			}
+			emitAmbiguousDerivedColumnReferenceFatal(
+					interfaceColumnName,
+					refLocation,
+					formatRelationalModifierDerivedColumnAmbiguitySources(derivedBuckets));
+			consumeDerivedColumnUnknownEntry(
+					localUnresolvedColumnMap,
+					null,
+					interfaceColumnName);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
 	private void mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
@@ -1197,6 +1248,12 @@ public class SqlParseSymbolTreeHelper {
 				}
 				String interfaceKey = findKeyIgnoreCase(localInterface, derivedColumnName);
 				if (interfaceKey == null) {
+					continue;
+				}
+				ArrayList<String> derivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+						derivedColumnName,
+						localDerivedColumns);
+				if (derivedBuckets.size() >= 2) {
 					continue;
 				}
 				Object definitionTokens = columnEntry.getValue();
@@ -1377,6 +1434,61 @@ public class SqlParseSymbolTreeHelper {
 			sourceRefs.add(sourceRef);
 		}
 		return sourceRefs;
+	}
+
+	/**
+	 * True when {@code columnName} is recorded as a relational-modifier source operand for
+	 * {@code physicalTableRef} in structured {@code derivation.source_columns} buckets.
+	 */
+	@SuppressWarnings("unchecked")
+	public boolean isRelationalModifierSourceColumnForPhysicalTable(
+			String columnName,
+			String physicalTableRef,
+			HashMap<String, Object> sourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| physicalTableRef == null
+				|| physicalTableRef.isBlank()
+				|| sourceColumnsByBucket == null
+				|| sourceColumnsByBucket.isEmpty()) {
+			return false;
+		}
+
+		String canonicalPhysical = resolveCanonicalPhysicalTableRef(physicalTableRef, localTableAliasMap);
+		if (canonicalPhysical == null || canonicalPhysical.isBlank()) {
+			canonicalPhysical = normalizeTableRef(physicalTableRef);
+		}
+		if (canonicalPhysical == null || canonicalPhysical.isBlank()) {
+			return false;
+		}
+
+		for (Object bucketObj : sourceColumnsByBucket.values()) {
+			if (bucketObj instanceof ArrayList<?> sourceRefList) {
+				for (Object refObj : sourceRefList) {
+					if (!(refObj instanceof Map<?, ?> refMap)) {
+						continue;
+					}
+					Object nameObj = refMap.get(MUMBLE_NAME_KEY);
+					if (!(nameObj instanceof String sourceName) || sourceName.isBlank()) {
+						continue;
+					}
+					if (!sourceName.equalsIgnoreCase(columnName)) {
+						continue;
+					}
+					Object tableRefObj = refMap.get(MUMBLE_TABLE_REF_KEY);
+					String sourceTableRef = tableRefObj instanceof String tableRefValue ? tableRefValue : null;
+					String sourcePhysical = resolveCanonicalPhysicalTableRef(sourceTableRef, localTableAliasMap);
+					if (sourcePhysical == null || sourcePhysical.isBlank()) {
+						sourcePhysical = normalizeTableRef(sourceTableRef);
+					}
+					if (sourcePhysical != null && sourcePhysical.equalsIgnoreCase(canonicalPhysical)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	public boolean hasRelationalModifierBucketDerivedColumns(HashMap<String, Object> localDerivedColumns) {
@@ -1698,6 +1810,44 @@ public class SqlParseSymbolTreeHelper {
 			matchedBucketKey = bucketEntry.getKey();
 		}
 		return matchedBucketKey;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<String> collectRelationalModifierStructuredDerivedColumnBucketKeys(
+			String columnName,
+			HashMap<String, Object> localDerivedColumns) {
+		ArrayList<String> bucketKeys = new ArrayList<String>();
+		if (columnName == null
+				|| columnName.isBlank()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return bucketKeys;
+		}
+
+		for (Map.Entry<String, Object> bucketEntry : localDerivedColumns.entrySet()) {
+			String bucketKey = bucketEntry.getKey();
+			if (bucketKey == null || bucketKey.isBlank()) {
+				continue;
+			}
+			Object bucketObj = bucketEntry.getValue();
+			if (!(bucketObj instanceof Map<?, ?> bucketMap)) {
+				continue;
+			}
+			if (!isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)) {
+				continue;
+			}
+			if (containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
+				bucketKeys.add(bucketKey);
+			}
+		}
+		return bucketKeys;
+	}
+
+	private String formatRelationalModifierDerivedColumnAmbiguitySources(ArrayList<String> bucketKeys) {
+		if (bucketKeys == null || bucketKeys.isEmpty()) {
+			return "[]";
+		}
+		return bucketKeys.toString();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3541,6 +3691,8 @@ public class SqlParseSymbolTreeHelper {
 									continue;
 								}
 								hasSpecificResolutionFatalForOutputColumn = true;
+							} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.AMBIGUOUS_DERIVED_COLUMN) {
+								hasSpecificResolutionFatalForOutputColumn = true;
 							} else if (resolutionResult.status == UnqualifiedScopeResolutionStatus.UNRESOLVED) {
 								hasSpecificResolutionFatalForOutputColumn = true;
 							}
@@ -3632,6 +3784,7 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localTableAliasMap,
 				localDerivedColumns,
+				localRelationalModifierSourceColumns,
 				activeConvertEgressRelationalModifierContext);
 
 		if (localTableCollection != null && localTableCollection.size() > 0) {
@@ -3658,11 +3811,13 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localTableAliasMap,
 				localDerivedColumns,
+				localRelationalModifierSourceColumns,
 				activeConvertEgressRelationalModifierContext);
 		canonicalizeLocalTableCollection(
 				currentTableDictionary,
 				localTableAliasMap,
 				localDerivedColumns,
+				localRelationalModifierSourceColumns,
 				activeConvertEgressRelationalModifierContext);
 
 		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
@@ -3672,6 +3827,12 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localRelationalModifierSourceColumns,
 				localTableAliasMap);
+
+		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedInterfaceColumns(
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				localDerivedColumns);
 
 		mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
 				localInterface,
@@ -3766,6 +3927,7 @@ public class SqlParseSymbolTreeHelper {
 					globalTableDictionary,
 					localTableAliasMap,
 					localDerivedColumns,
+					localRelationalModifierSourceColumns,
 					activeConvertEgressRelationalModifierContext);
 		}
 
@@ -10121,6 +10283,15 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (tableRef == null || tableRef.isBlank()) {
+			ArrayList<String> structuredBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+					columnName,
+					localDerivedColumns);
+			if (structuredBuckets.size() >= 2) {
+				return false;
+			}
+			if (structuredBuckets.size() == 1) {
+				return true;
+			}
 			return true;
 		}
 		if (relationalModifierContext != null
@@ -11168,6 +11339,14 @@ public class SqlParseSymbolTreeHelper {
 			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
 		}
 
+		ArrayList<String> ambiguousDerivedBuckets = collectRelationalModifierStructuredDerivedColumnBucketKeys(
+				columnName,
+				localDerivedColumns);
+		if (ambiguousDerivedBuckets.size() >= 2) {
+			return UnqualifiedScopeResolutionResult.ambiguousDerivedColumn(
+					formatRelationalModifierDerivedColumnAmbiguitySources(ambiguousDerivedBuckets));
+		}
+
 		UnpivotBinding unpivotBinding = resolveUnpivotBindingAtConvertEgress(
 				columnName,
 				null,
@@ -11335,6 +11514,35 @@ public class SqlParseSymbolTreeHelper {
 				null);
 	}
 
+	private void emitAmbiguousDerivedColumnReferenceFatal(
+			String columnName,
+			Integer[] refLocation,
+			String possibleModifierSources) {
+		String diagCode = walker.getDiagnosticCode(
+				SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE);
+		String diagTemplate = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Ambiguous derived column reference '%s' at (l:%s c:%s). Possible sources: %s",
+						columnName,
+						refLocation[0],
+						refLocation[1],
+						possibleModifierSources)
+				: String.format(diagTemplate,
+						columnName,
+						refLocation[0],
+						refLocation[1],
+						possibleModifierSources);
+
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				refLocation[0],
+				refLocation[1],
+				columnName);
+	}
+
 	/**
 	 * Apply a scope-exit unqualified resolution result: update tracked clause refs and
 	 * materialize tokens according to deferred vs immediate scope policy.
@@ -11430,6 +11638,20 @@ public class SqlParseSymbolTreeHelper {
 						columnName,
 						diagnosticLocation,
 						result.ambiguousSourcesLabel);
+			}
+			case AMBIGUOUS_DERIVED_COLUMN -> {
+				Integer[] diagnosticLocation = refLocation;
+				if (diagnosticLocation == null || diagnosticLocation.length < 2 || diagnosticLocation[0] == null) {
+					diagnosticLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
+				}
+				if (diagnosticLocation == null || diagnosticLocation.length < 2 || diagnosticLocation[0] == null) {
+					diagnosticLocation = new Integer[] { null, null };
+				}
+				emitAmbiguousDerivedColumnReferenceFatal(
+						columnName,
+						diagnosticLocation,
+						result.ambiguousSourcesLabel);
+				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 			}
 			case UNRESOLVED -> {
 				if (!hasOnlyQueryBackedAliasSources(localTableAliasMap)
@@ -12484,6 +12706,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableCollection,
 			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
 			RelationalModifierConvertEgressContext relationalModifierContext) {
 		if (localTableCollection == null || localTableCollection.isEmpty()) {
 			return;
@@ -12515,7 +12738,10 @@ public class SqlParseSymbolTreeHelper {
 
 			pruneRelationalModifierDerivedColumnsFromTableDictionary(
 					tableColumns,
+					canonicalKey,
 					localDerivedColumns,
+					localSourceColumnsByBucket,
+					localTableAliasMap,
 					relationalModifierContext);
 
 			if (tableKey.equalsIgnoreCase(canonicalKey)) {
@@ -12539,11 +12765,21 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		for (String tableKey : new ArrayList<String>(localTableCollection.keySet())) {
+			if (tableKey == null || tableKey.isBlank()) {
+				continue;
+			}
+			String canonicalKey = resolveCanonicalPhysicalTableRef(tableKey, localTableAliasMap);
+			if (canonicalKey == null || canonicalKey.isBlank()) {
+				canonicalKey = normalizeTableRef(tableKey);
+			}
 			Object tableColumnsObj = localTableCollection.get(tableKey);
 			if (tableColumnsObj instanceof HashMap<?, ?> tableColumnsMapObj) {
 				pruneRelationalModifierDerivedColumnsFromTableDictionary(
 						(HashMap<String, Object>) tableColumnsMapObj,
+						canonicalKey,
 						localDerivedColumns,
+						localSourceColumnsByBucket,
+						localTableAliasMap,
 						relationalModifierContext);
 			}
 		}
@@ -12618,7 +12854,10 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private void pruneRelationalModifierDerivedColumnsFromTableDictionary(
 			HashMap<String, Object> tableColumns,
+			String physicalTableRef,
 			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap,
 			RelationalModifierConvertEgressContext relationalModifierContext) {
 		if (tableColumns == null || tableColumns.isEmpty()) {
 			return;
@@ -12626,6 +12865,13 @@ public class SqlParseSymbolTreeHelper {
 
 		for (String columnKey : new ArrayList<String>(tableColumns.keySet())) {
 			if (columnKey == null || columnKey.isBlank()) {
+				continue;
+			}
+			if (isRelationalModifierSourceColumnForPhysicalTable(
+					columnKey,
+					physicalTableRef,
+					localSourceColumnsByBucket,
+					localTableAliasMap)) {
 				continue;
 			}
 			if (isRelationalModifierDerivedOutputColumnName(columnKey, localDerivedColumns)) {

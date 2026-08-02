@@ -399,6 +399,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		ArrayList<Object> sourceColumnBucketRefs = null;
 		HashMap<String, String> pivotDerivedSourceColumnBindings = null;
 		LinkedHashMap<String, Object> derivedColumnMap = getActiveStructuredRelationalModifierDerivedColumnsState();
+		Map<String, Object> sourceColumnsForParentTableDictionaryMerge = null;
 		if (derivedColumnMap != null) {
 			mergeRelationalModifierSourceColumnsIntoPhysicalTableDictionary(sourceResult);
 			pruneStructuredDerivedColumnsFromModifierTableDictionary(derivedColumnMap, sourceResult);
@@ -410,8 +411,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (physicalTableRef == null || physicalTableRef.isBlank()) {
 					physicalTableRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
 				}
+				sourceColumnsForParentTableDictionaryMerge =
+						new LinkedHashMap<String, Object>((Map<String, Object>) sourceColumnsMapObj);
 				sourceColumnBucketRefs = symbolTreeHelper.buildRelationalModifierSourceColumnInterfaceRefs(
-						(Map<String, Object>) sourceColumnsMapObj,
+						sourceColumnsForParentTableDictionaryMerge,
 						physicalTableRef);
 			}
 			Object pivotBindingsObj = walker.symbolTable.get(
@@ -432,6 +435,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		popRelationalModifierFrameAndMergeToParent(modifierKey);
+
+		if (sourceColumnsForParentTableDictionaryMerge != null
+				&& !sourceColumnsForParentTableDictionaryMerge.isEmpty()) {
+			String parentPhysicalTableRef = dictionarySourceRef;
+			if (parentPhysicalTableRef == null || parentPhysicalTableRef.isBlank()) {
+				parentPhysicalTableRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
+			}
+			mergeRelationalModifierSourceColumnsIntoActiveScopeTableDictionary(
+					parentPhysicalTableRef,
+					sourceColumnsForParentTableDictionaryMerge);
+		}
 
 		symbolTreeHelper.mergeRelationalModifierDerivationBucketOnParentScope(
 				bucketKey,
@@ -514,13 +528,24 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (!(sourceColumnsObj instanceof Map<?, ?> sourceColumnsMapObj) || sourceColumnsMapObj.isEmpty()) {
 			return;
 		}
-		Map<String, Object> sourceColumnsMap = (Map<String, Object>) sourceColumnsMapObj;
 
 		String tableRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
 		if (tableRef == null || tableRef.isBlank()) {
 			tableRef = resolveRelationalModifierSourceReference(sourceResult);
 		}
-		if (tableRef == null || tableRef.isBlank()) {
+		mergeRelationalModifierSourceColumnsIntoActiveScopeTableDictionary(
+				tableRef,
+				(Map<String, Object>) sourceColumnsMapObj);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeRelationalModifierSourceColumnsIntoActiveScopeTableDictionary(
+			String physicalTableRef,
+			Map<String, Object> sourceColumnsMap) {
+		if (sourceColumnsMap == null
+				|| sourceColumnsMap.isEmpty()
+				|| physicalTableRef == null
+				|| physicalTableRef.isBlank()) {
 			return;
 		}
 
@@ -533,13 +558,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionary);
 		}
 
-		Object tableColumnsObj = tableDictionary.get(tableRef);
+		Object tableColumnsObj = tableDictionary.get(physicalTableRef);
 		HashMap<String, Object> tableColumns;
 		if (tableColumnsObj instanceof HashMap<?, ?> tableColumnsMapObj) {
 			tableColumns = (HashMap<String, Object>) tableColumnsMapObj;
 		} else {
 			tableColumns = new HashMap<String, Object>();
-			tableDictionary.put(tableRef, tableColumns);
+			tableDictionary.put(physicalTableRef, tableColumns);
 		}
 
 		for (Map.Entry<String, Object> sourceColumnEntry : sourceColumnsMap.entrySet()) {
