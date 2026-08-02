@@ -81,9 +81,6 @@ public class SqlParseSymbolTreeHelper {
 	public static final String RELATIONAL_MODIFIER_INTERFACE_SOURCE_REF_KEY = "interface_source_ref";
 	/** Parent-scope bucketed PIVOT/UNPIVOT lineage: {@code {derived_columns={...}, source_columns={...}}}. */
 	public static final String RELATIONAL_MODIFIER_DERIVATION_KEY = "derivation";
-	/** UNPIVOT VALUE/FOR column names on structured {@code derivation} (not flat hint lists). */
-	public static final String RELATIONAL_MODIFIER_UNPIVOT_VALUE_COLUMN_KEY = "unpivot_value_column";
-	public static final String RELATIONAL_MODIFIER_UNPIVOT_FOR_COLUMN_KEY = "unpivot_for_column";
 	/** Per-bucket map of PIVOT derived output name → aggregate operand source column (convert interface lineage). */
 	public static final String RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY = "pivot_derived_source_bindings";
 
@@ -574,9 +571,6 @@ public class SqlParseSymbolTreeHelper {
 		final HashMap<String, Object> pivotDerivedSourceBindingsByBucket = new HashMap<String, Object>();
 		String interfaceSourceRef;
 		String dictionaryPhysicalSourceRef;
-		String operator;
-		String unpivotValueColumn;
-		String unpivotForColumn;
 
 		boolean hasStructuredBucketDerivation() {
 			if (!sourceColumnsByBucket.isEmpty()) {
@@ -595,77 +589,69 @@ public class SqlParseSymbolTreeHelper {
 					&& sourceColumnsByBucket.isEmpty()
 					&& pivotDerivedSourceBindingsByBucket.isEmpty()
 					&& (interfaceSourceRef == null || interfaceSourceRef.isBlank())
-					&& (dictionaryPhysicalSourceRef == null || dictionaryPhysicalSourceRef.isBlank())
-					&& (operator == null || operator.isBlank())
-					&& (unpivotValueColumn == null || unpivotValueColumn.isBlank())
-					&& (unpivotForColumn == null || unpivotForColumn.isBlank());
+					&& (dictionaryPhysicalSourceRef == null || dictionaryPhysicalSourceRef.isBlank());
+		}
+	}
+
+	/** UNPIVOT VALUE/FOR names inferred from walk-time {@code derived_columns} map key order (VALUE then FOR). */
+	public static final class InferredUnpivotDerivedOutputs {
+		public final String valueColumn;
+		public final String forColumn;
+
+		InferredUnpivotDerivedOutputs(String valueColumn, String forColumn) {
+			this.valueColumn = valueColumn;
+			this.forColumn = forColumn;
 		}
 	}
 
 	/** Structured PIVOT/UNPIVOT state for convert egress (replaces flat {@code ArrayList} hint lists). */
 	static final class RelationalModifierConvertEgressContext {
-		final String operator;
 		final String interfaceSourceRef;
 		final String dictionaryPhysicalSourceRef;
-		final String unpivotValueColumn;
-		final String unpivotForColumn;
 		final HashMap<String, Object> derivedColumnsByBucket;
 		final HashMap<String, Object> sourceColumnsByBucket;
 		final HashMap<String, Object> pivotDerivedSourceBindingsByBucket;
 
 		private RelationalModifierConvertEgressContext(
-				String operator,
 				String interfaceSourceRef,
 				String dictionaryPhysicalSourceRef,
-				String unpivotValueColumn,
-				String unpivotForColumn,
 				HashMap<String, Object> derivedColumnsByBucket,
 				HashMap<String, Object> sourceColumnsByBucket,
 				HashMap<String, Object> pivotDerivedSourceBindingsByBucket) {
-			this.operator = operator;
 			this.interfaceSourceRef = interfaceSourceRef;
 			this.dictionaryPhysicalSourceRef = dictionaryPhysicalSourceRef;
-			this.unpivotValueColumn = unpivotValueColumn;
-			this.unpivotForColumn = unpivotForColumn;
 			this.derivedColumnsByBucket = derivedColumnsByBucket;
 			this.sourceColumnsByBucket = sourceColumnsByBucket;
 			this.pivotDerivedSourceBindingsByBucket = pivotDerivedSourceBindingsByBucket;
 		}
 
-		static RelationalModifierConvertEgressContext from(
-				RelationalModifierDerivationScopeState state,
-				String operatorFromScope) {
+		static RelationalModifierConvertEgressContext from(RelationalModifierDerivationScopeState state) {
 			if (state == null) {
 				return null;
 			}
-			String operator = operatorFromScope != null && !operatorFromScope.isBlank()
-					? operatorFromScope
-					: state.operator;
 			return new RelationalModifierConvertEgressContext(
-					operator,
 					state.interfaceSourceRef,
 					state.dictionaryPhysicalSourceRef,
-					state.unpivotValueColumn,
-					state.unpivotForColumn,
 					new HashMap<String, Object>(state.derivedColumnsByBucket),
 					new HashMap<String, Object>(state.sourceColumnsByBucket),
 					new HashMap<String, Object>(state.pivotDerivedSourceBindingsByBucket));
 		}
 
 		boolean isEmpty() {
-			return (operator == null || operator.isBlank())
-					&& (interfaceSourceRef == null || interfaceSourceRef.isBlank())
+			return (interfaceSourceRef == null || interfaceSourceRef.isBlank())
 					&& derivedColumnsByBucket.isEmpty()
 					&& sourceColumnsByBucket.isEmpty()
 					&& pivotDerivedSourceBindingsByBucket.isEmpty();
 		}
 
 		boolean isUnpivot() {
-			return operator != null && MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator);
+			return !isPivot()
+					&& !derivedColumnsByBucket.isEmpty()
+					&& !sourceColumnsByBucket.isEmpty();
 		}
 
 		boolean isPivot() {
-			return operator != null && MUMBLE_PIVOT_KEY.equals(operator);
+			return !pivotDerivedSourceBindingsByBucket.isEmpty();
 		}
 	}
 
@@ -693,6 +679,46 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 		return inColumns;
+	}
+
+	@SuppressWarnings("unchecked")
+	public InferredUnpivotDerivedOutputs inferUnpivotDerivedOutputColumns(Map<String, Object> walkTimeDerivedColumnMap) {
+		if (walkTimeDerivedColumnMap == null || walkTimeDerivedColumnMap.isEmpty()) {
+			return null;
+		}
+		ArrayList<String> names = new ArrayList<String>();
+		for (Object keyObj : walkTimeDerivedColumnMap.keySet()) {
+			if (!(keyObj instanceof String columnName) || columnName.isBlank()) {
+				continue;
+			}
+			if (RELATIONAL_MODIFIER_OPERATOR_KEY.equals(columnName)) {
+				continue;
+			}
+			names.add(columnName);
+		}
+		if (names.isEmpty()) {
+			return null;
+		}
+		return new InferredUnpivotDerivedOutputs(
+				names.get(0),
+				names.size() > 1 ? names.get(1) : null);
+	}
+
+	InferredUnpivotDerivedOutputs inferUnpivotDerivedOutputColumnsFromContext(
+			RelationalModifierConvertEgressContext ctx) {
+		if (ctx == null) {
+			return null;
+		}
+		for (Object bucketObj : ctx.derivedColumnsByBucket.values()) {
+			if (bucketObj instanceof Map<?, ?> bucketMap) {
+				InferredUnpivotDerivedOutputs inferred = inferUnpivotDerivedOutputColumns(
+						(Map<String, Object>) bucketMap);
+				if (inferred != null) {
+					return inferred;
+				}
+			}
+		}
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -775,22 +801,8 @@ public class SqlParseSymbolTreeHelper {
 					&& !dictionarySourceRef.isBlank()) {
 				state.dictionaryPhysicalSourceRef = dictionarySourceRef;
 			}
-			Object operatorObj = derivationMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-			if (operatorObj instanceof String operator && !operator.isBlank()) {
-				state.operator = operator;
-			}
-			Object unpivotValueObj = derivationMap.get(RELATIONAL_MODIFIER_UNPIVOT_VALUE_COLUMN_KEY);
-			if (unpivotValueObj instanceof String unpivotValue && !unpivotValue.isBlank()) {
-				state.unpivotValueColumn = unpivotValue;
-			}
-			Object unpivotForObj = derivationMap.get(RELATIONAL_MODIFIER_UNPIVOT_FOR_COLUMN_KEY);
-			if (unpivotForObj instanceof String unpivotFor && !unpivotFor.isBlank()) {
-				state.unpivotForColumn = unpivotFor;
-			}
 		}
-		Object operatorFromScope = scopeSymbols.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-		String operator = operatorFromScope instanceof String operatorValue ? operatorValue : state.operator;
-		if (state.isEmpty() && (operator == null || operator.isBlank())) {
+		if (state.isEmpty()) {
 			Object derivedObj = scopeSymbols.get(DERIVED_COLUMNS_HINTS_KEY);
 			if (derivedObj instanceof Map<?, ?> derivedMapObj && !derivedMapObj.isEmpty()) {
 				mergeDerivationSubMapIntoState(state, derivedObj, true);
@@ -800,7 +812,7 @@ public class SqlParseSymbolTreeHelper {
 				mergeDerivationSubMapIntoState(state, sourceObj, false);
 			}
 		}
-		return RelationalModifierConvertEgressContext.from(state, operator);
+		return RelationalModifierConvertEgressContext.from(state);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -825,29 +837,6 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, String> pivotDerivedSourceColumnBindings,
 			String interfaceSourceRef,
 			String dictionaryPhysicalSourceRef) {
-		mergeRelationalModifierDerivationBucketOnParentScope(
-				bucketKey,
-				derivedBucketValue,
-				sourceColumnBucketRefs,
-				pivotDerivedSourceColumnBindings,
-				interfaceSourceRef,
-				dictionaryPhysicalSourceRef,
-				null,
-				null,
-				null);
-	}
-
-	@SuppressWarnings("unchecked")
-	public void mergeRelationalModifierDerivationBucketOnParentScope(
-			String bucketKey,
-			Object derivedBucketValue,
-			ArrayList<Object> sourceColumnBucketRefs,
-			HashMap<String, String> pivotDerivedSourceColumnBindings,
-			String interfaceSourceRef,
-			String dictionaryPhysicalSourceRef,
-			String operator,
-			String unpivotValueColumn,
-			String unpivotForColumn) {
 		if (bucketKey == null || bucketKey.isBlank()) {
 			return;
 		}
@@ -880,15 +869,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (dictionaryPhysicalSourceRef != null && !dictionaryPhysicalSourceRef.isBlank()) {
 			derivationMap.put(RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionaryPhysicalSourceRef);
-		}
-		if (operator != null && !operator.isBlank()) {
-			derivationMap.put(RELATIONAL_MODIFIER_OPERATOR_KEY, operator);
-		}
-		if (unpivotValueColumn != null && !unpivotValueColumn.isBlank()) {
-			derivationMap.put(RELATIONAL_MODIFIER_UNPIVOT_VALUE_COLUMN_KEY, unpivotValueColumn);
-		}
-		if (unpivotForColumn != null && !unpivotForColumn.isBlank()) {
-			derivationMap.put(RELATIONAL_MODIFIER_UNPIVOT_FOR_COLUMN_KEY, unpivotForColumn);
 		}
 
 		walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
@@ -929,18 +909,6 @@ public class SqlParseSymbolTreeHelper {
 					&& !dictionarySourceRef.isBlank()) {
 				state.dictionaryPhysicalSourceRef = dictionarySourceRef;
 			}
-			Object operatorObj = derivationMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-			if (operatorObj instanceof String operator && !operator.isBlank()) {
-				state.operator = operator;
-			}
-			Object unpivotValueObj = derivationMap.get(RELATIONAL_MODIFIER_UNPIVOT_VALUE_COLUMN_KEY);
-			if (unpivotValueObj instanceof String unpivotValue && !unpivotValue.isBlank()) {
-				state.unpivotValueColumn = unpivotValue;
-			}
-			Object unpivotForObj = derivationMap.get(RELATIONAL_MODIFIER_UNPIVOT_FOR_COLUMN_KEY);
-			if (unpivotForObj instanceof String unpivotFor && !unpivotFor.isBlank()) {
-				state.unpivotForColumn = unpivotFor;
-			}
 		}
 
 		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(DERIVED_COLUMNS_HINTS_KEY), true);
@@ -949,18 +917,6 @@ public class SqlParseSymbolTreeHelper {
 				state,
 				scopeSymbols.remove(RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY),
 				state.pivotDerivedSourceBindingsByBucket);
-		Object operatorFromScope = scopeSymbols.remove(RELATIONAL_MODIFIER_OPERATOR_KEY);
-		if (operatorFromScope instanceof String operator && !operator.isBlank()) {
-			state.operator = operator;
-		}
-		Object unpivotValueFromScope = scopeSymbols.remove(RELATIONAL_MODIFIER_UNPIVOT_VALUE_COLUMN_KEY);
-		if (unpivotValueFromScope instanceof String unpivotValue && !unpivotValue.isBlank()) {
-			state.unpivotValueColumn = unpivotValue;
-		}
-		Object unpivotForFromScope = scopeSymbols.remove(RELATIONAL_MODIFIER_UNPIVOT_FOR_COLUMN_KEY);
-		if (unpivotForFromScope instanceof String unpivotFor && !unpivotFor.isBlank()) {
-			state.unpivotForColumn = unpivotFor;
-		}
 		return state;
 	}
 
@@ -1301,9 +1257,15 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		String valueColumn = relationalModifierContext.unpivotValueColumn;
+		InferredUnpivotDerivedOutputs unpivotOutputs =
+				inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
+		if (unpivotOutputs == null) {
+			return;
+		}
+
+		String valueColumn = unpivotOutputs.valueColumn;
 		String sourceRef = relationalModifierContext.interfaceSourceRef;
-		String forColumn = relationalModifierContext.unpivotForColumn;
+		String forColumn = unpivotOutputs.forColumn;
 		ArrayList<String> inColumns = collectUnpivotInColumnNamesFromContext(relationalModifierContext);
 		if (valueColumn == null
 				|| valueColumn.isBlank()
@@ -1885,37 +1847,10 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * After UNPIVOT derivation hints have been applied, removes columns that are
-	 * definitively resolved by the UNPIVOT operator from the unresolved-column map
-	 * so they do not generate spurious diagnostic errors.
-	 *
-	 * <ul>
-	 *   <li>The VALUE column (e.g. {@code sales_amount}) is synthetic — generated by
-	 *       the UNPIVOT operator itself.</li>
-	 *   <li>The FOR column (e.g. {@code month_name}) is also synthetic.</li>
-	 *   <li>When the UNPIVOT source is an un-aliased subquery (sourceRef is a query
-	 *       scope key like {@code query0}), every column that appears in that
-	 *       subquery's output interface (including the IN-list columns and passthrough
-	 *       columns like {@code empid}) is also resolved.</li>
-	 * </ul>
+	 * After structured UNPIVOT {@code derived_columns} / {@code source_columns} are populated,
+	 * removes columns definitively resolved by the operator from {@code unresolved_column}.
 	 */
-	public void resolveUnpivotGeneratedColumnsFromUnresolvedMap(
-			ArrayList<Object> hints,
-			HashMap<String, Object> unresolvedColumnMap) {
-		if (hints == null || hints.isEmpty() || unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
-			return;
-		}
-		for (Object hintObj : hints) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-			resolveUnpivotGeneratedColumnsFromHintMap(
-					(Map<String, Object>) hintMapObj,
-					unresolvedColumnMap);
-		}
-	}
-
-	public void resolveUnpivotGeneratedColumnsFromWalkScope(
+	public void resolveUnpivotGeneratedColumnsAtWalkScope(
 			String interfaceSourceRef,
 			String dictionarySourceRef,
 			String valueColumn,
@@ -1928,92 +1863,52 @@ public class SqlParseSymbolTreeHelper {
 				|| unresolvedColumnMap.isEmpty()) {
 			return;
 		}
-		HashMap<String, Object> syntheticHint = new HashMap<String, Object>();
-		syntheticHint.put(RELATIONAL_MODIFIER_OPERATOR_KEY, MUMBLE_UNPIVOT_KEY);
-		syntheticHint.put(MUMBLE_TABLE_REF_KEY, interfaceSourceRef);
-		if (dictionarySourceRef != null && !dictionarySourceRef.isBlank()) {
-			syntheticHint.put(RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionarySourceRef);
+
+		String dictionaryPhysicalSourceRef = dictionarySourceRef;
+		if (dictionaryPhysicalSourceRef == null || dictionaryPhysicalSourceRef.isBlank()) {
+			dictionaryPhysicalSourceRef = interfaceSourceRef;
 		}
+
 		if (valueColumn != null && !valueColumn.isBlank()) {
-			syntheticHint.put(MUMBLE_VALUE_KEY, valueColumn);
+			removeUnpivotGeneratedColumnReference(
+					unresolvedColumnMap,
+					interfaceSourceRef,
+					valueColumn,
+					true);
 		}
 		if (forColumn != null && !forColumn.isBlank()) {
-			syntheticHint.put(MUMBLE_FOR_KEY, forColumn);
+			removeUnpivotGeneratedColumnReference(
+					unresolvedColumnMap,
+					interfaceSourceRef,
+					forColumn,
+					true);
 		}
+
 		if (inColumns != null && !inColumns.isEmpty()) {
-			syntheticHint.put(MUMBLE_IN_KEY, new ArrayList<String>(inColumns));
-		}
-		Object operandRefsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY);
-		if (operandRefsObj instanceof Map<?, ?> operandRefsMapObj && !operandRefsMapObj.isEmpty()) {
-			syntheticHint.put(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY, operandRefsMapObj);
-		}
-		resolveUnpivotGeneratedColumnsFromHintMap(syntheticHint, unresolvedColumnMap);
-	}
-
-	@SuppressWarnings("unchecked")
-	private void resolveUnpivotGeneratedColumnsFromHintMap(
-			Map<String, Object> hint,
-			HashMap<String, Object> unresolvedColumnMap) {
-		if (hint == null || hint.isEmpty() || unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
-			return;
-		}
-		Object operatorObj = hint.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-		if (!(operatorObj instanceof String operator)
-				|| !MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
-			return;
-		}
-		Object sourceRefObj = hint.get(MUMBLE_TABLE_REF_KEY);
-		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
-			return;
-		}
-
-		String dictionarySourceRef = sourceRef;
-		Object dictionarySourceRefObj = hint.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
-		if (dictionarySourceRefObj instanceof String dictionarySource
-				&& !dictionarySource.isBlank()) {
-			dictionarySourceRef = dictionarySource;
-		}
-
-		// The UNPIVOT VALUE column is synthetically generated by the UNPIVOT operator
-		Object valueColumnObj = hint.get(MUMBLE_VALUE_KEY);
-		if (valueColumnObj instanceof String valueColumn && !valueColumn.isBlank()) {
-			removeUnpivotGeneratedColumnReference(unresolvedColumnMap, sourceRef, valueColumn, true);
-		}
-
-		// The UNPIVOT FOR column is also synthetically generated by the UNPIVOT operator
-		Object forColumnObj = hint.get(MUMBLE_FOR_KEY);
-		if (forColumnObj instanceof String forColumn && !forColumn.isBlank()) {
-			removeUnpivotGeneratedColumnReference(unresolvedColumnMap, sourceRef, forColumn, true);
-		}
-
-		Object inColumnsObj = hint.get(MUMBLE_IN_KEY);
-		if (inColumnsObj instanceof ArrayList<?> inColumns) {
 			String canonicalSourceRef = resolveCanonicalPhysicalTableRef(
-					dictionarySourceRef,
+					dictionaryPhysicalSourceRef,
 					getTableAliasMapFromSymbolTable());
 			if (canonicalSourceRef == null || canonicalSourceRef.isBlank()) {
-				canonicalSourceRef = dictionarySourceRef;
+				canonicalSourceRef = dictionaryPhysicalSourceRef;
 			}
-			for (Object inColumnObj : inColumns) {
-				if (inColumnObj instanceof String inColumn && !inColumn.isBlank()) {
-					materializeUnpivotInColumnFromStructuredSourceDictionary(
-							canonicalSourceRef,
-							inColumn);
-					materializeUnpivotInColumnFromHintOperandRefs(
-							hint,
-							canonicalSourceRef,
-							inColumn);
-					removeAndMaterializeUnpivotResolvedColumn(unresolvedColumnMap, dictionarySourceRef, inColumn, false);
+			for (String inColumn : inColumns) {
+				if (inColumn == null || inColumn.isBlank()) {
+					continue;
 				}
+				materializeUnpivotInColumnFromStructuredSourceDictionary(canonicalSourceRef, inColumn);
+				materializeUnpivotInColumnFromOperandTokenRefs(canonicalSourceRef, inColumn);
+				removeAndMaterializeUnpivotResolvedColumn(
+						unresolvedColumnMap,
+						dictionaryPhysicalSourceRef,
+						inColumn,
+						false);
 			}
 		}
 
-		// When the UNPIVOT source is a query reference (e.g., un-aliased subquery),
-		// every column in the source query's output interface is resolved by that scope.
-		if (!walker.isNonTableQuerySourceReference(sourceRef)) {
+		if (!walker.isNonTableQuerySourceReference(interfaceSourceRef)) {
 			return;
 		}
-		Object sourceQueryScopeObj = walker.symbolTable.get(sourceRef);
+		Object sourceQueryScopeObj = walker.symbolTable.get(interfaceSourceRef);
 		if (!(sourceQueryScopeObj instanceof Map<?, ?> sourceQueryScopeMapObj)) {
 			return;
 		}
@@ -2026,6 +1921,44 @@ public class SqlParseSymbolTreeHelper {
 		for (String interfaceColName : new ArrayList<>(sourceInterface.keySet())) {
 			removeFromUnresolvedMapCaseInsensitive(unresolvedColumnMap, interfaceColName);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void materializeUnpivotInColumnFromOperandTokenRefs(
+			String canonicalSourceRef,
+			String inColumn) {
+		if (canonicalSourceRef == null || canonicalSourceRef.isBlank()
+				|| inColumn == null || inColumn.isBlank()) {
+			return;
+		}
+		Object operandRefsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY);
+		if (!(operandRefsObj instanceof Map<?, ?> operandRefsMapObj) || operandRefsMapObj.isEmpty()) {
+			return;
+		}
+		Map<String, Object> operandRefsMap = (Map<String, Object>) operandRefsMapObj;
+		Object tokenPayload = operandRefsMap.get(inColumn);
+		if (tokenPayload == null) {
+			for (Map.Entry<String, Object> entry : operandRefsMap.entrySet()) {
+				String key = entry.getKey();
+				if (key == null || !key.contains(".")) {
+					continue;
+				}
+				String keyColumn = key.substring(key.lastIndexOf('.') + 1);
+				if (keyColumn.equalsIgnoreCase(inColumn)) {
+					tokenPayload = entry.getValue();
+					break;
+				}
+			}
+		}
+		if (tokenPayload == null) {
+			return;
+		}
+		HashMap<String, Object> localTableDictionary = walker.getCurrentTableDictionary();
+		mergeSourceLineageIntoPhysicalTableDictionary(
+				localTableDictionary,
+				canonicalSourceRef,
+				inColumn,
+				tokenPayload);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2245,7 +2178,13 @@ public class SqlParseSymbolTreeHelper {
 			unpivotSourceRef = resolveCanonicalPhysicalTableRef(unpivotSourceRef, localTableAliasMap);
 		}
 
-		String valueColumn = relationalModifierContext.unpivotValueColumn;
+		InferredUnpivotDerivedOutputs unpivotOutputs =
+				inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
+		if (unpivotOutputs == null) {
+			return null;
+		}
+
+		String valueColumn = unpivotOutputs.valueColumn;
 		if (valueColumn != null
 				&& !valueColumn.isBlank()
 				&& valueColumn.equalsIgnoreCase(columnName)) {
@@ -2256,7 +2195,7 @@ public class SqlParseSymbolTreeHelper {
 			return new UnpivotBinding(UnpivotBindingKind.VALUE, null, unpivotSourceRef);
 		}
 
-		String forColumn = relationalModifierContext.unpivotForColumn;
+		String forColumn = unpivotOutputs.forColumn;
 		if (forColumn != null
 				&& !forColumn.isBlank()
 				&& forColumn.equalsIgnoreCase(columnName)) {
@@ -2660,124 +2599,6 @@ public class SqlParseSymbolTreeHelper {
 		return new HashMap<String, Object>();
 	}
 
-	private void materializeUnpivotInColumnFromHintOperandRefs(
-			Map<String, Object> hint,
-			String canonicalSourceRef,
-			String inColumn) {
-		if (hint == null || canonicalSourceRef == null || canonicalSourceRef.isBlank()
-				|| inColumn == null || inColumn.isBlank()) {
-			return;
-		}
-
-		Object operandRefsObj = hint.get(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY);
-		if (!(operandRefsObj instanceof Map<?, ?> operandRefsMapObj) || operandRefsMapObj.isEmpty()) {
-			return;
-		}
-
-		Object tokenPayload = ((Map<String, Object>) operandRefsMapObj).get(inColumn);
-		if (tokenPayload == null) {
-			for (Map.Entry<String, Object> entry : ((Map<String, Object>) operandRefsMapObj).entrySet()) {
-				String key = entry.getKey();
-				if (key == null || !key.contains(".")) {
-					continue;
-				}
-				String keyColumn = key.substring(key.lastIndexOf('.') + 1);
-				if (keyColumn.equalsIgnoreCase(inColumn)) {
-					tokenPayload = entry.getValue();
-					break;
-				}
-			}
-		}
-		if (tokenPayload == null) {
-			return;
-		}
-
-		HashMap<String, Object> localTableDictionary = walker.getCurrentTableDictionary();
-		mergeSourceLineageIntoPhysicalTableDictionary(
-				localTableDictionary,
-				canonicalSourceRef,
-				inColumn,
-				tokenPayload);
-	}
-
-	@SuppressWarnings("unchecked")
-	public void snapshotRelationalModifierOperandReferencesIntoLatestHint(
-			String interfaceSourceRef,
-			String dictionarySourceRef) {
-		Object hintsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
-		if (!(hintsObj instanceof ArrayList<?> hintListObj) || hintListObj.isEmpty()) {
-			return;
-		}
-
-		ArrayList<Object> hintList = (ArrayList<Object>) hintListObj;
-		Object latestHintObj = hintList.get(hintList.size() - 1);
-		if (!(latestHintObj instanceof Map<?, ?> latestHintMapObj)) {
-			return;
-		}
-
-		Map<String, Object> latestHintMap = (Map<String, Object>) latestHintMapObj;
-		HashMap<String, Object> snapshot = new HashMap<String, Object>();
-		HashMap<String, Object> localTableAliasMap = getTableAliasMapFromSymbolTable();
-
-		Object refsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
-		if (refsObj instanceof Map<?, ?> refsMapObj && !refsMapObj.isEmpty()) {
-			for (Map.Entry<?, ?> entry : refsMapObj.entrySet()) {
-				if (!(entry.getKey() instanceof String key) || entry.getValue() == null) {
-					continue;
-				}
-				if (key.contains(".")) {
-					int dotIndex = key.lastIndexOf('.');
-					String qualifier = key.substring(0, dotIndex);
-					String columnName = key.substring(dotIndex + 1);
-					if (!operandQualifierMatchesRelationalModifierSource(
-							qualifier,
-							interfaceSourceRef,
-							dictionarySourceRef,
-							localTableAliasMap)) {
-						continue;
-					}
-					snapshot.put(columnName, entry.getValue());
-				} else {
-					snapshot.put(key, entry.getValue());
-				}
-			}
-		}
-
-		ArrayList<String> operandColumns = new ArrayList<String>();
-		Object operatorObj = latestHintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-		if (operatorObj instanceof String operator && MUMBLE_PIVOT_KEY.equals(operator)) {
-			operandColumns.addAll(collectPivotOperandColumnNames(latestHintMap));
-		} else if (operatorObj instanceof String operator
-				&& MUMBLE_UNPIVOT_KEY.equalsIgnoreCase(operator)) {
-			Object inColumnsObj = latestHintMap.get(MUMBLE_IN_KEY);
-			if (inColumnsObj instanceof ArrayList<?> inColumns) {
-				for (Object inColumnObj : inColumns) {
-					if (inColumnObj instanceof String inColumn && !inColumn.isBlank()) {
-						operandColumns.add(inColumn);
-					}
-				}
-			}
-		}
-
-		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		if (unresolvedObj instanceof HashMap<?, ?> unresolvedMapObj && !operandColumns.isEmpty()) {
-			HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
-			for (String operandColumn : operandColumns) {
-				if (snapshot.containsKey(operandColumn)) {
-					continue;
-				}
-				Object unresolvedEntry = getUnqualifiedUnknownEntry(unresolvedMap, operandColumn);
-				if (unresolvedEntry != null) {
-					snapshot.put(operandColumn, unresolvedEntry);
-				}
-			}
-		}
-
-		if (!snapshot.isEmpty()) {
-			latestHintMap.put(RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY, snapshot);
-		}
-	}
-
 	private boolean operandQualifierMatchesRelationalModifierSource(
 			String qualifier,
 			String interfaceSourceRef,
@@ -3126,287 +2947,6 @@ public class SqlParseSymbolTreeHelper {
 		return inColumns;
 	}
 
-	@SuppressWarnings("unchecked")
-	public HashMap<String, Object> buildDerivedColumnsMapFromHints(ArrayList<Object> hints) {
-		HashMap<String, Object> derivedColumns = new HashMap<String, Object>();
-		if (hints == null || hints.isEmpty()) {
-			return derivedColumns;
-		}
-
-		for (Object hintObj : hints) {
-			if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
-			Object operatorObj = hintMap.get(RELATIONAL_MODIFIER_OPERATOR_KEY);
-			boolean isPivotHint = operatorObj instanceof String operator && MUMBLE_PIVOT_KEY.equals(operator);
-
-			Object derivedColumnsObj = hintMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
-			if (derivedColumnsObj instanceof ArrayList<?> derivedColumnsList) {
-				for (Object derivedColumnObj : derivedColumnsList) {
-					if (derivedColumnObj instanceof String derivedColumnName && !derivedColumnName.isBlank()) {
-						addDerivedColumnNameIfMissing(derivedColumns, derivedColumnName);
-						if (!isPivotHint) {
-							mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, derivedColumnName);
-						}
-						if (isPivotHint) {
-							mergePivotAggregateDependencyRefsFallbackIfPresent(
-									derivedColumns,
-									hintMap,
-									derivedColumnName);
-						}
-					}
-				}
-			}
-
-			Object valueObj = hintMap.get(MUMBLE_VALUE_KEY);
-			if (valueObj instanceof String valueColumn && !valueColumn.isBlank()) {
-				addDerivedColumnNameIfMissing(derivedColumns, valueColumn);
-				mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, valueColumn);
-			}
-
-		Object forObj = hintMap.get(MUMBLE_FOR_KEY);
-		if (forObj instanceof String forColumn && !forColumn.isBlank()) {
-			// PIVOT FOR names a source operand column, not a derived output column.
-			if (!isPivotHint) {
-				addDerivedColumnNameIfMissing(derivedColumns, forColumn);
-				mergeUnpivotDerivedRefsIfPresent(derivedColumns, hintMap, forColumn);
-			}
-		}
-
-			Object aggregateColumnsObj = hintMap.get("pivot_aggregate_columns");
-			Object inColumnsObj = hintMap.get("pivot_in_columns");
-			if (aggregateColumnsObj instanceof ArrayList<?> aggregateColumns
-					&& !aggregateColumns.isEmpty()
-					&& inColumnsObj instanceof ArrayList<?> inColumns
-					&& !inColumns.isEmpty()) {
-				for (Object inObj : inColumns) {
-					if (!(inObj instanceof String inValue) || inValue.isBlank()) {
-						continue;
-					}
-					String normalizedInValue = normalizePivotDerivedComponent(inValue);
-					for (Object aggObj : aggregateColumns) {
-						if (!(aggObj instanceof String aggName) || aggName.isBlank()) {
-							continue;
-						}
-						String derivedColumnName = inValue + "_" + aggName;
-						addDerivedColumnNameIfMissing(derivedColumns, derivedColumnName);
-						mergePivotAggregateResolvedRefsIfPresent(
-								derivedColumns,
-								hintMap,
-								aggName,
-								derivedColumnName);
-						mergePivotAggregateDependencyRefsFallbackIfPresent(
-								derivedColumns,
-								hintMap,
-								aggName,
-								derivedColumnName);
-						if (!normalizedInValue.equals(inValue)) {
-							String normalizedDerivedColumnName = normalizedInValue + "_" + aggName;
-							addDerivedColumnNameIfMissing(derivedColumns, normalizedDerivedColumnName);
-							mergePivotAggregateResolvedRefsIfPresent(
-									derivedColumns,
-									hintMap,
-									aggName,
-									normalizedDerivedColumnName);
-							mergePivotAggregateDependencyRefsFallbackIfPresent(
-									derivedColumns,
-									hintMap,
-									aggName,
-									normalizedDerivedColumnName);
-						}
-					}
-				}
-			}
-		}
-
-		return derivedColumns;
-	}
-
-	private void addDerivedColumnNameIfMissing(HashMap<String, Object> derivedColumns, String columnName) {
-		if (columnName == null || columnName.isBlank()) {
-			return;
-		}
-		if (containsKeyIgnoreCase(derivedColumns, columnName)) {
-			return;
-		}
-		derivedColumns.put(columnName, new ArrayList<Object>());
-	}
-
-	private void mergePivotAggregateDependencyRefsFallbackIfPresent(
-			HashMap<String, Object> derivedColumns,
-			Map<String, Object> hintMap,
-			String derivedColumnName) {
-		if (derivedColumns == null
-				|| derivedColumns.isEmpty()
-				|| hintMap == null
-				|| hintMap.isEmpty()
-				|| derivedColumnName == null
-				|| derivedColumnName.isBlank()) {
-			return;
-		}
-
-		String aggregateName = null;
-		int separatorIndex = derivedColumnName.lastIndexOf('_');
-		if (separatorIndex > 0 && separatorIndex + 1 < derivedColumnName.length()) {
-			aggregateName = derivedColumnName.substring(separatorIndex + 1);
-		}
-
-		if (aggregateName == null || aggregateName.isBlank()) {
-			return;
-		}
-
-		mergePivotAggregateDependencyRefsFallbackIfPresent(
-				derivedColumns,
-				hintMap,
-				aggregateName,
-				derivedColumnName);
-	}
-
-	@SuppressWarnings("unchecked")
-	private void mergePivotAggregateDependencyRefsFallbackIfPresent(
-			HashMap<String, Object> derivedColumns,
-			Map<String, Object> hintMap,
-			String aggregateName,
-			String derivedColumnName) {
-		if (derivedColumns == null
-				|| derivedColumns.isEmpty()
-				|| hintMap == null
-				|| aggregateName == null
-				|| aggregateName.isBlank()
-				|| derivedColumnName == null
-				|| derivedColumnName.isBlank()) {
-			return;
-		}
-
-		String resolvedKey = findKeyIgnoreCase(derivedColumns, derivedColumnName);
-		String targetKey = resolvedKey != null ? resolvedKey : derivedColumnName;
-		Object existingRefsObj = derivedColumns.get(targetKey);
-		if (existingRefsObj instanceof ArrayList<?> existingRefs && !existingRefs.isEmpty()) {
-			return;
-		}
-
-		Object dependencyObj = hintMap.get("pivot_aggregate_dependency_columns");
-		if (!(dependencyObj instanceof Map<?, ?> dependencyMapObj)) {
-			return;
-		}
-
-		Object dependencyListObj = ((Map<String, Object>) dependencyMapObj).get(aggregateName);
-		if (!(dependencyListObj instanceof ArrayList<?> dependencyList) || dependencyList.isEmpty()) {
-			return;
-		}
-
-		Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
-		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
-			sourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
-		}
-		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
-			return;
-		}
-
-		ArrayList<Object> fallbackRefs = new ArrayList<Object>();
-		for (Object dependencyObjItem : dependencyList) {
-			if (!(dependencyObjItem instanceof String dependencyName) || dependencyName.isBlank()) {
-				continue;
-			}
-			HashMap<String, Object> dependencyRef = new HashMap<String, Object>();
-			dependencyRef.put(MUMBLE_NAME_KEY, dependencyName);
-			dependencyRef.put(MUMBLE_TABLE_REF_KEY, sourceRef);
-			appendInterfaceReferenceIfMissing(fallbackRefs, dependencyRef);
-		}
-
-		if (!fallbackRefs.isEmpty()) {
-			derivedColumns.put(targetKey, fallbackRefs);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private void mergeUnpivotDerivedRefsIfPresent(
-			HashMap<String, Object> derivedColumns,
-			Map<String, Object> hintMap,
-			String derivedColumnName) {
-		if (derivedColumns == null
-				|| hintMap == null
-				|| derivedColumnName == null
-				|| derivedColumnName.isBlank()) {
-			return;
-		}
-
-		Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
-		if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
-			return;
-		}
-
-		Object inColumnsObj = hintMap.get(MUMBLE_IN_KEY);
-		if (!(inColumnsObj instanceof ArrayList<?> inColumns) || inColumns.isEmpty()) {
-			return;
-		}
-
-		Object existingRefsObj = derivedColumns.get(derivedColumnName);
-		ArrayList<Object> existingRefs;
-		if (existingRefsObj instanceof ArrayList<?>) {
-			existingRefs = (ArrayList<Object>) existingRefsObj;
-		} else {
-			existingRefs = new ArrayList<Object>();
-			derivedColumns.put(derivedColumnName, existingRefs);
-		}
-
-		for (Object inObj : inColumns) {
-			if (!(inObj instanceof String inColumn) || inColumn.isBlank()) {
-				continue;
-			}
-			HashMap<String, Object> ref = new HashMap<String, Object>();
-			ref.put(MUMBLE_NAME_KEY, inColumn);
-			ref.put(MUMBLE_TABLE_REF_KEY, sourceRef);
-			appendInterfaceReferenceIfMissing(existingRefs, ref);
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private void mergePivotAggregateResolvedRefsIfPresent(
-			HashMap<String, Object> derivedColumns,
-			Map<String, Object> hintMap,
-			String aggregateName,
-			String derivedColumnName) {
-		if (derivedColumns == null
-				|| hintMap == null
-				|| aggregateName == null
-				|| aggregateName.isBlank()
-				|| derivedColumnName == null
-				|| derivedColumnName.isBlank()) {
-			return;
-		}
-
-		Object resolvedRefsObj = hintMap.get("pivot_aggregate_resolved_refs");
-		if (!(resolvedRefsObj instanceof Map<?, ?> resolvedRefsMapObj)) {
-			return;
-		}
-
-		Object aggregateRefsObj = ((Map<String, Object>) resolvedRefsMapObj).get(aggregateName);
-		if (!(aggregateRefsObj instanceof ArrayList<?> aggregateRefs) || aggregateRefs.isEmpty()) {
-			return;
-		}
-
-		Object existingRefsObj = derivedColumns.get(derivedColumnName);
-		ArrayList<Object> existingRefs;
-		if (existingRefsObj instanceof ArrayList<?>) {
-			existingRefs = (ArrayList<Object>) existingRefsObj;
-		} else {
-			existingRefs = new ArrayList<Object>();
-			derivedColumns.put(derivedColumnName, existingRefs);
-		}
-
-		for (Object refObj : aggregateRefs) {
-			if (refObj instanceof Map<?, ?> refMapObj) {
-				HashMap<String, Object> clonedRef = new HashMap<String, Object>((Map<String, Object>) refMapObj);
-				appendInterfaceReferenceIfMissing(existingRefs, clonedRef);
-			} else {
-				appendInterfaceReferenceIfMissing(existingRefs, refObj);
-			}
-		}
-	}
-
 	private String normalizePivotDerivedComponent(String component) {
 		if (component == null || component.length() < 2) {
 			return component;
@@ -3430,10 +2970,14 @@ public class SqlParseSymbolTreeHelper {
 		if (sourceRef == null || sourceRef.isBlank()) {
 			return null;
 		}
-		if (ctx.unpivotValueColumn != null && ctx.unpivotValueColumn.equalsIgnoreCase(columnName)) {
+		InferredUnpivotDerivedOutputs unpivotOutputs = inferUnpivotDerivedOutputColumnsFromContext(ctx);
+		if (unpivotOutputs == null) {
+			return null;
+		}
+		if (unpivotOutputs.valueColumn != null && unpivotOutputs.valueColumn.equalsIgnoreCase(columnName)) {
 			return sourceRef;
 		}
-		if (ctx.unpivotForColumn != null && ctx.unpivotForColumn.equalsIgnoreCase(columnName)) {
+		if (unpivotOutputs.forColumn != null && unpivotOutputs.forColumn.equalsIgnoreCase(columnName)) {
 			return sourceRef;
 		}
 		return null;
@@ -3513,8 +3057,7 @@ public class SqlParseSymbolTreeHelper {
 		RelationalModifierDerivationScopeState relationalModifierDerivationScope =
 				detachRelationalModifierDerivationFromScope(walker.symbolTable);
 		activeConvertEgressRelationalModifierContext = RelationalModifierConvertEgressContext.from(
-				relationalModifierDerivationScope,
-				relationalModifierDerivationScope.operator);
+				relationalModifierDerivationScope);
 		HashMap<String, Object> localDerivedColumns;
 		if (!relationalModifierDerivationScope.derivedColumnsByBucket.isEmpty()) {
 			localDerivedColumns = new HashMap<String, Object>(
@@ -4284,13 +3827,6 @@ public class SqlParseSymbolTreeHelper {
 		relationalModifierDerivationScope.sourceColumnsByBucket.clear();
 		if (!localRelationalModifierSourceColumns.isEmpty()) {
 			relationalModifierDerivationScope.sourceColumnsByBucket.putAll(localRelationalModifierSourceColumns);
-		}
-		if (activeConvertEgressRelationalModifierContext != null) {
-			relationalModifierDerivationScope.operator = activeConvertEgressRelationalModifierContext.operator;
-			relationalModifierDerivationScope.unpivotValueColumn =
-					activeConvertEgressRelationalModifierContext.unpivotValueColumn;
-			relationalModifierDerivationScope.unpivotForColumn =
-					activeConvertEgressRelationalModifierContext.unpivotForColumn;
 		}
 		publishRelationalModifierDerivationToScope(
 				walker.symbolTable,
@@ -13302,10 +12838,13 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (relationalModifierContext.isUnpivot()) {
-				boolean isValueOrFor = (relationalModifierContext.unpivotValueColumn != null
-						&& relationalModifierContext.unpivotValueColumn.equalsIgnoreCase(columnKey))
-						|| (relationalModifierContext.unpivotForColumn != null
-								&& relationalModifierContext.unpivotForColumn.equalsIgnoreCase(columnKey));
+				InferredUnpivotDerivedOutputs unpivotOutputs =
+						inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
+				boolean isValueOrFor = unpivotOutputs != null
+						&& ((unpivotOutputs.valueColumn != null
+								&& unpivotOutputs.valueColumn.equalsIgnoreCase(columnKey))
+						|| (unpivotOutputs.forColumn != null
+								&& unpivotOutputs.forColumn.equalsIgnoreCase(columnKey)));
 				if (isValueOrFor
 						&& !isRelationalModifierPhysicalOperandColumn(columnKey, relationalModifierContext)) {
 					tableColumns.remove(columnKey);
