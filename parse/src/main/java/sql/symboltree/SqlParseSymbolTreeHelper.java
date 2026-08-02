@@ -2253,10 +2253,17 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> localCurrentQueryDictionary = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (localCurrentQueryDictionary == null)
 			localCurrentQueryDictionary = new HashMap<String, Object>();
-		ArrayList<Object> localRelationalModifierInterfaceHints =
-				(ArrayList<Object>) walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
-		HashMap<String, Object> localDerivedColumns =
-				buildDerivedColumnsMapFromHints(localRelationalModifierInterfaceHints);
+		Object localDerivedColumnsObj = walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
+		ArrayList<Object> localRelationalModifierInterfaceHints = null;
+		HashMap<String, Object> localDerivedColumns;
+		if (localDerivedColumnsObj instanceof ArrayList<?> derivedHintsList) {
+			localRelationalModifierInterfaceHints = (ArrayList<Object>) derivedHintsList;
+			localDerivedColumns = buildDerivedColumnsMapFromHints(localRelationalModifierInterfaceHints);
+		} else if (localDerivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj) {
+			localDerivedColumns = new HashMap<String, Object>((Map<String, Object>) derivedColumnsMapObj);
+		} else {
+			localDerivedColumns = new HashMap<String, Object>();
+		}
 		activeConvertEgressDerivedColumns = localDerivedColumns;
 		activeConvertEgressRelationalModifierHints = localRelationalModifierInterfaceHints;
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
@@ -5119,6 +5126,8 @@ public class SqlParseSymbolTreeHelper {
 		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
 		boolean deferCorrelatedValueSubqueryQualifiedUnknowns = hasParentQueryScope
 				&& passUpQualifiedUnresolvedFromThisSubquery;
+		HashMap<String, Object> scopeDerivedColumns = getScopeDerivedColumnsFromSymbolTable();
+		ArrayList<Object> scopeRelationalModifierHints = getScopeRelationalModifierHintsFromSymbolTable();
 
 		HashMap<String, Object> scopeSymbols = convertSymbolTableToTableDictionary(
 				emitFinalUnresolvedUnknownFatal,
@@ -5236,7 +5245,9 @@ public class SqlParseSymbolTreeHelper {
 		if (deferSubqueryUnresolvedDiagnosticsToStatementBoundary) {
 			consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
 					unqualifiedUnresolvedForLocal,
-					scopeSymbols);
+					scopeSymbols,
+					scopeDerivedColumns,
+					scopeRelationalModifierHints);
 			HashMap<String, Object> deferredUnresolvedForParent = new HashMap<String, Object>();
 			deferredUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
 			deferredUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
@@ -5249,7 +5260,9 @@ public class SqlParseSymbolTreeHelper {
 		if (passUpQualifiedUnresolvedFromThisSubquery) {
 			consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
 					unqualifiedUnresolvedForLocal,
-					scopeSymbols);
+					scopeSymbols,
+					scopeDerivedColumns,
+					scopeRelationalModifierHints);
 			HashMap<String, Object> allUnresolvedForParent = new HashMap<String, Object>();
 			allUnresolvedForParent.putAll(qualifiedUnresolvedForParent);
 			allUnresolvedForParent.putAll(unqualifiedUnresolvedForLocal);
@@ -9313,7 +9326,7 @@ public class SqlParseSymbolTreeHelper {
 			String tableRef,
 			String columnName,
 			HashMap<String, Object> visibleAliasMap) {
-		if (!containsKeyIgnoreCase(localDerivedColumns, columnName)) {
+		if (!containsDerivedColumnName(localDerivedColumns, columnName)) {
 			return false;
 		}
 		if (tableRef == null || tableRef.isBlank()) {
@@ -9336,6 +9349,43 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	private boolean containsDerivedColumnName(HashMap<String, Object> localDerivedColumns, String columnName) {
+		if (localDerivedColumns == null || localDerivedColumns.isEmpty()
+				|| columnName == null || columnName.isBlank()) {
+			return false;
+		}
+
+		if (containsKeyIgnoreCase(localDerivedColumns, columnName)) {
+			return true;
+		}
+
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (!(bucketObj instanceof ArrayList<?> bucketList) || bucketList.isEmpty()) {
+				continue;
+			}
+
+			Object firstItem = bucketList.get(0);
+			if (!(firstItem instanceof Map<?, ?> firstMap)
+					|| (!((Map<String, Object>) firstMap).containsKey(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY)
+						&& !((Map<String, Object>) firstMap).containsKey(RELATIONAL_MODIFIER_OPERATOR_KEY))) {
+				continue;
+			}
+
+			for (Object hintObj : bucketList) {
+				if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+					continue;
+				}
+				Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+				if (hintDefinesDerivedColumn(hintMap, columnName)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
 	private boolean derivedColumnMapSourceRefMatches(
 			HashMap<String, Object> localDerivedColumns,
 			String columnName,
@@ -9344,6 +9394,30 @@ public class SqlParseSymbolTreeHelper {
 		if (localDerivedColumns == null || localDerivedColumns.isEmpty()
 				|| tableRef == null || tableRef.isBlank()) {
 			return false;
+		}
+
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (!(bucketObj instanceof ArrayList<?> bucketList) || bucketList.isEmpty()) {
+				continue;
+			}
+
+			Object firstItem = bucketList.get(0);
+			if (!(firstItem instanceof Map<?, ?> firstMap)
+					|| (!((Map<String, Object>) firstMap).containsKey(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY)
+						&& !((Map<String, Object>) firstMap).containsKey(RELATIONAL_MODIFIER_OPERATOR_KEY))) {
+				continue;
+			}
+
+			for (Object hintObj : bucketList) {
+				if (!(hintObj instanceof Map<?, ?> hintMapObj)) {
+					continue;
+				}
+				Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+				if (hintDefinesDerivedColumn(hintMap, columnName)
+						&& hintSourceRefMatches(hintMap, tableRef, visibleAliasMap)) {
+					return true;
+				}
+			}
 		}
 
 		String resolvedKey = findKeyIgnoreCase(localDerivedColumns, columnName);
@@ -9414,6 +9488,58 @@ public class SqlParseSymbolTreeHelper {
 		return resolvedDerivedSourceRef != null
 				&& (resolvedDerivedSourceRef.equalsIgnoreCase(tableRef)
 						|| normalizeTableRef(resolvedDerivedSourceRef).equalsIgnoreCase(normalizeTableRef(tableRef)));
+	}
+
+	@SuppressWarnings("unchecked")
+	public void promoteRelationalModifierDerivedColumnsBucketKeyIfNeeded(String relationAlias) {
+		if (relationAlias == null || relationAlias.isBlank()) {
+			return;
+		}
+
+		Object derivedColumnsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		if (!(derivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj)) {
+			return;
+		}
+
+		HashMap<String, Object> derivedColumnsMap = (HashMap<String, Object>) derivedColumnsMapObj;
+		String matchingBucketKey = null;
+		Object matchingBucketValue = null;
+
+		for (Map.Entry<String, Object> entry : derivedColumnsMap.entrySet()) {
+			String bucketKey = entry.getKey();
+			Object bucketValue = entry.getValue();
+			if (!(bucketValue instanceof ArrayList<?> bucketList) || bucketList.isEmpty()) {
+				continue;
+			}
+
+			Object lastItem = bucketList.get(bucketList.size() - 1);
+			if (!(lastItem instanceof Map<?, ?> hintMapObj)) {
+				continue;
+			}
+
+			Map<String, Object> hintMap = (Map<String, Object>) hintMapObj;
+			Object sourceRefObj = hintMap.get(MUMBLE_TABLE_REF_KEY);
+			if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
+				sourceRefObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_REF_KEY);
+			}
+			if (!(sourceRefObj instanceof String sourceRef) || sourceRef.isBlank()) {
+				continue;
+			}
+			if (!relationAlias.equalsIgnoreCase(sourceRef)) {
+				continue;
+			}
+
+			matchingBucketKey = bucketKey;
+			matchingBucketValue = bucketValue;
+			break;
+		}
+
+		if (matchingBucketKey == null || relationAlias.equalsIgnoreCase(matchingBucketKey)) {
+			return;
+		}
+
+		derivedColumnsMap.remove(matchingBucketKey);
+		derivedColumnsMap.put(relationAlias, matchingBucketValue);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9499,6 +9625,16 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	private boolean hintDefinesDerivedColumn(Map<String, Object> hintMap, String columnName) {
+		Object sourceColumnsObj = hintMap.get(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+		if (sourceColumnsObj instanceof ArrayList<?> sourceColumns) {
+			for (Object sourceColumnObj : sourceColumns) {
+				if (sourceColumnObj instanceof String sourceColumn
+						&& sourceColumn.equalsIgnoreCase(columnName)) {
+					return true;
+				}
+			}
+		}
+
 		Object derivedColumnsObj = hintMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		if (derivedColumnsObj instanceof ArrayList<?> derivedColumns) {
 			for (Object derivedColumnObj : derivedColumns) {
@@ -9667,7 +9803,9 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private void consumeLocallyResolvedUnqualifiedBeforeScopePassUp(
 			HashMap<String, Object> unqualifiedUnresolvedForLocal,
-			Map<String, Object> scopeSymbols) {
+			Map<String, Object> scopeSymbols,
+			HashMap<String, Object> scopeDerivedColumns,
+			ArrayList<Object> scopeRelationalModifierHints) {
 		if (unqualifiedUnresolvedForLocal == null || unqualifiedUnresolvedForLocal.isEmpty()
 				|| scopeSymbols == null) {
 			return;
@@ -9717,9 +9855,9 @@ public class SqlParseSymbolTreeHelper {
 							null,
 							true,
 							false,
-							null,
-							null,
-							false);
+							scopeRelationalModifierHints,
+							scopeDerivedColumns,
+							true);
 			if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
 					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
 					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR) {

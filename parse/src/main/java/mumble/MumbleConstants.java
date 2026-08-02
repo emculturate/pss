@@ -33,13 +33,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_CTE_KEY = "cte";
     /** Named scope registry (WITH CTEs, inherited outer aliases) visible to nested subqueries. */
     public static final String MUMBLE_CONTEXT_LIST_KEY = "context_list";
-    /** @deprecated use {@link #MUMBLE_CONTEXT_LIST_KEY} */
-    @Deprecated
-    public static final String MUMBLE_CTE_LIST_KEY = MUMBLE_CONTEXT_LIST_KEY;
     public static final String MUMBLE_OUTER_CONTEXT_LIST_KEY = "outer_context_list_backup";
-    /** @deprecated use {@link #MUMBLE_OUTER_CONTEXT_LIST_KEY} */
-    @Deprecated
-    public static final String MUMBLE_OUTER_CTE_LIST_KEY = MUMBLE_OUTER_CONTEXT_LIST_KEY;
     public static final String MUMBLE_OUTER_DEF_ENTRIES_KEY = "outer_def_entries_backup"; // Saved outer def_* symbol-table entries before a nested WITH clause absorbs them
     /** Saved outer {@link #MUMBLE_TABLE_ALIAS_KEY} map before a nested WITH clause seeds its own aliases. */
     public static final String MUMBLE_OUTER_TABLE_ALIAS_KEY = "mumble_outer_table_alias";

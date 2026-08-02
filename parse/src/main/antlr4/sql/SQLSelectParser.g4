@@ -919,10 +919,6 @@ unpivot_null_policy
   | EXCLUDE NULLS
   ;
 
-relational_modifier_operand_column
-  : column_reference
-  ;
-
 relational_modifier_value_column
   : relational_modifier_operand_column
   ;
@@ -949,7 +945,7 @@ relational_modifier_alias
 // Postfix operator that rotates rows into columns over a single table source.
 pivot_clause
   : PIVOT
-    LEFT_PAREN pivot_aggregate_clause FOR pivot_value_column pivot_in_clause RIGHT_PAREN
+    LEFT_PAREN pivot_aggregate_clause FOR relational_modifier_operand_column pivot_in_clause RIGHT_PAREN
     pivot_default_on_null_clause?
   ;
 
@@ -983,10 +979,6 @@ snowflake_pivot_aggregate_function
   | SUM
   ;
 
-// Snowflake: FOR <value_column>
-pivot_value_column
-  : relational_modifier_operand_column
-  ;
 
 // Snowflake: IN ( <value-list> | ANY [ORDER BY ...] | <subquery> )
 pivot_in_clause
@@ -1029,6 +1021,10 @@ pivot_in_subquery
 // Snowflake: [ DEFAULT ON NULL (<value>) ]
 pivot_default_on_null_clause
   : DEFAULT ON NULL LEFT_PAREN value_expression RIGHT_PAREN
+  ;
+
+relational_modifier_operand_column
+  : column_reference
   ;
 
 
