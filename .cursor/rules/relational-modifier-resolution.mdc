@@ -27,6 +27,6 @@ alwaysApply: false
 
 ## Open work (Phase 17.6)
 
-See worklist **17.6.1–17.6.7**: SELECT ambiguity (17.6.2), golden audit (17.6.1), subquery-backed triple variants (17.6.7).
+See worklist **17.6.1–17.6.8**: SELECT ambiguity (17.6.2), golden audit (17.6.1), subquery-backed triple variants (17.6.7), **convert egress completeness** (17.6.8 — window `OVER` clauses, derived `query_dictionary` token merge, tests).
 
 Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–18.

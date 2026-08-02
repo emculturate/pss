@@ -789,6 +789,88 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	/**
+	 * Merges UNPIVOT/PIVOT FOR/VALUE definition tokens from structured {@code derived_columns}
+	 * buckets onto {@code query_dictionary} for names that are query interface outputs.
+	 * SELECT-list origins are phase-1 ({@code exitSelect_item}); this is the modifier-definition
+	 * counterpart to {@link #recordInterfaceOutputClauseRefOnQueryDictionary} for clause usages.
+	 */
+	@SuppressWarnings("unchecked")
+	private void mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localDerivedColumns) {
+		if (localInterface == null
+				|| localInterface.isEmpty()
+				|| localCurrentQueryDictionary == null
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return;
+		}
+
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (!(bucketObj instanceof Map<?, ?>)) {
+				continue;
+			}
+			Map<String, Object> bucketMap = (Map<String, Object>) bucketObj;
+			for (Map.Entry<String, Object> columnEntry : bucketMap.entrySet()) {
+				String derivedColumnName = columnEntry.getKey();
+				if (derivedColumnName == null
+						|| derivedColumnName.isBlank()
+						|| RELATIONAL_MODIFIER_OPERATOR_KEY.equals(derivedColumnName)) {
+					continue;
+				}
+				String interfaceKey = findKeyIgnoreCase(localInterface, derivedColumnName);
+				if (interfaceKey == null) {
+					continue;
+				}
+				Object definitionTokens = columnEntry.getValue();
+				if (definitionTokens == null) {
+					continue;
+				}
+				walker.mergeResolvedColumnIntoDictionary(
+						localCurrentQueryDictionary,
+						interfaceKey,
+						definitionTokens);
+			}
+		}
+	}
+
+	private void recordRelationalModifierDerivedColumnClauseRefOnQueryDictionary(
+			Object columnRefObj,
+			String columnName,
+			String clauseKey,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> effectiveAliasMap,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			HashMap<String, Object> localTableCollection) {
+		if (!isInterfaceOutputColumnName(localInterface, columnName)) {
+			return;
+		}
+		ArchivedClauseProbeContext clauseProbeContext = new ArchivedClauseProbeContext(
+				null,
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				null,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				effectiveAliasMap,
+				null,
+				null,
+				null,
+				null,
+				null,
+				false);
+		recordInterfaceOutputClauseRefOnQueryDictionary(
+				columnRefObj,
+				columnName,
+				clauseKey,
+				clauseProbeContext);
+	}
+
 	// --- UNPIVOT / convertSymbolTable resolution (canonical from event walker) ---
 
 	/**
@@ -3636,6 +3718,11 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localRelationalModifierSourceColumns,
 				localTableAliasMap);
+
+		mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
+				localInterface,
+				localCurrentQueryDictionary,
+				localDerivedColumns);
 
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
@@ -11987,6 +12074,16 @@ public class SqlParseSymbolTreeHelper {
 		ConvertEgressColumnResolutionResult clauseEgressResult =
 				resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx);
 		if (clauseEgressResult.hasExpandedDerivedSourceLineage()) {
+			recordRelationalModifierDerivedColumnClauseRefOnQueryDictionary(
+					refObj,
+					columnName,
+					clauseKey,
+					localInterface,
+					localCurrentQueryDictionary,
+					localUnresolvedColumnMap,
+					effectiveAliasMap,
+					visibleQuerySourceCollection,
+					localTableCollection);
 			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.expandedDerivedSourceLineage(
 					clauseEgressResult.expandedDerivedSourceLineage());
@@ -12014,6 +12111,16 @@ public class SqlParseSymbolTreeHelper {
 			return ArchivedClauseColumnRefResult.skip();
 		}
 		if (clauseEgressResult.isDerivedColumn()) {
+			recordRelationalModifierDerivedColumnClauseRefOnQueryDictionary(
+					refObj,
+					columnName,
+					clauseKey,
+					localInterface,
+					localCurrentQueryDictionary,
+					localUnresolvedColumnMap,
+					effectiveAliasMap,
+					visibleQuerySourceCollection,
+					localTableCollection);
 			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.skip();
 		}
@@ -12068,6 +12175,16 @@ public class SqlParseSymbolTreeHelper {
 
 		switch (resolutionResult.status) {
 			case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
+				recordRelationalModifierDerivedColumnClauseRefOnQueryDictionary(
+						refObj,
+						columnName,
+						clauseKey,
+						localInterface,
+						localCurrentQueryDictionary,
+						localUnresolvedColumnMap,
+						effectiveAliasMap,
+						visibleQuerySourceCollection,
+						localTableCollection);
 				consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 				return ArchivedClauseColumnRefResult.skip();
 			}
