@@ -7666,10 +7666,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
-			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
-				symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
-						columnSubTree,
-						ctx.getStart().toString());
+			if (!walker.isInsideSelectListScope()) {
+				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));
+				if (clauseSiteTokenText != null) {
+					symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
+							columnSubTree,
+							clauseSiteTokenText);
+				}
 			}
 			if (tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName && !columnName.isBlank()) {
 				recordRelationalModifierOperandReference(tableRef, columnName, ctx.getStart());
@@ -7729,12 +7732,35 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
-			if (ctx.getStart() != null && !walker.isInsideSelectListScope()) {
-				symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
-						columnSubTree,
-						ctx.getStart().toString());
+			if (!walker.isInsideSelectListScope()) {
+				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));
+				if (clauseSiteTokenText != null) {
+					symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
+							columnSubTree,
+							clauseSiteTokenText);
+				}
 			}
 		}
+	}
+
+	private org.antlr.v4.runtime.Token resolveClauseColumnSiteToken(
+			SQLSelectParserParser.Column_referenceContext ctx) {
+		if (ctx != null && ctx.name != null && ctx.name.getStart() != null) {
+			return ctx.name.getStart();
+		}
+		return ctx == null ? null : ctx.getStart();
+	}
+
+	private org.antlr.v4.runtime.Token resolveClauseColumnSiteToken(
+			SQLSelectParserParser.Column_primaryContext ctx) {
+		if (ctx != null && ctx.name != null && ctx.name.getStart() != null) {
+			return ctx.name.getStart();
+		}
+		return ctx == null ? null : ctx.getStart();
+	}
+
+	private String formatClauseColumnSiteToken(org.antlr.v4.runtime.Token token) {
+		return token == null ? null : token.toString();
 	}
 
 	@SuppressWarnings("unchecked")

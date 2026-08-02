@@ -100,6 +100,26 @@ public class SqlParseSymbolTreeHelper {
 			MUMBLE_ORDERED_BY_KEY,
 	};
 
+	/**
+	 * Clause / assignment RHS lists that keep walk-captured tuple-qualified modifier refs through
+	 * convert egress until structured clause harvest ({@linkplain #ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS}
+	 * plus UPDATE assignment RHS probe bucket).
+	 */
+	private boolean defersRelationalModifierClauseHarvestColumnRefList(String containerKey) {
+		if (containerKey == null || containerKey.isBlank()) {
+			return false;
+		}
+		if (UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(containerKey)) {
+			return true;
+		}
+		for (String archivedKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+			if (archivedKey.equals(containerKey)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** @deprecated use {@link #ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS} */
 	private static final String[] SCOPE_CLAUSE_COLUMN_LIST_KEYS = ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS;
 
@@ -1161,8 +1181,7 @@ public class SqlParseSymbolTreeHelper {
 				localTableAliasMap);
 		if (archivedScopeColumnReferenceContainers != null) {
 			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
-				if (MUMBLE_FILTERS_KEY.equals(containerKey)) {
-					// Preserve JOIN ON / WHERE tuple-qualified refs until clause harvest (17.7.6).
+				if (defersRelationalModifierClauseHarvestColumnRefList(containerKey)) {
 					continue;
 				}
 				expandRelationalModifierDerivedColumnLineageInColumnRefList(
@@ -1173,12 +1192,15 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 		if (assignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
-			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
-				expandRelationalModifierDerivedColumnLineageInColumnRefList(
-						rhsRefsObj,
-						localDerivedColumns,
-						localSourceColumnsByBucket,
-						localTableAliasMap);
+			if (!defersRelationalModifierClauseHarvestColumnRefList(
+					UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY)) {
+				for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+					expandRelationalModifierDerivedColumnLineageInColumnRefList(
+							rhsRefsObj,
+							localDerivedColumns,
+							localSourceColumnsByBucket,
+							localTableAliasMap);
+				}
 			}
 		}
 	}
@@ -2387,6 +2409,78 @@ public class SqlParseSymbolTreeHelper {
 				stripEphemeralLocationsFromColumnReferenceListInPlace(rhsRefsObj);
 			}
 		}
+	}
+
+	/**
+	 * When clause harvest is deferred ({@link #defersRelationalModifierClauseHarvestColumnRefList}),
+	 * archived clause lists skip probe-based token merge. Mirror interface-output site tokens from
+	 * ephemeral {@code locations} (and unresolved fallbacks) onto {@code query_dictionary} before
+	 * locations are stripped.
+	 */
+	@SuppressWarnings("unchecked")
+	private void mergeDeferredClauseHarvestSiteTokensIntoQueryDictionary(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj) {
+		if (localInterface == null || localCurrentQueryDictionary == null) {
+			return;
+		}
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				if (!defersRelationalModifierClauseHarvestColumnRefList(containerKey)) {
+					continue;
+				}
+				mergeClauseColumnListSiteTokensIntoQueryDictionary(
+						archivedScopeColumnReferenceContainers.get(containerKey),
+						localInterface,
+						localCurrentQueryDictionary);
+			}
+		}
+		if (defersRelationalModifierClauseHarvestColumnRefList(UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY)
+				&& updateAssignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				mergeClauseColumnListSiteTokensIntoQueryDictionary(
+						rhsRefsObj,
+						localInterface,
+						localCurrentQueryDictionary);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeClauseColumnListSiteTokensIntoQueryDictionary(
+			Object columnListObj,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
+			return;
+		}
+		for (Object refObj : (ArrayList<Object>) columnRefsObj) {
+			String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (columnName == null || columnName.isBlank()
+					|| !isInterfaceOutputColumnName(localInterface, columnName)) {
+				continue;
+			}
+			String dictionaryKey = findKeyIgnoreCase(localInterface, columnName);
+			if (dictionaryKey == null) {
+				dictionaryKey = columnName;
+			}
+			Object tokenPayload = extractClauseColumnReferenceSiteTokenPayload(refObj);
+			if (tokenPayload == null) {
+				continue;
+			}
+			walker.mergeResolvedColumnIntoDictionary(
+					localCurrentQueryDictionary,
+					dictionaryKey,
+					tokenPayload);
+		}
+	}
+
+	private Object extractClauseColumnReferenceSiteTokenPayload(Object refObj) {
+		ArrayList<Object> tokens = new ArrayList<Object>();
+		appendMaterializationRefTokens(tokens, refObj);
+		return tokens.isEmpty() ? null : tokens;
 	}
 
 	/**
@@ -4161,6 +4255,12 @@ public class SqlParseSymbolTreeHelper {
 				activeConvertEgressRelationalModifierContext,
 				deleteTargetTableRef,
 				deferCorrelatedValueSubqueryQualifiedUnknowns);
+
+		mergeDeferredClauseHarvestSiteTokensIntoQueryDictionary(
+				localInterface,
+				localCurrentQueryDictionary,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
 
 		stripEphemeralLocationsFromConvertEgressColumnReferences(
 				localInterface,
@@ -12913,6 +13013,9 @@ public class SqlParseSymbolTreeHelper {
 		if (!(assignmentsObj instanceof Map<?, ?> assignmentsMapObj)) {
 			return;
 		}
+		if (defersRelationalModifierClauseHarvestColumnRefList(UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY)) {
+			return;
+		}
 		for (Object rhsRefsObj : assignmentsMapObj.values()) {
 			probeArchivedScopeClauseColumnList(
 					rhsRefsObj,
@@ -12927,7 +13030,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		for (String clauseKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
-			if (MUMBLE_FILTERS_KEY.equals(clauseKey)) {
+			if (defersRelationalModifierClauseHarvestColumnRefList(clauseKey)) {
 				continue;
 			}
 			probeArchivedScopeClauseColumnList(
@@ -13049,7 +13152,7 @@ public class SqlParseSymbolTreeHelper {
 
 		switch (result.disposition) {
 			case EXPANDED_DERIVED_SOURCE_LINEAGE -> {
-				if (MUMBLE_FILTERS_KEY.equals(clauseKey)) {
+				if (defersRelationalModifierClauseHarvestColumnRefList(clauseKey)) {
 					return;
 				}
 				if (result.expandedDerivedSourceLineage == null
