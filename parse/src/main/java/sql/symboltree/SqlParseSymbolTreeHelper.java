@@ -82,6 +82,8 @@ public class SqlParseSymbolTreeHelper {
 	public static final String RELATIONAL_MODIFIER_DERIVATION_KEY = "derivation";
 	/** Per-bucket map of PIVOT derived output name → aggregate operand source column (convert interface lineage). */
 	public static final String RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY = "pivot_derived_source_bindings";
+	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMN_TOKENS_KEY = "tokens";
+	public static final String RELATIONAL_MODIFIER_PIVOT_AGGREGATE_OPERAND_KEY = "pivot_aggregate_operand";
 
 	/**
 	 * Archived scope containers holding flat column-ref lists (WHERE, HAVING, QUALIFY, JOIN ON,
@@ -567,6 +569,7 @@ public class SqlParseSymbolTreeHelper {
 	static final class RelationalModifierDerivationScopeState {
 		final HashMap<String, Object> derivedColumnsByBucket = new HashMap<String, Object>();
 		final HashMap<String, Object> sourceColumnsByBucket = new HashMap<String, Object>();
+		/** Convert egress only; never published on {@code def_query*}. */
 		final HashMap<String, Object> pivotDerivedSourceBindingsByBucket = new HashMap<String, Object>();
 		String interfaceSourceRef;
 		String dictionaryPhysicalSourceRef;
@@ -609,19 +612,16 @@ public class SqlParseSymbolTreeHelper {
 		final String dictionaryPhysicalSourceRef;
 		final HashMap<String, Object> derivedColumnsByBucket;
 		final HashMap<String, Object> sourceColumnsByBucket;
-		final HashMap<String, Object> pivotDerivedSourceBindingsByBucket;
 
 		private RelationalModifierConvertEgressContext(
 				String interfaceSourceRef,
 				String dictionaryPhysicalSourceRef,
 				HashMap<String, Object> derivedColumnsByBucket,
-				HashMap<String, Object> sourceColumnsByBucket,
-				HashMap<String, Object> pivotDerivedSourceBindingsByBucket) {
+				HashMap<String, Object> sourceColumnsByBucket) {
 			this.interfaceSourceRef = interfaceSourceRef;
 			this.dictionaryPhysicalSourceRef = dictionaryPhysicalSourceRef;
 			this.derivedColumnsByBucket = derivedColumnsByBucket;
 			this.sourceColumnsByBucket = sourceColumnsByBucket;
-			this.pivotDerivedSourceBindingsByBucket = pivotDerivedSourceBindingsByBucket;
 		}
 
 		static RelationalModifierConvertEgressContext from(RelationalModifierDerivationScopeState state) {
@@ -632,26 +632,79 @@ public class SqlParseSymbolTreeHelper {
 					state.interfaceSourceRef,
 					state.dictionaryPhysicalSourceRef,
 					new HashMap<String, Object>(state.derivedColumnsByBucket),
-					new HashMap<String, Object>(state.sourceColumnsByBucket),
-					new HashMap<String, Object>(state.pivotDerivedSourceBindingsByBucket));
+					new HashMap<String, Object>(state.sourceColumnsByBucket));
 		}
 
 		boolean isEmpty() {
 			return (interfaceSourceRef == null || interfaceSourceRef.isBlank())
 					&& derivedColumnsByBucket.isEmpty()
-					&& sourceColumnsByBucket.isEmpty()
-					&& pivotDerivedSourceBindingsByBucket.isEmpty();
+					&& sourceColumnsByBucket.isEmpty();
 		}
 
+		@SuppressWarnings("unchecked")
 		boolean isUnpivot() {
-			return !isPivot()
-					&& !derivedColumnsByBucket.isEmpty()
-					&& !sourceColumnsByBucket.isEmpty();
+			if (derivedColumnsByBucket.isEmpty() || sourceColumnsByBucket.isEmpty()) {
+				return false;
+			}
+			for (Object bucketObj : derivedColumnsByBucket.values()) {
+				if (!(bucketObj instanceof Map<?, ?> bucketMap) || bucketMap.size() != 2) {
+					return false;
+				}
+				if (relationalModifierDerivedBucketLooksLikePivot((Map<String, Object>) bucketMap)) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		boolean isPivot() {
-			return !pivotDerivedSourceBindingsByBucket.isEmpty();
+			if (derivedColumnsByBucket.isEmpty() || sourceColumnsByBucket.isEmpty()) {
+				return false;
+			}
+			return !isUnpivot();
 		}
+	}
+
+	private static boolean relationalModifierDerivedBucketLooksLikePivot(Map<String, Object> bucketMap) {
+		if (bucketMap == null || bucketMap.isEmpty()) {
+			return false;
+		}
+		if (bucketMap.size() != 2) {
+			return bucketMap.size() > 2;
+		}
+		String firstKey = null;
+		String secondKey = null;
+		for (String key : bucketMap.keySet()) {
+			if (firstKey == null) {
+				firstKey = key;
+			} else {
+				secondKey = key;
+				break;
+			}
+		}
+		if (firstKey == null || secondKey == null) {
+			return false;
+		}
+		return shareRelationalModifierPivotAggregateSuffix(firstKey, secondKey);
+	}
+
+	private static boolean shareRelationalModifierPivotAggregateSuffix(String left, String right) {
+		String leftSuffix = pivotAggregateSuffixFromDerivedColumnName(left);
+		String rightSuffix = pivotAggregateSuffixFromDerivedColumnName(right);
+		return leftSuffix != null
+				&& rightSuffix != null
+				&& leftSuffix.equalsIgnoreCase(rightSuffix);
+	}
+
+	private static String pivotAggregateSuffixFromDerivedColumnName(String derivedColumnName) {
+		if (derivedColumnName == null || derivedColumnName.isBlank()) {
+			return null;
+		}
+		int separatorIndex = derivedColumnName.lastIndexOf('_');
+		if (separatorIndex < 0 || separatorIndex >= derivedColumnName.length() - 1) {
+			return null;
+		}
+		return derivedColumnName.substring(separatorIndex + 1);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -732,12 +785,6 @@ public class SqlParseSymbolTreeHelper {
 		for (Object bucketObj : ctx.derivedColumnsByBucket.values()) {
 			if (bucketObj instanceof Map<?, ?> bucketMap
 					&& containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
-				return true;
-			}
-		}
-		for (Object bindingsObj : ctx.pivotDerivedSourceBindingsByBucket.values()) {
-			if (bindingsObj instanceof Map<?, ?> bindingsMap
-					&& containsKeyIgnoreCase((Map<String, Object>) bindingsMap, columnName)) {
 				return true;
 			}
 		}
@@ -985,14 +1032,6 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (!sourceColumnMap.isEmpty()) {
 			scopeSymbols.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, sourceColumnMap);
-		}
-		if (state.pivotDerivedSourceBindingsByBucket.size() == 1) {
-			Object bindingsObj = state.pivotDerivedSourceBindingsByBucket.values().iterator().next();
-			if (bindingsObj instanceof Map<?, ?> bindingsMapObj) {
-				scopeSymbols.put(
-						RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY,
-						new HashMap<String, String>((Map<String, String>) bindingsMapObj));
-			}
 		}
 		if (state.interfaceSourceRef != null && !state.interfaceSourceRef.isBlank()) {
 			scopeSymbols.put(RELATIONAL_MODIFIER_INTERFACE_SOURCE_REF_KEY, state.interfaceSourceRef);
@@ -1358,7 +1397,8 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		for (Object valueObj : bucketMap.values()) {
-			if (!(valueObj instanceof ArrayList<?> valueList) || valueList.isEmpty()) {
+			ArrayList<?> valueList = relationalModifierDerivedColumnEntryTokenRefs(valueObj);
+			if (valueList == null || valueList.isEmpty()) {
 				continue;
 			}
 			Object firstItem = valueList.get(0);
@@ -1370,6 +1410,21 @@ public class SqlParseSymbolTreeHelper {
 			return true;
 		}
 		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	ArrayList<Object> relationalModifierDerivedColumnEntryTokenRefs(Object derivedEntry) {
+		if (derivedEntry instanceof Map<?, ?> entryMap) {
+			Object tokensObj = entryMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMN_TOKENS_KEY);
+			if (tokensObj instanceof ArrayList<?> tokenList) {
+				return (ArrayList<Object>) tokenList;
+			}
+			return null;
+		}
+		if (derivedEntry instanceof ArrayList<?> tokenList) {
+			return (ArrayList<Object>) tokenList;
+		}
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1513,9 +1568,7 @@ public class SqlParseSymbolTreeHelper {
 			String derivedColumnName,
 			String bucketKey,
 			ArrayList<Object> sourceRefs) {
-		if (activeConvertEgressPivotDerivedSourceBindingsByBucket == null
-				|| activeConvertEgressPivotDerivedSourceBindingsByBucket.isEmpty()
-				|| derivedColumnName == null
+		if (derivedColumnName == null
 				|| derivedColumnName.isBlank()
 				|| bucketKey == null
 				|| bucketKey.isBlank()
@@ -1524,28 +1577,36 @@ public class SqlParseSymbolTreeHelper {
 			return null;
 		}
 
-		Object bucketBindingsObj = activeConvertEgressPivotDerivedSourceBindingsByBucket.get(bucketKey);
-		if (bucketBindingsObj == null) {
-			String resolvedBucketKey = findKeyIgnoreCase(
-					activeConvertEgressPivotDerivedSourceBindingsByBucket,
-					bucketKey);
-			if (resolvedBucketKey != null) {
-				bucketBindingsObj = activeConvertEgressPivotDerivedSourceBindingsByBucket.get(resolvedBucketKey);
-			}
-		}
-		if (!(bucketBindingsObj instanceof Map<?, ?> bindingsMapObj)) {
-			return null;
-		}
-
 		String sourceColumnName = null;
-		for (Map.Entry<?, ?> bindingEntry : bindingsMapObj.entrySet()) {
-			if (bindingEntry.getKey() instanceof String bindingDerivedName
-					&& bindingDerivedName.equalsIgnoreCase(derivedColumnName)
-					&& bindingEntry.getValue() instanceof String bindingSourceColumn
-					&& !bindingSourceColumn.isBlank()) {
-				sourceColumnName = bindingSourceColumn;
-				break;
+		if (activeConvertEgressPivotDerivedSourceBindingsByBucket != null
+				&& !activeConvertEgressPivotDerivedSourceBindingsByBucket.isEmpty()) {
+			Object bucketBindingsObj = activeConvertEgressPivotDerivedSourceBindingsByBucket.get(bucketKey);
+			if (bucketBindingsObj == null) {
+				String resolvedBucketKey = findKeyIgnoreCase(
+						activeConvertEgressPivotDerivedSourceBindingsByBucket,
+						bucketKey);
+				if (resolvedBucketKey != null) {
+					bucketBindingsObj = activeConvertEgressPivotDerivedSourceBindingsByBucket.get(resolvedBucketKey);
+				}
 			}
+			if (bucketBindingsObj instanceof Map<?, ?> bindingsMapObj) {
+				for (Map.Entry<?, ?> bindingEntry : bindingsMapObj.entrySet()) {
+					if (bindingEntry.getKey() instanceof String bindingDerivedName
+							&& bindingDerivedName.equalsIgnoreCase(derivedColumnName)
+							&& bindingEntry.getValue() instanceof String bindingSourceColumn
+							&& !bindingSourceColumn.isBlank()) {
+						sourceColumnName = bindingSourceColumn;
+						break;
+					}
+				}
+			}
+		}
+		if (sourceColumnName == null || sourceColumnName.isBlank()) {
+			sourceColumnName = extractPivotAggregateOperandColumnFromDerivedEntry(
+					resolveRelationalModifierDerivedColumnEntry(
+							derivedColumnName,
+							activeConvertEgressDerivedColumns),
+					sourceRefs);
 		}
 		if (sourceColumnName == null || sourceColumnName.isBlank()) {
 			return null;
@@ -1561,6 +1622,34 @@ public class SqlParseSymbolTreeHelper {
 					matchedRefs.add(refObj);
 				}
 				return matchedRefs;
+			}
+		}
+		return null;
+	}
+
+	private String extractPivotAggregateOperandColumnFromDerivedEntry(
+			Object derivedEntry,
+			ArrayList<Object> sourceRefs) {
+		if (derivedEntry instanceof Map<?, ?> entryMap) {
+			Object operandObj = entryMap.get(RELATIONAL_MODIFIER_PIVOT_AGGREGATE_OPERAND_KEY);
+			if (operandObj instanceof String operandColumn && !operandColumn.isBlank()) {
+				return operandColumn;
+			}
+			derivedEntry = entryMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMN_TOKENS_KEY);
+		}
+		if (!(derivedEntry instanceof ArrayList<?> tokenRefs) || tokenRefs.isEmpty() || sourceRefs == null) {
+			return null;
+		}
+		for (int index = tokenRefs.size() - 1; index >= 0; index--) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(tokenRefs.get(index));
+			if (refName == null || refName.isBlank()) {
+				continue;
+			}
+			for (Object sourceRefObj : sourceRefs) {
+				String sourceName = walker.extractReferenceNameFromInterfaceEntry(sourceRefObj);
+				if (sourceName != null && sourceName.equalsIgnoreCase(refName)) {
+					return sourceName;
+				}
 			}
 		}
 		return null;
@@ -12464,11 +12553,26 @@ public class SqlParseSymbolTreeHelper {
 	private boolean isRelationalModifierDerivedOutputColumnName(
 			String columnName,
 			HashMap<String, Object> localDerivedColumns) {
+		return resolveRelationalModifierDerivedColumnEntry(columnName, localDerivedColumns) != null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object resolveRelationalModifierDerivedColumnEntry(
+			String columnName,
+			HashMap<String, Object> localDerivedColumns) {
 		if (columnName == null
 				|| columnName.isBlank()
 				|| localDerivedColumns == null
 				|| localDerivedColumns.isEmpty()) {
-			return false;
+			return null;
+		}
+
+		String topLevelKey = findKeyIgnoreCase(localDerivedColumns, columnName);
+		if (topLevelKey != null) {
+			Object directEntry = localDerivedColumns.get(topLevelKey);
+			if (relationalModifierDerivedColumnEntryTokenRefs(directEntry) != null) {
+				return directEntry;
+			}
 		}
 
 		for (Object bucketValue : localDerivedColumns.values()) {
@@ -12480,12 +12584,12 @@ public class SqlParseSymbolTreeHelper {
 			if (bucketColumnKey == null) {
 				continue;
 			}
-			Object columnRefsObj = bucketMap.get(bucketColumnKey);
-			if (columnRefsObj instanceof ArrayList<?>) {
-				return true;
+			Object entry = bucketMap.get(bucketColumnKey);
+			if (relationalModifierDerivedColumnEntryTokenRefs(entry) != null) {
+				return entry;
 			}
 		}
-		return false;
+		return null;
 	}
 
 	private boolean isRelationalModifierPhysicalOperandColumn(
@@ -12525,14 +12629,14 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (isRelationalModifierDerivedOutputColumnName(columnKey, localDerivedColumns)) {
-				tableColumns.remove(columnKey);
+				removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
 				continue;
 			}
 			if (containsKeyIgnoreCase(localDerivedColumns, columnKey)) {
 				if (!isRelationalModifierPhysicalOperandColumn(
 						columnKey,
 						relationalModifierContext)) {
-					tableColumns.remove(columnKey);
+					removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
 					continue;
 				}
 			}
@@ -12541,7 +12645,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 			if (relationalModifierContext.isPivot()
 					&& structuredContextDefinesPivotDerivedOutputColumn(relationalModifierContext, columnKey)) {
-				tableColumns.remove(columnKey);
+				removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
 				continue;
 			}
 			if (relationalModifierContext.isUnpivot()) {
@@ -12554,9 +12658,21 @@ public class SqlParseSymbolTreeHelper {
 								&& unpivotOutputs.forColumn.equalsIgnoreCase(columnKey)));
 				if (isValueOrFor
 						&& !isRelationalModifierPhysicalOperandColumn(columnKey, relationalModifierContext)) {
-					tableColumns.remove(columnKey);
+					removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
 				}
 			}
+		}
+	}
+
+	private void removeDictionaryColumnIgnoreCase(
+			HashMap<String, Object> tableColumns,
+			String columnName) {
+		if (tableColumns == null || tableColumns.isEmpty() || columnName == null || columnName.isBlank()) {
+			return;
+		}
+		String matchedKey = findKeyIgnoreCase(tableColumns, columnName);
+		if (matchedKey != null) {
+			tableColumns.remove(matchedKey);
 		}
 	}
 
