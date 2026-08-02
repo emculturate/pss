@@ -39,6 +39,7 @@ public class SqlParseSymbolTreeHelper {
 	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
 	private HashMap<String, Object> activeConvertEgressDerivedColumns;
 	private ArrayList<Object> activeConvertEgressRelationalModifierHints;
+	private HashMap<String, Object> activeConvertEgressRelationalModifierSourceColumns;
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -449,28 +450,44 @@ public class SqlParseSymbolTreeHelper {
 		private final boolean derivedColumn;
 		private final QualifiedScopeResolutionResult qualified;
 		private final UnqualifiedScopeResolutionResult unqualified;
+		private final ArrayList<Object> expandedDerivedSourceLineage;
 
 		private ConvertEgressColumnResolutionResult(
 				boolean derivedColumn,
 				QualifiedScopeResolutionResult qualified,
-				UnqualifiedScopeResolutionResult unqualified) {
+				UnqualifiedScopeResolutionResult unqualified,
+				ArrayList<Object> expandedDerivedSourceLineage) {
 			this.derivedColumn = derivedColumn;
 			this.qualified = qualified;
 			this.unqualified = unqualified;
+			this.expandedDerivedSourceLineage = expandedDerivedSourceLineage;
 		}
 
 		static ConvertEgressColumnResolutionResult derivedColumn() {
-			return new ConvertEgressColumnResolutionResult(true, null, null);
+			return new ConvertEgressColumnResolutionResult(true, null, null, null);
 		}
 
 		static ConvertEgressColumnResolutionResult fromQualified(
 				QualifiedScopeResolutionResult qualified) {
-			return new ConvertEgressColumnResolutionResult(false, qualified, null);
+			return new ConvertEgressColumnResolutionResult(false, qualified, null, null);
 		}
 
 		static ConvertEgressColumnResolutionResult fromUnqualified(
 				UnqualifiedScopeResolutionResult unqualified) {
-			return new ConvertEgressColumnResolutionResult(false, null, unqualified);
+			return new ConvertEgressColumnResolutionResult(false, null, unqualified, null);
+		}
+
+		static ConvertEgressColumnResolutionResult fromExpandedDerivedSourceLineage(
+				ArrayList<Object> expandedDerivedSourceLineage) {
+			return new ConvertEgressColumnResolutionResult(false, null, null, expandedDerivedSourceLineage);
+		}
+
+		boolean hasExpandedDerivedSourceLineage() {
+			return expandedDerivedSourceLineage != null && !expandedDerivedSourceLineage.isEmpty();
+		}
+
+		ArrayList<Object> expandedDerivedSourceLineage() {
+			return expandedDerivedSourceLineage;
 		}
 
 		boolean isDerivedColumn() {
@@ -639,6 +656,441 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return rewrittenRefs;
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<Object> buildRelationalModifierSourceColumnInterfaceRefs(
+			Map<String, Object> sourceColumnsMap,
+			String physicalTableRef) {
+		ArrayList<Object> sourceRefs = new ArrayList<Object>();
+		if (sourceColumnsMap == null
+				|| sourceColumnsMap.isEmpty()
+				|| physicalTableRef == null
+				|| physicalTableRef.isBlank()) {
+			return sourceRefs;
+		}
+
+		for (String columnName : sourceColumnsMap.keySet()) {
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			HashMap<String, Object> sourceRef = new HashMap<String, Object>();
+			sourceRef.put(MUMBLE_NAME_KEY, columnName);
+			sourceRef.put(MUMBLE_TABLE_REF_KEY, physicalTableRef);
+			sourceRefs.add(sourceRef);
+		}
+		return sourceRefs;
+	}
+
+	public boolean hasRelationalModifierBucketDerivedColumns(HashMap<String, Object> localDerivedColumns) {
+		if (localDerivedColumns == null || localDerivedColumns.isEmpty()) {
+			return false;
+		}
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (bucketObj instanceof Map<?, ?> bucketMap
+					&& isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isRelationalModifierStructuredDerivedColumnBucket(Map<String, Object> bucketMap) {
+		if (bucketMap == null || bucketMap.isEmpty()) {
+			return false;
+		}
+		for (Object valueObj : bucketMap.values()) {
+			if (!(valueObj instanceof ArrayList<?> valueList) || valueList.isEmpty()) {
+				continue;
+			}
+			Object firstItem = valueList.get(0);
+			if (firstItem instanceof Map<?, ?> firstMap
+					&& ((Map<?, ?>) firstMap).containsKey(MUMBLE_NAME_KEY)
+					&& ((Map<?, ?>) firstMap).containsKey(MUMBLE_TABLE_REF_KEY)) {
+				continue;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void applyRelationalModifierBucketDerivedSourceExpansions(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localInterface == null
+				|| localInterface.isEmpty()
+				|| !hasRelationalModifierBucketDerivedColumns(localDerivedColumns)
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return;
+		}
+
+		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+			Object refsObj = interfaceEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+				continue;
+			}
+
+			ArrayList<Object> expandedRefs = expandReferenceListForRelationalModifierDerivedColumn(
+					(ArrayList<Object>) refs,
+					interfaceEntry.getKey(),
+					localDerivedColumns,
+					localSourceColumnsByBucket,
+					localTableAliasMap);
+			if (expandedRefs != null) {
+				interfaceEntry.setValue(expandedRefs);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public void applyRelationalModifierBucketDerivedSourceExpansionsToClauseColumnList(
+			Object columnListObj,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)
+				|| !hasRelationalModifierBucketDerivedColumns(localDerivedColumns)
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return;
+		}
+
+		ArrayList<Object> columnRefs = (ArrayList<Object>) columnRefsObj;
+		for (int index = 0; index < columnRefs.size(); index++) {
+			Object columnRefObj = columnRefs.get(index);
+			ArrayList<Object> singletonRefs = new ArrayList<Object>(1);
+			singletonRefs.add(columnRefObj);
+			ArrayList<Object> expandedRefs = expandReferenceListForRelationalModifierDerivedColumn(
+					singletonRefs,
+					null,
+					localDerivedColumns,
+					localSourceColumnsByBucket,
+					localTableAliasMap);
+			if (expandedRefs == null || expandedRefs.equals(singletonRefs)) {
+				continue;
+			}
+			columnRefs.remove(index);
+			columnRefs.addAll(index, expandedRefs);
+			index += expandedRefs.size() - 1;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public ArrayList<Object> expandReferenceListForRelationalModifierDerivedColumn(
+			ArrayList<Object> refs,
+			String fallbackColumnName,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (refs == null
+				|| refs.isEmpty()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return null;
+		}
+
+		String columnName = null;
+		String qualifier = null;
+		for (Object refObj : refs) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (refName != null && !refName.isBlank()) {
+				columnName = refName;
+			}
+			String refTable = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+			if (refTable != null && !refTable.isBlank()) {
+				qualifier = refTable;
+			}
+			if (columnName != null) {
+				break;
+			}
+		}
+		if ((columnName == null || columnName.isBlank())
+				&& fallbackColumnName != null
+				&& !fallbackColumnName.isBlank()) {
+			columnName = fallbackColumnName;
+		}
+		if (columnName == null || columnName.isBlank()) {
+			return null;
+		}
+
+		String bucketKey = resolveRelationalModifierDerivedColumnBucketKey(
+				columnName,
+				qualifier,
+				localDerivedColumns,
+				localTableAliasMap);
+		if (bucketKey == null || bucketKey.isBlank()) {
+			return null;
+		}
+
+		Object sourceBucketObj = localSourceColumnsByBucket.get(bucketKey);
+		if (sourceBucketObj == null) {
+			String resolvedBucketKey = findKeyIgnoreCase(localSourceColumnsByBucket, bucketKey);
+			if (resolvedBucketKey != null) {
+				sourceBucketObj = localSourceColumnsByBucket.get(resolvedBucketKey);
+			}
+		}
+		if (!(sourceBucketObj instanceof ArrayList<?> sourceRefs) || sourceRefs.isEmpty()) {
+			return null;
+		}
+
+		return copyInterfaceReferenceList((ArrayList<Object>) sourceRefs);
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveRelationalModifierDerivedColumnBucketKey(
+			String columnName,
+			String qualifier,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localTableAliasMap) {
+		if (columnName == null || columnName.isBlank() || localDerivedColumns == null) {
+			return null;
+		}
+
+		if (qualifier != null && !qualifier.isBlank()) {
+			String bucketKey = findKeyIgnoreCase(localDerivedColumns, qualifier);
+			if (bucketKey != null) {
+				Object bucketObj = localDerivedColumns.get(bucketKey);
+				if (bucketObj instanceof Map<?, ?> bucketMap
+						&& isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)
+						&& containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
+					return bucketKey;
+				}
+			}
+			if (isRelationalModifierDerivedColumnBucketKey(qualifier, localDerivedColumns)) {
+				return null;
+			}
+		}
+
+		String matchedBucketKey = null;
+		for (Map.Entry<String, Object> bucketEntry : localDerivedColumns.entrySet()) {
+			Object bucketObj = bucketEntry.getValue();
+			if (!(bucketObj instanceof Map<?, ?> bucketMap)) {
+				continue;
+			}
+			if (!isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)) {
+				continue;
+			}
+			if (!containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
+				continue;
+			}
+			if (matchedBucketKey != null) {
+				return null;
+			}
+			matchedBucketKey = bucketEntry.getKey();
+		}
+		return matchedBucketKey;
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<Object> copyInterfaceReferenceList(ArrayList<Object> sourceRefs) {
+		ArrayList<Object> copy = new ArrayList<Object>(sourceRefs.size());
+		for (Object refObj : sourceRefs) {
+			if (refObj instanceof Map<?, ?> refMapObj) {
+				copy.add(new HashMap<String, Object>((Map<String, Object>) refMapObj));
+			} else {
+				copy.add(refObj);
+			}
+		}
+		return copy;
+	}
+
+	private boolean isRelationalModifierDerivedColumnBucketKey(
+			String bucketKeyCandidate,
+			HashMap<String, Object> localDerivedColumns) {
+		if (bucketKeyCandidate == null
+				|| bucketKeyCandidate.isBlank()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return false;
+		}
+		String resolvedKey = findKeyIgnoreCase(localDerivedColumns, bucketKeyCandidate);
+		if (resolvedKey == null) {
+			return false;
+		}
+		Object bucketObj = localDerivedColumns.get(resolvedKey);
+		return bucketObj instanceof Map<?, ?> bucketMap
+				&& isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap);
+	}
+
+	private ArrayList<Object> tryExpandRelationalModifierDerivedColumnSourceLineageAtConvertEgress(
+			String columnName,
+			String tableRef) {
+		if (columnName == null || columnName.isBlank()) {
+			return null;
+		}
+		if (activeConvertEgressDerivedColumns == null
+				|| activeConvertEgressDerivedColumns.isEmpty()
+				|| activeConvertEgressRelationalModifierSourceColumns == null
+				|| activeConvertEgressRelationalModifierSourceColumns.isEmpty()) {
+			return null;
+		}
+		if (resolveRelationalModifierDerivedColumnBucketKey(
+				columnName,
+				tableRef,
+				activeConvertEgressDerivedColumns,
+				null) == null
+				&& resolveRelationalModifierDerivedColumnBucketKey(
+						columnName,
+						null,
+						activeConvertEgressDerivedColumns,
+						null) == null) {
+			return null;
+		}
+
+		HashMap<String, Object> probeRef = new HashMap<String, Object>();
+		probeRef.put(MUMBLE_NAME_KEY, columnName);
+		if (tableRef != null && !tableRef.isBlank()) {
+			probeRef.put(MUMBLE_TABLE_REF_KEY, tableRef);
+		}
+		ArrayList<Object> probeRefs = new ArrayList<Object>(1);
+		probeRefs.add(probeRef);
+		return expandReferenceListForRelationalModifierDerivedColumn(
+				probeRefs,
+				null,
+				activeConvertEgressDerivedColumns,
+				activeConvertEgressRelationalModifierSourceColumns,
+				null);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
+			ArrayList<Object> refs,
+			int refIndex,
+			ConvertEgressColumnResolutionResult egressResult) {
+		if (refs == null
+				|| refIndex < 0
+				|| refIndex >= refs.size()
+				|| egressResult == null
+				|| !egressResult.hasExpandedDerivedSourceLineage()) {
+			return false;
+		}
+
+		ArrayList<Object> expandedRefs =
+				copyInterfaceReferenceList(egressResult.expandedDerivedSourceLineage());
+		refs.remove(refIndex);
+		refs.addAll(refIndex, expandedRefs);
+		return true;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void expandRelationalModifierDerivedColumnLineageAcrossArchivedScope(
+			HashMap<String, Object> localInterface,
+			Object filtersList,
+			Object groupedByList,
+			Object orderedByList,
+			Object assignmentsObj,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()
+				|| localSourceColumnsByBucket == null
+				|| localSourceColumnsByBucket.isEmpty()) {
+			return;
+		}
+
+		expandRelationalModifierDerivedColumnLineageInInterfaceMap(
+				localInterface,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+		expandRelationalModifierDerivedColumnLineageInColumnRefList(
+				filtersList,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+		expandRelationalModifierDerivedColumnLineageInColumnRefList(
+				groupedByList,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+		expandRelationalModifierDerivedColumnLineageInColumnRefList(
+				orderedByList,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+		if (assignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				expandRelationalModifierDerivedColumnLineageInColumnRefList(
+						rhsRefsObj,
+						localDerivedColumns,
+						localSourceColumnsByBucket,
+						localTableAliasMap);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void expandRelationalModifierDerivedColumnLineageInInterfaceMap(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localInterface == null || localInterface.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+			Object refsObj = interfaceEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+				continue;
+			}
+			ArrayList<Object> mutableRefs = (ArrayList<Object>) refs;
+			expandRelationalModifierDerivedColumnLineageInMutableReferenceList(
+					mutableRefs,
+					interfaceEntry.getKey(),
+					localDerivedColumns,
+					localSourceColumnsByBucket,
+					localTableAliasMap);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void expandRelationalModifierDerivedColumnLineageInColumnRefList(
+			Object columnListObj,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
+			return;
+		}
+		expandRelationalModifierDerivedColumnLineageInMutableReferenceList(
+				(ArrayList<Object>) columnRefsObj,
+				null,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void expandRelationalModifierDerivedColumnLineageInMutableReferenceList(
+			ArrayList<Object> refs,
+			String fallbackColumnName,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		for (int index = 0; index < refs.size(); index++) {
+			Object refObj = refs.get(index);
+			ArrayList<Object> singletonRefs = new ArrayList<Object>(1);
+			singletonRefs.add(refObj);
+			ArrayList<Object> expandedRefs = expandReferenceListForRelationalModifierDerivedColumn(
+					singletonRefs,
+					fallbackColumnName,
+					localDerivedColumns,
+					localSourceColumnsByBucket,
+					localTableAliasMap);
+			if (expandedRefs == null || expandedRefs.equals(singletonRefs)) {
+				continue;
+			}
+			refs.remove(index);
+			refs.addAll(index, expandedRefs);
+			index += expandedRefs.size() - 1;
+		}
 	}
 
 	public void appendInterfaceReferenceIfMissing(ArrayList<Object> targetRefs, Object candidateRef) {
@@ -2264,8 +2716,17 @@ public class SqlParseSymbolTreeHelper {
 		} else {
 			localDerivedColumns = new HashMap<String, Object>();
 		}
+		Object localSourceColumnsObj = walker.symbolTable.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+		HashMap<String, Object> localRelationalModifierSourceColumns;
+		if (localSourceColumnsObj instanceof Map<?, ?> localSourceColumnsMapObj) {
+			localRelationalModifierSourceColumns =
+					new HashMap<String, Object>((Map<String, Object>) localSourceColumnsMapObj);
+		} else {
+			localRelationalModifierSourceColumns = new HashMap<String, Object>();
+		}
 		activeConvertEgressDerivedColumns = localDerivedColumns;
 		activeConvertEgressRelationalModifierHints = localRelationalModifierInterfaceHints;
+		activeConvertEgressRelationalModifierSourceColumns = localRelationalModifierSourceColumns;
 		String deleteTargetTableRef = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_TABLE_REF_KEY);
 		String deleteTargetAlias = (String) walker.symbolTable.remove(TEMP_DELETE_TARGET_ALIAS_KEY);
 
@@ -2522,6 +2983,18 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										tableRef,
 										interfaceQualifiedCtx);
+						if (egressResult.hasExpandedDerivedSourceLineage()) {
+							consumeDerivedColumnUnknownEntry(
+									localUnresolvedColumnMap,
+									tableRef,
+									columnName);
+							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
+									refs,
+									refIndex,
+									egressResult);
+							refIndex--;
+							continue;
+						}
 						if (egressResult.isDerivedColumn()) {
 							consumeDerivedColumnUnknownEntry(
 									localUnresolvedColumnMap,
@@ -2723,6 +3196,18 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										null,
 										interfaceUnqualifiedCtx);
+						if (egressResult.hasExpandedDerivedSourceLineage()) {
+							consumeDerivedColumnUnknownEntry(
+									localUnresolvedColumnMap,
+									null,
+									columnName);
+							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
+									refs,
+									refIndex,
+									egressResult);
+							refIndex--;
+							continue;
+						}
 						if (egressResult.isDerivedColumn()) {
 							consumeDerivedColumnUnknownEntry(
 									localUnresolvedColumnMap,
@@ -2919,6 +3404,16 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localRelationalModifierInterfaceHints);
 
+		expandRelationalModifierDerivedColumnLineageAcrossArchivedScope(
+				localInterface,
+				filtersList,
+				groupedByList,
+				orderedByList,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
+				localDerivedColumns,
+				localRelationalModifierSourceColumns,
+				localTableAliasMap);
+
 		patchInterfaceTableRefsForSinglePhysicalTableScope(localInterface, localTableCollection);
 
 		 walker.validateQueryInterface(localInterface, localCurrentQueryDictionary, effectiveAliasMap, effectiveTableCollection);
@@ -2975,6 +3470,11 @@ public class SqlParseSymbolTreeHelper {
 		} else if (!localDerivedColumns.isEmpty()) {
 			walker.symbolTable.put(DERIVED_COLUMNS_HINTS_KEY, localDerivedColumns);
 		}
+		if (!localRelationalModifierSourceColumns.isEmpty()) {
+			walker.symbolTable.put(
+					RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,
+					localRelationalModifierSourceColumns);
+		}
 		// Call a method here that will merge the local Table Dictionary into the walker's TableDictionary Map
 		walker.mergeTableDictionaryIntoWalkerTableDictionary(currentTableDictionary);
 		
@@ -3008,6 +3508,7 @@ public class SqlParseSymbolTreeHelper {
 			activeConvertEgressScopeBundle = null;
 			activeConvertEgressDerivedColumns = null;
 			activeConvertEgressRelationalModifierHints = null;
+			activeConvertEgressRelationalModifierSourceColumns = null;
 		}
 	}
 
@@ -9329,6 +9830,26 @@ public class SqlParseSymbolTreeHelper {
 		if (!containsDerivedColumnName(localDerivedColumns, columnName)) {
 			return false;
 		}
+
+		String structuredBucketKey = resolveRelationalModifierDerivedColumnBucketKey(
+				columnName,
+				null,
+				localDerivedColumns,
+				visibleAliasMap);
+		if (structuredBucketKey != null) {
+			if (tableRef == null || tableRef.isBlank()) {
+				return true;
+			}
+			if (isRelationalModifierDerivedColumnBucketKey(tableRef, localDerivedColumns)) {
+				return resolveRelationalModifierDerivedColumnBucketKey(
+						columnName,
+						tableRef,
+						localDerivedColumns,
+						visibleAliasMap) != null;
+			}
+			return true;
+		}
+
 		if (tableRef == null || tableRef.isBlank()) {
 			return true;
 		}
@@ -9357,6 +9878,14 @@ public class SqlParseSymbolTreeHelper {
 
 		if (containsKeyIgnoreCase(localDerivedColumns, columnName)) {
 			return true;
+		}
+
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (bucketObj instanceof Map<?, ?> bucketMap
+					&& isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)
+					&& containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
+				return true;
+			}
 		}
 
 		for (Object bucketObj : localDerivedColumns.values()) {
@@ -9394,6 +9923,17 @@ public class SqlParseSymbolTreeHelper {
 		if (localDerivedColumns == null || localDerivedColumns.isEmpty()
 				|| tableRef == null || tableRef.isBlank()) {
 			return false;
+		}
+
+		String qualifierBucketKey = findKeyIgnoreCase(localDerivedColumns, tableRef);
+		if (qualifierBucketKey != null) {
+			Object qualifierBucketObj = localDerivedColumns.get(qualifierBucketKey);
+			if (qualifierBucketObj instanceof Map<?, ?> qualifierBucketMap
+					&& isRelationalModifierStructuredDerivedColumnBucket(
+							(Map<String, Object>) qualifierBucketMap)
+					&& containsKeyIgnoreCase((Map<String, Object>) qualifierBucketMap, columnName)) {
+				return true;
+			}
 		}
 
 		for (Object bucketObj : localDerivedColumns.values()) {
@@ -10411,6 +10951,13 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
+		ArrayList<Object> expandedDerivedSourceLineage =
+				tryExpandRelationalModifierDerivedColumnSourceLineageAtConvertEgress(columnName, tableRef);
+		if (expandedDerivedSourceLineage != null) {
+			return ConvertEgressColumnResolutionResult.fromExpandedDerivedSourceLineage(
+					expandedDerivedSourceLineage);
+		}
+
 		if (isConvertEgressDerivedColumnReference(columnName, tableRef, ctx)) {
 			return ConvertEgressColumnResolutionResult.derivedColumn();
 		}
@@ -10904,47 +11451,65 @@ public class SqlParseSymbolTreeHelper {
 		RESOLVED,
 		DEFERRED,
 		AMBIGUOUS,
-		UNRESOLVED
+		UNRESOLVED,
+		EXPANDED_DERIVED_SOURCE_LINEAGE
 	}
 
 	private static final class ArchivedClauseColumnRefResult {
 		final ArchivedClauseColumnRefDisposition disposition;
 		final String resolvedSourceRef;
 		final String ambiguousSourcesLabel;
+		final ArrayList<Object> expandedDerivedSourceLineage;
 
 		private ArchivedClauseColumnRefResult(
 				ArchivedClauseColumnRefDisposition disposition,
 				String resolvedSourceRef,
-				String ambiguousSourcesLabel) {
+				String ambiguousSourcesLabel,
+				ArrayList<Object> expandedDerivedSourceLineage) {
 			this.disposition = disposition;
 			this.resolvedSourceRef = resolvedSourceRef;
 			this.ambiguousSourcesLabel = ambiguousSourcesLabel;
+			this.expandedDerivedSourceLineage = expandedDerivedSourceLineage;
 		}
 
 		static ArchivedClauseColumnRefResult skip() {
-			return new ArchivedClauseColumnRefResult(ArchivedClauseColumnRefDisposition.SKIP, null, null);
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.SKIP, null, null, null);
 		}
 
 		static ArchivedClauseColumnRefResult resolved(String resolvedSourceRef) {
 			return new ArchivedClauseColumnRefResult(
 					ArchivedClauseColumnRefDisposition.RESOLVED,
 					resolvedSourceRef,
+					null,
 					null);
 		}
 
 		static ArchivedClauseColumnRefResult deferred() {
-			return new ArchivedClauseColumnRefResult(ArchivedClauseColumnRefDisposition.DEFERRED, null, null);
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.DEFERRED, null, null, null);
 		}
 
 		static ArchivedClauseColumnRefResult ambiguous(String ambiguousSourcesLabel) {
 			return new ArchivedClauseColumnRefResult(
 					ArchivedClauseColumnRefDisposition.AMBIGUOUS,
 					null,
-					ambiguousSourcesLabel);
+					ambiguousSourcesLabel,
+					null);
 		}
 
 		static ArchivedClauseColumnRefResult unresolved() {
-			return new ArchivedClauseColumnRefResult(ArchivedClauseColumnRefDisposition.UNRESOLVED, null, null);
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.UNRESOLVED, null, null, null);
+		}
+
+		static ArchivedClauseColumnRefResult expandedDerivedSourceLineage(
+				ArrayList<Object> expandedDerivedSourceLineage) {
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.EXPANDED_DERIVED_SOURCE_LINEAGE,
+					null,
+					null,
+					expandedDerivedSourceLineage);
 		}
 	}
 
@@ -11176,6 +11741,11 @@ public class SqlParseSymbolTreeHelper {
 				false);
 		ConvertEgressColumnResolutionResult clauseEgressResult =
 				resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx);
+		if (clauseEgressResult.hasExpandedDerivedSourceLineage()) {
+			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
+			return ArchivedClauseColumnRefResult.expandedDerivedSourceLineage(
+					clauseEgressResult.expandedDerivedSourceLineage());
+		}
 		if (clauseEgressResult.isPivotOperandColumn()) {
 			applyConvertEgressPivotOperandMaterialization(
 					clauseEgressResult,
@@ -11429,6 +11999,10 @@ public class SqlParseSymbolTreeHelper {
 					result,
 					clauseKey,
 					probeContext);
+			if (result != null
+					&& result.disposition == ArchivedClauseColumnRefDisposition.EXPANDED_DERIVED_SOURCE_LINEAGE) {
+				index--;
+			}
 		}
 	}
 
@@ -11501,6 +12075,16 @@ public class SqlParseSymbolTreeHelper {
 				columnName);
 
 		switch (result.disposition) {
+			case EXPANDED_DERIVED_SOURCE_LINEAGE -> {
+				if (result.expandedDerivedSourceLineage == null
+						|| result.expandedDerivedSourceLineage.isEmpty()) {
+					return;
+				}
+				columnRefs.remove(index);
+				columnRefs.addAll(
+						index,
+						copyInterfaceReferenceList(result.expandedDerivedSourceLineage));
+			}
 			case RESOLVED -> {
 				if (result.resolvedSourceRef == null || result.resolvedSourceRef.isBlank()) {
 					return;

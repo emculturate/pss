@@ -402,11 +402,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		resolveRelationalModifierScopeAtPrimaryExit(modifierKey, sourceResult, relationAlias);
 
 		Object derivedColumnBucketValue = null;
+		ArrayList<Object> sourceColumnBucketRefs = null;
 		LinkedHashMap<String, Object> derivedColumnMap = getActiveUnpivotStructuredDerivedColumnsState();
 		if (derivedColumnMap != null) {
 			mergeUnpivotSourceColumnsIntoPhysicalTableDictionary(sourceResult);
 			pruneUnpivotDerivedColumnsFromModifierTableDictionary(derivedColumnMap, sourceResult);
 			derivedColumnBucketValue = copyUnpivotDerivedColumnBucketMap(derivedColumnMap);
+			Object sourceColumnsObj =
+					walker.symbolTable.get(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+			if (sourceColumnsObj instanceof Map<?, ?> sourceColumnsMapObj) {
+				String physicalTableRef = dictionarySourceRef;
+				if (physicalTableRef == null || physicalTableRef.isBlank()) {
+					physicalTableRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
+				}
+				sourceColumnBucketRefs = symbolTreeHelper.buildRelationalModifierSourceColumnInterfaceRefs(
+						(Map<String, Object>) sourceColumnsMapObj,
+						physicalTableRef);
+			}
 			walker.symbolTable.remove(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
 		} else if (hintsObj instanceof ArrayList<?> hintListObj && !hintListObj.isEmpty()) {
 			derivedColumnBucketValue = new ArrayList<Object>((ArrayList<Object>) hintListObj);
@@ -416,6 +428,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (derivedColumnBucketValue != null) {
 			upsertParentRelationalModifierDerivedColumnBucket(bucketKey, derivedColumnBucketValue);
+		}
+		if (sourceColumnBucketRefs != null && !sourceColumnBucketRefs.isEmpty()) {
+			upsertParentRelationalModifierSourceColumnBucket(bucketKey, sourceColumnBucketRefs);
 		}
 	}
 
@@ -434,6 +449,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.symbolTable.put(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY, parentDerived);
 		}
 		parentDerived.put(bucketKey, bucketValue);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void upsertParentRelationalModifierSourceColumnBucket(
+			String bucketKey,
+			ArrayList<Object> sourceColumnRefs) {
+		if (bucketKey == null || bucketKey.isBlank()
+				|| sourceColumnRefs == null || sourceColumnRefs.isEmpty()) {
+			return;
+		}
+
+		Object parentSourceObj =
+				walker.symbolTable.get(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+		HashMap<String, Object> parentSourceColumns;
+		if (parentSourceObj instanceof HashMap<?, ?> parentSourceMapObj) {
+			parentSourceColumns = (HashMap<String, Object>) parentSourceMapObj;
+		} else {
+			parentSourceColumns = new HashMap<String, Object>();
+			walker.symbolTable.put(
+					SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,
+					parentSourceColumns);
+		}
+		parentSourceColumns.put(bucketKey, copyRelationalModifierSourceColumnInterfaceRefs(sourceColumnRefs));
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<Object> copyRelationalModifierSourceColumnInterfaceRefs(ArrayList<Object> sourceColumnRefs) {
+		ArrayList<Object> copy = new ArrayList<Object>(sourceColumnRefs.size());
+		for (Object refObj : sourceColumnRefs) {
+			if (refObj instanceof Map<?, ?> refMapObj) {
+				copy.add(new HashMap<String, Object>((Map<String, Object>) refMapObj));
+			} else {
+				copy.add(refObj);
+			}
+		}
+		return copy;
 	}
 
 	private HashMap<String, Object> copyUnpivotDerivedColumnBucketMap(Map<String, Object> derivedColumnMap) {
