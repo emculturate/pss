@@ -391,7 +391,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				: resolveRelationalModifierSourceReference(sourceResult);
 		String dictionarySourceRef = resolveRelationalModifierPhysicalSourceReference(sourceResult);
 
-		Object hintsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
 		walker.symbolTable.remove(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY);
 
 		resolveRelationalModifierScopeAtPrimaryExit(modifierKey, sourceResult, relationAlias);
