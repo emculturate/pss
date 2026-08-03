@@ -3618,6 +3618,149 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	// --- Phase 17.7.8 closeout: derived outputs must not pollute physical table_dictionary ---
+
+	private static void assertPhysicalTableDictionaryBucketOmitsColumnKeys(
+			String tableDictionaryFlat,
+			String physicalTableKey,
+			String... forbiddenColumnKeys) {
+		String bucketMarker = physicalTableKey + "={";
+		int bucketStart = tableDictionaryFlat.indexOf(bucketMarker);
+		Assert.assertTrue("Expected table_dictionary bucket for " + physicalTableKey, bucketStart >= 0);
+		int contentStart = bucketStart + bucketMarker.length();
+		int bucketEnd = tableDictionaryFlat.indexOf("}, ", contentStart);
+		if (bucketEnd < 0) {
+			bucketEnd = tableDictionaryFlat.lastIndexOf('}');
+		}
+		String bucketBody = tableDictionaryFlat.substring(contentStart, bucketEnd);
+		for (String columnKey : forbiddenColumnKeys) {
+			Assert.assertFalse(
+					"Derived or modifier output column '" + columnKey + "' must not appear on physical table '"
+							+ physicalTableKey + "' in table_dictionary; bucket=[" + bucketBody + "]",
+					bucketBody.contains(columnKey + "="));
+		}
+	}
+
+	/**
+	 * 17.7.8 closeout (1/4): PIVOT on a physical table — {@code jan_sales_SUM} lives in
+	 * {@code derivation.derived_columns} and interface, not on {@code monthly_sales_long} physical dict.
+	 */
+	@Test
+	public void closeout17_7_8_PivotPhysicalSourceDerivedAbsentFromTableDictionaryTest() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales_long", "jan_sales_SUM");
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("derived_columns={p={jan_sales_SUM"));
+		Assert.assertTrue(sym.contains("jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
+	}
+
+	/**
+	 * 17.7.8 closeout (2/4): UNPIVOT on a physical wide table — VALUE/FOR names {@code sales_amount} /
+	 * {@code month_name} must not appear on physical {@code monthly_sales} (IN-list cols only).
+	 */
+	@Test
+	public void closeout17_7_8_UnpivotPhysicalSourceDerivedAbsentFromTableDictionaryTest() {
+		final String query =
+				"SELECT sales_amount, month_name\n"
+						+ "FROM monthly_sales\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales", "sales_amount", "month_name");
+		Assert.assertTrue(tableDict.contains("monthly_sales={jan_sales"));
+		Assert.assertTrue(tableDict.contains("feb_sales"));
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("derived_columns={u={sales_amount"));
+		Assert.assertTrue(sym.contains("month_name=[{name=month_name, table_ref=u}"));
+	}
+
+	/**
+	 * 17.7.8 closeout (3/4): PIVOT on subquery-backed source — derived {@code jan_sales_SUM} must not
+	 * land on the inner physical {@code monthly_sales_long} bucket after convert egress.
+	 */
+	@Test
+	public void closeout17_7_8_PivotSubquerySourceDerivedAbsentFromPhysicalTableDictionaryTest() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM (\n"
+						+ "  SELECT empid, month_name, sales_amount FROM monthly_sales_long\n"
+						+ ") src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales_long", "jan_sales_SUM");
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("derived_columns={p={jan_sales_SUM"));
+		Assert.assertTrue(sym.contains("jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
+	}
+
+	/**
+	 * 17.7.8 closeout (4/4): UNPIVOT on subquery-backed source — derived VALUE/FOR must not pollute the
+	 * physical {@code monthly_sales} table_dictionary bucket.
+	 */
+	@Test
+	public void closeout17_7_8_UnpivotSubquerySourceDerivedAbsentFromPhysicalTableDictionaryTest() {
+		final String query =
+				"SELECT sales_amount, month_name\n"
+						+ "FROM (\n"
+						+ "  SELECT empid, jan_sales, feb_sales FROM monthly_sales\n"
+						+ ") src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales", "sales_amount", "month_name");
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("derived_columns={u={sales_amount"));
+		Assert.assertTrue(sym.contains("month_name=[{name=month_name, table_ref=u}"));
+	}
+
+	/**
+	 * 17.7.8 closeout — dual PIVOT on physical sources: unqualified derived in SELECT still diagnoses
+	 * {@code AMBIGUOUS_DERIVED_COLUMN_REFERENCE} (derived vs derived), not physical {@code jan_sales}.
+	 */
+	@Test
+	public void closeout17_7_8_PivotPhysicalDualModifierDerivedAmbiguousInSelectTest() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN monthly_sales_long q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) q;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'jan_sales_SUM' at (l:1 c:7). Possible sources: [p, q]",
+				"jan_sales_SUM",
+				1,
+				7);
+		Assert.assertTrue(
+				extractor.getSymbolTable().toString().contains(
+						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}]"));
+	}
+
 	/**
 	 * Phase 17.7.5b.6: one ambiguous derived SELECT ref vs two refs to the same name under dual
 	 * PIVOT siblings — per-site {@code AMBIGUOUS_DERIVED_COLUMN_REFERENCE} fatals and unqualified
