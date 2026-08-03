@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~88% | **17.0–17.5** done; **17.7.1–17.7.2** + **17.7.5**/**17.7.5b** egress convergence ✅; **17.7.7** A–E ✅; **17.6.2** ✅; **17.7.8** prune + **§17.7.7-gap-fill** remain — see below |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~90% | **17.7.8** convert prune retired ✅; **§17.7.7-gap-fill** + **17.6.3** remain — see below |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -213,7 +213,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.7.8** (delete convert derived-on-physical prune), **§17.7.7-gap-fill**, **17.6.3** PIVOT SELECT ambiguity parity audit. Parallel: **17.6.8** egress token merge, **17.7.6** clause harvest.
+**Suggested next focus:** **§17.7.7-gap-fill**, **17.7.8 closeout ambiguity pairs** (new tests), **17.6.3** PIVOT SELECT ambiguity parity audit. Parallel: **17.6.8** egress token merge, **17.7.6** clause harvest.
 
 ---
 
@@ -1723,7 +1723,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | **17.7.5b** | **Convert egress derived-phase convergence** | ✅ Done (Aug 2026) | **.1–.6** complete; **.7** signed off with **17.7.5**. See subsection below. |
 | **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. **Depends on 17.7.5b** for dedupe/consolidate timing (after derived + normal phases). |
 | **17.7.7** | **Tests + golden review** | ✅ Subsets A–E done | **Signed off Aug 2026** — see **§17.7.7-matrix** checklist. Class **100/100**; gate tests green. **Remaining:** **§17.7.7-gap-fill** (new matrix cells), **17.7.8** closeout ambiguity pairs, deferred large-sample goldens (**§17.7.7-deferred-large-sample-goldens**). |
-| **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ⏸️ Open | **After** 17.7.1–17.7.2 green + **17.7.7** contract tests pass: **delete** `pruneRelationalModifierDerivedColumnsFromTableDictionary` and equivalents. Post-removal: misplaced derived outputs on physical keys = finalize bug, never restore convert stripping. **Closeout test matrix (add with 17.7.7):** four **pairs** (physical table + subquery-backed modifier source) for **derived vs non-derived** ambiguity — (1) unqualified SELECT column ambiguous between **PIVOT derived output** and same-named **physical** column on modifier source table; (2) same for **UNPIVOT derived** (VALUE/FOR) vs physical; repeat (1)–(2) when modifier immediate source is **`FROM (SELECT …) alias`** instead of physical table. Goldens per review policy; not bulk-copied from sibling tests. |
+| **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ✅ Done (Aug 2026) | Deleted `pruneRelationalModifierDerivedColumnsFromTableDictionary` and second-pass canonicalize prune; `canonicalizeLocalTableCollection` is alias-fold only. **Regression class:** convert egress re-materialized UNPIVOT VALUE/FOR (`sales_amount`, `month_name`) onto physical `monthly_sales` after walk-time prune — masked by convert prune in `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`. **Fix:** guard `mergeSourceLineageIntoPhysicalTableDictionary` so structured derived names are not merged onto physical keys unless they are `source_columns` operands for that table. Full `parse/` green. **Remaining:** optional **17.7.8 closeout matrix** tests (four physical/subquery pairs) not yet authored. |
 | **17.7.9** *(optional)* | **Diagnostic (3): qualified derived column inside modifier scope** | ⏸️ Optional | **Not fully covered today.** **17.0b** ✅ FATAL `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` for **UNPIVOT VALUE/FOR** with any `table_ref` prefix. **PIVOT** phrase operands remain **physical** (WARNING `RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT` / FATAL `…_INVALID` per **16.4**). **Gap:** no finalize pass that rejects **any** qualified reference to a **relational-modifier derived output** collected under `derivation.derived_columns[bucket]` inside the PIVOT/UNPIVOT symbol scope (including PIVOT-derived names referenced inside the phrase, or qualified derived tokens in modifier-local maps). **Policy:** inside `table_primary` / `tuple_primary` modifier subtree, derived outputs must appear **unqualified** in SQL; published `interface` / `derivation` entries get `table_ref` = modifier alias, `tuple_N`, table name, or `queryN` — never the user’s `p_src`-style source alias on the in-phrase reference. Emit new diagnostic (severity TBD, likely FATAL) at modifier finalize or operand walk when a derived bucket name is captured with a non-blank qualifier. |
 | **17.7.10** *(optional)* | **Diagnostic (4): derived ref qualified with source alias outside primary** | ⏸️ Optional | **Not implemented.** When a column ref **outside** `table_primary` / `tuple_primary` (JOIN ON, WHERE, SELECT list, etc. — anywhere outside the relational-modifier grammar walk) names a **structured derived output** (`derivation.derived_columns`) and the qualifier matches the modifier’s **immediate source table alias** (`p_src`, `u_src`, … from `FROM … alias`) but **not** the relational-operator alias (`p`, `u`, `q`), emit **SEVERE_WARNING** (e.g. `RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS`). Message: poorly formed / confusing — derived outputs should be qualified with the **modifier alias**, not the source-primary alias. **Resolution policy:** **allow both** `p` and `p_src` (and both entries on published `table_alias`); do **not** fatal or reject the ref. Example: `ON p_src.jan_sales_SUM = …` vs `ON p.jan_sales_SUM = …` on a triple pivot/unpivot join — former warns, latter clean. Do **not** warn when the qualifier is the modifier alias, a `queryN` ref, or an unrelated join alias. Hook: convert egress clause harvest (**17.7.6**) or dedicated visitor over archived `filters` / JOIN ON after structured `derivation` is visible. |
 
@@ -1733,7 +1733,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 2. ~~**17.7.2**~~ ✅ (Aug 2026) — structured publish + unified lineage expand; convert prune **transitional** until **17.7.8**.
 3. ~~**17.7.5b**~~ ✅ → ~~**17.7.5**~~ ✅ (Aug 2026); then **17.7.3** (minimal) + **17.7.4** diagnostics + **17.7.6** harvest.
 4. ~~**17.7.7** A–E~~ ✅ (Aug 2026) — **§17.7.7-gap-fill** + **17.7.8** closeout matrix tests next.
-5. **17.7.8** — mandatory closeout: remove convert prune; full pivot/unpivot suite + gate.
+5. ~~**17.7.8**~~ ✅ (Aug 2026) — convert prune removed; merge guard at physical materialize.
 
 **Parallel with 17.6:** **17.6.8** egress token merge can continue in parallel; **17.6.2** should land via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
 
@@ -1904,7 +1904,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | Lock diagnostic contract (position per emitted diagnostic, all severities) | ✅ `701dcd9` |
 | Tooling for repeatable golden refresh | ✅ `pivot_unpivot_queries.properties` + `refresh_pivot_unpivot_goldens.py` |
 | Matrix gap-fill (new tests for empty cells) | ⏸️ **§17.7.7-gap-fill** |
-| **17.7.8** closeout pairs (physical vs subquery × derived vs physical ambiguity) | ⏸️ Not started |
+| **17.7.8** closeout pairs (physical vs subquery × derived vs physical ambiguity) | ⏸️ Not started (prune removal ✅) |
 | Re-enable deferred large-sample / set-op diagnostic tests | ⏸️ After **17.7.5b** (see below) |
 
 ### §17.7.7-gap-fill — Bulk missing matrix combinations (new tests)

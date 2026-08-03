@@ -4627,10 +4627,7 @@ public class SqlParseSymbolTreeHelper {
 		// DELETE target columns from RETURNING). Re-merge so global and local dictionaries stay aligned.
 		canonicalizeLocalTableCollection(
 				localTableCollection,
-				localTableAliasMap,
-				localDerivedColumns,
-				localRelationalModifierSourceColumns,
-				activeConvertEgressRelationalModifierContext);
+				localTableAliasMap);
 
 		if (localTableCollection != null && localTableCollection.size() > 0) {
 			for (String tab_ref : localTableCollection.keySet()) {
@@ -4654,16 +4651,10 @@ public class SqlParseSymbolTreeHelper {
 
 		canonicalizeLocalTableCollection(
 				localTableCollection,
-				localTableAliasMap,
-				localDerivedColumns,
-				localRelationalModifierSourceColumns,
-				activeConvertEgressRelationalModifierContext);
+				localTableAliasMap);
 		canonicalizeLocalTableCollection(
 				currentTableDictionary,
-				localTableAliasMap,
-				localDerivedColumns,
-				localRelationalModifierSourceColumns,
-				activeConvertEgressRelationalModifierContext);
+				localTableAliasMap);
 
 		mergeRelationalModifierDerivedColumnDefinitionTokensIntoQueryDictionary(
 				localInterface,
@@ -4760,10 +4751,7 @@ public class SqlParseSymbolTreeHelper {
 		if (globalTableDictionary != null && !globalTableDictionary.isEmpty()) {
 			canonicalizeLocalTableCollection(
 					globalTableDictionary,
-					localTableAliasMap,
-					localDerivedColumns,
-					localRelationalModifierSourceColumns,
-					activeConvertEgressRelationalModifierContext);
+					localTableAliasMap);
 		}
 
 		return walker.symbolTable;
@@ -10889,6 +10877,19 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// 17.7.8: do not materialize structured derived outputs onto physical table_dictionary
+		// (walk-time finalize already prunes modifier-local dicts; convert egress must not re-pollute).
+		if (columnName != null
+				&& activeConvertEgressDerivedColumns != null
+				&& containsDerivedColumnName(activeConvertEgressDerivedColumns, columnName)
+				&& !isRelationalModifierSourceColumnForPhysicalTable(
+						columnName,
+						dictionaryKey,
+						activeConvertEgressRelationalModifierSourceColumns,
+						tableAliasMap)) {
+			return;
+		}
+
 		HashMap<String, Object> indicatedTableDictionary = walker.getTableDictionaryForReference(
 				dictionaryKey,
 				tableCollection);
@@ -13840,16 +13841,14 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Fold alias-keyed table-dictionary buckets into canonical physical table keys and strip
-	 * relational-modifier derived columns that must not appear in the table dictionary.
+	 * Fold alias-keyed table-dictionary buckets into canonical physical table keys.
+	 * Phase 17.7.8: derived PIVOT/UNPIVOT outputs must not be stripped here — if they appear on
+	 * physical keys, fix modifier finalize upstream.
 	 */
 	@SuppressWarnings("unchecked")
 	private void canonicalizeLocalTableCollection(
 			HashMap<String, Object> localTableCollection,
-			HashMap<String, Object> localTableAliasMap,
-			HashMap<String, Object> localDerivedColumns,
-			HashMap<String, Object> localSourceColumnsByBucket,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
+			HashMap<String, Object> localTableAliasMap) {
 		if (localTableCollection == null || localTableCollection.isEmpty()) {
 			return;
 		}
@@ -13878,14 +13877,6 @@ public class SqlParseSymbolTreeHelper {
 			}
 			HashMap<String, Object> tableColumns = (HashMap<String, Object>) tableColumnsMapObj;
 
-			pruneRelationalModifierDerivedColumnsFromTableDictionary(
-					tableColumns,
-					canonicalKey,
-					localDerivedColumns,
-					localSourceColumnsByBucket,
-					localTableAliasMap,
-					relationalModifierContext);
-
 			if (tableKey.equalsIgnoreCase(canonicalKey)) {
 				continue;
 			}
@@ -13904,163 +13895,6 @@ public class SqlParseSymbolTreeHelper {
 						columnEntry.getValue());
 			}
 			localTableCollection.remove(tableKey);
-		}
-
-		for (String tableKey : new ArrayList<String>(localTableCollection.keySet())) {
-			if (tableKey == null || tableKey.isBlank()) {
-				continue;
-			}
-			String canonicalKey = resolveCanonicalPhysicalTableRef(tableKey, localTableAliasMap);
-			if (canonicalKey == null || canonicalKey.isBlank()) {
-				canonicalKey = normalizeTableRef(tableKey);
-			}
-			Object tableColumnsObj = localTableCollection.get(tableKey);
-			if (tableColumnsObj instanceof HashMap<?, ?> tableColumnsMapObj) {
-				pruneRelationalModifierDerivedColumnsFromTableDictionary(
-						(HashMap<String, Object>) tableColumnsMapObj,
-						canonicalKey,
-						localDerivedColumns,
-						localSourceColumnsByBucket,
-						localTableAliasMap,
-						relationalModifierContext);
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	private boolean isRelationalModifierDerivedOutputColumnName(
-			String columnName,
-			HashMap<String, Object> localDerivedColumns) {
-		return resolveRelationalModifierDerivedColumnEntry(columnName, localDerivedColumns) != null;
-	}
-
-	@SuppressWarnings("unchecked")
-	private Object resolveRelationalModifierDerivedColumnEntry(
-			String columnName,
-			HashMap<String, Object> localDerivedColumns) {
-		if (columnName == null
-				|| columnName.isBlank()
-				|| localDerivedColumns == null
-				|| localDerivedColumns.isEmpty()) {
-			return null;
-		}
-
-		String topLevelKey = findKeyIgnoreCase(localDerivedColumns, columnName);
-		if (topLevelKey != null) {
-			Object directEntry = localDerivedColumns.get(topLevelKey);
-			if (relationalModifierDerivedColumnEntryTokenRefs(directEntry) != null) {
-				return directEntry;
-			}
-		}
-
-		for (Object bucketValue : localDerivedColumns.values()) {
-			if (!(bucketValue instanceof Map<?, ?> bucketMapObj)) {
-				continue;
-			}
-			Map<String, Object> bucketMap = (Map<String, Object>) bucketMapObj;
-			String bucketColumnKey = findKeyIgnoreCase(bucketMap, columnName);
-			if (bucketColumnKey == null) {
-				continue;
-			}
-			Object entry = bucketMap.get(bucketColumnKey);
-			if (relationalModifierDerivedColumnEntryTokenRefs(entry) != null) {
-				return entry;
-			}
-		}
-		return null;
-	}
-
-	private boolean isRelationalModifierPhysicalOperandColumn(
-			String columnName,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
-		if (columnName == null
-				|| columnName.isBlank()
-				|| relationalModifierContext == null
-				|| relationalModifierContext.isEmpty()) {
-			return false;
-		}
-
-		if (relationalModifierContext.isPivot()) {
-			return containsStringIgnoreCase(
-					collectPivotOperandColumnNamesFromContext(relationalModifierContext),
-					columnName);
-		}
-		if (relationalModifierContext.isUnpivot()) {
-			return containsStringIgnoreCase(
-					collectUnpivotInColumnNamesFromContext(relationalModifierContext),
-					columnName);
-		}
-		return false;
-	}
-
-	@SuppressWarnings("unchecked")
-	private void pruneRelationalModifierDerivedColumnsFromTableDictionary(
-			HashMap<String, Object> tableColumns,
-			String physicalTableRef,
-			HashMap<String, Object> localDerivedColumns,
-			HashMap<String, Object> localSourceColumnsByBucket,
-			HashMap<String, Object> localTableAliasMap,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
-		if (tableColumns == null || tableColumns.isEmpty()) {
-			return;
-		}
-
-		for (String columnKey : new ArrayList<String>(tableColumns.keySet())) {
-			if (columnKey == null || columnKey.isBlank()) {
-				continue;
-			}
-			if (isRelationalModifierSourceColumnForPhysicalTable(
-					columnKey,
-					physicalTableRef,
-					localSourceColumnsByBucket,
-					localTableAliasMap)) {
-				continue;
-			}
-			if (isRelationalModifierDerivedOutputColumnName(columnKey, localDerivedColumns)) {
-				removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
-				continue;
-			}
-			if (containsKeyIgnoreCase(localDerivedColumns, columnKey)) {
-				if (!isRelationalModifierPhysicalOperandColumn(
-						columnKey,
-						relationalModifierContext)) {
-					removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
-					continue;
-				}
-			}
-			if (relationalModifierContext == null || relationalModifierContext.isEmpty()) {
-				continue;
-			}
-			if (relationalModifierContext.isPivot()
-					&& structuredContextDefinesPivotDerivedOutputColumn(relationalModifierContext, columnKey)) {
-				removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
-				continue;
-			}
-			if (relationalModifierContext.isUnpivot()) {
-				InferredUnpivotDerivedOutputs unpivotOutputs =
-						inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
-				boolean isValueOrFor = unpivotOutputs != null
-						&& ((unpivotOutputs.valueColumn != null
-								&& unpivotOutputs.valueColumn.equalsIgnoreCase(columnKey))
-						|| (unpivotOutputs.forColumn != null
-								&& unpivotOutputs.forColumn.equalsIgnoreCase(columnKey)));
-				if (isValueOrFor
-						&& !isRelationalModifierPhysicalOperandColumn(columnKey, relationalModifierContext)) {
-					removeDictionaryColumnIgnoreCase(tableColumns, columnKey);
-				}
-			}
-		}
-	}
-
-	private void removeDictionaryColumnIgnoreCase(
-			HashMap<String, Object> tableColumns,
-			String columnName) {
-		if (tableColumns == null || tableColumns.isEmpty() || columnName == null || columnName.isBlank()) {
-			return;
-		}
-		String matchedKey = findKeyIgnoreCase(tableColumns, columnName);
-		if (matchedKey != null) {
-			tableColumns.remove(matchedKey);
 		}
 	}
 
