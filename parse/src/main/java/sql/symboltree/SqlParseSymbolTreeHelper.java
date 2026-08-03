@@ -1255,7 +1255,15 @@ public class SqlParseSymbolTreeHelper {
 			Object assignmentsObj,
 			HashMap<String, Object> localDerivedColumns,
 			HashMap<String, Object> localSourceColumnsByBucket,
-			HashMap<String, Object> localTableAliasMap) {
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localFromTableCollection,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			HashMap<String, Object> effectiveAliasMap,
+			HashMap<String, Object> effectiveTableCollection,
+			String deleteTargetTableRef,
+			RelationalModifierConvertEgressContext relationalModifierContext) {
 		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
@@ -1263,6 +1271,119 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localSourceColumnsByBucket,
 				localTableAliasMap);
+		consumeStructuredRelationalModifierDerivedColumnUnknownsAtConvertEgressPhaseB(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				assignmentsObj,
+				localUnresolvedColumnMap,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localFromTableCollection,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				effectiveAliasMap,
+				effectiveTableCollection,
+				deleteTargetTableRef,
+				relationalModifierContext);
+	}
+
+	/**
+	 * Phase 17.7.5b.5: single batch consume for structured PIVOT/UNPIVOT derived unknowns after
+	 * lineage expansion — ambiguous sites are diagnosed earlier; consume runs only here.
+	 */
+	@SuppressWarnings("unchecked")
+	private void consumeStructuredRelationalModifierDerivedColumnUnknownsAtConvertEgressPhaseB(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object assignmentsObj,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localFromTableCollection,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			HashMap<String, Object> localTableAliasMap,
+			HashMap<String, Object> effectiveAliasMap,
+			HashMap<String, Object> effectiveTableCollection,
+			String deleteTargetTableRef,
+			RelationalModifierConvertEgressContext relationalModifierContext) {
+		if (localUnresolvedColumnMap == null
+				|| localUnresolvedColumnMap.isEmpty()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return;
+		}
+
+		ConvertEgressResolutionContext phaseBCtx = new ConvertEgressResolutionContext(
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				relationalModifierContext,
+				localFromTableCollection,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				localTableAliasMap,
+				effectiveAliasMap,
+				effectiveTableCollection,
+				deleteTargetTableRef,
+				null,
+				true,
+				true,
+				false,
+				false,
+				false,
+				null);
+
+		forEachConvertEgressColumnRefSite(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				assignmentsObj,
+				(siteKey, refObj, columnName, tableRef) -> {
+					if (shouldConsumeStructuredDerivedUnknownAtConvertEgressPhaseB(
+							classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx))) {
+						consumeDerivedColumnUnknownEntry(
+								localUnresolvedColumnMap,
+								tableRef,
+								columnName);
+					}
+				});
+
+		for (String unresolvedKey : new ArrayList<String>(localUnresolvedColumnMap.keySet())) {
+			if (unresolvedKey == null || unresolvedKey.isBlank()) {
+				continue;
+			}
+			String columnName;
+			String tableRef = null;
+			if (unresolvedKey.contains(".")) {
+				tableRef = unresolvedKey.substring(0, unresolvedKey.lastIndexOf('.'));
+				columnName = unresolvedKey.substring(unresolvedKey.lastIndexOf('.') + 1);
+			} else {
+				columnName = unresolvedKey;
+			}
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			if (shouldConsumeStructuredDerivedUnknownAtConvertEgressPhaseB(
+					classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx))) {
+				consumeDerivedColumnUnknownEntry(
+						localUnresolvedColumnMap,
+						tableRef,
+						columnName);
+			}
+		}
+	}
+
+	private boolean shouldConsumeStructuredDerivedUnknownAtConvertEgressPhaseB(
+			ConvertEgressColumnResolutionResult result) {
+		if (result == null) {
+			return false;
+		}
+		if (result.hasExpandedDerivedSourceLineage() || result.isDerivedColumn()) {
+			return true;
+		}
+		return result.unqualified() != null
+				&& result.unqualified().status
+						== UnqualifiedScopeResolutionStatus.AMBIGUOUS_DERIVED_COLUMN;
 	}
 
 	/**
@@ -1348,10 +1469,6 @@ public class SqlParseSymbolTreeHelper {
 					ambiguitySources,
 					null,
 					emittedDiagnosticLocations);
-			consumeDerivedColumnUnknownEntry(
-					localUnresolvedColumnMap,
-					null,
-					columnName);
 		}
 	}
 
@@ -1554,6 +1671,84 @@ public class SqlParseSymbolTreeHelper {
 		visitor.visit(siteKey, refObj, columnName);
 	}
 
+	@FunctionalInterface
+	private interface ConvertEgressColumnRefSiteVisitor {
+		void visit(String siteKey, Object refObj, String columnName, String tableRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void forEachConvertEgressColumnRefSite(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj,
+			ConvertEgressColumnRefSiteVisitor visitor) {
+		if (visitor == null) {
+			return;
+		}
+
+		if (localInterface != null && !localInterface.isEmpty()) {
+			for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+				String interfaceKey = interfaceEntry.getKey();
+				if (interfaceKey == null || interfaceKey.isBlank()) {
+					continue;
+				}
+				Object refsObj = interfaceEntry.getValue();
+				if (!(refsObj instanceof ArrayList<?> refs)) {
+					continue;
+				}
+				for (Object refObj : (ArrayList<Object>) refs) {
+					visitConvertEgressColumnRefSite(visitor, MUMBLE_INTERFACE_KEY, refObj);
+				}
+			}
+		}
+
+		if (archivedScopeColumnReferenceContainers != null) {
+			for (String containerKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
+				visitConvertEgressColumnRefList(
+						visitor,
+						containerKey,
+						archivedScopeColumnReferenceContainers.get(containerKey));
+			}
+		}
+
+		if (updateAssignmentsObj instanceof Map<?, ?> assignmentsMapObj) {
+			for (Object rhsRefsObj : ((Map<String, Object>) assignmentsMapObj).values()) {
+				visitConvertEgressColumnRefList(
+						visitor,
+						UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY,
+						rhsRefsObj);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void visitConvertEgressColumnRefList(
+			ConvertEgressColumnRefSiteVisitor visitor,
+			String siteKey,
+			Object columnListObj) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
+			return;
+		}
+		for (Object refObj : (ArrayList<Object>) columnRefsObj) {
+			visitConvertEgressColumnRefSite(visitor, siteKey, refObj);
+		}
+	}
+
+	private void visitConvertEgressColumnRefSite(
+			ConvertEgressColumnRefSiteVisitor visitor,
+			String siteKey,
+			Object refObj) {
+		if (visitor == null || refObj == null) {
+			return;
+		}
+		String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+			return;
+		}
+		visitor.visit(siteKey, refObj, columnName, tableRef);
+	}
+
 	private boolean isAmbiguousUnqualifiedStructuredDerivedColumn(
 			String columnName,
 			String tableRef,
@@ -1570,16 +1765,6 @@ public class SqlParseSymbolTreeHelper {
 		return collectRelationalModifierStructuredDerivedColumnBucketKeys(
 				columnName,
 				localDerivedColumns).size() >= 2;
-	}
-
-	private boolean shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
-			String columnName,
-			String tableRef,
-			HashMap<String, Object> localDerivedColumns) {
-		return isAmbiguousUnqualifiedStructuredDerivedColumn(
-				columnName,
-				tableRef,
-				localDerivedColumns);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -3945,16 +4130,18 @@ public class SqlParseSymbolTreeHelper {
 											true,
 											null);
 							ConvertEgressColumnResolutionResult substitutionEgressResult =
-									resolveColumnRefAtConvertEgress(
+									classifyColumnRefAtConvertEgress(
 											columnName,
 											tableRef,
 											substitutionCtx);
-							if (substitutionEgressResult.isDerivedColumn()
-									|| (substitutionEgressResult.qualified() != null
-											&& (substitutionEgressResult.qualified().status
-													== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE
-													|| substitutionEgressResult.qualified().status
-															== QualifiedScopeResolutionStatus.RESOLVED_PHYSICAL_SOURCE))) {
+							if (substitutionEgressResult.isDerivedColumn()) {
+								continue;
+							}
+							if (substitutionEgressResult.qualified() != null
+									&& (substitutionEgressResult.qualified().status
+											== QualifiedScopeResolutionStatus.RESOLVED_QUERY_SOURCE
+											|| substitutionEgressResult.qualified().status
+													== QualifiedScopeResolutionStatus.RESOLVED_PHYSICAL_SOURCE)) {
 								Object qualifiedTokens = consumeQualifiedUnknownEntry(
 										localUnresolvedColumnMap,
 										tableRef,
@@ -4003,20 +4190,11 @@ public class SqlParseSymbolTreeHelper {
 										true,
 										null);
 						ConvertEgressColumnResolutionResult egressResult =
-								resolveColumnRefAtConvertEgress(
+								classifyColumnRefAtConvertEgress(
 										columnName,
 										tableRef,
 										interfaceQualifiedCtx);
 						if (egressResult.isDerivedColumn()) {
-							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
-									columnName,
-									tableRef,
-									localDerivedColumns)) {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										tableRef,
-										columnName);
-							}
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -4106,10 +4284,7 @@ public class SqlParseSymbolTreeHelper {
 								}
 							}
 							case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										tableRef,
-										columnName);
+								break;
 							}
 							case RESOLVED_PIVOT_OPERAND -> {
 								applyConvertEgressPivotOperandMaterialization(
@@ -4212,20 +4387,11 @@ public class SqlParseSymbolTreeHelper {
 										false,
 										outputCol);
 						ConvertEgressColumnResolutionResult egressResult =
-								resolveColumnRefAtConvertEgress(
+								classifyColumnRefAtConvertEgress(
 										columnName,
 										null,
 										interfaceUnqualifiedCtx);
 						if (egressResult.isDerivedColumn()) {
-							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
-									columnName,
-									null,
-									localDerivedColumns)) {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										null,
-										columnName);
-							}
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -4409,7 +4575,15 @@ public class SqlParseSymbolTreeHelper {
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
 				localDerivedColumns,
 				localRelationalModifierSourceColumns,
-				localTableAliasMap);
+				localTableAliasMap,
+				localUnresolvedColumnMap,
+				localFromTableCollection,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				effectiveAliasMap,
+				effectiveTableCollection,
+				deleteTargetTableRef,
+				activeConvertEgressRelationalModifierContext);
 
 		stripEphemeralLocationsFromConvertEgressColumnReferences(
 				localInterface,
@@ -10023,7 +10197,6 @@ public class SqlParseSymbolTreeHelper {
 				ConvertEgressColumnResolutionResult updateRhsEgressResult =
 						resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx);
 				if (updateRhsEgressResult.isDerivedColumn()) {
-					consumeDerivedColumnUnknownEntry(unresolvedColumnMap, tableRef, columnName);
 					continue;
 				}
 				if (updateRhsEgressResult.isPivotOperandColumn()) {
@@ -11402,7 +11575,6 @@ public class SqlParseSymbolTreeHelper {
 			if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_DERIVED_COLUMN
 					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_VALUE
 					|| resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED_UNPIVOT_FOR) {
-				consumeDerivedColumnUnknownEntry(unqualifiedUnresolvedForLocal, null, columnName);
 				continue;
 			}
 			if (resolutionResult.status != UnqualifiedScopeResolutionStatus.RESOLVED) {
@@ -12463,7 +12635,6 @@ public class SqlParseSymbolTreeHelper {
 
 		switch (result.status) {
 			case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
-				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 			}
 			case RESOLVED_PIVOT_OPERAND -> {
 				materializePivotOperandColumnAtConvertEgress(
@@ -12545,7 +12716,6 @@ public class SqlParseSymbolTreeHelper {
 						columnName,
 						diagnosticLocation,
 						result.ambiguousSourcesLabel);
-				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 			}
 			case UNRESOLVED -> {
 				if (!hasOnlyQueryBackedAliasSources(localTableAliasMap)
@@ -12657,7 +12827,6 @@ public class SqlParseSymbolTreeHelper {
 			ConvertEgressColumnResolutionResult egressResult =
 					resolveColumnRefAtConvertEgress(columnName, null, remainingIngressCtx);
 			if (egressResult.isDerivedColumn()) {
-				consumeDerivedColumnUnknownEntry(unresolvedColumnMap, null, columnName);
 				continue;
 			}
 			if (egressResult.isPivotOperandColumn()) {
@@ -13050,7 +13219,6 @@ public class SqlParseSymbolTreeHelper {
 					effectiveAliasMap,
 					visibleQuerySourceCollection,
 					localTableCollection);
-			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			return ArchivedClauseColumnRefResult.expandedDerivedSourceLineage(
 					clauseEgressResult.expandedDerivedSourceLineage());
 		}
@@ -13087,7 +13255,6 @@ public class SqlParseSymbolTreeHelper {
 					effectiveAliasMap,
 					visibleQuerySourceCollection,
 					localTableCollection);
-			consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 			String bucketKey = resolveRelationalModifierDerivedColumnBucketKey(
 					columnName,
 					tableRef,
@@ -13174,7 +13341,6 @@ public class SqlParseSymbolTreeHelper {
 						effectiveAliasMap,
 						visibleQuerySourceCollection,
 						localTableCollection);
-				consumeDerivedColumnUnknownEntry(localUnresolvedColumnMap, tableRef, columnName);
 				return ArchivedClauseColumnRefResult.skip();
 			}
 			case RESOLVED_PIVOT_OPERAND -> {
@@ -14603,10 +14769,6 @@ public class SqlParseSymbolTreeHelper {
 								localCurrentQueryDictionary,
 								localInterface);
 					}
-					consumeDerivedColumnUnknownEntry(
-							unresolvedCollector,
-							tableRef,
-							columnName);
 					continue;
 				}
 				case RESOLVED_WILDCARD_QUERY_SOURCE -> {
