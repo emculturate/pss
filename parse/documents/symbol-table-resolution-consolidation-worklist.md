@@ -209,6 +209,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **17.7.5b.4–b.6** (Aug 2026) — interface loop narrowed; phase B batch derived-unknown consume; parity test `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest`; **`17.7.5`** signed off.
 - **17.6.2** (Aug 2026) — skip legacy `applyUnpivotDerivationsToQueryScope` VALUE→IN rewrite when structured derived name is multi-bucket ambiguous; `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` asserts fatals for **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)`.
 - **17.6.3** (Aug 2026) — skip `applyPivotValueInterfaceDerivations` for multi-bucket ambiguous derived names; `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test` asserts fatal for **`jan_sales_SUM`** `(1,64)` (`p|q|r`).
+- **17.7.6** (Aug 2026) — publication dedupe only: step **D** `consolidateConvertEgressColumnReferenceLists` after phase B + strip; unique `(name, table_ref)` per egress list; **no** separate harvest pass and **no** unqualified-vs-qualified pruning in clause buckets.
 - **17.7.5b.1** (Aug 2026) — convert egress derived-path inventory: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); baseline **1731/1731** tests in `parse/` before **17.7.5b.2**.
 - Structured derivation track (pre-Aug refresh): `e8945ce` (**17.7.1**), `daa0068` / `cfc846c` / `c1a4bd7` (**17.7.2** structured publish), `15b6f7b` / `77d4d00` / `eb8e776` (ambiguous derived + source operands per egress site).
 
@@ -1708,7 +1709,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 
 ### Phase 17.7 — Structured `derivation` finalize (authoritative operands + derived buckets)
 
-**Goal:** PIVOT/UNPIVOT symbol-table finalization at `exitTable_primary` / tuple primary is the **only** place that decides which names are **physical source operands** vs **derived outputs** for each sibling modifier. Parent `table_dictionary` and parent `derivation.{source_columns,derived_columns}.{alias|tuple_N}` are authoritative. Convert egress **publishes and harvests** clause refs; it does **not** re-derive placement, does **not** use flat walk keys on `def_query*` for pivot/unpivot prune, and does **not** keep a convert-time “safety net” that strips wrongly placed derived names from physical tables.
+**Goal:** PIVOT/UNPIVOT symbol-table finalization at `exitTable_primary` / tuple primary is the **only** place that decides which names are **physical source operands** vs **derived outputs** for each sibling modifier. Parent `table_dictionary` and parent `derivation.{source_columns,derived_columns}.{alias|tuple_N}` are authoritative. Convert egress **publishes** clause and interface refs and runs **publication dedupe** (step **D**, **17.7.6** ✅); it does **not** re-derive placement, does **not** use flat walk keys on `def_query*` for pivot/unpivot prune, and does **not** keep a convert-time “safety net” that strips wrongly placed derived names from physical tables.
 
 **Invariant (closeout gate for 17.7):** Under correct finalize, a pivot **output** name (e.g. `jan_sales_SUM`) must **never** be collected into `table_dictionary[monthly_sales_long]` (or any physical key) in the first place. Therefore **no** convert pass may be required to remove such names by matching derived buckets against physical dict keys. If a test shows `jan_sales_SUM` on `monthly_sales_long` after full walk+convert, treat it as a **finalize / structured-walk bug** and fix upstream — **do not** reintroduce global or bucket-scoped “strip derived output from physical table” logic at convert.
 
@@ -1745,7 +1746,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | Path | When | Derived behavior today |
 |------|------|-------------------------|
 | **Interface loop** | Before `diagnoseAmbiguous…` | `resolveColumnRefAtConvertEgress` → lineage expand, `isDerivedColumn`, `consumeDerivedColumnUnknownEntry` (with `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose` only for multi-bucket ambiguous) |
-| **Clause lists** | Mostly after diagnose | Ambiguous derived diagnosed in `diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites`; probe **skips** ambiguous structured derived; lineage expand during `reconcileRelationalModifierDerivedColumnLineageForConvertScope` skips ambiguous |
+| **Clause lists** | Mostly after diagnose | Ambiguous derived diagnosed in `diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites`; probe **skips** deferred archived lists during phase C; lineage expand in **phase B** (`runConvertEgressRelationalModifierDerivedLineagePhaseB`) |
 
 Single-bucket (unambiguous) derived names therefore follow **interface-first consume/expand**; multi-bucket ambiguous names follow **diagnose-then-consume** with a retain guard in the interface loop. That is the opposite of the product goal: **one algorithm** whether there is one modifier bucket or many.
 
@@ -1771,9 +1772,9 @@ C. Normal resolution phase (non-derived-derived unknowns)
    - `probeArchivedScopeClauseColumns` (interface output validation, physical/query ambiguity, unresolved fatals).
    - Interface loop **either retired** or reduced to non-derived outcomes only (substitution, scalar subquery, etc.).
 
-D. Publication hygiene (unchanged)
+D. Publication hygiene (**17.7.6** ✅)
    - `stripEphemeralLocationsFromConvertEgressColumnReferences`
-   - `consolidateConvertEgressColumnReferenceLists` (strip + semantic dedupe by `(name, table_ref)`)
+   - `consolidateConvertEgressColumnReferenceLists` — one entry per `(name, table_ref)` on interface + archived clause lists + UPDATE RHS; **no** unqualified-vs-qualified pruning (multi-modifier: same name can be operand in one bucket, derived in another)
    - Merge back to `walker.symbolTable` / dictionaries.
 
 **AST rule (unchanged):** Never attach `locations` on walked AST `column` subtrees; ephemeral `locations` only on detached egress copies until step D.
@@ -1789,10 +1790,11 @@ D. Publication hygiene (unchanged)
 | **17.7.5b.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch at end of phase B | ✅ Done (Aug 2026) |
 | **17.7.5b.6** | Add **parity tests**: same SQL with one PIVOT vs two PIVOTs producing same derived name — identical diagnostic count/locations and identical published `filters`/`interface` after consolidate | ✅ Done (Aug 2026) — `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest` |
 | **17.7.5b.7** | Mark **17.7.5** ✅ when derived phase is the only derived path; refresh pivot class goldens under 17.6 policy | ✅ Done (Aug 2026) — `SqlEventWalkerPivotUnpivotTests` **101/101**; full `parse/` green |
+| **17.7.6** | Publication dedupe in step **D** only (`consolidateConvertEgressColumnReferenceLists`); no separate harvest pass | ✅ Done (Aug 2026) — see table row **17.7.6**; pivot class **118/118** |
 
 **Relationship to other 17.7 items:**
 
-- **17.7.6** publication dedupe runs in step **D** only ({@code consolidateConvertEgressColumnReferenceLists} after phase B + strip); no dedupe before phase B diagnostics.
+- **B → C → D:** Phase **B** = derived expand + consume; **C** = normal resolution + deferred clause probe; **D** = strip + `consolidateConvertEgressColumnReferenceLists` (**17.7.6** ✅). No egress-list dedupe before phase B diagnostics.
 - **17.7.2** derivation-only publish changes *what* is on `def_query*`, not the phase order above.
 - **17.7.8** prune retirement remains after **17.7.7** contract matrix; convergence does not reintroduce convert prune.
 
@@ -1844,7 +1846,7 @@ These are **optional** additions after **17.7.4–17.7.6** (or alongside **17.7.
 | QUALIFY | clause probe tests `*Qualify*` |
 | UPDATE SET / WHERE | `assignments` RHS + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` |
 
-Deferred clause harvest + token merge apply **only** when structured `derivation` is present on the frame (see `convertEgressScopeHasRelationalModifierStructuredDerivation`).
+Deferred clause **probe** (phase C) + `mergeDeferredClauseHarvestSiteTokensIntoQueryDictionary` apply **only** when structured `derivation` is present on the frame (see `convertEgressScopeHasRelationalModifierStructuredDerivation`). This is **not** a separate **17.7.6** harvest pass — publication dedupe is step **D** consolidate only.
 
 #### Dimension C — Column kind and qualification
 

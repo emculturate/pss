@@ -121,6 +121,20 @@ Bridge: returns true when `isAmbiguousUnqualifiedStructuredDerivedColumn` (≥2 
 
 ---
 
+## **17.7.6** — Publication dedupe (✅ Aug 2026)
+
+**Scope:** Step **D** only — no separate convert “harvest” pass, no semantic pruning of unqualified clause refs.
+
+| In scope | Out of scope |
+|----------|----------------|
+| `consolidateConvertEgressColumnReferenceLists` after phase B + `stripEphemeralLocationsFromConvertEgressColumnReferences` | Per-bucket reconcile / strip unqualified vs qualified twins |
+| Unique `(name, table_ref)` on `interface`, `filters`, `grouped_by`, `ordered_by`, UPDATE RHS | `table_dictionary` / `query_dictionary` mutation for harvest |
+| Preserve walk-captured clause sites (e.g. unqualified + qualified same name when both needed) | Optional **17.7.10** (source-alias ON warning) — hook is convert egress visitor, not harvest |
+
+**Code:** `SqlParseSymbolTreeHelper#consolidateConvertEgressColumnReferenceLists` (javadoc). Removed unused `dedupeClauseColumnReferenceListInPlace` (commit `e8949b0`).
+
+---
+
 ## `reconcileRelationalModifierDerivedColumnLineageForConvertScope`
 
 - **L1192–L1201:** No-op; comment points to `finalizeRelationalModifierDerivedColumnLineageInClauseLists`.
