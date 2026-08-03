@@ -23,7 +23,10 @@ def eval_query_concat(expr: str) -> str:
 
 
 def extract_tests(java_text: str) -> dict[str, str]:
-    pattern = re.compile(r"@Test\s+public void (\w+)\(\)\s*\{(.*?)(?=\n\t@Test|\n\}$)", re.DOTALL)
+    pattern = re.compile(
+        r"@Test\s+(?://[^\n]*\n\s*)*public void (\w+)\(\)\s*\{(.*?)(?=\n\t@Test|\n\}$)",
+        re.DOTALL,
+    )
     tests: dict[str, str] = {}
     for match in pattern.finditer(java_text):
         name = match.group(1)
@@ -54,7 +57,7 @@ def write_properties(tests: dict[str, str], java_text: str) -> None:
         escaped = query.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "")
         lines.append(f"{name}={escaped}\n")
     for match in re.finditer(
-        r"@Test\s+public void (\w+)\(\)\s*\{(.*?)(?=\n\t@Test|\n\}$)",
+        r"@Test\s+(?://[^\n]*\n\s*)*public void (\w+)\(\)\s*\{(.*?)(?=\n\t@Test|\n\}$)",
         java_text,
         re.DOTALL,
     ):
@@ -126,27 +129,19 @@ def replace_expected_in_block(block: str, label: str, getter: str, expected: str
     getter_idx = block.find(getter_marker, idx)
     if getter_idx < 0:
         return block
-    comma_before_getter = block.rfind(",", idx, getter_idx)
-    if comma_before_getter < 0:
+    quote_start = block.find('"', idx + len(marker))
+    if quote_start < 0 or quote_start >= getter_idx:
         return block
-    quote_end = comma_before_getter
-    while quote_end > idx and block[quote_end - 1] in " \t\n\r":
-        quote_end -= 1
-    if quote_end <= idx or block[quote_end - 1] != '"':
-        return block
-    quote_end -= 1
-    i = quote_end - 1
-    while i > idx:
+    i = quote_start + 1
+    while i < getter_idx:
         if block[i] == "\\":
-            i -= 2
+            i += 2
             continue
         if block[i] == '"':
-            quote_start = i
-            break
-        i -= 1
-    else:
-        return block
-    return block[: quote_start + 1] + escape_java(expected) + block[quote_end + 1 :]
+            quote_end = i
+            return block[: quote_start + 1] + escape_java(expected) + block[quote_end:]
+        i += 1
+    return block
 
 
 def patch_method_block(block: str, method: str, goldens: dict[tuple[str, str], str]) -> str:
@@ -172,8 +167,15 @@ def patch_java(java_text: str, goldens: dict[tuple[str, str], str], methods: lis
 
 
 def main() -> int:
+    methods_filter = sys.argv[1:] if len(sys.argv) > 1 else None
     java_text = TEST_JAVA.read_text(encoding="utf-8")
     tests = extract_tests(java_text)
+    if methods_filter:
+        missing = [m for m in methods_filter if m not in tests]
+        if missing:
+            print(f"Unknown test methods: {missing}", file=sys.stderr)
+            return 1
+        tests = {m: tests[m] for m in methods_filter}
     if not tests:
         print("No tests extracted", file=sys.stderr)
         return 1

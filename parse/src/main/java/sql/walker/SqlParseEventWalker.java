@@ -6105,7 +6105,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			boolean wildcardInterface = interfaceMap.containsKey("*");
 
 			for (String identifier : new ArrayList<String>(pivotIdentifierMap.keySet())) {
-				boolean resolvesAgainstSource = wildcardInterface || containsMapKeyIgnoreCase(interfaceMap, identifier);
+				boolean resolvesAgainstSource = wildcardInterface
+						|| containsMapKeyIgnoreCase(interfaceMap, identifier)
+						|| pivotInIdentifierResolvableAgainstPublishedSubqueryInterface(identifier);
 				HashMap<String, Object> singleIdentifierMap = new HashMap<String, Object>();
 				singleIdentifierMap.put(identifier, pivotIdentifierMap.get(identifier));
 				if (resolvesAgainstSource) {
@@ -6238,6 +6240,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
+	private boolean pivotInIdentifierResolvableAgainstPublishedSubqueryInterface(String identifier) {
+		if (identifier == null || identifier.isBlank()) {
+			return false;
+		}
+		ArrayList<Map<String, Object>> scopes = new ArrayList<>(symbolTreeHelper.getAncestorSymbolTables());
+		scopes.add(walker.symbolTable);
+		for (Map<String, Object> scope : scopes) {
+			if (scope == null || scope.isEmpty()) {
+				continue;
+			}
+			for (String scopeKey : scope.keySet()) {
+				if (scopeKey == null || !scopeKey.startsWith("def_query")) {
+					continue;
+				}
+				Object scopeObj = scope.get(scopeKey);
+				if (!(scopeObj instanceof Map<?, ?> scopeMapObj)) {
+					continue;
+				}
+				Object interfaceObj = ((Map<String, Object>) scopeMapObj).get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObj instanceof Map<?, ?> interfaceMapObj
+						&& containsMapKeyIgnoreCase((Map<String, Object>) interfaceMapObj, identifier)) {
+					return true;
+				}
+				Object queryDictionaryObj = ((Map<String, Object>) scopeMapObj).get(MUMBLE_QUERY_DICTIONARY_KEY);
+				if (queryDictionaryObj instanceof Map<?, ?> queryDictionaryMapObj
+						&& containsMapKeyIgnoreCase((Map<String, Object>) queryDictionaryMapObj, identifier)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
 	private Map<String, Object> resolvePrimarySourceInterface(Map<String, Object> sourceResult) {
 		String sourceRef = resolveRelationalModifierSourceReference(sourceResult);
 		if (sourceRef == null || sourceRef.isBlank()) {
@@ -6246,11 +6282,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Object sourceScopeObj = walker.symbolTable.get(sourceRef);
 		if (!(sourceScopeObj instanceof Map<?, ?>)) {
+			sourceScopeObj = walker.symbolTable.get("def_" + sourceRef);
+		}
+		if (!(sourceScopeObj instanceof Map<?, ?>)) {
 			Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
 			if (aliasMapObj instanceof Map<?, ?> aliasMapObjRaw) {
 				Object aliasTargetObj = ((Map<String, Object>) aliasMapObjRaw).get(sourceRef);
 				if (aliasTargetObj instanceof String aliasTarget && !aliasTarget.isBlank()) {
 					sourceScopeObj = walker.symbolTable.get(aliasTarget);
+					if (!(sourceScopeObj instanceof Map<?, ?>)) {
+						sourceScopeObj = walker.symbolTable.get("def_" + aliasTarget);
+					}
 				}
 			}
 		}
