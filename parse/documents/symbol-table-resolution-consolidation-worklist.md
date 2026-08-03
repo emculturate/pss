@@ -218,7 +218,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.6.1** residual triple derivation audit, **17.7.11** query-backed operand `query_dictionary` design + implement. Optional: **17.6.9** window `query_dictionary` policy, **17.7.10** source-alias ON warning.
+**Suggested next focus:** **17.6.1** residual triple derivation audit, **17.7.11** query-backed operand `query_dictionary` design + implement. Optional: **17.6.9** — follow [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md) one step per session/PR; **17.7.10** source-alias ON warning.
 
 ---
 
@@ -1669,7 +1669,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | 🔄 Partial (Aug 2026) | Paired subquery FROM for each `triple*` join test: `triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test`, `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test`, `tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test`, `triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test`. Goldens assert `table_alias` maps (`p_src=query0`, `m1=query0`, …) and same sibling-modifier diagnostics as physical-table pairs. Smoketest + `-Pphase15-derived-gate`. **Human sign-off on all five `*SubqueryFromV17_6_7Test` goldens is blocked until 17.7.11** (query-backed operand site tokens on `query_dictionary` parity with physical `triple*` pairs). |
 | **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | ✅ Done (Aug 2026) | **(a)** clause-site tokens (WHERE/HAVING/QUALIFY) — contract tests on `unpivotV0` / `pivotBasicMetricColumnsV0`. **(b)** Window: `window_partition_by` / `window_ordered_by` archived lists + `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary`; **17.6.8 (b)** tests list each {@code OVER}-referenced name in **SELECT** (interim until **17.6.9**). **(c)** RETURNING — `insertUnpivotDerivedReturningQueryDictionaryV17_6_8Test`, `updatePivotDerivedReturningQueryDictionaryV17_6_8Test`, `deleteUnpivotDerivedReturningQueryDictionaryV17_6_8Test` assert derived names on {@code query_dictionary}. |
-| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ⏸️ Open | Today {@code mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary} can add {@code query_dictionary} keys for column names that appear **only** in {@code OVER} partition/order (not in {@code interface}). Revisit: restrict window egress merge to **interface output** names (mirror {@code recordInterfaceOutputClauseRefOnQueryDictionary}), keep site tokens on {@code window_partition_by} / {@code window_ordered_by} lists only; add negative contract test (partition-only ref → no {@code query_dictionary} key). Then slim **17.6.8 (b)** tests if desired. |
+| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ⏸️ Open | **Incremental plan:** [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md) (Steps 0–6). Today {@code mergesQueryDictionaryTokensForAllColumnNamesInClauseList} forces **all** window list names onto {@code query_dictionary}. Target: interface-gated merge only; partition/order-only refs → {@code window_partition_by} / {@code window_ordered_by} only. New class {@code SqlEventWalkerWindowEgressContractTests} (P0 negatives) + pivot {@code *V17_6_9*} tests; slim four **17.6.8 (b)** goldens after implementation (user-reviewed). Window list over-harvest → optional **17.6.9b**. |
 
 **Recommended sequencing:**
 
@@ -1679,6 +1679,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 4. ~~**17.6.3**~~ ✅ (Aug 2026) — triple-PIVOT same-output SELECT ambiguity + `applyPivotValueInterfaceDerivations` skip.
 5. **17.6.7** 🔄 (Aug 2026) — five paired `*SubqueryFromV17_6_7Test` methods in gate; human sign-off blocked until **17.7.11**.
 6. ~~**17.6.8**~~ ✅ (Aug 2026) — clause + window + RETURNING egress contract tests; window partition-only policy → **17.6.9**.
+6b. **17.6.9** — [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md): Step 0 inventory → Step 1 sign-off → Step 2 P0 tests → Step 3 code → Step 4 slim 17.6.8 (b) goldens → Step 5 close; Step 6 legacy/V7–V30 + **17.6.9b** window-list harvest optional.
 7. **17.6.4** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
 8. **17.7** — structured derivation finalize track (**17.7.1** first); mandatory closeout **17.7.8** removes convert derived-on-physical prune entirely.
 
