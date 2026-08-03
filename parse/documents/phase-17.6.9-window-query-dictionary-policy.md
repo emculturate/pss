@@ -33,7 +33,14 @@
 - Cleaning **extra** entries on `window_partition_by` / `window_ordered_by` (e.g. all UNPIVOT IN-list physical columns listed when only one name is in `PARTITION BY`) — **17.6.9b**; symmetric on UNPIVOT/PIVOT; do not “fix” by golden refresh alone.
 - Full clause-site matrix (JOIN ON / GROUP BY / ORDER BY with window exprs) — see §Backlog below.
 - **17.7.11** query-backed operand `query_dictionary` placement.
-- Slimming **17.6.8 (b)** goldens that still assert interim broad `query_dictionary` when SELECT lists multiple outputs — optional follow-up; **NewPolicy** V1–V4 are the modifier window contract.
+
+### Deprecated: 17.6.8 (b) modifier window tests
+
+The four **17.6.8 (b)** pivot/unpivot window methods (`unpivotV0Window*QueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0Window*QueryDictionaryV17_6_8Test`) are **`@Deprecated`**. They kept interim “list every {@code OVER} name on {@code query_dictionary} when also in SELECT” assertions from before **17.6.9**.
+
+**Use instead:** **NewPolicy V1–V4** for modifier + window egress policy. Other **17.6.8** tests (WHERE/HAVING/QUALIFY/RETURNING) remain valid for clause-site egress and are not deprecated.
+
+Physical-table window goldens in `SqlEventWalkerFunctionsAggregatesWindowingTests` now include **`window_partition_by` / `window_ordered_by`** on the outer scope where walk archives {@code OVER} harvest (aligned with 17.6.8 archive lists + 17.6.9 policy).
 
 ---
 
@@ -88,9 +95,9 @@ For every **window function that is itself an interface output** (a SELECT-list 
 
 | Role | Class | Methods (representative) |
 |------|--------|---------------------------|
-| Physical SELECT + `OVER` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | `subqueryDictionaryExtensionWindowOverPartitionByV7`–`…MixedV10` |
+| Physical SELECT + `OVER` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | `subqueryDictionaryExtensionWindowOverPartitionByV7`–`…MixedV30`, lag/lead/first_value window samples — symbol tables include `window_*` archives |
 | Modifier window contract | `SqlEventWalkerPivotUnpivotTests` | `*NewPolicyV1*`–`*NewPolicyV4*` |
-| Legacy interim breadth | `SqlEventWalkerPivotUnpivotTests` | `unpivotV0WindowDerivedColumnsQueryDictionaryV17_6_8Test`, `unpivotV0WindowSourceColumnQueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0WindowDerivedColumnsQueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0WindowSourceColumnQueryDictionaryV17_6_8Test` |
+| Deprecated (modifier window) | `SqlEventWalkerPivotUnpivotTests` | `*Window*V17_6_8Test` on pivot/unpivot — superseded by **NewPolicy** |
 | Multi-clause SELECT | `SqlEventWalkerCoreSelectFromAliasingTests` | `interfaceLoopDualRoleTrailingClauseSourceAndAliasRefTest` |
 | DML + window column | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateReturningWithFromSubqueryTest`, `insertComplexSubstitutionI5WithCteQualifyWindowSubstitution` |
 
@@ -102,15 +109,14 @@ For every **window function that is itself an interface output** (a SELECT-list 
 
 ## Suspicious baselines (read before changing goldens)
 
-1. **17.6.8 (b) pivot/unpivot tests** — may still assert broad `query_dictionary` when multiple SELECT outputs; distinct from **NewPolicy** partition-only contract.
-2. **17.6.9b** — `window_partition_by` / `window_ordered_by` may list full bucket `source_columns` expansion beyond the single name in SQL `PARTITION BY`.
-3. **`subqueryDictionaryExtensionWindowOverPartitionByV7`** — inner `query0.query_dictionary` may still list partition-only refs; optional **Step 6** legacy alignment.
+1. **17.6.9b** — `window_partition_by` / `window_ordered_by` may list full bucket `source_columns` expansion beyond the single name in SQL `PARTITION BY`.
+2. **`subqueryDictionaryExtensionWindowOverPartitionByV7`** — inner `def_query0.query_dictionary` may still list partition-only refs (`col12`); optional follow-up if physical scopes should match modifier **17.6.9** gating exactly.
 
 ---
 
 ## Execution plan (historical)
 
-Steps 0–3 **completed** (implementation + **NewPolicy** V1–V4). Step 4 (slim 17.6.8 (b) goldens) and Step 6 (V7–V30 audit) remain **optional**. Step 5: worklist row may be marked ✅ when product owner accepts closure.
+Steps 0–3 **completed** (implementation + **NewPolicy** V1–V4). **17.6.8 (b) modifier window tests deprecated.** Optional: inner-scope `query_dictionary` audit on V7–V30.
 
 ### Step 2 sketch (optional P0 class — not added)
 
@@ -154,3 +160,4 @@ Prioritized **after** closure. Mostly **○** today.
 | Aug 2026 | Initial plan from window test cohort inventory + 17.6.8 (b) review |
 | Aug 2026 | §Interface lineage — window `interface.<alias>` must include PARTITION BY + ORDER BY on PIVOT/UNPIVOT (V7–V10 parity) |
 | Aug 2026 | **Closed:** `query_dictionary` gating + walk-captured OVER deps on `interface.<alias>`; locked contract **NewPolicy V1–V4** |
+| Aug 2026 | Deprecated **17.6.8 (b)** modifier window tests; refreshed physical window symbol goldens for `window_*` archives |
