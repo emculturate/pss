@@ -1780,7 +1780,7 @@ D. Publication hygiene (unchanged)
 | Step | Action | Safety gate |
 |------|--------|-------------|
 | **17.7.5b.1** | Inventory: grep all `consumeDerivedColumnUnknownEntry`, `applyConvertEgressExpandedDerivedSourceLineage`, `isDerivedColumn` branches in `convertSymbolTableToTableDictionary` + interface loop | ✅ Done (Aug 2026) | Checklist: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); no behavior change |
-| **17.7.5b.2** | Extract **read-only** `classifyColumnRefAtConvertEgress` (or flag on existing resolver) used by derived-phase visitor | Unit/canary: single derived bucket SELECT + WHERE — same goldens as today |
+| **17.7.5b.2** | Extract **read-only** `classifyColumnRefAtConvertEgress` (or flag on existing resolver) used by derived-phase visitor | ✅ Done (Aug 2026) | Body moved from `resolveColumnRefAtConvertEgress`; resolver delegates to classifier (no behavior change) |
 | **17.7.5b.3** | Move **lineage expand** for interface + clauses to run only inside derived phase B (after classify, before consume) | `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` + `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` |
 | **17.7.5b.4** | Narrow interface loop: remove derived consume/expand; keep substitution + materialize paths that are not modifier-derived | Gate 195/195 + pivot class contract tests |
 | **17.7.5b.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch at end of phase B | Prove ambiguous + unambiguous both go through phase B |

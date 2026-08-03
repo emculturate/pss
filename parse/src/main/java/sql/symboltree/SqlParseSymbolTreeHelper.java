@@ -425,7 +425,7 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Phase 15.4: bundled scope inputs for {@link #resolveColumnRefAtConvertEgress}.
+	 * Phase 15.4: bundled scope inputs for {@link #classifyColumnRefAtConvertEgress}.
 	 */
 	private static final class ConvertEgressResolutionContext {
 		final HashMap<String, Object> localDerivedColumns;
@@ -1197,13 +1197,13 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localSourceColumnsByBucket,
 			HashMap<String, Object> localTableAliasMap) {
 		// Structured derived-column lineage is expanded in
-		// finalizeRelationalModifierDerivedColumnLineageInClauseLists after deferred harvest.
+		// {@link #runConvertEgressRelationalModifierDerivedLineagePhaseB} (17.7.5b.3).
 	}
 
 	/**
-	 * After deferred clause harvest has merged site tokens into {@code query_dictionary}, expand
-	 * every convert-egress reference that names a structured PIVOT/UNPIVOT derived column in a
-	 * modifier bucket to {@code derived@tuple_N} plus that bucket's {@code source_columns} list.
+	 * Expands every convert-egress reference that names a structured PIVOT/UNPIVOT derived column
+	 * in a modifier bucket to {@code derived@tuple_N} plus that bucket's {@code source_columns} list.
+	 * Invoked from {@link #runConvertEgressRelationalModifierDerivedLineagePhaseB} at convert exit.
 	 */
 	@SuppressWarnings("unchecked")
 	public void finalizeRelationalModifierDerivedColumnLineageInClauseLists(
@@ -1242,6 +1242,27 @@ public class SqlParseSymbolTreeHelper {
 						localTableAliasMap);
 			}
 		}
+	}
+
+	/**
+	 * Phase 17.7.5b.3: derived-phase lineage expansion on interface, archived clause lists, and
+	 * UPDATE assignment RHS — after ambiguous diagnostics, clause probe, and deferred harvest
+	 * merge into {@code query_dictionary}, immediately before strip/consolidate.
+	 */
+	private void runConvertEgressRelationalModifierDerivedLineagePhaseB(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object assignmentsObj,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				assignmentsObj,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
 	}
 
 	/**
@@ -2247,7 +2268,7 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
-		// Bucket lineage is applied in finalizeRelationalModifierDerivedColumnLineageInClauseLists.
+		// Bucket lineage is applied in runConvertEgressRelationalModifierDerivedLineagePhaseB (17.7.5b.3).
 		return null;
 	}
 
@@ -3986,23 +4007,6 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										tableRef,
 										interfaceQualifiedCtx);
-						if (egressResult.hasExpandedDerivedSourceLineage()) {
-							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
-									columnName,
-									tableRef,
-									localDerivedColumns)) {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										tableRef,
-										columnName);
-							}
-							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
-									refs,
-									refIndex,
-									egressResult);
-							refIndex--;
-							continue;
-						}
 						if (egressResult.isDerivedColumn()) {
 							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
 									columnName,
@@ -4212,23 +4216,6 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										null,
 										interfaceUnqualifiedCtx);
-						if (egressResult.hasExpandedDerivedSourceLineage()) {
-							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
-									columnName,
-									null,
-									localDerivedColumns)) {
-								consumeDerivedColumnUnknownEntry(
-										localUnresolvedColumnMap,
-										null,
-										columnName);
-							}
-							applyConvertEgressExpandedDerivedSourceLineageToReferenceList(
-									refs,
-									refIndex,
-									egressResult);
-							refIndex--;
-							continue;
-						}
 						if (egressResult.isDerivedColumn()) {
 							if (!shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose(
 									columnName,
@@ -4416,7 +4403,7 @@ public class SqlParseSymbolTreeHelper {
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
 
-		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
+		runConvertEgressRelationalModifierDerivedLineagePhaseB(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
@@ -11959,10 +11946,10 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Phase 15.4: single convert-egress decision tree — derived first, then qualified or
-	 * unqualified unified resolver. Callers apply consume / materialize / diagnostics.
+	 * Phase 17.7.5b.2: read-only convert-egress classification — derived, expanded lineage,
+	 * qualified, or unqualified. No map mutation; callers consume / materialize / diagnose.
 	 */
-	private ConvertEgressColumnResolutionResult resolveColumnRefAtConvertEgress(
+	private ConvertEgressColumnResolutionResult classifyColumnRefAtConvertEgress(
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
@@ -12040,6 +12027,14 @@ public class SqlParseSymbolTreeHelper {
 						ctx.localDerivedColumns,
 						ctx.localSourceColumnsByBucket,
 						ctx.treatDerivedRegistryKeysAsDerivedColumn));
+	}
+
+	/** @see #classifyColumnRefAtConvertEgress */
+	private ConvertEgressColumnResolutionResult resolveColumnRefAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ConvertEgressResolutionContext ctx) {
+		return classifyColumnRefAtConvertEgress(columnName, tableRef, ctx);
 	}
 
 	/**

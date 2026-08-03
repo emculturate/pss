@@ -132,7 +132,7 @@ Bridge: returns true when `isAmbiguousUnqualifiedStructuredDerivedColumn` (≥2 
 
 | Step | Primary symbols to refactor |
 |------|----------------------------|
-| **.2** | New `classifyColumnRefAtConvertEgress` (read-only); all call sites above |
+| **.2** | ✅ `classifyColumnRefAtConvertEgress` (read-only); `resolveColumnRefAtConvertEgress` delegates |
 | **.3** | Remove L3999/L4225 interface expand; relocate L4419 finalize expand into phase B; align `validateArchivedClauseColumnRef` expand |
 | **.4** | Delete derived branches L3989–L4242 (consume/expand/`isDerivedColumn` early exit) from interface loop; keep substitution, pivot operand, unpivot IN, physical/query materialize |
 | **.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch in diagnose visitor |
@@ -144,3 +144,9 @@ Bridge: returns true when `isAmbiguousUnqualifiedStructuredDerivedColumn` (≥2 
 - [x] Grep inventory captured in this document  
 - [x] No production code changes  
 - [x] Full `parse/` module test suite green — **1731/1731** (Aug 2026 baseline before **17.7.5b.2**)
+
+## Verification (17.7.5b.2)
+
+- [x] `classifyColumnRefAtConvertEgress` extracted; no behavior change  
+- [x] `SqlEventWalkerPivotUnpivotTests` + `SmoketestQualityGateTestSuite` + gate/canary methods green  
+- [x] Full `parse/` module — **1731/1731**
