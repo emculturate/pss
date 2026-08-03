@@ -38,6 +38,36 @@ public class SqlParseSymbolTreeHelper {
 	private final ArrayDeque<String> pendingIntersectSetOperatorsForNextParticipants = new ArrayDeque<>();
 	/** Parse token for a walked {@code column} subtree (clause egress only; never SELECT-list). */
 	private final IdentityHashMap<Object, String> clauseColumnSiteTokenBySubTree = new IdentityHashMap<>();
+	/**
+	 * Per-{@code OVER} partition/order column refs for the next SELECT-list window output (walk order:
+	 * partition push, then order push; consumed LIFO on {@code exitSelect_item}).
+	 */
+	private final ArrayDeque<ArrayList<Object>> pendingWindowSelectInterfacePartitionDeps =
+			new ArrayDeque<>();
+	/** One partition+order pair per completed {@code OVER}; consumed on {@code exitSelect_item}. */
+	private final ArrayDeque<WindowSelectInterfaceClauseDeps> pendingWindowSelectInterfaceOverDeps =
+			new ArrayDeque<>();
+	/**
+	 * Set when an in-{@code OVER} {@code ORDER BY} finishes; latched on
+	 * {@code exitWindow_over_partition_expression} for the following {@code exitSelect_item}.
+	 */
+	private WindowSelectInterfaceClauseDeps latchedWindowOverClauseDepsForNextSelectItem;
+	private String lastWindowSelectListOutputInterfaceAlias;
+	private String lastSelectListOutputInterfaceAlias;
+	private final HashMap<String, WindowSelectInterfaceClauseDeps> windowOutputInterfaceClauseDepsByAlias =
+			new LinkedHashMap<>();
+
+	private static final class WindowSelectInterfaceClauseDeps {
+		private final ArrayList<Object> partitionByRefs;
+		private final ArrayList<Object> orderByRefs;
+
+		private WindowSelectInterfaceClauseDeps(
+				ArrayList<Object> partitionByRefs,
+				ArrayList<Object> orderByRefs) {
+			this.partitionByRefs = partitionByRefs != null ? partitionByRefs : new ArrayList<Object>();
+			this.orderByRefs = orderByRefs != null ? orderByRefs : new ArrayList<Object>();
+		}
+	}
 
 	/** Phase 15.6: active only during {@link #convertSymbolTableToTableDictionary}. */
 	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
@@ -1209,6 +1239,7 @@ public class SqlParseSymbolTreeHelper {
 				|| localSourceColumnsByBucket.isEmpty()) {
 			return;
 		}
+		applyWalkCapturedWindowSelectInterfaceClauseDeps(localInterface);
 		expandRelationalModifierDerivedColumnLineageInInterfaceMap(
 				localInterface,
 				localDerivedColumns,
@@ -2818,8 +2849,9 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	private static boolean mergesQueryDictionaryTokensForAllColumnNamesInClauseList(String containerKey) {
-		return MUMBLE_WINDOW_PARTITION_BY_KEY.equals(containerKey)
-				|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(containerKey);
+		// 17.6.9: window_partition_by / window_ordered_by use the same rule as other clause lists —
+		// query_dictionary tokens only for names that are SELECT-list interface outputs.
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -15584,6 +15616,206 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	public boolean isWindowFunctionSelectItemSubtree(HashMap<String, Object> selectItemSubtree) {
+		return containsWindowFunctionSelectItemSubtree(selectItemSubtree);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean containsWindowFunctionSelectItemSubtree(HashMap<String, Object> selectItemSubtree) {
+		if (selectItemSubtree == null || selectItemSubtree.isEmpty()) {
+			return false;
+		}
+		if (selectItemSubtree.containsKey(MUMBLE_WINDOW_FUNCTION_KEY)) {
+			return true;
+		}
+		for (Object value : selectItemSubtree.values()) {
+			if (value instanceof HashMap<?, ?> childMapObj) {
+				if (containsWindowFunctionSelectItemSubtree((HashMap<String, Object>) childMapObj)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public void pushPendingWindowSelectInterfacePartitionDeps(ArrayList<Object> partitionDeps) {
+		if (partitionDeps == null || partitionDeps.isEmpty()) {
+			pendingWindowSelectInterfacePartitionDeps.addLast(new ArrayList<Object>());
+			return;
+		}
+		pendingWindowSelectInterfacePartitionDeps.addLast(partitionDeps);
+	}
+
+	public boolean hasLatchedWindowOverClauseDepsForNextSelectItem() {
+		return latchedWindowOverClauseDepsForNextSelectItem != null;
+	}
+
+	public boolean hasPendingWindowSelectInterfaceOverDeps() {
+		return !pendingWindowSelectInterfaceOverDeps.isEmpty();
+	}
+
+	public void latchCompletedWindowOverClauseDepsForNextSelectItem() {
+		if (latchedWindowOverClauseDepsForNextSelectItem == null
+				&& !pendingWindowSelectInterfaceOverDeps.isEmpty()) {
+			latchedWindowOverClauseDepsForNextSelectItem =
+					pendingWindowSelectInterfaceOverDeps.peekLast();
+		}
+	}
+
+	/**
+	 * After {@code exitSelect_item} flatten for a window output, append PARTITION BY and ORDER BY
+	 * clause column refs captured at {@code exitPartition_by_clause} / in-{@code OVER} {@code exitOrderby_clause}
+	 * (same harvest as {@code window_partition_by} / {@code window_ordered_by}, scoped per {@code OVER}).
+	 */
+	public void mergePendingWindowSelectInterfaceClauseDepsIntoInterfaceColumnList(
+			ArrayList<Object> interfaceColumnList,
+			String interfaceAlias) {
+		if (interfaceColumnList == null) {
+			return;
+		}
+		WindowSelectInterfaceClauseDeps overDeps = latchedWindowOverClauseDepsForNextSelectItem;
+		latchedWindowOverClauseDepsForNextSelectItem = null;
+		if (overDeps == null && !pendingWindowSelectInterfaceOverDeps.isEmpty()) {
+			overDeps = pendingWindowSelectInterfaceOverDeps.pollLast();
+		} else if (overDeps != null) {
+			pendingWindowSelectInterfaceOverDeps.pollLast();
+		}
+		if (overDeps == null) {
+			return;
+		}
+		for (Object refObj : overDeps.partitionByRefs) {
+			appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+		}
+		for (Object refObj : overDeps.orderByRefs) {
+			appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+		}
+		rememberWindowOutputInterfaceClauseDepsForAlias(
+				interfaceAlias,
+				copyWindowSelectInterfaceClauseDeps(overDeps));
+	}
+
+	private WindowSelectInterfaceClauseDeps copyWindowSelectInterfaceClauseDeps(
+			WindowSelectInterfaceClauseDeps source) {
+		if (source == null) {
+			return null;
+		}
+		return new WindowSelectInterfaceClauseDeps(
+				copyClauseColumnReferenceSublist(source.partitionByRefs, 0),
+				copyClauseColumnReferenceSublist(source.orderByRefs, 0));
+	}
+
+	private ArrayList<Object> copyClauseColumnReferenceSublist(
+			ArrayList<Object> sourceList,
+			int startIndexInclusive) {
+		ArrayList<Object> slice = new ArrayList<Object>();
+		if (sourceList == null || startIndexInclusive >= sourceList.size()) {
+			return slice;
+		}
+		for (int index = startIndexInclusive; index < sourceList.size(); index++) {
+			Object refObj = sourceList.get(index);
+			Object egressCopy = copyClauseColumnReferenceForEgress(refObj);
+			if (egressCopy != null) {
+				slice.add(egressCopy);
+			}
+		}
+		return slice;
+	}
+
+	/** Windows in query {@code ORDER BY} do not consume pending deps; drop after the SELECT list. */
+	public void clearPendingWindowSelectInterfaceClauseDeps() {
+		pendingWindowSelectInterfacePartitionDeps.clear();
+		pendingWindowSelectInterfaceOverDeps.clear();
+		latchedWindowOverClauseDepsForNextSelectItem = null;
+		lastWindowSelectListOutputInterfaceAlias = null;
+		lastSelectListOutputInterfaceAlias = null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void applyWalkCapturedWindowSelectInterfaceClauseDeps(
+			HashMap<String, Object> localInterface) {
+		if (localInterface == null || windowOutputInterfaceClauseDepsByAlias.isEmpty()) {
+			return;
+		}
+		for (Map.Entry<String, WindowSelectInterfaceClauseDeps> entry :
+				windowOutputInterfaceClauseDepsByAlias.entrySet()) {
+			Object refsObj = localInterface.get(entry.getKey());
+			if (!(refsObj instanceof ArrayList<?>)) {
+				continue;
+			}
+			ArrayList<Object> interfaceColumnList = (ArrayList<Object>) refsObj;
+			WindowSelectInterfaceClauseDeps overDeps = entry.getValue();
+			if (overDeps == null) {
+				continue;
+			}
+			for (Object refObj : overDeps.partitionByRefs) {
+				appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+			}
+			for (Object refObj : overDeps.orderByRefs) {
+				appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+			}
+		}
+		windowOutputInterfaceClauseDepsByAlias.clear();
+	}
+
+	private void rememberWindowOutputInterfaceClauseDepsForAlias(
+			String interfaceAlias,
+			WindowSelectInterfaceClauseDeps overDeps) {
+		if (interfaceAlias == null
+				|| interfaceAlias.isBlank()
+				|| overDeps == null) {
+			return;
+		}
+		windowOutputInterfaceClauseDepsByAlias.put(interfaceAlias, overDeps);
+	}
+
+	public void recordSelectListOutputInterfaceAlias(String interfaceAlias) {
+		if (interfaceAlias != null && !interfaceAlias.isBlank()) {
+			lastSelectListOutputInterfaceAlias = interfaceAlias;
+		}
+	}
+
+	public void recordWindowSelectListOutputInterfaceAlias(String interfaceAlias) {
+		if (interfaceAlias != null && !interfaceAlias.isBlank()) {
+			lastWindowSelectListOutputInterfaceAlias = interfaceAlias;
+		}
+	}
+
+	/**
+	 * When in-{@code OVER} {@code ORDER BY} is harvested after {@code exitSelect_item}, merge
+	 * latched PARTITION BY / ORDER BY refs into the last window SELECT-list output on this list.
+	 */
+	@SuppressWarnings("unchecked")
+	public void mergeOrphanedLatchedWindowOverClauseDepsIntoSelectInterface(
+			HashMap<String, Object> selectInterface) {
+		if (latchedWindowOverClauseDepsForNextSelectItem == null
+				|| selectInterface == null) {
+			return;
+		}
+		String targetAlias = lastWindowSelectListOutputInterfaceAlias;
+		if (targetAlias == null || targetAlias.isBlank()) {
+			targetAlias = lastSelectListOutputInterfaceAlias;
+		}
+		if (targetAlias == null || targetAlias.isBlank()) {
+			return;
+		}
+		Object refsObj = selectInterface.get(targetAlias);
+		if (!(refsObj instanceof ArrayList<?>)) {
+			return;
+		}
+		ArrayList<Object> interfaceColumnList = (ArrayList<Object>) refsObj;
+		WindowSelectInterfaceClauseDeps overDeps = latchedWindowOverClauseDepsForNextSelectItem;
+		latchedWindowOverClauseDepsForNextSelectItem = null;
+		if (!pendingWindowSelectInterfaceOverDeps.isEmpty()) {
+			pendingWindowSelectInterfaceOverDeps.pollLast();
+		}
+		for (Object refObj : overDeps.partitionByRefs) {
+			appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+		}
+		for (Object refObj : overDeps.orderByRefs) {
+			appendClauseColumnReferenceForConvertEgress(interfaceColumnList, refObj);
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public void captureClauseDependencies(Map<String, Object> clauseSubMap, String symbolTableKey) {
 		Object existing = walker.symbolTable.remove(symbolTableKey);
@@ -15594,11 +15826,50 @@ public class SqlParseSymbolTreeHelper {
 			flatList = new ArrayList<Object>();
 		}
 
+		int flatListSizeBeforeClauseHarvest = flatList.size();
 		if (clauseSubMap instanceof HashMap<?, ?>) {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) clauseSubMap, flatList);
 		}
 
+		if (MUMBLE_WINDOW_PARTITION_BY_KEY.equals(symbolTableKey)) {
+			pushPendingWindowSelectInterfacePartitionDeps(
+					copyClauseColumnReferenceSublistFromFlatList(flatList, flatListSizeBeforeClauseHarvest));
+		} else if (MUMBLE_WINDOW_ORDERED_BY_KEY.equals(symbolTableKey)) {
+			ArrayList<Object> orderByRefs =
+					copyClauseColumnReferenceSublistFromFlatList(flatList, flatListSizeBeforeClauseHarvest);
+			ArrayList<Object> partitionByRefs = pendingWindowSelectInterfacePartitionDeps.pollLast();
+			WindowSelectInterfaceClauseDeps overDeps =
+					new WindowSelectInterfaceClauseDeps(partitionByRefs, orderByRefs);
+			pendingWindowSelectInterfaceOverDeps.addLast(overDeps);
+			latchedWindowOverClauseDepsForNextSelectItem = overDeps;
+			String targetAlias = lastWindowSelectListOutputInterfaceAlias;
+			if (targetAlias == null || targetAlias.isBlank()) {
+				targetAlias = lastSelectListOutputInterfaceAlias;
+			}
+			rememberWindowOutputInterfaceClauseDepsForAlias(
+					targetAlias,
+					copyWindowSelectInterfaceClauseDeps(overDeps));
+		}
+
 		walker.symbolTable.put(symbolTableKey, flatList);
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArrayList<Object> copyClauseColumnReferenceSublistFromFlatList(
+			ArrayList<Object> flatList,
+			int startIndexInclusive) {
+		ArrayList<Object> slice = new ArrayList<Object>();
+		if (flatList == null || startIndexInclusive >= flatList.size()) {
+			return slice;
+		}
+		for (int index = startIndexInclusive; index < flatList.size(); index++) {
+			Object refObj = flatList.get(index);
+			Object egressCopy = copyClauseColumnReferenceForEgress(refObj);
+			if (egressCopy != null) {
+				slice.add(egressCopy);
+			}
+		}
+		return slice;
 	}
 
 	@SuppressWarnings("unchecked")

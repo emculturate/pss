@@ -162,12 +162,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"{def_query0={window_ordered_by=[{name=metric_value, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], query_dictionary={metric_name=[[@1,7:17='metric_name',<381>,1:7], [@12,68:78='metric_name',<381>,2:34], [@25,152:162='metric_name',<381>,5:19]], metric_value=[[@3,20:31='metric_value',<381>,1:20], [@15,89:100='metric_value',<381>,2:55], [@23,135:146='metric_value',<381>,5:2]], rn=[[@18,106:107='rn',<381>,2:72]]}, table_dictionary={my_table={jan_sales=[[@28,168:176='jan_sales',<381>,5:35]], mar_sales=[[@32,190:198='mar_sales',<381>,5:57]], feb_sales=[[@30,179:187='feb_sales',<381>,5:46]]}}, window_partition_by=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, derived_columns={tuple_0={metric_value=[[@23,135:146='metric_value',<381>,5:2]], metric_name=[[@25,152:162='metric_name',<381>,5:19]]}}}, interface={metric_name=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], metric_value=[{name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], rn=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, table_alias={tuple_0=my_table}}}",
 				extractor.getSymbolTable().toString());
 	}
-	/**
-	 * 17.6.9 policy sketch: SELECT exposes only {@code rn}; partition/order derived names stay off
-	 * top-level interface keys and (after 17.6.9) off {@code query_dictionary}. Target:
-	 * {@code interface.rn} lists both {@code metric_name} and {@code metric_value} with UNPIVOT lineage
-	 * (see phase-17.6.9 §Interface lineage). Goldens below reflect <b>current</b> behavior until 17.6.9 lands.
-	 */
+
 	@Test
 	public void unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV1Test() {
 		final String query =
@@ -184,12 +179,41 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("Interface is wrong", "[rn]",
 				extractor.getInterface().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={metric_value=[[@11,63:74='metric_value',<381>,2:55]], metric_name=[[@8,42:52='metric_name',<381>,2:34]], rn=[[@14,80:81='rn',<381>,2:72]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={rn=[[@14,80:81='rn',<381>,2:72]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={window_ordered_by=[{name=metric_value, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], query_dictionary={metric_name=[[@8,42:52='metric_name',<381>,2:34]], metric_value=[[@11,63:74='metric_value',<381>,2:55]], rn=[[@14,80:81='rn',<381>,2:72]]}, table_dictionary={my_table={jan_sales=[[@24,142:150='jan_sales',<381>,5:35]], mar_sales=[[@28,164:172='mar_sales',<381>,5:57]], feb_sales=[[@26,153:161='feb_sales',<381>,5:46]]}}, window_partition_by=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, derived_columns={tuple_0={metric_value=[[@19,109:120='metric_value',<381>,5:2]], metric_name=[[@21,126:136='metric_name',<381>,5:19]]}}}, interface={rn=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, table_alias={tuple_0=my_table}}}",
+				"{def_query0={window_ordered_by=[{name=metric_value, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], query_dictionary={rn=[[@14,80:81='rn',<381>,2:72]]}, table_dictionary={my_table={jan_sales=[[@24,142:150='jan_sales',<381>,5:35]], mar_sales=[[@28,164:172='mar_sales',<381>,5:57]], feb_sales=[[@26,153:161='feb_sales',<381>,5:46]]}}, window_partition_by=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, derived_columns={tuple_0={metric_value=[[@19,109:120='metric_value',<381>,5:2]], metric_name=[[@21,126:136='metric_name',<381>,5:19]]}}}, interface={rn=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}, {name=metric_value, table_ref=tuple_0}]}, table_alias={tuple_0=my_table}}}",
 				extractor.getSymbolTable().toString());
 	}
+	@Test
+	public void unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV2Test() {
+		final String query =
+				"SELECT item\n"
+						+ "FROM my_table\n"
+						+ "UNPIVOT (\n"
+						+ "  metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales))\n"
+						+ " order by  ROW_NUMBER() OVER (PARTITION BY metric_name ORDER BY metric_value)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[item]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={item=[[@1,7:10='item',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={window_ordered_by=[{name=metric_value, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], query_dictionary={item=[[@1,7:10='item',<381>,1:7]]}, table_dictionary={my_table={jan_sales=[[@11,71:79='jan_sales',<381>,4:35]], mar_sales=[[@15,93:101='mar_sales',<381>,4:57]], item=[[@1,7:10='item',<381>,1:7]], feb_sales=[[@13,82:90='feb_sales',<381>,4:46]]}}, window_partition_by=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}]}, derived_columns={tuple_0={metric_value=[[@6,38:49='metric_value',<381>,4:2]], metric_name=[[@8,55:65='metric_name',<381>,4:19]]}}}, ordered_by=[{name=metric_name, table_ref=tuple_0}, {name=jan_sales, table_ref=my_table}, {name=feb_sales, table_ref=my_table}, {name=mar_sales, table_ref=my_table}, {name=metric_value, table_ref=tuple_0}], interface={item=[{name=item, table_ref=my_table}]}, table_alias={tuple_0=my_table}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * 17.6.9 policy sketch: SELECT exposes only {@code rn}; partition/order derived names stay off
+	 * top-level interface keys and (after 17.6.9) off {@code query_dictionary}. Target:
+	 * {@code interface.rn} lists both {@code metric_name} and {@code metric_value} with UNPIVOT lineage
+	 * (see phase-17.6.9 §Interface lineage). Goldens below reflect <b>current</b> behavior until 17.6.9 lands.
+	 */
 
 	/** Phase 17.6.8 (b): UNPIVOT source (IN-list) column in {@code OVER} → {@code query_dictionary}. See **17.6.9** for window-only {@code query_dictionary} policy. */
 	@Test

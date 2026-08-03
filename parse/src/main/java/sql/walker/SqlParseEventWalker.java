@@ -4287,6 +4287,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSelect_list( SQLSelectParserParser.Select_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		@SuppressWarnings("unchecked")
+		HashMap<String, Object> selectInterface =
+				(HashMap<String, Object>) walker.symbolTable.get(MUMBLE_INTERFACE_KEY);
+		symbolTreeHelper.mergeOrphanedLatchedWindowOverClauseDepsIntoSelectInterface(selectInterface);
+		symbolTreeHelper.clearPendingWindowSelectInterfaceClauseDeps();
 		// then parent is normal query
 		walker.handlePushDown(ruleIndex);
 	}
@@ -4369,6 +4374,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
 		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
+		if (symbolTreeHelper.isWindowFunctionSelectItemSubtree(interfaceReference)
+				|| symbolTreeHelper.hasLatchedWindowOverClauseDepsForNextSelectItem()
+				|| symbolTreeHelper.hasPendingWindowSelectInterfaceOverDeps()) {
+			symbolTreeHelper.mergePendingWindowSelectInterfaceClauseDepsIntoInterfaceColumnList(
+					columnList,
+					interfaceAlias);
+			symbolTreeHelper.recordWindowSelectListOutputInterfaceAlias(interfaceAlias);
+		}
 
 		Object existingInterfaceEntry = selectInterface.get(interfaceAlias);
 		if (existingInterfaceEntry != null && !"*".equals(interfaceAlias)) {
@@ -4376,6 +4389,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		selectInterface.put(interfaceAlias, columnList);
+		symbolTreeHelper.recordSelectListOutputInterfaceAlias(interfaceAlias);
 		symbolTreeHelper.recordInsertSourceSelectItemSequence(interfaceAlias);
 		if (symbolTreeHelper.isQueryBackedSelectItemReference(interfaceReference)) {
 			symbolTreeHelper.addCurrentQueryScalarSubqueryAlias(interfaceAlias);
@@ -8688,6 +8702,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				item.putAll((Map<String, Object>) subMap.remove("1"));
 				item.putAll((Map<String, Object>) subMap.remove("2"));
 				subMap.put(MUMBLE_WINDOW_FUNCTION_KEY, item);
+				symbolTreeHelper.latchCompletedWindowOverClauseDepsForNextSelectItem();
 			} else {
 				// Wrong number of entries
 			}
