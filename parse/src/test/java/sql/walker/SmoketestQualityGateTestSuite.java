@@ -11,7 +11,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (210 tests):
+ * Gate composition (224 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -29,6 +29,7 @@ import org.junit.Test;
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
  *   <li>PIVOT / UNPIVOT multi-modifier 17.7 gate (2): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}</li>
+ *   <li>PIVOT / UNPIVOT subset B clause probes (14): JOIN ON, GROUP/ORDER, HAVING/ORDER, QUALIFY, ORDER BY expression, FromDerived, WithTax, JoinTargets, {@code monthly_sales_long} join/tax-where/join-filter/order-by, pivot IN-list WHERE — see §17.7.7-matrix subset B</li>
  *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
  *   <li>Endpoint parser extensions (2): {@code basicTupleSubstitutionVariableTest}, {@code inListVariableSubstitutionTest}</li>
  *   <li>JOIN duplicate-interface fatal (1): {@code handlingRepeatingColumnNamesInTheInterfaceV1}</li>
@@ -495,6 +496,78 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void triplePivotUnpivotPivotJoinDerivedColumnsV1Test() {
 		pivotUnpivotTests.triplePivotUnpivotPivotJoinDerivedColumnsV1Test();
+	}
+
+	// --- PIVOT / UNPIVOT subset B clause probes (14) — §17.7.7-matrix ---
+
+	@Test
+	public void unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest() {
+		pivotUnpivotTests.unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest();
+	}
+
+	@Test
+	public void unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderTest() {
+		pivotUnpivotTests.unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderTest();
+	}
+
+	@Test
+	public void unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderTest() {
+		pivotUnpivotTests.unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderTest();
+	}
+
+	@Test
+	public void unpivotTableWithQualifySalesAmountProbeTest() {
+		pivotUnpivotTests.unpivotTableWithQualifySalesAmountProbeTest();
+	}
+
+	@Test
+	public void unpivotTableWithOrderByExpressionSalesAmountProbeTest() {
+		pivotUnpivotTests.unpivotTableWithOrderByExpressionSalesAmountProbeTest();
+	}
+
+	@Test
+	public void unpivotFromDerivedAdjustedColumnsV3Test() {
+		pivotUnpivotTests.unpivotFromDerivedAdjustedColumnsV3Test();
+	}
+
+	@Test
+	public void unpivotWithTaxAndWhereV4Test() {
+		pivotUnpivotTests.unpivotWithTaxAndWhereV4Test();
+	}
+
+	@Test
+	public void unpivotJoinTargetsWithFilterV5Test() {
+		pivotUnpivotTests.unpivotJoinTargetsWithFilterV5Test();
+	}
+
+	@Test
+	public void pivotTableWithInAliasesJanFebMarV2Test() {
+		pivotUnpivotTests.pivotTableWithInAliasesJanFebMarV2Test();
+	}
+
+	@Test
+	public void pivotWithTaxAndWhereV4Test() {
+		pivotUnpivotTests.pivotWithTaxAndWhereV4Test();
+	}
+
+	@Test
+	public void pivotMonthlySalesLongJoinOnDerivedSumProbeTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongJoinOnDerivedSumProbeTest();
+	}
+
+	@Test
+	public void pivotMonthlySalesLongJoinFilterDerivedSumTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongJoinFilterDerivedSumTest();
+	}
+
+	@Test
+	public void pivotMonthlySalesLongTaxWhereDerivedSumTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongTaxWhereDerivedSumTest();
+	}
+
+	@Test
+	public void pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest();
 	}
 
 	// --- Nested WITH clause / set-op matrix (4) ---
