@@ -1190,18 +1190,6 @@ public class SqlParseSymbolTreeHelper {
 		return null;
 	}
 
-	@SuppressWarnings("unchecked")
-	public void reconcileRelationalModifierDerivedColumnLineageForConvertScope(
-			HashMap<String, Object> localInterface,
-			HashMap<String, Object> archivedScopeColumnReferenceContainers,
-			Object assignmentsObj,
-			HashMap<String, Object> localDerivedColumns,
-			HashMap<String, Object> localSourceColumnsByBucket,
-			HashMap<String, Object> localTableAliasMap) {
-		// Pre-diagnose ordering artifact: lineage expand runs in
-		// {@link #runConvertEgressRelationalModifierDerivedLineagePhaseB} (17.7.5b).
-	}
-
 	/**
 	 * Expands every convert-egress reference that names a structured PIVOT/UNPIVOT derived column
 	 * in a modifier bucket to {@code derived@tuple_N} plus that bucket's {@code source_columns} list.
@@ -2510,13 +2498,6 @@ public class SqlParseSymbolTreeHelper {
 		if (orderedByList != null) {
 			archivedScopeColumnReferenceContainers.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
 		}
-		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
-				localInterface,
-				archivedScopeColumnReferenceContainers,
-				assignmentsObj,
-				localDerivedColumns,
-				localSourceColumnsByBucket,
-				localTableAliasMap);
 		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
@@ -4571,14 +4552,6 @@ public class SqlParseSymbolTreeHelper {
 				localInterface,
 				activeConvertEgressRelationalModifierContext,
 				localDerivedColumns);
-
-		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
-				localInterface,
-				archivedScopeColumnReferenceContainers,
-				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
-				localDerivedColumns,
-				localRelationalModifierSourceColumns,
-				localTableAliasMap);
 
 		diagnoseAmbiguousUnqualifiedRelationalModifierDerivedColumnRefSites(
 				localInterface,
@@ -10939,11 +10912,11 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		// 17.7.8: do not materialize structured derived outputs onto physical table_dictionary
-		// (walk-time finalize already prunes modifier-local dicts; convert egress must not re-pollute).
+		// 17.7.3 / 17.7.8: block structured derived outputs on physical keys; allow per-bucket
+		// source_columns operands (sibling modifiers may share a column name as derived vs IN-list).
 		if (columnName != null
 				&& activeConvertEgressDerivedColumns != null
-				&& containsDerivedColumnName(activeConvertEgressDerivedColumns, columnName)
+				&& containsStructuredDerivedColumnName(activeConvertEgressDerivedColumns, columnName)
 				&& !isRelationalModifierSourceColumnForPhysicalTable(
 						columnName,
 						dictionaryKey,
@@ -11249,6 +11222,22 @@ public class SqlParseSymbolTreeHelper {
 
 		if (containsKeyIgnoreCase(localDerivedColumns, columnName)) {
 			return true;
+		}
+
+		return containsStructuredDerivedColumnName(localDerivedColumns, columnName);
+	}
+
+	/**
+	 * Phase 17.7.3: structured {@code derivation.derived_columns} buckets only (per sibling modifier),
+	 * not legacy flat keys on the derivation map root.
+	 */
+	@SuppressWarnings("unchecked")
+	private boolean containsStructuredDerivedColumnName(
+			HashMap<String, Object> localDerivedColumns,
+			String columnName) {
+		if (localDerivedColumns == null || localDerivedColumns.isEmpty()
+				|| columnName == null || columnName.isBlank()) {
+			return false;
 		}
 
 		for (Object bucketObj : localDerivedColumns.values()) {

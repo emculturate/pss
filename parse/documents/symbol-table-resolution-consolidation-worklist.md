@@ -217,7 +217,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.6.1** residual triple derivation audit, **17.7.3** / **17.7.4**. Optional: **17.7.8** derived-vs-physical pairs, **17.6.9** window `query_dictionary` policy, **17.7.10** source-alias ON warning.
+**Suggested next focus:** **17.6.1** residual triple derivation audit, **17.7.4** diagnostics. Optional: **17.6.9** window `query_dictionary` policy, **17.7.10** source-alias ON warning, **17.7.11** design workshop.
 
 ---
 
@@ -1722,7 +1722,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 |----|------|--------|-------|
 | **17.7.1** | **Finalize: merge `source_columns` into parent `table_dictionary`** | ✅ Done (Aug 2026) | Parent-scope merge after modifier pop; convert prune respects `derivation.source_columns` per physical table (transitional until **17.7.8**). `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` table_dictionary green. |
 | **17.7.2** | **Derivation-only derived on parent** | ✅ Done (Aug 2026) | Structured `derivation.{source_columns,derived_columns}` on parent `def_query*`; flat hint lists retired (`cfc846c`, `c1a4bd7`, `daa0068`). Convert-time `pruneRelationalModifierDerivedColumnsFromTableDictionary` remains **transitional** until **17.7.8**. Lineage expand at convert egress unified (`0d100ce` — `derived@tuple` + sources, dedupe at finalize). |
-| **17.7.3** | **Convert harvest: structured `derivation` walk only** | ⏸️ Open | `canonicalizeLocalTableCollection` / clause egress: per-bucket context for sibling modifiers; **no** query-wide `isRelationalModifierDerivedOutputColumnName(name, entireDerivedMap)` table-dict removal. Transitional only until **17.7.8** — not a substitute for 17.7.1–17.7.2. |
+| **17.7.3** | **Convert harvest: structured `derivation` walk only** | ✅ Done (Aug 2026) | **17.7.8** removed query-wide `pruneRelationalModifierDerivedColumnsFromTableDictionary` / `isRelationalModifierDerivedOutputColumnName` from `canonicalizeLocalTableCollection` (alias-fold only). **17.7.3** finish: convert egress physical merge uses **structured bucket** derived detection (`containsStructuredDerivedColumnName`) plus per-bucket `source_columns` operand allow-list (`isRelationalModifierSourceColumnForPhysicalTable`); removed no-op `reconcileRelationalModifierDerivedColumnLineageForConvertScope`. Clause egress already uses per-bucket `RelationalModifierConvertEgressContext` + phase B lineage expand (**17.7.5b**). **Closeout:** `closeout17_7_3_TriplePivotOperandColumnsRemainOnPhysicalTableDictionaryTest`, `closeout17_7_3_TripleUnpivotInListOperandsRemainOnPhysicalTableDictionaryTest`. |
 | **17.7.4** | **Diagnostic (1): missing source vs non-table interface** | ⏸️ Open | At pivot/unpivot finalize: all relational-modifier **source** operands (PIVOT aggregate/FOR, PIVOT IN identifiers, UNPIVOT VALUE/FOR/IN) must resolve against `resolvePrimarySourceInterface` when source is subquery/CTE — extend beyond `DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED` alone. |
 | **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | ✅ Done (Aug 2026) | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` across interface + clause egress; convert egress converged via **17.7.5b** (classify → diagnose → phase B expand + batch consume). Parity: `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest`. |
 | **17.7.5b** | **Convert egress derived-phase convergence** | ✅ Done (Aug 2026) | **.1–.6** complete; **.7** signed off with **17.7.5**. See subsection below. |
@@ -1737,7 +1737,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 
 1. ~~**17.7.1**~~ ✅ — verify triple u1/p/u2 table_dictionary.
 2. ~~**17.7.2**~~ ✅ (Aug 2026) — structured publish + unified lineage expand; convert prune **transitional** until **17.7.8**.
-3. ~~**17.7.5b**~~ ✅ → ~~**17.7.5**~~ ✅ (Aug 2026); ~~**17.7.6**~~ ✅ (Aug 2026); then **17.7.3** (minimal) + **17.7.4** diagnostics.
+3. ~~**17.7.5b**~~ ✅ → ~~**17.7.5**~~ ✅ (Aug 2026); ~~**17.7.6**~~ ✅ (Aug 2026); ~~**17.7.3**~~ ✅ (Aug 2026); **17.7.4** diagnostics.
 4. ~~**17.7.7** A–E + gap-fill~~ ✅ (Aug 2026) — see heatmap + `gapFill17_7_7_*`.
 5. ~~**17.7.8**~~ ✅ (Aug 2026) — convert prune removed; merge guard at physical materialize.
 6. **17.7.11** — **design workshop** (human + agent) on query-backed / non-table tuple operand lineage, then **one** focused implementation PR; no token persistence on `derivation` or cross-scope helper maps.

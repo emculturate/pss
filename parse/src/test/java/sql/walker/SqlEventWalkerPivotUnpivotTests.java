@@ -5191,6 +5191,72 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	/**
+	 * 17.7.3 closeout (1/2): triple sibling PIVOT — convert egress must keep PIVOT operand columns on the
+	 * physical {@code monthly_sales_long} bucket while structured derived outputs stay off physical keys.
+	 */
+	@Test
+	public void closeout17_7_3_TriplePivotOperandColumnsRemainOnPhysicalTableDictionaryTest() {
+		final String query =
+				"SELECT jan_sales_SUM, feb_sales_SUM, mar_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN monthly_sales_long q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('feb_sales')) q\n"
+						+ "  ON p.jan_sales_SUM = q.feb_sales_SUM\n"
+						+ "JOIN monthly_sales_long r_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('mar_sales')) r\n"
+						+ "  ON q.feb_sales_SUM = r.mar_sales_SUM\n"
+						+ "WHERE p.jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		Assert.assertTrue(tableDict.contains("monthly_sales_long={month_name="));
+		Assert.assertTrue(tableDict.contains("sales_amount="));
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(
+				tableDict,
+				"monthly_sales_long",
+				"jan_sales_SUM",
+				"feb_sales_SUM",
+				"mar_sales_SUM");
+	}
+
+	/**
+	 * 17.7.3 closeout (2/2): triple sibling UNPIVOT — IN-list wide columns stay on physical
+	 * {@code monthly_sales}; structured VALUE/FOR derived names must not pollute that bucket.
+	 */
+	@Test
+	public void closeout17_7_3_TripleUnpivotInListOperandsRemainOnPhysicalTableDictionaryTest() {
+		final String query =
+				"SELECT u1.sales_amount, u1.month_name\n"
+						+ "FROM monthly_sales m1\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u1\n"
+						+ "JOIN monthly_sales m2\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u2\n"
+						+ "  ON u1.month_name = u2.month_name\n"
+						+ "JOIN monthly_sales m3\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, mar_sales)) u3\n"
+						+ "  ON u2.month_name = u3.month_name\n"
+						+ "WHERE u1.sales_amount > 10;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		String tableDict = extractor.getTableColumnDictionaryMap().toString();
+		Assert.assertTrue(tableDict.contains("monthly_sales={jan_sales="));
+		Assert.assertTrue(tableDict.contains("feb_sales"));
+		Assert.assertTrue(tableDict.contains("mar_sales"));
+		assertPhysicalTableDictionaryBucketOmitsColumnKeys(
+				tableDict,
+				"monthly_sales",
+				"sales_amount",
+				"month_name");
+	}
+
+	/**
 	 * Phase 17.7.5b.6: one ambiguous derived SELECT ref vs two refs to the same name under dual
 	 * PIVOT siblings — per-site {@code AMBIGUOUS_DERIVED_COLUMN_REFERENCE} fatals and unqualified
 	 * interface publish; single-modifier control has no derived ambiguity.
