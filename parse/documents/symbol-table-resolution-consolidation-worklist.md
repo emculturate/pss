@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~95% | **17.7.7** gap-fill signed off ✅; **17.6.3**, **17.7.6**, optional **17.7.8** pairs remain |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~95% | **17.6.3** ✅; **17.7.6**, **17.6.8**, optional **17.7.8** pairs remain |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -208,12 +208,13 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `6d0ad1a` — `pivot_unpivot_queries.properties` catalog for golden refresh tooling (`parse/tools/refresh_pivot_unpivot_goldens.py`).
 - **17.7.5b.4–b.6** (Aug 2026) — interface loop narrowed; phase B batch derived-unknown consume; parity test `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest`; **`17.7.5`** signed off.
 - **17.6.2** (Aug 2026) — skip legacy `applyUnpivotDerivationsToQueryScope` VALUE→IN rewrite when structured derived name is multi-bucket ambiguous; `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` asserts fatals for **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)`.
+- **17.6.3** (Aug 2026) — skip `applyPivotValueInterfaceDerivations` for multi-bucket ambiguous derived names; `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test` asserts fatal for **`jan_sales_SUM`** `(1,64)` (`p|q|r`).
 - **17.7.5b.1** (Aug 2026) — convert egress derived-path inventory: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); baseline **1731/1731** tests in `parse/` before **17.7.5b.2**.
 - Structured derivation track (pre-Aug refresh): `e8945ce` (**17.7.1**), `daa0068` / `cfc846c` / `c1a4bd7` (**17.7.2** structured publish), `15b6f7b` / `77d4d00` / `eb8e776` (ambiguous derived + source operands per egress site).
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.6.3** PIVOT SELECT ambiguity parity audit, **17.7.6** clause harvest, **17.6.8** egress token merge. Optional: **17.7.8** derived-vs-physical pairs, **17.7.10** source-alias ON warning.
+**Suggested next focus:** **17.7.6** clause harvest, **17.6.8** egress token merge, **17.6.7** subquery-backed triple variants. Optional: **17.7.8** derived-vs-physical pairs, **17.7.10** source-alias ON warning.
 
 ---
 
@@ -1658,7 +1659,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 |----|-------|----------|--------|-------|
 | **17.6.1** | **Golden audit — triple-tuple / multi-modifier tests** | P1 | 🔄 Partial | Subsets **A–E** goldens refreshed and signed off (**17.7.7**); triple tests use position-based diagnostic contract. Residual: human pass on **derivation** / `table_dictionary` intent vs design doc for `triple*` (no blind re-refresh). |
 | **17.6.2** | **Multi-sibling UNPIVOT SELECT ambiguity** | P0 | ✅ Done (Aug 2026) | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test`: **`AMBIGUOUS_DERIVED_COLUMN_REFERENCE`** for unqualified **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)` (`u1|u2|u3`). Fix: do not run tier-2 VALUE→IN interface rewrite when `isAmbiguousUnqualifiedStructuredDerivedColumn` for VALUE name. WHERE alias-qualified — unchanged. |
-| **17.6.3** | **Multi-sibling PIVOT SELECT ambiguity (parity)** | P1 | ⏸️ Open | Same rule for multiple sibling PIVOT derived registry keys when names collide in SELECT without tuple alias. Audit whether existing `pivotUnqualifiedOuterOutputsAfterJoinAmbiguousTest` coverage is sufficient or needs a triple-PIVOT join variant. |
+| **17.6.3** | **Multi-sibling PIVOT SELECT ambiguity (parity)** | P1 | ✅ Done (Aug 2026) | `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test`: unqualified `jan_sales_SUM` in SELECT with three PIVOT siblings → `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` `(1,64)` `[p,q,r]`. Fix: skip `applyPivotValueInterfaceDerivations` for ambiguous structured derived names (parity with **17.6.2** UNPIVOT VALUE rewrite skip). Distinct-output happy path: `triplePivotJoinDerivedColumnsAcrossTuplesV1Test`. |
 | **17.6.4** | **Separate symbol-table keys: hints list vs derived_columns map** | P2 | ⏸️ Deferred | Replace `DERIVED_COLUMNS_HINTS_KEY` dual use (`ArrayList` walk-time → `HashMap` egress) with distinct keys, e.g. `relational_modifier_hints` (list, walk only) vs `derived_columns` (map, egress only). Eliminates type collision that required `retainRelationalModifierHintsForContinuedFrom` band-aid. |
 | **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Superseded by **17.7** | Absorbed into **17.7.1** (parent table dict at modifier finalize) + **17.7.2**. |
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
@@ -1670,7 +1671,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 1. ~~**Checkpoint commit**~~ — `3295166` ✅
 2. **17.6.2** — fix multi-sibling UNPIVOT SELECT ambiguity + flip/split `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` (joint golden review).
 3. **17.6.1** — golden audit pass across pivot/unpivot suite (with user; no auto-refresh).
-4. **17.6.3** — PIVOT parity test + fix if gap exists.
+4. ~~**17.6.3**~~ ✅ (Aug 2026) — triple-PIVOT same-output SELECT ambiguity + `applyPivotValueInterfaceDerivations` skip.
 5. **17.6.7** — subquery-backed triple-tuple variants (after 17.6.2 behavior is signed off; exercises query-backed UNPIVOT source path from policy).
 6. **17.6.8** — complete egress for derived `query_dictionary` + window archive keys + targeted tests (`unpivotV0` clause variant, optional `OVER` case).
 7. **17.6.4** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).

@@ -3379,6 +3379,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	// Derived columns appear in SELECT (unqualified or source-table qualified), JOIN ON, and WHERE.
 	// Modifier aliases (p, q, u1, …) may qualify derived operands in JOIN/WHERE but not in SELECT.
 
+	// Three-tuple PIVOT join: distinct derived output per modifier (happy path).
 	@Test
 	public void triplePivotJoinDerivedColumnsAcrossTuplesV1Test() {
 		final String query =
@@ -3415,6 +3416,52 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query3={query_dictionary={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@43,238:250='jan_sales_SUM',<381>,6:7], [@76,407:419='jan_sales_SUM',<381>,10:8], [@11,88:90='SUM',<141>,3:7], [@19,125:135=''jan_sales'',<389>,3:44]], mar_sales_SUM=[[@5,37:49='mar_sales_SUM',<381>,1:37], [@72,385:397='mar_sales_SUM',<381>,9:25], [@88,459:471='mar_sales_SUM',<381>,12:8], [@53,307:309='SUM',<141>,8:7], [@61,344:354=''mar_sales'',<389>,8:44]], feb_sales_SUM=[[@3,22:34='feb_sales_SUM',<381>,1:22], [@47,256:268='feb_sales_SUM',<381>,6:25], [@68,367:379='feb_sales_SUM',<381>,9:7], [@82,433:445='feb_sales_SUM',<381>,11:8], [@28,178:180='SUM',<141>,5:7], [@36,215:225=''feb_sales'',<389>,5:44]]}, table_dictionary={monthly_sales_long={month_name=[[@16,110:119='month_name',<381>,3:29], [@33,200:209='month_name',<381>,5:29], [@58,329:338='month_name',<381>,8:29]], sales_amount=[[@13,92:103='sales_amount',<381>,3:11], [@30,182:193='sales_amount',<381>,5:11], [@55,311:322='sales_amount',<381>,8:11]]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], q=[{name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}], r=[{name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}]}, derived_columns={p={jan_sales_SUM=[[@11,88:90='SUM',<141>,3:7], [@19,125:135=''jan_sales'',<389>,3:44]]}, q={feb_sales_SUM=[[@28,178:180='SUM',<141>,5:7], [@36,215:225=''feb_sales'',<389>,5:44]]}, r={mar_sales_SUM=[[@53,307:309='SUM',<141>,8:7], [@61,344:354=''mar_sales'',<389>,8:44]]}}}, filters=[{name=jan_sales_SUM, table_ref=p}, {name=feb_sales_SUM, table_ref=q}, {name=mar_sales_SUM, table_ref=r}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], mar_sales_SUM=[{name=mar_sales_SUM, table_ref=r}, {name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=q}, {name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}]}, table_alias={p=p_src, q=q_src, p_src=monthly_sales_long, r=r_src, q_src=monthly_sales_long, r_src=monthly_sales_long}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * Phase 17.6.3: triple sibling PIVOTs with the same derived registry key — unqualified
+	 * {@code jan_sales_SUM} in SELECT must fatal like {@link #tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test}.
+	 */
+	@Test
+	public void triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test() {
+		final String query =
+				"SELECT p_src.empid AS e1, q_src.empid AS e2, r_src.empid AS e3, jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN monthly_sales_long q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) q\n"
+						+ "  ON p.jan_sales_SUM = q.jan_sales_SUM\n"
+						+ "JOIN monthly_sales_long r_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) r\n"
+						+ "  ON q.jan_sales_SUM = r.jan_sales_SUM\n"
+						+ "WHERE p.jan_sales_SUM > 0\n"
+						+ "  AND q.jan_sales_SUM > 0\n"
+						+ "  AND r.jan_sales_SUM > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'jan_sales_SUM' at (l:1 c:64). Possible sources: [p, q, r]",
+				"jan_sales_SUM",
+				1,
+				64);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=empid, table_ref=p_src}, alias=e1}, 2={column={name=empid, table_ref=q_src}, alias=e2}, 3={column={name=empid, table_ref=r_src}, alias=e3}, 4={column={name=jan_sales_SUM, table_ref=null}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=p_src, table=monthly_sales_long}}, 2={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=jan_sales_SUM, table_ref=q}}, operator==}}}, 3={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=q, table={alias=q_src, table=monthly_sales_long}}, 4={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=q}}, right={column={name=jan_sales_SUM, table_ref=r}}, operator==}}}, 5={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=r, table={alias=r_src, table=monthly_sales_long}}}}, where={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=jan_sales_SUM, table_ref=q}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=jan_sales_SUM, table_ref=r}}, right={literal=0}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM, e1, e2, e3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales_long={empid=[[@1,7:11='p_src',<381>,1:7], [@7,26:30='q_src',<381>,1:26], [@13,45:49='r_src',<381>,1:45]], month_name=[[@30,137:146='month_name',<381>,3:29], [@47,227:236='month_name',<381>,5:29], [@72,356:365='month_name',<381>,8:29]], sales_amount=[[@27,119:130='sales_amount',<381>,3:11], [@44,209:220='sales_amount',<381>,5:11], [@69,338:349='sales_amount',<381>,8:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query3={jan_sales_SUM=[[@19,64:76='jan_sales_SUM',<381>,1:64], [@57,265:277='jan_sales_SUM',<381>,6:7], [@61,283:295='jan_sales_SUM',<381>,6:25], [@82,394:406='jan_sales_SUM',<381>,9:7], [@86,412:424='jan_sales_SUM',<381>,9:25], [@90,434:446='jan_sales_SUM',<381>,10:8], [@96,460:472='jan_sales_SUM',<381>,11:8], [@102,486:498='jan_sales_SUM',<381>,12:8]], e1=[[@5,22:23='e1',<381>,1:22]], e2=[[@11,41:42='e2',<381>,1:41]], e3=[[@17,60:61='e3',<381>,1:60]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query3={query_dictionary={jan_sales_SUM=[[@19,64:76='jan_sales_SUM',<381>,1:64], [@57,265:277='jan_sales_SUM',<381>,6:7], [@61,283:295='jan_sales_SUM',<381>,6:25], [@82,394:406='jan_sales_SUM',<381>,9:7], [@86,412:424='jan_sales_SUM',<381>,9:25], [@90,434:446='jan_sales_SUM',<381>,10:8], [@96,460:472='jan_sales_SUM',<381>,11:8], [@102,486:498='jan_sales_SUM',<381>,12:8]], e1=[[@5,22:23='e1',<381>,1:22]], e2=[[@11,41:42='e2',<381>,1:41]], e3=[[@17,60:61='e3',<381>,1:60]]}, table_dictionary={monthly_sales_long={month_name=[[@30,137:146='month_name',<381>,3:29], [@47,227:236='month_name',<381>,5:29], [@72,356:365='month_name',<381>,8:29]], empid=[[@1,7:11='p_src',<381>,1:7], [@7,26:30='q_src',<381>,1:26], [@13,45:49='r_src',<381>,1:45]], sales_amount=[[@27,119:130='sales_amount',<381>,3:11], [@44,209:220='sales_amount',<381>,5:11], [@69,338:349='sales_amount',<381>,8:11]]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], q=[{name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}], r=[{name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}]}, derived_columns={p={jan_sales_SUM=[[@25,115:117='SUM',<141>,3:7], [@33,152:162=''jan_sales'',<389>,3:44]]}, q={jan_sales_SUM=[[@42,205:207='SUM',<141>,5:7], [@50,242:252=''jan_sales'',<389>,5:44]]}, r={jan_sales_SUM=[[@67,334:336='SUM',<141>,8:7], [@75,371:381=''jan_sales'',<389>,8:44]]}}}, filters=[{name=jan_sales_SUM, table_ref=p}, {name=jan_sales_SUM, table_ref=q}, {name=jan_sales_SUM, table_ref=r}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], e1=[{name=empid, table_ref=p_src}], e2=[{name=empid, table_ref=q_src}], e3=[{name=empid, table_ref=r_src}]}, table_alias={p=p_src, q=q_src, p_src=monthly_sales_long, r=r_src, q_src=monthly_sales_long, r_src=monthly_sales_long}}}",
 				extractor.getSymbolTable().toString());
 	}
 

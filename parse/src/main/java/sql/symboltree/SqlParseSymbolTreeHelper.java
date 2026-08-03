@@ -3688,7 +3688,8 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public void applyPivotValueInterfaceDerivations(
 			HashMap<String, Object> localInterface,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			HashMap<String, Object> localDerivedColumns) {
 		if (localInterface == null || localInterface.isEmpty()
 				|| relationalModifierContext == null
 				|| relationalModifierContext.isEmpty()
@@ -3702,6 +3703,14 @@ public class SqlParseSymbolTreeHelper {
 			}
 			for (String derivedColumnName : ((Map<String, Object>) bucketMap).keySet()) {
 				if (derivedColumnName == null || derivedColumnName.isBlank()) {
+					continue;
+				}
+				// Do not publish pivot derived interface lineage for names that are
+				// ambiguous across sibling modifiers (17.6.3 parity with 17.6.2 UNPIVOT).
+				if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+						derivedColumnName,
+						null,
+						localDerivedColumns)) {
 					continue;
 				}
 				String interfaceKey = findKeyIgnoreCase(localInterface, derivedColumnName);
@@ -4519,7 +4528,8 @@ public class SqlParseSymbolTreeHelper {
 
 		applyPivotValueInterfaceDerivations(
 				localInterface,
-				activeConvertEgressRelationalModifierContext);
+				activeConvertEgressRelationalModifierContext,
+				localDerivedColumns);
 
 		reconcileRelationalModifierDerivedColumnLineageForConvertScope(
 				localInterface,
