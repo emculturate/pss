@@ -1196,8 +1196,8 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localDerivedColumns,
 			HashMap<String, Object> localSourceColumnsByBucket,
 			HashMap<String, Object> localTableAliasMap) {
-		// Structured derived-column lineage is expanded in
-		// {@link #runConvertEgressRelationalModifierDerivedLineagePhaseB} (17.7.5b.3).
+		// Pre-diagnose ordering artifact: lineage expand runs in
+		// {@link #runConvertEgressRelationalModifierDerivedLineagePhaseB} (17.7.5b).
 	}
 
 	/**
@@ -2515,6 +2515,13 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				localSourceColumnsByBucket,
 				localTableAliasMap);
+		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				assignmentsObj,
+				localDerivedColumns,
+				localSourceColumnsByBucket,
+				localTableAliasMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2540,6 +2547,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	/**
+	 * Phase 17.7.6 / publication step D: after phase B and {@link #stripEphemeralLocationsFromConvertEgressColumnReferences},
+	 * collapse egress ref lists ({@code interface}, archived {@code filters} / {@code grouped_by} / {@code ordered_by},
+	 * UPDATE assignment RHS) to one entry per {@code (name, table_ref)}. Does not prune unqualified vs qualified
+	 * duplicates — the same name can be physical in one modifier bucket and derived in another.
+	 */
 	@SuppressWarnings("unchecked")
 	private void consolidateConvertEgressColumnReferenceLists(
 			HashMap<String, Object> localInterface,
@@ -2828,24 +2841,6 @@ public class SqlParseSymbolTreeHelper {
 		ArrayList<Object> tokens = new ArrayList<Object>();
 		appendMaterializationRefTokens(tokens, refObj);
 		return tokens.isEmpty() ? null : tokens;
-	}
-
-	/**
-	 * Collapses a clause column-ref list ({@code filters}, {@code grouped_by}, {@code ordered_by},
-	 * UPDATE assignment RHS, etc.) to one entry per (name, table_ref). After relational-modifier
-	 * lineage expansion, drops an unqualified duplicate when the same column name already appears
-	 * at a physical table source in the list.
-	 */
-	public void dedupeClauseColumnReferenceListInPlace(ArrayList<Object> columnRefs) {
-		if (columnRefs == null || columnRefs.isEmpty()) {
-			return;
-		}
-		ArrayList<Object> deduped = new ArrayList<Object>(columnRefs.size());
-		for (Object refObj : columnRefs) {
-			appendInterfaceReferenceIfMissing(deduped, refObj);
-		}
-		columnRefs.clear();
-		columnRefs.addAll(deduped);
 	}
 
 	public boolean equalsIgnoreCaseNullable(String left, String right) {
