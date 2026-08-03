@@ -176,6 +176,24 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		String searchFragment = expectedTokenFragment != null ? expectedTokenFragment : expectedMessageFragment;
 		ParseDiagnostic diagnostic = findDiagnosticByCodeAndFragmentAndSeverity(snippet, code, severity, searchFragment);
 		Assert.assertNotNull("Expected diagnostic with code " + code + " and severity " + severity, diagnostic);
+
+		if ("UNRESOLVED_UNQUALIFIED_COLUMNS".equals(code)) {
+			String siteMarker = "(l:" + expectedLine + " c:" + expectedCharPositionInLine + ")";
+			Assert.assertTrue(
+					"Diagnostic message should include unresolved site " + siteMarker,
+					diagnostic.message() != null && diagnostic.message().contains(siteMarker));
+			if (expectedTokenFragment != null) {
+				Assert.assertTrue(
+						"Diagnostic message should mention column '" + expectedTokenFragment + "'",
+						diagnostic.message().contains(expectedTokenFragment));
+			} else if (expectedMessageFragment != null) {
+				Assert.assertTrue(
+						"Diagnostic message should contain '" + expectedMessageFragment + "'",
+						diagnostic.message().contains(expectedMessageFragment));
+			}
+			return;
+		}
+
 		Assert.assertNotNull("Expected diagnostic line", diagnostic.line());
 		Assert.assertNotNull("Expected diagnostic character position", diagnostic.charPositionInLine());
 		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), diagnostic.line());
@@ -183,9 +201,6 @@ public abstract class AbstractSqlParseEventWalkerTest {
 				Integer.valueOf(expectedCharPositionInLine), diagnostic.charPositionInLine());
 
 		if (expectedMessageFragment != null) {
-			if ("UNRESOLVED_UNQUALIFIED_COLUMNS".equals(code)) {
-				return;
-			}
 			Assert.assertTrue(
 					"Diagnostic message should contain '" + expectedMessageFragment + "'",
 					diagnostic.message() != null && diagnostic.message().contains(expectedMessageFragment));

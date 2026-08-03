@@ -522,9 +522,14 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		assertNoFatalErrors(extractor);
-		Assert.assertEquals("Walker Error diagnostics are wrong",
-				"[Unresolved unqualified column reference(s): [empid [(l:1 c:7)]]]",
-				extractor.getSnippet().getErrorStringList(errorhandling.ParseDiagnostic.Severity.ERROR).toString());
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				errorhandling.ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				1,
+				7);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
 				"AMBIGUOUS_COLUMN_REFERENCE",
@@ -617,9 +622,14 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		assertNoFatalErrors(extractor);
-		Assert.assertEquals("Walker Error diagnostics are wrong",
-				"[Unresolved unqualified column reference(s): [empid [(l:1 c:7)]]]",
-				extractor.getSnippet().getErrorStringList(errorhandling.ParseDiagnostic.Severity.ERROR).toString());
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				errorhandling.ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				1,
+				7);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}, 4={column={name=a1, table_ref=t2}}, 5={column={name=a2, table_ref=t2}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}, 3={name=mar_sales, table_ref=null}}}, table={alias=null, table=monthly_sales}}, 2={join=JOIN, on={condition={left={column={name=month_name, table_ref=null}}, right={column={name=metric_label, table_ref=t2}}, operator==}}}, 3={table={alias=t2, table=metrics_table}}}}}}",
 				extractor.getAsTree().toString());
@@ -648,9 +658,14 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		assertNoFatalErrors(extractor);
-		Assert.assertEquals("Walker Error diagnostics are wrong",
-				"[Unresolved unqualified column reference(s): [empid [(l:1 c:7)]]]",
-				extractor.getSnippet().getErrorStringList(errorhandling.ParseDiagnostic.Severity.ERROR).toString());
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				errorhandling.ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				1,
+				7);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}, 4={column={name=a1, table_ref=t2}}, 5={column={name=a2, table_ref=t2}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}, 3={name=mar_sales, table_ref=null}}}, alias=up, table={alias=null, table=monthly_sales}}, 2={join=JOIN, on={condition={left={column={name=month_name, table_ref=up}}, right={column={name=metric_label, table_ref=t2}}, operator==}}}, 3={table={alias=t2, table=metrics_table}}}}}}",
 				extractor.getAsTree().toString());
@@ -694,12 +709,13 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query1={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={tab1={*=[[@1,7:7='*',<291>,1:7]], col2=[[@11,40:43='col2',<381>,1:40]], col1=[[@8,30:33='col1',<381>,1:30]]}}, derivation={source_columns={tuple_0=[{name=col2, table_ref=tab1}, {name=col1, table_ref=tab1}]}, derived_columns={tuple_0={A_sum=[[@6,26:28='sum',<141>,1:26], [@14,49:49='A',<381>,1:49]]}}}, interface={*=[{name=*, table_ref=*}]}, table_alias={tuple_0=tab1}}}",
 				extractor.getSymbolTable().toString());
-		assertFatalDiagnosticCount(
+		assertFatalDiagnosticAtPosition(
 				extractor.getSnippet(),
 				"PIVOT_IN_IDENTIFIER_UNRESOLVED",
 				"cannot be resolved against the PIVOT source",
 				"A",
-				1);
+				1,
+				49);
 		Assert.assertEquals(
 				"Identifier-form PIVOT IN value against a table should not get the reference warning",
 				0,
@@ -736,12 +752,13 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query2={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={q={*=[[@1,7:7='*',<291>,1:7]], col2=[[@19,67:70='col2',<381>,1:67]], col1=[[@16,57:60='col1',<381>,1:57]]}}, def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]], col2=[[@7,28:31='col2',<381>,1:28]], col1=[[@5,22:25='col1',<381>,1:22]]}, table_dictionary={tab1={col2=[[@7,28:31='col2',<381>,1:28]], col1=[[@5,22:25='col1',<381>,1:22]]}}, interface={col2=[{name=col2, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}, derivation={source_columns={tuple_0=[{name=col2, table_ref=q}, {name=col1, table_ref=q}]}, derived_columns={tuple_0={A_sum=[[@14,53:55='sum',<141>,1:53], [@22,76:76='A',<381>,1:76]]}}}, interface={*=[{name=*, table_ref=*}]}, table_alias={q=query0, tuple_0=q}}}",
 				extractor.getSymbolTable().toString());
-		assertFatalDiagnosticCount(
+		assertFatalDiagnosticAtPosition(
 				extractor.getSnippet(),
 				"PIVOT_IN_IDENTIFIER_UNRESOLVED",
 				"cannot be resolved against the PIVOT source",
 				"A",
-				1);
+				1,
+				76);
 		Assert.assertEquals(
 				"Unresolved subquery PIVOT IN identifier should not get the reference warning",
 				0,
@@ -787,6 +804,14 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						errorhandling.ParseDiagnostic.Severity.SEVERE_WARNING,
 						null,
 						"A"));
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"PIVOT_IN_IDENTIFIER_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"PIVOT IN identifier \"A\" at (l:1 c:84) is interpreted as a column reference.",
+				"A",
+				1,
+				84);
 		Assert.assertEquals(
 				"Resolved subquery PIVOT IN identifier should not get the fatal diagnostic",
 				0,
@@ -2523,6 +2548,13 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"wrong.sales_amount",
 				3,
 				11);
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
+				"Source Table not found for Column 'sales_amount' at (l:3 c:11). No alias or table called 'wrong'.",
+				"sales_amount",
+				3,
+				11);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
 				"RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT",
@@ -2579,15 +2611,76 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				33);
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"Unresolved unqualified column reference(s): [jan_sales [(l:1 c:14)]",
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'jan_sales' at (l:1 c:14). Possible sources: [metrics_table, monthly_sales_long]",
 				"jan_sales",
 				1,
 				14);
-		Assert.assertEquals("Walker Error diagnostics are wrong",
-				"[Unresolved unqualified column reference(s): [jan_sales [(l:1 c:14)], empid [(l:1 c:7), (l:4 c:25)], mar_sales [(l:1 c:36)], feb_sales [(l:1 c:25)]]]",
-				extractor.getSnippet().getErrorStringList(ParseDiagnostic.Severity.ERROR).toString());
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'empid' at (l:1 c:7). Possible sources: [metrics_table, monthly_sales_long]",
+				"empid",
+				1,
+				7);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'feb_sales' at (l:1 c:25). Possible sources: [metrics_table, monthly_sales_long]",
+				"feb_sales",
+				1,
+				25);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'mar_sales' at (l:1 c:36). Possible sources: [metrics_table, monthly_sales_long]",
+				"mar_sales",
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"jan_sales",
+				1,
+				14);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				1,
+				7);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				4,
+				25);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"mar_sales",
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"feb_sales",
+				1,
+				25);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}, 5={column={name=a1, table_ref=t2}}, 6={column={name=a2, table_ref=t2}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=msl}}}}, for={column={name=month_name, table_ref=msl}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}, 3={pivot_literal='mar_sales'}}}, table={alias=msl, table=monthly_sales_long}}, 2={join=JOIN, on={condition={left={column={name=empid, table_ref=null}}, right={column={name=metric_label, table_ref=t2}}, operator==}}}, 3={table={alias=t2, table=metrics_table}}}}}}",
 				extractor.getAsTree().toString());
@@ -2903,15 +2996,76 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSnippet().getDiagnosticCountBySeverity(ParseDiagnostic.Severity.WARNING));
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
-				"UNRESOLVED_UNQUALIFIED_COLUMNS",
-				ParseDiagnostic.Severity.ERROR,
-				"Unresolved unqualified column reference(s): [jan_sales [(l:1 c:14)]",
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'jan_sales' at (l:1 c:14). Possible sources: [metrics_table, monthly_sales_long]",
 				"jan_sales",
 				1,
 				14);
-		Assert.assertEquals("Walker Error diagnostics are wrong",
-				"[Unresolved unqualified column reference(s): [jan_sales [(l:1 c:14)], empid [(l:1 c:7), (l:4 c:25)], mar_sales [(l:1 c:36)], feb_sales [(l:1 c:25)]]]",
-				extractor.getSnippet().getErrorStringList(ParseDiagnostic.Severity.ERROR).toString());
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'empid' at (l:1 c:7). Possible sources: [metrics_table, monthly_sales_long]",
+				"empid",
+				1,
+				7);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'feb_sales' at (l:1 c:25). Possible sources: [metrics_table, monthly_sales_long]",
+				"feb_sales",
+				1,
+				25);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'mar_sales' at (l:1 c:36). Possible sources: [metrics_table, monthly_sales_long]",
+				"mar_sales",
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"jan_sales",
+				1,
+				14);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				1,
+				7);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"empid",
+				4,
+				25);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"mar_sales",
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				null,
+				"feb_sales",
+				1,
+				25);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}, 5={column={name=a1, table_ref=t2}}, 6={column={name=a2, table_ref=t2}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}, 3={pivot_literal='mar_sales'}}}, table={alias=msl, table=monthly_sales_long}}, 2={join=JOIN, on={condition={left={column={name=empid, table_ref=null}}, right={column={name=metric_label, table_ref=t2}}, operator==}}}, 3={table={alias=t2, table=metrics_table}}}}}}",
 				extractor.getAsTree().toString());
@@ -3182,13 +3336,6 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		assertNoFatalErrors(extractor);
 		Snippet snippet = extractor.getSnippet();
-		assertDiagnosticCountBySeverity(
-				snippet,
-				"AMBIGUOUS_COLUMN_REFERENCE",
-				ParseDiagnostic.Severity.SEVERE_WARNING,
-				"Ambiguous column reference",
-				null,
-				2);
 		assertDiagnosticAtPosition(
 				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
@@ -3205,9 +3352,6 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"sales_amount",
 				4,
 				19);
-		Assert.assertEquals("Walker severe-warning diagnostics are wrong",
-				"[Ambiguous column reference 'month_name' at (l:4 c:7). Possible sources: [wide_rows, targets], Ambiguous column reference 'sales_amount' at (l:4 c:19). Possible sources: [wide_rows, targets]]",
-				snippet.getErrorStringList(ParseDiagnostic.Severity.SEVERE_WARNING).toString());
 		Assert.assertEquals("AST is wrong",
 				"{SQL={with={1={cte={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}, alias=wide_rows}}, query={select={1={column={name=month_name, table_ref=null}}, 2={column={name=sales_amount, table_ref=null}}}, having={condition={left={column={name=sales_amount, table_ref=null}}, right={literal=100}, operator=>}}, orderby={1={null_order=null, predicand={column={name=sales_amount, table_ref=null}}, sort_order=ASC}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}, 3={name=mar_sales, table_ref=null}}}, table={alias=null, table=wide_rows}}, 2={join=JOIN, on={and={1={condition={left={column={name=sales_amount, table_ref=null}}, right={column={name=target_amount, table_ref=t}}, operator=>=}}, 2={condition={left={column={name=month_name, table_ref=null}}, right={column={name=month_name, table_ref=t}}, operator==}}}}}, 3={table={alias=t, table=targets}}}}, where={condition={left={column={name=sales_amount, table_ref=null}}, right={literal=10}, operator=>}}, groupby={1={column={name=month_name, table_ref=null}}, 2={column={name=sales_amount, table_ref=null}}}, qualify={condition={left={column={name=month_name, table_ref=null}}, operator=IS NOT NULL}}}}}",
 				extractor.getAsTree().toString());
@@ -3289,23 +3433,13 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		Snippet snippet = extractor.getSnippet();
-		assertFatalDiagnosticCount(
+		assertFatalDiagnosticAtPosition(
 				snippet,
 				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
-				"Ambiguous derived column reference",
-				"month_name",
-				1);
-		assertDiagnosticAtPosition(
-				snippet,
-				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
-				ParseDiagnostic.Severity.FATAL,
 				"Ambiguous derived column reference 'month_name' at (l:1 c:69). Possible sources: [u1, u2, u3]",
 				"month_name",
 				1,
 				69);
-		Assert.assertEquals("Walker fatal diagnostics are wrong",
-				"[Ambiguous derived column reference 'month_name' at (l:1 c:69). Possible sources: [u1, u2, u3]]",
-				snippet.getFatalErrorStringList().toString());
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=m1}, alias=e1}, 2={column={name=empid, table_ref=m2}, alias=e2}, 3={column={name=empid, table_ref=m3}, alias=e3}, 4={column={name=sales_amount, table_ref=null}}, 5={column={name=month_name, table_ref=null}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u1, table={alias=m1, table=monthly_sales}}, 2={join=JOIN, on={and={1={condition={left={column={name=month_name, table_ref=u1}}, right={column={name=month_name, table_ref=u2}}, operator==}}, 2={condition={left={column={name=sales_amount, table_ref=u1}}, right={column={name=sales_amount, table_ref=u2}}, operator==}}}}}, 3={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u2, table={alias=m2, table=monthly_sales}}, 4={join=JOIN, on={condition={left={column={name=month_name, table_ref=u2}}, right={column={name=month_name, table_ref=u3}}, operator==}}}, 5={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=mar_sales, table_ref=null}}}, alias=u3, table={alias=m3, table=monthly_sales}}}}, where={and={1={condition={left={column={name=sales_amount, table_ref=u1}}, right={literal=10}, operator=>}}, 2={condition={left={column={name=sales_amount, table_ref=u2}}, right={literal=10}, operator=>}}, 3={condition={left={column={name=sales_amount, table_ref=u3}}, right={literal=10}, operator=>}}}}}}",
 				extractor.getAsTree().toString());
@@ -3344,26 +3478,69 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		assertFatalDiagnosticCount(
-				extractor.getSnippet(),
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
 				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
-				"Ambiguous derived column reference",
-				"feb_sales_SUM",
-				2);
-		assertDiagnosticCountBySeverity(
-				extractor.getSnippet(),
+				"Ambiguous derived column reference 'feb_sales_SUM' at (l:1 c:48). Possible sources: [p, q]",
+				null,
+				1,
+				48);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'feb_sales_SUM' at (l:12 c:6). Possible sources: [p, q]",
+				null,
+				12,
+				6);
+		assertDiagnosticAtPosition(
+				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
-				"Ambiguous column reference",
+				"Ambiguous column reference 'sales_amount' at (l:1 c:22). Possible sources: [p, q]",
 				"sales_amount",
-				3);
-		assertDiagnosticCountBySeverity(
-				extractor.getSnippet(),
+				1,
+				22);
+		assertDiagnosticAtPosition(
+				snippet,
 				"AMBIGUOUS_COLUMN_REFERENCE",
 				ParseDiagnostic.Severity.SEVERE_WARNING,
-				"Ambiguous column reference",
+				"Ambiguous column reference 'month_name' at (l:1 c:36). Possible sources: [p, q]",
 				"month_name",
-				3);
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'sales_amount' at (l:11 c:28). Possible sources: [p, q]",
+				null,
+				11,
+				28);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'month_name' at (l:12 c:28). Possible sources: [p, q]",
+				null,
+				12,
+				28);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'month_name' at (l:13 c:43). Possible sources: [p, q]",
+				null,
+				13,
+				43);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'sales_amount' at (l:13 c:55). Possible sources: [p, q]",
+				null,
+				13,
+				55);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=jan_sales_SUM, table_ref=null}}, 2={column={name=sales_amount, table_ref=null}}, 3={column={name=month_name, table_ref=null}}, 4={column={name=feb_sales_SUM, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=jan_sales_SUM, table_ref=p}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=feb_sales_SUM, table_ref=q}}, sort_order=ASC}, 3={null_order=null, predicand={column={name=month_name, table_ref=null}}, sort_order=ASC}, 4={null_order=null, predicand={column={name=sales_amount, table_ref=null}}, sort_order=ASC}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}}}, alias=p, table={alias=p_src, table=monthly_sales_long}}, 2={join=JOIN, on={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=sales_amount, table_ref=u}}, operator==}}, 2={condition={left={column={name=month_name, table_ref=u}}, right={literal='jan_sales'}, operator==}}}}}, 3={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u, table={alias=u_src, table=monthly_sales}}, 4={join=JOIN, on={condition={left={column={name=sales_amount, table_ref=u}}, right={column={name=feb_sales_SUM, table_ref=q}}, operator==}}}, 5={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='feb_sales'}}}, alias=q, table={alias=q_src, table=monthly_sales_long}}}}, where={or={1={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=sales_amount, table_ref=u}}, right={literal=0}, operator=>}}}}, 2={and={1={condition={left={column={name=sales_amount, table_ref=null}}, right={literal=10}, operator=<}}, 2={condition={left={column={name=feb_sales_SUM, table_ref=null}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=month_name, table_ref=null}}, right={literal='jan_sales'}, operator=!=}}}}}}}}",
 				extractor.getAsTree().toString());
@@ -3401,18 +3578,21 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		assertFatalDiagnosticCount(
-				extractor.getSnippet(),
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
 				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
-				"Ambiguous derived column reference",
+				"Ambiguous derived column reference 'sales_amount' at (l:1 c:62). Possible sources: [u1, u2]",
 				"sales_amount",
-				1);
-		assertFatalDiagnosticCount(
-				extractor.getSnippet(),
+				1,
+				62);
+		assertFatalDiagnosticAtPosition(
+				snippet,
 				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
-				"Ambiguous derived column reference",
+				"Ambiguous derived column reference 'month_name' at (l:1 c:76). Possible sources: [u1, u2]",
 				"month_name",
-				1);
+				1,
+				76);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=u1_src}, alias=e1}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=empid, table_ref=u2_src}, alias=e2}, 4={column={name=sales_amount, table_ref=null}}, 5={column={name=month_name, table_ref=null}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u1, table={alias=u1_src, table=monthly_sales}}, 2={join=JOIN, on={condition={left={column={name=sales_amount, table_ref=u1}}, right={column={name=jan_sales_SUM, table_ref=p}}, operator==}}}, 3={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=p_src, table=monthly_sales_long}}, 4={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=sales_amount, table_ref=u2}}, operator==}}}, 5={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=feb_sales, table_ref=null}, 2={name=mar_sales, table_ref=null}}}, alias=u2, table={alias=u2_src, table=monthly_sales}}}}, where={and={1={condition={left={column={name=sales_amount, table_ref=u1}}, right={literal=10}, operator=>}}, 2={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=sales_amount, table_ref=u2}}, right={literal=10}, operator=>}}}}}}",
 				extractor.getAsTree().toString());
@@ -3447,7 +3627,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{}", extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{table_dictionary={tab1={}}, unresolved_column={col2={column={name=col2, table_ref=null}, locations=[[@8,26:29='col2',<381>,1:26]]}, col1={column={name=col1, table_ref=null}, locations=[[@5,16:19='col1',<381>,1:16]]}}, derived_columns=[{source_columns=[col2, col1], for=col2, pivot_in_columns=[A, B], source_ref=tab1, pivot_aggregate_dependency_columns={sum=[col1]}, table_ref=tab1, derived_columns=[A_sum, B_sum], operator=pivot, pivot_aggregate_columns=[sum]}]}", extractor.getSymbolTable().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{table_dictionary={tab1={col2=[[@8,26:29='col2',<381>,1:26]], col1=[[@5,16:19='col1',<381>,1:16]]}}, unresolved_column={col2={column={name=col2, table_ref=null}, locations=[[@8,26:29='col2',<381>,1:26]]}, col1={column={name=col1, table_ref=null}, locations=[[@5,16:19='col1',<381>,1:16]]}}, derivation={source_columns={tuple_0=[{name=col2, table_ref=tab1}, {name=col1, table_ref=tab1}]}, interface_source_ref=tab1, pivot_derived_source_bindings={tuple_0={B_sum=col1, A_sum=col1}}, source_ref=tab1, derived_columns={tuple_0={A_sum=[[@3,12:14='sum',<141>,1:12], [@11,35:37=''A'',<389>,1:35]], B_sum=[[@3,12:14='sum',<141>,1:12], [@13,40:42=''B'',<389>,1:40]]}}}}", extractor.getSymbolTable().toString());
 	}
 
 }
