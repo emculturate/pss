@@ -7708,7 +7708,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
-			if (!walker.isInsideSelectListScope()) {
+			if (walker.shouldCaptureClauseColumnSiteTokenForActiveColumnReference()) {
 				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));
 				if (clauseSiteTokenText != null) {
 					symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
@@ -7774,7 +7774,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			// Capture walker.symbolTable entry
 			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
-			if (!walker.isInsideSelectListScope()) {
+			if (walker.shouldCaptureClauseColumnSiteTokenForActiveColumnReference()) {
 				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));
 				if (clauseSiteTokenText != null) {
 					symbolTreeHelper.registerClauseColumnSiteTokenForColumnSubTree(
@@ -8516,6 +8516,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				type = item.remove(ASTWALKER_RULE_TYPE_KEY);
 
 				item.put(MUMBLE_PARTITION_BY_KEY, item.remove(type.toString()));
+				symbolTreeHelper.captureClauseDependencies(item, MUMBLE_WINDOW_PARTITION_BY_KEY);
 				walker.addToParent(parentRuleIndex, parentStackLevel, item);
 			} else {
 				// Wrong number of entries
@@ -9019,6 +9020,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+			symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_WINDOW_ORDERED_BY_KEY);
 			// Part of a window function
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();

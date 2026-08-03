@@ -98,6 +98,8 @@ public class SqlParseSymbolTreeHelper {
 			MUMBLE_FILTERS_KEY,
 			MUMBLE_GROUPED_BY_KEY,
 			MUMBLE_ORDERED_BY_KEY,
+			MUMBLE_WINDOW_PARTITION_BY_KEY,
+			MUMBLE_WINDOW_ORDERED_BY_KEY,
 	};
 
 	/**
@@ -2794,7 +2796,8 @@ public class SqlParseSymbolTreeHelper {
 				mergeClauseColumnListSiteTokensIntoQueryDictionary(
 						archivedScopeColumnReferenceContainers.get(containerKey),
 						localInterface,
-						localCurrentQueryDictionary);
+						localCurrentQueryDictionary,
+						containerKey);
 			}
 		}
 		if (defersRelationalModifierClauseHarvestColumnRefList(UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY)
@@ -2803,23 +2806,58 @@ public class SqlParseSymbolTreeHelper {
 				mergeClauseColumnListSiteTokensIntoQueryDictionary(
 						rhsRefsObj,
 						localInterface,
-						localCurrentQueryDictionary);
+						localCurrentQueryDictionary,
+						UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY);
 			}
 		}
+	}
+
+	/** Window lists are merged after phase B so derived/source lineage and site {@code locations} exist. */
+	@SuppressWarnings("unchecked")
+	private void mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers) {
+		if (localCurrentQueryDictionary == null || archivedScopeColumnReferenceContainers == null) {
+			return;
+		}
+		if (!convertEgressScopeHasRelationalModifierStructuredDerivation()) {
+			return;
+		}
+		mergeClauseColumnListSiteTokensIntoQueryDictionary(
+				archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_PARTITION_BY_KEY),
+				localInterface,
+				localCurrentQueryDictionary,
+				MUMBLE_WINDOW_PARTITION_BY_KEY);
+		mergeClauseColumnListSiteTokensIntoQueryDictionary(
+				archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_ORDERED_BY_KEY),
+				localInterface,
+				localCurrentQueryDictionary,
+				MUMBLE_WINDOW_ORDERED_BY_KEY);
+	}
+
+	private static boolean mergesQueryDictionaryTokensForAllColumnNamesInClauseList(String containerKey) {
+		return MUMBLE_WINDOW_PARTITION_BY_KEY.equals(containerKey)
+				|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(containerKey);
 	}
 
 	@SuppressWarnings("unchecked")
 	private void mergeClauseColumnListSiteTokensIntoQueryDictionary(
 			Object columnListObj,
 			HashMap<String, Object> localInterface,
-			HashMap<String, Object> localCurrentQueryDictionary) {
+			HashMap<String, Object> localCurrentQueryDictionary,
+			String containerKey) {
 		if (!(columnListObj instanceof ArrayList<?> columnRefsObj)) {
 			return;
 		}
+		boolean mergeAllNamedColumns = mergesQueryDictionaryTokensForAllColumnNamesInClauseList(containerKey);
 		for (Object refObj : (ArrayList<Object>) columnRefsObj) {
 			String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
-			if (columnName == null || columnName.isBlank()
-					|| !isInterfaceOutputColumnName(localInterface, columnName)) {
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			if (!mergeAllNamedColumns
+					&& !isInterfaceOutputColumnName(localInterface, columnName)) {
 				continue;
 			}
 			String dictionaryKey = findKeyIgnoreCase(localInterface, columnName);
@@ -3945,6 +3983,8 @@ public class SqlParseSymbolTreeHelper {
         Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 		Object groupedByList = walker.symbolTable.remove(MUMBLE_GROUPED_BY_KEY);
 		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
+		Object windowPartitionByList = walker.symbolTable.remove(MUMBLE_WINDOW_PARTITION_BY_KEY);
+		Object windowOrderedByList = walker.symbolTable.remove(MUMBLE_WINDOW_ORDERED_BY_KEY);
 		HashMap<String, Object> archivedScopeColumnReferenceContainers = new HashMap<String, Object>();
 		if (filtersList != null) {
 			archivedScopeColumnReferenceContainers.put(MUMBLE_FILTERS_KEY, filtersList);
@@ -3954,6 +3994,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (orderedByList != null) {
 			archivedScopeColumnReferenceContainers.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		}
+		if (windowPartitionByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_WINDOW_PARTITION_BY_KEY, windowPartitionByList);
+		}
+		if (windowOrderedByList != null) {
+			archivedScopeColumnReferenceContainers.put(MUMBLE_WINDOW_ORDERED_BY_KEY, windowOrderedByList);
 		}
 		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
 
@@ -4604,6 +4650,11 @@ public class SqlParseSymbolTreeHelper {
 				deleteTargetTableRef,
 				activeConvertEgressRelationalModifierContext);
 
+		mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary(
+				localInterface,
+				localCurrentQueryDictionary,
+				archivedScopeColumnReferenceContainers);
+
 		stripEphemeralLocationsFromConvertEgressColumnReferences(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
@@ -4743,6 +4794,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (orderedByList != null) {
 			walker.symbolTable.put(MUMBLE_ORDERED_BY_KEY, orderedByList);
+		}
+		if (windowPartitionByList != null) {
+			walker.symbolTable.put(MUMBLE_WINDOW_PARTITION_BY_KEY, windowPartitionByList);
+		}
+		if (windowOrderedByList != null) {
+			walker.symbolTable.put(MUMBLE_WINDOW_ORDERED_BY_KEY, windowOrderedByList);
 		}
 		if (preservedInsertSourceSelectSequence != null) {
 			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
@@ -13035,7 +13092,10 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	private static boolean isGroupOrOrderClauseKey(String clauseKey) {
-		return MUMBLE_GROUPED_BY_KEY.equals(clauseKey) || MUMBLE_ORDERED_BY_KEY.equals(clauseKey);
+		return MUMBLE_GROUPED_BY_KEY.equals(clauseKey)
+				|| MUMBLE_ORDERED_BY_KEY.equals(clauseKey)
+				|| MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
+				|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey);
 	}
 
 	private static boolean isUnqualifiedColumnRef(String tableRef) {

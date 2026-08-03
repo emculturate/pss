@@ -120,6 +120,10 @@ public final class MumbleConstants {
     public static final String MUMBLE_OPTIONS_KEY = "options";
     public static final String MUMBLE_ORDERBY_KEY = "orderby";
     public static final String MUMBLE_ORDERED_BY_KEY = "ordered_by";
+    /** Archived flat column-ref list for {@code OVER (PARTITION BY …)} at convert egress. */
+    public static final String MUMBLE_WINDOW_PARTITION_BY_KEY = "window_partition_by";
+    /** Archived flat column-ref list for in-{@code OVER} {@code ORDER BY} at convert egress. */
+    public static final String MUMBLE_WINDOW_ORDERED_BY_KEY = "window_ordered_by";
     public static final String MUMBLE_OR_KEY = "or";
     public static final String MUMBLE_OUTER_KEY = "outer";
     public static final String MUMBLE_OVER_KEY = "over";

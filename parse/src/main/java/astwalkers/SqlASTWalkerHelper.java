@@ -907,6 +907,17 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return isInsideSelectList();
 	}
 
+	/** True when the active column reference sits under an {@code OVER (...)} clause (including in SELECT). */
+	public boolean isInsideWindowOverClauseScope() {
+		Integer level = currentStackLevel(SQLSelectParserParser.RULE_over_clause);
+		return level != null && level > 0;
+	}
+
+	/** Clause-site token capture for archived egress (WHERE, OVER partition/order, etc.). */
+	public boolean shouldCaptureClauseColumnSiteTokenForActiveColumnReference() {
+		return !isInsideSelectListScope() || isInsideWindowOverClauseScope();
+	}
+
 	private String findInterfaceKeyIgnoreCase(Map<String, Object> interfaceMap, String columnName) {
 		if (interfaceMap == null || interfaceMap.isEmpty() || columnName == null) {
 			return null;
