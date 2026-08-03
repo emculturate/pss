@@ -4,6 +4,15 @@ import org.junit.Test;
 
 import sql.SQLSelectParserParser;
 
+/**
+ * Window-function and aggregate coverage for physical-table queries (no PIVOT/UNPIVOT).
+ * <p>
+ * <b>Grammar vs ANSI:</b> {@code SQLSelectParser.g4} also allows {@code window_over_partition_expression}
+ * under WHERE / HAVING / GROUP BY / JOIN ON / UPDATE SET via permissive {@code search_condition} /
+ * {@code row_value_predicand} rules. Those sites are <em>not</em> ANSI-standard for windows and are
+ * intentionally <b>untested</b> here — do not add walker golden tests for inline {@code OVER} in those
+ * clauses unless product policy explicitly requires it.
+ */
 public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSqlParseEventWalkerTest {
 
 	@Test
@@ -2328,6 +2337,35 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={col1=[[@1,7:10='col1',<381>,1:7], [@10,47:50='col1',<381>,1:47]]}}", extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@1,7:10='col1',<381>,1:7]]}}", extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={col1=[[@1,7:10='col1',<381>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<381>,1:7], [@10,47:50='col1',<381>,1:47]]}}, ordered_by=[{name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}", extractor.getSymbolTable().toString());
+	}
+
+	/** ANSI SQL:2003+ — window expression as query {@code ORDER BY} sort key (not in select list). */
+	@Test
+	public void windowFunctionInQueryOrderByClauseV17_6_9Test() {
+		final String query =
+				"SELECT col1, col2 FROM tab1 "
+						+ "ORDER BY ROW_NUMBER() OVER (PARTITION BY col1 ORDER BY col2 DESC)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=col1, table_ref=null}}, 2={column={name=col2, table_ref=null}}}, orderby={1={null_order=null, predicand={window_function={over={partition_by={1={column={name=col1, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=col2, table_ref=null}}, sort_order=DESC}}}, function={function_name=ROW_NUMBER, parameters=null}}}, sort_order=ASC}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[col2, col1]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={col2=[[@3,13:16='col2',<381>,1:13], [@18,83:86='col2',<381>,1:83]], col1=[[@1,7:10='col1',<381>,1:7], [@15,69:72='col1',<381>,1:69]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={window_ordered_by=[{name=col2, table_ref=tab1}], query_dictionary={col2=[[@3,13:16='col2',<381>,1:13]], col1=[[@1,7:10='col1',<381>,1:7]]}, table_dictionary={tab1={col2=[[@3,13:16='col2',<381>,1:13], [@18,83:86='col2',<381>,1:83]], col1=[[@1,7:10='col1',<381>,1:7], [@15,69:72='col1',<381>,1:69]]}}, window_partition_by=[{name=col1, table_ref=tab1}], ordered_by=[{name=col1, table_ref=tab1}, {name=col2, table_ref=tab1}], interface={col2=[{name=col2, table_ref=tab1}], col1=[{name=col1, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test

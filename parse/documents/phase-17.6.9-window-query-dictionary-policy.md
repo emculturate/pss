@@ -10,7 +10,7 @@
 
 ## Goal (one sentence)
 
-**Partition/order columns referenced only inside `OVER` must not gain `query_dictionary` keys at convert egress; their site tokens live on `window_partition_by` / `window_ordered_by` only.** Interface output names (SELECT list / explicit aliases) keep today’s `query_dictionary` behavior.
+**Partition/order columns referenced only inside `OVER` must not gain `query_dictionary` keys at convert egress; their site tokens live on `window_partition_by` / `window_ordered_by` only.** Interface **output** names (SELECT list keys, e.g. `rn`) keep `query_dictionary` tokens for their defining sites; see also §Interface lineage for what belongs on `interface.<alias>` dependency lists.
 
 ---
 
@@ -34,13 +34,55 @@
 
 ---
 
+## Interface lineage for window outputs (PIVOT / UNPIVOT)
+
+This is **separate from** the `query_dictionary` partition-only rule above. A SELECT may expose **only** the window alias on the top-level interface key list (e.g. `[rn]`) while still publishing full **dependency lineage** under `interface.rn`.
+
+### Rule
+
+For every **window function that is itself an interface output** (a SELECT-list item with an alias, e.g. `ROW_NUMBER() … AS rn`):
+
+**`interface.<alias>`** must list **all column dependencies** introduced by that window expression:
+
+| Source in SQL | Must appear on `interface.<alias>` |
+|---------------|--------------------------------------|
+| `PARTITION BY` expressions | **Yes** — each resolved column ref |
+| `ORDER BY` expressions inside `OVER` | **Yes** — each resolved column ref |
+| Window function arguments (e.g. `SUM(col9) OVER (…)`) | **Yes** — same as non-modifier windows |
+
+**Parity baseline (no relational modifier):** `SqlEventWalkerFunctionsAggregatesWindowingTests` — `subqueryDictionaryExtensionWindowOverPartitionByV7` through `…MixedV10` (`rn`, `rn1`, `rn2`). Example (V7): `interface.rn` includes **both** partition column `col12` and order column `col3`; archived lists split them across `window_partition_by` and `window_ordered_by`.
+
+**Modifier queries (PIVOT / UNPIVOT):** Same rule. After convert egress **phase B** structured derivation (`expandRelationalModifierDerivedColumnLineageInInterfaceMap` / `finalizeRelationalModifierDerivedColumnLineageInClauseLists`):
+
+- Each PARTITION BY / ORDER BY ref that names a **derived** modifier output is represented on `interface.<alias>` as **`{name=<derived>, table_ref=<bucket>}`** (e.g. `tuple_0`), then expanded to that bucket’s **`derivation.source_columns`** (physical IN-list / pivot operands), matching non-modifier “physical ref” behavior.
+- **Distinct derived names** (e.g. `metric_name` and `metric_value` on the same UNPIVOT) each appear on the list when both are referenced in `OVER`, even when expansion repeats the same source column set.
+- **Do not** drop ORDER BY dependencies while keeping PARTITION BY only — that diverges from V7–V10 and from `window_ordered_by` archive content.
+
+### Not the same as top-level interface keys
+
+| Concept | Example UNPIVOT + `SELECT ROW_NUMBER() … AS rn` only |
+|---------|------------------------------------------------------|
+| **Interface key list** (`getInterface()` / scope `interface` map keys) | `[rn]` only — `metric_name` / `metric_value` are **not** separate output columns |
+| **`interface.rn` dependency list** | Must still include **`metric_name`**, **`metric_value`**, and expanded sources where applicable |
+| **`query_dictionary` keys** (17.6.9) | **`rn` only** (plus any other SELECT outputs); **no** keys for partition/order-only derived names |
+
+Contract test sketch: `unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV1Test` in `SqlEventWalkerPivotUnpivotTests` — assert `[rn]` interface list **and** `interface.rn` contains both derived OVER refs with lineage.
+
+### Known gap (Aug 2026)
+
+UNPIVOT + window can populate **`window_ordered_by`** with ORDER BY derived names while **`interface.rn` omits ORDER BY** deps (PARTITION BY may be present). Treat as **bug / incomplete parity** with V7–V10, not as policy. Fix belongs with interface flatten timing or phase-B backfill from archived window lists into the owning window interface entry (implementation TBD; may land in same phase as 17.6.9 or **17.6.9c**).
+
+**Code touchpoints:** `exitSelect_item` → `flattenSubTreeForDependencyColumns`; convert `runConvertEgressRelationalModifierDerivedLineagePhaseB` → `expandRelationalModifierDerivedColumnLineageInInterfaceMap`; walk `captureClauseDependencies` → `window_partition_by` / `window_ordered_by`.
+
+---
+
 ## Test cohort (reuse; do not fork)
 
 Use these as regression spine while stepping through 17.6.9:
 
 | Role | Class | Methods (representative) |
 |------|--------|---------------------------|
-| Physical SELECT + `OVER` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | `subqueryDictionaryExtensionWindowOverPartitionByV7`, `…V9` (partition-only on inner scope) |
+| Physical SELECT + `OVER` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | `subqueryDictionaryExtensionWindowOverPartitionByV7`–`…MixedV10` (**interface `<alias>` = PARTITION + ORDER BY deps**) |
 | Multi-clause SELECT | `SqlEventWalkerCoreSelectFromAliasingTests` | `interfaceLoopDualRoleTrailingClauseSourceAndAliasRefTest` |
 | Pivot/unpivot egress | `SqlEventWalkerPivotUnpivotTests` | `unpivotV0WindowDerivedColumnsQueryDictionaryV17_6_8Test`, `unpivotV0WindowSourceColumnQueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0WindowDerivedColumnsQueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0WindowSourceColumnQueryDictionaryV17_6_8Test` |
 | DML + window column | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateReturningWithFromSubqueryTest`, `insertComplexSubstitutionI5WithCteQualifyWindowSubstitution` |
@@ -103,6 +145,7 @@ Add to **`SqlEventWalkerPivotUnpivotTests`** (gate `-Pphase15-derived-gate`):
 |----|-------------------|--------|
 | **2d** | `unpivotPartitionOnlyDerivedInOverNoQueryDictionaryV17_6_9Test` | UNPIVOT; `OVER (PARTITION BY metric_name …)` with **`metric_name` not in SELECT** (only `metric_value`, `rn`) | `metric_name` **not** on `query_dictionary`; on `window_partition_by` |
 | **2e** | `pivotPartitionOnlyDerivedInOverNoQueryDictionaryV17_6_9Test` | PIVOT sibling; partition by derived sum **not** in SELECT | Same pattern |
+| **2f** | `unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV1Test` (or `*V17_6_9*`) | `SELECT ROW_NUMBER() … AS rn` only over UNPIVOT derived names | `[rn]` interface keys; **`interface.rn`** lists **both** `metric_name` and `metric_value` + expanded `derivation` sources; no `metric_*` on `query_dictionary` |
 
 **Done when:** New tests committed; **expected failures** document 17.6.9 gap (do not “fix” by weakening assertions).
 
@@ -110,8 +153,14 @@ Add to **`SqlEventWalkerPivotUnpivotTests`** (gate `-Pphase15-derived-gate`):
 
 ### Step 3 — Implementation (single focused change)
 
+**3a — `query_dictionary` (core 17.6.9)**
+
 - [ ] Set `mergesQueryDictionaryTokensForAllColumnNamesInClauseList` to **false** for window keys **or** remove window keys from that branch so window merge uses `isInterfaceOutputColumnName` (~L2840–L2842).
 - [ ] Verify `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary` still runs only when `convertEgressScopeHasRelationalModifierStructuredDerivation()` — physical-only scopes: confirm **2a–2c** behavior still correct (may need to allow window merge for non-modifier scopes with same interface rule — implement minimal diff).
+
+**3b — `interface.<window alias>` lineage on modifier queries (§Interface lineage)**
+
+- [ ] Ensure `interface.<alias>` includes **PARTITION BY and ORDER BY** deps on PIVOT/UNPIVOT, expanded via structured `derivation` (parity with V7–V10); green **2f** / `unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV1Test`.
 
 **Done when:** Step 2 tests green; no new diagnostics in pivot gate smoke subset.
 
@@ -150,10 +199,12 @@ Update **only** `query_dictionary` (and comments referencing “interim until 17
 
 Prioritized **after** Steps 0–5. Mostly **○** today.
 
+**Intentionally untested (grammar allows, not ANSI):** inline `OVER` in **WHERE**, **HAVING**, **GROUP BY**, **JOIN ON**, **UPDATE SET**. See class javadoc on `SqlEventWalkerFunctionsAggregatesWindowingTests` — do not add walker goldens for those unless product policy changes.
+
 | P | Scenario | Suggested class |
 |---|----------|-----------------|
 | P1 | PIVOT/UNPIVOT — `OVER` refs in **QUALIFY** / **WHERE** / **HAVING** on derived or source operand | `SqlEventWalkerPivotUnpivotTests` |
-| P2 | `ORDER BY ROW_NUMBER() OVER (...)` | `SqlEventWalkerWindowEgressContractTests` |
+| ~~P2~~ | ~~`ORDER BY ROW_NUMBER() OVER (...)`~~ | ✅ `windowFunctionInQueryOrderByClauseV17_6_9Test` in `SqlEventWalkerFunctionsAggregatesWindowingTests` |
 | P2 | `UPDATE … SET col = <window expr>` | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` |
 | P3 | Triple-modifier + window partition on derived name | `SqlEventWalkerPivotUnpivotTests` |
 | P3 | `JOIN … ON` with window (if grammar allows) | `SqlEventWalkerJoinsAndTableResolutionTests` or window contract |
@@ -163,7 +214,7 @@ Prioritized **after** Steps 0–5. Mostly **○** today.
 ## Agent re-center checklist (start of any 17.6.9 session)
 
 1. Which **step** (0–6) is active? Only work that step.
-2. Read §Policy — partition-only → no `query_dictionary`.
+2. Read §Policy — partition-only → no `query_dictionary`; read §Interface lineage — `interface.<alias>` still lists all OVER deps on modifier queries.
 3. Code: `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary` / `mergesQueryDictionaryTokensForAllColumnNamesInClauseList`.
 4. Tests: run `SqlEventWalkerWindowEgressContractTests` + four `*V17_6_8*` window pivot tests.
 5. **No** bulk golden refresh; pivot changes need user confirmation.
@@ -176,3 +227,4 @@ Prioritized **after** Steps 0–5. Mostly **○** today.
 | Date | Note |
 |------|------|
 | Aug 2026 | Initial plan from window test cohort inventory + 17.6.8 (b) review |
+| Aug 2026 | §Interface lineage — window `interface.<alias>` must include PARTITION BY + ORDER BY on PIVOT/UNPIVOT (V7–V10 parity) |
