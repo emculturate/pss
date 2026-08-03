@@ -1816,7 +1816,7 @@ These are **optional** additions after **17.7.4–17.7.6** (or alongside **17.7.
 
 ### §17.7.7-matrix — Pivot/unpivot test classification and golden refresh plan
 
-**Class:** `SqlEventWalkerPivotUnpivotTests` (**100** methods, **100/100** green as of Aug 2026). **Policy:** refresh goldens under **17.6 golden review policy** (behavioral intent; bulk refresh only via `parse/tools/refresh_pivot_unpivot_goldens.py` + human review of intent). **Gate tests (stay green every subset):** `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`. **Query catalog:** `parse/src/test/resources/pivot_unpivot_queries.properties` (`6d0ad1a`).
+**Class:** `SqlEventWalkerPivotUnpivotTests` (**109** methods; gate + gap-fill Aug 2026). **Policy:** refresh goldens under **17.6 golden review policy** (behavioral intent; bulk refresh only via `parse/tools/refresh_pivot_unpivot_goldens.py` + human review of intent). **Gate tests (stay green every subset):** `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`. **Query catalog:** `parse/src/test/resources/pivot_unpivot_queries.properties` (`6d0ad1a`).
 
 #### Dimension A — Modifier topology (arity / mix)
 
@@ -1826,7 +1826,7 @@ These are **optional** additions after **17.7.4–17.7.6** (or alongside **17.7.
 | **S1-U** | Single UNPIVOT | ~22 tests (`unpivotV0`–`V9`, probes, …) |
 | **S2-PP** | Two PIVOTs (no unpivot) | `triplePivotJoinDerivedColumnsAcrossTuplesV1Test` |
 | **S2-UU** | Two UNPIVOTs | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` |
-| **S2-PU** | One PIVOT + one UNPIVOT | (thin — mostly folded into triples) |
+| **S2-PU** | One PIVOT + one UNPIVOT | `gapFill17_7_7_S2PuPivotUnpivotJoinClauseEgressDerivedV1Test`; triple gate tests fold broader mix |
 | **S3** | Three modifiers (e.g. P–U–P, U–P–U) | `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` |
 | **T0** | Tuple/generator endpoint | `generatorDirectFromListTupleEndpointNakedSyntaxBuildsSameAstShapeTest` |
 
@@ -1894,7 +1894,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 - [x] **B** — subset golden refresh (32 clause-probe tests: JOIN ON, GROUP BY, HAVING, QUALIFY, ORDER BY, monthly_sales_long derived, WithTax, FromDerived). (`3d0f3cd`)
 - [x] **C** — qualifiers & fatals (**16.4** + **17.0b**): `pivotQualifiedOperands*`, `*UnqualifiedParity*`, `unpivotQualified*`, `*WrongQualifier*`, `pivotInIdentifier*Fatal*`. Goldens aligned (`0d100ce` bulk refresh); unhappy tests use **per-diagnostic position** asserts for WARNING / SEVERE / FATAL / ERROR (`701dcd9`). `AbstractSqlParseEventWalkerTest.assertDiagnosticAtPosition` treats each `UNRESOLVED_UNQUALIFIED_COLUMNS` **SQL site** via `(l:X c:Y)` in the diagnostic message.
 - [x] **D** — derived vs physical / nested / CTE / DML: `pivotSameQuery*`, `pivotNested*`, `pivotUpdate*`, `pivotCte*`, `unpivotCte*` (e.g. `unpivotCteSourceDerivedColumnClauseSurfacesV1Test` — SEVERE per site). Generator/tuple endpoint symbol-table shape updated for structured `derivation`.
-- [x] **E** — multi-modifier + 17.7 contract: `triple*`, `pivotUnqualifiedOuterOutputs*` (SEVERE + bundled ERROR site asserts), gate tests (`triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`), **17.7.8** `closeout17_7_8_*` table_dictionary guards. **Signed off Aug 2026** with class at **106/106** (was 100/100 pre-closeout).
+- [x] **E** — multi-modifier + 17.7 contract: `triple*`, `pivotUnqualifiedOuterOutputs*` (SEVERE + bundled ERROR site asserts), gate tests (`triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`), **17.7.8** `closeout17_7_8_*`, **17.7.7-gap-fill** `gapFill17_7_7_*`. **Signed off Aug 2026** with class at **109/109** (was 106/106 pre-gap-fill).
 
 #### 17.7.7 goals after A–E sign-off
 
@@ -1903,7 +1903,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | Stabilize pivot class goldens for modifier + clause matrix | ✅ A–E |
 | Lock diagnostic contract (position per emitted diagnostic, all severities) | ✅ `701dcd9` |
 | Tooling for repeatable golden refresh | ✅ `pivot_unpivot_queries.properties` + `refresh_pivot_unpivot_goldens.py` |
-| Matrix gap-fill (new tests for empty cells) | ⏸️ **§17.7.7-gap-fill** |
+| Matrix gap-fill (new tests for empty cells) | 🔄 **S3×GROUP BY/HAVING** + **S2-PU** clause egress (`gapFill17_7_7_*`); heatmap: `phase-17.7.7-pivot-matrix-heatmap.md` |
 | **17.7.8** closeout pairs (physical vs subquery × derived vs physical ambiguity) | 🔄 Partial — physical/subquery **table_dictionary** guards + dual-PIVOT derived ambiguity (`closeout17_7_8_*` ×5); derived **vs** same-named physical column pairs still open |
 | Re-enable deferred large-sample / set-op diagnostic tests | ⏸️ After **17.7.5b** (see below) |
 
@@ -1925,9 +1925,12 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 **Checklist — gap-fill (17.7.7-gap-fill):**
 
+- [x] Matrix tag convention + **coverage heatmap** (`phase-17.7.7-pivot-matrix-heatmap.md`).
 - [ ] Tag every existing `SqlEventWalkerPivotUnpivotTests` method with matrix codes (comment header or companion doc table).
-- [ ] Produce **coverage heatmap** (topology × bucket × kind × outcome); mark empty cells.
-- [ ] Add **minimum one happy + one unhappy** test per empty **high-priority** cell (S2/S3 × filters/ordered_by/grouped_by × derived/source).
+- [ ] Produce **coverage heatmap** (topology × bucket × kind × outcome); mark empty cells. *(Initial heatmap done; refine as cells fill.)*
+- [x] **S3 × GROUP BY / HAVING** — happy + unhappy (`gapFill17_7_7_S3*`).
+- [x] **S2-PU** clause egress happy (`gapFill17_7_7_S2PuPivotUnpivotJoinClauseEgressDerivedV1Test`).
+- [ ] Add **minimum one happy + one unhappy** test per remaining **high-priority** cell (S2/S3 × filters/ordered_by/grouped_by × derived/source).
 - [ ] Wire new tests into subset **E** (or gate) when they assert 17.7 contract behavior.
 - [x] Pivot class A–E refresh stabilized (**Aug 2026** sign-off above).
 - [ ] Re-enable **§17.7.7-deferred-large-sample-goldens** after **17.7.5b** convert egress convergence (scheduled next; not blocked on pivot class goldens).

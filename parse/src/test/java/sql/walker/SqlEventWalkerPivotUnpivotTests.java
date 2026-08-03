@@ -9,6 +9,11 @@ import sql.SQLSelectParserParser;
 
 public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalkerTest {
 
+	/**
+	 * Matrix tags (§17.7.7-matrix): {@code subset=X | topo=S* | bucket=* | kind=derived|source | outcome=happy|unhappy}.
+	 * Full heatmap: {@code parse/documents/phase-17.7.7-pivot-matrix-heatmap.md}.
+	 */
+
 	// UNPIVOT RELATIONAL OPERATOR TESTS
 
 	@Test
@@ -3616,6 +3621,97 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query1={query_dictionary={jan_sales_SUM=[[@7,27:39='jan_sales_SUM',<381>,1:27], [@58,295:307='jan_sales_SUM',<381>,6:25], [@78,409:421='jan_sales_SUM',<381>,9:7], [@92,476:488='jan_sales_SUM',<381>,11:8], [@39,217:219='SUM',<141>,5:7], [@47,254:264=''jan_sales'',<389>,5:44]], month_name=[[@17,76:85='month_name',<381>,1:76]], sales_amount=[[@15,62:73='sales_amount',<381>,1:62], [@54,278:289='sales_amount',<381>,6:8], [@82,428:439='sales_amount',<381>,9:26], [@86,450:461='sales_amount',<381>,10:9], [@98,503:514='sales_amount',<381>,12:9]], e1=[[@5,23:24='e1',<381>,1:23]], e2=[[@13,58:59='e2',<381>,1:58]]}, table_dictionary={monthly_sales={jan_sales=[[@28,154:162='jan_sales',<381>,3:41]], mar_sales=[[@71,387:395='mar_sales',<381>,8:52]], empid=[[@1,7:12='u1_src',<381>,1:7], [@9,42:47='u2_src',<381>,1:42]], feb_sales=[[@69,376:384='feb_sales',<381>,8:41], [@30,165:173='feb_sales',<381>,3:52]]}, monthly_sales_long={month_name=[[@44,239:248='month_name',<381>,5:29]], sales_amount=[[@41,221:232='sales_amount',<381>,5:11]]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], u1=[{name=jan_sales, table_ref=u1_src}, {name=feb_sales, table_ref=u1_src}], u2=[{name=feb_sales, table_ref=u2_src}, {name=mar_sales, table_ref=u2_src}]}, derived_columns={p={jan_sales_SUM=[[@39,217:219='SUM',<141>,5:7], [@47,254:264=''jan_sales'',<389>,5:44]]}, u1={sales_amount=[[@23,122:133='sales_amount',<381>,3:9]], month_name=[[@25,139:148='month_name',<381>,3:26]]}, u2={sales_amount=[[@64,344:355='sales_amount',<381>,8:9]], month_name=[[@66,361:370='month_name',<381>,8:26]]}}}, filters=[{name=sales_amount, table_ref=u1}, {name=jan_sales_SUM, table_ref=p}, {name=sales_amount, table_ref=u2}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=sales_amount, table_ref=null}], e1=[{name=empid, table_ref=u1_src}], e2=[{name=empid, table_ref=u2_src}]}, table_alias={p=p_src, p_src=monthly_sales_long, u2_src=monthly_sales, u1_src=monthly_sales, u1=u1_src, u2=u2_src}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	// --- §17.7.7-gap-fill (focused matrix cells) ---
+
+	/**
+	 * Matrix: subset=E | topo=S3 (P–U–P) | bucket=GROUP_BY,HAVING,ORDER_BY | kind=derived (qualified) |
+	 * outcome=happy.
+	 */
+	@Test
+	public void gapFill17_7_7_S3PivotUnpivotPivotGroupByHavingQualifiedDerivedV1Test() {
+		final String query =
+				"SELECT p.jan_sales_SUM, u.month_name, u.sales_amount\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) p\n"
+						+ "JOIN monthly_sales u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "  ON p.jan_sales_SUM = u.sales_amount AND u.month_name = 'jan_sales'\n"
+						+ "JOIN monthly_sales_long q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('feb_sales')) q\n"
+						+ "  ON u.sales_amount = q.feb_sales_SUM\n"
+						+ "GROUP BY p.jan_sales_SUM, u.month_name, u.sales_amount\n"
+						+ "HAVING p.jan_sales_SUM > 0 AND u.sales_amount > 10 AND q.feb_sales_SUM > 0\n"
+						+ "ORDER BY p.jan_sales_SUM, u.month_name;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("grouped_by=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertTrue(sym.contains("{name=month_name, table_ref=u}"));
+		Assert.assertTrue(sym.contains("{name=sales_amount, table_ref=u}]"));
+		Assert.assertTrue(sym.contains("ordered_by=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=u}]"));
+		Assert.assertTrue(sym.contains("filters=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertTrue(sym.contains("{name=feb_sales_SUM, table_ref=q}]"));
+	}
+
+	/**
+	 * Matrix: subset=E | topo=S3 (U–P–U) | bucket=GROUP_BY | kind=derived (unqualified) | outcome=unhappy.
+	 */
+	@Test
+	public void gapFill17_7_7_S3UnpivotPivotUnpivotGroupByAmbiguousDerivedFatalV1Test() {
+		final String query =
+				"SELECT p.jan_sales_SUM\n"
+						+ "FROM monthly_sales u1_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u1\n"
+						+ "JOIN monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "  ON u1.sales_amount = p.jan_sales_SUM\n"
+						+ "JOIN monthly_sales u2_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (feb_sales, mar_sales)) u2\n"
+						+ "  ON p.jan_sales_SUM = u2.sales_amount\n"
+						+ "GROUP BY sales_amount;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'sales_amount' at (l:10 c:9). Possible sources: [u1, u2]",
+				"sales_amount",
+				10,
+				9);
+		Assert.assertTrue(
+				extractor.getSymbolTable().toString().contains("grouped_by=[{name=sales_amount, table_ref=null}]"));
+	}
+
+	/**
+	 * Matrix: subset=E | topo=S2-PU | bucket=WHERE,GROUP_BY,HAVING,ORDER_BY | kind=derived (qualified) |
+	 * outcome=happy.
+	 */
+	@Test
+	public void gapFill17_7_7_S2PuPivotUnpivotJoinClauseEgressDerivedV1Test() {
+		final String query =
+				"SELECT p.jan_sales_SUM, u.month_name, u.sales_amount\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN monthly_sales u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "  ON p.jan_sales_SUM = u.sales_amount AND u.month_name = 'jan_sales'\n"
+						+ "WHERE p.jan_sales_SUM > 0\n"
+						+ "GROUP BY p.jan_sales_SUM, u.month_name, u.sales_amount\n"
+						+ "HAVING u.sales_amount > 10\n"
+						+ "ORDER BY p.jan_sales_SUM, u.month_name;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertNoFatalErrors(extractor);
+
+		String sym = extractor.getSymbolTable().toString();
+		Assert.assertTrue(sym.contains("grouped_by=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertTrue(sym.contains("ordered_by=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=u}]"));
+		Assert.assertTrue(sym.contains("filters=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertTrue(sym.contains("{name=sales_amount, table_ref=u}]"));
 	}
 
 	// --- Phase 17.7.8 closeout: derived outputs must not pollute physical table_dictionary ---
