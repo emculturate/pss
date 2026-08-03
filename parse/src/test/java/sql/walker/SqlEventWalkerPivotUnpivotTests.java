@@ -4017,6 +4017,294 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 
+	// Phase 17.6.7: triple-tuple joins with subquery-backed FROM arms (paired with physical-table triple tests above).
+
+	private static final String V17_6_7_PIVOT_LONG_SRC =
+			"(SELECT empid, month_name, sales_amount FROM monthly_sales_long)";
+	private static final String V17_6_7_UNPIVOT_WIDE_SRC =
+			"(SELECT empid, jan_sales, feb_sales, mar_sales FROM monthly_sales)";
+
+	/** Phase 17.6.7 paired variant of {@link #triplePivotJoinDerivedColumnsAcrossTuplesV1Test}. */
+	@Test
+	public void triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test() {
+		final String query =
+				"SELECT jan_sales_SUM, feb_sales_SUM, mar_sales_SUM\n"
+						+ "FROM " + V17_6_7_PIVOT_LONG_SRC + " p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('feb_sales')) q\n"
+						+ "  ON p.jan_sales_SUM = q.feb_sales_SUM\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " r_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('mar_sales')) r\n"
+						+ "  ON q.feb_sales_SUM = r.mar_sales_SUM\n"
+						+ "WHERE p.jan_sales_SUM > 0\n"
+						+ "  AND q.feb_sales_SUM > 0\n"
+						+ "  AND r.mar_sales_SUM > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=jan_sales_SUM, table_ref=null}}, 2={column={name=feb_sales_SUM, table_ref=null}}, 3={column={name=mar_sales_SUM, table_ref=null}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=p_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 2={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=feb_sales_SUM, table_ref=q}}, operator==}}}, 3={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='feb_sales'}}}, alias=q, table={alias=q_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 4={join=JOIN, on={condition={left={column={name=feb_sales_SUM, table_ref=q}}, right={column={name=mar_sales_SUM, table_ref=r}}, operator==}}}, 5={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='mar_sales'}}}, alias=r, table={alias=r_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}}}, where={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=feb_sales_SUM, table_ref=q}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=mar_sales_SUM, table_ref=r}}, right={literal=0}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM, mar_sales_SUM, feb_sales_SUM]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{p_src={month_name=[[@25,156:165='month_name',<381>,3:29], [@85,467:476='month_name',<381>,8:29]], sales_amount=[[@22,138:149='sales_amount',<381>,3:11], [@82,449:460='sales_amount',<381>,8:11]]}, q_src={month_name=[[@51,292:301='month_name',<381>,5:29]], sales_amount=[[@48,274:285='sales_amount',<381>,5:11]]}, r_src={month_name=[[@85,467:476='month_name',<381>,8:29]], sales_amount=[[@82,449:460='sales_amount',<381>,8:11]]}, monthly_sales_long={empid=[[@9,64:68='empid',<381>,2:13], [@35,200:204='empid',<381>,4:13], [@69,375:379='empid',<381>,7:13]], month_name=[[@11,71:80='month_name',<381>,2:20], [@37,207:216='month_name',<381>,4:20], [@71,382:391='month_name',<381>,7:20]], sales_amount=[[@13,83:94='sales_amount',<381>,2:32], [@39,219:230='sales_amount',<381>,4:32], [@73,394:405='sales_amount',<381>,7:32]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={empid=[[@69,375:379='empid',<381>,7:13]], month_name=[[@71,382:391='month_name',<381>,7:20]], sales_amount=[[@73,394:405='sales_amount',<381>,7:32]]}, query6={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@61,330:342='jan_sales_SUM',<381>,6:7], [@103,545:557='jan_sales_SUM',<381>,10:8], [@20,134:136='SUM',<141>,3:7], [@28,171:181=''jan_sales'',<389>,3:44]], mar_sales_SUM=[[@5,37:49='mar_sales_SUM',<381>,1:37], [@99,523:535='mar_sales_SUM',<381>,9:25], [@115,597:609='mar_sales_SUM',<381>,12:8], [@80,445:447='SUM',<141>,8:7], [@88,482:492=''mar_sales'',<389>,8:44]], feb_sales_SUM=[[@3,22:34='feb_sales_SUM',<381>,1:22], [@65,348:360='feb_sales_SUM',<381>,6:25], [@95,505:517='feb_sales_SUM',<381>,9:7], [@109,571:583='feb_sales_SUM',<381>,11:8], [@46,270:272='SUM',<141>,5:7], [@54,307:317=''feb_sales'',<389>,5:44]]}, query0={empid=[[@9,64:68='empid',<381>,2:13]], month_name=[[@11,71:80='month_name',<381>,2:20]], sales_amount=[[@13,83:94='sales_amount',<381>,2:32]]}, query2={empid=[[@35,200:204='empid',<381>,4:13]], month_name=[[@37,207:216='month_name',<381>,4:20]], sales_amount=[[@39,219:230='sales_amount',<381>,4:32]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query6={query_dictionary={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@61,330:342='jan_sales_SUM',<381>,6:7], [@103,545:557='jan_sales_SUM',<381>,10:8], [@20,134:136='SUM',<141>,3:7], [@28,171:181=''jan_sales'',<389>,3:44]], mar_sales_SUM=[[@5,37:49='mar_sales_SUM',<381>,1:37], [@99,523:535='mar_sales_SUM',<381>,9:25], [@115,597:609='mar_sales_SUM',<381>,12:8], [@80,445:447='SUM',<141>,8:7], [@88,482:492=''mar_sales'',<389>,8:44]], feb_sales_SUM=[[@3,22:34='feb_sales_SUM',<381>,1:22], [@65,348:360='feb_sales_SUM',<381>,6:25], [@95,505:517='feb_sales_SUM',<381>,9:7], [@109,571:583='feb_sales_SUM',<381>,11:8], [@46,270:272='SUM',<141>,5:7], [@54,307:317=''feb_sales'',<389>,5:44]]}, table_dictionary={p_src={month_name=[[@25,156:165='month_name',<381>,3:29], [@85,467:476='month_name',<381>,8:29]], sales_amount=[[@22,138:149='sales_amount',<381>,3:11], [@82,449:460='sales_amount',<381>,8:11]]}, q_src={month_name=[[@51,292:301='month_name',<381>,5:29]], sales_amount=[[@48,274:285='sales_amount',<381>,5:11]]}, r_src={month_name=[[@85,467:476='month_name',<381>,8:29]], sales_amount=[[@82,449:460='sales_amount',<381>,8:11]]}}, def_query0={query_dictionary={empid=[[@9,64:68='empid',<381>,2:13]], month_name=[[@11,71:80='month_name',<381>,2:20]], sales_amount=[[@13,83:94='sales_amount',<381>,2:32]]}, table_dictionary={monthly_sales_long={empid=[[@9,64:68='empid',<381>,2:13], [@35,200:204='empid',<381>,4:13], [@69,375:379='empid',<381>,7:13]], month_name=[[@11,71:80='month_name',<381>,2:20], [@37,207:216='month_name',<381>,4:20], [@71,382:391='month_name',<381>,7:20]], sales_amount=[[@13,83:94='sales_amount',<381>,2:32], [@39,219:230='sales_amount',<381>,4:32], [@73,394:405='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], q=[{name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}], r=[{name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}]}, derived_columns={p={jan_sales_SUM=[[@20,134:136='SUM',<141>,3:7], [@28,171:181=''jan_sales'',<389>,3:44]]}, q={feb_sales_SUM=[[@46,270:272='SUM',<141>,5:7], [@54,307:317=''feb_sales'',<389>,5:44]]}, r={mar_sales_SUM=[[@80,445:447='SUM',<141>,8:7], [@88,482:492=''mar_sales'',<389>,8:44]]}}}, filters=[{name=jan_sales_SUM, table_ref=p}, {name=feb_sales_SUM, table_ref=q}, {name=mar_sales_SUM, table_ref=r}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], mar_sales_SUM=[{name=mar_sales_SUM, table_ref=r}, {name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=q}, {name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}]}, def_query4={query_dictionary={empid=[[@69,375:379='empid',<381>,7:13]], month_name=[[@71,382:391='month_name',<381>,7:20]], sales_amount=[[@73,394:405='sales_amount',<381>,7:32]]}, table_dictionary={monthly_sales_long={empid=[[@69,375:379='empid',<381>,7:13]], month_name=[[@71,382:391='month_name',<381>,7:20]], sales_amount=[[@73,394:405='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, table_alias={p_src=query0, q_src=query2, r_src=query4, p=p_src, q=q_src, r=r_src}, def_query2={query_dictionary={empid=[[@35,200:204='empid',<381>,4:13]], month_name=[[@37,207:216='month_name',<381>,4:20]], sales_amount=[[@39,219:230='sales_amount',<381>,4:32]]}, table_dictionary={monthly_sales_long={empid=[[@35,200:204='empid',<381>,4:13]], month_name=[[@37,207:216='month_name',<381>,4:20]], sales_amount=[[@39,219:230='sales_amount',<381>,4:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Phase 17.6.7 paired variant of {@link #triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test}. */
+	@Test
+	public void triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test() {
+		final String query =
+				"SELECT p_src.empid AS e1, q_src.empid AS e2, r_src.empid AS e3, jan_sales_SUM\n"
+						+ "FROM " + V17_6_7_PIVOT_LONG_SRC + " p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) q\n"
+						+ "  ON p.jan_sales_SUM = q.jan_sales_SUM\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " r_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) r\n"
+						+ "  ON q.jan_sales_SUM = r.jan_sales_SUM\n"
+						+ "WHERE p.jan_sales_SUM > 0\n"
+						+ "  AND q.jan_sales_SUM > 0\n"
+						+ "  AND r.jan_sales_SUM > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'jan_sales_SUM' at (l:1 c:64). Possible sources: [p, q, r]",
+				"jan_sales_SUM",
+				1,
+				64);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=empid, table_ref=p_src}, alias=e1}, 2={column={name=empid, table_ref=q_src}, alias=e2}, 3={column={name=empid, table_ref=r_src}, alias=e3}, 4={column={name=jan_sales_SUM, table_ref=null}}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=p_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 2={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=jan_sales_SUM, table_ref=q}}, operator==}}}, 3={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=q, table={alias=q_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 4={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=q}}, right={column={name=jan_sales_SUM, table_ref=r}}, operator==}}}, 5={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=r, table={alias=r_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}}}, where={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=jan_sales_SUM, table_ref=q}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=jan_sales_SUM, table_ref=r}}, right={literal=0}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM, e1, e2, e3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{p_src={month_name=[[@39,183:192='month_name',<381>,3:29], [@99,494:503='month_name',<381>,8:29]], sales_amount=[[@36,165:176='sales_amount',<381>,3:11], [@96,476:487='sales_amount',<381>,8:11]]}, q_src={month_name=[[@65,319:328='month_name',<381>,5:29]], sales_amount=[[@62,301:312='sales_amount',<381>,5:11]]}, r_src={month_name=[[@99,494:503='month_name',<381>,8:29]], sales_amount=[[@96,476:487='sales_amount',<381>,8:11]]}, monthly_sales_long={empid=[[@23,91:95='empid',<381>,2:13], [@49,227:231='empid',<381>,4:13], [@83,402:406='empid',<381>,7:13]], month_name=[[@25,98:107='month_name',<381>,2:20], [@51,234:243='month_name',<381>,4:20], [@85,409:418='month_name',<381>,7:20]], sales_amount=[[@27,110:121='sales_amount',<381>,2:32], [@53,246:257='sales_amount',<381>,4:32], [@87,421:432='sales_amount',<381>,7:32]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={empid=[[@83,402:406='empid',<381>,7:13], [@13,45:49='r_src',<381>,1:45]], month_name=[[@85,409:418='month_name',<381>,7:20]], sales_amount=[[@87,421:432='sales_amount',<381>,7:32]]}, query6={jan_sales_SUM=[[@19,64:76='jan_sales_SUM',<381>,1:64], [@75,357:369='jan_sales_SUM',<381>,6:7], [@79,375:387='jan_sales_SUM',<381>,6:25], [@109,532:544='jan_sales_SUM',<381>,9:7], [@113,550:562='jan_sales_SUM',<381>,9:25], [@117,572:584='jan_sales_SUM',<381>,10:8], [@123,598:610='jan_sales_SUM',<381>,11:8], [@129,624:636='jan_sales_SUM',<381>,12:8]], e1=[[@5,22:23='e1',<381>,1:22]], e2=[[@11,41:42='e2',<381>,1:41]], e3=[[@17,60:61='e3',<381>,1:60]]}, query0={empid=[[@23,91:95='empid',<381>,2:13], [@1,7:11='p_src',<381>,1:7]], month_name=[[@25,98:107='month_name',<381>,2:20]], sales_amount=[[@27,110:121='sales_amount',<381>,2:32]]}, query2={empid=[[@49,227:231='empid',<381>,4:13], [@7,26:30='q_src',<381>,1:26]], month_name=[[@51,234:243='month_name',<381>,4:20]], sales_amount=[[@53,246:257='sales_amount',<381>,4:32]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query6={query_dictionary={jan_sales_SUM=[[@19,64:76='jan_sales_SUM',<381>,1:64], [@75,357:369='jan_sales_SUM',<381>,6:7], [@79,375:387='jan_sales_SUM',<381>,6:25], [@109,532:544='jan_sales_SUM',<381>,9:7], [@113,550:562='jan_sales_SUM',<381>,9:25], [@117,572:584='jan_sales_SUM',<381>,10:8], [@123,598:610='jan_sales_SUM',<381>,11:8], [@129,624:636='jan_sales_SUM',<381>,12:8]], e1=[[@5,22:23='e1',<381>,1:22]], e2=[[@11,41:42='e2',<381>,1:41]], e3=[[@17,60:61='e3',<381>,1:60]]}, table_dictionary={p_src={month_name=[[@39,183:192='month_name',<381>,3:29], [@99,494:503='month_name',<381>,8:29]], sales_amount=[[@36,165:176='sales_amount',<381>,3:11], [@96,476:487='sales_amount',<381>,8:11]]}, q_src={month_name=[[@65,319:328='month_name',<381>,5:29]], sales_amount=[[@62,301:312='sales_amount',<381>,5:11]]}, r_src={month_name=[[@99,494:503='month_name',<381>,8:29]], sales_amount=[[@96,476:487='sales_amount',<381>,8:11]]}}, def_query0={query_dictionary={empid=[[@23,91:95='empid',<381>,2:13], [@1,7:11='p_src',<381>,1:7]], month_name=[[@25,98:107='month_name',<381>,2:20]], sales_amount=[[@27,110:121='sales_amount',<381>,2:32]]}, table_dictionary={monthly_sales_long={empid=[[@23,91:95='empid',<381>,2:13], [@49,227:231='empid',<381>,4:13], [@83,402:406='empid',<381>,7:13]], month_name=[[@25,98:107='month_name',<381>,2:20], [@51,234:243='month_name',<381>,4:20], [@85,409:418='month_name',<381>,7:20]], sales_amount=[[@27,110:121='sales_amount',<381>,2:32], [@53,246:257='sales_amount',<381>,4:32], [@87,421:432='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], q=[{name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}], r=[{name=month_name, table_ref=r_src}, {name=sales_amount, table_ref=r_src}]}, derived_columns={p={jan_sales_SUM=[[@34,161:163='SUM',<141>,3:7], [@42,198:208=''jan_sales'',<389>,3:44]]}, q={jan_sales_SUM=[[@60,297:299='SUM',<141>,5:7], [@68,334:344=''jan_sales'',<389>,5:44]]}, r={jan_sales_SUM=[[@94,472:474='SUM',<141>,8:7], [@102,509:519=''jan_sales'',<389>,8:44]]}}}, filters=[{name=jan_sales_SUM, table_ref=p}, {name=jan_sales_SUM, table_ref=q}, {name=jan_sales_SUM, table_ref=r}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}], e1=[{name=empid, table_ref=p_src}], e2=[{name=empid, table_ref=q_src}], e3=[{name=empid, table_ref=r_src}]}, def_query4={query_dictionary={empid=[[@83,402:406='empid',<381>,7:13], [@13,45:49='r_src',<381>,1:45]], month_name=[[@85,409:418='month_name',<381>,7:20]], sales_amount=[[@87,421:432='sales_amount',<381>,7:32]]}, table_dictionary={monthly_sales_long={empid=[[@83,402:406='empid',<381>,7:13]], month_name=[[@85,409:418='month_name',<381>,7:20]], sales_amount=[[@87,421:432='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, table_alias={p_src=query0, q_src=query2, r_src=query4, p=p_src, q=q_src, r=r_src}, def_query2={query_dictionary={empid=[[@49,227:231='empid',<381>,4:13], [@7,26:30='q_src',<381>,1:26]], month_name=[[@51,234:243='month_name',<381>,4:20]], sales_amount=[[@53,246:257='sales_amount',<381>,4:32]]}, table_dictionary={monthly_sales_long={empid=[[@49,227:231='empid',<381>,4:13]], month_name=[[@51,234:243='month_name',<381>,4:20]], sales_amount=[[@53,246:257='sales_amount',<381>,4:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Phase 17.6.7 paired variant of {@link #tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test}. */
+	@Test
+	public void tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test() {
+		final String query =
+				"SELECT m1.empid AS e1, m2.empid AS e2, m3.empid AS e3, sales_amount, month_name\n"
+						+ "FROM " + V17_6_7_UNPIVOT_WIDE_SRC + " m1\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u1\n"
+						+ "JOIN " + V17_6_7_UNPIVOT_WIDE_SRC + " m2\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u2\n"
+						+ "  ON u1.month_name = u2.month_name AND u1.sales_amount = u2.sales_amount\n"
+						+ "JOIN " + V17_6_7_UNPIVOT_WIDE_SRC + " m3\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, mar_sales)) u3\n"
+						+ "  ON u2.month_name = u3.month_name\n"
+						+ "WHERE u1.sales_amount > 10\n"
+						+ "  AND u2.sales_amount > 10\n"
+						+ "  AND u3.sales_amount > 10;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'month_name' at (l:1 c:69). Possible sources: [u1, u2, u3]",
+				"month_name",
+				1,
+				69);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'sales_amount' at (l:1 c:55). Possible sources: [u1, u2, u3]",
+				"sales_amount",
+				1,
+				55);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=empid, table_ref=m1}, alias=e1}, 2={column={name=empid, table_ref=m2}, alias=e2}, 3={column={name=empid, table_ref=m3}, alias=e3}, 4={column={name=sales_amount, table_ref=null}}, 5={column={name=month_name, table_ref=null}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u1, table={alias=m1, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}, 2={join=JOIN, on={and={1={condition={left={column={name=month_name, table_ref=u1}}, right={column={name=month_name, table_ref=u2}}, operator==}}, 2={condition={left={column={name=sales_amount, table_ref=u1}}, right={column={name=sales_amount, table_ref=u2}}, operator==}}}}}, 3={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u2, table={alias=m2, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}, 4={join=JOIN, on={condition={left={column={name=month_name, table_ref=u2}}, right={column={name=month_name, table_ref=u3}}, operator==}}}, 5={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=mar_sales, table_ref=null}}}, alias=u3, table={alias=m3, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}}}, where={and={1={condition={left={column={name=sales_amount, table_ref=u1}}, right={literal=10}, operator=>}}, 2={condition={left={column={name=sales_amount, table_ref=u2}}, right={literal=10}, operator=>}}, 3={condition={left={column={name=sales_amount, table_ref=u3}}, right={literal=10}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[month_name, sales_amount, e1, e2, e3]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@27,100:108='jan_sales',<381>,2:20], [@54,242:250='jan_sales',<381>,4:20], [@97,457:465='jan_sales',<381>,7:20]], empid=[[@25,93:97='empid',<381>,2:13], [@52,235:239='empid',<381>,4:13], [@95,450:454='empid',<381>,7:13]], mar_sales=[[@31,122:130='mar_sales',<381>,2:42], [@58,264:272='mar_sales',<381>,4:42], [@101,479:487='mar_sales',<381>,7:42]], feb_sales=[[@29,111:119='feb_sales',<381>,2:31], [@56,253:261='feb_sales',<381>,4:31], [@99,468:476='feb_sales',<381>,7:31]]}, m1={jan_sales=[[@43,196:204='jan_sales',<381>,3:41]], feb_sales=[[@45,207:215='feb_sales',<381>,3:52]]}, m2={jan_sales=[[@70,338:346='jan_sales',<381>,5:41]], feb_sales=[[@72,349:357='feb_sales',<381>,5:52]]}, m3={jan_sales=[[@113,553:561='jan_sales',<381>,8:41]], mar_sales=[[@115,564:572='mar_sales',<381>,8:52]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={jan_sales=[[@27,100:108='jan_sales',<381>,2:20]], empid=[[@25,93:97='empid',<381>,2:13], [@1,7:8='m1',<381>,1:7]], mar_sales=[[@31,122:130='mar_sales',<381>,2:42]], feb_sales=[[@29,111:119='feb_sales',<381>,2:31]]}, query1={jan_sales=[[@54,242:250='jan_sales',<381>,4:20]], empid=[[@52,235:239='empid',<381>,4:13], [@7,23:24='m2',<381>,1:23]], mar_sales=[[@58,264:272='mar_sales',<381>,4:42]], feb_sales=[[@56,253:261='feb_sales',<381>,4:31]]}, query2={jan_sales=[[@97,457:465='jan_sales',<381>,7:20]], empid=[[@95,450:454='empid',<381>,7:13], [@13,39:40='m3',<381>,1:39]], mar_sales=[[@101,479:487='mar_sales',<381>,7:42]], feb_sales=[[@99,468:476='feb_sales',<381>,7:31]]}, query3={month_name=[[@21,69:78='month_name',<381>,1:69], [@79,372:381='month_name',<381>,6:8], [@83,388:397='month_name',<381>,6:24], [@122,587:596='month_name',<381>,9:8], [@126,603:612='month_name',<381>,9:24]], sales_amount=[[@19,55:66='sales_amount',<381>,1:55], [@87,406:417='sales_amount',<381>,6:42], [@91,424:435='sales_amount',<381>,6:60], [@130,623:634='sales_amount',<381>,10:9], [@136,650:661='sales_amount',<381>,11:9], [@142,677:688='sales_amount',<381>,12:9]], e1=[[@5,19:20='e1',<381>,1:19]], e2=[[@11,35:36='e2',<381>,1:35]], e3=[[@17,51:52='e3',<381>,1:51]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query3={query_dictionary={month_name=[[@21,69:78='month_name',<381>,1:69], [@79,372:381='month_name',<381>,6:8], [@83,388:397='month_name',<381>,6:24], [@122,587:596='month_name',<381>,9:8], [@126,603:612='month_name',<381>,9:24]], sales_amount=[[@19,55:66='sales_amount',<381>,1:55], [@87,406:417='sales_amount',<381>,6:42], [@91,424:435='sales_amount',<381>,6:60], [@130,623:634='sales_amount',<381>,10:9], [@136,650:661='sales_amount',<381>,11:9], [@142,677:688='sales_amount',<381>,12:9]], e1=[[@5,19:20='e1',<381>,1:19]], e2=[[@11,35:36='e2',<381>,1:35]], e3=[[@17,51:52='e3',<381>,1:51]]}, table_dictionary={m1={jan_sales=[[@43,196:204='jan_sales',<381>,3:41]], feb_sales=[[@45,207:215='feb_sales',<381>,3:52]]}, m2={jan_sales=[[@70,338:346='jan_sales',<381>,5:41]], feb_sales=[[@72,349:357='feb_sales',<381>,5:52]]}, m3={jan_sales=[[@113,553:561='jan_sales',<381>,8:41]], mar_sales=[[@115,564:572='mar_sales',<381>,8:52]]}}, def_query1={query_dictionary={jan_sales=[[@54,242:250='jan_sales',<381>,4:20]], empid=[[@52,235:239='empid',<381>,4:13], [@7,23:24='m2',<381>,1:23]], mar_sales=[[@58,264:272='mar_sales',<381>,4:42]], feb_sales=[[@56,253:261='feb_sales',<381>,4:31]]}, table_dictionary={monthly_sales={jan_sales=[[@54,242:250='jan_sales',<381>,4:20]], empid=[[@52,235:239='empid',<381>,4:13]], mar_sales=[[@58,264:272='mar_sales',<381>,4:42]], feb_sales=[[@56,253:261='feb_sales',<381>,4:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}, def_query0={query_dictionary={jan_sales=[[@27,100:108='jan_sales',<381>,2:20]], empid=[[@25,93:97='empid',<381>,2:13], [@1,7:8='m1',<381>,1:7]], mar_sales=[[@31,122:130='mar_sales',<381>,2:42]], feb_sales=[[@29,111:119='feb_sales',<381>,2:31]]}, table_dictionary={monthly_sales={jan_sales=[[@27,100:108='jan_sales',<381>,2:20], [@54,242:250='jan_sales',<381>,4:20], [@97,457:465='jan_sales',<381>,7:20]], empid=[[@25,93:97='empid',<381>,2:13], [@52,235:239='empid',<381>,4:13], [@95,450:454='empid',<381>,7:13]], mar_sales=[[@31,122:130='mar_sales',<381>,2:42], [@58,264:272='mar_sales',<381>,4:42], [@101,479:487='mar_sales',<381>,7:42]], feb_sales=[[@29,111:119='feb_sales',<381>,2:31], [@56,253:261='feb_sales',<381>,4:31], [@99,468:476='feb_sales',<381>,7:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}, derivation={source_columns={u1=[{name=jan_sales, table_ref=m1}, {name=feb_sales, table_ref=m1}], u2=[{name=jan_sales, table_ref=m2}, {name=feb_sales, table_ref=m2}], u3=[{name=jan_sales, table_ref=m3}, {name=mar_sales, table_ref=m3}]}, derived_columns={u1={sales_amount=[[@38,164:175='sales_amount',<381>,3:9]], month_name=[[@40,181:190='month_name',<381>,3:26]]}, u2={sales_amount=[[@65,306:317='sales_amount',<381>,5:9]], month_name=[[@67,323:332='month_name',<381>,5:26]]}, u3={sales_amount=[[@108,521:532='sales_amount',<381>,8:9]], month_name=[[@110,538:547='month_name',<381>,8:26]]}}}, filters=[{name=month_name, table_ref=u1}, {name=month_name, table_ref=u2}, {name=sales_amount, table_ref=u1}, {name=sales_amount, table_ref=u2}, {name=month_name, table_ref=u3}, {name=sales_amount, table_ref=u3}], interface={month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=sales_amount, table_ref=null}], e1=[{name=empid, table_ref=m1}], e2=[{name=empid, table_ref=m2}], e3=[{name=empid, table_ref=m3}]}, table_alias={m1=query0, m2=query1, m3=query2, u1=m1, u2=m2, u3=m3}, def_query2={query_dictionary={jan_sales=[[@97,457:465='jan_sales',<381>,7:20]], empid=[[@95,450:454='empid',<381>,7:13], [@13,39:40='m3',<381>,1:39]], mar_sales=[[@101,479:487='mar_sales',<381>,7:42]], feb_sales=[[@99,468:476='feb_sales',<381>,7:31]]}, table_dictionary={monthly_sales={jan_sales=[[@97,457:465='jan_sales',<381>,7:20]], empid=[[@95,450:454='empid',<381>,7:13]], mar_sales=[[@101,479:487='mar_sales',<381>,7:42]], feb_sales=[[@99,468:476='feb_sales',<381>,7:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Phase 17.6.7 paired variant of {@link #triplePivotUnpivotPivotJoinDerivedColumnsV1Test}. */
+	@Test
+	public void triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test() {
+		final String query =
+				"SELECT jan_sales_SUM, sales_amount, month_name, feb_sales_SUM\n"
+						+ "FROM " + V17_6_7_PIVOT_LONG_SRC + " p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales', 'feb_sales')) p\n"
+						+ "JOIN " + V17_6_7_UNPIVOT_WIDE_SRC + " u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "  ON p.jan_sales_SUM = u.sales_amount AND u.month_name = 'jan_sales'\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('feb_sales')) q\n"
+						+ "  ON u.sales_amount = q.feb_sales_SUM\n"
+						+ "WHERE p.jan_sales_SUM > 0\n"
+						+ "  AND u.sales_amount > 0 or sales_amount < 10\n"
+						+ "  AND feb_sales_SUM > 0 and month_name != 'jan_sales'\n"
+						+ "ORDER BY p.jan_sales_SUM, q.feb_sales_SUM, month_name, sales_amount;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'feb_sales_SUM' at (l:1 c:48). Possible sources: [p, q]",
+				null,
+				1,
+				48);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'feb_sales_SUM' at (l:12 c:6). Possible sources: [p, q]",
+				null,
+				12,
+				6);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'sales_amount' at (l:1 c:22). Possible sources: [p, q]",
+				"sales_amount",
+				1,
+				22);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'month_name' at (l:1 c:36). Possible sources: [p, q]",
+				"month_name",
+				1,
+				36);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'sales_amount' at (l:11 c:28). Possible sources: [p, q]",
+				null,
+				11,
+				28);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'month_name' at (l:12 c:28). Possible sources: [p, q]",
+				null,
+				12,
+				28);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'month_name' at (l:13 c:43). Possible sources: [p, q]",
+				null,
+				13,
+				43);
+		assertDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_COLUMN_REFERENCE",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Ambiguous column reference 'sales_amount' at (l:13 c:55). Possible sources: [p, q]",
+				null,
+				13,
+				55);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=jan_sales_SUM, table_ref=null}}, 2={column={name=sales_amount, table_ref=null}}, 3={column={name=month_name, table_ref=null}}, 4={column={name=feb_sales_SUM, table_ref=null}}}, orderby={1={null_order=null, predicand={column={name=jan_sales_SUM, table_ref=p}}, sort_order=ASC}, 2={null_order=null, predicand={column={name=feb_sales_SUM, table_ref=q}}, sort_order=ASC}, 3={null_order=null, predicand={column={name=month_name, table_ref=null}}, sort_order=ASC}, 4={null_order=null, predicand={column={name=sales_amount, table_ref=null}}, sort_order=ASC}}, from={join={1={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}, 2={pivot_literal='feb_sales'}}}, alias=p, table={alias=p_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 2={join=JOIN, on={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=sales_amount, table_ref=u}}, operator==}}, 2={condition={left={column={name=month_name, table_ref=u}}, right={literal='jan_sales'}, operator==}}}}}, 3={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u, table={alias=u_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}, 4={join=JOIN, on={condition={left={column={name=sales_amount, table_ref=u}}, right={column={name=feb_sales_SUM, table_ref=q}}, operator==}}}, 5={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='feb_sales'}}}, alias=q, table={alias=q_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}}}, where={or={1={and={1={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 2={condition={left={column={name=sales_amount, table_ref=u}}, right={literal=0}, operator=>}}}}, 2={and={1={condition={left={column={name=sales_amount, table_ref=null}}, right={literal=10}, operator=<}}, 2={condition={left={column={name=feb_sales_SUM, table_ref=null}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=month_name, table_ref=null}}, right={literal='jan_sales'}, operator=!=}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM, month_name, sales_amount, feb_sales_SUM]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{p_src={month_name=[[@27,167:176='month_name',<381>,3:29], [@96,529:538='month_name',<381>,8:29], [@132,698:707='month_name',<381>,12:28], [@145,767:776='month_name',<381>,13:43]], sales_amount=[[@24,149:160='sales_amount',<381>,3:11], [@93,511:522='sales_amount',<381>,8:11], [@124,652:663='sales_amount',<381>,11:28], [@147,779:790='sales_amount',<381>,13:55]]}, monthly_sales={jan_sales=[[@41,231:239='jan_sales',<381>,4:20]], empid=[[@39,224:228='empid',<381>,4:13]], mar_sales=[[@45,253:261='mar_sales',<381>,4:42]], feb_sales=[[@43,242:250='feb_sales',<381>,4:31]]}, q_src={month_name=[[@96,529:538='month_name',<381>,8:29]], sales_amount=[[@93,511:522='sales_amount',<381>,8:11]]}, u_src={jan_sales=[[@57,330:338='jan_sales',<381>,5:41]], feb_sales=[[@59,341:349='feb_sales',<381>,5:52]]}, monthly_sales_long={empid=[[@11,75:79='empid',<381>,2:13], [@80,437:441='empid',<381>,7:13]], month_name=[[@13,82:91='month_name',<381>,2:20], [@82,444:453='month_name',<381>,7:20]], sales_amount=[[@15,94:105='sales_amount',<381>,2:32], [@84,456:467='sales_amount',<381>,7:32]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query5={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@66,362:374='jan_sales_SUM',<381>,6:7], [@114,606:618='jan_sales_SUM',<381>,10:8], [@139,735:747='jan_sales_SUM',<381>,13:11], [@22,145:147='SUM',<141>,3:7], [@30,182:192=''jan_sales'',<389>,3:44]], month_name=[[@5,36:45='month_name',<381>,1:36], [@74,399:408='month_name',<381>,6:44], [@132,698:707='month_name',<381>,12:28], [@145,767:776='month_name',<381>,13:43], [@54,315:324='month_name',<381>,5:26]], sales_amount=[[@3,22:33='sales_amount',<381>,1:22], [@70,380:391='sales_amount',<381>,6:25], [@106,567:578='sales_amount',<381>,9:7], [@120,632:643='sales_amount',<381>,11:8], [@124,652:663='sales_amount',<381>,11:28], [@147,779:790='sales_amount',<381>,13:55], [@52,298:309='sales_amount',<381>,5:9]], feb_sales_SUM=[[@7,48:60='feb_sales_SUM',<381>,1:48], [@110,584:596='feb_sales_SUM',<381>,9:24], [@128,676:688='feb_sales_SUM',<381>,12:6], [@143,752:764='feb_sales_SUM',<381>,13:28]]}, query0={empid=[[@11,75:79='empid',<381>,2:13]], month_name=[[@13,82:91='month_name',<381>,2:20]], sales_amount=[[@15,94:105='sales_amount',<381>,2:32]]}, query2={jan_sales=[[@41,231:239='jan_sales',<381>,4:20]], empid=[[@39,224:228='empid',<381>,4:13]], mar_sales=[[@45,253:261='mar_sales',<381>,4:42]], feb_sales=[[@43,242:250='feb_sales',<381>,4:31]]}, query3={empid=[[@80,437:441='empid',<381>,7:13]], month_name=[[@82,444:453='month_name',<381>,7:20]], sales_amount=[[@84,456:467='sales_amount',<381>,7:32]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query5={query_dictionary={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@66,362:374='jan_sales_SUM',<381>,6:7], [@114,606:618='jan_sales_SUM',<381>,10:8], [@139,735:747='jan_sales_SUM',<381>,13:11], [@22,145:147='SUM',<141>,3:7], [@30,182:192=''jan_sales'',<389>,3:44]], month_name=[[@5,36:45='month_name',<381>,1:36], [@74,399:408='month_name',<381>,6:44], [@132,698:707='month_name',<381>,12:28], [@145,767:776='month_name',<381>,13:43], [@54,315:324='month_name',<381>,5:26]], sales_amount=[[@3,22:33='sales_amount',<381>,1:22], [@70,380:391='sales_amount',<381>,6:25], [@106,567:578='sales_amount',<381>,9:7], [@120,632:643='sales_amount',<381>,11:8], [@124,652:663='sales_amount',<381>,11:28], [@147,779:790='sales_amount',<381>,13:55], [@52,298:309='sales_amount',<381>,5:9]], feb_sales_SUM=[[@7,48:60='feb_sales_SUM',<381>,1:48], [@110,584:596='feb_sales_SUM',<381>,9:24], [@128,676:688='feb_sales_SUM',<381>,12:6], [@143,752:764='feb_sales_SUM',<381>,13:28]]}, table_dictionary={p_src={month_name=[[@27,167:176='month_name',<381>,3:29], [@96,529:538='month_name',<381>,8:29], [@132,698:707='month_name',<381>,12:28], [@145,767:776='month_name',<381>,13:43]], sales_amount=[[@24,149:160='sales_amount',<381>,3:11], [@93,511:522='sales_amount',<381>,8:11], [@124,652:663='sales_amount',<381>,11:28], [@147,779:790='sales_amount',<381>,13:55]]}, q_src={month_name=[[@96,529:538='month_name',<381>,8:29]], sales_amount=[[@93,511:522='sales_amount',<381>,8:11]]}, u_src={jan_sales=[[@57,330:338='jan_sales',<381>,5:41]], feb_sales=[[@59,341:349='feb_sales',<381>,5:52]]}}, def_query0={query_dictionary={empid=[[@11,75:79='empid',<381>,2:13]], month_name=[[@13,82:91='month_name',<381>,2:20]], sales_amount=[[@15,94:105='sales_amount',<381>,2:32]]}, table_dictionary={monthly_sales_long={empid=[[@11,75:79='empid',<381>,2:13], [@80,437:441='empid',<381>,7:13]], month_name=[[@13,82:91='month_name',<381>,2:20], [@82,444:453='month_name',<381>,7:20]], sales_amount=[[@15,94:105='sales_amount',<381>,2:32], [@84,456:467='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], q=[{name=month_name, table_ref=q_src}, {name=sales_amount, table_ref=q_src}], u=[{name=jan_sales, table_ref=u_src}, {name=feb_sales, table_ref=u_src}]}, derived_columns={p={jan_sales_SUM=[[@22,145:147='SUM',<141>,3:7], [@30,182:192=''jan_sales'',<389>,3:44]], feb_sales_SUM=[[@22,145:147='SUM',<141>,3:7], [@32,195:205=''feb_sales'',<389>,3:57]]}, q={feb_sales_SUM=[[@91,507:509='SUM',<141>,8:7], [@99,544:554=''feb_sales'',<389>,8:44]]}, u={sales_amount=[[@52,298:309='sales_amount',<381>,5:9]], month_name=[[@54,315:324='month_name',<381>,5:26]]}}}, ordered_by=[{name=jan_sales_SUM, table_ref=p}, {name=feb_sales_SUM, table_ref=q}, {name=month_name, table_ref=u}, {name=jan_sales, table_ref=u_src}, {name=feb_sales, table_ref=u_src}, {name=sales_amount, table_ref=u}], filters=[{name=jan_sales_SUM, table_ref=p}, {name=sales_amount, table_ref=u}, {name=month_name, table_ref=u}, {name=feb_sales_SUM, table_ref=q}, {name=jan_sales, table_ref=u_src}, {name=feb_sales, table_ref=u_src}, {name=feb_sales_SUM, table_ref=null}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], month_name=[{name=month_name, table_ref=u}, {name=jan_sales, table_ref=u_src}, {name=feb_sales, table_ref=u_src}], sales_amount=[{name=sales_amount, table_ref=u}, {name=jan_sales, table_ref=u_src}, {name=feb_sales, table_ref=u_src}], feb_sales_SUM=[{name=feb_sales_SUM, table_ref=null}]}, def_query3={query_dictionary={empid=[[@80,437:441='empid',<381>,7:13]], month_name=[[@82,444:453='month_name',<381>,7:20]], sales_amount=[[@84,456:467='sales_amount',<381>,7:32]]}, table_dictionary={monthly_sales_long={empid=[[@80,437:441='empid',<381>,7:13]], month_name=[[@82,444:453='month_name',<381>,7:20]], sales_amount=[[@84,456:467='sales_amount',<381>,7:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, table_alias={p_src=query0, u_src=query2, q_src=query3, p=p_src, q=q_src, u=u_src}, def_query2={query_dictionary={jan_sales=[[@41,231:239='jan_sales',<381>,4:20]], empid=[[@39,224:228='empid',<381>,4:13]], mar_sales=[[@45,253:261='mar_sales',<381>,4:42]], feb_sales=[[@43,242:250='feb_sales',<381>,4:31]]}, table_dictionary={monthly_sales={jan_sales=[[@41,231:239='jan_sales',<381>,4:20]], empid=[[@39,224:228='empid',<381>,4:13]], mar_sales=[[@45,253:261='mar_sales',<381>,4:42]], feb_sales=[[@43,242:250='feb_sales',<381>,4:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Phase 17.6.7 paired variant of {@link #tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}. */
+	@Test
+	public void tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test() {
+		final String query =
+				"SELECT u1_src.empid AS e1, jan_sales_SUM, u2_src.empid AS e2, sales_amount, month_name\n"
+						+ "FROM " + V17_6_7_UNPIVOT_WIDE_SRC + " u1_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u1\n"
+						+ "JOIN " + V17_6_7_PIVOT_LONG_SRC + " p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "  ON u1.sales_amount = p.jan_sales_SUM\n"
+						+ "JOIN " + V17_6_7_UNPIVOT_WIDE_SRC + " u2_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (feb_sales, mar_sales)) u2\n"
+						+ "  ON p.jan_sales_SUM = u2.sales_amount\n"
+						+ "WHERE u1.sales_amount > 10\n"
+						+ "  AND p.jan_sales_SUM > 0\n"
+						+ "  AND u2.sales_amount > 10;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'sales_amount' at (l:1 c:62). Possible sources: [u1, u2]",
+				"sales_amount",
+				1,
+				62);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'month_name' at (l:1 c:76). Possible sources: [u1, u2]",
+				"month_name",
+				1,
+				76);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=empid, table_ref=u1_src}, alias=e1}, 2={column={name=jan_sales_SUM, table_ref=null}}, 3={column={name=empid, table_ref=u2_src}, alias=e2}, 4={column={name=sales_amount, table_ref=null}}, 5={column={name=month_name, table_ref=null}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u1, table={alias=u1_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}, 2={join=JOIN, on={condition={left={column={name=sales_amount, table_ref=u1}}, right={column={name=jan_sales_SUM, table_ref=p}}, operator==}}}, 3={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=p_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}, 4={join=JOIN, on={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={column={name=sales_amount, table_ref=u2}}, operator==}}}, 5={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=feb_sales, table_ref=null}, 2={name=mar_sales, table_ref=null}}}, alias=u2, table={alias=u2_src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}, 4={column={name=mar_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}}}, where={and={1={condition={left={column={name=sales_amount, table_ref=u1}}, right={literal=10}, operator=>}}, 2={condition={left={column={name=jan_sales_SUM, table_ref=p}}, right={literal=0}, operator=>}}, 3={condition={left={column={name=sales_amount, table_ref=u2}}, right={literal=10}, operator=>}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM, month_name, sales_amount, e1, e2]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{p_src={month_name=[[@64,338:347='month_name',<381>,5:29]], sales_amount=[[@61,320:331='sales_amount',<381>,5:11]]}, monthly_sales={jan_sales=[[@23,107:115='jan_sales',<381>,2:20], [@84,428:436='jan_sales',<381>,7:20]], empid=[[@21,100:104='empid',<381>,2:13], [@82,421:425='empid',<381>,7:13]], mar_sales=[[@27,129:137='mar_sales',<381>,2:42], [@88,450:458='mar_sales',<381>,7:42]], feb_sales=[[@25,118:126='feb_sales',<381>,2:31], [@86,439:447='feb_sales',<381>,7:31]]}, u2_src={mar_sales=[[@102,539:547='mar_sales',<381>,8:52]], feb_sales=[[@100,528:536='feb_sales',<381>,8:41]]}, u1_src={jan_sales=[[@39,207:215='jan_sales',<381>,3:41]], feb_sales=[[@41,218:226='feb_sales',<381>,3:52]]}, monthly_sales_long={empid=[[@48,246:250='empid',<381>,4:13]], month_name=[[@50,253:262='month_name',<381>,4:20]], sales_amount=[[@52,265:276='sales_amount',<381>,4:32]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query4={jan_sales_SUM=[[@7,27:39='jan_sales_SUM',<381>,1:27], [@78,394:406='jan_sales_SUM',<381>,6:25], [@109,561:573='jan_sales_SUM',<381>,9:7], [@123,628:640='jan_sales_SUM',<381>,11:8], [@59,316:318='SUM',<141>,5:7], [@67,353:363=''jan_sales'',<389>,5:44]], month_name=[[@17,76:85='month_name',<381>,1:76]], sales_amount=[[@15,62:73='sales_amount',<381>,1:62], [@74,377:388='sales_amount',<381>,6:8], [@113,580:591='sales_amount',<381>,9:26], [@117,602:613='sales_amount',<381>,10:9], [@129,655:666='sales_amount',<381>,12:9]], e1=[[@5,23:24='e1',<381>,1:23]], e2=[[@13,58:59='e2',<381>,1:58]]}, query0={jan_sales=[[@23,107:115='jan_sales',<381>,2:20]], empid=[[@21,100:104='empid',<381>,2:13], [@1,7:12='u1_src',<381>,1:7]], mar_sales=[[@27,129:137='mar_sales',<381>,2:42]], feb_sales=[[@25,118:126='feb_sales',<381>,2:31]]}, query1={empid=[[@48,246:250='empid',<381>,4:13]], month_name=[[@50,253:262='month_name',<381>,4:20]], sales_amount=[[@52,265:276='sales_amount',<381>,4:32]]}, query3={jan_sales=[[@84,428:436='jan_sales',<381>,7:20]], empid=[[@82,421:425='empid',<381>,7:13], [@9,42:47='u2_src',<381>,1:42]], mar_sales=[[@88,450:458='mar_sales',<381>,7:42]], feb_sales=[[@86,439:447='feb_sales',<381>,7:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query4={query_dictionary={jan_sales_SUM=[[@7,27:39='jan_sales_SUM',<381>,1:27], [@78,394:406='jan_sales_SUM',<381>,6:25], [@109,561:573='jan_sales_SUM',<381>,9:7], [@123,628:640='jan_sales_SUM',<381>,11:8], [@59,316:318='SUM',<141>,5:7], [@67,353:363=''jan_sales'',<389>,5:44]], month_name=[[@17,76:85='month_name',<381>,1:76]], sales_amount=[[@15,62:73='sales_amount',<381>,1:62], [@74,377:388='sales_amount',<381>,6:8], [@113,580:591='sales_amount',<381>,9:26], [@117,602:613='sales_amount',<381>,10:9], [@129,655:666='sales_amount',<381>,12:9]], e1=[[@5,23:24='e1',<381>,1:23]], e2=[[@13,58:59='e2',<381>,1:58]]}, table_dictionary={p_src={month_name=[[@64,338:347='month_name',<381>,5:29]], sales_amount=[[@61,320:331='sales_amount',<381>,5:11]]}, u2_src={mar_sales=[[@102,539:547='mar_sales',<381>,8:52]], feb_sales=[[@100,528:536='feb_sales',<381>,8:41]]}, u1_src={jan_sales=[[@39,207:215='jan_sales',<381>,3:41]], feb_sales=[[@41,218:226='feb_sales',<381>,3:52]]}}, def_query1={query_dictionary={empid=[[@48,246:250='empid',<381>,4:13]], month_name=[[@50,253:262='month_name',<381>,4:20]], sales_amount=[[@52,265:276='sales_amount',<381>,4:32]]}, table_dictionary={monthly_sales_long={empid=[[@48,246:250='empid',<381>,4:13]], month_name=[[@50,253:262='month_name',<381>,4:20]], sales_amount=[[@52,265:276='sales_amount',<381>,4:32]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, def_query0={query_dictionary={jan_sales=[[@23,107:115='jan_sales',<381>,2:20]], empid=[[@21,100:104='empid',<381>,2:13], [@1,7:12='u1_src',<381>,1:7]], mar_sales=[[@27,129:137='mar_sales',<381>,2:42]], feb_sales=[[@25,118:126='feb_sales',<381>,2:31]]}, table_dictionary={monthly_sales={jan_sales=[[@23,107:115='jan_sales',<381>,2:20], [@84,428:436='jan_sales',<381>,7:20]], empid=[[@21,100:104='empid',<381>,2:13], [@82,421:425='empid',<381>,7:13]], mar_sales=[[@27,129:137='mar_sales',<381>,2:42], [@88,450:458='mar_sales',<381>,7:42]], feb_sales=[[@25,118:126='feb_sales',<381>,2:31], [@86,439:447='feb_sales',<381>,7:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], u1=[{name=jan_sales, table_ref=u1_src}, {name=feb_sales, table_ref=u1_src}], u2=[{name=feb_sales, table_ref=u2_src}, {name=mar_sales, table_ref=u2_src}]}, derived_columns={p={jan_sales_SUM=[[@59,316:318='SUM',<141>,5:7], [@67,353:363=''jan_sales'',<389>,5:44]]}, u1={sales_amount=[[@34,175:186='sales_amount',<381>,3:9]], month_name=[[@36,192:201='month_name',<381>,3:26]]}, u2={sales_amount=[[@95,496:507='sales_amount',<381>,8:9]], month_name=[[@97,513:522='month_name',<381>,8:26]]}}}, filters=[{name=sales_amount, table_ref=u1}, {name=jan_sales_SUM, table_ref=p}, {name=sales_amount, table_ref=u2}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=sales_amount, table_ref=null}], e1=[{name=empid, table_ref=u1_src}], e2=[{name=empid, table_ref=u2_src}]}, def_query3={query_dictionary={jan_sales=[[@84,428:436='jan_sales',<381>,7:20]], empid=[[@82,421:425='empid',<381>,7:13], [@9,42:47='u2_src',<381>,1:42]], mar_sales=[[@88,450:458='mar_sales',<381>,7:42]], feb_sales=[[@86,439:447='feb_sales',<381>,7:31]]}, table_dictionary={monthly_sales={jan_sales=[[@84,428:436='jan_sales',<381>,7:20]], empid=[[@82,421:425='empid',<381>,7:13]], mar_sales=[[@88,450:458='mar_sales',<381>,7:42]], feb_sales=[[@86,439:447='feb_sales',<381>,7:31]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], mar_sales=[{name=mar_sales, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}, table_alias={u1_src=query0, p_src=query1, u2_src=query3, p=p_src, u1=u1_src, u2=u2_src}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+
 	// --- §17.7.7-gap-fill (focused matrix cells) ---
 
 	/**

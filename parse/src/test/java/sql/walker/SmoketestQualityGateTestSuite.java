@@ -28,7 +28,7 @@ import org.junit.Test;
  *   <li>Phase 13.4 intra–select-list forward alias (5): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}; {@code selfReferenceColumnAliasInSameSelectListHappyPathV1Test}, {@code selfReferenceColumnAliasReversedOrderUnresolvedV2Test}, {@code selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test}, {@code selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test}</li>
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
- *   <li>PIVOT / UNPIVOT multi-modifier 17.7 gate (2): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}</li>
+ *   <li>PIVOT / UNPIVOT multi-modifier gate (7): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}; Phase 17.6.7 subquery-backed triple variants ({@code triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test}, {@code tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test}, {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test})</li>
  *   <li>PIVOT / UNPIVOT subset B clause probes (14): JOIN ON, GROUP/ORDER, HAVING/ORDER, QUALIFY, ORDER BY expression, FromDerived, WithTax, JoinTargets, {@code monthly_sales_long} join/tax-where/join-filter/order-by, pivot IN-list WHERE — see §17.7.7-matrix subset B</li>
  *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
  *   <li>Endpoint parser extensions (2): {@code basicTupleSubstitutionVariableTest}, {@code inListVariableSubstitutionTest}</li>
@@ -486,7 +486,7 @@ public class SmoketestQualityGateTestSuite {
 		pivotUnpivotTests.pivotInIdentifierResolvedFromSubqueryWarningV1Test();
 	}
 
-	// --- PIVOT / UNPIVOT multi-modifier 17.7 gate (2) ---
+	// --- PIVOT / UNPIVOT multi-modifier gate (7) — 17.7 contract + 17.6.7 subquery FROM ---
 
 	@Test
 	public void tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test() {
@@ -496,6 +496,31 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void triplePivotUnpivotPivotJoinDerivedColumnsV1Test() {
 		pivotUnpivotTests.triplePivotUnpivotPivotJoinDerivedColumnsV1Test();
+	}
+
+	@Test
+	public void triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test() {
+		pivotUnpivotTests.triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test();
+	}
+
+	@Test
+	public void triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test() {
+		pivotUnpivotTests.triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test();
+	}
+
+	@Test
+	public void tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test() {
+		pivotUnpivotTests.tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test();
+	}
+
+	@Test
+	public void triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test() {
+		pivotUnpivotTests.triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test();
+	}
+
+	@Test
+	public void tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test() {
+		pivotUnpivotTests.tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test();
 	}
 
 	// --- PIVOT / UNPIVOT subset B clause probes (14) — §17.7.7-matrix ---
