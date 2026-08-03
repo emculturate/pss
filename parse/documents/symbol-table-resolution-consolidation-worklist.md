@@ -1710,7 +1710,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | 🔄 In progress | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` across interface + clause egress via `forEachConvertEgressUnqualifiedColumnRefSite`; per-site locations on detached clause copies (`15b6f7b`). `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` + `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` (2× fatal) green. **Not converged:** interface loop still pre-consumes / expands derived before diagnose — see **17.7.5b**. |
 | **17.7.5b** | **Convert egress derived-phase convergence** | 🔄 Active | Single derived phase → single normal phase → strip + consolidate. **No** special-case sequencing for “one ref / one bucket” vs multi-bucket ambiguous. See subsection below. |
 | **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. **Depends on 17.7.5b** for dedupe/consolidate timing (after derived + normal phases). |
-| **17.7.7** | **Tests + golden review** | 🔄 In progress | `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` (17.7.5) green for table/query dict; `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` (17.7.5) green for 2× ambiguous derived; **17.7.4** diagnostics; pivot class golden refresh under **17.6 golden review policy** (many tests still expect pre-17.7 `query_dictionary` shapes). |
+| **17.7.7** | **Tests + golden review** | 🔄 In progress | Gate: `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`. Pivot class **coverage matrix + subset golden refresh** (**§17.7.7-matrix**); **bulk new happy/unhappy tests** for matrix gaps (**§17.7.7-gap-fill**). Deferred large-sample goldens: **§17.7.7-deferred-large-sample-goldens**. |
 | **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ⏸️ Open | **After** 17.7.1–17.7.2 green + **17.7.7** contract tests pass: **delete** `pruneRelationalModifierDerivedColumnsFromTableDictionary` and equivalents. Post-removal: misplaced derived outputs on physical keys = finalize bug, never restore convert stripping. **Closeout test matrix (add with 17.7.7):** four **pairs** (physical table + subquery-backed modifier source) for **derived vs non-derived** ambiguity — (1) unqualified SELECT column ambiguous between **PIVOT derived output** and same-named **physical** column on modifier source table; (2) same for **UNPIVOT derived** (VALUE/FOR) vs physical; repeat (1)–(2) when modifier immediate source is **`FROM (SELECT …) alias`** instead of physical table. Goldens per review policy; not bulk-copied from sibling tests. |
 | **17.7.9** *(optional)* | **Diagnostic (3): qualified derived column inside modifier scope** | ⏸️ Optional | **Not fully covered today.** **17.0b** ✅ FATAL `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` for **UNPIVOT VALUE/FOR** with any `table_ref` prefix. **PIVOT** phrase operands remain **physical** (WARNING `RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT` / FATAL `…_INVALID` per **16.4**). **Gap:** no finalize pass that rejects **any** qualified reference to a **relational-modifier derived output** collected under `derivation.derived_columns[bucket]` inside the PIVOT/UNPIVOT symbol scope (including PIVOT-derived names referenced inside the phrase, or qualified derived tokens in modifier-local maps). **Policy:** inside `table_primary` / `tuple_primary` modifier subtree, derived outputs must appear **unqualified** in SQL; published `interface` / `derivation` entries get `table_ref` = modifier alias, `tuple_N`, table name, or `queryN` — never the user’s `p_src`-style source alias on the in-phrase reference. Emit new diagnostic (severity TBD, likely FATAL) at modifier finalize or operand walk when a derived bucket name is captured with a non-blank qualifier. |
 | **17.7.10** *(optional)* | **Diagnostic (4): derived ref qualified with source alias outside primary** | ⏸️ Optional | **Not implemented.** When a column ref **outside** `table_primary` / `tuple_primary` (JOIN ON, WHERE, SELECT list, etc. — anywhere outside the relational-modifier grammar walk) names a **structured derived output** (`derivation.derived_columns`) and the qualifier matches the modifier’s **immediate source table alias** (`p_src`, `u_src`, … from `FROM … alias`) but **not** the relational-operator alias (`p`, `u`, `q`), emit **SEVERE_WARNING** (e.g. `RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS`). Message: poorly formed / confusing — derived outputs should be qualified with the **modifier alias**, not the source-primary alias. **Resolution policy:** **allow both** `p` and `p_src` (and both entries on published `table_alias`); do **not** fatal or reject the ref. Example: `ON p_src.jan_sales_SUM = …` vs `ON p.jan_sales_SUM = …` on a triple pivot/unpivot join — former warns, latter clean. Do **not** warn when the qualifier is the modifier alias, a `queryN` ref, or an unrelated join alias. Hook: convert egress clause harvest (**17.7.6**) or dedicated visitor over archived `filters` / JOIN ON after structured `derivation` is visible. |
@@ -1720,7 +1720,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 1. **17.7.1** → verify triple u1/p/u2 table_dictionary.
 2. **17.7.2** → derivation-only publish + modifier-local derived prune at finalize.
 3. **17.7.3** (minimal / delete paths as 17.7.1–17.7.2 absorb behavior) → **17.7.5** + **17.7.4** diagnostics + **17.7.6** harvest.
-4. **17.7.7** — behavioral + diagnostic tests.
+4. **17.7.7** — **§17.7.7-matrix** subset golden refresh (A→E) + **§17.7.7-gap-fill** new tests; keep gate tests green.
 5. **17.7.8** — mandatory closeout: remove convert prune; full pivot/unpivot suite + gate.
 
 **Parallel with 17.6:** **17.6.8** egress token merge can continue in parallel; **17.6.2** should land via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
@@ -1801,6 +1801,127 @@ These are **optional** additions after **17.7.4–17.7.6** (or alongside **17.7.
 
 - **17.7.9:** qualified PIVOT-derived name inside phrase (if grammatically allowed) or qualified derived token in modifier-local collection → FATAL.
 - **17.7.10:** `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` variant with `p_src.jan_sales_SUM` on ON line 6 → one SEVERE_WARNING; symbol table / `filters` still resolve the ref (e.g. `table_ref=p_src` or equivalent); compare to `p.` variant with no warning.
+
+### §17.7.7-matrix — Pivot/unpivot test classification and golden refresh plan
+
+**Class:** `SqlEventWalkerPivotUnpivotTests` (~100 methods). **Policy:** refresh goldens under **17.6 golden review policy** (behavioral intent; do not blind-copy sibling tests). **Gate tests (stay green every subset):** `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`.
+
+#### Dimension A — Modifier topology (arity / mix)
+
+| Code | Meaning | Approx. coverage today |
+|------|---------|-------------------------|
+| **S1-P** | Single PIVOT | ~45 tests (`pivotV1*`, `pivotBasic*`, `pivotSameQuery*`, …) |
+| **S1-U** | Single UNPIVOT | ~22 tests (`unpivotV0`–`V9`, probes, …) |
+| **S2-PP** | Two PIVOTs (no unpivot) | `triplePivotJoinDerivedColumnsAcrossTuplesV1Test` |
+| **S2-UU** | Two UNPIVOTs | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` |
+| **S2-PU** | One PIVOT + one UNPIVOT | (thin — mostly folded into triples) |
+| **S3** | Three modifiers (e.g. P–U–P, U–P–U) | `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` |
+| **T0** | Tuple/generator endpoint | `generatorDirectFromListTupleEndpointNakedSyntaxBuildsSameAstShapeTest` |
+
+#### Dimension B — Egress bucket (where the column ref is harvested)
+
+| Bucket | Key / probe |
+|--------|-------------|
+| SELECT (interface) | `interface` / `query_dictionary` output names |
+| WHERE | `filters` |
+| GROUP BY | `grouped_by` |
+| HAVING | `grouped_by` / `filters` (as walked) |
+| ORDER BY | `ordered_by` |
+| JOIN ON | `filters` (join condition archive) |
+| QUALIFY | clause probe tests `*Qualify*` |
+| UPDATE SET / WHERE | `assignments` RHS + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` |
+
+Deferred clause harvest + token merge apply **only** when structured `derivation` is present on the frame (see `convertEgressScopeHasRelationalModifierStructuredDerivation`).
+
+#### Dimension C — Column kind and qualification
+
+| Kind | What it is in `derivation` | Unqualified | Qualified (`p` / modifier alias) | Qualified (`p_src` / source alias) |
+|------|----------------------------|-------------|--------------------------------|-------------------------------------|
+| **Derived output** | `derived_columns[bucket]` (e.g. `jan_sales_SUM`, unpivot `sales_amount` / `month_name` outputs) | SELECT + clauses; ambiguous → `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` | `pivotQualifiedOperands*`, triple ON `p.jan_sales_SUM` | Future **17.7.10** (warn on `p_src.` outside phrase) |
+| **Source operand** | `source_columns[bucket]` (PIVOT aggregate/FOR cols; UNPIVOT **IN-list** physical cols) | Probes + triple `sales_amount`/`month_name` across `p`/`q` → `AMBIGUOUS_COLUMN_REFERENCE` | Physical-operand policy **16.4** (redundant/invalid WARNING/FATAL) | Same |
+| **UNPIVOT phrase VALUE/FOR identifiers** | Names the **derived outputs** the UNPIVOT will create — **not** physical `source_columns` | **Happy:** `UNPIVOT (sales_amount FOR month_name IN (…))` — must be **unqualified** in the phrase | **Unhappy:** any `alias.sales_amount` or `alias.month_name` **inside the UNPIVOT parentheses** → **17.0b** FATAL (see glossary below) | Same FATAL (prefix is never allowed on VALUE/FOR) |
+| **UNPIVOT IN-list** | Physical columns on source table (`jan_sales`, …) | Unqualified IN identifiers | Qualified IN → **16.4-style** WARNING (redundant) / FATAL (invalid alias) — **not** 17.0b |
+
+#### Dimension D — Outcome
+
+| Outcome | Examples |
+|---------|----------|
+| **Happy** | `assertNoWalkerDiagnostics`; stable `derivation` + `interface` + `table_dictionary` |
+| **Unhappy — derived ambiguity** | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` (`feb_sales_SUM` on `p`+`q`) |
+| **Unhappy — source ambiguity** | `AMBIGUOUS_COLUMN_REFERENCE` (same operand on `p`+`q` buckets) |
+| **Unhappy — in-phrase qualifiers** | `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` (17.0b), `RELATIONAL_MODIFIER_QUALIFIED_OPERAND_*` (16.4) |
+| **Unhappy — IN / interface** | `PIVOT_IN_IDENTIFIER_UNRESOLVED`, set-op / interface fatals (mostly outside this class) |
+
+#### Glossary — UNPIVOT VALUE, FOR, and IN (why the matrix row looked confusing)
+
+Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **three different roles**:
+
+1. **VALUE** (`sales_amount` in `UNPIVOT (sales_amount …)`) — names the **new derived column** that will hold unpivoted measure values. It is **not** “pick column `sales_amount` from table `msl`” in the phrase; it declares the output column identity. After unpivot, `derivation.derived_columns[bucket].sales_amount` holds lineage from IN-list columns.
+
+2. **FOR** (`month_name` in `FOR month_name`) — names the **new derived column** that will hold the pivot key labels (which IN column each row came from). Same derived namespace as VALUE.
+
+3. **IN** (`jan_sales`, `feb_sales`, …) — names **existing physical columns** on the source table. These are **source operands** (`derivation.source_columns`), same spirit as PIVOT IN identifiers.
+
+**Phase 17.0b** (done): If the user writes `UNPIVOT (msl.sales_amount FOR msl.month_name IN (jan_sales, …))`, the parser still parses `table_ref=msl` on VALUE/FOR in the AST, but **operand validation at modifier exit** emits **FATAL** `RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED` because VALUE/FOR must be **unqualified** — qualifying them wrongly suggests a physical column reference. Tests: `unpivotQualifiedDerivedOperandsFatalTest`, `unpivotWrongQualifierOperandFatalTest`, `unpivotQualifiedValueDerivedOperandFatalTest`. **Contrast:** `UNPIVOT (sales_amount FOR month_name IN (msl.jan_sales, …))` qualifies **IN-list** operands → **physical** policy (WARNING/FATAL), tested by `unpivotQualifiedInListOperandsRedundantWarningTest`. **Happy baseline:** `unpivotQualifiedOperandsUnqualifiedParityTest` (clean phrase, no qualifier diagnostics).
+
+**Happy “unpivot selects”** in the matrix = normal queries like `unpivotV1Test` / `unpivotBasicMonthSalesV7Test`: unqualified VALUE/FOR, resolved derived outputs on `interface`, no 17.0b fatals.
+
+#### Golden refresh subsets (review one subset per cycle)
+
+| Subset | Theme | ~Count | Representative tests |
+|--------|--------|--------|---------------------|
+| **A** | S1 baseline happy | ~18 | `unpivotV0/V1`, `pivotV1Tab1`, `pivotV1Query`, `pivotBasic*`, `unpivotBasic*`, `pivotInIdentifierResolved*`, `unpivotPostModifierAliasV1` |
+| **B** | S1 clause probes | ~32 | `*JoinOn*`, `*GroupOrder*`, `*HavingOrder*`, `*Qualify*`, `*OrderByExpression*`, `monthly_sales_long*`, `*WithTax*`, `*FromDerived*` |
+| **C** | Qualifiers & fatals (16.4 + 17.0b) | ~28 | `pivotQualifiedOperands*`, `*UnqualifiedParity*`, `unpivotQualified*`, `*WrongQualifier*`, `pivotInIdentifier*Fatal*` |
+| **D** | Derived vs physical / nested / CTE / DML | ~16 | `pivotSameQuery*`, `pivotNested*`, `pivotUpdate*`, `pivotCte*`, `unpivotCte*` |
+| **E** | Multi-modifier + 17.7 contract | ~6 | `triple*`, `pivotUnqualifiedOuterOutputs*`, gate tests |
+
+**Checklist — subset golden refresh (17.7.7):**
+
+- [ ] **A** — run subset, update goldens, review
+- [ ] **B** — …
+- [ ] **C** — …
+- [ ] **D** — …
+- [ ] **E** — … (includes gate tests; confirm no regression)
+
+### §17.7.7-gap-fill — Bulk missing matrix combinations (new tests)
+
+**Goal:** After classifying existing tests (tag with A–E + dimensions above), **add** focused tests for empty or weak cells — both **happy** (correct `derivation`, `filters`/`interface` binding, `query_dictionary` tokens) and **unhappy** (each diagnostic type from each bucket).
+
+**Priority gaps (from matrix audit Aug 2026):**
+
+| Gap | Happy test intent | Unhappy test intent |
+|-----|-------------------|---------------------|
+| **S3** × GROUP BY / HAVING | Triple join + `GROUP BY` unqualified derived | Ambiguous derived in `GROUP BY` |
+| **S3** × unqual **source** in `grouped_by` / `ordered_by` only | Tuple-qualified + unqual operand | `AMBIGUOUS_COLUMN_REFERENCE` per site |
+| **S2-PU** systematic | Double join pivot+unpivot, each clause | Derived vs source ambiguity one modifier at a time |
+| **Derived** in UPDATE RHS with modifier join | Extend `pivotUpdateFromRhs*` pattern | Ambiguous derived on RHS |
+| **17.7.10** | `p.jan_sales_SUM` ON (no warning) | `p_src.jan_sales_SUM` ON → one SEVERE_WARNING |
+| **17.7.9** (optional) | — | Qualified **PIVOT-derived** name inside phrase (if grammar allows) |
+| **17.7.8 closeout matrix** | Physical vs subquery-backed modifier source | Unqualified ambiguous derived **vs** same-named physical column (four pairs in 17.7.8 table) |
+
+**Checklist — gap-fill (17.7.7-gap-fill):**
+
+- [ ] Tag every existing `SqlEventWalkerPivotUnpivotTests` method with matrix codes (comment header or companion doc table).
+- [ ] Produce **coverage heatmap** (topology × bucket × kind × outcome); mark empty cells.
+- [ ] Add **minimum one happy + one unhappy** test per empty **high-priority** cell (S2/S3 × filters/ordered_by/grouped_by × derived/source).
+- [ ] Wire new tests into subset **E** (or gate) when they assert 17.7 contract behavior.
+- [ ] Re-enable **§17.7.7-deferred-large-sample-goldens** only after pivot class A–E refresh stabilizes.
+
+### §17.7.7-deferred-large-sample-goldens (end of 17.7 track — do not forget)
+
+**Status:** ⏸️ Deferred while pivot/unpivot class goldens and 17.7.5b convergence land.
+
+**Ignored tests (re-enable when refreshing diagnostic goldens):**
+
+| Test class | Method |
+|------------|--------|
+| `SqlEventWalkerLiveSampleQueriesTests` | `largeStudentgeneralQueryParseTest`, `largeStudentgeneralQueryParseExceptTest` |
+| `SqlParseEventWalkerWithAccessObjectTest` | `multipleIntersectSubqueryInterfaceValidationV2Test`, `multipleExceptSubqueryInterfaceValidationV2Test`, `multipleIntersectSubqueryInterfaceValidationV2ExceptTest` |
+
+**Why deferred:** Large production-shaped queries and set-op interface validation matrices; failures are **`AMBIGUOUS_COLUMN_REFERENCE` severe-warning list** / fatal-count drift vs pre-17.7 expectations — not pivot contract regressions. Revisit **after** `SqlEventWalkerPivotUnpivotTests` subset golden refresh (below) and 17.7.5b.
+
+**Pivot class golden refresh plan (in progress — prep only, no bulk update yet):** See handoff note in chat / PR: five subsets (A–E), coverage matrix (modifier arity × clause bucket × qual/unqual × happy/unhappy diagnostics). Gate: `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` + `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` stay green throughout.
 
 ---
 
