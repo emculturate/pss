@@ -1872,13 +1872,15 @@ public class SqlParseSymbolTreeHelper {
 		if (interfaceObj instanceof HashMap<?, ?> interfaceMapObj) {
 			applyUnpivotDerivationsToQueryScope(
 					(HashMap<String, Object>) interfaceMapObj,
-					ctx);
+					ctx,
+					activeConvertEgressDerivedColumns);
 		}
 	}
 
 	public void applyUnpivotDerivationsToQueryScope(
 			HashMap<String, Object> localInterface,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			HashMap<String, Object> localDerivedColumns) {
 		if (localInterface == null || localInterface.isEmpty()
 				|| relationalModifierContext == null
 				|| relationalModifierContext.isEmpty()
@@ -1901,6 +1903,15 @@ public class SqlParseSymbolTreeHelper {
 				|| sourceRef == null
 				|| sourceRef.isBlank()
 				|| inColumns.isEmpty()) {
+			return;
+		}
+
+		// Legacy single-unpivot VALUE→IN-list rewrite must not run when multiple sibling
+		// modifiers expose the same structured derived name (17.6.2 / 17.7.5).
+		if (isAmbiguousUnqualifiedStructuredDerivedColumn(
+				valueColumn,
+				null,
+				localDerivedColumns)) {
 			return;
 		}
 
@@ -4495,7 +4506,10 @@ public class SqlParseSymbolTreeHelper {
 		}
 		}
 
-		applyUnpivotDerivationsToQueryScope(localInterface, activeConvertEgressRelationalModifierContext);
+		applyUnpivotDerivationsToQueryScope(
+				localInterface,
+				activeConvertEgressRelationalModifierContext,
+				localDerivedColumns);
 
 		materializeSelectedUnpivotInColumnsIntoSourceDictionary(
 				localCurrentQueryDictionary,

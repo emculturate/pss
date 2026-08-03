@@ -3440,6 +3440,13 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"month_name",
 				1,
 				69);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'sales_amount' at (l:1 c:55). Possible sources: [u1, u2, u3]",
+				"sales_amount",
+				1,
+				55);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=m1}, alias=e1}, 2={column={name=empid, table_ref=m2}, alias=e2}, 3={column={name=empid, table_ref=m3}, alias=e3}, 4={column={name=sales_amount, table_ref=null}}, 5={column={name=month_name, table_ref=null}}}, from={join={1={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u1, table={alias=m1, table=monthly_sales}}, 2={join=JOIN, on={and={1={condition={left={column={name=month_name, table_ref=u1}}, right={column={name=month_name, table_ref=u2}}, operator==}}, 2={condition={left={column={name=sales_amount, table_ref=u1}}, right={column={name=sales_amount, table_ref=u2}}, operator==}}}}}, 3={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u2, table={alias=m2, table=monthly_sales}}, 4={join=JOIN, on={condition={left={column={name=month_name, table_ref=u2}}, right={column={name=month_name, table_ref=u3}}, operator==}}}, 5={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=mar_sales, table_ref=null}}}, alias=u3, table={alias=m3, table=monthly_sales}}}}, where={and={1={condition={left={column={name=sales_amount, table_ref=u1}}, right={literal=10}, operator=>}}, 2={condition={left={column={name=sales_amount, table_ref=u2}}, right={literal=10}, operator=>}}, 3={condition={left={column={name=sales_amount, table_ref=u3}}, right={literal=10}, operator=>}}}}}}",
 				extractor.getAsTree().toString());
@@ -3454,7 +3461,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"{query0={month_name=[[@21,69:78='month_name',<381>,1:69], [@57,266:275='month_name',<381>,6:8], [@61,282:291='month_name',<381>,6:24], [@89,428:437='month_name',<381>,9:8], [@93,444:453='month_name',<381>,9:24]], sales_amount=[[@19,55:66='sales_amount',<381>,1:55], [@65,300:311='sales_amount',<381>,6:42], [@69,318:329='sales_amount',<381>,6:60], [@97,464:475='sales_amount',<381>,10:9], [@103,491:502='sales_amount',<381>,11:9], [@109,518:529='sales_amount',<381>,12:9]], e1=[[@5,19:20='e1',<381>,1:19]], e2=[[@11,35:36='e2',<381>,1:35]], e3=[[@17,51:52='e3',<381>,1:51]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={month_name=[[@21,69:78='month_name',<381>,1:69], [@57,266:275='month_name',<381>,6:8], [@61,282:291='month_name',<381>,6:24], [@89,428:437='month_name',<381>,9:8], [@93,444:453='month_name',<381>,9:24]], sales_amount=[[@19,55:66='sales_amount',<381>,1:55], [@65,300:311='sales_amount',<381>,6:42], [@69,318:329='sales_amount',<381>,6:60], [@97,464:475='sales_amount',<381>,10:9], [@103,491:502='sales_amount',<381>,11:9], [@109,518:529='sales_amount',<381>,12:9]], e1=[[@5,19:20='e1',<381>,1:19]], e2=[[@11,35:36='e2',<381>,1:35]], e3=[[@17,51:52='e3',<381>,1:51]]}, table_dictionary={monthly_sales={jan_sales=[[@32,143:151='jan_sales',<381>,3:41], [@48,232:240='jan_sales',<381>,5:41], [@80,394:402='jan_sales',<381>,8:41]], mar_sales=[[@82,405:413='mar_sales',<381>,8:52]], empid=[[@7,23:24='m2',<381>,1:23], [@13,39:40='m3',<381>,1:39], [@1,7:8='m1',<381>,1:7]], feb_sales=[[@34,154:162='feb_sales',<381>,3:52], [@50,243:251='feb_sales',<381>,5:52]]}}, derivation={source_columns={u1=[{name=jan_sales, table_ref=m1}, {name=feb_sales, table_ref=m1}], u2=[{name=jan_sales, table_ref=m2}, {name=feb_sales, table_ref=m2}], u3=[{name=jan_sales, table_ref=m3}, {name=mar_sales, table_ref=m3}]}, derived_columns={u1={sales_amount=[[@27,111:122='sales_amount',<381>,3:9]], month_name=[[@29,128:137='month_name',<381>,3:26]]}, u2={sales_amount=[[@43,200:211='sales_amount',<381>,5:9]], month_name=[[@45,217:226='month_name',<381>,5:26]]}, u3={sales_amount=[[@75,362:373='sales_amount',<381>,8:9]], month_name=[[@77,379:388='month_name',<381>,8:26]]}}}, filters=[{name=month_name, table_ref=u1}, {name=month_name, table_ref=u2}, {name=sales_amount, table_ref=u1}, {name=sales_amount, table_ref=u2}, {name=month_name, table_ref=u3}, {name=sales_amount, table_ref=u3}], interface={month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=jan_sales, table_ref=u3}, {name=feb_sales, table_ref=u3}, {name=mar_sales, table_ref=u3}], e1=[{name=empid, table_ref=m1}], e2=[{name=empid, table_ref=m2}], e3=[{name=empid, table_ref=m3}]}, table_alias={m1=monthly_sales, m2=monthly_sales, m3=monthly_sales, u1=m1, u2=m2, u3=m3}}}",
+				"{def_query0={query_dictionary={month_name=[[@21,69:78='month_name',<381>,1:69], [@57,266:275='month_name',<381>,6:8], [@61,282:291='month_name',<381>,6:24], [@89,428:437='month_name',<381>,9:8], [@93,444:453='month_name',<381>,9:24]], sales_amount=[[@19,55:66='sales_amount',<381>,1:55], [@65,300:311='sales_amount',<381>,6:42], [@69,318:329='sales_amount',<381>,6:60], [@97,464:475='sales_amount',<381>,10:9], [@103,491:502='sales_amount',<381>,11:9], [@109,518:529='sales_amount',<381>,12:9]], e1=[[@5,19:20='e1',<381>,1:19]], e2=[[@11,35:36='e2',<381>,1:35]], e3=[[@17,51:52='e3',<381>,1:51]]}, table_dictionary={monthly_sales={jan_sales=[[@32,143:151='jan_sales',<381>,3:41], [@48,232:240='jan_sales',<381>,5:41], [@80,394:402='jan_sales',<381>,8:41]], mar_sales=[[@82,405:413='mar_sales',<381>,8:52]], empid=[[@7,23:24='m2',<381>,1:23], [@13,39:40='m3',<381>,1:39], [@1,7:8='m1',<381>,1:7]], feb_sales=[[@34,154:162='feb_sales',<381>,3:52], [@50,243:251='feb_sales',<381>,5:52]]}}, derivation={source_columns={u1=[{name=jan_sales, table_ref=m1}, {name=feb_sales, table_ref=m1}], u2=[{name=jan_sales, table_ref=m2}, {name=feb_sales, table_ref=m2}], u3=[{name=jan_sales, table_ref=m3}, {name=mar_sales, table_ref=m3}]}, derived_columns={u1={sales_amount=[[@27,111:122='sales_amount',<381>,3:9]], month_name=[[@29,128:137='month_name',<381>,3:26]]}, u2={sales_amount=[[@43,200:211='sales_amount',<381>,5:9]], month_name=[[@45,217:226='month_name',<381>,5:26]]}, u3={sales_amount=[[@75,362:373='sales_amount',<381>,8:9]], month_name=[[@77,379:388='month_name',<381>,8:26]]}}}, filters=[{name=month_name, table_ref=u1}, {name=month_name, table_ref=u2}, {name=sales_amount, table_ref=u1}, {name=sales_amount, table_ref=u2}, {name=month_name, table_ref=u3}, {name=sales_amount, table_ref=u3}], interface={month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=sales_amount, table_ref=null}], e1=[{name=empid, table_ref=m1}], e2=[{name=empid, table_ref=m2}], e3=[{name=empid, table_ref=m3}]}, table_alias={m1=monthly_sales, m2=monthly_sales, m3=monthly_sales, u1=m1, u2=m2, u3=m3}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -3609,6 +3616,80 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query1={query_dictionary={jan_sales_SUM=[[@7,27:39='jan_sales_SUM',<381>,1:27], [@58,295:307='jan_sales_SUM',<381>,6:25], [@78,409:421='jan_sales_SUM',<381>,9:7], [@92,476:488='jan_sales_SUM',<381>,11:8], [@39,217:219='SUM',<141>,5:7], [@47,254:264=''jan_sales'',<389>,5:44]], month_name=[[@17,76:85='month_name',<381>,1:76]], sales_amount=[[@15,62:73='sales_amount',<381>,1:62], [@54,278:289='sales_amount',<381>,6:8], [@82,428:439='sales_amount',<381>,9:26], [@86,450:461='sales_amount',<381>,10:9], [@98,503:514='sales_amount',<381>,12:9]], e1=[[@5,23:24='e1',<381>,1:23]], e2=[[@13,58:59='e2',<381>,1:58]]}, table_dictionary={monthly_sales={jan_sales=[[@28,154:162='jan_sales',<381>,3:41]], mar_sales=[[@71,387:395='mar_sales',<381>,8:52]], empid=[[@1,7:12='u1_src',<381>,1:7], [@9,42:47='u2_src',<381>,1:42]], feb_sales=[[@69,376:384='feb_sales',<381>,8:41], [@30,165:173='feb_sales',<381>,3:52]]}, monthly_sales_long={month_name=[[@44,239:248='month_name',<381>,5:29]], sales_amount=[[@41,221:232='sales_amount',<381>,5:11]]}}, derivation={source_columns={p=[{name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], u1=[{name=jan_sales, table_ref=u1_src}, {name=feb_sales, table_ref=u1_src}], u2=[{name=feb_sales, table_ref=u2_src}, {name=mar_sales, table_ref=u2_src}]}, derived_columns={p={jan_sales_SUM=[[@39,217:219='SUM',<141>,5:7], [@47,254:264=''jan_sales'',<389>,5:44]]}, u1={sales_amount=[[@23,122:133='sales_amount',<381>,3:9]], month_name=[[@25,139:148='month_name',<381>,3:26]]}, u2={sales_amount=[[@64,344:355='sales_amount',<381>,8:9]], month_name=[[@66,361:370='month_name',<381>,8:26]]}}}, filters=[{name=sales_amount, table_ref=u1}, {name=jan_sales_SUM, table_ref=p}, {name=sales_amount, table_ref=u2}], interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=p_src}, {name=sales_amount, table_ref=p_src}], month_name=[{name=month_name, table_ref=null}], sales_amount=[{name=sales_amount, table_ref=null}], e1=[{name=empid, table_ref=u1_src}], e2=[{name=empid, table_ref=u2_src}]}, table_alias={p=p_src, p_src=monthly_sales_long, u2_src=monthly_sales, u1_src=monthly_sales, u1=u1_src, u2=u2_src}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	/**
+	 * Phase 17.7.5b.6: one ambiguous derived SELECT ref vs two refs to the same name under dual
+	 * PIVOT siblings — per-site {@code AMBIGUOUS_DERIVED_COLUMN_REFERENCE} fatals and unqualified
+	 * interface publish; single-modifier control has no derived ambiguity.
+	 */
+	@Test
+	public void pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest() {
+		final String dualPivotFrom =
+				"FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN monthly_sales_long q_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) q\n";
+
+		final String oneRefQuery = "SELECT jan_sales_SUM\n" + dualPivotFrom + ";";
+		final String twoRefQuery = "SELECT jan_sales_SUM, jan_sales_SUM\n" + dualPivotFrom + ";";
+
+		SqlParseEventWalker oneRefExtractor = runParsertest(oneRefQuery, parse(oneRefQuery));
+		SqlParseEventWalker twoRefExtractor = runParsertest(twoRefQuery, parse(twoRefQuery));
+
+		assertFatalDiagnosticCount(
+				oneRefExtractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				null,
+				"jan_sales_SUM",
+				1);
+		assertFatalDiagnosticAtPosition(
+				oneRefExtractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'jan_sales_SUM' at (l:1 c:7). Possible sources: [p, q]",
+				"jan_sales_SUM",
+				1,
+				7);
+
+		assertFatalDiagnosticCount(
+				twoRefExtractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				null,
+				"jan_sales_SUM",
+				2);
+		assertFatalDiagnosticAtPosition(
+				twoRefExtractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				"Ambiguous derived column reference 'jan_sales_SUM' at (l:1 c:7). Possible sources: [p, q]",
+				"jan_sales_SUM",
+				1,
+				7);
+
+		Assert.assertTrue(
+				"Dual-modifier single ref must leave derived interface unqualified",
+				oneRefExtractor.getSymbolTable().toString().contains(
+						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}]"));
+		Assert.assertTrue(
+				"Dual-modifier two refs must leave derived interface unqualified",
+				twoRefExtractor.getSymbolTable().toString().contains(
+						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=null}]"));
+
+		final String singlePivotQuery =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p;";
+		SqlParseEventWalker singleModifierExtractor =
+				runParsertest(singlePivotQuery, parse(singlePivotQuery));
+		assertFatalDiagnosticCount(
+				singleModifierExtractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
+				null,
+				null,
+				0);
+		Assert.assertTrue(
+				"Single modifier must bind derived output to bucket alias",
+				singleModifierExtractor.getSymbolTable().toString().contains(
+						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
 	}
 
 	/*

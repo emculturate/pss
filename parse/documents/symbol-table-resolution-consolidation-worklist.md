@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~85% | **17.0–17.5** done; **17.7.1** + structured `derivation` publish (**17.7.2**); **17.7.7** subsets **A–E** signed off (Aug 2026); **17.6** backlog + **17.7.5b** egress convergence + **17.7.8** prune retirement remain — see below |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~88% | **17.0–17.5** done; **17.7.1–17.7.2** + **17.7.5**/**17.7.5b** egress convergence ✅; **17.7.7** A–E ✅; **17.6.2** ✅; **17.7.8** prune + **§17.7.7-gap-fill** remain — see below |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -206,12 +206,14 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - Commit `0d100ce` — unified PIVOT/UNPIVOT derived ref expansion (`derived@tuple_N` + per-bucket `source_columns`, dedupe at finalize); retired sibling fallback / harvest-site split / collapse heuristics; bulk golden refresh (~99/100 class tests via `refresh_pivot_unpivot_goldens.py`).
 - Commit `701dcd9` — diagnostic contract: **`assertDiagnosticAtPosition` for every walker diagnostic** (FATAL / ERROR / SEVERE / WARNING), including bundled `UNRESOLVED_UNQUALIFIED_COLUMNS` sites in message; removed aggregate `getErrorStringList` / count-only asserts in C/D/E unhappy tests.
 - Commit `6d0ad1a` — `pivot_unpivot_queries.properties` catalog for golden refresh tooling (`parse/tools/refresh_pivot_unpivot_goldens.py`).
+- **17.7.5b.4–b.6** (Aug 2026) — interface loop narrowed; phase B batch derived-unknown consume; parity test `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest`; **`17.7.5`** signed off.
+- **17.6.2** (Aug 2026) — skip legacy `applyUnpivotDerivationsToQueryScope` VALUE→IN rewrite when structured derived name is multi-bucket ambiguous; `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` asserts fatals for **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)`.
 - **17.7.5b.1** (Aug 2026) — convert egress derived-path inventory: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); baseline **1731/1731** tests in `parse/` before **17.7.5b.2**.
 - Structured derivation track (pre-Aug refresh): `e8945ce` (**17.7.1**), `daa0068` / `cfc846c` / `c1a4bd7` (**17.7.2** structured publish), `15b6f7b` / `77d4d00` / `eb8e776` (ambiguous derived + source operands per egress site).
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.7.5b.2–17.7.5b.4** (convert egress derived-phase convergence), then **17.7.8** (delete convert derived-on-physical prune). Parallel: **17.6.2** (complete triple-UNPIVOT SELECT ambiguity for `sales_amount`), **§17.7.7-gap-fill**.
+**Suggested next focus:** **17.7.8** (delete convert derived-on-physical prune), **§17.7.7-gap-fill**, **17.6.3** PIVOT SELECT ambiguity parity audit. Parallel: **17.6.8** egress token merge, **17.7.6** clause harvest.
 
 ---
 
@@ -1655,7 +1657,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 | ID | Issue | Priority | Status | Notes |
 |----|-------|----------|--------|-------|
 | **17.6.1** | **Golden audit — triple-tuple / multi-modifier tests** | P1 | 🔄 Partial | Subsets **A–E** goldens refreshed and signed off (**17.7.7**); triple tests use position-based diagnostic contract. Residual: human pass on **derivation** / `table_dictionary` intent vs design doc for `triple*` (no blind re-refresh). |
-| **17.6.2** | **Multi-sibling UNPIVOT SELECT ambiguity** | P0 | 🔄 Partial | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` now asserts **`AMBIGUOUS_DERIVED_COLUMN_REFERENCE` FATAL** for unqualified `month_name` at `(1,69)` (`u1|u2|u3`). **Gap:** unqualified `sales_amount` in SELECT `(1,55)` still needs same contract (and product fix if not yet emitted). WHERE remains alias-qualified — OK. |
+| **17.6.2** | **Multi-sibling UNPIVOT SELECT ambiguity** | P0 | ✅ Done (Aug 2026) | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test`: **`AMBIGUOUS_DERIVED_COLUMN_REFERENCE`** for unqualified **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)` (`u1|u2|u3`). Fix: do not run tier-2 VALUE→IN interface rewrite when `isAmbiguousUnqualifiedStructuredDerivedColumn` for VALUE name. WHERE alias-qualified — unchanged. |
 | **17.6.3** | **Multi-sibling PIVOT SELECT ambiguity (parity)** | P1 | ⏸️ Open | Same rule for multiple sibling PIVOT derived registry keys when names collide in SELECT without tuple alias. Audit whether existing `pivotUnqualifiedOuterOutputsAfterJoinAmbiguousTest` coverage is sufficient or needs a triple-PIVOT join variant. |
 | **17.6.4** | **Separate symbol-table keys: hints list vs derived_columns map** | P2 | ⏸️ Deferred | Replace `DERIVED_COLUMNS_HINTS_KEY` dual use (`ArrayList` walk-time → `HashMap` egress) with distinct keys, e.g. `relational_modifier_hints` (list, walk only) vs `derived_columns` (map, egress only). Eliminates type collision that required `retainRelationalModifierHintsForContinuedFrom` band-aid. |
 | **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Superseded by **17.7** | Absorbed into **17.7.1** (parent table dict at modifier finalize) + **17.7.2**. |
@@ -1717,8 +1719,8 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | **17.7.2** | **Derivation-only derived on parent** | ✅ Done (Aug 2026) | Structured `derivation.{source_columns,derived_columns}` on parent `def_query*`; flat hint lists retired (`cfc846c`, `c1a4bd7`, `daa0068`). Convert-time `pruneRelationalModifierDerivedColumnsFromTableDictionary` remains **transitional** until **17.7.8**. Lineage expand at convert egress unified (`0d100ce` — `derived@tuple` + sources, dedupe at finalize). |
 | **17.7.3** | **Convert harvest: structured `derivation` walk only** | ⏸️ Open | `canonicalizeLocalTableCollection` / clause egress: per-bucket context for sibling modifiers; **no** query-wide `isRelationalModifierDerivedOutputColumnName(name, entireDerivedMap)` table-dict removal. Transitional only until **17.7.8** — not a substitute for 17.7.1–17.7.2. |
 | **17.7.4** | **Diagnostic (1): missing source vs non-table interface** | ⏸️ Open | At pivot/unpivot finalize: all relational-modifier **source** operands (PIVOT aggregate/FOR, PIVOT IN identifiers, UNPIVOT VALUE/FOR/IN) must resolve against `resolvePrimarySourceInterface` when source is subquery/CTE — extend beyond `DIAG_SQL_PIVOT_IN_IDENTIFIER_UNRESOLVED` alone. |
-| **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | 🔄 In progress | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` across interface + clause egress via `forEachConvertEgressUnqualifiedColumnRefSite`; per-site locations on detached clause copies (`15b6f7b`). `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` + `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` (2× fatal) green. **Not converged:** interface loop still pre-consumes / expands derived before diagnose — see **17.7.5b**. |
-| **17.7.5b** | **Convert egress derived-phase convergence** | 🔄 Active | Single derived phase → single normal phase → strip + consolidate. **No** special-case sequencing for “one ref / one bucket” vs multi-bucket ambiguous. See subsection below. |
+| **17.7.5** | **Diagnostic (2): ambiguous unqualified derived column** | ✅ Done (Aug 2026) | `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` across interface + clause egress; convert egress converged via **17.7.5b** (classify → diagnose → phase B expand + batch consume). Parity: `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest`. |
+| **17.7.5b** | **Convert egress derived-phase convergence** | ✅ Done (Aug 2026) | **.1–.6** complete; **.7** signed off with **17.7.5**. See subsection below. |
 | **17.7.6** | **Clause harvest** | ⏸️ Open | Interface / filters / GROUP BY / ORDER BY: reconcile against per-bucket `derived_columns`; strip duplicates; lineage stays in `derivation` subtree. **Depends on 17.7.5b** for dedupe/consolidate timing (after derived + normal phases). |
 | **17.7.7** | **Tests + golden review** | ✅ Subsets A–E done | **Signed off Aug 2026** — see **§17.7.7-matrix** checklist. Class **100/100**; gate tests green. **Remaining:** **§17.7.7-gap-fill** (new matrix cells), **17.7.8** closeout ambiguity pairs, deferred large-sample goldens (**§17.7.7-deferred-large-sample-goldens**). |
 | **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ⏸️ Open | **After** 17.7.1–17.7.2 green + **17.7.7** contract tests pass: **delete** `pruneRelationalModifierDerivedColumnsFromTableDictionary` and equivalents. Post-removal: misplaced derived outputs on physical keys = finalize bug, never restore convert stripping. **Closeout test matrix (add with 17.7.7):** four **pairs** (physical table + subquery-backed modifier source) for **derived vs non-derived** ambiguity — (1) unqualified SELECT column ambiguous between **PIVOT derived output** and same-named **physical** column on modifier source table; (2) same for **UNPIVOT derived** (VALUE/FOR) vs physical; repeat (1)–(2) when modifier immediate source is **`FROM (SELECT …) alias`** instead of physical table. Goldens per review policy; not bulk-copied from sibling tests. |
@@ -1729,7 +1731,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 
 1. ~~**17.7.1**~~ ✅ — verify triple u1/p/u2 table_dictionary.
 2. ~~**17.7.2**~~ ✅ (Aug 2026) — structured publish + unified lineage expand; convert prune **transitional** until **17.7.8**.
-3. **17.7.5b** (active) → finish **17.7.5** ✅; then **17.7.3** (minimal) + **17.7.4** diagnostics + **17.7.6** harvest.
+3. ~~**17.7.5b**~~ ✅ → ~~**17.7.5**~~ ✅ (Aug 2026); then **17.7.3** (minimal) + **17.7.4** diagnostics + **17.7.6** harvest.
 4. ~~**17.7.7** A–E~~ ✅ (Aug 2026) — **§17.7.7-gap-fill** + **17.7.8** closeout matrix tests next.
 5. **17.7.8** — mandatory closeout: remove convert prune; full pivot/unpivot suite + gate.
 
@@ -1781,11 +1783,11 @@ D. Publication hygiene (unchanged)
 |------|--------|-------------|
 | **17.7.5b.1** | Inventory: grep all `consumeDerivedColumnUnknownEntry`, `applyConvertEgressExpandedDerivedSourceLineage`, `isDerivedColumn` branches in `convertSymbolTableToTableDictionary` + interface loop | ✅ Done (Aug 2026) | Checklist: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); no behavior change |
 | **17.7.5b.2** | Extract **read-only** `classifyColumnRefAtConvertEgress` (or flag on existing resolver) used by derived-phase visitor | ✅ Done (Aug 2026) | Body moved from `resolveColumnRefAtConvertEgress`; resolver delegates to classifier (no behavior change) |
-| **17.7.5b.3** | Move **lineage expand** for interface + clauses to run only inside derived phase B (after classify, before consume) | `triplePivotUnpivotPivotJoinDerivedColumnsV1Test` + `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test` |
-| **17.7.5b.4** | Narrow interface loop: remove derived consume/expand; keep substitution + materialize paths that are not modifier-derived | Gate 195/195 + pivot class contract tests |
-| **17.7.5b.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch at end of phase B | Prove ambiguous + unambiguous both go through phase B |
-| **17.7.5b.6** | Add **parity tests**: same SQL with one PIVOT vs two PIVOTs producing same derived name — identical diagnostic count/locations and identical published `filters`/`interface` after consolidate | Closes “one ref vs many” regression class |
-| **17.7.5b.7** | Mark **17.7.5** ✅ when derived phase is the only derived path; refresh pivot class goldens under 17.6 policy | Full pivot/unpivot class green |
+| **17.7.5b.3** | Move **lineage expand** for interface + clauses to run only inside derived phase B (after classify, before consume) | ✅ Done (Aug 2026) |
+| **17.7.5b.4** | Narrow interface loop: remove derived consume/expand; keep substitution + materialize paths that are not modifier-derived | ✅ Done (Aug 2026) |
+| **17.7.5b.5** | Delete `shouldRetainDerivedColumnUnknownUntilAmbiguousDiagnose`; single consume batch at end of phase B | ✅ Done (Aug 2026) |
+| **17.7.5b.6** | Add **parity tests**: same SQL with one PIVOT vs two PIVOTs producing same derived name — identical diagnostic count/locations and identical published `filters`/`interface` after consolidate | ✅ Done (Aug 2026) — `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest` |
+| **17.7.5b.7** | Mark **17.7.5** ✅ when derived phase is the only derived path; refresh pivot class goldens under 17.6 policy | ✅ Done (Aug 2026) — `SqlEventWalkerPivotUnpivotTests` **101/101**; full `parse/` green |
 
 **Relationship to other 17.7 items:**
 
