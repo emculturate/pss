@@ -5858,11 +5858,40 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (fromDictionary[0] != null) {
 			return fromDictionary;
 		}
-		return lookupRelationalModifierOperandTokenPositionInDictionary(
+		Integer[] fromQueryDictionary = lookupRelationalModifierOperandTokenPositionInDictionary(
 				getQueryColumnDictionaryMap(),
 				columnName,
 				tableRef,
 				sourceResult);
+		if (fromQueryDictionary[0] != null) {
+			return fromQueryDictionary;
+		}
+		return lookupRelationalModifierOperandTokenPositionInStructuredSourceColumns(columnName);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Integer[] lookupRelationalModifierOperandTokenPositionInStructuredSourceColumns(String columnName) {
+		Integer[] result = new Integer[] { null, null };
+		if (columnName == null || columnName.isBlank()) {
+			return result;
+		}
+
+		Object sourceColumnsObj = walker.symbolTable.get(
+				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
+		if (!(sourceColumnsObj instanceof Map<?, ?> sourceColumnsMapObj)) {
+			return result;
+		}
+
+		Object tokenListObj = ((Map<String, Object>) sourceColumnsMapObj).get(columnName);
+		if (tokenListObj == null) {
+			for (Map.Entry<String, Object> entry : ((Map<String, Object>) sourceColumnsMapObj).entrySet()) {
+				if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(columnName)) {
+					tokenListObj = entry.getValue();
+					break;
+				}
+			}
+		}
+		return extractLineAndCharFromFirstTokenListEntry(tokenListObj);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -6083,6 +6112,93 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
+	private void validateRelationalModifierSourceOperandsAgainstPrimaryInterface(
+			String modifierKey,
+			Map<String, Object> modifier,
+			Map<String, Object> sourceResult) {
+		if (modifier == null || modifier.isEmpty() || sourceResult == null || isDirectTableSource(sourceResult)) {
+			return;
+		}
+
+		Map<String, Object> interfaceMap = resolvePrimarySourceInterfaceForOperandValidation(sourceResult);
+		boolean wildcardInterface = interfaceMap.containsKey("*");
+		if (interfaceMap.isEmpty() && !wildcardInterface) {
+			return;
+		}
+		String operatorLabel = MUMBLE_UNPIVOT_KEY.equals(modifierKey) ? "UNPIVOT" : "PIVOT";
+
+		ArrayList<RelationalModifierOperandReference> operandReferences =
+				collectRelationalModifierOperandReferences(modifier);
+		for (RelationalModifierOperandReference operandReference : operandReferences) {
+			if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
+				// PIVOT IN (quoted or identifier) is diagnosed in resolvePivotScopeAtPrimaryExit.
+				if (operandReference.role == RelationalModifierOperandRole.IN_LIST) {
+					continue;
+				}
+			} else if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
+				if (operandReference.role != RelationalModifierOperandRole.IN_LIST) {
+					continue;
+				}
+			} else {
+				continue;
+			}
+
+			Map<String, Object> columnMap = operandReference.columnMap;
+			if (columnMap == null || columnMap.isEmpty()) {
+				continue;
+			}
+			Object columnNameObj = columnMap.get(MUMBLE_NAME_KEY);
+			if (!(columnNameObj instanceof String columnName) || columnName.isBlank()) {
+				continue;
+			}
+
+			boolean resolvesAgainstSource = wildcardInterface
+					|| containsMapKeyIgnoreCase(interfaceMap, columnName);
+			if (resolvesAgainstSource) {
+				continue;
+			}
+
+			Object tableRefObj = columnMap.get(MUMBLE_TABLE_REF_KEY);
+			String operandTableRef = tableRefObj instanceof String tableRefValue ? tableRefValue : null;
+			Integer[] tokenPosition = lookupRelationalModifierOperandTokenPosition(
+					columnName,
+					operandTableRef,
+					sourceResult);
+			emitRelationalModifierSourceOperandUnresolvedFatal(
+					operatorLabel,
+					columnName,
+					tokenPosition[0],
+					tokenPosition[1]);
+		}
+	}
+
+	private void emitRelationalModifierSourceOperandUnresolvedFatal(
+			String operatorLabel,
+			String columnName,
+			Integer line,
+			Integer charPos) {
+		String diagCode = walker.getDiagnosticCode(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED);
+		String diagTemplate = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"%s source operand '%s' at (l:%s c:%s) cannot be resolved against the %s source interface.",
+						operatorLabel,
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos),
+						operatorLabel)
+				: String.format(
+						diagTemplate,
+						operatorLabel,
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos),
+						operatorLabel);
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, columnName);
+	}
+
 	private void resolvePivotScopeAtPrimaryExit(Map<String, Object> sourceResult, String relationAlias) {
 		String interfaceSourceRef = (relationAlias != null && !relationAlias.isBlank())
 				? relationAlias
@@ -6206,6 +6322,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			String modifierKey,
 			Map<String, Object> sourceResult,
 			String relationAlias) {
+		Object modifierObj = sourceResult == null ? null : sourceResult.get(modifierKey);
+		if (modifierObj instanceof Map<?, ?> modifierMapObj) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> modifier = (Map<String, Object>) modifierMapObj;
+			validateRelationalModifierSourceOperandsAgainstPrimaryInterface(
+					modifierKey,
+					modifier,
+					sourceResult);
+		}
 		if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
 			resolvePivotScopeAtPrimaryExit(sourceResult, relationAlias);
 		} else if (MUMBLE_UNPIVOT_KEY.equals(modifierKey)) {
@@ -6271,6 +6396,146 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> lookupRelationalModifierSourceScopeInSymbolTableScopeForOperandValidation(
+			Map<String, Object> scope,
+			String sourceRef) {
+		if (scope == null || scope.isEmpty() || sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+
+		Object sourceScopeObj = scope.get(sourceRef);
+		if (!(sourceScopeObj instanceof Map<?, ?>)) {
+			sourceScopeObj = scope.get("def_" + sourceRef);
+		}
+		if (!(sourceScopeObj instanceof Map<?, ?>)) {
+			Object aliasMapObj = scope.get(MUMBLE_TABLE_ALIAS_KEY);
+			if (aliasMapObj instanceof Map<?, ?> aliasMapObjRaw) {
+				Object aliasTargetObj = ((Map<String, Object>) aliasMapObjRaw).get(sourceRef);
+				if (aliasTargetObj instanceof String aliasTarget && !aliasTarget.isBlank()) {
+					sourceScopeObj = scope.get(aliasTarget);
+					if (!(sourceScopeObj instanceof Map<?, ?>)) {
+						sourceScopeObj = scope.get("def_" + aliasTarget);
+					}
+				}
+			}
+		}
+		if (sourceScopeObj instanceof Map<?, ?> sourceScopeMapObj) {
+			return (Map<String, Object>) sourceScopeMapObj;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveRelationalModifierSourceReferenceForOperandValidation(Map<String, Object> sourceResult) {
+		if (sourceResult == null || sourceResult.isEmpty()) {
+			return null;
+		}
+
+		if (sourceResult.containsKey(MUMBLE_VALUES_KEY)) {
+			Object valuesObject = sourceResult.get(MUMBLE_VALUES_KEY);
+			if (valuesObject instanceof Map<?, ?> valuesMapObj) {
+				Object aliasObj = ((Map<String, Object>) valuesMapObj).get(MUMBLE_ALIAS_KEY);
+				if (aliasObj instanceof String alias && !alias.isBlank()) {
+					return alias;
+				}
+			}
+			String valuesScopeKey = symbolTreeHelper.findTopLevelValuesScopeKey();
+			if (valuesScopeKey != null && !valuesScopeKey.isBlank()) {
+				return valuesScopeKey;
+			}
+		}
+
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (!(tableObj instanceof Map<?, ?>)) {
+			if (sourceResult.containsKey(MUMBLE_SELECT_KEY)) {
+				String innermostQueryScopeKey =
+						resolveInnermostDefinitionQueryScopeKeyFromAncestorScopesForOperandValidation();
+				if (innermostQueryScopeKey != null && !innermostQueryScopeKey.isBlank()) {
+					return innermostQueryScopeKey;
+				}
+			}
+		}
+
+		return resolveRelationalModifierSourceReference(sourceResult);
+	}
+
+	private String resolveInnermostDefinitionQueryScopeKeyFromAncestorScopesForOperandValidation() {
+		String bestKey = null;
+		int bestIndex = Integer.MAX_VALUE;
+		for (Map<String, Object> scope : symbolTreeHelper.getAncestorSymbolTables()) {
+			if (scope == null || scope.isEmpty()) {
+				continue;
+			}
+			for (String key : scope.keySet()) {
+				if (key == null || !key.startsWith("def_" + MUMBLE_QUERY_KEY)) {
+					continue;
+				}
+				String numericSuffix = key.substring(("def_" + MUMBLE_QUERY_KEY).length());
+				if (numericSuffix.isBlank()) {
+					continue;
+				}
+				try {
+					int idx = Integer.parseInt(numericSuffix);
+					if (idx < bestIndex) {
+						bestIndex = idx;
+						bestKey = MUMBLE_QUERY_KEY + numericSuffix;
+					}
+				} catch (NumberFormatException e) {
+					// ignore
+				}
+			}
+		}
+		return bestKey;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> resolvePrimarySourceInterfaceForOperandValidation(Map<String, Object> sourceResult) {
+		String sourceRef = resolveRelationalModifierSourceReferenceForOperandValidation(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return new HashMap<String, Object>();
+		}
+
+		Map<String, Object> sourceScope = null;
+		ArrayList<Map<String, Object>> scopes = new ArrayList<>(symbolTreeHelper.getAncestorSymbolTables());
+		scopes.add(walker.symbolTable);
+		for (Map<String, Object> scope : scopes) {
+			sourceScope = lookupRelationalModifierSourceScopeInSymbolTableScopeForOperandValidation(scope, sourceRef);
+			if (sourceScope != null) {
+				break;
+			}
+		}
+
+		if (sourceScope == null) {
+			String latestQueryKey = resolveLatestQueryScopeKeyFromSymbolTable();
+			if (latestQueryKey != null && !latestQueryKey.isBlank()) {
+				sourceScope = lookupRelationalModifierSourceScopeInSymbolTableScopeForOperandValidation(
+						walker.symbolTable,
+						latestQueryKey);
+			}
+		}
+
+		if (sourceScope == null) {
+			String latestDefinitionQueryKey = resolveLatestDefinitionQueryScopeKeyFromSymbolTable();
+			if (latestDefinitionQueryKey != null && !latestDefinitionQueryKey.isBlank()) {
+				sourceScope = lookupRelationalModifierSourceScopeInSymbolTableScopeForOperandValidation(
+						walker.symbolTable,
+						latestDefinitionQueryKey);
+			}
+		}
+
+		if (sourceScope == null || sourceScope.isEmpty()) {
+			return new HashMap<String, Object>();
+		}
+
+		Object interfaceObj = sourceScope.get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof Map<?, ?> interfaceMapObj) {
+			return (Map<String, Object>) interfaceMapObj;
+		}
+
+		return new HashMap<String, Object>();
 	}
 
 	@SuppressWarnings("unchecked")

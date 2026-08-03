@@ -37,6 +37,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				"SQL_RELATIONAL_MODIFIER_QUALIFIED_OPERAND_INVALID";
 		public static final String DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED =
 				"SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED";
+		public static final String DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED =
+				"SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
@@ -248,6 +250,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED,
 				 "RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED",
 				 "Qualified UNPIVOT operand '%s.%s' at (l:%s c:%s) is not permitted; derived output columns in VALUE and FOR positions must be unqualified.");
+		 registerDiagnostic(
+				 DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED,
+				 "RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+				 "%s source operand '%s' at (l:%s c:%s) cannot be resolved against the %s source interface.");
 	 }
 
 	@SuppressWarnings("unchecked")

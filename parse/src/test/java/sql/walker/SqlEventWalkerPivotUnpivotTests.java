@@ -984,6 +984,58 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						"A"));
 	}
 
+	/**
+	 * Phase 17.7.4 — PIVOT aggregate/FOR source operands vs subquery interface (not PIVOT IN identifiers).
+	 * Unquoted PIVOT IN values remain {@code PIVOT_IN_IDENTIFIER_*} — see {@link #pivotInIdentifierMissingFromSubqueryFatalV1Test}.
+	 */
+	@Test
+	public void pivotSourceOperandUnresolvedSubqueryFatalV1Test() {
+		final String query =
+				"SELECT * FROM (SELECT col1, col2 FROM tab1) q "
+						+ "PIVOT (SUM(missing_amount) FOR col2 IN ('A'))";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(extractor);
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+				"cannot be resolved against the PIVOT source interface",
+				"missing_amount",
+				1,
+				57);
+		Assert.assertEquals(
+				"Valid FOR operand on subquery should not get source-operand unresolved",
+				0,
+				countFatalDiagnostics(
+						extractor.getSnippet(),
+						"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+						null,
+						"col2"));
+	}
+
+	/**
+	 * Phase 17.7.4 — UNPIVOT IN-list column not on subquery source interface.
+	 * PIVOT IN (including unquoted identifiers) stays on {@code PIVOT_IN_IDENTIFIER_*} — not this diagnostic.
+	 */
+	@Test
+	public void unpivotSourceOperandUnresolvedSubqueryFatalV1Test() {
+		final String query =
+				"SELECT * FROM (SELECT empid, jan_sales, feb_sales FROM monthly_sales) u "
+						+ "UNPIVOT (sales_amount FOR month_name IN (missing_wide, feb_sales))";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(extractor);
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+				"cannot be resolved against the UNPIVOT source interface",
+				"missing_wide",
+				1,
+				113);
+	}
+
 	@Test
 	public void pivotInIdentifierResolvedFromSubqueryWarningV1Test() {
 		final String query = "select * from (select col1, col2, 1 as A from tab1) q pivot (sum(col1) for col2 in (A))";
