@@ -163,6 +163,19 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	/**
+	 * Phase <b>17.6.9</b> locked contract — relational modifier + window egress (UNPIVOT / PIVOT ×
+	 * SELECT-list window / query {@code ORDER BY} window). All four methods share the same walk and
+	 * convert egress paths ({@code captureClauseDependencies}, {@code windowOutputInterfaceClauseDepsByAlias},
+	 * {@code finalizeRelationalModifierDerivedColumnLineageInClauseLists}, phase-B expansion from
+	 * {@code derivation.source_columns}). Differences in goldens are only what the SQL names in
+	 * {@code OVER} and what each modifier publishes under {@code derivation} (IN-list vs pivot operands).
+	 * <p>
+	 * Policy: partition/order-only names stay off {@code query_dictionary}; {@code window_partition_by} /
+	 * {@code window_ordered_by} hold archived refs; SELECT-list window outputs merge OVER deps onto
+	 * {@code interface.<alias>}; query {@code ORDER BY} windows publish on {@code ordered_by} + window lists.
+	 * See {@code parse/documents/phase-17.6.9-window-query-dictionary-policy.md}.
+	 */
 	@Test
 	public void unpivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV1Test() {
 		final String query =
@@ -208,14 +221,51 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
-	/**
-	 * 17.6.9 policy sketch: SELECT exposes only {@code rn}; partition/order derived names stay off
-	 * top-level interface keys and (after 17.6.9) off {@code query_dictionary}. Target:
-	 * {@code interface.rn} lists both {@code metric_name} and {@code metric_value} with UNPIVOT lineage
-	 * (see phase-17.6.9 §Interface lineage). Goldens below reflect <b>current</b> behavior until 17.6.9 lands.
-	 */
+	@Test
+	public void pivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV3Test() {
+		final String query =
+				"SELECT \n"
+						+ "  ROW_NUMBER() OVER (PARTITION BY jan_sales_SUM ORDER BY feb_sales_SUM) AS rn\n"
+						+ "FROM my_table\n"
+						+ "PIVOT (SUM(metric_value) FOR metric_name IN ('jan_sales', 'feb_sales', 'mar_sales'));";
 
-	/** Phase 17.6.8 (b): UNPIVOT source (IN-list) column in {@code OVER} → {@code query_dictionary}. See **17.6.9** for window-only {@code query_dictionary} policy. */
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={rn=[[@14,83:84='rn',<381>,2:75]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={window_ordered_by=[{name=feb_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}], query_dictionary={rn=[[@14,83:84='rn',<381>,2:75]]}, table_dictionary={my_table={metric_name=[[@24,129:139='metric_name',<381>,4:29]], metric_value=[[@21,111:122='metric_value',<381>,4:11]]}}, window_partition_by=[{name=jan_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}]}, derived_columns={tuple_0={jan_sales_SUM=[[@19,107:109='SUM',<141>,4:7], [@27,145:155=''jan_sales'',<389>,4:45]], feb_sales_SUM=[[@19,107:109='SUM',<141>,4:7], [@29,158:168=''feb_sales'',<389>,4:58]], mar_sales_SUM=[[@19,107:109='SUM',<141>,4:7], [@31,171:181=''mar_sales'',<389>,4:71]]}}}, interface={rn=[{name=jan_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}, {name=feb_sales_SUM, table_ref=tuple_0}]}, table_alias={tuple_0=my_table}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void pivotWindowDerivedColumnsQueryDictionaryV17_6NewPolicyV4Test() {
+		final String query =
+				"SELECT item\n"
+						+ "FROM my_table\n"
+						+ "PIVOT (SUM(metric_value) FOR metric_name IN ('jan_sales', 'feb_sales', 'mar_sales'))\n"
+						+ " order by  ROW_NUMBER() OVER (PARTITION BY jan_sales_SUM ORDER BY feb_sales_SUM)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[item]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={item=[[@1,7:10='item',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={window_ordered_by=[{name=feb_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}], query_dictionary={item=[[@1,7:10='item',<381>,1:7]]}, table_dictionary={my_table={item=[[@1,7:10='item',<381>,1:7]], metric_name=[[@11,55:65='metric_name',<381>,3:29]], metric_value=[[@8,37:48='metric_value',<381>,3:11]]}}, window_partition_by=[{name=jan_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}], derivation={source_columns={tuple_0=[{name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}]}, derived_columns={tuple_0={jan_sales_SUM=[[@6,33:35='SUM',<141>,3:7], [@14,71:81=''jan_sales'',<389>,3:45]], feb_sales_SUM=[[@6,33:35='SUM',<141>,3:7], [@16,84:94=''feb_sales'',<389>,3:58]], mar_sales_SUM=[[@6,33:35='SUM',<141>,3:7], [@18,97:107=''mar_sales'',<389>,3:71]]}}}, ordered_by=[{name=jan_sales_SUM, table_ref=tuple_0}, {name=metric_name, table_ref=my_table}, {name=metric_value, table_ref=my_table}, {name=feb_sales_SUM, table_ref=tuple_0}], interface={item=[{name=item, table_ref=my_table}]}, table_alias={tuple_0=my_table}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Phase 17.6.8 (b): UNPIVOT source (IN-list) column in {@code OVER} → {@code query_dictionary}. Superseded for partition-only derived names by **17.6.9** {@code *NewPolicyV*} contract; this test still asserts dual-role SELECT + interim {@code query_dictionary} breadth. */
 	@Test
 	public void unpivotV0WindowSourceColumnQueryDictionaryV17_6_8Test() {
 		final String query =
