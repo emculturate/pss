@@ -1,40 +1,59 @@
-# Phase 17.7.7 — Pivot/unpivot matrix heatmap (living)
+# Phase 17.7.7 — Pivot/unpivot matrix heatmap
 
-**Class:** `SqlEventWalkerPivotUnpivotTests`  
+**Status:** ✅ **Signed off Aug 2026** (gap-fill batch complete; optional cells deferred — see worklist §17.7.7-gap-fill).  
+**Class:** `SqlEventWalkerPivotUnpivotTests` (**117** methods, **117/117** green).  
 **Spec:** `symbol-table-resolution-consolidation-worklist.md` §17.7.7-matrix  
-**Tag convention** (on new / gap-fill tests):
+
+**Tag convention** (gap-fill / gate tests):
 
 ```text
 Matrix: subset=E | topo=S3 | bucket=GROUP_BY,HAVING | kind=derived | outcome=happy
 ```
 
-## Topology × clause bucket (derived column refs)
+## Topology × clause bucket (derived / source column refs)
 
-Legend: **●** covered (happy and/or unhappy in class), **◐** partial (other topology or diagnostic only), **○** empty / weak.
+Legend: **●** covered in class (happy and/or unhappy), **◐** gate / adjacent topology only, **○** deferred (not required for 17.7.7 sign-off).
 
-| Topo \\ Bucket | SELECT | WHERE | GROUP BY | HAVING | ORDER BY | JOIN ON |
-|----------------|--------|-------|----------|--------|----------|---------|
-| **S1-P** | ● | ● | ● | ● | ● | ● |
-| **S1-U** | ● | ● | ● | ● | ● | ● |
-| **S2-PP** | ● | ◐ | ◐ | ◐ | ◐ | ● |
-| **S2-UU** | ● | ◐ | ◐ | ◐ | ◐ | ● |
-| **S2-PU** | ● | ● | ● | ● | ● | ● |
-| **S3** | ● | ● | ● | ● | ● | ● |
+| Topo \\ Bucket | SELECT | WHERE | GROUP BY | HAVING | ORDER BY | JOIN ON | QUALIFY |
+|----------------|--------|-------|----------|--------|----------|---------|---------|
+| **S1-P** | ● | ● | ● | ● | ● | ● | ● |
+| **S1-U** | ● | ● | ● | ● | ● | ● | ● |
+| **S2-PP** | ● | ◐ | ● | ● | ● | ◐ | ○ |
+| **S2-UU** | ● | ◐ | ◐ | ◐ | ◐ | ● | ○ |
+| **S2-PU** | ● | ● | ● | ● | ● | ● | ● |
+| **S3** | ● | ● | ● | ● | ● | ● | ○ |
 
-**Notes**
+## Gap-fill inventory (`gapFill17_7_7_*` — 11 tests)
 
-- **S1** clause coverage is mostly subset **B** (`*GroupOrder*`, `*HavingOrder*`, `*JoinOn*`, …).
-- **S3** SELECT/WHERE/ORDER BY/JOIN ON: gate tests `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`.
-- **S3** GROUP BY / HAVING (qualified happy + GROUP BY derived fatal): `gapFill17_7_7_S3PivotUnpivotPivotGroupByHavingQualifiedDerivedV1Test`, `gapFill17_7_7_S3UnpivotPivotUnpivotGroupByAmbiguousDerivedFatalV1Test` (Aug 2026).
-- **S2-PU** systematic clause egress: `gapFill17_7_7_S2PuPivotUnpivotJoinClauseEgressDerivedV1Test` (Aug 2026); complements `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest` (S2-PP SELECT parity).
+| Test | Topo | Bucket | Outcome |
+|------|------|--------|---------|
+| `gapFill17_7_7_S3PivotUnpivotPivotGroupByHavingQualifiedDerivedV1Test` | S3 | GROUP BY, HAVING, ORDER BY | happy (+ SELECT severe warnings) |
+| `gapFill17_7_7_S3UnpivotPivotUnpivotGroupByAmbiguousDerivedFatalV1Test` | S3 | GROUP BY | derived fatal |
+| `gapFill17_7_7_S3UnpivotPivotUnpivotOrderByAmbiguousDerivedMonthNameFatalV1Test` | S3 | ORDER BY | derived fatal |
+| `gapFill17_7_7_S3PivotUnpivotPivotHavingAmbiguousDerivedFebSalesSumFatalV1Test` | S3 | HAVING | derived fatal |
+| `gapFill17_7_7_S3PivotUnpivotPivotOrderByAmbiguousSourceSalesAmountSevereV1Test` | S3 | ORDER BY | source SEVERE |
+| `gapFill17_7_7_S3PivotUnpivotPivotJoinOnQualifiedDerivedHappyV1Test` | S3 | JOIN ON | happy |
+| `gapFill17_7_7_S2PuPivotUnpivotJoinClauseEgressDerivedV1Test` | S2-PU | WHERE, GROUP BY, HAVING, ORDER BY | happy |
+| `gapFill17_7_7_S2PuQualifyDerivedQualifiedHappyV1Test` | S2-PU | QUALIFY | happy |
+| `gapFill17_7_7_S2PpDualPivotGroupByAmbiguousDerivedJanSalesSumFatalV1Test` | S2-PP | GROUP BY | derived fatal |
+| `gapFill17_7_7_S2PpDualPivotGroupByHavingQualifiedDerivedHappyV1Test` | S2-PP | GROUP BY, HAVING | happy |
+| `gapFill17_7_7_S2PpDualPivotOrderByAmbiguousSourceMonthNameSevereV1Test` | S2-PP | ORDER BY | source SEVERE |
 
-## Outcome × kind (multi-modifier only)
+All gap-fill tests use **full golden** asserts (AST, interface, substitutions, table/query dictionaries, symbol tree) plus **position-based diagnostics** where applicable. Queries: `pivot_unpivot_queries.properties`; refresh: `parse/tools/refresh_pivot_unpivot_goldens.py`.
 
-| | Derived happy (qualified) | Derived unhappy (unqualified) | Source ambiguity |
-|--|---------------------------|-------------------------------|------------------|
-| **S2-PU** | ● clause egress test | ○ | ◐ (triple gate) |
-| **S3** | ● GROUP BY/HAVING | ● GROUP BY `sales_amount` | ● gate tests |
+## Deferred (post–17.7.7)
 
-## Incremental tagging
+| Gap | Reason |
+|-----|--------|
+| Per-method matrix tags on all **117** tests | Subset **A–E** catalog + gap-fill table sufficient for now |
+| **17.7.8** derived vs same-named physical (four pairs) | Optional closeout; partial coverage via `closeout17_7_8_*` |
+| **17.7.10** `p_src.` ON warning | Optional alias diagnostic |
+| UPDATE RHS + modifier join | Phase 17.6 / DML matrix |
+| S3 × QUALIFY, S2-UU systematic clause matrix | Low priority vs gate + gap-fill |
+| **§17.7.7-deferred-large-sample-goldens** | Non–pivot-contract; after 17.7.5b convergence |
 
-Full per-method tags for all **109** tests are **not** required for gap-fill; subset **A–E** in the worklist remains the catalog. New tests and gate tests carry explicit `Matrix:` headers; extend this heatmap when filling another cell.
+## Related gate tests
+
+- `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`
+- `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest` (S2-PP SELECT)
+- `closeout17_7_8_*` (physical `table_dictionary` guards)
