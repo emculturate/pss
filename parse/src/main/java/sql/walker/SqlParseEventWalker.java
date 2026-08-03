@@ -6131,7 +6131,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				collectRelationalModifierOperandReferences(modifier);
 		for (RelationalModifierOperandReference operandReference : operandReferences) {
 			if (MUMBLE_PIVOT_KEY.equals(modifierKey)) {
-				// PIVOT IN (quoted or identifier) is diagnosed in resolvePivotScopeAtPrimaryExit.
 				if (operandReference.role == RelationalModifierOperandRole.IN_LIST) {
 					continue;
 				}

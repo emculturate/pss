@@ -984,10 +984,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						"A"));
 	}
 
-	/**
-	 * Phase 17.7.4 — PIVOT aggregate/FOR source operands vs subquery interface (not PIVOT IN identifiers).
-	 * Unquoted PIVOT IN values remain {@code PIVOT_IN_IDENTIFIER_*} — see {@link #pivotInIdentifierMissingFromSubqueryFatalV1Test}.
-	 */
+	/** Phase 17.7.4 — PIVOT aggregate/FOR source operands vs subquery-backed source interface. */
 	@Test
 	public void pivotSourceOperandUnresolvedSubqueryFatalV1Test() {
 		final String query =
@@ -1014,10 +1011,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						"col2"));
 	}
 
-	/**
-	 * Phase 17.7.4 — UNPIVOT IN-list column not on subquery source interface.
-	 * PIVOT IN (including unquoted identifiers) stays on {@code PIVOT_IN_IDENTIFIER_*} — not this diagnostic.
-	 */
+	/** Phase 17.7.4 — UNPIVOT IN-list operand vs subquery-backed source interface. */
 	@Test
 	public void unpivotSourceOperandUnresolvedSubqueryFatalV1Test() {
 		final String query =
@@ -1034,6 +1028,52 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"missing_wide",
 				1,
 				113);
+	}
+
+	/** Phase 17.7.4 — PIVOT aggregate/FOR source operands vs VALUES-backed source interface. */
+	@Test
+	public void pivotSourceOperandUnresolvedValuesFatalV1Test() {
+		final String query =
+				"SELECT * FROM (VALUES (1, 'A', 10.0), (2, 'B', 20.0)) AS v (col1, col2, amount) "
+						+ "PIVOT (SUM(missing_amount) FOR col2 IN ('A'))";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(extractor);
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+				"cannot be resolved against the PIVOT source interface",
+				"missing_amount",
+				1,
+				91);
+		Assert.assertEquals(
+				"Valid FOR operand on VALUES should not get source-operand unresolved",
+				0,
+				countFatalDiagnostics(
+						extractor.getSnippet(),
+						"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+						null,
+						"col2"));
+	}
+
+	/** Phase 17.7.4 — UNPIVOT IN-list operand vs VALUES-backed source interface. */
+	@Test
+	public void unpivotSourceOperandUnresolvedValuesFatalV1Test() {
+		final String query =
+				"SELECT * FROM (VALUES (1, 100.0, 200.0), (2, 110.0, 210.0)) AS u (empid, jan_sales, feb_sales) "
+						+ "UNPIVOT (sales_amount FOR month_name IN (missing_wide, feb_sales))";
+
+		ParserRunResult runResult = runSQLParsertestAllowErrors(query, parse(query));
+		SqlParseEventWalker extractor = runResult.getExtractor();
+		Assert.assertNotNull(extractor);
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
+				"cannot be resolved against the UNPIVOT source interface",
+				"missing_wide",
+				1,
+				136);
 	}
 
 	@Test
