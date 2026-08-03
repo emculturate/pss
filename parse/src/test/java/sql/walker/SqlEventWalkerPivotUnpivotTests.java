@@ -187,6 +187,72 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	/** Phase 17.6.8 (c): INSERT … SELECT UNPIVOT + RETURNING derived outputs → {@code query_dictionary}. */
+	@Test
+	public void insertUnpivotDerivedReturningQueryDictionaryV17_6_8Test() {
+		final String query =
+				"INSERT INTO dest (metric_name, metric_value)\n"
+						+ "SELECT metric_name, metric_value\n"
+						+ "FROM my_table\n"
+						+ "UNPIVOT (\n"
+						+ "  metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales))\n"
+						+ "RETURNING metric_name, metric_value;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[metric_name, metric_value]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={metric_name=[[@9,52:62='metric_name',<381>,2:7], [@18,121:131='metric_name',<381>,5:19]], metric_value=[[@11,65:76='metric_value',<381>,2:20], [@16,104:115='metric_value',<381>,5:2]]}, insert1={metric_name=[[@4,18:28='metric_name',<381>,1:18], [@29,181:191='metric_name',<381>,6:10], [@29,181:191='metric_name',<381>,6:10]], metric_value=[[@6,31:42='metric_value',<381>,1:31], [@31,194:205='metric_value',<381>,6:23], [@31,194:205='metric_value',<381>,6:23]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	/** Phase 17.6.8 (c): UPDATE … FROM PIVOT + RETURNING derived outputs → {@code query_dictionary}. */
+	@Test
+	public void updatePivotDerivedReturningQueryDictionaryV17_6_8Test() {
+		final String query =
+				"UPDATE dest d\n"
+						+ "SET flag = 1\n"
+						+ "FROM my_table\n"
+						+ "PIVOT (SUM(metric_value) FOR metric_name IN ('jan_sales', 'feb_sales', 'mar_sales')) p\n"
+						+ "WHERE d.jan_sales_sum = p.jan_sales_sum\n"
+						+ "RETURNING p.jan_sales_sum, p.feb_sales_sum;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[jan_sales_sum, flag, feb_sales_sum]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{update1={feb_sales_sum=[[@42,197:209='feb_sales_sum',<381>,6:29], [@11,48:50='SUM',<141>,4:7], [@21,99:109=''feb_sales'',<389>,4:58]], jan_sales_sum=[[@38,180:192='jan_sales_sum',<381>,6:12], [@30,136:148='jan_sales_sum',<381>,5:8], [@34,154:166='jan_sales_sum',<381>,5:26], [@11,48:50='SUM',<141>,4:7], [@19,86:96=''jan_sales'',<389>,4:45]], flag=[[@4,18:21='flag',<381>,2:4]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
+	/** Phase 17.6.8 (c): DELETE … USING UNPIVOT + RETURNING → {@code query_dictionary}. */
+	@Test
+	public void deleteUnpivotDerivedReturningQueryDictionaryV17_6_8Test() {
+		final String query =
+				"DELETE FROM dest d\n"
+						+ "USING my_table\n"
+						+ "UNPIVOT (\n"
+						+ "  metric_value FOR metric_name IN (jan_sales, feb_sales, mar_sales)) u\n"
+						+ "WHERE d.metric_name = u.metric_name\n"
+						+ "RETURNING d.metric_name, u.metric_value;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("Interface is wrong", "[metric_name, metric_value]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{delete0={metric_name=[[@32,163:173='metric_name',<381>,6:12], [@24,123:133='metric_name',<381>,5:8], [@28,139:149='metric_name',<381>,5:24], [@10,63:73='metric_name',<381>,4:19]], metric_value=[[@36,178:189='metric_value',<381>,6:27], [@8,46:57='metric_value',<381>,4:2]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+	}
+
 	@Test
 	public void unpivotV1Test() {
 		final String query = "SELECT id, metric_name, jan_sales, feb_sales, mar_sales, metric_value\n" 

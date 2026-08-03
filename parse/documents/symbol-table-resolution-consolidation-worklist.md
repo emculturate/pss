@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~95% | **17.6.3** ✅, **17.7.6** ✅; **17.6.8**, optional **17.7.8** pairs remain |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~96% | **17.6.3** ✅, **17.6.8** ✅, **17.7.6** ✅; optional **17.7.8** pairs remain |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -210,12 +210,13 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **17.6.2** (Aug 2026) — skip legacy `applyUnpivotDerivationsToQueryScope` VALUE→IN rewrite when structured derived name is multi-bucket ambiguous; `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test` asserts fatals for **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)`.
 - **17.6.3** (Aug 2026) — skip `applyPivotValueInterfaceDerivations` for multi-bucket ambiguous derived names; `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test` asserts fatal for **`jan_sales_SUM`** `(1,64)` (`p|q|r`).
 - **17.7.6** (Aug 2026) — publication dedupe only: step **D** `consolidateConvertEgressColumnReferenceLists` after phase B + strip; unique `(name, table_ref)` per egress list; **no** separate harvest pass and **no** unqualified-vs-qualified pruning in clause buckets.
+- **17.6.8** (Aug 2026) — convert egress completeness: clause-site (WHERE/HAVING/QUALIFY) + window `OVER` archive merge + **INSERT** / **UPDATE** / **DELETE** **RETURNING** contract tests in `SqlEventWalkerPivotUnpivotTests` (**131/131**); window partition-only `query_dictionary` policy deferred to **17.6.9**.
 - **17.7.5b.1** (Aug 2026) — convert egress derived-path inventory: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); baseline **1731/1731** tests in `parse/` before **17.7.5b.2**.
 - Structured derivation track (pre-Aug refresh): `e8945ce` (**17.7.1**), `daa0068` / `cfc846c` / `c1a4bd7` (**17.7.2** structured publish), `15b6f7b` / `77d4d00` / `eb8e776` (ambiguous derived + source operands per egress site).
 
 **Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.6.8** egress token merge, **17.6.7** subquery-backed triple variants, **17.7.3** / **17.7.4**. Optional: **17.7.8** derived-vs-physical pairs, **17.7.10** source-alias ON warning.
+**Suggested next focus:** **17.6.7** subquery-backed triple variants, **17.7.3** / **17.7.4**, **17.6.1** residual triple derivation audit. Optional: **17.7.8** derived-vs-physical pairs, **17.6.9** window `query_dictionary` policy, **17.7.10** source-alias ON warning.
 
 ---
 
@@ -1665,7 +1666,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 | **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Superseded by **17.7** | Absorbed into **17.7.1** (parent table dict at modifier finalize) + **17.7.2**. |
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | ⏸️ Open | For each triple join test (`triplePivot*`, `tripleUnpivot*`, `triplePivotUnpivot*`), add a **paired variant** that replaces each physical table in every FROM-join slot with a **subquery** presenting the columns that tuple's PIVOT/UNPIVOT needs. Verify sibling-modifier logic (operand materialization, per-hint lineage, SELECT ambiguity) works when source is `queryN` not a physical table. Pattern exists in suite for single-modifier cases (`FROM (SELECT … FROM monthly_sales_long) src` + PIVOT). Author goldens under **golden review policy** above — do not copy from physical-table variant assertions. |
-| **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | 🔄 In progress | Finish **one egress policy** for every place interface output column refs are collected or rewritten at scope exit. **(a)** clause-site tokens (WHERE/HAVING/QUALIFY) — contract tests on `unpivotV0` / `pivotBasicMetricColumnsV0`. **(b)** Window: `window_partition_by` / `window_ordered_by` archived lists + convert merge; PIVOT/UNPIVOT **17.6.8 (b)** tests list each {@code OVER}-referenced name in **SELECT** so {@code query_dictionary} keys match interface outputs (interim). **(c)** RETURNING: revisit only if off-`interface`. |
+| **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | ✅ Done (Aug 2026) | **(a)** clause-site tokens (WHERE/HAVING/QUALIFY) — contract tests on `unpivotV0` / `pivotBasicMetricColumnsV0`. **(b)** Window: `window_partition_by` / `window_ordered_by` archived lists + `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary`; **17.6.8 (b)** tests list each {@code OVER}-referenced name in **SELECT** (interim until **17.6.9**). **(c)** RETURNING — `insertUnpivotDerivedReturningQueryDictionaryV17_6_8Test`, `updatePivotDerivedReturningQueryDictionaryV17_6_8Test`, `deleteUnpivotDerivedReturningQueryDictionaryV17_6_8Test` assert derived names on {@code query_dictionary}. |
 | **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ⏸️ Open | Today {@code mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary} can add {@code query_dictionary} keys for column names that appear **only** in {@code OVER} partition/order (not in {@code interface}). Revisit: restrict window egress merge to **interface output** names (mirror {@code recordInterfaceOutputClauseRefOnQueryDictionary}), keep site tokens on {@code window_partition_by} / {@code window_ordered_by} lists only; add negative contract test (partition-only ref → no {@code query_dictionary} key). Then slim **17.6.8 (b)** tests if desired. |
 
 **Recommended sequencing:**
@@ -1675,7 +1676,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 3. **17.6.1** — golden audit pass across pivot/unpivot suite (with user; no auto-refresh).
 4. ~~**17.6.3**~~ ✅ (Aug 2026) — triple-PIVOT same-output SELECT ambiguity + `applyPivotValueInterfaceDerivations` skip.
 5. **17.6.7** — subquery-backed triple-tuple variants (after 17.6.2 behavior is signed off; exercises query-backed UNPIVOT source path from policy).
-6. **17.6.8** — complete egress for derived `query_dictionary` + window archive keys + targeted tests (`unpivotV0` clause variant, optional `OVER` case).
+6. ~~**17.6.8**~~ ✅ (Aug 2026) — clause + window + RETURNING egress contract tests; window partition-only policy → **17.6.9**.
 7. **17.6.4** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
 8. **17.7** — structured derivation finalize track (**17.7.1** first); mandatory closeout **17.7.8** removes convert derived-on-physical prune entirely.
 
@@ -1738,7 +1739,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 4. ~~**17.7.7** A–E + gap-fill~~ ✅ (Aug 2026) — see heatmap + `gapFill17_7_7_*`.
 5. ~~**17.7.8**~~ ✅ (Aug 2026) — convert prune removed; merge guard at physical materialize.
 
-**Parallel with 17.6:** **17.6.8** egress token merge can continue in parallel; **17.6.2** should land via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
+**Parallel with 17.6:** ~~**17.6.8**~~ ✅; **17.6.2** landed via **17.7.5** (ambiguous derived) rather than a separate ad-hoc SELECT-only hack.
 
 ### Phase 17.7.5b — Convert egress derived-phase convergence (strict parity)
 
