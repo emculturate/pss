@@ -987,6 +987,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public HashMap<String, Object> getSymbolTable() {
 		if (walker.symbolTable != null) {
 			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
+			// Phase 19.4: handoff still repairs embedded def_* query_dictionary from the global
+			// live index (phase-2 external usage). Full retirement needs golden acceptance —
+			// probe without sync: SmoketestQualityGateTestSuite 125/239 Symbol Table failures.
 			symbolTreeHelper.syncPublishedScopeQueryDictionariesFromGlobal(walker.symbolTable);
 		}
 		return walker.symbolTable;
@@ -999,6 +1002,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void finalizeHandoffSymbolTable() {
 		if (walker.symbolTable != null) {
 			symbolTreeHelper.stripWalkTimeKeysFromPublishedScope(walker.symbolTable);
+			// See getSymbolTable() — same Phase 19.4 handoff sync (retained pending golden review).
 			symbolTreeHelper.syncPublishedScopeQueryDictionariesFromGlobal(walker.symbolTable);
 		}
 	}

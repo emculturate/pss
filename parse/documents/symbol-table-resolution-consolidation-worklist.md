@@ -168,7 +168,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
 | **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18.1**/**18.4**/**18.5** ❌ dropped/N/A; **18.2**/**18.3** ✅; reformulation policy in `relational-modifier-resolution-policy.md` |
-| **19** Query dictionary publish consolidation | ⏸️ In progress | ~60% | **19.0–19.3** ✅; **19.4** sync retire/assert next; then **19.5** |
+| **19** Query dictionary publish consolidation | ✅ Done | 100% | **19.0–19.5** ✅; sync **retained** as intentional handoff (**19.4**); egress bundle wired (**19.5**) |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
 
@@ -224,7 +224,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **Phase 19.4** — retire or assert-only `syncPublishedScopeQueryDictionariesFromGlobal`; keep Phase 19 stability rule (no silent golden/diagnostic churn).
+**Suggested next focus:** Phase **20** (DDL walker hygiene) or Phase **13** language gaps. Phase **19** closed. Keep stability rule for any further query-dict churn.
 
 ---
 
@@ -2117,9 +2117,9 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 
 ---
 
-## Phase 19 — Query dictionary publish path consolidation
+## Phase 19 — Query dictionary publish path consolidation (✅ DONE — Aug 2026)
 
-**Goal:** Replace scattered **ingress** paths that write `query_dictionary` / global `queryColumnDictionaryMap` with a **single publish policy**, and retire or narrow end-of-walk **`syncPublishedScopeQueryDictionariesFromGlobal`** repair. The intentional **two-store model** (`def_queryN.query_dictionary` immutable snapshot + global live index) **remains by design** — Phase 19 eliminates **redundant write sites**, not the architectural split documented in `table-and-query-dictionary-design.md`.
+**Goal:** Replace scattered **ingress** paths that write `query_dictionary` / global `queryColumnDictionaryMap` with a **single publish policy**, and **audit** end-of-walk **`syncPublishedScopeQueryDictionariesFromGlobal`**. Outcome: publish consolidated through `publishQueryDictionary`; sync **retained** as intentional handoff (**19.4**); convert-egress bundle kept aligned with live index (**19.5**). The intentional **two-store model** (`def_queryN.query_dictionary` snapshot + global live index) **remains by design**.
 
 **Prerequisite:** Phase **15.6** closeout (`ConvertEgressScopeBundle` stabilizes egress-time reads). Phases **16–18** may overlap if they do not touch publish finalizers.
 
@@ -2240,6 +2240,20 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
 
 **Verify (green, 0 failures):** DML UPDATE V1–V14 / INSERT V1–V8 / Postgres INSERT / VALUES source / DELETE RETURNING probes + nested demos + full `SmoketestQualityGateTestSuite` (**281** including probes).
 
+### Phase 19.4 — End-of-walk sync audit (Aug 2026)
+
+**Status:** ✅ **Closed — audit/retain.** Full retirement declined; sync kept as intentional handoff.
+
+**Decision (Aug 2026):** Keep `syncPublishedScopeQueryDictionariesFromGlobal` as the supported bridge that mirrors phase-2 global enrichments onto nested `def_*.query_dictionary` at client handoff. Two-store model remains: global live index may be richer during the walk; embedded snapshots are reconciled at `getSymbolTable()` / `finalizeHandoffSymbolTable()`.
+
+**Call sites (retained):**
+| Site | File | Role |
+|------|------|------|
+| `getSymbolTable()` | `SqlParseEventWalker` | Every client symbol-table read |
+| `finalizeHandoffSymbolTable()` | `SqlParseEventWalker` | Grammar exit / aborted-walk handoff |
+
+**No-sync probe (historical):** gate **125/239** Symbol Table golden failures if sync removed — documented so we do not revisit without accepting that churn.
+
 ### Phase 19 end state
 
 1. **Single API** — `publishQueryDictionary(PublishContext)` (name TBD) owns:
@@ -2248,9 +2262,9 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
    - merge into global `queryColumnDictionaryMap`
    - record publish phase (phase-1 origins vs phase-2 external usage) for diagnostics
 2. **All scope finalizers** call the same API — SELECT, VALUES, UNION/INTERSECT, INSERT, UPDATE, DELETE.
-3. **`syncPublishedScopeQueryDictionariesFromGlobal`** retired or reduced to a **debug/assert** path only (no production repair at walk end).
-4. **`ConvertEgressScopeBundle`** (15.6) receives read-only global dict handles from publish API — no ad-hoc map reads during egress.
-5. **Two-store contract** documented: global may be richer than `def_*` snapshot after parent phase-2; that is not a sync bug.
+3. **`syncPublishedScopeQueryDictionariesFromGlobal`** retained as intentional handoff (**19.4** audit/retain) — mirrors phase-2 global enrichments onto nested `def_*` at `getSymbolTable()` / `finalizeHandoffSymbolTable()`.
+4. **`ConvertEgressScopeBundle`** (15.6 / **19.5**) keeps `globalQueryDictionaryRefs` aligned with publish + phase-2 live writes; convert reads prefer the bundle when active.
+5. **Two-store contract** documented: global may be richer than `def_*` snapshot after parent phase-2 until handoff sync; that is not a sync bug.
 
 ### Phase 19 substeps
 
@@ -2260,8 +2274,14 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
 | **19.1** | Introduce `publishQueryDictionary` / `PublishContext` with sanitize + embedded + global merge; wire `publishQueryLikeScope` | `SqlParseSymbolTreeHelper.java` | nested demos + V1–V16 + V13/V14 + full gate; **no silent golden/diag churn** | ✅ **Aug 2026** |
 | **19.2** | Route `finalizeQueryScopeSymbolTable` through **19.1** (remove pre-publish duplicate sanitize/merge); VALUES already covered via `publishQueryLikeScope` sanitize | Finalizers | nested demo + V1–V16 + VALUES/DML probes + full gate | ✅ **Aug 2026** |
 | **19.3** | Route INSERT / UPDATE / DELETE finalizers through **19.1** | DML finalizers | DML V13/V14 + INSERT/VALUES/DELETE probes + full gate | ✅ **Aug 2026** |
-| **19.4** | Audit `syncPublishedScopeQueryDictionariesFromGlobal` call sites in `SqlParseEventWalker`; retire or guard behind assert | `SqlParseEventWalker.java` | Full suite; confirm no handoff drift | ⏸️ |
-| **19.5** | Wire `ConvertEgressScopeBundle.globalQueryDictionaryRefs` to publish API outputs; grep clean for stray egress `mergeIntoGlobal…` | Helper + convert | Full gate + full suite | ⏸️ |
+| **19.4** | Audit `syncPublishedScopeQueryDictionariesFromGlobal`; retire or assert-only | `SqlParseEventWalker.java` | Full gate; no silent golden churn | ✅ **Closed audit/retain** — sync kept as intentional handoff (125-golden retirement declined) |
+| **19.5** | Wire `ConvertEgressScopeBundle.globalQueryDictionaryRefs` to publish API outputs; grep clean for stray egress `mergeIntoGlobal…` | Helper + convert | Full gate + full suite | ✅ **Aug 2026** — 0 golden/diag churn |
+
+### Phase 19.5 — Convert-egress bundle ↔ live index (Aug 2026)
+
+**Goal:** Keep `ConvertEgressScopeBundle.globalQueryDictionaryRefs` aligned with publish / phase-2 writes; convert-time global reads prefer the bundle when active.
+
+**Verify (green, 0 golden/diag churn):** `SmoketestQualityGateTestSuite` green; full `mvn clean test` **1591** run, **0** fail/error, **2** skipped.
 
 ### Phase 19 closeout checklist
 
@@ -2269,10 +2289,11 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
 - [x] **19.1** `publishQueryDictionary` API + `publishQueryLikeScope` wired
 - [x] **19.2** SELECT finalize duplicate pre-publish merge retired
 - [x] **19.3** INSERT / UPDATE / DELETE publish paths routed through `publishQueryDictionary`
-- [ ] No direct `mergeIntoGlobalQueryColumnDictionary` outside publish API (+ phase-2 enrichers explicitly excepted) — **19.5** (scope-close path already clean after **19.3**)
-- [ ] `syncPublishedScopeQueryDictionariesFromGlobal` retired or assert-only — **19.4**
-- [ ] `table-and-query-dictionary-design.md` cross-ref: two-store intentional; publish API is sole write ingress
-- [ ] Full gate + full suite green under Phase 19 stability rule
+- [x] **19.4** sync audited and **retained** as intentional handoff (retirement declined)
+- [x] No direct `mergeIntoGlobalQueryColumnDictionary` outside publish API (+ phase-2 enrichers explicitly excepted) — **19.5**
+- [x] `syncPublishedScopeQueryDictionariesFromGlobal` — **retain** (not assert-only); intentional handoff per **19.4**
+- [x] `table-and-query-dictionary-design.md` cross-ref: two-store intentional; publish API + phase-2 + handoff sync
+- [x] Full gate + full suite green under Phase 19 stability rule — **19.5** verify
 
 ### Phase 15 vs Phase 13 / 16–19
 
@@ -2971,11 +2992,11 @@ Phase 17 — UNPIVOT derived columns                                     🔄 IN
   17.0b derived-column operand qualifier guard ✅ (Jul 2026)
   17.1–17.5: enforce signed ownership policy; VALUE/FOR/IN outcomes; retire duplicate convert hooks
 
-Phase 18 — PIVOT IN-list output + IN-identifier                        ⏸️ after Phase 15
-  18.0–18.5: RESOLVED_PIVOT_IN_LIST_OUTPUT; retire isPivotDerivedInterfaceOutputColumn; IN-identifier contract
+Phase 18 — PIVOT IN-list output + IN-identifier                        ✅ closed policy-only
+  18.0–18.5: inventory + reformulation policy; 18.1/18.4/18.5 dropped
 
-Phase 19 — Query dictionary publish path consolidation                   ⏸️ after Phase 15.6
-  19.0–19.5: single publishQueryDictionary ingress; retire write-path spread + syncPublishedScopeQueryDictionariesFromGlobal repair
+Phase 19 — Query dictionary publish path consolidation                   ✅ DONE (Aug 2026)
+  19.0–19.5: single publishQueryDictionary ingress; sync retained as handoff (19.4); egress bundle (19.5)
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.

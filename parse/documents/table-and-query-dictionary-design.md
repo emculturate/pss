@@ -210,7 +210,8 @@ Before merging a dictionary change, ask:
 | External query-alias usage at scope exit | Interface validation loop + `materializeResolvedQualifiedQuerySourceReference` (~~`mergeSelectListQualifiedQueryAliasRefsIntoSourceQueryDictionary`~~ retired Jul 2026) |
 | Predicand / correlated unresolved bubble-up | `dependent_queries`, deferred `unresolved_column` at scope exit, `finalizeQueryScopeSymbolTable` pass-up flags |
 | Phase 1 output origins | `SqlParseEventWalker.exitSelect_item` → `addAliasTokensObject` |
-| Global / published sync | `mergeIntoGlobalQueryColumnDictionary`, `syncPublishedScopeQueryDictionariesFromGlobal` |
+| Global / published sync | `publishQueryDictionary` (scope-close sanitize+embed+global), `syncPublishedScopeQueryDictionariesFromGlobal` (intentional handoff; Phase 19.4 retain), phase-2 `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` |
+| Convert-egress global reads | `ConvertEgressScopeBundle.globalQueryDictionaryRefs` via `getQuerySourceDictionaryPreferDefinition` (Phase 15.6 / 19.5) |
 
 ---
 

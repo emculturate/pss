@@ -5793,6 +5793,8 @@ public class SqlParseSymbolTreeHelper {
 
 		HashMap<String, Object> globalQueryDictionaryRefs = new HashMap<String, Object>();
 		for (String liveQueryRef : liveQueryRefs) {
+			// Phase 19.5: live index is owned by publishQueryDictionary / phase-2 enrichers;
+			// the bundle holds the same map refs (not copies) for convert-egress reads.
 			Object queryDictionaryObj = walker.queryColumnDictionaryMap.get(liveQueryRef);
 			if (queryDictionaryObj != null) {
 				globalQueryDictionaryRefs.put(liveQueryRef, queryDictionaryObj);
@@ -13391,19 +13393,29 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (querySourcesWithColumn.isEmpty()
-				&& walker.queryColumnDictionaryMap != null
 				&& !hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
-			for (String queryRef : walker.queryColumnDictionaryMap.keySet()) {
-				String canonicalQueryRef = normalizeQuerySourceReference(queryRef);
-				if (canonicalQueryRef == null || canonicalQueryRef.isBlank()) {
-					continue;
-				}
-				if (checkedQuerySources.contains(canonicalQueryRef)) {
-					continue;
-				}
-				checkedQuerySources.add(canonicalQueryRef);
-				if (querySourceHasExactColumn(queryRef, columnName, null)) {
-					addIgnoringCase(querySourcesWithColumn, canonicalQueryRef);
+			Iterable<String> fallbackQueryRefs;
+			if (activeConvertEgressScopeBundle != null) {
+				// Phase 19.5: prefer the convert-egress publish snapshot over a raw global-map scan.
+				fallbackQueryRefs = activeConvertEgressScopeBundle.globalQueryDictionaryRefs.keySet();
+			} else if (walker.queryColumnDictionaryMap != null) {
+				fallbackQueryRefs = walker.queryColumnDictionaryMap.keySet();
+			} else {
+				fallbackQueryRefs = null;
+			}
+			if (fallbackQueryRefs != null) {
+				for (String queryRef : fallbackQueryRefs) {
+					String canonicalQueryRef = normalizeQuerySourceReference(queryRef);
+					if (canonicalQueryRef == null || canonicalQueryRef.isBlank()) {
+						continue;
+					}
+					if (checkedQuerySources.contains(canonicalQueryRef)) {
+						continue;
+					}
+					checkedQuerySources.add(canonicalQueryRef);
+					if (querySourceHasExactColumn(queryRef, columnName, null)) {
+						addIgnoringCase(querySourcesWithColumn, canonicalQueryRef);
+					}
 				}
 			}
 		}
@@ -15396,7 +15408,9 @@ public class SqlParseSymbolTreeHelper {
 
 		Object existingObj = walker.queryColumnDictionaryMap.get(normalizedScopeKey);
 		if (!(existingObj instanceof HashMap<?, ?> existingMapObj)) {
-			walker.queryColumnDictionaryMap.put(normalizedScopeKey, new HashMap<String, Object>(queryDictionary));
+			HashMap<String, Object> published = new HashMap<String, Object>(queryDictionary);
+			walker.queryColumnDictionaryMap.put(normalizedScopeKey, published);
+			notifyActiveConvertEgressBundleGlobalQueryDictionary(normalizedScopeKey, published);
 			return;
 		}
 
@@ -15413,6 +15427,24 @@ public class SqlParseSymbolTreeHelper {
 			}
 			existingMap.put(columnName, mergeReferenceCollections(existingRefs, entry.getValue()));
 		}
+		notifyActiveConvertEgressBundleGlobalQueryDictionary(normalizedScopeKey, existingMap);
+	}
+
+	/**
+	 * Phase 19.5: keep {@link ConvertEgressScopeBundle#globalQueryDictionaryRefs} aligned when the
+	 * live index gains a new scope key during convert (same map instance for existing keys is
+	 * already shared; new keys must be registered explicitly).
+	 */
+	private void notifyActiveConvertEgressBundleGlobalQueryDictionary(
+			String liveQueryRef,
+			Object queryDictionaryObj) {
+		if (activeConvertEgressScopeBundle == null
+				|| liveQueryRef == null
+				|| liveQueryRef.isBlank()
+				|| queryDictionaryObj == null) {
+			return;
+		}
+		activeConvertEgressScopeBundle.globalQueryDictionaryRefs.put(liveQueryRef, queryDictionaryObj);
 	}
 
 	public boolean isDefinitionScopeKey(String scopeKey) {
@@ -15485,10 +15517,12 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Reads a scope's column-token map from {@link SqlASTWalkerHelper#queryColumnDictionaryMap}.
-	 * That global map is keyed by live source refs ({@code queryN}, {@code unionN}, etc.), not
-	 * {@code def_*}. Nested scope payloads live under {@code def_queryN} in the symbol table;
-	 * use {@link #getQueryDefinitionSymbol} for those.
+	 * Reads a scope's column-token map from the global live index
+	 * ({@link SqlASTWalkerHelper#queryColumnDictionaryMap}), preferring
+	 * {@link ConvertEgressScopeBundle#globalQueryDictionaryRefs} while convert egress is active
+	 * (Phase 15.6 / 19.5). That index is keyed by live source refs ({@code queryN}, {@code unionN},
+	 * etc.), not {@code def_*}. Nested scope payloads live under {@code def_queryN} in the symbol
+	 * table; use {@link #getQueryDefinitionSymbol} for those.
 	 */
 	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
 		String liveQueryRef = normalizeQuerySourceReference(queryRef);
@@ -15983,6 +16017,7 @@ public class SqlParseSymbolTreeHelper {
 		} else {
 			sourceQueryDictionary = new HashMap<String, Object>();
 			walker.queryColumnDictionaryMap.put(liveQueryRef, sourceQueryDictionary);
+			notifyActiveConvertEgressBundleGlobalQueryDictionary(liveQueryRef, sourceQueryDictionary);
 		}
 
 		Object promotedRefs = unknownEntryValue;
@@ -17170,9 +17205,19 @@ public class SqlParseSymbolTreeHelper {
 
 	/**
 	 * Merges the global {@link SqlASTWalkerHelper#queryColumnDictionaryMap} entry for a published
-	 * query scope into that scope's local {@code query_dictionary} (handoff sync). Downstream
-	 * references (e.g. UPDATE {@code o.col}) land on the global map after the scope is published;
-	 * this keeps nested {@code def_queryN} payloads aligned with the global two-store model.
+	 * query scope into that scope's local {@code query_dictionary} (handoff sync).
+	 * <p>
+	 * <b>Two-store contract:</b> phase-1 publish leaves an immutable-ish snapshot on
+	 * {@code def_queryN.query_dictionary}; phase-2 external usage (parent qualified refs on query
+	 * aliases) enriches the <em>global</em> live index afterward. This method copies those
+	 * phase-2 tokens onto nested {@code def_*} payloads at client handoff so symbol-table goldens
+	 * and consumers that only read the tree still see them.
+	 * <p>
+	 * Phase <b>19.4</b> goal is to retire this repair (global may legitimately be richer than the
+	 * embedded snapshot). A no-sync probe failed <b>125/239</b> smoketest gate methods — all
+	 * {@code Symbol Table is wrong} golden diffs (missing phase-2 tokens on nested
+	 * {@code query_dictionary} entries). Do <b>not</b> remove call sites without human acceptance
+	 * of that golden churn (Phase 19 stability rule).
 	 */
 	@SuppressWarnings("unchecked")
 	public void syncPublishedScopeQueryDictionariesFromGlobal(HashMap<String, Object> scopeRoot) {
