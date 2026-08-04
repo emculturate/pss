@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout goldens ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Only open doc:** §17.7.7-gap-fill **table** (deferred rows — see below). Large samples still **§17.7.7-deferred-large-sample-goldens**. |
+| **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -204,6 +204,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **exitPivot `queryCount`:** Removed spurious `walker.queryCount++` on `exitPivot_clause` (`64b8063`); PIVOT does not publish `def_query`, so the bump only skewed `queryN` / `def_queryN` numbering. Golden refresh across pivot/unpivot + related walker tests (`33f1810`); **`mvn clean test`** **1564/1564** run, **3** `@Ignore`.
 - **17.7.7 matrix A–E + gap-fill:** `SqlEventWalkerPivotUnpivotTests` **142/142**; `gapFill17_7_7_*` (11) with full goldens; per-method catalog `phase-17.7.7-pivot-test-catalog.md`; heatmap `phase-17.7.7-pivot-matrix-heatmap.md`.
 - **17.7.8 gap-fill row (happy):** `closeout17_7_8_*` (physical/subquery × PIVOT/UNPIVOT) — full extractor goldens (AST, interface, substitutions, table/query dict, symbol tree).
+- **17.7.8 gap-fill row (unhappy):** `gapFill17_7_8_DerivedVersusRegular*` — FATAL `AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE` for PIVOT + UNPIVOT across interface + archived clause buckets (JOIN ON, WHERE, GROUP BY, HAVING, ORDER BY, QUALIFY, window PARTITION BY / ORDER BY, UPDATE SET RHS; CTE join partner on WHERE). **`9b9817a`** + **`52d1ac9`**.
 - Commit `10f846d` / `3d0f3cd` — pivot subsets **A** + **B** golden refresh; subquery PIVOT IN resolution (matrix subset **A**).
 - **17.7.4** signed off (Aug 2026) — `RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED` at pivot/unpivot finalize for non-table sources (PIVOT aggregate/FOR, UNPIVOT IN-list); subquery + VALUES closeout tests; worklist + comment cleanup (`03b599d` + sign-off commit).
 - Commit `0d100ce` — unified PIVOT/UNPIVOT derived ref expansion (`derived@tuple_N` + per-bucket `source_columns`, dedupe at finalize); retired sibling fallback / harvest-site split / collapse heuristics; bulk golden refresh (~99/100 class tests via `refresh_pivot_unpivot_goldens.py`).
@@ -223,7 +224,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **Phase 18** (PIVOT IN-list output alias + IN-identifier). Optional: gap-fill table rows marked ⏸️ (UPDATE RHS + derived-vs-physical ambiguity — product/policy, not core 17.7); refresh **`largeStudentgeneralQueryParse*`** when severe-warning policy is settled.
+**Suggested next focus:** **Phase 18** (PIVOT IN-list output alias + IN-identifier). Optional: refresh **`largeStudentgeneralQueryParse*`** when severe-warning policy is settled.
 
 ---
 
@@ -1744,7 +1745,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 | **17.7.5b** | **Convert egress derived-phase convergence** | ✅ Done (Aug 2026) | **.1–.6** complete; **.7** signed off with **17.7.5**. See subsection below. |
 | **17.7.6** | **Clause harvest (publication dedupe)** | ✅ Done (Aug 2026) | No separate harvest pass: after **17.7.5b** phase B + strip, `consolidateConvertEgressColumnReferenceLists` collapses egress lists to unique `(name, table_ref)` only. **No** unqualified-vs-qualified pruning (multi-modifier: same name can be operand in one bucket, derived in another). Lineage stays in `derivation`; walk-captured clause sites preserved. |
 | **17.7.7** | **Tests + golden review** | ✅ Done (Aug 2026) | Subsets **A–E** + **§17.7.7-gap-fill** (`gapFill17_7_7_*` ×11). Class **142/142**; heatmap + **`phase-17.7.7-pivot-test-catalog.md`** (per-method subset/matrix). Deferred: large-sample goldens (**§17.7.7-deferred-large-sample-goldens**), heatmap **○** cells. |
-| **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ✅ Done (Aug 2026) | Convert prune removed; merge guard at physical materialize. **Closeout:** `closeout17_7_8_*` ×5 — first four with **full extractor goldens** + physical `table_dictionary` guards; fifth dual-PIVOT derived ambiguity. Unhappy “derived vs same-named physical” pairs remain **optional** in §17.7.7-gap-fill table only. |
+| **17.7.8** | **FINAL REMOVAL — retire convert derived-on-physical prune** | ✅ Done (Aug 2026) | Convert prune removed; merge guard at physical materialize. **Closeout:** `closeout17_7_8_*` ×5 — first four with **full extractor goldens** + physical `table_dictionary` guards; fifth dual-PIVOT derived ambiguity. **Gap-fill unhappy:** `gapFill17_7_8_DerivedVersusRegular*` (derived vs join subquery/CTE regular source) — clause-bucket FATAL matrix for PIVOT + UNPIVOT. |
 | **17.7.9** | **Diagnostic (3): qualified derived inside modifier scope** | ❌ **Dropped** | Not pursuing. **17.0b** + **16.4** cover UNPIVOT VALUE/FOR and PIVOT physical operands; no broad PIVOT-derived-in-phrase FATAL pass. |
 | **17.7.10** *(optional)* | **Diagnostic (4): derived ref qualified with source alias outside primary** | ✅ Done (Aug 2026) | Convert egress: `diagnoseRelationalModifierDerivedReferenceWithSourcePrimaryAlias` over interface + archived clause lists; **SEVERE_WARNING** `RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS` when structured `derived_columns` output is qualified with source-primary alias (`p_src`, `u_src`) not modifier alias (`p`, `u`); resolution unchanged. **Tests:** `pivotDerivedReferenceSourceAliasOutsideModifierSevereWarningV17_7_10Test`, `unpivotDerivedReferenceSourceAliasOutsideModifierSevereWarningV17_7_10Test`, `pivotDerivedReferenceModifierAliasOutsideModifierNoV17_7_10WarningTest`. |
 | **17.7.11** | **Query-backed operand tokens on `query_dictionary`** | ❌ **Abandoned** | Accepted **17.6.1** / **17.6.7** / `*FromV17_7_11Test` goldens are the contract; no implementation PR. Operand placement for query-backed FROM stays as today. |
@@ -1941,18 +1942,19 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | Tooling for repeatable golden refresh | ✅ `pivot_unpivot_queries.properties` + `refresh_pivot_unpivot_goldens.py` |
 | Matrix gap-fill (new tests for empty cells) | ✅ **Signed off** — `gapFill17_7_7_*` ×11; deferred cells in `phase-17.7.7-pivot-matrix-heatmap.md` |
 | **17.7.8** closeout pairs (physical vs subquery × PIVOT/UNPIVOT happy) | ✅ `closeout17_7_8_*` (×4) full extractor goldens + `closeout17_7_8_PivotPhysicalDualModifierDerivedAmbiguousInSelectTest` |
+| **17.7.8** gap-fill unhappy (derived vs regular, clause buckets) | ✅ `gapFill17_7_8_DerivedVersusRegular*` — PIVOT + UNPIVOT; diagnostic-only asserts |
 | Re-enable deferred large-sample / set-op diagnostic tests | ⏸️ After **17.7.5b** (see below) |
 
 ### §17.7.7-gap-fill — Bulk missing matrix combinations (new tests)
 
-**Status:** ✅ **Phase 17 core complete** (Aug 2026). The **priority gaps table below** is the only remaining “open” planning surface: rows marked ⏸️ are **not** blockers and **not** scheduled work unless product asks for them.
+**Status:** ✅ **Phase 17 core complete** (Aug 2026). The **priority gaps table below** is historical audit + sign-off record; no matrix rows remain ⏸️ except optional large-sample goldens (§17.7.7-deferred-large-sample-goldens).
 
 #### What the gap-fill table is (and is not)
 
 - **Is:** A backlog of **optional** matrix cells that were empty during the **17.7.7** audit — each row names a **topology × clause × column-kind** scenario and whether we wanted a **happy** test (full goldens) and/or an **unhappy** test (diagnostics).
 - **Is not:** Mandatory Phase 17 exit criteria. Subsets **A–E**, `gapFill17_7_7_*`, gate `triple*`, and **17.7.8** `closeout17_7_8_*` already lock the contract.
-- **Confusing row — “17.7.8 closeout matrix”:** The **happy** half is the 2×2 **physical vs subquery-backed source** × **PIVOT vs UNPIVOT**, asserting derived outputs never land on the **physical** `table_dictionary` (`closeout17_7_8_*` tests 1–4, now with full extractor strings). The **unhappy** half (“unqualified derived **vs** same-named **physical** column”) would need a schema where one name is both a real column and a modifier output — rare in fixtures; behavior is already covered indirectly by **derived ambiguity** (`AMBIGUOUS_DERIVED_COLUMN_REFERENCE`) vs **physical** resolution paths in subsets **D**/**E**. No dedicated four-test matrix unless we invent conflicting column names on `monthly_sales_long` / `monthly_sales`.
-- **Confusing row — “UPDATE RHS with modifier join”:** Extends existing `pivotUpdate*` tests: when UPDATE **SET** RHS references an unqualified name after a FROM with PIVOT/UNPIVOT, resolution must use the same convert-egress rules as SELECT. Deferred because DML + modifier join is a **separate** product surface from the pivot class gate; not required to retire convert prune (**17.7.8**).
+- **Confusing row — “17.7.8 closeout matrix”:** The **happy** half is the 2×2 **physical vs subquery-backed source** × **PIVOT vs UNPIVOT**, asserting derived outputs never land on the **physical** `table_dictionary` (`closeout17_7_8_*` tests 1–4). The **unhappy** half is **derived modifier output vs same-named regular source** (join subquery or CTE interface column, not a physical table column on the pivot source) → FATAL `AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE`; locked by `gapFill17_7_8_DerivedVersusRegular*` across clause egress buckets for both PIVOT and UNPIVOT.
+- **Confusing row — “UPDATE RHS with modifier join”:** Covered by `gapFill17_7_8_*UpdateRhsFatalTest` (PIVOT + UNPIVOT) alongside SELECT clause probes; happy-path DML without join collision remains in subset **D** `pivotUpdate*`.
 
 **Goal (original):** After classifying existing tests (tag with A–E + dimensions above), **add** focused tests for empty or weak cells — both **happy** and **unhappy**.
 
@@ -1965,10 +1967,10 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | **S3** × unqual **source** in `ordered_by` | Tuple-qualified SELECT | `AMBIGUOUS_COLUMN_REFERENCE` per site | ✅ `gapFill17_7_7_S3PivotUnpivotPivotOrderByAmbiguousSourceSalesAmountSevereV1Test` |
 | **S2-PU** systematic | Double join pivot+unpivot, each clause | Derived vs source ambiguity one modifier at a time | ✅ happy + QUALIFY; source ambiguity via S3 / gate |
 | **S2-PP** GROUP BY / ORDER BY | Qualified derived | Derived / source ambiguity | ✅ `gapFill17_7_7_S2Pp*` |
-| **Derived** in UPDATE RHS with modifier join | Extend `pivotUpdateFromRhs*` pattern | Ambiguous derived on RHS | ⏸️ Deferred — see explanation above |
+| **Derived** in UPDATE RHS with modifier join | Extend `pivotUpdateFromRhs*` pattern | Ambiguous derived on RHS | ✅ `gapFill17_7_8_*UpdateRhsFatalTest` (derived vs regular on SET RHS) |
 | **17.7.10** | `p.jan_sales_SUM` ON (no warning) | `p_src.jan_sales_SUM` ON → one SEVERE_WARNING | ✅ `*V17_7_10Test` (PIVOT + UNPIVOT WHERE) |
 | **17.7.9** | — | Qualified PIVOT-derived inside phrase | ❌ Dropped |
-| **17.7.8 closeout matrix** | Physical vs subquery × PIVOT/UNPIVOT (happy) | Derived vs same-named physical (four unhappy pairs) | ✅ Happy (`closeout17_7_8_*` ×4 goldens); ⏸️ unhappy optional |
+| **17.7.8 closeout matrix** | Physical vs subquery × PIVOT/UNPIVOT (happy) | Derived vs same-named **regular** source (clause buckets) | ✅ Happy (`closeout17_7_8_*` ×4 goldens); ✅ unhappy (`gapFill17_7_8_DerivedVersusRegular*`) |
 
 **Checklist — gap-fill (17.7.7-gap-fill):**
 
@@ -1997,7 +1999,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 **Why large-sample remains deferred:** Production-shaped SQL with many unqualified subquery columns → large **`AMBIGUOUS_COLUMN_REFERENCE`** severe-warning sets; product decision whether any fatals should downgrade before locking goldens (`701dcd9` position policy when refreshed).
 
-**Pivot class golden refresh:** ✅ **Complete** — subsets **A–E** + gap-fill signed off Aug 2026. **17.7.8** closeout happy paths ✅. **Only optional follow-ups:** gap-fill table ⏸️ rows; large-sample `@Ignore` pair.
+**Pivot class golden refresh:** ✅ **Complete** — subsets **A–E** + gap-fill signed off Aug 2026. **17.7.8** closeout happy paths ✅; **17.7.8** gap-fill unhappy (derived vs regular) ✅. **Only optional follow-up:** large-sample `@Ignore` pair (`largeStudentgeneralQueryParse*`).
 
 ---
 
