@@ -31,7 +31,7 @@ def extract_tests(java_text: str) -> dict[str, str]:
     for match in pattern.finditer(java_text):
         name = match.group(1)
         body = match.group(2)
-        if "runParsertest(query, parser)" not in body and "runSQLParsertestAllowErrors(query, parser)" not in body:
+        if "runParsertest(query, parser)" not in body and "runSQLParsertestAllowErrors(query, parser)" not in body and "runParsertest(query, parse(query))" not in body:
             continue
         qm = re.search(
             r"final String query\s*=\s*(.*?);\s*\n\s*final SQLSelectParserParser",
@@ -41,6 +41,12 @@ def extract_tests(java_text: str) -> dict[str, str]:
         if not qm:
             qm = re.search(
                 r"final String query\s*=\s*(.*?);\s*\n\s*\n\s*final SQLSelectParserParser",
+                body,
+                re.DOTALL,
+            )
+        if not qm:
+            qm = re.search(
+                r"final String query\s*=\s*(.*?);\s*\n\s*SqlParseEventWalker extractor = runParsertest\(query, parse\(query\)\)",
                 body,
                 re.DOTALL,
             )
@@ -169,19 +175,21 @@ def patch_java(java_text: str, goldens: dict[tuple[str, str], str], methods: lis
 def main() -> int:
     methods_filter = sys.argv[1:] if len(sys.argv) > 1 else None
     java_text = TEST_JAVA.read_text(encoding="utf-8")
-    tests = extract_tests(java_text)
+    all_tests = extract_tests(java_text)
+    tests = all_tests
     if methods_filter:
-        missing = [m for m in methods_filter if m not in tests]
+        missing = [m for m in methods_filter if m not in all_tests]
         if missing:
             print(f"Unknown test methods: {missing}", file=sys.stderr)
             return 1
-        tests = {m: tests[m] for m in methods_filter}
-    if not tests:
+        tests = {m: all_tests[m] for m in methods_filter}
+    if not all_tests:
         print("No tests extracted", file=sys.stderr)
         return 1
-    write_properties(tests, java_text)
+    write_properties(all_tests, java_text)
     goldens = run_capture()
-    java_text = patch_java(java_text, goldens, list(tests.keys()))
+    patch_names = list(tests.keys())
+    java_text = patch_java(java_text, goldens, patch_names)
     TEST_JAVA.write_text(java_text, encoding="utf-8")
     compile = subprocess.run(
         ["mvn", "-q", "test-compile", "-DskipTests"],

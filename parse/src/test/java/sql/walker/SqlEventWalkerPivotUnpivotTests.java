@@ -5300,13 +5300,21 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
 		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
 
 		String tableDict = extractor.getTableColumnDictionaryMap().toString();
 		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales_long", "jan_sales_SUM");
 
-		String sym = extractor.getSymbolTable().toString();
-		Assert.assertTrue(sym.contains("derived_columns={p={jan_sales_SUM"));
-		Assert.assertTrue(sym.contains("jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=jan_sales_SUM, table_ref=null}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=null, table=monthly_sales_long}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales_long={month_name=[[@11,74:83='month_name',<381>,3:29]], sales_amount=[[@8,56:67='sales_amount',<381>,3:11]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@6,52:54='SUM',<141>,3:7], [@14,89:99=''jan_sales'',<389>,3:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@6,52:54='SUM',<141>,3:7], [@14,89:99=''jan_sales'',<389>,3:44]]}, table_dictionary={monthly_sales_long={month_name=[[@11,74:83='month_name',<381>,3:29]], sales_amount=[[@8,56:67='sales_amount',<381>,3:11]]}}, derivation={source_columns={p=[{name=month_name, table_ref=monthly_sales_long}, {name=sales_amount, table_ref=monthly_sales_long}]}, derived_columns={p={jan_sales_SUM=[[@6,52:54='SUM',<141>,3:7], [@14,89:99=''jan_sales'',<389>,3:44]]}}}, interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=monthly_sales_long}, {name=sales_amount, table_ref=monthly_sales_long}]}, table_alias={p=monthly_sales_long}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	/**
@@ -5322,15 +5330,21 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
 		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
 
 		String tableDict = extractor.getTableColumnDictionaryMap().toString();
 		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales", "sales_amount", "month_name");
-		Assert.assertTrue(tableDict.contains("monthly_sales={jan_sales"));
-		Assert.assertTrue(tableDict.contains("feb_sales"));
 
-		String sym = extractor.getSymbolTable().toString();
-		Assert.assertTrue(sym.contains("derived_columns={u={sales_amount"));
-		Assert.assertTrue(sym.contains("month_name=[{name=month_name, table_ref=u}"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=sales_amount, table_ref=null}}, 2={column={name=month_name, table_ref=null}}}, from={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u, table={alias=null, table=monthly_sales}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[month_name, sales_amount]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@13,92:100='jan_sales',<381>,3:41]], feb_sales=[[@15,103:111='feb_sales',<381>,3:52]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={month_name=[[@3,21:30='month_name',<381>,1:21], [@10,77:86='month_name',<381>,3:26]], sales_amount=[[@1,7:18='sales_amount',<381>,1:7], [@8,60:71='sales_amount',<381>,3:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={month_name=[[@3,21:30='month_name',<381>,1:21], [@10,77:86='month_name',<381>,3:26]], sales_amount=[[@1,7:18='sales_amount',<381>,1:7], [@8,60:71='sales_amount',<381>,3:9]]}, table_dictionary={monthly_sales={jan_sales=[[@13,92:100='jan_sales',<381>,3:41]], feb_sales=[[@15,103:111='feb_sales',<381>,3:52]]}}, derivation={source_columns={u=[{name=jan_sales, table_ref=monthly_sales}, {name=feb_sales, table_ref=monthly_sales}]}, derived_columns={u={sales_amount=[[@8,60:71='sales_amount',<381>,3:9]], month_name=[[@10,77:86='month_name',<381>,3:26]]}}}, interface={month_name=[{name=month_name, table_ref=u}, {name=jan_sales, table_ref=monthly_sales}, {name=feb_sales, table_ref=monthly_sales}], sales_amount=[{name=jan_sales, table_ref=u}, {name=feb_sales, table_ref=u}]}, table_alias={u=monthly_sales}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	/**
@@ -5348,13 +5362,21 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
 		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
 
 		String tableDict = extractor.getTableColumnDictionaryMap().toString();
 		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales_long", "jan_sales_SUM");
 
-		String sym = extractor.getSymbolTable().toString();
-		Assert.assertTrue(sym.contains("derived_columns={p={jan_sales_SUM"));
-		Assert.assertTrue(sym.contains("jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=jan_sales_SUM, table_ref=null}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={table={alias=null, table=monthly_sales_long}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[jan_sales_SUM]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{src={month_name=[[@21,128:137='month_name',<381>,5:29]], sales_amount=[[@18,110:121='sales_amount',<381>,5:11]]}, monthly_sales_long={empid=[[@5,37:41='empid',<381>,3:9]], month_name=[[@7,44:53='month_name',<381>,3:16]], sales_amount=[[@9,56:67='sales_amount',<381>,3:28]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={empid=[[@5,37:41='empid',<381>,3:9]], month_name=[[@7,44:53='month_name',<381>,3:16]], sales_amount=[[@9,56:67='sales_amount',<381>,3:28]]}, query1={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@16,106:108='SUM',<141>,5:7], [@24,143:153=''jan_sales'',<389>,5:44]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={jan_sales_SUM=[[@1,7:19='jan_sales_SUM',<381>,1:7], [@16,106:108='SUM',<141>,5:7], [@24,143:153=''jan_sales'',<389>,5:44]]}, table_dictionary={src={month_name=[[@21,128:137='month_name',<381>,5:29]], sales_amount=[[@18,110:121='sales_amount',<381>,5:11]]}}, def_query0={query_dictionary={empid=[[@5,37:41='empid',<381>,3:9]], month_name=[[@7,44:53='month_name',<381>,3:16]], sales_amount=[[@9,56:67='sales_amount',<381>,3:28]]}, table_dictionary={monthly_sales_long={empid=[[@5,37:41='empid',<381>,3:9]], month_name=[[@7,44:53='month_name',<381>,3:16]], sales_amount=[[@9,56:67='sales_amount',<381>,3:28]]}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}], month_name=[{name=month_name, table_ref=monthly_sales_long}], sales_amount=[{name=sales_amount, table_ref=monthly_sales_long}]}}, derivation={source_columns={p=[{name=month_name, table_ref=src}, {name=sales_amount, table_ref=src}]}, derived_columns={p={jan_sales_SUM=[[@16,106:108='SUM',<141>,5:7], [@24,143:153=''jan_sales'',<389>,5:44]]}}}, interface={jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}, {name=month_name, table_ref=src}, {name=sales_amount, table_ref=src}]}, table_alias={src=query0, p=src}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	/**
@@ -5372,13 +5394,21 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
 		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
 
 		String tableDict = extractor.getTableColumnDictionaryMap().toString();
 		assertPhysicalTableDictionaryBucketOmitsColumnKeys(tableDict, "monthly_sales", "sales_amount", "month_name");
 
-		String sym = extractor.getSymbolTable().toString();
-		Assert.assertTrue(sym.contains("derived_columns={u={sales_amount"));
-		Assert.assertTrue(sym.contains("month_name=[{name=month_name, table_ref=u}"));
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=sales_amount, table_ref=null}}, 2={column={name=month_name, table_ref=null}}}, from={unpivot={value={column={name=sales_amount, table_ref=null}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, alias=u, table={alias=src, query={select={1={column={name=empid, table_ref=null}}, 2={column={name=jan_sales, table_ref=null}}, 3={column={name=feb_sales, table_ref=null}}}, from={table={alias=null, table=monthly_sales}}}}}}}", extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[month_name, sales_amount]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{monthly_sales={jan_sales=[[@9,55:63='jan_sales',<381>,3:16]], empid=[[@7,48:52='empid',<381>,3:9]], feb_sales=[[@11,66:74='feb_sales',<381>,3:27]]}, src={jan_sales=[[@23,142:150='jan_sales',<381>,5:41]], feb_sales=[[@25,153:161='feb_sales',<381>,5:52]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={jan_sales=[[@9,55:63='jan_sales',<381>,3:16]], empid=[[@7,48:52='empid',<381>,3:9]], feb_sales=[[@11,66:74='feb_sales',<381>,3:27]]}, query1={month_name=[[@3,21:30='month_name',<381>,1:21], [@20,127:136='month_name',<381>,5:26]], sales_amount=[[@1,7:18='sales_amount',<381>,1:7], [@18,110:121='sales_amount',<381>,5:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query1={query_dictionary={month_name=[[@3,21:30='month_name',<381>,1:21], [@20,127:136='month_name',<381>,5:26]], sales_amount=[[@1,7:18='sales_amount',<381>,1:7], [@18,110:121='sales_amount',<381>,5:9]]}, table_dictionary={src={jan_sales=[[@23,142:150='jan_sales',<381>,5:41]], feb_sales=[[@25,153:161='feb_sales',<381>,5:52]]}}, def_query0={query_dictionary={jan_sales=[[@9,55:63='jan_sales',<381>,3:16]], empid=[[@7,48:52='empid',<381>,3:9]], feb_sales=[[@11,66:74='feb_sales',<381>,3:27]]}, table_dictionary={monthly_sales={jan_sales=[[@9,55:63='jan_sales',<381>,3:16]], empid=[[@7,48:52='empid',<381>,3:9]], feb_sales=[[@11,66:74='feb_sales',<381>,3:27]]}}, interface={jan_sales=[{name=jan_sales, table_ref=monthly_sales}], empid=[{name=empid, table_ref=monthly_sales}], feb_sales=[{name=feb_sales, table_ref=monthly_sales}]}}, derivation={source_columns={u=[{name=jan_sales, table_ref=src}, {name=feb_sales, table_ref=src}]}, derived_columns={u={sales_amount=[[@18,110:121='sales_amount',<381>,5:9]], month_name=[[@20,127:136='month_name',<381>,5:26]]}}}, interface={month_name=[{name=month_name, table_ref=u}, {name=jan_sales, table_ref=src}, {name=feb_sales, table_ref=src}], sales_amount=[{name=jan_sales, table_ref=u}, {name=feb_sales, table_ref=u}]}, table_alias={src=query0, u=src}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	/**

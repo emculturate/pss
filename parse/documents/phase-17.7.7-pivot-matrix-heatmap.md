@@ -1,7 +1,8 @@
 # Phase 17.7.7 — Pivot/unpivot matrix heatmap
 
 **Status:** ✅ **Signed off Aug 2026** (gap-fill batch complete; optional cells deferred — see worklist §17.7.7-gap-fill).  
-**Class:** `SqlEventWalkerPivotUnpivotTests` (**117** methods, **117/117** green).  
+**Class:** `SqlEventWalkerPivotUnpivotTests` (**142** methods, **142/142** green).  
+**Catalog:** `phase-17.7.7-pivot-test-catalog.md` (per-method subset **A–E**).  
 **Spec:** `symbol-table-resolution-consolidation-worklist.md` §17.7.7-matrix  
 
 **Tag convention** (gap-fill / gate tests):
@@ -45,15 +46,12 @@ All gap-fill tests use **full golden** asserts (AST, interface, substitutions, t
 
 | Gap | Reason |
 |-----|--------|
-| Per-method matrix tags on all **117** tests | Subset **A–E** catalog + gap-fill table sufficient for now |
-| **17.7.8** derived vs same-named physical (four pairs) | Optional closeout; partial coverage via `closeout17_7_8_*` |
-| **17.7.10** `p_src.` ON warning | Optional alias diagnostic |
-| UPDATE RHS + modifier join | Phase 17.6 / DML matrix |
+| **§17.7.7-gap-fill table** ⏸️ rows | Optional only — UPDATE RHS + derived-vs-same-named-physical unhappy pairs; explained in worklist §17.7.7-gap-fill |
+| **§17.7.7-deferred-large-sample-goldens** | `largeStudentgeneralQueryParse*` still `@Ignore` |
 | S3 × QUALIFY, S2-UU systematic clause matrix | Low priority vs gate + gap-fill |
-| **§17.7.7-deferred-large-sample-goldens** | Non–pivot-contract; after 17.7.5b convergence |
 
 ## Related gate tests
 
 - `triplePivotUnpivotPivotJoinDerivedColumnsV1Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test`
 - `pivotDerivedAmbiguousConvertEgressPhaseParityOneVsTwoSelectRefsTest` (S2-PP SELECT)
-- `closeout17_7_8_*` (physical `table_dictionary` guards)
+- `closeout17_7_8_*` (physical/subquery × PIVOT/UNPIVOT — full goldens on tests 1–4)

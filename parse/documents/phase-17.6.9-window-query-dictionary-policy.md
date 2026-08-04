@@ -1,10 +1,10 @@
 # Phase 17.6.9 — Window `query_dictionary` policy
 
 **Status:** ✅ Done (Aug 2026) — default `parse/` suite verified **`9d06616`** (`mvn clean test`: 1564 run, 0 failures, 0 errors, 3 skipped)  
-**Priority:** P2 (optional vs **17.7.11** critical path)  
+**Priority:** P2 (historical — Phase 17 complete)  
 **Parent:** [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md) §17.6.9  
 **Depends on:** **17.6.8** ✅ (window archive lists + interim `query_dictionary` merge)  
-**Related:** **17.7.11** (operand site tokens on `query_dictionary` for query-backed FROM — separate design)
+**Related:** Query-backed FROM operand placement — accepted goldens (**17.7.11** abandoned)
 
 ---
 
@@ -41,7 +41,7 @@ For relational modifiers, **`window_partition_by`**, **`window_ordered_by`**, an
 **Out of scope (track separately):**
 
 - Full clause-site matrix (JOIN ON / GROUP BY / ORDER BY with window exprs) — see §Backlog below.
-- **17.7.11** query-backed operand `query_dictionary` placement.
+- Query-backed FROM operand `query_dictionary` placement (**17.7.11** abandoned — out of scope).
 
 ### Deprecated: 17.6.8 (b) modifier window tests
 
@@ -155,7 +155,7 @@ Prioritized **after** closure. Mostly **○** today.
 3. Code: `mergesQueryDictionaryTokensForAllColumnNamesInClauseList` → `false`; `applyWalkCapturedWindowSelectInterfaceClauseDeps`.
 4. Run **NewPolicy** four + full `SqlEventWalkerFunctionsAggregatesWindowingTests` + pivot class gate when touching walker/symbol tree.
 5. **No** bulk golden refresh on pivot tests without user confirmation.
-6. Do not conflate with **17.7.11**.
+6. Do not conflate with abandoned **17.7.11** (relational-modifier operands on query-backed FROM).
 
 ---
 
