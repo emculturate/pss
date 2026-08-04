@@ -221,7 +221,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Optional: remove spurious `walker.queryCount++` in `exitPivot_clause` (+ pivot golden renumber); large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**); **17.7.11** if implementing query-backed operand token placement beyond current accepted goldens.
 
-**Suggested next focus:** **17.7.11** (query-backed operand tokens on `query_dictionary` — design workshop + one implementation PR, if refining beyond accepted **17.6.1** / **17.6.7** goldens). Parallel optional: **exitPivot** `queryCount` removal; **17.7.9** / **17.7.10**; refresh **`largeStudentgeneralQueryParse*`** `@Ignore` tests; **Phase 18** (PIVOT IN-list output alias + IN-identifier); **17.6.4** hints-key refactor.
+**Suggested next focus:** **17.7.11** (query-backed operand tokens on `query_dictionary` — design workshop + one implementation PR, if refining beyond accepted **17.6.1** / **17.6.7** goldens). Parallel optional: **exitPivot** `queryCount` removal; **17.7.9** / **17.7.10**; refresh **`largeStudentgeneralQueryParse*`** `@Ignore` tests; **Phase 18** (PIVOT IN-list output alias + IN-identifier).
 
 ---
 
@@ -1675,7 +1675,7 @@ When a test fails after a code change (any pivot/unpivot test):
 | **17.6.1** | **Golden audit — triple-tuple / multi-modifier tests** | P1 | ✅ Done (Aug 2026) | Human sign-off tiers **A–C** (§17.6.1 sign-off). Subsets **A–E** + gap-fill already signed (**17.7.7**). No blind golden refresh. |
 | **17.6.2** | **Multi-sibling UNPIVOT SELECT ambiguity** | P0 | ✅ Done (Aug 2026) | `tripleUnpivotJoinDerivedColumnsAcrossTuplesV1Test`: **`AMBIGUOUS_DERIVED_COLUMN_REFERENCE`** for unqualified **`month_name`** `(1,69)` and **`sales_amount`** `(1,55)` (`u1|u2|u3`). Fix: do not run tier-2 VALUE→IN interface rewrite when `isAmbiguousUnqualifiedStructuredDerivedColumn` for VALUE name. WHERE alias-qualified — unchanged. |
 | **17.6.3** | **Multi-sibling PIVOT SELECT ambiguity (parity)** | P1 | ✅ Done (Aug 2026) | `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousV17_6_3Test`: unqualified `jan_sales_SUM` in SELECT with three PIVOT siblings → `AMBIGUOUS_DERIVED_COLUMN_REFERENCE` `(1,64)` `[p,q,r]`. Fix: skip `applyPivotValueInterfaceDerivations` for ambiguous structured derived names (parity with **17.6.2** UNPIVOT VALUE rewrite skip). Distinct-output happy path: `triplePivotJoinDerivedColumnsAcrossTuplesV1Test`. |
-| **17.6.4** | **Separate symbol-table keys: hints list vs derived_columns map** | P2 | ⏸️ Deferred | Replace `DERIVED_COLUMNS_HINTS_KEY` dual use (`ArrayList` walk-time → `HashMap` egress) with distinct keys, e.g. `relational_modifier_hints` (list, walk only) vs `derived_columns` (map, egress only). Eliminates type collision that required `retainRelationalModifierHintsForContinuedFrom` band-aid. |
+| **17.6.4** | **`derived_columns` symbol-table key constant** | P2 | ✅ Done (Aug 2026) | Retired duplicate `DERIVED_COLUMNS_HINTS_KEY`; all walk / `derivation` / convert sites use `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` (`"derived_columns"`). Shape may evolve clause → bucketed publish; no separate hints key. |
 | **17.6.5** | **Defer operand materialization to scope exit** | P2 | ⏸️ Superseded by **17.7** | Absorbed into **17.7.1** (parent table dict at modifier finalize) + **17.7.2**. |
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | ✅ Done (Aug 2026) | Five paired `*SubqueryFromV17_6_7Test` methods; gate + smoketest. Human golden acceptance via **17.6.1** tier **C**. **17.7.11** optional if implementing stricter query-backed operand `query_dictionary` placement in code. |
@@ -1691,7 +1691,7 @@ When a test fails after a code change (any pivot/unpivot test):
 5. ~~**17.6.7**~~ ✅ (Aug 2026) — five `*SubqueryFromV17_6_7Test`; golden acceptance tier **C**.
 6. ~~**17.6.8**~~ ✅ (Aug 2026) — clause + window + RETURNING egress contract tests; window partition-only policy → **17.6.9**.
 6b. ~~**17.6.9**~~ ✅ (Aug 2026) — [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md); **NewPolicy V1–V4**; **17.6.9b** optional.
-7. **17.6.4** — structural refactor as a dedicated slice after behavioral issues are green (do **not** mix with ambiguity fixes).
+7. ~~**17.6.4**~~ ✅ (Aug 2026) — single constant `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` for all `derived_columns` symbol-table / `derivation` usage.
 8. **17.7** — structured derivation finalize track (**17.7.1** first); mandatory closeout **17.7.8** removes convert derived-on-physical prune entirely.
 
 **17.6.2 expected behavior sketch:**
@@ -1729,7 +1729,7 @@ For UNPIVOT slots, subquery must expose IN-list physical columns (`jan_sales`, `
 
 **Invariant (closeout gate for 17.7):** Under correct finalize, a pivot **output** name (e.g. `jan_sales_SUM`) must **never** be collected into `table_dictionary[monthly_sales_long]` (or any physical key) in the first place. Therefore **no** convert pass may be required to remove such names by matching derived buckets against physical dict keys. If a test shows `jan_sales_SUM` on `monthly_sales_long` after full walk+convert, treat it as a **finalize / structured-walk bug** and fix upstream — **do not** reintroduce global or bucket-scoped “strip derived output from physical table” logic at convert.
 
-**Supersedes / absorbs:** **17.6.5** (operand materialization at scope exit → **finalize at modifier exit**), **17.6.6** (per-hint buckets → **`derivation` subtree keyed by `alias|tuple_N`**). **17.6.4** remains related (hints list vs map) but is orthogonal until derivation-only publish is stable.
+**Supersedes / absorbs:** **17.6.5** (operand materialization at scope exit → **finalize at modifier exit**), **17.6.6** (per-hint buckets → **`derivation` subtree keyed by `alias|tuple_N`**). **17.6.4** ✅ — one code constant for `derived_columns` (`RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY`).
 
 | ID | Step | Status | Notes |
 |----|------|--------|-------|

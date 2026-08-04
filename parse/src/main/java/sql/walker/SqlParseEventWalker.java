@@ -5464,7 +5464,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	private LinkedHashMap<String, Object> getActiveStructuredRelationalModifierDerivedColumnsState() {
-		Object derivedColumnsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY);
+		Object derivedColumnsObj = walker.symbolTable.get(SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		if (!(derivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj)) {
 			return null;
 		}
@@ -5498,7 +5498,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		recordRelationalModifierDerivedColumnToken(
-				SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY,
+				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
 				columnName,
 				columnToken);
 		consumeUnresolvedColumnReferenceFromModifierScope(columnName);
@@ -7085,7 +7085,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Mirror PIVOT behavior: isolate UNPIVOT artifacts in a short-lived local scope.
 		enterRelationalModifierClauseScope(MUMBLE_UNPIVOT_KEY);
 		walker.symbolTable.put(
-				SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY,
+				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
 				new LinkedHashMap<String, Object>());
 		walker.symbolTable.put(
 				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,
@@ -7303,7 +7303,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void enterPivot_clause( SQLSelectParserParser.Pivot_clauseContext ctx) {
 		enterRelationalModifierClauseScope(MUMBLE_PIVOT_KEY);
 		walker.symbolTable.put(
-				SqlParseSymbolTreeHelper.DERIVED_COLUMNS_HINTS_KEY,
+				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
 				new LinkedHashMap<String, Object>());
 		walker.symbolTable.put(
 				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY,

@@ -92,7 +92,6 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY = "_tmp_update_nodefrom_target_table_collection";
 	public static final String TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY = "_tmp_update_assignment_rhs_tokens";
 	public static final String UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY = "_update_assignment_rhs_clause_probe";
-	public static final String DERIVED_COLUMNS_HINTS_KEY = "derived_columns";
 	private static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY =
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY;
 	private static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY =
@@ -918,7 +917,7 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> derivationMap = (Map<String, Object>) derivationMapObj;
 			mergeDerivationSubMapIntoState(
 					state,
-					derivationMap.get(DERIVED_COLUMNS_HINTS_KEY),
+					derivationMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY),
 					true);
 			mergeDerivationSubMapIntoState(
 					state,
@@ -940,7 +939,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 		if (state.isEmpty()) {
-			Object derivedObj = scopeSymbols.get(DERIVED_COLUMNS_HINTS_KEY);
+			Object derivedObj = scopeSymbols.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 			if (derivedObj instanceof Map<?, ?> derivedMapObj && !derivedMapObj.isEmpty()) {
 				mergeDerivationSubMapIntoState(state, derivedObj, true);
 			}
@@ -986,7 +985,7 @@ public class SqlParseSymbolTreeHelper {
 		if (derivedBucketValue != null) {
 			HashMap<String, Object> derivedColumnsMap = ensureRelationalModifierDerivationSubMap(
 					derivationMap,
-					DERIVED_COLUMNS_HINTS_KEY);
+					RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 			derivedColumnsMap.put(bucketKey, derivedBucketValue);
 		}
 		if (sourceColumnBucketRefs != null && !sourceColumnBucketRefs.isEmpty()) {
@@ -1008,7 +1007,7 @@ public class SqlParseSymbolTreeHelper {
 			derivationMap.put(RELATIONAL_MODIFIER_SOURCE_REF_KEY, dictionaryPhysicalSourceRef);
 		}
 
-		walker.symbolTable.remove(DERIVED_COLUMNS_HINTS_KEY);
+		walker.symbolTable.remove(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		walker.symbolTable.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY);
 		walker.symbolTable.remove(RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY);
 	}
@@ -1026,7 +1025,7 @@ public class SqlParseSymbolTreeHelper {
 			Map<String, Object> derivationMap = (Map<String, Object>) derivationMapObj;
 			mergeDerivationSubMapIntoState(
 					state,
-					derivationMap.get(DERIVED_COLUMNS_HINTS_KEY),
+					derivationMap.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY),
 					true);
 			mergeDerivationSubMapIntoState(
 					state,
@@ -1048,7 +1047,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(DERIVED_COLUMNS_HINTS_KEY), true);
+		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY), true);
 		mergeDerivationSubMapIntoState(state, scopeSymbols.remove(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY), false);
 		mergeDerivationSubMapIntoState(
 				state,
@@ -1075,7 +1074,7 @@ public class SqlParseSymbolTreeHelper {
 		if (state.hasStructuredBucketDerivation()) {
 			HashMap<String, Object> derivationMap = new HashMap<String, Object>();
 			if (!state.derivedColumnsByBucket.isEmpty()) {
-				derivationMap.put(DERIVED_COLUMNS_HINTS_KEY, state.derivedColumnsByBucket);
+				derivationMap.put(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY, state.derivedColumnsByBucket);
 			}
 			if (!state.sourceColumnsByBucket.isEmpty()) {
 				derivationMap.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, state.sourceColumnsByBucket);
@@ -1089,7 +1088,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (!state.derivedColumnsByBucket.isEmpty()) {
-			scopeSymbols.put(DERIVED_COLUMNS_HINTS_KEY, state.derivedColumnsByBucket);
+			scopeSymbols.put(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY, state.derivedColumnsByBucket);
 		}
 		if (!state.sourceColumnsByBucket.isEmpty()) {
 			scopeSymbols.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, state.sourceColumnsByBucket);
@@ -1122,7 +1121,7 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 		if (!derivedColumnMap.isEmpty()) {
-			scopeSymbols.put(DERIVED_COLUMNS_HINTS_KEY, derivedColumnMap);
+			scopeSymbols.put(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY, derivedColumnMap);
 		}
 		if (!sourceColumnMap.isEmpty()) {
 			scopeSymbols.put(RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY, sourceColumnMap);
@@ -11383,9 +11382,9 @@ public class SqlParseSymbolTreeHelper {
 
 		HashMap<String, Object> derivedColumnsMap = getRelationalModifierDerivationSubMapFromScope(
 				walker.symbolTable,
-				DERIVED_COLUMNS_HINTS_KEY);
+				RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		if (derivedColumnsMap == null) {
-			Object derivedColumnsObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+			Object derivedColumnsObj = walker.symbolTable.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 			if (!(derivedColumnsObj instanceof Map<?, ?> derivedColumnsMapObj)) {
 				return;
 			}
@@ -11436,11 +11435,11 @@ public class SqlParseSymbolTreeHelper {
 		}
 		HashMap<String, Object> derivedFromDerivation = getRelationalModifierDerivationSubMapFromScope(
 				walker.symbolTable,
-				DERIVED_COLUMNS_HINTS_KEY);
+				RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		if (derivedFromDerivation != null && !derivedFromDerivation.isEmpty()) {
 			return derivedFromDerivation;
 		}
-		Object derivedObj = walker.symbolTable.get(DERIVED_COLUMNS_HINTS_KEY);
+		Object derivedObj = walker.symbolTable.get(RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY);
 		if (derivedObj instanceof HashMap<?, ?> derivedMap && !derivedMap.isEmpty()) {
 			return (HashMap<String, Object>) derivedMap;
 		}

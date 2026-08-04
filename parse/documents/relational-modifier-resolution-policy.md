@@ -30,7 +30,7 @@ Derived columns introduced by UNPIVOT (and analogously PIVOT registry keys) use 
 
 | Tier | When | What is decided | Example |
 |------|------|-----------------|---------|
-| **1 — Identity** | Modifier tuple finalize (`exitTable_primary` / `resolveUnpivotScopeAtPrimaryExit`) | Names in VALUE/FOR positions **are derived output columns**; record in `DERIVED_COLUMNS_HINTS_KEY`, stamp `MUMBLE_TABLE_REF_KEY` / `RELATIONAL_MODIFIER_SOURCE_REF_KEY`, consume from `unresolved_column` where hygiene applies | `sales_amount` registered as UNPIVOT VALUE derived on source `msl` |
+| **1 — Identity** | Modifier tuple finalize (`exitTable_primary` / `resolveUnpivotScopeAtPrimaryExit`) | Names in VALUE/FOR positions **are derived output columns**; record in `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY`, stamp `MUMBLE_TABLE_REF_KEY` / `RELATIONAL_MODIFIER_SOURCE_REF_KEY`, consume from `unresolved_column` where hygiene applies | `sales_amount` registered as UNPIVOT VALUE derived on source `msl` |
 | **2 — Reference rewrite** | Enclosing query scope finalize (`exitQuery_specification` / `finalizeQueryScopeSymbolTable`) | Every captured ref to that derived name in **this query’s** surfaces is rewritten using the recorded hint (VALUE → IN-list physical refs; FOR unchanged as derived) | `SELECT sales_amount`, `GROUP BY sales_amount`, `WHERE sales_amount > 0` all updated consistently |
 
 **Why two tiers:** At `exitColumn` inside SELECT, `sales_amount` cannot yet be tied to the UNPIVOT tuple — FROM has not been walked. At modifier exit (lower, inner context), identity **is** knowable and must be recorded **immediately**. Clause refs encountered later (WHERE, JOIN ON, GROUP BY, …) still batch their rewrite at query closeout because SELECT was also captured before FROM; one scope-finalize pass keeps all surfaces consistent.
@@ -57,7 +57,7 @@ Optional: if a clause is walked **after** FROM and hints are complete, tier-2 ma
 
 ## Consolidation target (Phase 17.1–17.5)
 
-**Canonical helper:** evolve `rewriteReferenceListForSingleUnpivotHint` into a scope-level `applyUnpivotDerivationsToQueryScope(...)` that rewrites `interface`, `filters`, `grouped_by`, `ordered_by`, and other archived clause lists from `DERIVED_COLUMNS_HINTS_KEY`.
+**Canonical helper:** evolve `rewriteReferenceListForSingleUnpivotHint` into a scope-level `applyUnpivotDerivationsToQueryScope(...)` that rewrites `interface`, `filters`, `grouped_by`, `ordered_by`, and other archived clause lists from `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY`.
 
 **Single walk call site (recommended):** `finalizeQueryScopeSymbolTable` / `exitQuery_specification`.
 
@@ -99,7 +99,7 @@ When multiple PIVOT or UNPIVOT operators are **siblings** in the same `query_spe
 | **Unqualified in WHERE / JOIN ON / GROUP BY / …** | Same ambiguity rules as other multi-source columns — multiple visible modifier aliases → diagnostic. |
 | **Unqualified in SELECT list** | **Must not** silently pick one tuple when ≥2 sibling modifiers expose the same derived name. Emit `AMBIGUOUS_COLUMN_REFERENCE` (see **17.6.2**). |
 
-Walk-time hints remain **per-operator** (append-only list); consolidation to published `derivation` buckets and parent `table_dictionary` happens at **modifier finalize** (`exitTable_primary` / tuple primary). Convert egress **publication dedupe** (**17.7.6**) collapses published clause/interface ref lists to unique `(name, table_ref)` in step **D** — see **Phase 17.7** in the worklist. Structural separation of hints list vs derived map is tracked as **17.6.4**; per-sibling operand/derived buckets are **17.7** (`derivation.source_columns` / `derivation.derived_columns` keyed by `alias|tuple_N`).
+Walk-time state under `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` may evolve from clause-local column maps to bucketed `derivation.derived_columns` at modifier finalize (`exitTable_primary` / tuple primary). Convert egress **publication dedupe** (**17.7.6**) collapses published clause/interface ref lists to unique `(name, table_ref)` in step **D** — see **Phase 17.7** in the worklist. Per-sibling operand/derived buckets are **17.7** (`derivation.source_columns` / `derivation.derived_columns` keyed by `alias|tuple_N`).
 
 **Convert prune retirement (17.7.8):** Convert must not rely on stripping pivot/unpivot **output** names from physical `table_dictionary` entries (e.g. `jan_sales_SUM` on `monthly_sales_long`). Correct finalize prevents those names from being materialized on physical keys; any leak is a finalize bug, not something convert repairs.
 
