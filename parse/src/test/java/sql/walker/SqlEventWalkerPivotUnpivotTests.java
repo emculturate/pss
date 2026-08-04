@@ -5547,6 +5547,73 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
 	}
 
+	/** Phase 17.7.10 — SEVERE_WARNING when derived output uses source-primary alias outside modifier phrase. */
+	@Test
+	public void pivotDerivedReferenceSourceAliasOutsideModifierSevereWarningV17_7_10Test() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "WHERE p_src.jan_sales_SUM > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Derived column 'jan_sales_SUM' qualified with source alias 'p_src'",
+				"jan_sales_SUM",
+				4,
+				6);
+	}
+
+	@Test
+	public void unpivotDerivedReferenceSourceAliasOutsideModifierSevereWarningV17_7_10Test() {
+		final String query =
+				"SELECT sales_amount\n"
+						+ "FROM monthly_sales u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "WHERE u_src.sales_amount > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS",
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				"Derived column 'sales_amount' qualified with source alias 'u_src'",
+				"sales_amount",
+				4,
+				6);
+	}
+
+	@Test
+	public void pivotDerivedReferenceModifierAliasOutsideModifierNoV17_7_10WarningTest() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "WHERE p.jan_sales_SUM > 0;";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertNull(
+				"Modifier alias qualifier should not emit 17.7.10 warning",
+				findDiagnosticByCodeAndFragmentAndSeverity(
+						snippet,
+						"RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS",
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						"jan_sales_SUM"));
+	}
+
 	/*
 		TUPLE TESTS WITH PIVOT AND UNPIVOT
 	*/

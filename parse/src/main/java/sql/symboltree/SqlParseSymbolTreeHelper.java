@@ -1493,11 +1493,290 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Emits {@link SqlASTWalkerHelper#DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE} for unqualified
-	 * convert-egress sites whose name is a pivot/unpivot source operand in multiple modifier
-	 * buckets (for example {@code sales_amount} visible on both {@code p} and {@code q}).
+	 * Phase 17.7.10: outside the modifier phrase, warn when a structured derived output is qualified
+	 * with the source-primary alias ({@code p_src}) instead of the modifier alias ({@code p}).
 	 */
 	@SuppressWarnings("unchecked")
+	private void diagnoseRelationalModifierDerivedReferenceWithSourcePrimaryAlias(
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers,
+			Object updateAssignmentsObj,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localRelationalModifierSourceColumns,
+			HashMap<String, Object> localTableAliasMap) {
+		if (localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()
+				|| localTableAliasMap == null
+				|| localTableAliasMap.isEmpty()) {
+			return;
+		}
+
+		HashSet<String> emittedDiagnosticLocations = new HashSet<String>();
+		forEachConvertEgressColumnRefSite(
+				localInterface,
+				archivedScopeColumnReferenceContainers,
+				updateAssignmentsObj,
+				(siteKey, refObj, columnName, tableRef) -> {
+					if (MUMBLE_INTERFACE_KEY.equals(siteKey)) {
+						return;
+					}
+					if (columnName == null
+							|| columnName.isBlank()
+							|| isUnqualifiedColumnRef(tableRef)) {
+						return;
+					}
+					String matchedBucketKey = findStructuredDerivedColumnBucketForSourcePrimaryQualifier(
+							columnName,
+							tableRef,
+							localDerivedColumns,
+							localRelationalModifierSourceColumns,
+							localTableAliasMap);
+					if (matchedBucketKey == null) {
+						return;
+					}
+					String interfaceDictionaryKey = MUMBLE_INTERFACE_KEY.equals(siteKey) && localInterface != null
+							? findKeyIgnoreCase(localInterface, columnName)
+							: null;
+					Integer[] refLocation = resolveRelationalModifierDerivedSourcePrimaryAliasRefSiteLocation(
+							refObj,
+							columnName,
+							tableRef,
+							localUnresolvedColumnMap,
+							localCurrentQueryDictionary,
+							interfaceDictionaryKey,
+							emittedDiagnosticLocations);
+					emitRelationalModifierDerivedReferenceUseModifierAliasWarningIfNew(
+							columnName,
+							tableRef,
+							matchedBucketKey,
+							refLocation,
+							emittedDiagnosticLocations);
+				});
+	}
+
+	private String findStructuredDerivedColumnBucketForSourcePrimaryQualifier(
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (columnName == null
+				|| columnName.isBlank()
+				|| tableRef == null
+				|| tableRef.isBlank()
+				|| localDerivedColumns == null
+				|| localDerivedColumns.isEmpty()) {
+			return null;
+		}
+
+		String matchedBucketKey = null;
+		for (Map.Entry<String, Object> bucketEntry : localDerivedColumns.entrySet()) {
+			String bucketKey = bucketEntry.getKey();
+			if (bucketKey == null || bucketKey.isBlank()) {
+				continue;
+			}
+			Object bucketObj = bucketEntry.getValue();
+			if (!(bucketObj instanceof Map<?, ?> bucketMap)
+					|| !isRelationalModifierStructuredDerivedColumnBucket((Map<String, Object>) bucketMap)
+					|| !containsKeyIgnoreCase((Map<String, Object>) bucketMap, columnName)) {
+				continue;
+			}
+			String sourcePrimaryAlias = resolveRelationalModifierSourcePrimaryAliasForBucket(
+					bucketKey,
+					localSourceColumnsByBucket,
+					localTableAliasMap);
+			if (sourcePrimaryAlias == null
+					|| !sourcePrimaryAlias.equalsIgnoreCase(tableRef)
+					|| bucketKey.equalsIgnoreCase(tableRef)) {
+				continue;
+			}
+			if (matchedBucketKey != null && !matchedBucketKey.equalsIgnoreCase(bucketKey)) {
+				return null;
+			}
+			matchedBucketKey = bucketKey;
+		}
+		return matchedBucketKey;
+	}
+
+	private String resolveRelationalModifierSourcePrimaryAliasForBucket(
+			String modifierBucketKey,
+			HashMap<String, Object> localSourceColumnsByBucket,
+			HashMap<String, Object> localTableAliasMap) {
+		if (modifierBucketKey == null || modifierBucketKey.isBlank()) {
+			return null;
+		}
+		if (localTableAliasMap != null && !localTableAliasMap.isEmpty()) {
+			String mapKey = findKeyIgnoreCase(localTableAliasMap, modifierBucketKey);
+			if (mapKey != null) {
+				Object aliasTargetObj = localTableAliasMap.get(mapKey);
+				if (aliasTargetObj instanceof String aliasTarget
+						&& !aliasTarget.isBlank()
+						&& !aliasTarget.equalsIgnoreCase(modifierBucketKey)) {
+					return aliasTarget;
+				}
+			}
+		}
+		if (localSourceColumnsByBucket == null || localSourceColumnsByBucket.isEmpty()) {
+			return null;
+		}
+		String bucketMapKey = findKeyIgnoreCase(localSourceColumnsByBucket, modifierBucketKey);
+		if (bucketMapKey == null) {
+			return null;
+		}
+		Object refsObj = localSourceColumnsByBucket.get(bucketMapKey);
+		if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+			return null;
+		}
+		String sourceTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refs.get(0));
+		if (sourceTableRef == null
+				|| sourceTableRef.isBlank()
+				|| sourceTableRef.equalsIgnoreCase(modifierBucketKey)) {
+			return null;
+		}
+		return sourceTableRef;
+	}
+
+	private Integer[] resolveRelationalModifierDerivedSourcePrimaryAliasRefSiteLocation(
+			Object refObj,
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			String interfaceDictionaryKey,
+			HashSet<String> emittedDiagnosticLocations) {
+		if (!isUnqualifiedColumnRef(tableRef)) {
+			Integer[] qualifiedLocation = firstLocationFromUnresolvedUnknownEntry(
+					peekQualifiedUnknownEntry(localUnresolvedColumnMap, tableRef, columnName));
+			if (qualifiedLocation != null && qualifiedLocation.length >= 2 && qualifiedLocation[0] != null) {
+				return qualifiedLocation;
+			}
+			Object globalQualifiedEntry = walker.getCapturedQualifiedUnresolvedLocationEntry(
+					tableRef + "." + columnName);
+			qualifiedLocation = firstLocationFromUnresolvedUnknownEntry(globalQualifiedEntry);
+			if (qualifiedLocation != null && qualifiedLocation.length >= 2 && qualifiedLocation[0] != null) {
+				return qualifiedLocation;
+			}
+		}
+
+		Integer[] refLocation = resolveAmbiguousDerivedColumnRefSiteLocation(
+				refObj,
+				columnName,
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary,
+				interfaceDictionaryKey,
+				emittedDiagnosticLocations);
+		if (refLocation != null && refLocation.length >= 2 && refLocation[0] != null) {
+			return refLocation;
+		}
+		return new Integer[] { null, null };
+	}
+
+	private Object peekQualifiedUnknownEntry(
+			HashMap<String, Object> unresolvedColumnMap,
+			String tableRef,
+			String columnName) {
+		if (unresolvedColumnMap == null
+				|| unresolvedColumnMap.isEmpty()
+				|| tableRef == null
+				|| tableRef.isBlank()
+				|| columnName == null
+				|| columnName.isBlank()) {
+			return null;
+		}
+
+		String directKey = tableRef + "." + columnName;
+		if (unresolvedColumnMap.containsKey(directKey)) {
+			return unresolvedColumnMap.get(directKey);
+		}
+		for (Map.Entry<String, Object> entry : unresolvedColumnMap.entrySet()) {
+			String key = entry.getKey();
+			if (key == null || !key.contains(".")) {
+				continue;
+			}
+			int separatorIndex = key.lastIndexOf('.');
+			if (separatorIndex <= 0 || separatorIndex + 1 >= key.length()) {
+				continue;
+			}
+			String keyTableRef = key.substring(0, separatorIndex);
+			String keyColumnName = key.substring(separatorIndex + 1);
+			if (keyTableRef.equalsIgnoreCase(tableRef) && keyColumnName.equalsIgnoreCase(columnName)) {
+				return entry.getValue();
+			}
+		}
+		return null;
+	}
+
+	private Integer[] firstLocationFromUnresolvedUnknownEntry(Object unresolvedEntry) {
+		if (!(unresolvedEntry instanceof Map<?, ?> unresolvedMap)) {
+			return new Integer[] { null, null };
+		}
+		Object locationsObj = unresolvedMap.get("locations");
+		if (!(locationsObj instanceof ArrayList<?> locations) || locations.isEmpty()) {
+			return new Integer[] { null, null };
+		}
+		for (Object locationObj : locations) {
+			if (locationObj == null) {
+				continue;
+			}
+			Integer[] location = walker.parseLineAndCharacterFromToken(locationObj.toString());
+			if (location != null && location.length >= 2 && location[0] != null) {
+				return location;
+			}
+		}
+		return new Integer[] { null, null };
+	}
+
+	private void emitRelationalModifierDerivedReferenceUseModifierAliasWarningIfNew(
+			String columnName,
+			String sourcePrimaryAlias,
+			String modifierAlias,
+			Integer[] refLocation,
+			HashSet<String> emittedDiagnosticLocations) {
+		String locationKey = formatAmbiguousDerivedDiagnosticLocationKey(refLocation);
+		if (locationKey == null) {
+			return;
+		}
+		if (emittedDiagnosticLocations != null && !emittedDiagnosticLocations.add(locationKey)) {
+			return;
+		}
+
+		String diagCode = walker.getDiagnosticCode(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS);
+		String diagTemplate = walker.getDiagnosticMessage(
+				SqlASTWalkerHelper.DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Derived column '%s' qualified with source alias '%s' at (l:%s c:%s); use relational modifier alias '%s' instead.",
+						columnName,
+						sourcePrimaryAlias,
+						refLocation[0],
+						refLocation[1],
+						modifierAlias)
+				: String.format(
+						diagTemplate,
+						columnName,
+						sourcePrimaryAlias,
+						refLocation[0],
+						refLocation[1],
+						modifierAlias);
+
+		walker.addWalkerDiagnostic(
+				ParseDiagnostic.Severity.SEVERE_WARNING,
+				diagCode,
+				diagMessage,
+				refLocation[0],
+				refLocation[1],
+				walker.getClass().getSimpleName(),
+				null,
+				columnName,
+				true,
+				"ast-walk",
+				null,
+				null);
+	}
+
 	private void diagnoseAmbiguousUnqualifiedRelationalModifierSourceOperandRefSites(
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
@@ -4599,6 +4878,16 @@ public class SqlParseSymbolTreeHelper {
 				localRelationalModifierSourceColumns,
 				archivedScopeColumnReferenceContainers,
 				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY));
+
+		diagnoseRelationalModifierDerivedReferenceWithSourcePrimaryAlias(
+				localInterface,
+				localCurrentQueryDictionary,
+				archivedScopeColumnReferenceContainers,
+				walker.symbolTable.get(MUMBLE_ASSIGNMENTS_KEY),
+				localUnresolvedColumnMap,
+				localDerivedColumns,
+				localRelationalModifierSourceColumns,
+				localTableAliasMap);
 
 		// Resolve ingress-captured unqualified entries
 		// Archived clause lists are validated separately via probeArchivedScopeClauseColumns.
