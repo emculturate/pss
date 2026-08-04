@@ -85,7 +85,68 @@ Optional: if a clause is walked **after** FROM and hints are complete, tier-2 ma
 | IN-list | Physical source | Materialize lineage; consume unresolved | — (already physical) | `RESOLVED_UNPIVOT_IN_SOURCE` materialize |
 | Phrase qualifiers | Diagnostics | `validateRelationalModifierOperandQualifiers` (17.0b) | — | — |
 
-PIVOT uses the same principles; operand materialization is Phase **16**; derived registry consume is Phase **15**; IN-list output aliases are Phase **18**.
+PIVOT uses the same principles; operand materialization is Phase **16**; derived registry consume is Phase **15**. **Phase 18a** (Snowflake bare IN-list output names as first-class resolution) is **not implemented** — use the **PIVOT naming reformulation** section below instead of selecting bare IN values / IN aliases.
+
+---
+
+## PIVOT naming reformulation (PSS-compatible Snowflake style) — Phase 18 closeout
+
+**Status:** Policy-only (Aug 2026). No resolver change for Snowflake default output names (`q1` alone). Instruct users to alias aggregates and IN values, then **SELECT the registry key**.
+
+### How PSS names PIVOT outputs
+
+Derived registry key = `{inComponent}_{aggregateAlias}` (case preserved from aliases / function name):
+
+| Phrase fragment | `inComponent` | Aggregate alias | Registry key |
+|-----------------|---------------|-----------------|--------------|
+| `SUM(amt) AS total` … `IN ('jan_sales' AS q1)` | `q1` (IN prefix) | `total` | **`q1_total`** |
+| `SUM(amt) AS total` … `IN ('feb_sales')` | `feb_sales` (literal) | `total` | **`feb_sales_total`** |
+| `SUM(amt)` (no AS) … `IN ('jan_sales')` | `jan_sales` | `SUM` | **`jan_sales_SUM`** |
+
+AST carries `alias=…` on the aggregate and `pivot_prefix=…` on IN entries when `AS` is present.
+
+### Snowflake vs PSS (do not conflate)
+
+| Construct | Snowflake result column | PSS registry key |
+|-----------|-------------------------|------------------|
+| `IN ('jan_sales' AS q1)` + `SUM(amt)` | **`q1`** (alias replaces value) | **`q1_SUM`** (or `q1_<aggAlias>`) |
+| Select bare `q1` | Valid | **Not** a supported output name — may synthesize wrong source lineage today; treat as unsupported for clean parses |
+| Select `q1_SUM` / `q1_total` | Usually absent unless agg aliased that way | **Supported** derived column |
+
+### Instruct users to reformulate
+
+For a clean PSS parse / resolution, rewrite Snowflake-shaped SELECTs to **name the registry key explicitly**:
+
+**Prefer:**
+
+```sql
+SELECT empid, q1_total, feb_sales_total
+FROM monthly_sales_long
+PIVOT (
+  SUM(sales_amount) AS total
+  FOR month_name IN ('jan_sales' AS q1, 'feb_sales')
+);
+```
+
+**Avoid (unsupported as pivot outputs in PSS):**
+
+```sql
+SELECT empid, q1, feb_sales   -- bare IN alias / bare IN literal as Snowflake column names
+FROM monthly_sales_long
+PIVOT (
+  SUM(sales_amount) AS total
+  FOR month_name IN ('jan_sales' AS q1, 'feb_sales')
+);
+```
+
+**Checklist for authors / agents:**
+
+1. Give the aggregate an **`AS` alias** when you care about a stable suffix (`AS total` → `…_total`).
+2. Give each IN value an **`AS` prefix** when you want a short stem (`'jan_sales' AS q1` → stem `q1`).
+3. In SELECT / WHERE / JOIN / GROUP BY / …, reference **`{stem}_{aggAlias}`** only — never bare `q1` and never assume Snowflake’s “alias replaces value” naming.
+4. Do not expect IN aliases or bare IN literals to appear as physical columns on the pivot **source** table.
+
+**Agent hint:** When rewriting user SQL for this parser, always emit the registry form above; do not “fix” bare Snowflake pivot output names by inventing source `table_dictionary` entries.
 
 ---
 

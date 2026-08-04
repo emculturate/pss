@@ -2381,6 +2381,90 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
+	/**
+	 * Documents a valid Snowflake PIVOT naming gap vs current PSS behavior.
+	 *
+	 * <p>Snowflake: {@code IN ('jan_sales' AS q1, ...)} names output columns {@code q1}/{@code q2}
+	 * (the IN alias <em>replaces</em> the pivot value as the result column name). See Snowflake
+	 * PIVOT docs.
+	 *
+	 * <p>Current PSS still publishes registry keys {@code q1_SUM}/{@code q2_SUM}. Selecting the
+	 * Snowflake names {@code q1}/{@code q2} does <strong>not</strong> fatal today — it
+	 * synthesizes physical lineage on {@code monthly_sales_long} (same accidental path as bare
+	 * IN-list aliases). That is the failure mode: wrong namespace / lineage, not unresolved.
+	 * Registry-form SELECT still works: {@link #pivotSnowflakeInAliasOutputNamesRegistryFormStillResolvesV1Test}.
+	 */
+	@Test
+	public void pivotSnowflakeInAliasOutputNamesBindAsSyntheticSourceNotDerivedV1Test() {
+		final String query =
+				"SELECT empid, q1, q2\n"
+						+ "FROM monthly_sales_long\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales' AS q1, 'feb_sales' AS q2));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		// Registry has the PSS derived names…
+		Assert.assertTrue(
+				"Expected q1_SUM in derived_columns",
+				extractor.getSymbolTable().toString().contains("q1_SUM="));
+		Assert.assertTrue(
+				"Expected q2_SUM in derived_columns",
+				extractor.getSymbolTable().toString().contains("q2_SUM="));
+
+		// …but Snowflake-shaped SELECT names are attributed as synthetic source columns,
+		// not as derived pivot outputs (interface table_ref=monthly_sales_long, not tuple_0).
+		Assert.assertEquals(
+				"Interface is wrong",
+				"[q1, empid, q2]",
+				extractor.getInterface().toString());
+		Assert.assertTrue(
+				"Snowflake output name q1 should not be treated as derived registry key in interface",
+				extractor.getSymbolTable().toString().contains(
+						"q1=[{name=q1, table_ref=monthly_sales_long}]"));
+		Assert.assertTrue(
+				"q1 should not appear as derived interface binding to tuple_0",
+				!extractor.getSymbolTable().toString().contains(
+						"q1=[{name=q1_SUM, table_ref=tuple_0}]")
+						&& !extractor.getSymbolTable().toString().contains(
+								"q1=[{name=q1, table_ref=tuple_0}]"));
+		Assert.assertTrue(
+				"Synthetic q1 landed on physical source table_dictionary",
+				extractor.getTableColumnDictionaryMap().toString().contains("q1="));
+	}
+
+	/**
+	 * Same PIVOT as {@link #pivotSnowflakeInAliasOutputNamesBindAsSyntheticSourceNotDerivedV1Test},
+	 * but SELECT PSS registry names ({@code q1_SUM}) — first-class derived resolution.
+	 */
+	@Test
+	public void pivotSnowflakeInAliasOutputNamesRegistryFormStillResolvesV1Test() {
+		final String query =
+				"SELECT empid, q1_SUM, q2_SUM\n"
+						+ "FROM monthly_sales_long\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales' AS q1, 'feb_sales' AS q2));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertTrue(
+				extractor.getSymbolTable().toString().contains("q1_SUM="));
+		Assert.assertTrue(
+				extractor.getInterface().toString().contains("q1_SUM"));
+		Assert.assertTrue(
+				"Registry form should bind as derived (tuple_0), not synthetic source column",
+				extractor.getSymbolTable().toString().contains(
+						"q1_SUM=[{name=q1_SUM, table_ref=tuple_0}"));
+		Assert.assertTrue(
+				"q1_SUM must not land on physical source table_dictionary",
+				!extractor.getTableColumnDictionaryMap().toString().contains("q1_SUM="));
+	}
+
 	@Test
 	public void pivotSameQuerySelectDerivedColumnFromTableTest() {
 		final String query =

@@ -16,6 +16,12 @@ alwaysApply: false
 4. **Context-dependent** — same token (`sales_amount`) may be unbound at `exitColumn` in SELECT, identity-known at modifier exit, fully rewritten at query closeout.
 5. **Defer within walk**, not to convert fallbacks (`probeArchivedScopeClauseColumns`, ambiguity suppressors).
 
+## PIVOT naming — instruct users (Phase 18 closed policy-only)
+
+PSS derived keys are **`{inComponent}_{aggregateAlias}`** (e.g. `'jan_sales' AS q1` + `SUM(amt) AS total` → **`q1_total`**). Snowflake’s bare output name (`q1` alone) is **not** supported as a first-class pivot output.
+
+When helping users get a clean parse, **reformulate** to alias the aggregate and (optionally) each IN value, then **SELECT the registry key** — never bare `q1` / bare IN literals as if they were Snowflake result columns. Full policy: `relational-modifier-resolution-policy.md` § *PIVOT naming reformulation*.
+
 ## Golden review policy (Phase 17.6 — through 17.6.1 + 17.6.7)
 
 **Do not auto-update test goldens** in `SqlEventWalkerPivotUnpivotTests` (especially triple-tuple / multi-modifier tests).
@@ -25,10 +31,8 @@ alwaysApply: false
 - **Wait for user confirmation** before changing assertion strings. No bulk golden refresh scripts.
 - Prefer fixing resolution code when actual output matches contract.
 
-## Open work (Phase 17.6 + 17.7)
+## Open work
 
-**17.6:** golden audit (17.6.1), subquery-backed triple variants (17.6.7), convert egress completeness (17.6.8). SELECT/PIVOT ambiguity (17.6.2–17.6.3) → implement via **17.7.5** ambiguous **derived** column diagnostic.
+Phase **17** core complete; **Phase 18** closed **policy-only** (PIVOT naming reformulation — no bare Snowflake output-name resolver). Optional: §17.7.7 deferred large-sample goldens. Next roadmap: Phase **19** publish path (see worklist).
 
-**17.7 (active):** Structured `derivation` finalize — **17.7.1** parent `table_dictionary` commit for `source_columns` first. Closeout **17.7.8**: **remove** convert-time `pruneRelationalModifierDerivedColumnsFromTableDictionary` (and equivalents). **Invariant:** pivot/unpivot **output** names must never land on physical `table_dictionary` rows if finalize is correct; if they do, fix finalize — **do not** keep convert stripping as a safety net.
-
-Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–18.
+Phase tracking: `parse/documents/symbol-table-resolution-consolidation-worklist.md` Phase 16–19.

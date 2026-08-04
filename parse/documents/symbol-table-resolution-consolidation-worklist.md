@@ -167,7 +167,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
-| **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
+| **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18a code deferred** — user reformulation policy in `relational-modifier-resolution-policy.md`; IN-identifier left as-is (green) |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
@@ -224,7 +224,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **Phase 18** (PIVOT IN-list output alias + IN-identifier). Optional: refresh **`largeStudentgeneralQueryParse*`** when severe-warning policy is settled.
+**Suggested next focus:** **Phase 19** (query dictionary publish consolidation) or optional Phase 17 large-sample goldens. **Phase 18** closed policy-only (reformulation doc — no `RESOLVED_PIVOT_IN_LIST_OUTPUT`).
 
 ---
 
@@ -2005,7 +2005,9 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 ## Phase 18 — PIVOT IN-list output alias and IN-identifier rationalization
 
-**Goal:** Give **Snowflake-style PIVOT IN-list output names** (`jan_sales` in SELECT, not `jan_sales_SUM`) and **PIVOT IN-identifier references** first-class resolution semantics — folded into the Phase 15 unified loop — instead of ad-hoc `isPivotDerivedInterfaceOutputColumn` skips and separate walker diagnostic maps.
+**Status:** ✅ **Closed policy-only (Aug 2026).** No `RESOLVED_PIVOT_IN_LIST_OUTPUT` / skip retirement. Users and agents reformulate to PSS registry names — see [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) § *PIVOT naming reformulation*. **18.0** inventory retained below for history. IN-identifier walk-time path left as-is (tests green).
+
+**Original goal (not implemented):** Give **Snowflake-style PIVOT IN-list output names** (`jan_sales` / bare IN `AS` alias in SELECT) first-class resolution — deferred indefinitely in favor of reformulation.
 
 **Problem today — two related but distinct tracks:**
 
@@ -2035,12 +2037,67 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 4. **IN-identifier:** walker proof remains at parse event; convert egress **does not** re-handle; document handoff from `pivot_in_identifier_references` to published scope.
 5. **`applyPivotValueInterfaceDerivations`** legacy path (`pivot_aggregate_columns` / `pivot_in_columns` fallback ~L981) audited — retire or align with walker hint population.
 
+### Phase 18.0 — IN-list alias vs derived registry classification (Aug 2026)
+
+**Status:** ✅ Inventory complete. Contract below is the Phase 18 acceptance model; **current goldens are not fully consistent with it** (see gaps).
+
+#### Naming namespaces (locked)
+
+| SQL name shape | Kind | Registry / hint | Expected lineage | Materialize? | Consume `unresolved`? | Target outcome |
+|----------------|------|-----------------|------------------|--------------|----------------------|----------------|
+| `jan_sales` after `IN ('jan_sales')` | **IN-list output alias** (Snowflake-style bare IN value) | Walk IN literals (worklist historically called this `pivot_in_columns`; **no live hint key by that name today**) | Pivot **source** physical table (`my_table` / `monthly_sales_long`) | **Yes** → source `table_dictionary` | Yes | `RESOLVED_PIVOT_IN_LIST_OUTPUT` |
+| `jan_sales_SUM` / `jan_sales_sum` | **Derived registry** (`{inValue}_{aggregate}`) | `derivation.derived_columns` | Modifier bucket (`tuple_0` / pivot alias); **not** physical source row for the output name | **No** (17.7.8) | Yes | `RESOLVED_DERIVED_COLUMN` |
+| `A_sum` / `jan_sum` (agg alias) | Derived registry with explicit agg alias | Same derived bucket | Same as `*_SUM` | No | Yes | `RESOLVED_DERIVED_COLUMN` (Phase 15/17; not 18a) |
+
+**Fixture note:** `monthly_sales_long` / `my_table` are long-format sources — they do **not** naturally own columns named `jan_sales`. Materializing bare IN aliases onto the source dict is **synthetic Snowflake attribution**, not “column already existed on the table.”
+
+**Case folding:** `jan_sales_sum` in SELECT binds to registry key `jan_sales_SUM` (see V0 family) — that is **derived**, not IN-list alias.
+
+#### The 11 IN-list alias / physical-lineage tests
+
+| # | Test | Clause / topology | Bare name sites | Golden interface `table_ref` today | Bare name on source `table_dictionary` today | Paired derived counterpart |
+|---|------|-------------------|-----------------|--------------------------------------|-----------------------------------------------|----------------------------|
+| 1 | `pivotBasicMetricColumnsV1Test` | SELECT | `jan_sales`… | `my_table` ✅ | Yes ✅ | `pivotBasicMetricColumnsV0Test` (`jan_sales_sum` → derived) |
+| 2 | `pivotTableWithInAliasesJanFebMarV2Test` | SELECT + WHERE `units` | bare months | `monthly_sales_long` ✅ | Yes ✅ | (no exact pair; WHERE is physical `units`) |
+| 3 | `pivotTableWithGroupByAndOrderByV2GroupOrderTest` | GROUP BY / ORDER BY | bare months | interface ✅ source; **grouped_by/ordered_by often `null`** | Yes ✅ | — |
+| 4 | `pivotTableWithHavingAndOrderByV2HavingOrderTest` | HAVING / ORDER BY | bare months | interface ✅; filters/ordered_by often `null` | Yes ✅ | — |
+| 5 | `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest` | JOIN ON | `jan_sales` | **`null` ⚠️** | **No ⚠️** (only operands on source dict) | `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` |
+| 6 | `pivotTableWithQualifyJanSalesProbeTest` | QUALIFY | `jan_sales` | interface ✅; filters `null` | Yes ✅ | — |
+| 7 | `pivotTableWithOrderByExpressionJanFebProbeTest` | ORDER BY expr | `jan_sales`/`feb_sales` | interface ✅; ordered_by `null` | Yes ✅ | `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` |
+| 8 | `pivotWithTaxAndWhereV4Test` | **Mixed** bare + `*_SUM` | both | bare → source; `*_SUM` → `tuple_0` | bare yes; derived no | `pivotMonthlySalesLongTaxWhereDerivedSumTest` |
+| 9 | `pivotJoinTargetsWithFilterV5Test` | JOIN + alias `u` + WHERE | bare + `u.jan_sales` | SELECT interface **`null` ⚠️**; ON sites on source | Partial (ON yes / SELECT no) | `pivotMonthlySalesLongJoinFilterDerivedSumTest` |
+| 10 | `pivotKeepingForColumnV6Test` | SELECT + FOR col | bare + `month_name` | source ✅ | Yes ✅ | `pivotBasicMonthSalesV7Test` (same FROM, derived names) |
+| 11 | `pivotBasicMonthSalesJoinV8Test` | JOIN (ON uses `empid` only) | bare months in SELECT | **`null` ⚠️** | **No ⚠️** | `pivotBasicMonthSalesV7Test` |
+
+#### Derived complement set (registry path — already Phase 15/17)
+
+| Test | Role vs IN-list set |
+|------|---------------------|
+| `pivotBasicMonthSalesV7Test` | Same FROM as V6/V8; SELECT uses `*_SUM` |
+| `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` | Pair of JoinOn bare probe (#5) |
+| `pivotMonthlySalesLongJoinFilterDerivedSumTest` | Pair of V5 (#9) |
+| `pivotMonthlySalesLongTaxWhereDerivedSumTest` | Pair of V4 tax (#8) without bare mix |
+| `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` | Pair of OrderBy expr (#7) |
+| `pivotBasicMetricColumnsV0*` | Case-insensitive derived SELECT/`jan_sales_sum` |
+
+#### Gaps / risks for 18.1
+
+1. **Golden split:** Single-source SELECT/QUALIFY/GROUP tests materialize bare names onto the source dict; **multi-source JOIN** goldens (#5, #9, #11) often leave interface `table_ref=null` and omit bare names from source `table_dictionary`. Phase 18 must pick one contract (recommend: always materialize to pivot source / `interfaceSourceRef`) and expect golden churn on the JOIN family.
+2. **Clause surfaces:** Even when interface is correct, `filters` / `grouped_by` / `ordered_by` often keep `table_ref=null` for bare names — weaker than derived counterparts (which rewrite to `tuple_0`).
+3. **Hint metadata:** Worklist still mentions `pivot_in_columns`; walker code today does **not** publish that key. 18.1 needs either revive that hint from IN literals or read IN values from published derivation / modifier AST handoff.
+4. **Helper mismatch:** `isPivotDerivedInterfaceOutputColumn` only matches **derived registry** keys — it does **not** identify bare IN aliases. The interface-loop “Phase 18 deferral” skip therefore does not explain V1 success; bare names currently succeed via **physical / single-source materialize paths**, not a first-class IN-list outcome.
+5. **Mixed query (#8):** Must keep both outcomes in one statement — bare → materialize source; `*_SUM` → consume derived.
+
+#### 18.0 → 18.1 handoff
+
+Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT IN-source materialize (source dict), then drive JOIN probes (#5/#9/#11) onto that contract. Do **not** treat V0 `jan_sales_sum` as IN-list alias.
+
 ### Phase 18 substeps
 
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
-| **18.0** | Classify 11 IN-list alias tests vs `pivotMonthlySalesLong*` derived tests; document expected lineage (physical pivot source vs registry) | Test matrix in worklist | ⏸️ |
-| **18.1** | Add `RESOLVED_PIVOT_IN_LIST_OUTPUT` to shared resolver using `pivot_in_columns` + pivot source ref | IN-list alias annotated tests | ⏸️ |
+| **18.0** | Classify 11 IN-list alias tests vs `pivotMonthlySalesLong*` derived tests; document expected lineage (physical pivot source vs registry) | Test matrix in worklist | ✅ **Aug 2026** |
+| **18.1** | Add `RESOLVED_PIVOT_IN_LIST_OUTPUT` to shared resolver using IN-list output names + pivot source ref (revive/align hint — see 18.0 gaps) | IN-list alias annotated tests | ⏸️ |
 | **18.2** | Replace `isPivotDerivedInterfaceOutputColumn` with explicit helper; retire misleading name | Interface loop + clause probe + UPDATE RHS | ⏸️ |
 | **18.3** | Audit `applyPivotValueInterfaceDerivations` dual paths (registry vs aggregate/in fallback); single walker→convert hint contract | Pivot interface goldens | ⏸️ |
 | **18.4** | Document IN-identifier walk-time contract; assert convert does not regress `pivotInIdentifier*` diagnostics | `pivotInIdentifier*` tests + gate smoke | ⏸️ |
@@ -2048,12 +2105,13 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 ### Phase 18 closeout checklist
 
-- [ ] `pivot_in_columns` vs derived registry keys are distinct in hints and resolver
-- [ ] `RESOLVED_PIVOT_IN_LIST_OUTPUT` in shared egress loop
-- [ ] `isPivotDerivedInterfaceOutputColumn` retired or renamed with correct semantics
-- [ ] IN-identifier walk-time vs convert boundary documented
-- [ ] `applyPivotValueInterfaceDerivations` legacy fallback path resolved
-- [ ] Pivot **67/67** + gate **195/195** + full suite **1209/1209**
+- [x] **18.0** classify IN-list alias vs derived tests (matrix above)
+- [x] **Policy:** PIVOT naming reformulation documented for users/agents (`relational-modifier-resolution-policy.md` + `.cursor/rules/relational-modifier-resolution.mdc`)
+- [x] Snowflake gap tests retained: `pivotSnowflakeInAliasOutputNamesBindAsSyntheticSourceNotDerivedV1Test`, `pivotSnowflakeInAliasOutputNamesRegistryFormStillResolvesV1Test`
+- [ ] ~~`RESOLVED_PIVOT_IN_LIST_OUTPUT`~~ — **deferred / not planned**
+- [ ] ~~Retire `isPivotDerivedInterfaceOutputColumn`~~ — **deferred / not planned**
+- [x] IN-identifier: leave walk-time contract; no convert rework in this closeout
+- [x] Pivot suite remains green under current goldens (no 18a semantic change)
 
 ---
 
