@@ -14,6 +14,28 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	 * Full heatmap: {@code parse/documents/phase-17.7.7-pivot-matrix-heatmap.md}.
 	 */
 
+	/** 17.7.8 — PIVOT derived {@code jan_sales_SUM} vs join subquery column of the same name. */
+	private static final String GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY =
+			"FROM monthly_sales_long p_src\n"
+					+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+					+ "JOIN (\n"
+					+ "  SELECT empid, jan_sales_SUM\n"
+					+ "  FROM (\n"
+					+ "    SELECT empid, 1 AS jan_sales_SUM FROM monthly_sales_long\n"
+					+ "  ) inner_q\n"
+					+ ") q ON p.empid = q.empid";
+
+	/** 17.7.8 — UNPIVOT derived {@code sales_amount} vs join subquery column of the same name. */
+	private static final String GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY =
+			"FROM monthly_sales u_src\n"
+					+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+					+ "JOIN (\n"
+					+ "  SELECT empid, sales_amount, month_name\n"
+					+ "  FROM (\n"
+					+ "    SELECT empid, 1 AS sales_amount, 'jan_sales' AS month_name FROM monthly_sales\n"
+					+ "  ) inner_q\n"
+					+ ") q ON u.empid = q.empid";
+
 	// UNPIVOT RELATIONAL OPERATOR TESTS
 
 	@Test
@@ -5654,6 +5676,338 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"jan_sales_SUM",
 				11,
 				6);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryJoinOnFatalTest() {
+		final String query =
+				"SELECT empid\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN (\n"
+						+ "  SELECT empid, jan_sales_SUM\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS jan_sales_SUM FROM monthly_sales_long\n"
+						+ "  ) inner_q\n"
+						+ ") q ON jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				9,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryGroupByFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY + "\nGROUP BY jan_sales_SUM;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				10,
+				9);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryHavingFatalTest() {
+		final String query =
+				"SELECT empid\n"
+						+ GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY
+						+ "\nGROUP BY p.empid\nHAVING jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				11,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryOrderByFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY + "\nORDER BY jan_sales_SUM;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				10,
+				9);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryQualifyFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY + "\nQUALIFY jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				10,
+				8);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryWindowPartitionByFatalTest() {
+		final String query =
+				"SELECT empid,\n"
+						+ "  ROW_NUMBER() OVER (PARTITION BY jan_sales_SUM ORDER BY p.empid) AS rn\n"
+						+ GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY
+						+ ";";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				2,
+				34);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryWindowOrderByFatalTest() {
+		final String query =
+				"SELECT empid,\n"
+						+ "  ROW_NUMBER() OVER (PARTITION BY p.empid ORDER BY jan_sales_SUM) AS rn\n"
+						+ GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY
+						+ ";";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				2,
+				51);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryUpdateRhsFatalTest() {
+		final String query =
+				"UPDATE targets t\n"
+						+ "SET target_amount = jan_sales_SUM\n"
+						+ GAP_FILL_17_7_8_PIVOT_JOIN_SUBQUERY_BODY
+						+ "\nWHERE t.empid = p.empid;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				2,
+				20);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubquerySelectFatalTest() {
+		final String query = "SELECT sales_amount\n" + GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY + ";";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				1,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryWhereFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY + "\nWHERE sales_amount > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				10,
+				6);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinCteWhereFatalTest() {
+		final String query =
+				"WITH q AS (\n"
+						+ "  SELECT empid, sales_amount, month_name\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS sales_amount, 'jan_sales' AS month_name FROM monthly_sales\n"
+						+ "  ) inner_q\n"
+						+ ")\n"
+						+ "SELECT empid\n"
+						+ "FROM monthly_sales u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "JOIN q ON u.empid = q.empid\n"
+						+ "WHERE sales_amount > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				11,
+				6);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryJoinOnFatalTest() {
+		final String query =
+				"SELECT empid\n"
+						+ "FROM monthly_sales u_src\n"
+						+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales, feb_sales)) u\n"
+						+ "JOIN (\n"
+						+ "  SELECT empid, sales_amount, month_name\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS sales_amount, 'jan_sales' AS month_name FROM monthly_sales\n"
+						+ "  ) inner_q\n"
+						+ ") q ON sales_amount > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				9,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryGroupByFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY + "\nGROUP BY sales_amount;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				10,
+				9);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryHavingFatalTest() {
+		final String query =
+				"SELECT empid\n"
+						+ GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY
+						+ "\nGROUP BY u.empid\nHAVING sales_amount > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				11,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryOrderByFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY + "\nORDER BY sales_amount;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				10,
+				9);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryQualifyFatalTest() {
+		final String query =
+				"SELECT empid\n" + GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY + "\nQUALIFY sales_amount > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				10,
+				8);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryWindowPartitionByFatalTest() {
+		final String query =
+				"SELECT empid,\n"
+						+ "  ROW_NUMBER() OVER (PARTITION BY sales_amount ORDER BY u.empid) AS rn\n"
+						+ GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY
+						+ ";";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				2,
+				34);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryWindowOrderByFatalTest() {
+		final String query =
+				"SELECT empid,\n"
+						+ "  ROW_NUMBER() OVER (PARTITION BY u.empid ORDER BY sales_amount) AS rn\n"
+						+ GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY
+						+ ";";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				2,
+				51);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularUnpivotJoinSubqueryUpdateRhsFatalTest() {
+		final String query =
+				"UPDATE targets t\n"
+						+ "SET target_amount = sales_amount\n"
+						+ GAP_FILL_17_7_8_UNPIVOT_JOIN_SUBQUERY_BODY
+						+ "\nWHERE t.empid = u.empid;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'sales_amount'",
+				"sales_amount",
+				2,
+				20);
 	}
 
 	/** Phase 17.7.10 — SEVERE_WARNING when derived output uses source-primary alias outside modifier phrase. */
