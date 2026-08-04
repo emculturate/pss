@@ -2903,7 +2903,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		HashMap<String, Object> hold = symbolTable;
 		HashMap<String, Object> tableDictionary = null;
 		if (hold.size() > 0) {
-			for (String tab_ref : hold.keySet()) {
+			ArrayList<String> sourceRefs = new ArrayList<String>(hold.keySet());
+			for (String tab_ref : sourceRefs) {
 				if (!isTupleSubstitutionReference(tab_ref) && tab_ref != null && tab_ref.startsWith("<")) {
 					continue;
 				}

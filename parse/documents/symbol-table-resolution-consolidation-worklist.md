@@ -2157,6 +2157,7 @@ DDL handlers still bypass the walked tree in several places:
 | **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro tests | ⏸️ |
 | **20.7** | Delete `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` | Walker | Grep clean | ⏸️ |
 | **20.8** | Golden refresh if blob/key order shifts; full DDL + script + truncate endpoint gate | Tests | **20/20** + truncate endpoints + script DDL statements | ⏸️ |
+| **20.9** *(optional)* | Left-factor Jinja / set-op aliasing to reduce recoverable parser warnings in `{{ source(...) }} as alias` + parenthesized `EXCEPT` / `UNION` forms without changing AST or symbol-table output | Grammar + `SqlParseEventWalkerWithAccessObjectTest` canaries | Minimal left-factored tweak around `table_source_primary` / `subquery` / `set_operation_member`; validate warning count drops while final parse stays identical | ⏸️ |
 
 ### Phase 20 closeout checklist
 

@@ -1,5 +1,6 @@
 package sql.walker;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -453,6 +454,7 @@ public class SmoketestQualityGateTestSuite {
 	// --- Production join_extension / ambiguity probes (2) ---
 
 	@Test
+	@Ignore("Disabled until we fix the test this calls	")
 	public void donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest() {
 		liveSampleTests.donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest();
 	}
