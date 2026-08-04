@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~99% | **17.6.1** ✅ (triple/multi-modifier golden sign-off Aug 2026), **17.6.7** ✅ (paired subquery FROM + human golden acceptance), **17.6.8–17.6.9** ✅, **17.7.1–17.7.8** ✅; **17.7.11** ⏸️ (query-backed operand `query_dictionary` implementation — not blocking accepted goldens) |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~99% | **17.6** ✅ (incl. **17.6.4** constant); **17.6.1** / **17.6.7** golden sign-off Aug 2026; **17.6.8–17.6.9** ✅; **17.7.1–17.7.8** ✅; **exitPivot** `queryCount` fix + golden renumber ✅ (`64b8063`, `33f1810`); **17.7.11** ⏸️ optional |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -201,6 +201,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Recent wins (Aug 2026 — `Spring-2026-Extensions`):**
 
+- **exitPivot `queryCount`:** Removed spurious `walker.queryCount++` on `exitPivot_clause` (`64b8063`); PIVOT does not publish `def_query`, so the bump only skewed `queryN` / `def_queryN` numbering. Golden refresh across pivot/unpivot + related walker tests (`33f1810`); **`mvn clean test`** **1564/1564** run, **3** `@Ignore`.
 - **17.7.7 matrix A–E + gap-fill:** `SqlEventWalkerPivotUnpivotTests` **117/117**; `gapFill17_7_7_*` (11) with full goldens; heatmap `phase-17.7.7-pivot-matrix-heatmap.md`.
 - Commit `10f846d` / `3d0f3cd` — pivot subsets **A** + **B** golden refresh; subquery PIVOT IN resolution (matrix subset **A**).
 - **17.7.4** signed off (Aug 2026) — `RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED` at pivot/unpivot finalize for non-table sources (PIVOT aggregate/FOR, UNPIVOT IN-list); subquery + VALUES closeout tests; worklist + comment cleanup (`03b599d` + sign-off commit).
@@ -219,9 +220,9 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **`6c9e5fc`** (Aug 2026) — Worklist: full-suite baseline documented; deferred large-sample status updated.
 - **17.6.1** (Aug 2026) — **Human golden sign-off** for triple / multi-modifier pivot-unpivot tests (tiers **A–C** below). Triple\* / closeout / `*SubqueryFromV17_6_7Test` goldens are **accepted** for `derivation`, `table_dictionary`, `interface`, diagnostics, and symbol tables per design contract.
 
-**Active blockers:** None for default `mvn test`. Optional: remove spurious `walker.queryCount++` in `exitPivot_clause` (+ pivot golden renumber); large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**); **17.7.11** if implementing query-backed operand token placement beyond current accepted goldens.
+**Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**); **17.7.11** if implementing query-backed operand token placement beyond current accepted goldens.
 
-**Suggested next focus:** **17.7.11** (query-backed operand tokens on `query_dictionary` — design workshop + one implementation PR, if refining beyond accepted **17.6.1** / **17.6.7** goldens). Parallel optional: **exitPivot** `queryCount` removal; **17.7.9** / **17.7.10**; refresh **`largeStudentgeneralQueryParse*`** `@Ignore` tests; **Phase 18** (PIVOT IN-list output alias + IN-identifier).
+**Suggested next focus:** **17.7.11** (query-backed operand tokens on `query_dictionary` — design workshop + one implementation PR, if refining beyond accepted **17.6.1** / **17.6.7** goldens). Parallel optional: **17.7.9** / **17.7.10**; refresh **`largeStudentgeneralQueryParse*`** `@Ignore` tests; **Phase 18** (PIVOT IN-list output alias + IN-identifier).
 
 ---
 
@@ -1638,8 +1639,8 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 - [x] Walk vs convert UNPIVOT ownership **documented** (signed policy + Cursor rule) — **enforcement** complete through **17.5**
 - [x] VALUE/FOR/IN namespace outcomes in shared resolver (`RESOLVED_UNPIVOT_*` at egress) — **17.1** ✅
 - [x] `applyUnpivotValueDerivationsToReferenceListObject` stub resolved (deleted — clause probe + `RESOLVED_UNPIVOT_*`) — **17.3** ✅
-- [x] Pivot suite + gate — **Jul 2026** baseline; **Aug 2026** `SqlEventWalkerPivotUnpivotTests` **100/100** + smoketest gate (see **17.7.7** sign-off)
-- [x] Full suite **1499/1499** — **Jul 2026** (Phase 17 closeout; no regressions, diagnostic matrix green)
+- [x] Pivot suite + gate — **Jul 2026** baseline; **Aug 2026** `SqlEventWalkerPivotUnpivotTests` + smoketest gate (see **17.7.7** sign-off); post-**exitPivot** golden renumber **`33f1810`**
+- [x] Full suite **`mvn clean test`** **1564/1564** run — **Aug 2026** (**3** `@Ignore` live samples); prior Jul baseline **1499/1499**
 
 ### Phase 17.6 — Sibling PIVOT/UNPIVOT hardening (Jul 2026)
 
@@ -1680,7 +1681,8 @@ When a test fails after a code change (any pivot/unpivot test):
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | ✅ Done (Aug 2026) | Five paired `*SubqueryFromV17_6_7Test` methods; gate + smoketest. Human golden acceptance via **17.6.1** tier **C**. **17.7.11** optional if implementing stricter query-backed operand `query_dictionary` placement in code. |
 | **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | ✅ Done (Aug 2026) | **(a)** clause-site tokens (WHERE/HAVING/QUALIFY) — contract tests on `unpivotV0` / `pivotBasicMetricColumnsV0`. **(b)** Window: `window_partition_by` / `window_ordered_by` archived lists + `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary`; **17.6.8 (b)** tests list each {@code OVER}-referenced name in **SELECT** (interim until **17.6.9**). **(c)** RETURNING — `insertUnpivotDerivedReturningQueryDictionaryV17_6_8Test`, `updatePivotDerivedReturningQueryDictionaryV17_6_8Test`, `deleteUnpivotDerivedReturningQueryDictionaryV17_6_8Test` assert derived names on {@code query_dictionary}. |
-| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ✅ Done (Aug 2026) | [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md). Interface-gated {@code query_dictionary}; {@code window_partition_by} / {@code window_ordered_by} archives; **NewPolicy V1–V4** modifier contract; **17.6.8 (b)** modifier window tests {@code @Deprecated}. Cross-suite symbol goldens + non-SQL window predicand fixes in **`9d06616`**; default suite **1564/1564** run (**3** `@Ignore`). **17.6.9b** window-list over-harvest optional. |
+| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ✅ Done (Aug 2026) | [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md). Interface-gated {@code query_dictionary}; {@code window_partition_by} / {@code window_ordered_by} archives + modifier phase-B fan-out on archived lists; **NewPolicy V1–V4**; **17.6.8 (b)** {@code @Deprecated}. Suite **1564/1564** (**3** `@Ignore`). |
+| **17.6.9b** | **Trim window archive lists to syntactic {@code OVER} only** | P2 | ❌ Won’t implement | **Closed Aug 2026:** policy accepts full **`source_columns`** expansion on `window_partition_by`, `window_ordered_by`, and modifier **`ordered_by`** (same as **NewPolicy** goldens). No code change. |
 
 **Recommended sequencing:**
 
@@ -1690,7 +1692,7 @@ When a test fails after a code change (any pivot/unpivot test):
 4. ~~**17.6.3**~~ ✅ (Aug 2026) — triple-PIVOT same-output SELECT ambiguity + `applyPivotValueInterfaceDerivations` skip.
 5. ~~**17.6.7**~~ ✅ (Aug 2026) — five `*SubqueryFromV17_6_7Test`; golden acceptance tier **C**.
 6. ~~**17.6.8**~~ ✅ (Aug 2026) — clause + window + RETURNING egress contract tests; window partition-only policy → **17.6.9**.
-6b. ~~**17.6.9**~~ ✅ (Aug 2026) — [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md); **NewPolicy V1–V4**; **17.6.9b** optional.
+6b. ~~**17.6.9**~~ ✅ (Aug 2026) — [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md); **NewPolicy V1–V4**. ~~**17.6.9b**~~ ❌ won’t implement (fan-out on archived window / `ordered_by` lists accepted in policy).
 7. ~~**17.6.4**~~ ✅ (Aug 2026) — single constant `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` for all `derived_columns` symbol-table / `derivation` usage.
 8. **17.7** — structured derivation finalize track (**17.7.1** first); mandatory closeout **17.7.8** removes convert derived-on-physical prune entirely.
 

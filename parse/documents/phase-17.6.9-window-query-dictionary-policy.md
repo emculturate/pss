@@ -19,8 +19,9 @@
 | Surface | Partition/order-only ref (not in `interface`) | Same name in `interface` + `OVER` |
 |---------|--------------------------------------------------|-----------------------------------|
 | `query_dictionary` | **No** new key / merge | **Yes** — tokens merged (mirror `recordInterfaceOutputClauseRefOnQueryDictionary`) |
-| `window_partition_by` | **Yes** — resolved refs + locations | **Yes** |
-| `window_ordered_by` | **Yes** | **Yes** |
+| `window_partition_by` | **Yes** — resolved refs + locations; **modifier:** phase-B fan-out (derived @ bucket + bucket `source_columns`) — see §Archived window / ORDER BY lists | **Yes** |
+| `window_ordered_by` | **Yes**; same fan-out rule as `window_partition_by` on PIVOT/UNPIVOT | **Yes** |
+| `ordered_by` | Unchanged for ordinary sort keys; **query `ORDER BY` with window expr:** same archived refs + **modifier** phase-B fan-out on harvested OVER deps (with `window_*`) | Unchanged |
 | `table_dictionary` | Unchanged (physical / walk-time rules) | Unchanged |
 | Published `derivation` | No token blobs; no cross-scope helper leaks | Same |
 
@@ -28,9 +29,17 @@
 
 **Walk + convert (interface lineage on SELECT-list windows):** per-`OVER` partition/order harvest → `windowOutputInterfaceClauseDepsByAlias` → `applyWalkCapturedWindowSelectInterfaceClauseDeps` at start of `finalizeRelationalModifierDerivedColumnLineageInClauseLists`, then phase-B `expandRelationalModifierDerivedColumnLineageInInterfaceMap` / clause-list expansion from `derivation.source_columns`.
 
+### Archived window / ORDER BY lists (PIVOT / UNPIVOT — locked)
+
+For relational modifiers, **`window_partition_by`**, **`window_ordered_by`**, and **`ordered_by`** (when it archives deps from a query-level `ORDER BY … OVER (…)`) go through the **same** convert egress phase-B expansion as **`interface.<window alias>`**:
+
+- Each ref that names a **derived** modifier output becomes **`{name=<derived>, table_ref=<bucket>}`**, then the list also includes that bucket’s **`derivation.source_columns`** entries (UNPIVOT IN-list physicals, PIVOT FOR/aggregate operands, etc.).
+- A single name in SQL `PARTITION BY` may therefore produce **multiple** archived refs on `window_partition_by` — **expected**, not over-harvest. **NewPolicy V1–V4** goldens are authoritative.
+
+**Not in scope:** trimming those lists back to syntactic-only `OVER` names (former **17.6.9b** — closed as won’t implement).
+
 **Out of scope (track separately):**
 
-- Cleaning **extra** entries on `window_partition_by` / `window_ordered_by` (e.g. all UNPIVOT IN-list physical columns listed when only one name is in `PARTITION BY`) — **17.6.9b**; symmetric on UNPIVOT/PIVOT; do not “fix” by golden refresh alone.
 - Full clause-site matrix (JOIN ON / GROUP BY / ORDER BY with window exprs) — see §Backlog below.
 - **17.7.11** query-backed operand `query_dictionary` placement.
 
@@ -66,7 +75,7 @@ For every **window function that is itself an interface output** (a SELECT-list 
 
 - Each PARTITION BY / ORDER BY ref that names a **derived** modifier output is represented as **`{name=<derived>, table_ref=<bucket>}`** (e.g. `tuple_0`), then expanded using that bucket’s **`derivation.source_columns`** (UNPIVOT IN-list physicals vs PIVOT operand pair). Output shape is a **function of published derivation**, not a separate pivot/unpivot egress path.
 - **Distinct derived names** referenced in `OVER` each appear when both partition and order use different derived names.
-- Query **`ORDER BY`** windows (not SELECT-list outputs) publish OVER deps on **`ordered_by`** + `window_*` lists, not on `interface.<alias>`.
+- Query **`ORDER BY`** windows (not SELECT-list outputs) publish OVER deps on **`ordered_by`** + `window_*` lists (with the same phase-B **`source_columns`** fan-out on modifiers), not on `interface.<alias>`.
 
 ### Not the same as top-level interface keys
 
@@ -107,10 +116,9 @@ For every **window function that is itself an interface output** (a SELECT-list 
 
 ---
 
-## Suspicious baselines (read before changing goldens)
+## Optional follow-up (not required for 17.6.9)
 
-1. **17.6.9b** — `window_partition_by` / `window_ordered_by` may list full bucket `source_columns` expansion beyond the single name in SQL `PARTITION BY`.
-2. **`subqueryDictionaryExtensionWindowOverPartitionByV7`** — inner `def_query0.query_dictionary` may still list partition-only refs (`col12`); optional follow-up if physical scopes should match modifier **17.6.9** gating exactly.
+- **`subqueryDictionaryExtensionWindowOverPartitionByV7`** — inner `def_query0.query_dictionary` may still list partition-only refs (`col12`); optional audit if physical inner scopes should match modifier **17.6.9** `query_dictionary` gating exactly.
 
 ---
 
@@ -138,14 +146,12 @@ Prioritized **after** closure. Mostly **○** today.
 | P3 | Triple-modifier + window partition on derived name | `SqlEventWalkerPivotUnpivotTests` |
 | P3 | `JOIN … ON` with window (if grammar allows) | `SqlEventWalkerJoinsAndTableResolutionTests` |
 
-**17.6.9b:** Fix over-harvest on `window_partition_by` / `window_ordered_by`.
-
 ---
 
 ## Agent re-center checklist (post-close)
 
 1. Modifier window contract = **NewPolicy V1–V4** in `SqlEventWalkerPivotUnpivotTests`.
-2. §Policy — partition-only → no `query_dictionary`; SELECT-list window → `interface.<alias>` + phase-B `source_columns` expansion.
+2. §Policy — partition-only → no `query_dictionary`; SELECT-list window → `interface.<alias>`; **`window_partition_by` / `window_ordered_by` / modifier `ordered_by`** → same phase-B **`source_columns`** fan-out as interface deps.
 3. Code: `mergesQueryDictionaryTokensForAllColumnNamesInClauseList` → `false`; `applyWalkCapturedWindowSelectInterfaceClauseDeps`.
 4. Run **NewPolicy** four + full `SqlEventWalkerFunctionsAggregatesWindowingTests` + pivot class gate when touching walker/symbol tree.
 5. **No** bulk golden refresh on pivot tests without user confirmation.
@@ -161,3 +167,4 @@ Prioritized **after** closure. Mostly **○** today.
 | Aug 2026 | §Interface lineage — window `interface.<alias>` must include PARTITION BY + ORDER BY on PIVOT/UNPIVOT (V7–V10 parity) |
 | Aug 2026 | **Closed:** `query_dictionary` gating + walk-captured OVER deps on `interface.<alias>`; locked contract **NewPolicy V1–V4** |
 | Aug 2026 | Deprecated **17.6.8 (b)** modifier window tests; refreshed physical window symbol goldens for `window_*` archives |
+| Aug 2026 | **17.6.9b closed (won’t implement):** archived `window_*` / modifier `ordered_by` accept phase-B derived **`source_columns`** fan-out; policy + worklist updated |
