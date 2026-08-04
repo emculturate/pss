@@ -7851,8 +7851,8 @@ public class SqlParseSymbolTreeHelper {
 			localCurrentQueryDictionary = new HashMap<String, Object>();
 		}
 
-		sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-		mergeIntoGlobalQueryColumnDictionary(scopeKey, localCurrentQueryDictionary);
+		// Phase 19.2: do not sanitize/merge here — {@link #publishQueryLikeScope} owns a single
+		// publish via {@link #publishQueryDictionary} (sanitize + embed + global merge).
 		scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
 		if (projectSelectIntoTarget && querySpecificationSubMap != null) {
 			projectSelectIntoTargetFromInterface(querySpecificationSubMap, scopeSymbols, localCurrentQueryDictionary);
