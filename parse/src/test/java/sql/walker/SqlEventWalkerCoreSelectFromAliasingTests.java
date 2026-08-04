@@ -3553,4 +3553,51 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 		Assert.assertEquals("Substitution List is wrong", "{<b>=condition, <a>=condition}",
 				extractor.getSubstitutionsMap().toString());
 	}
+
+	@Test
+	public void selectListAliasNotVisibleInOuterQueryTest() {
+		// Negative control: an outer select-list name must not resolve via an inner select-list
+		// alias that was never published on the subquery interface (`other`, not `keep`).
+		final String query = "SELECT keep FROM (SELECT a AS other FROM tab1) q";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=keep, table_ref=null}}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}, alias=other}}, from={table={alias=null, table=tab1}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[keep]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={other=[[@7,30:34='other',<381>,1:30]]}, query1={keep=[[@1,7:10='keep',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:25='a',<381>,1:25]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={keep=[[@1,7:10='keep',<381>,1:7]]}, def_query0={query_dictionary={other=[[@7,30:34='other',<381>,1:30]]}, table_dictionary={tab1={a=[[@5,25:25='a',<381>,1:25]]}}, interface={other=[{name=a, table_ref=tab1}]}}, interface={keep=[{name=keep, table_ref=null}]}, table_alias={q=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'keep' at (l:1 c:7) was not found in output interface of any visible query alias [q].",
+				"column 'keep'",
+				1,
+				7);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [keep [(l:1 c:7)]]",
+				"keep",
+				1,
+				7);
+	}
 }
+

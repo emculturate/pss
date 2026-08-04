@@ -2378,5 +2378,38 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 
 	// ===== end POSITION / CHARINDEX / INSTR tests =====
 
+	@Test
+	public void selectListAliasReferencedInPartitionByTest() {
+		// Minimal Phase 13.4 window proof: later OVER PARTITION BY binds an earlier true
+		// select-list output alias (ingress + convert-egress skip).
+		final String query =
+				"SELECT a AS alias_from_select_list, ROW_NUMBER() OVER (PARTITION BY alias_from_select_list) AS rn FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}, alias=alias_from_select_list}, 2={alias=rn, window_function={over={partition_by={1={column={name=alias_from_select_list, table_ref=null}}}}, function={function_name=ROW_NUMBER, parameters=null}}}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[alias_from_select_list, rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={rn=[[@15,95:96='rn',<381>,1:95]], alias_from_select_list=[[@3,12:33='alias_from_select_list',<381>,1:12], [@12,68:89='alias_from_select_list',<381>,1:68]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={alias_from_select_list=[[@3,12:33='alias_from_select_list',<381>,1:12], [@12,68:89='alias_from_select_list',<381>,1:68]], rn=[[@15,95:96='rn',<381>,1:95]]}, table_dictionary={tab1={a=[[@1,7:7='a',<381>,1:7]]}}, window_partition_by=[{name=alias_from_select_list, table_ref=tab1}], interface={alias_from_select_list=[{name=a, table_ref=tab1}], rn=[{name=alias_from_select_list, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }
 
