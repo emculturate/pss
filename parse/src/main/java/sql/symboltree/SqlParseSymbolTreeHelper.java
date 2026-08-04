@@ -6269,8 +6269,13 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
-		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(insertDefinitionScopeKey), queryDictionary);
-		insertScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, queryDictionary);
+		// Already sanitized above (empty-dict early return must not rewrite embedded).
+		publishQueryDictionary(new QueryDictionaryPublishContext(
+				toLiveScopeKey(insertDefinitionScopeKey),
+				queryDictionary,
+				insertScopeMap,
+				false,
+				true));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -6289,11 +6294,13 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		HashMap<String, Object> queryDictionary = new HashMap<String, Object>((Map<String, Object>) updateDictionaryMapObj);
-		sanitizeQueryDictionaryForGlobalExport(queryDictionary);
-		if (queryDictionary.isEmpty()) {
-			return;
-		}
-		mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(updateDefinitionScopeKey), queryDictionary);
+		// Global-only export from update_dictionary (no embedded query_dictionary rewrite).
+		publishQueryDictionary(new QueryDictionaryPublishContext(
+				toLiveScopeKey(updateDefinitionScopeKey),
+				queryDictionary,
+				null,
+				true,
+				true));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -8099,9 +8106,12 @@ public class SqlParseSymbolTreeHelper {
 		}
 		HashMap<String, Object> updateScopeMap = (HashMap<String, Object>) updateScopeMapObj;
 		if (returningQueryDictionary != null) {
-			sanitizeQueryDictionaryForGlobalExport(returningQueryDictionary);
-			mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(updateDefinitionScopeKey), returningQueryDictionary);
-			updateScopeMap.put(MUMBLE_QUERY_DICTIONARY_KEY, returningQueryDictionary);
+			publishQueryDictionary(new QueryDictionaryPublishContext(
+					toLiveScopeKey(updateDefinitionScopeKey),
+					returningQueryDictionary,
+					updateScopeMap,
+					true,
+					true));
 		}
 		HashMap<String, Object> mergedInterface = buildUpdateScopeInterfaceFromAssignments(updateScopeMap);
 		mergeMissingInterfaceEntries(mergedInterface, returningInterface);
@@ -8295,7 +8305,6 @@ public class SqlParseSymbolTreeHelper {
 		convertSymbolTableToTableDictionary(false, false, null);
 
 		String deleteScopeKey = MUMBLE_DELETE_KEY + walker.queryCount;
-		String deleteDefinitionScopeKey = toDefinitionScopeKey(deleteScopeKey);
 		HashMap<String, Object> scopeSymbols = walker.symbolTable;
 		if (publishReturningQueryDictionary) {
 			HashMap<String, Object> localCurrentQueryDictionary =
@@ -8303,8 +8312,8 @@ public class SqlParseSymbolTreeHelper {
 			if (localCurrentQueryDictionary == null) {
 				localCurrentQueryDictionary = new HashMap<String, Object>();
 			}
-			sanitizeQueryDictionaryForGlobalExport(localCurrentQueryDictionary);
-			mergeIntoGlobalQueryColumnDictionary(deleteScopeKey, localCurrentQueryDictionary);
+			// Phase 19.3: single publish via publishQueryLikeScope → publishQueryDictionary
+			// (same SELECT 19.2 pattern — no pre-publish global merge).
 			scopeSymbols.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
 		}
 
@@ -8570,8 +8579,14 @@ public class SqlParseSymbolTreeHelper {
 		}
 		HashMap<String, Object> insertScopeMap = (HashMap<String, Object>) insertScopeMapObj;
 		if (returningQueryDictionary != null) {
-			sanitizeQueryDictionaryForGlobalExport(returningQueryDictionary);
-			mergeIntoGlobalQueryColumnDictionary(toLiveScopeKey(insertDefinitionScopeKey), returningQueryDictionary);
+			// Preserve prior contract: sanitize+merge RETURNING into global first, then fold into
+			// any embedded dict left by publishQueryLikeScope (without a second global write).
+			publishQueryDictionary(new QueryDictionaryPublishContext(
+					toLiveScopeKey(insertDefinitionScopeKey),
+					returningQueryDictionary,
+					null,
+					true,
+					true));
 			Object existingQueryDictionaryObj = insertScopeMap.get(MUMBLE_QUERY_DICTIONARY_KEY);
 			if (existingQueryDictionaryObj instanceof HashMap<?, ?> existingQueryDictionaryMapObj) {
 				HashMap<String, Object> mergedQueryDictionary =
@@ -15328,14 +15343,14 @@ public class SqlParseSymbolTreeHelper {
 		final String liveScopeKey;
 		final HashMap<String, Object> queryDictionary;
 		/** When non-null, the sanitized dictionary is written under {@code query_dictionary}. */
-		final HashMap<String, Object> embeddedTarget;
+		final Map<String, Object> embeddedTarget;
 		final boolean sanitize;
 		final boolean mergeIntoGlobal;
 
 		private QueryDictionaryPublishContext(
 				String liveScopeKey,
 				HashMap<String, Object> queryDictionary,
-				HashMap<String, Object> embeddedTarget,
+				Map<String, Object> embeddedTarget,
 				boolean sanitize,
 				boolean mergeIntoGlobal) {
 			this.liveScopeKey = liveScopeKey;
