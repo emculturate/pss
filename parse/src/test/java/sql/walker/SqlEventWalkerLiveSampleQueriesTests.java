@@ -394,7 +394,6 @@ public class SqlEventWalkerLiveSampleQueriesTests extends AbstractSqlParseEventW
 
 	
 	@Test
-	@Ignore("I thought we'd fixed the problem with the self-referential column variable following an alias defined in the same select list, but it seems to have returned.")
 	public void donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest() {
 		// Donor Email Column Variable, Invalid Fatal Unresolved Error Test on line 46, character 67
 		// The test proves we have fixed an incorrect fatal unresolved error for the

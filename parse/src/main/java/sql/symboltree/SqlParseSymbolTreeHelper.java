@@ -14429,6 +14429,16 @@ public class SqlParseSymbolTreeHelper {
 				return ArchivedClauseColumnRefResult.deferred();
 			}
 			default -> {
+				// Phase 13.4: ingress already proved true SELECT-list output aliases and skipped
+				// unresolved collection. Convert clause probe (esp. window OVER inside the select
+				// list) must not re-fatal those names when FROM sources cannot bind them.
+				if (isIntraQueryOutputAliasUsage(
+						columnName,
+						tableRef,
+						localInterface,
+						localTableCollection)) {
+					return ArchivedClauseColumnRefResult.skip();
+				}
 				return ArchivedClauseColumnRefResult.unresolved();
 			}
 		}
