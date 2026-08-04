@@ -1256,7 +1256,7 @@ derived registry key in unresolved_column
 - Substeps **15.0–15.6** complete; batch shim deleted; `resolveColumnRefAtConvertEgress` is the shared egress decision tree
 - `ConvertEgressScopeBundle` built once per `convertSymbolTableToTableDictionary` invocation
 - Gate: `mvn -Pphase15-derived-gate test` **67/67**; `mvn -Psmoketest-quality-gate test` **195/195**; `mvn test` full suite green
-- **Deferred to Phase 18:** PIVOT IN-list output alias full model (`isPivotDerivedInterfaceOutputColumn` minimal skip remains)
+- **Deferred to Phase 18:** PIVOT IN-list output alias full model — closed **policy-only** (reformulation doc); registry-key skip inlined to `structuredContextDefinesPivotDerivedOutputColumn` (**18.2**)
 - **Next:** Phase **16** (PIVOT operand materialization); Phase **19** unblocked
 
 ### Convert-egress scope bundle (15.6 detail)
@@ -2033,9 +2033,9 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 1. **Separate metadata** on hints: `pivot_in_columns` (output alias names) vs `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` (registry `{inValue}_{aggregate}` keys) — no conflation in helper method names.
 2. **Unified resolver outcome** `RESOLVED_PIVOT_IN_LIST_OUTPUT`: qualified/unqualified refs to bare IN value → lineage on pivot `sourceRef` physical table; consume from `unresolved_column`.
-3. **Retire** `isPivotDerivedInterfaceOutputColumn` (rename/replace with explicit IN-list output check).
+3. **Retire** `isPivotDerivedInterfaceOutputColumn` — ✅ inlined into `structuredContextDefinesPivotDerivedOutputColumn` (Aug 2026); behavior retained for registry keys.
 4. **IN-identifier:** walker proof remains at parse event; convert egress **does not** re-handle; document handoff from `pivot_in_identifier_references` to published scope.
-5. **`applyPivotValueInterfaceDerivations`** legacy path (`pivot_aggregate_columns` / `pivot_in_columns` fallback ~L981) audited — retire or align with walker hint population.
+5. **`applyPivotValueInterfaceDerivations`** — ✅ single path via structured `derivedColumnsByBucket` (legacy aggregate/IN fallback retired; javadoc Aug 2026).
 
 ### Phase 18.0 — IN-list alias vs derived registry classification (Aug 2026)
 
@@ -2098,8 +2098,8 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 |----------|--------|--------|--------|
 | **18.0** | Classify 11 IN-list alias tests vs `pivotMonthlySalesLong*` derived tests; document expected lineage (physical pivot source vs registry) | Test matrix in worklist | ✅ **Aug 2026** |
 | **18.1** | Add `RESOLVED_PIVOT_IN_LIST_OUTPUT` to shared resolver using IN-list output names + pivot source ref (revive/align hint — see 18.0 gaps) | IN-list alias annotated tests | ⏸️ |
-| **18.2** | Replace `isPivotDerivedInterfaceOutputColumn` with explicit helper; retire misleading name | Interface loop + clause probe + UPDATE RHS | ⏸️ |
-| **18.3** | Audit `applyPivotValueInterfaceDerivations` dual paths (registry vs aggregate/in fallback); single walker→convert hint contract | Pivot interface goldens | ⏸️ |
+| **18.2** | Inline `isPivotDerivedInterfaceOutputColumn` into `structuredContextDefinesPivotDerivedOutputColumn`; fix misleading Phase 18 deferral comment | Interface loop + clause probe + UPDATE RHS | ✅ **Aug 2026** |
+| **18.3** | Audit `applyPivotValueInterfaceDerivations` dual paths (registry vs aggregate/in fallback); single walker→convert hint contract | Pivot interface goldens | ✅ **Aug 2026** — single path via `derivedColumnsByBucket`; legacy aggregate/IN fallback retired; javadoc aligned |
 | **18.4** | Document IN-identifier walk-time contract; assert convert does not regress `pivotInIdentifier*` diagnostics | `pivotInIdentifier*` tests + gate smoke | ⏸️ |
 | **18.5** | Fold IN-list output into unified egress loop; grep clean for ad-hoc skips | Pivot **67/67** + full suite | ⏸️ |
 
@@ -2108,8 +2108,9 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 - [x] **18.0** classify IN-list alias vs derived tests (matrix above)
 - [x] **Policy:** PIVOT naming reformulation documented for users/agents (`relational-modifier-resolution-policy.md` + `.cursor/rules/relational-modifier-resolution.mdc`)
 - [x] Snowflake gap tests retained: `pivotSnowflakeInAliasOutputNamesBindAsSyntheticSourceNotDerivedV1Test`, `pivotSnowflakeInAliasOutputNamesRegistryFormStillResolvesV1Test`
+- [x] **18.2** `isPivotDerivedInterfaceOutputColumn` inlined into `structuredContextDefinesPivotDerivedOutputColumn`; Phase 18 deferral comment corrected
+- [x] **18.3** `applyPivotValueInterfaceDerivations` — single structured-bucket path; legacy dual-path retired (javadoc Aug 2026)
 - [ ] ~~`RESOLVED_PIVOT_IN_LIST_OUTPUT`~~ — **deferred / not planned**
-- [ ] ~~Retire `isPivotDerivedInterfaceOutputColumn`~~ — **deferred / not planned**
 - [x] IN-identifier: leave walk-time contract; no convert rework in this closeout
 - [x] Pivot suite remains green under current goldens (no 18a semantic change)
 

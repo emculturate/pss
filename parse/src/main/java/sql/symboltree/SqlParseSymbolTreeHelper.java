@@ -4574,14 +4574,16 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Applies PIVOT derivation hints to the local interface, adding new interface entries
-	 * for derived pivot columns created by combining aggregates and IN-list values.
-	 * 
-	 * For each pivot hint:
-	 * - Extracts aggregate column names (function names or explicit aliases)
-	 * - Extracts IN-list column names (pivot value columns)
-	 * - For each combination of aggregate and IN value, creates a derived column name
-	 * - Adds new interface entries for these derived columns
+	 * Publishes PIVOT derived registry keys onto matching {@code localInterface} entries.
+	 *
+	 * <p>Walks structured {@code derivation.derived_columns} buckets
+	 * ({@code RelationalModifierConvertEgressContext#derivedColumnsByBucket}) and, for each
+	 * registry name that already appears in the interface (case-insensitive), appends a derived
+	 * ref. Skips names that are ambiguous across sibling modifier buckets (Phase 17.6.3).
+	 *
+	 * <p>Does not rebuild names from aggregate × IN-list hints — those keys are walk-finalized
+	 * into the structured registry before convert egress. Legacy
+	 * {@code pivot_aggregate_columns} / {@code pivot_in_columns} fallbacks are retired.
 	 */
 	@SuppressWarnings("unchecked")
 	public void applyPivotValueInterfaceDerivations(
@@ -5278,11 +5280,12 @@ public class SqlParseSymbolTreeHelper {
 							}
 						}
 					} else {
-						// Phase 18 deferral: PIVOT IN-list output aliases still skip interface bind here.
+						// Pivot registry derived outputs (jan_sales_SUM / q1_total) — skip physical
+						// interface bind; shared egress treats them as RESOLVED_DERIVED_COLUMN.
 						if (outputCol.equalsIgnoreCase(columnName)
-								&& isPivotDerivedInterfaceOutputColumn(
-										columnName,
-										activeConvertEgressRelationalModifierContext)) {
+								&& structuredContextDefinesPivotDerivedOutputColumn(
+										activeConvertEgressRelationalModifierContext,
+										columnName)) {
 							continue;
 						}
 
@@ -12342,13 +12345,6 @@ public class SqlParseSymbolTreeHelper {
 		return peekRelationalModifierConvertContextFromScope(walker.symbolTable);
 	}
 
-	@SuppressWarnings("unchecked")
-	private boolean isPivotDerivedInterfaceOutputColumn(
-			String columnName,
-			RelationalModifierConvertEgressContext relationalModifierContext) {
-		return structuredContextDefinesPivotDerivedOutputColumn(relationalModifierContext, columnName);
-	}
-
 	private void consumeDerivedColumnUnknownEntry(
 			HashMap<String, Object> unresolvedColumnMap,
 			String tableRef,
@@ -12470,9 +12466,9 @@ public class SqlParseSymbolTreeHelper {
 					relationalModifierContext,
 					null,
 					columnKey)
-					|| isPivotDerivedInterfaceOutputColumn(
-							columnKey,
-							relationalModifierContext)) {
+					|| structuredContextDefinesPivotDerivedOutputColumn(
+							relationalModifierContext,
+							columnKey)) {
 				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnKey);
 				continue;
 			}
@@ -13081,7 +13077,8 @@ public class SqlParseSymbolTreeHelper {
 
 	/**
 	 * Phase 15.4: shared derived-column proof for convert egress (clause probe, interface loop,
-	 * {@code resolveRemaining…}). PIVOT interface-output skip on UPDATE RHS is clause-key scoped.
+	 * {@code resolveRemaining…}). UPDATE RHS also treats structured PIVOT registry keys as derived
+	 * via {@link #structuredContextDefinesPivotDerivedOutputColumn}.
 	 */
 	private boolean isConvertEgressDerivedColumnReference(
 			String columnName,
@@ -13097,9 +13094,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 		return ctx.clauseProbeKey != null
 				&& UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY.equals(ctx.clauseProbeKey)
-				&& isPivotDerivedInterfaceOutputColumn(
-						columnName,
-						ctx.relationalModifierContext);
+				&& structuredContextDefinesPivotDerivedOutputColumn(
+						ctx.relationalModifierContext,
+						columnName);
 	}
 
 	/**
@@ -13257,7 +13254,9 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		if (isPivotDerivedInterfaceOutputColumn(columnName, relationalModifierContext)) {
+		if (structuredContextDefinesPivotDerivedOutputColumn(
+				relationalModifierContext,
+				columnName)) {
 			return UnqualifiedScopeResolutionResult.resolvedDerivedColumn();
 		}
 
