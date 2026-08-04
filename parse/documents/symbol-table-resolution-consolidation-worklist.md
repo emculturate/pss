@@ -167,7 +167,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
-| **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18a code deferred** — user reformulation policy in `relational-modifier-resolution-policy.md`; IN-identifier left as-is (green) |
+| **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18.1**/**18.4**/**18.5** ❌ dropped/N/A; **18.2**/**18.3** ✅; reformulation policy in `relational-modifier-resolution-policy.md` |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
@@ -224,7 +224,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **Phase 19** (query dictionary publish consolidation) or optional Phase 17 large-sample goldens. **Phase 18** closed policy-only (reformulation doc — no `RESOLVED_PIVOT_IN_LIST_OUTPUT`).
+**Suggested next focus:** **Phase 19** (query dictionary publish consolidation) or optional Phase 17 large-sample goldens. **Phase 18** closed policy-only (**18.1** ❌ dropped — reformulation doc; no `RESOLVED_PIVOT_IN_LIST_OUTPUT`).
 
 ---
 
@@ -2005,9 +2005,9 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 ## Phase 18 — PIVOT IN-list output alias and IN-identifier rationalization
 
-**Status:** ✅ **Closed policy-only (Aug 2026).** No `RESOLVED_PIVOT_IN_LIST_OUTPUT` / skip retirement. Users and agents reformulate to PSS registry names — see [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) § *PIVOT naming reformulation*. **18.0** inventory retained below for history. IN-identifier walk-time path left as-is (tests green).
+**Status:** ✅ **Closed policy-only (Aug 2026).** **18.1**/**18.4**/**18.5** ❌ dropped/N/A — no `RESOLVED_PIVOT_IN_LIST_OUTPUT`, no IN-identifier docs/convert pass, no skip grep-clean. Users and agents reformulate to PSS registry names — see [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) § *PIVOT naming reformulation*. **18.0** inventory retained below for history. IN-identifier walk-time path unchanged (existing `pivotInIdentifier*` coverage).
 
-**Original goal (not implemented):** Give **Snowflake-style PIVOT IN-list output names** (`jan_sales` / bare IN `AS` alias in SELECT) first-class resolution — deferred indefinitely in favor of reformulation.
+**Original goal (not implemented):** Give **Snowflake-style PIVOT IN-list output names** (`jan_sales` / bare IN `AS` alias in SELECT) first-class resolution — **18.1 dropped / not planned**; reformulation policy instead.
 
 **Problem today — two related but distinct tracks:**
 
@@ -2034,7 +2034,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 1. **Separate metadata** on hints: `pivot_in_columns` (output alias names) vs `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` (registry `{inValue}_{aggregate}` keys) — no conflation in helper method names.
 2. **Unified resolver outcome** `RESOLVED_PIVOT_IN_LIST_OUTPUT`: qualified/unqualified refs to bare IN value → lineage on pivot `sourceRef` physical table; consume from `unresolved_column`.
 3. **Retire** `isPivotDerivedInterfaceOutputColumn` — ✅ inlined into `structuredContextDefinesPivotDerivedOutputColumn` (Aug 2026); behavior retained for registry keys.
-4. **IN-identifier:** walker proof remains at parse event; convert egress **does not** re-handle; document handoff from `pivot_in_identifier_references` to published scope.
+4. **IN-identifier:** walker proof remains at parse event; convert egress **does not** re-handle — **18.4** ❌ dropped (no formal docs write-up; existing `pivotInIdentifier*` tests stand).
 5. **`applyPivotValueInterfaceDerivations`** — ✅ single path via structured `derivedColumnsByBucket` (legacy aggregate/IN fallback retired; javadoc Aug 2026).
 
 ### Phase 18.0 — IN-list alias vs derived registry classification (Aug 2026)
@@ -2097,11 +2097,11 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 | Sub-step | Action | Verify | Status |
 |----------|--------|--------|--------|
 | **18.0** | Classify 11 IN-list alias tests vs `pivotMonthlySalesLong*` derived tests; document expected lineage (physical pivot source vs registry) | Test matrix in worklist | ✅ **Aug 2026** |
-| **18.1** | Add `RESOLVED_PIVOT_IN_LIST_OUTPUT` to shared resolver using IN-list output names + pivot source ref (revive/align hint — see 18.0 gaps) | IN-list alias annotated tests | ⏸️ |
+| **18.1** | Add `RESOLVED_PIVOT_IN_LIST_OUTPUT` to shared resolver using IN-list output names + pivot source ref (revive/align hint — see 18.0 gaps) | IN-list alias annotated tests | ❌ **Dropped / not planned** — Snowflake bare IN output names rejected in favor of reformulation to registry keys |
 | **18.2** | Inline `isPivotDerivedInterfaceOutputColumn` into `structuredContextDefinesPivotDerivedOutputColumn`; fix misleading Phase 18 deferral comment | Interface loop + clause probe + UPDATE RHS | ✅ **Aug 2026** |
 | **18.3** | Audit `applyPivotValueInterfaceDerivations` dual paths (registry vs aggregate/in fallback); single walker→convert hint contract | Pivot interface goldens | ✅ **Aug 2026** — single path via `derivedColumnsByBucket`; legacy aggregate/IN fallback retired; javadoc aligned |
-| **18.4** | Document IN-identifier walk-time contract; assert convert does not regress `pivotInIdentifier*` diagnostics | `pivotInIdentifier*` tests + gate smoke | ⏸️ |
-| **18.5** | Fold IN-list output into unified egress loop; grep clean for ad-hoc skips | Pivot **67/67** + full suite | ⏸️ |
+| **18.4** | Document IN-identifier walk-time contract; assert convert does not regress `pivotInIdentifier*` diagnostics | `pivotInIdentifier*` tests + gate smoke | ❌ **Dropped / not planned** — walk-time path left as-is (tests already green); no docs write-up or convert rework |
+| **18.5** | Fold IN-list output into unified egress loop; grep clean for ad-hoc skips | Pivot **67/67** + full suite | ❌ **N/A** after policy-only closeout — remaining skips are intentional registry derived guards (**18.2**); do not grep-clean expecting free cleanup without **18.1** |
 
 ### Phase 18 closeout checklist
 
@@ -2110,8 +2110,9 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 - [x] Snowflake gap tests retained: `pivotSnowflakeInAliasOutputNamesBindAsSyntheticSourceNotDerivedV1Test`, `pivotSnowflakeInAliasOutputNamesRegistryFormStillResolvesV1Test`
 - [x] **18.2** `isPivotDerivedInterfaceOutputColumn` inlined into `structuredContextDefinesPivotDerivedOutputColumn`; Phase 18 deferral comment corrected
 - [x] **18.3** `applyPivotValueInterfaceDerivations` — single structured-bucket path; legacy dual-path retired (javadoc Aug 2026)
-- [ ] ~~`RESOLVED_PIVOT_IN_LIST_OUTPUT`~~ — **deferred / not planned**
-- [x] IN-identifier: leave walk-time contract; no convert rework in this closeout
+- [x] ~~`RESOLVED_PIVOT_IN_LIST_OUTPUT`~~ (**18.1**) — ❌ **Dropped / not planned**
+- [x] **18.5** ❌ **N/A** after policy-only closeout — remaining skips are intentional registry derived guards (**18.2**); do not grep-clean expecting free cleanup without **18.1**
+- [x] **18.4** ❌ **Dropped / not planned** — IN-identifier walk-time contract left as-is; no convert rework, no extra docs/tests
 - [x] Pivot suite remains green under current goldens (no 18a semantic change)
 
 ---
