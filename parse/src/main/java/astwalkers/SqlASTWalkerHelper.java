@@ -22,6 +22,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
 		public static final String DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE =
 				"SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE";
+		public static final String DIAG_SQL_AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE =
+				"SQL_AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE";
 		public static final String DIAG_SQL_SHADOWED_PARENT_CTE_NAME = "SQL_SHADOWED_PARENT_CTE_NAME";
 		public static final String DIAG_SQL_UNRESOLVED_UNQUALIFIED_COLUMNS = "SQL_UNRESOLVED_UNQUALIFIED_COLUMNS";
 		public static final String DIAG_SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES = "SQL_UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES";
@@ -212,6 +214,10 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE,
 				 "AMBIGUOUS_DERIVED_COLUMN_REFERENCE",
 				 "Ambiguous derived column reference '%s' at (l:%s c:%s). Possible sources: %s");
+		 registerDiagnostic(
+				 DIAG_SQL_AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE,
+				 "AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				 "Ambiguous column reference '%s' at (l:%s c:%s). Possible derived sources: %s. Possible regular sources: %s");
 		 registerDiagnostic(
 				 DIAG_SQL_SHADOWED_PARENT_CTE_NAME,
 				 "SHADOWED_PARENT_CTE_NAME",

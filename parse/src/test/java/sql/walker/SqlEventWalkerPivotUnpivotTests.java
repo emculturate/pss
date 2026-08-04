@@ -5577,6 +5577,85 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 						"jan_sales_SUM=[{name=jan_sales_SUM, table_ref=p}"));
 	}
 
+	/**
+	 * 17.7.8 — unqualified name is both a PIVOT derived output and a join subquery interface column.
+	 */
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubquerySelectFatalTest() {
+		final String query =
+				"SELECT jan_sales_SUM\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN (\n"
+						+ "  SELECT empid, jan_sales_SUM\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS jan_sales_SUM FROM monthly_sales_long\n"
+						+ "  ) inner_q\n"
+						+ ") q ON p.empid = q.empid;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				1,
+				7);
+	}
+
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryWhereFatalTest() {
+		final String query =
+				"SELECT empid\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN (\n"
+						+ "  SELECT empid, jan_sales_SUM\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS jan_sales_SUM FROM monthly_sales_long\n"
+						+ "  ) inner_q\n"
+						+ ") q ON p.empid = q.empid\n"
+						+ "WHERE jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				10,
+				6);
+	}
+
+	/**
+	 * Same collision as {@link #gapFill17_7_8_DerivedVersusRegularPivotJoinSubqueryWhereFatalTest} but the
+	 * join partner is a CTE ({@code q}) instead of an inline subquery.
+	 */
+	@Test
+	public void gapFill17_7_8_DerivedVersusRegularPivotJoinCteWhereFatalTest() {
+		final String query =
+				"WITH q AS (\n"
+						+ "  SELECT empid, jan_sales_SUM\n"
+						+ "  FROM (\n"
+						+ "    SELECT empid, 1 AS jan_sales_SUM FROM monthly_sales_long\n"
+						+ "  ) inner_q\n"
+						+ ")\n"
+						+ "SELECT empid\n"
+						+ "FROM monthly_sales_long p_src\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales')) p\n"
+						+ "JOIN q ON p.empid = q.empid\n"
+						+ "WHERE jan_sales_SUM > 0;";
+
+		SqlParseEventWalker extractor = runParsertest(query, parse(query));
+		assertFatalDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"AMBIGUOUS_DERIVED_AND_REGULAR_COLUMN_REFERENCE",
+				"Ambiguous column reference 'jan_sales_SUM'",
+				"jan_sales_SUM",
+				11,
+				6);
+	}
+
 	/** Phase 17.7.10 — SEVERE_WARNING when derived output uses source-primary alias outside modifier phrase. */
 	@Test
 	public void pivotDerivedReferenceSourceAliasOutsideModifierSevereWarningV17_7_10Test() {
