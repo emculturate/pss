@@ -8646,7 +8646,12 @@ public class SqlParseSymbolTreeHelper {
 
 		Object queryDictionaryObj = scopePayload.get(MUMBLE_QUERY_DICTIONARY_KEY);
 		if (queryDictionaryObj instanceof HashMap<?, ?> queryDictionaryMapObj) {
-			mergeIntoGlobalQueryColumnDictionary(liveScopeKey, (HashMap<String, Object>) queryDictionaryMapObj);
+			publishQueryDictionary(new QueryDictionaryPublishContext(
+					liveScopeKey,
+					(HashMap<String, Object>) queryDictionaryMapObj,
+					scopePayload,
+					true,
+					true));
 		}
 
 		scopePayload.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
@@ -15311,6 +15316,55 @@ public class SqlParseSymbolTreeHelper {
 			normalizedSourceRef = normalizedSourceRef.substring("def_".length());
 		}
 		return normalizedSourceRef;
+	}
+
+	/**
+	 * Phase 19.1: inputs for the single query-dictionary publish policy
+	 * ({@link #publishQueryDictionary}). Scope finalizers and {@link #publishQueryLikeScope}
+	 * should route through this instead of calling {@link #mergeIntoGlobalQueryColumnDictionary}
+	 * directly.
+	 */
+	private static final class QueryDictionaryPublishContext {
+		final String liveScopeKey;
+		final HashMap<String, Object> queryDictionary;
+		/** When non-null, the sanitized dictionary is written under {@code query_dictionary}. */
+		final HashMap<String, Object> embeddedTarget;
+		final boolean sanitize;
+		final boolean mergeIntoGlobal;
+
+		private QueryDictionaryPublishContext(
+				String liveScopeKey,
+				HashMap<String, Object> queryDictionary,
+				HashMap<String, Object> embeddedTarget,
+				boolean sanitize,
+				boolean mergeIntoGlobal) {
+			this.liveScopeKey = liveScopeKey;
+			this.queryDictionary = queryDictionary;
+			this.embeddedTarget = embeddedTarget;
+			this.sanitize = sanitize;
+			this.mergeIntoGlobal = mergeIntoGlobal;
+		}
+	}
+
+	/**
+	 * Phase 19.1: sole intended ingress for scope-close query-dictionary publish —
+	 * optional sanitize, optional embed onto a scope payload / {@code def_*} map, then
+	 * optional merge into the global live index. Does not replace phase-2 usage enrichment
+	 * ({@link #mergeExplicitQualifiedUnknownIntoSourceQueryDictionary}).
+	 */
+	private void publishQueryDictionary(QueryDictionaryPublishContext context) {
+		if (context == null || context.queryDictionary == null) {
+			return;
+		}
+		if (context.sanitize) {
+			sanitizeQueryDictionaryForGlobalExport(context.queryDictionary);
+		}
+		if (context.embeddedTarget != null) {
+			context.embeddedTarget.put(MUMBLE_QUERY_DICTIONARY_KEY, context.queryDictionary);
+		}
+		if (context.mergeIntoGlobal) {
+			mergeIntoGlobalQueryColumnDictionary(context.liveScopeKey, context.queryDictionary);
+		}
 	}
 
 	@SuppressWarnings("unchecked")

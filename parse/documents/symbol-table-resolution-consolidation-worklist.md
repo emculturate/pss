@@ -168,7 +168,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
 | **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18.1**/**18.4**/**18.5** ❌ dropped/N/A; **18.2**/**18.3** ✅; reformulation policy in `relational-modifier-resolution-policy.md` |
-| **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
+| **19** Query dictionary publish consolidation | ⏸️ In progress | ~20% | **19.0** ✅; **19.1** ✅ `publishQueryDictionary` + `publishQueryLikeScope` wired; **19.2–19.5** next |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
 | **13** Language feature gap closure | ⏸️ Not started | 0% | **Unblocked** — can run in parallel with Phases 15–19; see Phase 13 section |
 
@@ -224,7 +224,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 
 **Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **Phase 19** (query dictionary publish consolidation) or optional Phase 17 large-sample goldens. **Phase 18** closed policy-only (**18.1** ❌ dropped — reformulation doc; no `RESOLVED_PIVOT_IN_LIST_OUTPUT`).
+**Suggested next focus:** **Phase 19.2** — route `finalizeQueryScopeSymbolTable` (remove pre-publish double merge) through `publishQueryDictionary`; keep Phase 19 stability rule (no silent golden/diagnostic churn).
 
 ---
 
@@ -2123,7 +2123,9 @@ Implement `RESOLVED_PIVOT_IN_LIST_OUTPUT` so bare IN values resolve like UNPIVOT
 
 **Prerequisite:** Phase **15.6** closeout (`ConvertEgressScopeBundle` stabilizes egress-time reads). Phases **16–18** may overlap if they do not touch publish finalizers.
 
-**Gate:** Gate **195/195**; substitution column V1–V16; `nestedQueryDemoTest` + `nestedQueryDemoWithCteTest`; DML UPDATE V13/V14; full suite **1209/1209**.
+**Gate:** `SmoketestQualityGateTestSuite` (full gate); substitution column V1–V16; `nestedQueryDemoTest` + `nestedQueryDemoWithCteTest`; DML UPDATE V13/V14 (`updateFromNestedSubquery*`); full `parse/` suite. Prefer running the named probes first, then the full gate, then full suite before closeout.
+
+**Stability rule (Aug 2026):** Phase 19 work must **not** change goldens, diagnostic **counts**, diagnostic **types/codes**, or diagnostic **positions** for any existing test unless those diffs are **first presented to the human for review and explicit acceptance**. Refactors are expected to be behavior-preserving; if a “bugfix” or sanitize cleanup appears to require golden/diagnostic churn, **stop and review** — do not land silent expectation updates.
 
 ### Problem today — write-path spread
 
@@ -2139,6 +2141,81 @@ Step D closed **backfill repair** (post-hoc sweeps). These **ingress** paths sti
 | `SqlParseEventWalker` end-of-walk | `syncPublishedScopeQueryDictionariesFromGlobal` | **Repair sync** global → `def_*` when handoff drifted |
 
 **Symptom:** global map and embedded `def_*.query_dictionary` can diverge **legitimately** (phase-2 parent attribution) but also **accidentally** when ingress order or merge sanitization differs between finalizers.
+
+### Phase 19.0 — Ingress inventory (Aug 2026)
+
+**Status:** ✅ Complete. No code change — call-site matrix for **19.1**.
+
+#### A. Scope-publish writers (`mergeIntoGlobalQueryColumnDictionary`)
+
+All live under `SqlParseSymbolTreeHelper` unless noted. Live keys only after `normalizeQuerySourceReference`.
+
+| # | Call site | Method | Sanitize first? | Also writes embedded `def_*.query_dictionary`? | Notes |
+|---|-----------|--------|-----------------|-----------------------------------------------|-------|
+| 1 | ~L7854–7856 | `finalizeQueryScopeSymbolTable` | ✅ | Puts dict on `scopeSymbols` before publish | **Double merge:** same dict merged again by #8 inside `publishQueryLikeScope` |
+| 2 | ~L8306–8308 | `finalizeDeleteScopeSymbolTable` (RETURNING path only) | ✅ | Puts on `scopeSymbols` before publish | Skipped when `publishReturningQueryDictionary=false`; then #8 may merge nothing |
+| 3 | ~L8102–8104 | `publishUpdateReturningScopeArtifacts` | ✅ | ✅ on `def_updateN` after publish | Runs **after** `publishQueryLikeScope` |
+| 4 | ~L8573–8593 | `publishInsertReturningScopeArtifacts` | ✅ | ✅ merge/replace on `def_insertN` | Runs **after** publish; may merge with existing embedded dict |
+| 5 | ~L6267–6273 | `publishInsertScopeQueryDictionary` | ✅ | ✅ on `def_insertN` | Called at end of `finalizeInsertScopeSymbolTable`; seeds from target `table_dictionary` |
+| 6 | ~L6292–6296 | `publishUpdateScopeQueryDictionary` | ✅ | ❌ **global only** | Copies from `update_dictionary`; does **not** put `query_dictionary` on `def_updateN` |
+| 7 | ~L8647–8649 | `publishQueryLikeScope` | ❌ | Payload already holds dict; `popSymbolTable(def_*)` embeds it | Shared publish for SELECT / VALUES / set-op / INSERT / UPDATE / DELETE frames |
+| 8 | *(via #7)* | same | — | — | Every finalizer that calls `publishQueryLikeScope` with a non-empty dict hits global again |
+
+**Not a scope finalizer but still global write:**
+
+| # | Call site | Method | Role |
+|---|-----------|--------|------|
+| 9 | ~L15910–15916 | `mergeExplicitQualifiedUnknownIntoSourceQueryDictionary` | **Phase-2** external usage enrichment on global live index (parent attribution). Intentional two-store asymmetry — **out of scope for collapsing into sanitize+embed publish**, but must remain after **19.1** or be explicitly owned by publish API as “usage merge”. |
+| 10 | `SqlASTWalkerHelper` ~L4407–4418 | `mergeColumnReferenceIntoQueryDictionary` | Direct `queryColumnDictionaryMap.put` — sibling phase-2 / helper path; inventory for **19.5** grep-clean. |
+| 11 | `SqlParseEventWalker` ~L1750 | SCRIPT snapshot put | Script-level aggregate of statement dicts — not per-scope publish. |
+
+#### B. Finalizer → publish ordering (per statement kind)
+
+| Finalizer | Walker exit | Order (dict-relevant steps) | Double-global risk |
+|-----------|-------------|----------------------------|--------------------|
+| **SELECT / query_specification** | `finalizeQueryScopeSymbolTable` | convert → sanitize+**merge#1** → put on payload → … → **`publishQueryLikeScope` (#7 merge again)** | **Yes** (same snapshot twice) |
+| **VALUES** | `finalizeValuesScopeSymbolTable` | build/merge values into local dict → put on payload → `resolveValuesScopeSymbolTable` → **`publishQueryLikeScope`** | No prior sanitize; single merge via #7 |
+| **UNION / INTERSECT** | `finalizeSetOperationScopeSymbolTable` → `finalizeSetOperationAtExit` | set-op assembly → deferred unresolved → **`publishQueryLikeScope`** | Relies on participant leaves already published; composite may carry little/no local dict |
+| **INSERT** | `finalizeInsertScopeSymbolTable` | **`publishQueryLikeScope`** → table-dict global merge → optional RETURNING (#4) → **`publishInsertScopeQueryDictionary` (#5)** | Publish often before insert dict is seeded; #5 is the real insert-scope export |
+| **UPDATE** | `finalizeUpdateScopeSymbolTable` | convert → **`publishQueryLikeScope`** → optional RETURNING (#3) → **`publishUpdateScopeQueryDictionary` (#6)** | #6 global-only from `update_dictionary`; embedded `query_dictionary` may be RETURNING-only |
+| **DELETE** | `finalizeDeleteScopeSymbolTable` | convert → optional sanitize+**merge#2** (RETURNING) → **`publishQueryLikeScope`** | Double merge when RETURNING path used |
+
+#### C. End-of-walk repair sync
+
+| Site | File | When |
+|------|------|------|
+| `getSymbolTable()` | `SqlParseEventWalker` ~L990 | Every client read of symbol table |
+| `finalizeHandoffSymbolTable()` | `SqlParseEventWalker` ~L1002 | Successful grammar exit / aborted walk handoff |
+
+Both call `syncPublishedScopeQueryDictionariesFromGlobal`: walk all `def_*` scopes whose live key is `query*` / `union*` / `intersect*` / `values*`, and **merge global → embedded** `query_dictionary` (`mergeGlobalQueryDictionaryIntoScopeQueryDictionary`). This is the repair that **19.4** retires or assert-guards. It is how phase-2 global enrichment (#9) becomes visible on nested `def_queryN` payloads at handoff.
+
+**Not covered by sync:** `def_insertN` / `def_updateN` / `def_deleteN` — `isPublishedQueryDictionaryScopeKey` excludes DML live keys.
+
+#### D. Local dict mutations (not global publish)
+
+Walk-time / convert paths that only touch the **active frame** `query_dictionary` (or merge tokens into an already-published source via #9) — e.g. `tryResolveIntraSelectListForwardReference`, clause token merges, `mergeResolvedColumnIntoDictionary`. These are **consumers/enrichers**, not alternate publish APIs. **19.1** should not relocate them; publish API only owns sanitize + embed + global merge at scope close.
+
+#### E. `ConvertEgressScopeBundle` (15.6) read path
+
+`buildConvertEgressScopeBundle` snapshots `globalQueryDictionaryRefs` from `walker.queryColumnDictionaryMap` at convert start. Egress readers already prefer the bundle (`getGlobalQueryDictionary`). **19.5** wires this to the future publish API outputs and greps stray egress merges — no change in **19.0**.
+
+#### 19.0 → 19.1 handoff
+
+1. Introduce `publishQueryDictionary(PublishContext)` that always: sanitize → write/replace embedded dict on the scope payload (or post-`def_*` map) → **single** `mergeIntoGlobalQueryColumnDictionary`.
+2. First consumers: `finalizeQueryScopeSymbolTable` (remove pre-publish merge #1; let publish API run once from `publishQueryLikeScope` or replace that merge) and `finalizeValuesScopeSymbolTable` (add sanitize).
+3. Keep #9 phase-2 usage merges as a separate operation (document name); do not fold into scope-close publish without an explicit design choice.
+4. DML paths (#3–#6, DELETE #2) wait for **19.3** but share the same API shape.
+
+### Phase 19.1 — `publishQueryDictionary` API (Aug 2026)
+
+**Status:** ✅ Done. Behavior-preserving introduce + first wire; **no golden / diagnostic churn** on gate probes.
+
+**Delivered:**
+- `QueryDictionaryPublishContext` + private `publishQueryDictionary` in `SqlParseSymbolTreeHelper` (sanitize → embed onto payload → global merge).
+- `publishQueryLikeScope` routes its former raw `mergeIntoGlobalQueryColumnDictionary` call through the new API (sanitize + embed + merge). SELECT still also sanitizes/merges earlier in `finalizeQueryScopeSymbolTable` — **double merge remains until 19.2**.
+- Phase-2 enrichers unchanged.
+
+**Verify (green, 0 failures):** `nestedQueryDemoTest` / `nestedQueryDemoWithCteTest`; `getSubstitutionColumnVariableV1–V16`; UPDATE V13/V14; full `SmoketestQualityGateTestSuite` (**239** methods in suite class run; **263** including named probes).
 
 ### Phase 19 end state
 
@@ -2156,20 +2233,22 @@ Step D closed **backfill repair** (post-hoc sweeps). These **ingress** paths sti
 
 | Sub-step | Action | Primary files | Verify | Status |
 |----------|--------|---------------|--------|--------|
-| **19.0** | Ingress inventory: grep `mergeIntoGlobalQueryColumnDictionary`, `query_dictionary.put`, `syncPublishedScopeQueryDictionariesFromGlobal`; document per-finalizer ordering | worklist + helper | Matrix in this section | ⏸️ |
-| **19.1** | Introduce `publishQueryDictionary` / `PublishContext` with sanitize + embedded + global merge | `SqlParseSymbolTreeHelper.java` | Gate; no golden churn | ⏸️ |
-| **19.2** | Route `finalizeQueryScopeSymbolTable` + `publishQueryLikeScope` through **19.1** | Finalizers | nested demo + substitution V1–V16 | ⏸️ |
+| **19.0** | Ingress inventory: grep `mergeIntoGlobalQueryColumnDictionary`, `query_dictionary.put`, `syncPublishedScopeQueryDictionariesFromGlobal`; document per-finalizer ordering | worklist + helper | Matrix in this section | ✅ **Aug 2026** |
+| **19.1** | Introduce `publishQueryDictionary` / `PublishContext` with sanitize + embedded + global merge; wire `publishQueryLikeScope` | `SqlParseSymbolTreeHelper.java` | nested demos + V1–V16 + V13/V14 + full gate; **no silent golden/diag churn** | ✅ **Aug 2026** |
+| **19.2** | Route `finalizeQueryScopeSymbolTable` through **19.1** (remove pre-publish duplicate sanitize/merge); VALUES already covered via `publishQueryLikeScope` sanitize | Finalizers | nested demo + substitution V1–V16 | ⏸️ |
 | **19.3** | Route INSERT / UPDATE / DELETE finalizers through **19.1** | DML finalizers | DML V13/V14 + complex sub I/U | ⏸️ |
 | **19.4** | Audit `syncPublishedScopeQueryDictionariesFromGlobal` call sites in `SqlParseEventWalker`; retire or guard behind assert | `SqlParseEventWalker.java` | Full suite; confirm no handoff drift | ⏸️ |
-| **19.5** | Wire `ConvertEgressScopeBundle.globalQueryDictionaryRefs` to publish API outputs; grep clean for stray egress `mergeIntoGlobal…` | Helper + convert | Gate **195/195** + full suite | ⏸️ |
+| **19.5** | Wire `ConvertEgressScopeBundle.globalQueryDictionaryRefs` to publish API outputs; grep clean for stray egress `mergeIntoGlobal…` | Helper + convert | Full gate + full suite | ⏸️ |
 
 ### Phase 19 closeout checklist
 
-- [ ] Single `publishQueryDictionary` API; all finalizers use it — **19.1–19.3**
-- [ ] Ingress inventory complete; no direct `mergeIntoGlobalQueryColumnDictionary` outside publish API — **19.0**, **19.5**
+- [x] **19.0** ingress inventory matrix (scope-publish writers, finalizer ordering, end-of-walk sync, phase-2 enrichers)
+- [x] **19.1** `publishQueryDictionary` API + `publishQueryLikeScope` wired (duplicate SELECT pre-merge remains for **19.2**)
+- [ ] Single `publishQueryDictionary` API; all finalizers use it — **19.2–19.3**
+- [ ] No direct `mergeIntoGlobalQueryColumnDictionary` outside publish API (+ phase-2 enrichers explicitly excepted) — **19.5**
 - [ ] `syncPublishedScopeQueryDictionariesFromGlobal` retired or assert-only — **19.4**
 - [ ] `table-and-query-dictionary-design.md` cross-ref: two-store intentional; publish API is sole write ingress
-- [ ] Gate **195/195** + full suite **1209/1209**
+- [ ] Full gate + full suite green under Phase 19 stability rule
 
 ### Phase 15 vs Phase 13 / 16–19
 
