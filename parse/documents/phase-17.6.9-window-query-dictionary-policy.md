@@ -1,7 +1,7 @@
 # Phase 17.6.9 — Window `query_dictionary` policy
 
-**Status:** ✅ Done (Aug 2026)  
-**Priority:** P2 (optional vs **17.7.11** critical path; valuable before pivot/triple golden sign-off)  
+**Status:** ✅ Done (Aug 2026) — default `parse/` suite verified **`9d06616`** (`mvn clean test`: 1564 run, 0 failures, 0 errors, 3 skipped)  
+**Priority:** P2 (optional vs **17.7.11** critical path)  
 **Parent:** [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md) §17.6.9  
 **Depends on:** **17.6.8** ✅ (window archive lists + interim `query_dictionary` merge)  
 **Related:** **17.7.11** (operand site tokens on `query_dictionary` for query-backed FROM — separate design)

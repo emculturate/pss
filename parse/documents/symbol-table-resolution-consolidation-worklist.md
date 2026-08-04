@@ -166,7 +166,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **14** Universal per-column resolution (Steps C–F) | ✅ Done | 100% | Steps **C–F** complete (Jul 2026); Step **E.5** closed in Phase **15.3** |
 | **15** Unified convert egress loop | ✅ Done | 100% | **15.1–15.6** + closeout signed off Jul 2026 — see Phase 15 |
 | **16** PIVOT operand materialization | ✅ Done | 100% | **16.0–16.4** done — see Phase 16 |
-| **17** UNPIVOT derived columns | 🔄 In progress | ~97% | **17.6.3** ✅, **17.6.7** ✅, **17.6.8** ✅, **17.7.6** ✅; optional **17.7.8** pairs remain |
+| **17** UNPIVOT derived columns | 🔄 In progress | ~99% | **17.6.8** ✅, **17.6.9** ✅ (full-suite goldens **`9d06616`**), **17.7.1–17.7.8** ✅; **17.7.11** ⏸️; **17.6.7** human sign-off gated on **17.7.11** |
 | **18** PIVOT IN-list output + IN-identifier | ⏸️ Not started | 0% | After Phase 15 — Snowflake-style aliases + identifier refs; see Phase 18 |
 | **19** Query dictionary publish consolidation | ⏸️ Not started | 0% | After Phase 15.6 — single publish ingress; retire write-path spread; see Phase 19 |
 | **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
@@ -215,10 +215,11 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **17.6.7** (Aug 2026) — triple-tuple **subquery-backed FROM** paired variants (5 tests) for all `triple*` join chains; `p_src`/`q_src`/`m1`… alias → `queryN`; in `-Pphase15-derived-gate` and smoketest multi-modifier gate (7). **Sign-off blocked until 17.7.11** (`*SubqueryFromV17_6_7Test` query_dictionary operand parity).
 - **17.7.5b.1** (Aug 2026) — convert egress derived-path inventory: [phase-17.7.5b.1-convert-egress-inventory.md](phase-17.7.5b.1-convert-egress-inventory.md); baseline **1731/1731** tests in `parse/` before **17.7.5b.2**.
 - Structured derivation track (pre-Aug refresh): `e8945ce` (**17.7.1**), `daa0068` / `cfc846c` / `c1a4bd7` (**17.7.2** structured publish), `15b6f7b` / `77d4d00` / `eb8e776` (ambiguous derived + source operands per egress site).
+- **`9d06616`** (Aug 2026) — **Full `parse/` default suite green:** `mvn clean test` **1564** tests, **0** failures, **0** errors, **3** skipped. Refreshed **17.6.9** `window_partition_by` / `window_ordered_by` symbol goldens across subqueries, DML, live samples, core aliasing, access-object set-op V2; fixed **8** `SqlEventWalkerNonSqlEndpointParserTests` window predicand/column-variable errors.
 
-**Active blockers:** None for pivot/unpivot class gate. Large-sample / set-op diagnostic goldens still deferred (**§17.7.7-deferred-large-sample-goldens**).
+**Active blockers:** None for default `mvn test`. **17.7.11** blocks full **17.6.7** `*SubqueryFromV17_6_7Test` sign-off. Optional hygiene: remove spurious `walker.queryCount++` in `exitPivot_clause` (+ pivot golden renumber); large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
 
-**Suggested next focus:** **17.6.1** residual triple derivation audit, **17.7.11** query-backed operand `query_dictionary` design + implement. Optional: **17.6.9** — follow [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md) one step per session/PR; **17.7.10** source-alias ON warning.
+**Suggested next focus:** **17.7.11** (query-backed operand tokens on `query_dictionary` — design workshop + one implementation PR). Then **17.6.1** residual triple `derivation` / `table_dictionary` audit. Parallel optional: **exitPivot** `queryCount` removal; **17.7.9** / **17.7.10**; refresh **`largeStudentgeneralQueryParse*`** `@Ignore` tests; **Phase 18** (PIVOT IN-list output alias + IN-identifier).
 
 ---
 
@@ -1669,7 +1670,7 @@ This policy applies through **17.6.1** completion and **17.6.7** subquery varian
 | **17.6.6** | **Per-hint operand buckets** | P2 | ⏸️ Superseded by **17.7** | Absorbed into structured `derivation` per-sibling keys (**17.7.2**); no query-wide convert prune (**17.7.8**). |
 | **17.6.7** | **Triple-tuple subquery-backed FROM variants** | P1 | 🔄 Partial (Aug 2026) | Paired subquery FROM for each `triple*` join test: `triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test`, `triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test`, `tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test`, `triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test`, `tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test`. Goldens assert `table_alias` maps (`p_src=query0`, `m1=query0`, …) and same sibling-modifier diagnostics as physical-table pairs. Smoketest + `-Pphase15-derived-gate`. **Human sign-off on all five `*SubqueryFromV17_6_7Test` goldens is blocked until 17.7.11** (query-backed operand site tokens on `query_dictionary` parity with physical `triple*` pairs). |
 | **17.6.8** | **Convert egress completeness (not special-case paths)** | P1 | ✅ Done (Aug 2026) | **(a)** clause-site tokens (WHERE/HAVING/QUALIFY) — contract tests on `unpivotV0` / `pivotBasicMetricColumnsV0`. **(b)** Window: `window_partition_by` / `window_ordered_by` archived lists + `mergeDeferredWindowClauseHarvestSiteTokensIntoQueryDictionary`; **17.6.8 (b)** tests list each {@code OVER}-referenced name in **SELECT** (interim until **17.6.9**). **(c)** RETURNING — `insertUnpivotDerivedReturningQueryDictionaryV17_6_8Test`, `updatePivotDerivedReturningQueryDictionaryV17_6_8Test`, `deleteUnpivotDerivedReturningQueryDictionaryV17_6_8Test` assert derived names on {@code query_dictionary}. |
-| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ✅ Done (Aug 2026) | [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md). Interface-gated {@code query_dictionary}; {@code window_partition_by} / {@code window_ordered_by} archives; **NewPolicy V1–V4** modifier contract; **17.6.8 (b)** modifier window tests {@code @Deprecated}. Physical window goldens updated for {@code window_*} lists. **17.6.9b** window-list over-harvest optional. |
+| **17.6.9** | **Window {@code query_dictionary} policy (non-interface {@code OVER} refs)** | P2 | ✅ Done (Aug 2026) | [phase-17.6.9-window-query-dictionary-policy.md](phase-17.6.9-window-query-dictionary-policy.md). Interface-gated {@code query_dictionary}; {@code window_partition_by} / {@code window_ordered_by} archives; **NewPolicy V1–V4** modifier contract; **17.6.8 (b)** modifier window tests {@code @Deprecated}. Cross-suite symbol goldens + non-SQL window predicand fixes in **`9d06616`**; default suite **1564/1564** run (**3** `@Ignore`). **17.6.9b** window-list over-harvest optional. |
 
 **Recommended sequencing:**
 
@@ -1960,22 +1961,24 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 - [x] **S2-PP** GROUP BY / HAVING / ORDER BY gap-fill (`gapFill17_7_7_S2Pp*`).
 - [x] Wire gap-fill tests into subset **E** (full goldens + diagnostics).
 - [x] Pivot class A–E refresh stabilized (**Aug 2026** sign-off above).
-- [ ] Re-enable **§17.7.7-deferred-large-sample-goldens** after **17.7.5b** convert egress convergence (scheduled next; not blocked on pivot class goldens).
+- [x] Re-enable **§17.7.7-deferred-large-sample-goldens** set-op V2 trio — done in **`9d06616`** (`multipleIntersectSubqueryInterfaceValidationV2Test`, `multipleExceptSubqueryInterfaceValidationV2Test`, `multipleIntersectSubqueryInterfaceValidationV2ExceptTest`).
+- [ ] Re-enable **`largeStudentgeneralQueryParseTest`** / **`largeStudentgeneralQueryParseExceptTest`** when severe-warning / fatal policy for production-shaped SQL is settled.
 
 ### §17.7.7-deferred-large-sample-goldens (end of 17.7 track — do not forget)
 
-**Status:** ⏸️ Deferred until **17.7.5b** lands. Pivot class subsets **A–E** are signed off (**Aug 2026**); large-sample / set-op tests are not pivot-contract blockers.
+**Status:** 🔄 **Partial (Aug 2026).** Set-op interface validation V2 tests re-enabled and green (**`9d06616`**). Large student general queries remain `@Ignore` (warning volume / fatal-vs-severe policy — not default-suite blockers).
 
-**Ignored tests (re-enable when refreshing diagnostic goldens):**
+**Still ignored (optional follow-up):**
 
 | Test class | Method |
 |------------|--------|
 | `SqlEventWalkerLiveSampleQueriesTests` | `largeStudentgeneralQueryParseTest`, `largeStudentgeneralQueryParseExceptTest` |
-| `SqlParseEventWalkerWithAccessObjectTest` | `multipleIntersectSubqueryInterfaceValidationV2Test`, `multipleExceptSubqueryInterfaceValidationV2Test`, `multipleIntersectSubqueryInterfaceValidationV2ExceptTest` |
 
-**Why deferred:** Large production-shaped queries and set-op interface validation matrices; failures are **`AMBIGUOUS_COLUMN_REFERENCE` severe-warning list** / fatal-count drift vs pre-17.7 expectations — not pivot contract regressions. Revisit **after** **17.7.5b**; refresh those goldens with the same **per-diagnostic position** policy as pivot class (`701dcd9`).
+**Re-enabled (Aug 2026):** `SqlParseEventWalkerWithAccessObjectTest` — `multipleIntersectSubqueryInterfaceValidationV2Test`, `multipleExceptSubqueryInterfaceValidationV2Test`, `multipleIntersectSubqueryInterfaceValidationV2ExceptTest`.
 
-**Pivot class golden refresh:** ✅ **Complete** — subsets **A–E** + gap-fill signed off Aug 2026. Coverage matrix: **§17.7.7-matrix** + `phase-17.7.7-pivot-matrix-heatmap.md`. Next test work (optional): **17.7.8** derived-vs-physical pairs, **§17.7.7-deferred-large-sample-goldens**.
+**Why large-sample remains deferred:** Production-shaped SQL with many unqualified subquery columns → large **`AMBIGUOUS_COLUMN_REFERENCE`** severe-warning sets; product decision whether any fatals should downgrade before locking goldens (`701dcd9` position policy when refreshed).
+
+**Pivot class golden refresh:** ✅ **Complete** — subsets **A–E** + gap-fill signed off Aug 2026. Coverage matrix: **§17.7.7-matrix** + `phase-17.7.7-pivot-matrix-heatmap.md`. **17.7.8** closeout ✅. Next optional test work: large-sample `@Ignore` pair above; **17.7.8** derived-vs-physical gap-fill pairs if desired.
 
 ---
 
