@@ -7344,7 +7344,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		
 		// Register pivot structured derivation (derived_columns + source_columns token maps)
 		registerPivotValueInterfaceHint(aggregate, inList, nameCol, ctx);
-		walker.queryCount++;
 	}
 
 	@Override
