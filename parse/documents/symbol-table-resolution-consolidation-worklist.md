@@ -169,7 +169,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
 | **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18.1**/**18.4**/**18.5** ❌ dropped/N/A; **18.2**/**18.3** ✅; reformulation policy in `relational-modifier-resolution-policy.md` |
 | **19** Query dictionary publish consolidation | ✅ Done | 100% | **19.0–19.5** ✅; sync **retained** as intentional handoff (**19.4**); egress bundle wired (**19.5**) |
-| **20** DDL event-walker AST construction hygiene | ⏸️ Not started | ~25% | After Phase 19 — retire ctx re-scrape; walked `subMap` only; see Phase 20 |
+| **20** DDL event-walker AST construction hygiene | ✅ Done | 100%* | **20.0–20.8** ✅; opaque tails are interval-verbatim; optional **20.9** left-factor warnings deferred |
 | **13** Language feature gap closure | ✅ Closed for consolidation | 100%* | **13.1–13.4** ✅; **13.5** ❌ spun off → [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md); **13.6** ❌ spun off → [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) |
 
 **Recent wins (Jul 2026):**
@@ -2310,7 +2310,7 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
 
 ---
 
-## Phase 20 — DDL event-walker AST construction hygiene
+## Phase 20 — DDL event-walker AST construction hygiene (✅ DONE — Aug 2026)
 
 **Goal:** Eliminate DDL-specific **ctx re-scrape** and **fallback recovery** in `SqlParseEventWalker` so every DDL subtree that the grammar already walks is attached to the statement AST at the natural rule-exit point — the same pattern as `exitDb_object_name`, `exitQuery_expression` (CREATE-as-query), and the rest of the walker.
 
@@ -2327,7 +2327,7 @@ Walk-time / convert paths that only touch the **active frame** `query_dictionary
 
 **Gate:** `SqlEventWalkerScriptsAndDDLTests` **20/20**; truncate endpoint tests (`truncateStatementEndpointMatchesDdlEndpointTest`, `truncateEndpointAccessObjectTest`); SCRIPT DDL items in `mixedScriptStatementTypesTest` / `fullScriptPrimaryCoverageTest`.
 
-**Explicitly out of scope for Phase 20 (see spun-off DDL plan):** Structured parsing of `generic_ddl_options` / `generic_ddl_paren_content` into clause-specific mumble keys (`IF NOT EXISTS`, `OR REPLACE`, …). That work lives in [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md) (**former 13.5**, ❌ spun off). Phase 20 still emits **opaque option/parameter blobs** — but those blobs must be **joined from walked `subMap` terminal children**, not re-read from `ctx.getChild(i).getText()`.
+**Explicitly out of scope for Phase 20 (see spun-off DDL plan):** Structured parsing of `generic_ddl_options` / `generic_ddl_paren_content` into clause-specific mumble keys (`IF NOT EXISTS`, `OR REPLACE`, …). That work lives in [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md) (**former 13.5**, ❌ spun off). Phase 20 still emits **opaque option/parameter blobs** — as **verbatim source-interval slices**, not token-rejoined `ctx.getChild(i).getText()`.
 
 ### Problem today — parallel AST construction paths
 
@@ -2335,22 +2335,22 @@ DDL handlers still bypass the walked tree in several places:
 
 | Anti-pattern | Locations | Issue |
 |--------------|-----------|-------|
-| **`extractDdlObjectTypeText(ctx)`** | `exitDrop_statement_primary`, `exitAlter_statement_primary`, `exitDdl_object_type`, `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content`, `exitCreate_macro_expression` | Iterates `ctx.getChild(i).getText()` instead of joining walked `subMap` entries |
+| **`extractDdlObjectTypeText(ctx)`** | ~~DDL handlers~~ → **20.7 ✅ deleted** | Was ctx child token-rejoin + lowercase |
 | **`extractCreateTypeText(ctx, …)`** | ~~All 14 `exitCreate_*_expression` handlers~~ → **20.5 ✅** `verbatimChildSpanText` | Was ctx child-index token rejoin; now source-interval span over type-keyword children |
-| **Discard walked `subMap`** | `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content` | `removeNodeMap` then ignore; re-scrape ctx for blob text |
-| **`ctx.generic_ddl_paren_content() != null` guards** | `exitCreate_function_expression`, `exitCreate_procedure_expression`, `exitCreate_macro_expression` | Child index arithmetic from ctx introspection instead of walked child count/order |
-| **`passThroughDdlRuleValueToParent`** | Defined, never called | Dead code |
+| **Discard walked `subMap`** | ~~`exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content`~~ → **20.3 ✅** | Was `removeNodeMap` then ignore; now verbatim promote + `SKIP` |
+| **`ctx.generic_ddl_paren_content() != null` guards** | ~~function/procedure/macro~~ → **20.6 ✅** | Was child index arithmetic from ctx; now walked child layout |
+| **`passThroughDdlRuleValueToParent`** | ~~Defined, never called~~ → **20.7 ✅ deleted** | Dead code |
 
 **Acceptable (no change):** `ctx.query_expression() != null` in `exitCreate_table_expression` — branch selector only (AS-select vs column-def form), not AST recovery.
 
 ### Phase 20 end state
 
-1. **Opaque DDL tails are verbatim source slices** via `verbatimRuleText` — not token-rejoined text; `extractDdlObjectTypeText` unused for options/paren blobs.
+1. **Opaque DDL tails are verbatim source slices** via `verbatimRuleText` — not token-rejoined text.
 2. **`exitDdl_object_type`** — promote type string → `addToParent` + `SKIP` (DROP/ALTER read walked child).
 3. **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`** — one verbatim string → `addToParent` + `SKIP`; never discard walked map then scrape/rejoin tokens.
 4. **CREATE exits** — `type` from `verbatimChildSpanText` over type-keyword children; `parameters` / `clauses` / `options` / `columns` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
-5. **Function/procedure** — optional-arg layout inferred from walked `subMap` child count, not `ctx.generic_ddl_paren_content() != null`.
-6. **Dead code removed** — `passThroughDdlRuleValueToParent`; `extractCreateTypeText` retired in **20.5**; eventually `extractDdlObjectTypeText`.
+5. **Function/procedure/macro** — optional-arg layout inferred from walked `subMap` children (string vs map / child count); no `ctx.generic_ddl_paren_content()` guards — **20.6 ✅**
+6. **Dead code removed** — `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` — **20.5 / 20.7 ✅**
 
 ### Phase 20 design note — verbatim opaque tails (Aug 2026)
 
@@ -2375,18 +2375,18 @@ DDL handlers still bypass the walked tree in several places:
 | **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: promote **one verbatim string** + `SKIP`; nested-paren grammar for paren content; options remain `(~SEMI_COLON)+` | Grammar + Walker | `SqlEventWalkerDdlTests` paren/multiline/case goldens | ✅ |
 | **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | drop/alter goldens | ✅ |
 | **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with `verbatimChildSpanText` over type-keyword children (terminals under create rule; no `ddl_object_type` wrapper) | All `exitCreate_*_expression` | All CREATE DDL tests | ✅ |
-| **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ⏸️ |
-| **20.7** | Delete `extractDdlObjectTypeText`, `passThroughDdlRuleValueToParent` (`extractCreateTypeText` already retired in **20.5**) | Walker | Grep clean | ⏸️ |
-| **20.8** | Golden refresh if blob case/spacing shifts; full DDL + script + truncate endpoint gate | `SqlEventWalkerDdlTests` + Scripts/DDL + truncate | Gate green | ⏸️ |
+| **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ✅ |
+| **20.7** | Delete `extractDdlObjectTypeText`, `passThroughDdlRuleValueToParent` (`extractCreateTypeText` already retired in **20.5**) | Walker | Grep clean | ✅ |
+| **20.8** | Golden refresh if blob case/spacing shifts; full DDL + script + truncate endpoint gate | `SqlEventWalkerDdlTests` + Scripts/DDL + truncate | Gate green | ✅ |
 | **20.9** *(optional)* | Left-factor Jinja / set-op aliasing to reduce recoverable parser warnings in `{{ source(...) }} as alias` + parenthesized `EXCEPT` / `UNION` forms without changing AST or symbol-table output | Grammar + `SqlParseEventWalkerWithAccessObjectTest` canaries | Minimal left-factored tweak around `table_source_primary` / `subquery` / `set_operation_member`; validate warning count drops while final parse stays identical | ⏸️ |
 
 ### Phase 20 closeout checklist
 
-- [ ] All DDL object names, query bodies, types come from walked grammar children; opaque tails are **verbatim source slices** — **20.2–20.6**
-- [ ] No `extractDdlObjectTypeText` / `extractCreateTypeText` / `buildFallbackTableNodeFromText` / token-rejoin scraping in DDL handlers — **20.7**
-- [ ] `generic_ddl_*` remains opaque (structured options ❌ spun off — see [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md)) but blob text is **interval-verbatim**, not ctx child rejoin — **20.3**
-- [ ] `SqlEventWalkerDdlTests` + `SqlEventWalkerScriptsAndDDLTests` + truncate endpoints + script DDL coverage — **20.8**
-- [ ] No symbol-table / convert egress changes (confirm diff scope: grammar + `SqlParseEventWalker.java` + DDL tests only)
+- [x] All DDL object names, query bodies, types come from walked grammar children; opaque tails are **verbatim source slices** — **20.2–20.6**
+- [x] No `extractDdlObjectTypeText` / `extractCreateTypeText` / `buildFallbackTableNodeFromText` / token-rejoin scraping in DDL handlers — **20.7**
+- [x] `generic_ddl_*` remains opaque (structured options ❌ spun off — see [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md)) but blob text is **interval-verbatim**, not ctx child rejoin — **20.3**
+- [x] `SqlEventWalkerDdlTests` (**55**) + `SqlEventWalkerScriptsAndDDLTests` (**20**) + truncate endpoints + script DDL coverage + generator DDL round-trips — **20.8**
+- [x] No symbol-table / convert egress changes (diff scope: grammar + `SqlParseEventWalker.java` + DDL/script tests + worklist)
 
 ### Phase 20 vs spun-off DDL structured options
 
@@ -2954,6 +2954,10 @@ Phase 18 — PIVOT IN-list output + IN-identifier                        ✅ clo
 
 Phase 19 — Query dictionary publish path consolidation                   ✅ DONE (Aug 2026)
   19.0–19.5: single publishQueryDictionary ingress; sync retained as handoff (19.4); egress bundle (19.5)
+
+Phase 20 — DDL event-walker AST construction hygiene                     ✅ DONE (Aug 2026)
+  20.0–20.8: verbatim opaque tails; walked DROP/ALTER type; CREATE type/params from walk; scrapers deleted
+  20.9 optional: Jinja / set-op left-factor warning reduction (deferred)
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.
@@ -3067,7 +3071,7 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **20** | DDL event-walker AST construction hygiene (`SqlParseEventWalker` — retire ctx re-scrape; walked `subMap` only) | ⏸️ See Phase 20 (~25% — names + query bodies done) |
+| **20** | DDL event-walker AST construction hygiene (`SqlParseEventWalker` — verbatim opaque tails; retire ctx scrapers) | ✅ **20.0–20.8** done (Aug 2026); optional **20.9** deferred |
 
 Do **not** start the production validation checklist until Phase **20** closeout is ✅ (or explicitly deferred) and every row in the table above is ✅.
 
@@ -3135,7 +3139,7 @@ Read parse/documents/symbol-table-resolution-consolidation-worklist.md first —
 - Phase 15 — Unified convert egress loop (15.1–15.6; **15.6** = ConvertEgressScopeBundle)
 - Phase 14 Step E — **E.5 CLOSED** in Phase 15.3
 - Phase 19 — Query dictionary publish path consolidation (after 15.6)
-- Phase 20 — DDL event-walker AST construction hygiene (after 19; partial progress Jul 2026)
+- Phase 20 — DDL event-walker AST construction hygiene ✅ DONE (Aug 2026; optional 20.9 deferred)
 - Shortest path to dead-code removal
 - Published scope vs global dictionary rules
 - Phase 8 unified resolver (RESOLVED_DERIVED_COLUMN, isPhysicalTableRefVisibleInScope)

@@ -362,6 +362,14 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 	}
 
 	@Test
+	public void createProcedureEmptyArgsTest() {
+		assertDdlAstSymbolDiagnostics(
+				"CREATE PROCEDURE mydb.myschema.pr_noop() LANGUAGE SQL",
+				"{DDL={create={type=PROCEDURE, name={schema=myschema, dbname=mydb, table=pr_noop}, clauses=LANGUAGE SQL}}}",
+				"{def_create0={}}");
+	}
+
+	@Test
 	public void createProcedureSnowflakeLanguageTest() {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE PROCEDURE mydb.myschema.pr_refresh(days int) RETURNS VARCHAR LANGUAGE JAVASCRIPT",
@@ -375,6 +383,22 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 				"CREATE MACRO mydb.myschema.mac_one(arg1 int) AS SELECT 1 AS id",
 				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_one}, parameters=arg1 int, query={select={1={alias=id, literal=1}}}}}}",
 				"{def_create1={def_query0={query_dictionary={id=[[@15,60:61='id',<381>,1:60]]}, interface={id=[]}}}}");
+	}
+
+	@Test
+	public void createMacroEmptyArgsTest() {
+		assertDdlAstSymbolDiagnostics(
+				"CREATE MACRO mydb.myschema.mac_pi() AS SELECT 3 AS id",
+				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_pi}, query={select={1={alias=id, literal=3}}}}}}",
+				"{def_create1={def_query0={query_dictionary={id=[[@13,51:52='id',<381>,1:51]]}, interface={id=[]}}}}");
+	}
+
+	@Test
+	public void createMacroParametersPreserveCaseVerbatimTest() {
+		assertDdlAstSymbolDiagnostics(
+				"CREATE MACRO mydb.myschema.mac_typed(Arg1 INT) AS SELECT 1 AS id",
+				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_typed}, parameters=Arg1 INT, query={select={1={alias=id, literal=1}}}}}}",
+				"{def_create1={def_query0={query_dictionary={id=[[@15,62:63='id',<381>,1:62]]}, interface={id=[]}}}}");
 	}
 
 	@Test

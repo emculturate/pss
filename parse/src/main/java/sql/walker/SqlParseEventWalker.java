@@ -2248,25 +2248,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object nameChild = subMap.get("1");
-		Object argContentChild = subMap.get("2");
-		Object dataTypeChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "3" : "2");
-		Object clausesChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "4" : "3");
+		// Walked children: name, optional parameters (String), data_type (Map), clauses (String).
+		List<Object> children = extractOrderedRuleChildren(subMap);
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
 		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "function", 1));
 
-		if (nameChild != null) {
-			createNode.put(MUMBLE_NAME_KEY, nameChild);
+		int index = 0;
+		if (index < children.size()) {
+			createNode.put(MUMBLE_NAME_KEY, children.get(index++));
 		}
-
-		if (ctx.generic_ddl_paren_content() != null && argContentChild != null) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, argContentChild);
+		if (index < children.size() && children.get(index) instanceof String) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(index++));
 		}
-		if (dataTypeChild != null) {
-			createNode.put(MUMBLE_DATATYPE_KEY, dataTypeChild);
+		if (index < children.size()) {
+			createNode.put(MUMBLE_DATATYPE_KEY, children.get(index++));
 		}
-		if (clausesChild != null) {
-			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
+		if (index < children.size() && children.get(index) instanceof String) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(index++));
 		}
 
 		subMap.clear();
@@ -2280,21 +2278,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object nameChild = subMap.get("1");
-		Object argContentChild = subMap.get("2");
-		Object clausesChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "3" : "2");
+		// Walked children: name, optional parameters (String), required clauses (String).
+		List<Object> children = extractOrderedRuleChildren(subMap);
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
 		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "procedure", 1));
 
-		if (nameChild != null) {
-			createNode.put(MUMBLE_NAME_KEY, nameChild);
+		if (!children.isEmpty()) {
+			createNode.put(MUMBLE_NAME_KEY, children.get(0));
 		}
-
-		if (ctx.generic_ddl_paren_content() != null && argContentChild != null) {
-			createNode.put(MUMBLE_PARAMETERS_KEY, argContentChild);
-		}
-		if (clausesChild != null) {
-			createNode.put(MUMBLE_CLAUSES_KEY, clausesChild);
+		if (children.size() >= 3) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(2));
+		} else if (children.size() == 2) {
+			createNode.put(MUMBLE_CLAUSES_KEY, children.get(1));
 		}
 
 		subMap.clear();
@@ -2308,6 +2304,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
+		// Walked children: name, optional parameters (String); query under MUMBLE_QUERY_KEY.
 		List<Object> children = extractOrderedRuleChildren(subMap);
 		Object queryChild = subMap.remove(MUMBLE_QUERY_KEY);
 
@@ -2317,11 +2314,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (!children.isEmpty()) {
 			createNode.put(MUMBLE_NAME_KEY, children.get(0));
 		}
-
-		if (ctx.generic_ddl_paren_content() != null) {
-			createNode.put(
-					MUMBLE_PARAMETERS_KEY,
-					extractDdlObjectTypeText(ctx.generic_ddl_paren_content()));
+		if (children.size() >= 2 && children.get(1) instanceof String) {
+			createNode.put(MUMBLE_PARAMETERS_KEY, children.get(1));
 		}
 		if (queryChild != null) {
 			createNode.put(MUMBLE_QUERY_KEY, queryChild);
@@ -2759,44 +2753,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 		walker.addToParent(parentRuleIndex, parentStackLevel, verbatimRuleText(ctx));
 		walker.asTree.put("SKIP", "TRUE");
-	}
-
-	private String extractDdlObjectTypeText(ParserRuleContext ctx) {
-		if (ctx == null || ctx.getChildCount() == 0) {
-			return "";
-		}
-
-		StringBuilder typeBuilder = new StringBuilder();
-		for (int i = 0; i < ctx.getChildCount(); i++) {
-			if (i > 0) {
-				typeBuilder.append(' ');
-			}
-			typeBuilder.append(ctx.getChild(i).getText().toLowerCase());
-		}
-
-		return typeBuilder.toString();
-	}
-
-	private void passThroughDdlRuleValueToParent(ParserRuleContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		if (subMap == null) {
-			// Missing DDL pass-through map: ctx.getText()
-			return;
-		}
-
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		Object value = subMap;
-		if (subMap.size() == 1 && subMap.containsKey("1")) {
-			value = subMap.remove("1");
-		}
-
-		walker.addToParent(parentRuleIndex, parentStackLevel, value);
 	}
 
 	/*
