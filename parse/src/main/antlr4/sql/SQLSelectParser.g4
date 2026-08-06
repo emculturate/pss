@@ -827,18 +827,20 @@ lateral_modifier
   : LATERAL
   ;
 
-// Used anywhere a table name is expected
+// Used anywhere a table name is expected.
+// Source alias is optional; trailing modifier alias is gated by the modifier (no adjacent double-optional alias).
 table_primary
-  : table_source_primary table_relational_modifier? relation_as_clause?
+  : table_source_primary relation_as_clause? (table_relational_modifier relation_as_clause?)?
   ;
 
+// Bare relation sources only — aliases attach at table_primary (or not at all on tuple_primary).
 table_source_primary
-  : db_object_name relation_as_clause?
-  | variable_identifier as_clause
-  | jinja_identifier relation_as_clause?
-  | table_function_primary relation_as_clause?
+  : db_object_name
+  | variable_identifier
+  | jinja_identifier
+  | table_function_primary
   | values_statement_primary
-  | subquery relation_as_clause?
+  | subquery
   ;
 
 relation_as_clause
@@ -846,18 +848,9 @@ relation_as_clause
   | {isAllowedImplicitAlias(_input.LT(1).getText())}? alias_identifier
   ;
 
-// Used ONLY in the TUPLE Variable Substitution end point
+// Used ONLY in the TUPLE Variable Substitution end point (no relation aliases).
 tuple_primary
-  : tuple_source_primary table_relational_modifier?
- ;
-
-tuple_source_primary
-  : db_object_name
-  | variable_identifier
-  | jinja_identifier
-  | table_function_primary
-  | values_statement_primary
-  | subquery
+  : table_source_primary table_relational_modifier?
   ;
 
 

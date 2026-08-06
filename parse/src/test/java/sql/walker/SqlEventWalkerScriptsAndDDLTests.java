@@ -338,7 +338,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=table, table={schema=myschema, dbname=mydb, table=tab2}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={schema=myschema, alias=src, dbname=mydb, table=source_tab}}}}}}",
+				"{DDL={create={type=table, table={schema=myschema, dbname=mydb, table=tab2}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={alias=src, schema=myschema, dbname=mydb, table=source_tab}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -390,7 +390,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=view, name={schema=myschema, dbname=mydb, table=vw1}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={schema=myschema, alias=src, dbname=mydb, table=source_tab}}}}}}",
+				"{DDL={create={type=view, name={schema=myschema, dbname=mydb, table=vw1}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={alias=src, schema=myschema, dbname=mydb, table=source_tab}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -417,7 +417,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=materialized view, name={schema=myschema, dbname=mydb, table=mv1}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={schema=myschema, alias=src, dbname=mydb, table=source_tab}}}}}}",
+				"{DDL={create={type=materialized view, name={schema=myschema, dbname=mydb, table=mv1}, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={alias=src, schema=myschema, dbname=mydb, table=source_tab}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());
@@ -492,7 +492,7 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 
 		Assert.assertEquals("AST is wrong",
-				"{DDL={create={type=macro, name={schema=myschema, dbname=mydb, table=mac1}, parameters=arg1 int, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={schema=myschema, alias=src, dbname=mydb, table=source_tab}}}}}}",
+				"{DDL={create={type=macro, name={schema=myschema, dbname=mydb, table=mac1}, parameters=arg1 int, query={select={1={column={name=col1, table_ref=src}}, 2={column={name=col2, table_ref=src}}, 3={column={name=col3, table_ref=src}}}, from={table={alias=src, schema=myschema, dbname=mydb, table=source_tab}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[]",
 				extractor.getInterface().toString());

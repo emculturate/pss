@@ -2380,7 +2380,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 		
-		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={schema=schema1, alias=emp_sales, table=emp_sales}}, where={condition={left={column={name=col1, table_ref=emp_sales}}, right={literal=100}, operator=>}}, select={1={column={name=col2, table_ref=emp_sales}}}}}",
+		Assert.assertEquals("AST is wrong", "{TUPLE={from={table={alias=emp_sales, schema=schema1, table=emp_sales}}, where={condition={left={column={name=col1, table_ref=emp_sales}}, right={literal=100}, operator=>}}, select={1={column={name=col2, table_ref=emp_sales}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col2]", 
 				extractor.getInterface().toString());
@@ -2465,7 +2465,7 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runJoinExtensionParsertest(sql, parser);
 		
-		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={condition={left={column={name=col1, table_ref=dd}}, right={column={name=col1, table_ref=bb}}, operator==}}}, 2={table={schema=schema1, alias=dd, table=emp_sales}}}}",
+		Assert.assertEquals("AST is wrong", "{JOIN_EXTENSION={1={join=join, on={condition={left={column={name=col1, table_ref=dd}}, right={column={name=col1, table_ref=bb}}, operator==}}}, 2={table={alias=dd, schema=schema1, table=emp_sales}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());

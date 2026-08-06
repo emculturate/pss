@@ -1320,7 +1320,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}, 2={column={name=col1, table_ref=bbb}}}, from={join={1={table={schema=sch1, alias=aaa, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={schema=sch2, alias=bbb, table=bbb}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}, 2={column={name=col1, table_ref=bbb}}}, from={join={1={table={alias=aaa, schema=sch1, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=bbb, schema=sch2, table=bbb}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col1]", 
 				extractor.getInterface().toString());
@@ -1350,7 +1350,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}, 2={column={name=col2, table_ref=bbb}}}, from={join={1={table={schema=sch1, alias=aaa, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={schema=sch2, alias=bbb, table=bbb}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}, 2={column={name=col2, table_ref=bbb}}}, from={join={1={table={alias=aaa, schema=sch1, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col2, table_ref=bbb}}, operator==}}}, 3={table={alias=bbb, schema=sch2, table=bbb}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col2, col1]", 
 				extractor.getInterface().toString());
@@ -1375,7 +1375,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}}, from={join={1={table={schema=sch1, alias=aaa, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col1, table_ref=bbb}}, operator==}}}, 3={table={alias=bbb, query={select={1={column={name=col1, table_ref=null}}}, from={table={schema=sch2, alias=null, table=bbb}}}}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=col1, table_ref=aaa}}}, from={join={1={table={alias=aaa, schema=sch1, table=aaa}}, 2={join=join, on={condition={left={column={name=col1, table_ref=aaa}}, right={column={name=col1, table_ref=bbb}}, operator==}}}, 3={table={alias=bbb, query={select={1={column={name=col1, table_ref=null}}}, from={table={schema=sch2, alias=null, table=bbb}}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col1]", 
 				extractor.getInterface().toString());
@@ -1399,7 +1399,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=col1, table_ref=aaa}}}, from={table={schema=sch1, alias=aaa, table=aaa}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=col1, table_ref=bbb}}}, from={table={schema=sch2, alias=bbb, table=bbb}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=col1, table_ref=aaa}}}, from={table={alias=aaa, schema=sch1, table=aaa}}}, 2={union={qualifier=null, operator=union}}, 3={select={1={column={name=col1, table_ref=bbb}}}, from={table={alias=bbb, schema=sch2, table=bbb}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col1]", 
 				extractor.getInterface().toString());
@@ -1422,7 +1422,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		final SQLSelectParserParser parser = parse(sql);
 		SqlParseEventWalker extractor = runParsertest(sql, parser);
 
-		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=col1, table_ref=aaa}}}, from={table={schema=sch1, alias=aaa, table=aaa}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=col1, table_ref=bbb}}}, from={table={schema=sch2, alias=bbb, table=bbb}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={union={1={select={1={column={name=col1, table_ref=aaa}}}, from={table={alias=aaa, schema=sch1, table=aaa}}}, 2={union={qualifier=null, operator=except}}, 3={select={1={column={name=col1, table_ref=bbb}}}, from={table={alias=bbb, schema=sch2, table=bbb}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[col1]", 
 				extractor.getInterface().toString());

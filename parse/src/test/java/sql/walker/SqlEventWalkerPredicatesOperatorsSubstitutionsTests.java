@@ -2217,15 +2217,15 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 	@Test
 	public void unionJoinWithSubstitutionV1() {
-		// Item 34 - Parse error is resolved by adding alias after the variable when you need to use these special joins
-		// the word "natural" would get parsed as an alias, not a join type since we don't enforce it to be a reserved word
+		// Item 34 - With bare FROM variables, "union join" binds as UNION JOIN (not alias=union + JOIN).
+		// "natural join" still needs care: implicit aliases can steal join-type words when allowed.
 		final String query = " SELECT * FROM third cross join <fourth> union join <fifth> fth natural join sixth ";
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		
-		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={join=crossjoin}, 3={table={alias=union, substitution={name=<fourth>, type=tuple}}}, 4={join=join}, 5={table={alias=fth, substitution={name=<fifth>, type=tuple}}}, 6={join=naturaljoin}, 7={table={alias=null, table=sixth}}}}}}",
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=third}}, 2={join=crossjoin}, 3={table={substitution={name=<fourth>, type=tuple}, alias=null}}, 4={join=unionjoin}, 5={table={alias=fth, substitution={name=<fifth>, type=tuple}}}, 6={join=naturaljoin}, 7={table={alias=null, table=sixth}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]", 
 				extractor.getInterface().toString());
@@ -2235,7 +2235,7 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@1,8:8='*',<291>,1:8]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={sixth={*=[[@1,8:8='*',<291>,1:8]]}, third={*=[[@1,8:8='*',<291>,1:8]]}, <fifth>={*=[[@1,8:8='*',<291>,1:8]]}, <fourth>={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={union=<fourth>, fth=<fifth>}}}",
+		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={*=[[@1,8:8='*',<291>,1:8]]}, table_dictionary={sixth={*=[[@1,8:8='*',<291>,1:8]]}, third={*=[[@1,8:8='*',<291>,1:8]]}, <fifth>={*=[[@1,8:8='*',<291>,1:8]]}, <fourth>={*=[[@1,8:8='*',<291>,1:8]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={fth=<fifth>}}}",
 				extractor.getSymbolTable().toString());
 	}
 

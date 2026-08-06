@@ -1019,7 +1019,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				+ " WHERE a.col1 <> a.col3 " + " ) AS b )";
 
 		final Snippet snippet = runSuccessfulSQLParserTest(query, SQLPARSER_INSERT_TREE_KEY);
-		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=b, query={select={1={column={name=col1, table_ref=a}, alias=att1}, 2={column={name=col2, table_ref=a}, alias=att2}}, from={table={schema=subj, alias=a, dbname=sch, table=tab1}}, where={condition={left={column={name=col1, table_ref=a}}, right={column={name=col3, table_ref=a}}, operator=<>}}}}}, select={1={column={name=att1, table_ref=b}}, 2={column={name=att2, table_ref=b}}}}, target_table={table={schema=subj, alias=values, dbname=sch, table=tbl}}, columns={1={column={name=newcol1, table_ref=null}}, 2={column={name=newcol2, table_ref=null}}}}}}",
+		Assert.assertEquals("AST is wrong", "{INSERT={insert={preamble=insert_into, from={from={table={alias=b, query={select={1={column={name=col1, table_ref=a}, alias=att1}, 2={column={name=col2, table_ref=a}, alias=att2}}, from={table={alias=a, schema=subj, dbname=sch, table=tab1}}, where={condition={left={column={name=col1, table_ref=a}}, right={column={name=col3, table_ref=a}}, operator=<>}}}}}, select={1={column={name=att1, table_ref=b}}, 2={column={name=att2, table_ref=b}}}}, target_table={table={schema=subj, alias=values, dbname=sch, table=tbl}}, columns={1={column={name=newcol1, table_ref=null}}, 2={column={name=newcol2, table_ref=null}}}}}}",
 				snippet.getSqlAbstractTree().toString());
 		Assert.assertEquals("Interface is wrong", "[newcol2, newcol1]",
 				snippet.getQueryInterface().toString());

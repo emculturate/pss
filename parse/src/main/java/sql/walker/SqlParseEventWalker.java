@@ -4601,24 +4601,50 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 
+	/**
+	 * Source alias now lives on {@code table_primary}, after this rule. Peek the completed
+	 * parent parse tree so query-scope collection can still run at source-exit timing
+	 * (before PIVOT/UNPIVOT walks consume {@code queryN}).
+	 */
 	private String extractTableSourcePrimaryAlias(SQLSelectParserParser.Table_source_primaryContext ctx) {
-		if (ctx == null || ctx.getChildCount() < 2) {
+		if (ctx == null || !(ctx.getParent() instanceof SQLSelectParserParser.Table_primaryContext tablePrimary)) {
 			return null;
 		}
-
-		ParseTree aliasChild = ctx.getChild(1);
-		if (aliasChild instanceof SQLSelectParserParser.As_clauseContext asClause) {
-			if (asClause.alias_identifier() != null) {
-				return asClause.alias_identifier().getText();
+		for (int i = 0; i < tablePrimary.getChildCount(); i++) {
+			if (tablePrimary.getChild(i) != ctx) {
+				continue;
+			}
+			if (i + 1 >= tablePrimary.getChildCount()) {
+				return null;
+			}
+			ParseTree next = tablePrimary.getChild(i + 1);
+			if (next instanceof SQLSelectParserParser.Relation_as_clauseContext relationAs) {
+				return extractRelationAsClauseAliasText(relationAs);
 			}
 			return null;
 		}
+		return null;
+	}
 
-		String aliasText = aliasChild.getText();
-		if (aliasText == null || aliasText.isBlank() || "as".equalsIgnoreCase(aliasText)) {
+	private String extractRelationAsClauseAliasText(SQLSelectParserParser.Relation_as_clauseContext ctx) {
+		if (ctx == null) {
 			return null;
 		}
-		return aliasText;
+		if (ctx.alias_identifier() != null) {
+			String aliasText = ctx.alias_identifier().getText();
+			if (aliasText != null && !aliasText.isBlank()) {
+				return aliasText;
+			}
+		}
+		// Fallback: last non-AS child text
+		for (int i = ctx.getChildCount() - 1; i >= 0; i--) {
+			ParseTree child = ctx.getChild(i);
+			String text = child == null ? null : child.getText();
+			if (text != null && !text.isBlank() && !"as".equalsIgnoreCase(text)) {
+				return text;
+			}
+		}
+		return null;
 	}
 
 	private void emitMalformedVariableStartRecoveryWarning(Token startToken) {
@@ -4712,137 +4738,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 		if (subMap == null) {
-			throw new IllegalStateException("Missing AST node map for table_primary at: " + ctx.getText());
+			throw new IllegalStateException("Missing AST node map for table_source_primary at: " + ctx.getText());
 		}
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		Map<String, Object> item;
-		String alias = null;
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		try {
-		if (ctx.getChildCount() == 1) {
-			item = (Map<String, Object>) subMap.remove("1");
-			if (item.keySet().contains(MUMBLE_TABLE_KEY)) {
-				item.put(MUMBLE_ALIAS_KEY, null);
-
-				Object table = item.get(MUMBLE_TABLE_KEY);
-				if (table != null) {
-					String qualifiedTableReference = symbolTreeHelper.getQualifiedTableReference(item);
-					String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(qualifiedTableReference);
-					// Table doesn't have an Alias, so it doesn't need to be collected in the Table ALias map
-					// walker.collectTableAlias(alias, table);
-
-					// However, we still need to collect the table reference in the AST 
-					subMap.put(MUMBLE_TABLE_KEY, item);
-
-					// Only physical tables are registered in table_dictionary. CTE references are query-backed.
-					if (cteScopeReference == null) {
-						walker.ensureTableDictionaryEntry(qualifiedTableReference);
-					} else {
-						symbolTreeHelper.upsertCurrentTableAliasMapping(qualifiedTableReference, cteScopeReference);
-					}
-				}
-			} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
-				item = walker.checkForSubstitutionVariable(item, MUMBLE_TUPLE_KEY);
-				item.put(MUMBLE_ALIAS_KEY, null);
-				subMap.put(MUMBLE_TABLE_KEY, item);
-				Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
-				String tableName = resolveSubstitutionTableReference(substitution);
-				if (tableName != null) {
-					// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
-					Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
-					String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
-					if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
-						walker.ensureTableDictionaryEntry(tableName);
-					}
-				}
-			} else if (item.keySet().contains(MUMBLE_TABLE_FUNCTION_KEY)) {
-				// Table functions are table sources, not query sources.
-				subMap.putAll(item);
-				symbolTreeHelper.registerTableFunctionSourceReference(item, null);
-			} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
-				subMap.putAll(item);
-
-				// exitValues_statement always stores a Map under MUMBLE_VALUES_KEY
-				Object valuesObject = item.get(MUMBLE_VALUES_KEY);
-				if (valuesObject instanceof Map<?, ?> valuesMapObj) {
-					Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
-					String valuesScopeKey = symbolTreeHelper.findTopLevelValuesScopeKey();
-					Object aliasObj = valuesMap.get(MUMBLE_ALIAS_KEY);
-					if (aliasObj instanceof String valuesAlias && !valuesAlias.isBlank()) {
-						symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
-						// NOTE: The alias is tracked in table_alias via collectTableAlias() below,
-						// so we do NOT create a nested submap in QCD via addCurrentScopeValuesAliasMapping().
-						// This prevents the VALUES columns from appearing both in a nested submap
-						// and at the top level of the parent query's QCD entry.
-						walker.collectTableAlias(valuesAlias, valuesScopeKey);
-					} else {
-						symbolTreeHelper.registerUnaliasedFromSource(item);
-					}
-				}
-
+			if (parentRuleIndex == SQLSelectParserParser.RULE_tuple_primary) {
+				packageBareTupleSourcePrimary(subMap);
 			} else {
-				if (shouldWrapSetOperationAtCurrentLevel(stackLevel, item)) {
-					Map<String, Object> tableItem = new HashMap<String, Object>();
-					tableItem.put(MUMBLE_ALIAS_KEY, null);
-					tableItem.put(MUMBLE_QUERY_KEY, item);
-					subMap.put(MUMBLE_TABLE_KEY, tableItem);
-					registerQueryLikeFromSource(item, null);
-				} else {
-					subMap.putAll(item);
-					symbolTreeHelper.registerUnaliasedFromSource(item);
+				packageBareTableSourcePrimary(subMap, stackLevel);
+				// Register/bind alias at source-exit timing (peek parent table_primary), matching
+				// pre-left-factor collectQuerySymbolTable timing before relational modifiers run.
+				String peekedSourceAlias = extractTableSourcePrimaryAlias(ctx);
+				if (peekedSourceAlias != null && !peekedSourceAlias.isBlank()) {
+					applyTableSourceAlias(subMap, peekedSourceAlias);
+				} else if (parentRuleIndex == SQLSelectParserParser.RULE_table_primary) {
+					registerUnaliasedTableSourceSymbols(subMap);
 				}
 			}
-
-		} else if (ctx.getChildCount() == 2) {
-			item = new HashMap<String, Object>();
-			Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					MUMBLE_TUPLE_KEY);
-
-			Map<String, Object> aliasMap = (Map<String, Object>) subMap.remove("2");
-			alias = (String) aliasMap.get(MUMBLE_ALIAS_KEY);
-			item.putAll(aliasMap);
-
-			// Try various alternatives
-			if (reference.containsKey(MUMBLE_TABLE_KEY)) {
-				String tableRef = symbolTreeHelper.getQualifiedTableReference(reference);
-				String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
-				item.putAll(reference);
-				if (cteScopeReference != null) {
-					symbolTreeHelper.upsertCurrentTableAliasMapping(alias, cteScopeReference);
-					symbolTreeHelper.upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
-				} else {
-					walker.collectTableAlias(alias, tableRef);
-					walker.ensureTableDictionaryEntry(tableRef);
-				}
-				
-			} else if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-				// Check for Substitution Variable
-				item.putAll(reference);
-				// Collect Symbol Table Reference
-				Map<String, Object> substitution = (Map<String, Object>) reference.get(MUMBLE_SUBSTITUTION_KEY);
-				String tableName = resolveSubstitutionTableReference(substitution);
-				// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
-				Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
-				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
-				if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
-					walker.collectTableAlias(alias, tableName);
-					walker.ensureTableDictionaryEntry(tableName);
-				}
-			} else if (reference.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
-				// Keep table_function in the from-list item directly; reserve query for subqueries.
-				item.putAll(reference);
-				symbolTreeHelper.registerTableFunctionSourceReference(reference, alias);
-			} else {// then it's a query, add it to the tree no matter what kind of query it is
-				item.put(MUMBLE_QUERY_KEY, reference);
-				registerQueryLikeFromSource(reference, alias);
-			}
-
-			subMap.put(MUMBLE_TABLE_KEY, item);
-		} else {
-			// Wrong number of entries
-		}
-
-		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+			walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		} finally {
 			if (!setOperationWrapAnchorStackLevels.isEmpty()
 					&& stackLevel != null
@@ -4853,6 +4767,126 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (tableSourcePrimaryNestingDepth > 0) {
 				tableSourcePrimaryNestingDepth--;
 			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void packageBareTableSourcePrimary(Map<String, Object> subMap, Integer stackLevel) {
+		Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
+		if (item == null) {
+			return;
+		}
+		if (item.keySet().contains(MUMBLE_TABLE_KEY)) {
+			item.put(MUMBLE_ALIAS_KEY, null);
+
+			Object table = item.get(MUMBLE_TABLE_KEY);
+			if (table != null) {
+				String qualifiedTableReference = symbolTreeHelper.getQualifiedTableReference(item);
+				String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(qualifiedTableReference);
+				subMap.put(MUMBLE_TABLE_KEY, item);
+
+				if (cteScopeReference == null) {
+					walker.ensureTableDictionaryEntry(qualifiedTableReference);
+				} else {
+					symbolTreeHelper.upsertCurrentTableAliasMapping(qualifiedTableReference, cteScopeReference);
+				}
+			}
+		} else if (item.keySet().contains(MUMBLE_SUBSTITUTION_KEY)) {
+			item = walker.checkForSubstitutionVariable(item, MUMBLE_TUPLE_KEY);
+			item.put(MUMBLE_ALIAS_KEY, null);
+			subMap.put(MUMBLE_TABLE_KEY, item);
+			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
+			String tableName = resolveSubstitutionTableReference(substitution);
+			if (tableName != null) {
+				Object substitutionTypeObj = substitution.get(MUMBLE_TYPE_KEY);
+				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
+				if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+					walker.ensureTableDictionaryEntry(tableName);
+				}
+			}
+		} else if (item.keySet().contains(MUMBLE_TABLE_FUNCTION_KEY)) {
+			subMap.putAll(item);
+			// Table-function scope registration deferred to applyTableSourceAlias /
+			// registerUnaliasedTableSourceSymbols so aliased sources do not allocate
+			// an unused flatten0/generator0 before the alias bind.
+		} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
+			subMap.putAll(item);
+
+			Object valuesObject = item.get(MUMBLE_VALUES_KEY);
+			if (valuesObject instanceof Map<?, ?> valuesMapObj) {
+				Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
+				String valuesScopeKey = symbolTreeHelper.findTopLevelValuesScopeKey();
+				Object aliasObj = valuesMap.get(MUMBLE_ALIAS_KEY);
+				if (aliasObj instanceof String valuesAlias && !valuesAlias.isBlank()) {
+					symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
+					walker.collectTableAlias(valuesAlias, valuesScopeKey);
+				} else {
+					symbolTreeHelper.registerUnaliasedFromSource(item);
+				}
+			}
+		} else {
+			if (shouldWrapSetOperationAtCurrentLevel(stackLevel, item)) {
+				Map<String, Object> tableItem = new HashMap<String, Object>();
+				tableItem.put(MUMBLE_ALIAS_KEY, null);
+				tableItem.put(MUMBLE_QUERY_KEY, item);
+				subMap.put(MUMBLE_TABLE_KEY, tableItem);
+				// Query-scope registration deferred to exitTable_primary (needs final alias).
+			} else {
+				subMap.putAll(item);
+				// Unaliased query registration deferred to exitTable_primary.
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void packageBareTupleSourcePrimary(Map<String, Object> subMap) {
+		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
+				MUMBLE_TUPLE_KEY);
+		if (item == null) {
+			return;
+		}
+
+		if (item.containsKey(MUMBLE_TABLE_KEY)) {
+			String tableRef = symbolTreeHelper.getQualifiedTableReference(item);
+			String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
+			Object aliasObj = item.get(MUMBLE_ALIAS_KEY);
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
+				symbolTreeHelper.upsertCurrentTableAliasMapping(alias, aliasTarget);
+			} else if (cteScopeReference != null && tableRef != null && !tableRef.isBlank()) {
+				symbolTreeHelper.upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
+			}
+			if (cteScopeReference == null) {
+				walker.ensureTableDictionaryEntry(tableRef);
+			}
+			subMap.put(MUMBLE_TABLE_KEY, item);
+		} else if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
+			String name = resolveSubstitutionTableReference(substitution);
+			Object typeObj = substitution.get(MUMBLE_TYPE_KEY);
+			String substitutionType = typeObj == null ? null : typeObj.toString();
+			if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
+				walker.ensureTableDictionaryEntry(name);
+			}
+			subMap.putAll(item);
+		} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
+			subMap.putAll(item);
+		} else if (item.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+			subMap.putAll(item);
+		} else {
+			String alias = null;
+			Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
+			if (!done)
+				done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
+			if (!done)
+				done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
+			if (!done)
+				done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
+			if (!done)
+				done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
+			if (!done)
+				done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
+			subMap.putAll(item);
 		}
 	}
 
@@ -4883,13 +4917,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
 	}
 
-	// exitTable_primary: composes table_source_primary + optional table_relational_modifier + optional relation_as_clause.
-	// Slot "1" is always the processed table source result from exitTable_source_primary.
-	// Optional additional slots are classified by content:
-	//   - Map with MUMBLE_ALIAS_KEY   → outer relation_as_clause alias
-	//   - Map with MUMBLE_UNPIVOT_KEY → unpivot_clause (from table_relational_modifier)
-	//   - Map with MUMBLE_PIVOT_KEY   → pivot_clause (from table_relational_modifier)
-	
+	// exitTable_primary: table_source_primary relation_as_clause? (table_relational_modifier relation_as_clause?)?
+	// Slot "1" is always the processed bare source from exitTable_source_primary.
+	// Later slots (in order): optional source alias, optional modifier, optional modifier alias.
 	@Override
 	public void exitTable_primary( SQLSelectParserParser.Table_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
@@ -4903,14 +4933,20 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> sourceResult = (Map<String, Object>) subMap.remove("1");
 		Map<String, Object> modifier = null;
-		String outerAlias = null;
+		String sourceAlias = null;
+		String modifierAlias = null;
 		String modifierKey = null;
 
 		for (int i = 2; subMap.containsKey(String.valueOf(i)); i++) {
 			Object entry = subMap.remove(String.valueOf(i));
 			if (entry instanceof Map<?, ?> entryMap) {
 				if (entryMap.containsKey(MUMBLE_ALIAS_KEY)) {
-					outerAlias = (String) entryMap.get(MUMBLE_ALIAS_KEY);
+					String aliasValue = (String) entryMap.get(MUMBLE_ALIAS_KEY);
+					if (modifier == null) {
+						sourceAlias = aliasValue;
+					} else {
+						modifierAlias = aliasValue;
+					}
 				} else if (entryMap.containsKey(MUMBLE_UNPIVOT_KEY)) {
 					modifier = (Map<String, Object>) entryMap.get(MUMBLE_UNPIVOT_KEY);
 					modifierKey = MUMBLE_UNPIVOT_KEY;
@@ -4921,9 +4957,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
+		if (sourceAlias != null && !sourceAlias.isBlank()) {
+			// Symbols + AST wrap already applied in exitTable_source_primary via parent peek.
+			// Only reshape if peek somehow missed (should be rare).
+			if (!tableSourceAliasAlreadyApplied(sourceResult, sourceAlias)) {
+				applyTableSourceAlias(sourceResult, sourceAlias);
+			}
+		}
+		// Unaliased query registration also happens at source exit for table_primary parents.
+
 		String relationAlias = null;
-		if (outerAlias != null && !outerAlias.isBlank()) {
-			relationAlias = outerAlias;
+		if (modifierAlias != null && !modifierAlias.isBlank()) {
+			relationAlias = modifierAlias;
 		}
 
 		if (modifier != null && relationAlias != null) {
@@ -4939,22 +4984,188 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		if (modifier != null && modifierKey != null) {
 			completeRelationalModifierFromPrimaryExit(sourceResult, modifier, modifierKey, relationAlias);
 		}
-		if (outerAlias != null) {
-			Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
-			if (tableEntry instanceof Map<?, ?> tableMap) {
-				if (modifier == null) {
-					((Map<String, Object>) tableMap).put(MUMBLE_ALIAS_KEY, outerAlias);
-					String tableRef = symbolTreeHelper.getQualifiedTableReference((Map<String, Object>) tableMap);
-					String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
-					String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
-					symbolTreeHelper.upsertCurrentTableAliasMapping(outerAlias, aliasTarget);
-				}
-			} else {
-				sourceResult.put(MUMBLE_ALIAS_KEY, outerAlias);
-			}
-		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, sourceResult);
+	}
+
+	/**
+	 * Apply a FROM-source alias that now lives on {@code table_primary} (formerly on
+	 * {@code table_source_primary} when childCount == 2). Rebuilds the same
+	 * {@code {table={alias=…, …}}} packaging and key order the old path produced.
+	 */
+	@SuppressWarnings("unchecked")
+	private void applyTableSourceAlias(Map<String, Object> sourceResult, String alias) {
+		if (sourceResult == null || alias == null || alias.isBlank()) {
+			return;
+		}
+
+		Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableEntry instanceof Map<?, ?> tableMapObj) {
+			Map<String, Object> reference = (Map<String, Object>) tableMapObj;
+			Map<String, Object> item = new LinkedHashMap<String, Object>();
+			item.put(MUMBLE_ALIAS_KEY, alias);
+
+			if (reference.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+				Map<String, Object> typed = walker.checkForSubstitutionVariable(
+						new LinkedHashMap<String, Object>(reference),
+						MUMBLE_TUPLE_KEY);
+				// Match old childCount==2 order: alias first, then substitution payload.
+				Map<String, Object> ordered = new LinkedHashMap<String, Object>();
+				ordered.put(MUMBLE_ALIAS_KEY, alias);
+				for (Map.Entry<String, Object> e : typed.entrySet()) {
+					if (!MUMBLE_ALIAS_KEY.equals(e.getKey())) {
+						ordered.put(e.getKey(), e.getValue());
+					}
+				}
+				Map<String, Object> substitution = (Map<String, Object>) ordered.get(MUMBLE_SUBSTITUTION_KEY);
+				String tableName = resolveSubstitutionTableReference(substitution);
+				Object substitutionTypeObj = substitution == null ? null : substitution.get(MUMBLE_TYPE_KEY);
+				String substitutionType = substitutionTypeObj == null ? null : substitutionTypeObj.toString();
+				if (tableName != null
+						&& (substitutionType == null
+								|| (!MUMBLE_COLUMN_KEY.equals(substitutionType)
+										&& !MUMBLE_PREDICAND_KEY.equals(substitutionType)))) {
+					walker.collectTableAlias(alias, tableName);
+					walker.ensureTableDictionaryEntry(tableName);
+				}
+				sourceResult.clear();
+				sourceResult.put(MUMBLE_TABLE_KEY, ordered);
+				return;
+			}
+
+			if (reference.containsKey(MUMBLE_QUERY_KEY)) {
+				Object queryObj = reference.get(MUMBLE_QUERY_KEY);
+				item.put(MUMBLE_QUERY_KEY, queryObj);
+				if (queryObj instanceof Map<?, ?> queryMap) {
+					registerQueryLikeFromSource((Map<String, Object>) queryMap, alias);
+				}
+				sourceResult.clear();
+				sourceResult.put(MUMBLE_TABLE_KEY, item);
+				return;
+			}
+
+			if (reference.containsKey(MUMBLE_TABLE_KEY)
+					|| reference.containsKey(MUMBLE_SCHEMA_KEY)
+					|| reference.containsKey(MUMBLE_DATABASE_NAME_KEY)) {
+				String tableRef = symbolTreeHelper.getQualifiedTableReference(reference);
+				String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
+				Map<String, Object> ordered = new LinkedHashMap<String, Object>();
+				ordered.put(MUMBLE_ALIAS_KEY, alias);
+				for (Map.Entry<String, Object> e : reference.entrySet()) {
+					if (!MUMBLE_ALIAS_KEY.equals(e.getKey())) {
+						ordered.put(e.getKey(), e.getValue());
+					}
+				}
+				if (cteScopeReference != null) {
+					symbolTreeHelper.upsertCurrentTableAliasMapping(alias, cteScopeReference);
+					symbolTreeHelper.upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
+				} else {
+					walker.collectTableAlias(alias, tableRef);
+					walker.ensureTableDictionaryEntry(tableRef);
+				}
+				sourceResult.clear();
+				sourceResult.put(MUMBLE_TABLE_KEY, ordered);
+				return;
+			}
+
+			// Fallback: keep remaining nested keys under table with alias first.
+			Map<String, Object> ordered = new LinkedHashMap<String, Object>();
+			ordered.put(MUMBLE_ALIAS_KEY, alias);
+			for (Map.Entry<String, Object> e : reference.entrySet()) {
+				if (!MUMBLE_ALIAS_KEY.equals(e.getKey())) {
+					ordered.put(e.getKey(), e.getValue());
+				}
+			}
+			sourceResult.clear();
+			sourceResult.put(MUMBLE_TABLE_KEY, ordered);
+			return;
+		}
+
+		if (sourceResult.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+			Map<String, Object> item = new LinkedHashMap<String, Object>();
+			item.put(MUMBLE_ALIAS_KEY, alias);
+			item.putAll(sourceResult);
+			item.put(MUMBLE_ALIAS_KEY, alias);
+			symbolTreeHelper.registerTableFunctionSourceReference(sourceResult, alias);
+			sourceResult.clear();
+			sourceResult.put(MUMBLE_TABLE_KEY, item);
+			return;
+		}
+
+		if (sourceResult.containsKey(MUMBLE_VALUES_KEY)) {
+			Object valuesObject = sourceResult.get(MUMBLE_VALUES_KEY);
+			if (valuesObject instanceof Map<?, ?> valuesMapObj) {
+				Map<String, Object> valuesMap = (Map<String, Object>) valuesMapObj;
+				valuesMap.put(MUMBLE_ALIAS_KEY, alias);
+				String valuesScopeKey = symbolTreeHelper.findTopLevelValuesScopeKey();
+				symbolTreeHelper.wrapValuesScopeAsDefinition(valuesScopeKey);
+				walker.collectTableAlias(alias, valuesScopeKey);
+			}
+			Map<String, Object> item = new LinkedHashMap<String, Object>();
+			item.put(MUMBLE_ALIAS_KEY, alias);
+			item.putAll(sourceResult);
+			item.put(MUMBLE_ALIAS_KEY, alias);
+			sourceResult.clear();
+			sourceResult.put(MUMBLE_TABLE_KEY, item);
+			return;
+		}
+
+		// Query-like / bare subquery: old aliased path wrapped as table={alias, query=…}.
+		Map<String, Object> item = new LinkedHashMap<String, Object>();
+		item.put(MUMBLE_ALIAS_KEY, alias);
+		item.put(MUMBLE_QUERY_KEY, new LinkedHashMap<String, Object>(sourceResult));
+		registerQueryLikeFromSource(sourceResult, alias);
+		sourceResult.clear();
+		sourceResult.put(MUMBLE_TABLE_KEY, item);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean tableSourceAliasAlreadyApplied(Map<String, Object> sourceResult, String alias) {
+		if (sourceResult == null || alias == null || alias.isBlank()) {
+			return false;
+		}
+		Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableEntry instanceof Map<?, ?> tableMap) {
+			Object existing = tableMap.get(MUMBLE_ALIAS_KEY);
+			return existing instanceof String existingAlias && alias.equals(existingAlias);
+		}
+		Object topAlias = sourceResult.get(MUMBLE_ALIAS_KEY);
+		return topAlias instanceof String existingAlias && alias.equals(existingAlias);
+	}
+
+	/**
+	 * Register query-like FROM sources when no relation alias was attached at table_primary.
+	 * Physical tables / substitutions / table functions already registered in packageBare*.
+	 */
+	@SuppressWarnings("unchecked")
+	private void registerUnaliasedTableSourceSymbols(Map<String, Object> sourceResult) {
+		if (sourceResult == null || sourceResult.isEmpty()) {
+			return;
+		}
+		Object tableEntry = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableEntry instanceof Map<?, ?> tableMapObj) {
+			Map<String, Object> tableMap = (Map<String, Object>) tableMapObj;
+			if (tableMap.containsKey(MUMBLE_QUERY_KEY)) {
+				Object queryObj = tableMap.get(MUMBLE_QUERY_KEY);
+				if (queryObj instanceof Map<?, ?> queryMap) {
+					registerQueryLikeFromSource((Map<String, Object>) queryMap, null);
+				}
+			}
+			return;
+		}
+		if (sourceResult.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+			symbolTreeHelper.registerTableFunctionSourceReference(sourceResult, null);
+			return;
+		}
+		if (sourceResult.containsKey(MUMBLE_VALUES_KEY)
+				|| sourceResult.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			return;
+		}
+		if (isQueryLikeFromSource(sourceResult)
+				|| sourceResult.containsKey(MUMBLE_QUERY_KEY)
+				|| sourceResult.containsKey(MUMBLE_SELECT_KEY)) {
+			symbolTreeHelper.registerUnaliasedFromSource(sourceResult);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -6794,88 +7005,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	
-	@Override
-	public void exitTuple_source_primary( SQLSelectParserParser.Tuple_source_primaryContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		// Get the referenced AST segment from the stack and collect any Substitution Variables in the process
-		Map<String, Object> item = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.remove("1"),
-					MUMBLE_TUPLE_KEY);
-		
-		// allocate work variables if needed later
-
-		// Figure out what kind of Tuple entry you've got, and construct the next level's subtree
-		if (item.containsKey(MUMBLE_TABLE_KEY)) {
-			// Table Reference
-			String tableRef = symbolTreeHelper.getQualifiedTableReference(item);
-			String cteScopeReference = symbolTreeHelper.resolveCteOrExistingQueryScopeInVisibleScopes(tableRef);
-			Object aliasObj = item.get(MUMBLE_ALIAS_KEY);
-			if (aliasObj instanceof String alias && !alias.isBlank()) {
-				String aliasTarget = (cteScopeReference != null) ? cteScopeReference : tableRef;
-				symbolTreeHelper.upsertCurrentTableAliasMapping(alias, aliasTarget);
-			} else if (cteScopeReference != null && tableRef != null && !tableRef.isBlank()) {
-				symbolTreeHelper.upsertCurrentTableAliasMapping(tableRef, cteScopeReference);
-			}
-			if (cteScopeReference == null) {
-				walker.ensureTableDictionaryEntry(tableRef);
-			}
-			// Table reference needs an AST Key added to it
-			subMap.put(MUMBLE_TABLE_KEY, item);
-
-		} else if (item.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-			// Substitution Variable
-			Map<String, Object> substitution = (Map<String, Object>) item.get(MUMBLE_SUBSTITUTION_KEY);
-			// Collect Symbol Table Reference
-			String name = resolveSubstitutionTableReference(substitution);
-			// Only register as table source if it's a TUPLE substitution, not COLUMN or PREDICAND
-			Object typeObj = substitution.get(MUMBLE_TYPE_KEY);
-			String substitutionType = typeObj == null ? null : typeObj.toString();
-			if (substitutionType == null || (!MUMBLE_COLUMN_KEY.equals(substitutionType) && !MUMBLE_PREDICAND_KEY.equals(substitutionType))) {
-				walker.ensureTableDictionaryEntry(name);
-			}
-			// Substitution Variable is ready for use
-			subMap.putAll(item);
-
-		} else if (item.containsKey(MUMBLE_VALUES_KEY)) {
-			//	Values Statement is simply ready for use
-			subMap.putAll(item);
-
-		} else if (item.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
-			// Table functions are tuple-valid sources and should not be treated as query symbols.
-			subMap.putAll(item);
-			
-		} else { 
-			// Only other option is a QUERY Object of some kind
-			// Add the query to the symbol table tree and collect any interface elements
-			String alias = null;
-		
-			Boolean done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_QUERY_KEY, alias);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INSERT_KEY, alias);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UPDATE_KEY, alias);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_DELETE_KEY, alias);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_UNION_KEY, alias);
-			if (!done)
-					done = symbolTreeHelper.collectQuerySymbolTable(MUMBLE_INTERSECT_KEY, alias);
-			// Add the query AST to the tree, it is ready for use As Is
-			subMap.putAll(item);
-		}
-
-		// Put nearly-completed AST back into parent rule and stack level
-		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
-	}
-
-	// exitTuple_primary: composes tuple_source_primary + optional table_relational_modifier.
-	// Slot "1" is always the processed tuple source result from exitTuple_source_primary.
+	// exitTuple_primary: composes shared table_source_primary + optional table_relational_modifier.
+	// Slot "1" is always the processed tuple source result from exitTable_source_primary (tuple parent path).
 	// Optional slot "2" is the relational modifier (UNPIVOT or PIVOT clause map).
 	
 	@Override
