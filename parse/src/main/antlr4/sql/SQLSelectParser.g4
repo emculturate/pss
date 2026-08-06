@@ -1560,6 +1560,15 @@ extract_field
   : primary_datetime_field
   | time_zone_field
   | extended_datetime_field
+  | snowflake_extract_field
+  | character_literal
+  ;
+
+// Snowflake EXTRACT date/time parts — must precede `Identifier` (same-length names otherwise lex as identifiers).
+snowflake_extract_field
+  : DAYOFMONTH | DAYOFWEEK | DAYOFWEEKISO | DAYOFYEAR
+  | WEEKISO | WEEKOFYEAR
+  | EPOCH_SECOND | EPOCH_MILLISECOND | EPOCH_MICROSECOND
   ;
 
 time_zone_field
@@ -1567,8 +1576,7 @@ time_zone_field
   ;
 
 extract_source
-  : column_reference
-  | datetime_literal
+  : value_expression
   ;
 
 /*
@@ -3281,6 +3289,15 @@ EXCLUDE : E X C L U D E;
 UNPIVOT : U N P I V O T;
 PIVOT : P I V O T;
 
+DAYOFMONTH : D A Y O F M O N T H;
+DAYOFWEEK : D A Y O F W E E K;
+DAYOFWEEKISO : D A Y O F W E E K I S O;
+DAYOFYEAR : D A Y O F Y E A R;
+WEEKISO : W E E K I S O;
+WEEKOFYEAR : W E E K O F Y E A R;
+EPOCH_MICROSECOND : E P O C H UNDERLINE M I C R O S E C O N D;
+EPOCH_MILLISECOND : E P O C H UNDERLINE M I L L I S E C O N D;
+EPOCH_SECOND : E P O C H UNDERLINE S E C O N D;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*

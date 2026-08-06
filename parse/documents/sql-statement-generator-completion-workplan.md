@@ -29,6 +29,8 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 
 **Non-goals:** pretty-print / comment preservation / exact whitespace / dialect pretty forms beyond what the AST encodes.
 
+**Grammar / walker hygiene (Aug 2026, `Spring-2026-Extensions`):** Quantified comparisons (`= ALL/ANY/SOME (subquery)`) are wired on `predicate` with walker `exitQuantified_comparison_predicate` / `exitQuantifier`. The `literal_value` fragment endpoint is registered as `SQLPARSER_LITERAL_TREE_KEY` (`LITERAL`) with `exitLiteral_value`. Removed as dead grammar: `query_primary` (+ `exitQuery_primary`), `unique_predicate` (not Snowflake). Set-op and related parents use `subquery` \| `query_specification` \| `variable_identifier` directly.
+
 ---
 
 ## Milestone status (high level)
@@ -212,9 +214,13 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 
 ### 2.7 EXTRACT and datetime fields
 
+SQL `EXTRACT(field FROM expr)` uses `exitExtract_expression` → `extract={part, part_form, source}` (see `extract-dialect-capture-workplan.md`). `part_form` is `KEYWORD` or `STRING`; `part` is normalized uppercase.
+
 | Grammar | Walker | Actions |
 |---------|--------|---------|
-| `extract_expression`, `extract_field`, `time_zone_field`, `extract_source`, datetime field rules | (extract exits if present / function path) | Emit `EXTRACT(field FROM source)` |
+| `extract_expression`, `extract_field`, `extract_source`, datetime field rules | `exitExtract_expression`, `exitExtract_field` | Emit `EXTRACT(part FROM source)`; honor `part_form` for string vs keyword |
+
+**Optional later (not grammar hygiene):** add dedicated `exitExtract_*` handlers only if you want a stable, named AST node for the generator — not required for parsing or symbol tables today.
 
 ### 2.8 Window functions (value-expression family)
 
@@ -283,7 +289,7 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 | Grammar | Walker | Actions |
 |---------|--------|---------|
 | `comparison_predicate`, `comparison_operator`, `comp_op`, `relative_comp_op`, `similarity_op` | `exitComparison_predicate`, `exitComparison_operator` | Emit `= <> < <= > >=` and similarity ops from AST `condition={left, right, operator}` |
-| `quantified_comparison_predicate`, `quantifier`, `all`, `some` | — | Emit `= ALL/ANY/SOME (subquery)` if AST present |
+| `quantified_comparison_predicate`, `quantifier`, `all`, `some` | `exitQuantified_comparison_predicate`, `exitQuantifier` | Emit `comp_op quantifier (subquery)` from AST `condition={left, right, operator, quantifier}` (subquery on `right`) |
 
 ### 3.3 BETWEEN / NULL / IS
 
@@ -299,12 +305,13 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 | `in_predicate`, `in_predicate_value`, `in_value_list` | `exitIn_predicate`, `exitIn_predicate_value`, `exitIn_value_list` | Emit `[NOT] IN (list\|subquery)` |
 | `like_any_predicate`, `like_any_operator`, `escape_character_clause` | `exitLike_any_predicate`, `exitLike_any_operator`, `exitEscape_character_clause` | Emit LIKE/ILIKE/RLIKE/REGEXP ANY + ESCAPE |
 
-### 3.5 EXISTS / UNIQUE
+### 3.5 EXISTS
 
 | Grammar | Walker | Actions |
 |---------|--------|---------|
 | `exists_predicate`, `exists_operator`, `exists_predicate_value` | `exitExists_predicate`, … | Emit `[NOT] EXISTS (subquery)` |
-| `unique_predicate` | — | Emit UNIQUE predicate if AST exists |
+
+*(Removed: SQL-standard `unique_predicate` — not supported on Snowflake; grammar rule deleted.)*
 
 ### 3.6 Substitution as condition
 
@@ -569,7 +576,7 @@ Used by **tuple substitution endpoint**, not always full FROM:
 | `intersected_query`, `intersect_clause`, `intersect_operator` | `exitIntersected_query`, `exitIntersect_clause` | Emit INTERSECT [ALL\|DISTINCT] chains |
 | `unionized_query`, `union_clause`, `union_operator` | `exitUnionized_query`, `exitUnion_clause` | Emit UNION / EXCEPT [ALL\|DISTINCT] |
 | `set_operation_member` | `exitSet_operation_member` | Emit parenthesized members / substitutions |
-| `query_primary` | `exitQuery_primary` | SELECT / VALUES / subquery primary |
+| `subquery`, `query_specification`, `variable_identifier` | (via `set_operation_member` / `query` — no `query_primary`) | Member is parenthesized `query_expression`, bare `SELECT`, or substitution |
 | `query` | `exitQuery` | Wrapper used in WITH/script |
 
 **Substeps:**
@@ -698,7 +705,7 @@ Each endpoint is a **root** that reuses Phases 1–8 emitters.
 | `tuple_value` | `exitTuple_value` | Emit tuple_primary tree (§5.8) |
 | `query_value` | `exitQuery_value` | Emit query_expression |
 | `join_extension_value` | `exitJoin_extension_value` | Emit join_extension_primary |
-| `literal_value` | — | Emit literal |
+| `literal_value` | `exitLiteral_value` | Emit `LITERAL` root / `{literal=…}` (endpoint key `SQLPARSER_LITERAL_TREE_KEY`) |
 | `values_statement_end` | `exitValues_statement_end` | Emit VALUES statement |
 | `insert_end_point` / `update_end_point` / `delete_end_point` / `truncate_end_point` | matching exits | Emit full DML statement |
 
@@ -755,10 +762,10 @@ Each endpoint is a **root** that reuses Phases 1–8 emitters.
 |------:|-------------------------|
 | 1 | `identifier*`, `variable_identifier*`, `jinja_*`, `*_literal`, `puml_constant_identifier`, `data_type*` |
 | 2 | `column_*`, `value_expression*`, `additive_*`, `multiplicative_*`, `routine_invocation`, `aggregate_*`, `case_*`, `cast_*`, `trim_*`, `position_*`, `window_*`, `over_*`, `partition_by_clause`, `bracket_frame_*`, `extract_*`, **arrays / array functions (planned — §2.10)** |
-| 3 | `search_condition`, `*_predicate`, `comparison_*`, `between_*`, `in_*`, `like_any_*`, `exists_*`, `null_predicate`, `is_*`, `where/having/qualify_clause` |
+| 3 | `search_condition`, `*_predicate`, `comparison_*`, `quantified_*`, `between_*`, `in_*`, `like_any_*`, `exists_*`, `null_predicate`, `is_*`, `where/having/qualify_clause` |
 | 4 | `query_specification`, `set_qualifier`, `select_*`, `groupby_*`, `orderby_*`, `limit_clause`, `into_list` |
 | 5 | `from_clause`, `table_reference_list`, `*_join*`, `table_primary`, `table_source_primary`, `tuple_*`, `table_relational_modifier`, `pivot_*`, `unpivot_*`, `relational_modifier_*`, `table_function_*`, `flatten_*`, `generator_*`, `result_scan_*`, `infer_schema_*`, `validate_*`, `join_extension*` |
-| 6 | `query_expression`, `intersected_query`, `unionized_query`, `set_operation_member`, `query_primary`, `subquery`, `query` |
+| 6 | `query_expression`, `intersected_query`, `unionized_query`, `set_operation_member`, `subquery`, `query_specification`, `query` |
 | 7 | `values_*` |
 | 8 | `with_*`, `cte_body`, `query_alias` |
 | 9 | `insert_*`, `postgres_insert`, `on_conflict_*`, `update_*`, `delete_*`, `assignment_*`, `returning`, `truncate_*` |

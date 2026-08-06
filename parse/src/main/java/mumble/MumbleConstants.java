@@ -57,6 +57,12 @@ public final class MumbleConstants {
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";
     public static final String MUMBLE_EXISTS_KEY = "exists";
+    public static final String MUMBLE_EXTRACT_KEY = "extract";
+    public static final String MUMBLE_EXTRACT_PART_KEY = "part";
+    public static final String MUMBLE_EXTRACT_PART_FORM_KEY = "part_form";
+    public static final String MUMBLE_EXTRACT_PART_FORM_KEYWORD = "KEYWORD";
+    public static final String MUMBLE_EXTRACT_PART_FORM_STRING = "STRING";
+    public static final String MUMBLE_EXTRACT_SOURCE_KEY = "source";
     public static final String MUMBLE_FILES_KEY = "files";
     public static final String MUMBLE_FILE_FORMAT_KEY = "file_format";
     public static final String MUMBLE_FILTERS_KEY = "filters";

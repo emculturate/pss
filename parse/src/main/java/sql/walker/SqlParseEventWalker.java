@@ -10079,6 +10079,103 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitExtract_field(SQLSelectParserParser.Extract_fieldContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitExtract_source(SQLSelectParserParser.Extract_sourceContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitExtract_expression(SQLSelectParserParser.Extract_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object fieldObj = subMap.remove("extract_field_string");
+		if (fieldObj == null) {
+			fieldObj = subMap.remove("1");
+		}
+		Object sourceObj = subMap.remove("extract_source");
+		if (sourceObj == null) {
+			sourceObj = subMap.remove("2");
+		}
+
+		Map<String, Object> item = new HashMap<String, Object>();
+		item.put(MUMBLE_EXTRACT_PART_KEY, normalizeExtractPartText(fieldObj));
+		item.put(MUMBLE_EXTRACT_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
+		item.put(MUMBLE_EXTRACT_SOURCE_KEY, liftExtractSourceNode(sourceObj));
+
+		subMap.clear();
+		subMap.put(MUMBLE_EXTRACT_KEY, item);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object liftExtractSourceNode(Object sourceObj) {
+		if (!(sourceObj instanceof Map)) {
+			return sourceObj;
+		}
+		Map<String, Object> map = (Map<String, Object>) sourceObj;
+		map.remove(ASTWALKER_RULE_TYPE_KEY);
+		while (map.size() == 1 && map.containsKey("1")) {
+			Object inner = map.get("1");
+			if (!(inner instanceof Map)) {
+				return inner;
+			}
+			map = (Map<String, Object>) inner;
+			map.remove(ASTWALKER_RULE_TYPE_KEY);
+		}
+		return map;
+	}
+
+	private static String normalizeExtractPartText(Object fieldObj) {
+		String raw = extractExtractFieldRawText(fieldObj);
+		if (raw == null) {
+			return null;
+		}
+		raw = raw.trim();
+		if (raw.length() >= 2 && raw.charAt(0) == '\'' && raw.charAt(raw.length() - 1) == '\'') {
+			raw = raw.substring(1, raw.length() - 1);
+		}
+		return raw.toUpperCase();
+	}
+
+	private static String classifyExtractPartForm(Object fieldObj) {
+		String raw = extractExtractFieldRawText(fieldObj);
+		if (raw != null && raw.trim().length() >= 2 && raw.trim().charAt(0) == '\'') {
+			return MUMBLE_EXTRACT_PART_FORM_STRING;
+		}
+		return MUMBLE_EXTRACT_PART_FORM_KEYWORD;
+	}
+
+	private static String extractExtractFieldRawText(Object fieldObj) {
+		if (fieldObj == null) {
+			return null;
+		}
+		if (fieldObj instanceof String) {
+			return (String) fieldObj;
+		}
+		if (fieldObj instanceof Map) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> map = (Map<String, Object>) fieldObj;
+			Object one = map.get("1");
+			if (one != null) {
+				return extractExtractFieldRawText(one);
+			}
+			Object literal = map.get(MUMBLE_LITERAL_KEY);
+			if (literal != null) {
+				return literal.toString();
+			}
+		}
+		return fieldObj.toString();
+	}
+
+	@Override
 	public void exitNumeric_primary( SQLSelectParserParser.Numeric_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		walker.handleOneChild(ruleIndex);
