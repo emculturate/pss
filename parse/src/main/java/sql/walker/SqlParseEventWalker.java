@@ -1602,10 +1602,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return scriptParseAccumulator;
 	}
 
-	public SqlASTWalkerHelper getWalker() {
-		return walker;
-	}
-
 	public HashMap<String, Object> getSubstitutionsMap() {
 		return walker.substitutionsMap;
 	}
@@ -5198,30 +5194,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return false;
 	}
 
-	private ArrayList<String> buildPivotDerivedColumnNames(ArrayList<String> aggregateColumns, ArrayList<String> inListColumns) {
-		ArrayList<String> derivedColumnNames = new ArrayList<String>();
-		if (aggregateColumns == null || aggregateColumns.isEmpty()
-				|| inListColumns == null || inListColumns.isEmpty()) {
-			return derivedColumnNames;
-		}
-
-		for (String inValue : inListColumns) {
-			if (inValue == null || inValue.isBlank()) {
-				continue;
-			}
-			for (String aggregate : aggregateColumns) {
-				if (aggregate == null || aggregate.isBlank()) {
-					continue;
-				}
-				String derivedColumnName = inValue + "_" + aggregate;
-				if (!containsStringIgnoreCase(derivedColumnNames, derivedColumnName)) {
-					derivedColumnNames.add(derivedColumnName);
-				}
-			}
-		}
-		return derivedColumnNames;
-	}
-
 	private static final class PivotAggregateCapture {
 		final String outputName;
 		final String aggregateTokenString;
@@ -5476,102 +5448,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			captures.add(new PivotInValueCapture(component, tokenString));
 		}
 		return captures;
-	}
-
-	@SuppressWarnings("unchecked")
-	private ArrayList<String> extractPivotAggregateColumnNames(Object aggregateObj) {
-		ArrayList<String> columnNames = new ArrayList<String>();
-		if (!(aggregateObj instanceof Map<?, ?> aggregateMapObj)) {
-			return columnNames;
-		}
-
-		Map<String, Object> aggregateMap = (Map<String, Object>) aggregateMapObj;
-		if (aggregateMap.containsKey(MUMBLE_FUNCTION_KEY)) {
-			String aggregateName = extractPivotAggregateOutputName(aggregateMap);
-			if (aggregateName != null && !aggregateName.isBlank()) {
-				columnNames.add(aggregateName);
-			}
-			return columnNames;
-		}
-
-		for (int index = 1; aggregateMap.containsKey(String.valueOf(index)); index++) {
-			Object aggItemObj = aggregateMap.get(String.valueOf(index));
-			if (!(aggItemObj instanceof Map<?, ?> aggItemMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> aggItemMap = (Map<String, Object>) aggItemMapObj;
-			Object aliasObj = aggItemMap.get(MUMBLE_ALIAS_KEY);
-			if (aliasObj instanceof String alias && !alias.isBlank()) {
-				columnNames.add(alias);
-			} else {
-				Object functionObj = aggItemMap.get(MUMBLE_FUNCTION_KEY);
-				if (functionObj instanceof Map<?, ?> functionMapObj) {
-					Object functionNameObj = ((Map<String, Object>) functionMapObj).get(MUMBLE_FUNCTION_NAME_KEY);
-					if (functionNameObj instanceof String functionName && !functionName.isBlank()) {
-						columnNames.add(functionName);
-					}
-				}
-			}
-		}
-
-		return columnNames;
-	}
-
-	@SuppressWarnings("unchecked")
-	private HashMap<String, Object> extractPivotAggregateDependencyColumns(Object aggregateObj) {
-		HashMap<String, Object> dependenciesByAggregate = new HashMap<String, Object>();
-		if (!(aggregateObj instanceof Map<?, ?> aggregateMapObj)) {
-			return dependenciesByAggregate;
-		}
-
-		Map<String, Object> aggregateMap = (Map<String, Object>) aggregateMapObj;
-		if (aggregateMap.containsKey(MUMBLE_FUNCTION_KEY)) {
-			String aggregateName = extractPivotAggregateOutputName(aggregateMap);
-			if (aggregateName == null || aggregateName.isBlank()) {
-				return dependenciesByAggregate;
-			}
-			Object functionObj = aggregateMap.get(MUMBLE_FUNCTION_KEY);
-			if (!(functionObj instanceof Map<?, ?> functionMapObj)) {
-				return dependenciesByAggregate;
-			}
-			Object parametersObj = ((Map<String, Object>) functionMapObj).get(MUMBLE_PARAMETERS_KEY);
-			String dependencyName = extractPivotAggregateDependencyName(parametersObj);
-			if (dependencyName != null && !dependencyName.isBlank()) {
-				ArrayList<String> dependencyNames = new ArrayList<String>();
-				dependencyNames.add(dependencyName);
-				dependenciesByAggregate.put(aggregateName, dependencyNames);
-			}
-			return dependenciesByAggregate;
-		}
-
-		for (int index = 1; aggregateMap.containsKey(String.valueOf(index)); index++) {
-			Object aggItemObj = aggregateMap.get(String.valueOf(index));
-			if (!(aggItemObj instanceof Map<?, ?> aggItemMapObj)) {
-				continue;
-			}
-
-			Map<String, Object> aggItemMap = (Map<String, Object>) aggItemMapObj;
-			String aggregateName = extractPivotAggregateOutputName(aggItemMap);
-			if (aggregateName == null || aggregateName.isBlank()) {
-				continue;
-			}
-
-			Object functionObj = aggItemMap.get(MUMBLE_FUNCTION_KEY);
-			if (!(functionObj instanceof Map<?, ?> functionMapObj)) {
-				continue;
-			}
-
-			Object parametersObj = ((Map<String, Object>) functionMapObj).get(MUMBLE_PARAMETERS_KEY);
-			String dependencyName = extractPivotAggregateDependencyName(parametersObj);
-			if (dependencyName != null && !dependencyName.isBlank()) {
-				ArrayList<String> dependencyNames = new ArrayList<String>();
-				dependencyNames.add(dependencyName);
-				dependenciesByAggregate.put(aggregateName, dependencyNames);
-			}
-		}
-
-		return dependenciesByAggregate;
 	}
 
 	@SuppressWarnings("unchecked")

@@ -65,6 +65,15 @@ Post–Phase A caller re-scan; all deleted. Gate: **239/239**.
 
 Kept shared lineage helpers still used by live convert/egress paths (`expandRelationalModifierDerivedColumnLineageIn*`). Post-B orphan rescan: **0** remaining in either helper.
 
+### Phase B.1 — Walker orphans ✅ DONE (Aug 2026)
+
+Caller-audited definition-only methods removed from `SqlParseEventWalker` (not relocated — walk helpers otherwise stay in the walker):
+
+- `buildPivotDerivedColumnNames` (superseded by `buildPivotStructuredDerivedColumns`)
+- `extractPivotAggregateColumnNames`
+- `extractPivotAggregateDependencyColumns`
+- `getWalker()`
+
 ### Phase C — Fresh JaCoCo heat map (optional)
 
 ```bash
