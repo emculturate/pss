@@ -46,29 +46,45 @@ Regenerate parser (`mvn generate-sources` / normal `parse` build).
 - `MUMBLE_EXTRACT_KEY` and related keys in `MumbleConstants`.
 - `exitExtract_expression`: build `extract={part, part_form, source[, source_type]}`; typed `DATE`/`TIME`/`TIMESTAMP` literals promote `source_type` on the extract node and `source={literal=…}`.
 - `exitExtract_source`: `handleOneChild` so `source` is the lifted value subtree (not `{1=…, Type=…}`).
-- `exitExtract_field` / `exitCharacter_literal` path: normalize string literals (strip quotes, uppercase `part`).
+- `exitExtract_field`: `handleOneChild` for part tokens / string literal.
+- `exitDate_literal` / `exitTime_literal` / `exitTimestamp_literal`: `{literal, source_type}` before `unsigned_literal` merge.
+- `attachExtractSource`: promote `source_type` onto `extract` (no post-hoc `Type` stripping — rely on dedicated exits / `handleOneChild`).
+
+### AST contract (generator / round-trip)
+
+`extract={part, part_form, source[, source_type]}`
+
+| Key | Meaning |
+|-----|---------|
+| `part` | Normalized uppercase field name |
+| `part_form` | `KEYWORD` or `STRING` |
+| `source_type` | Present for typed SQL literals: `DATE`, `TIME`, `TIMESTAMP` |
+| `source` | Semantic subtree only — e.g. `{column=…}`, `{literal=…}`, `{parentheses=…}`, `{calc=…}`, `{function=…}`, nested `{extract=…}` |
+
+No grammar rule index keys (`Type=NNN`) anywhere under `extract` or `source`.
 
 ---
 
-## Phase 3 — Exemplar tests ✅
+## Phase 3 — Exemplar tests ✅ (expanded)
 
-Class: `SqlEventWalkerExtractTests.java` — each test: `assertNoFatalErrors`, `assertNoWalkerDiagnostics`, golden `getAsTree()` (and symbol table where column refs matter).
+Class: `SqlEventWalkerExtractTests.java` — **22** cases. Each test: `assertNoWalkerDiagnostics`, golden `getAsTree()`, and **rejects** any `Type=\d+` in the AST string.
 
-| # | Dialect hint | SQL sketch | Exercises |
-|---|--------------|------------|-----------|
-| 1 | shared | `EXTRACT(YEAR FROM d)` | keyword field + column source |
-| 2 | both | `EXTRACT('month' FROM d)` | string field + column |
-| 3 | Postgres | `EXTRACT(DOW FROM d)` | PG extended keyword |
-| 4 | Snowflake | `EXTRACT(DAYOFWEEK FROM d)` | SF-only keyword |
-| 5 | Snowflake | `EXTRACT(EPOCH_SECOND FROM ts)` | SF epoch part (keyword; lowercase `epoch_second` lexes as `Identifier` unless quoted) |
-| 6 | shared | `EXTRACT(YEAR FROM DATE '2020-01-01')` | datetime literal source |
-| 7 | both | `EXTRACT(YEAR FROM (order_date))` | parenthesized `value_expression` source *(interval arithmetic is a separate grammar gap)* |
-| 8 | both | `EXTRACT(HOUR FROM CAST(order_date AS TIMESTAMP))` | cast / function-shaped source |
+| Area | Examples covered |
+|------|------------------|
+| Field keyword / string | `YEAR`, `'month'`, `'dow'` |
+| Postgres extended | `DOW`, `CENTURY`, `MICROSECONDS` |
+| Snowflake parts | `DAYOFWEEK`, `WEEKISO`, `EPOCH_SECOND`, `EPOCH_MICROSECOND` |
+| Timezone parts | `TIMEZONE`, `TIMEZONE_HOUR` |
+| Typed literals | `DATE '…'`, `TIMESTAMP '…'`, `TIME '…'` → `source_type` + `source.literal` |
+| Column / qual / paren | `d`, `o.d`, `(d)` |
+| Expression source | `d + 1` (`calc`), `CAST(… AS TIMESTAMP)`, `'…'::timestamp`, nested `EXTRACT` |
+
+One test also asserts symbol table goldens (`extractKeywordYearFromColumn`).
 
 **Gate:**
 
 ```bash
-cd parse && mvn -Psmoketest-quality-gate test
+cd parse && mvn -q test -Dtest=SqlEventWalkerExtractTests
 ```
 
 ---
