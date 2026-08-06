@@ -624,7 +624,8 @@ public class SQLStatementGeneratorTest {
         Assert.assertTrue(upper.contains("(ID INT)"));
 
         HashMap<String, Object> reparsed = parseDdlToAst(generated);
-        Assert.assertTrue(reparsed.toString().contains("columns=id int"));
+        // Verbatim paren-content slice preserves source casing (e.g. INT).
+        Assert.assertTrue(reparsed.toString().contains("columns=id INT"));
     }
 
     @Test

@@ -455,11 +455,15 @@ alter_options
 /*
    DDL options and sub-statements as default placeholder objects.
    Two flavors based on natural syntactic boundary:
-     generic_ddl_paren_content - consumes tokens up to (but not including) the closing RIGHT_PAREN
-     generic_ddl_options       - consumes tokens up to (but not including) the statement terminator
+     generic_ddl_paren_content - tokens inside a (...) group, with nested parentheses allowed
+     generic_ddl_options       - trailing opaque tail through the next SEMI_COLON or end of input
+                                 (parentheses and newlines in the source are part of the verbatim slice)
+   Walker exits promote a single verbatim source-interval string (not token-rejoined text).
  */
 generic_ddl_paren_content
-  : (~RIGHT_PAREN)+
+  : ( ~(LEFT_PAREN | RIGHT_PAREN)
+    | LEFT_PAREN generic_ddl_paren_content? RIGHT_PAREN
+    )+
   ;
 
 generic_ddl_options

@@ -2345,35 +2345,48 @@ DDL handlers still bypass the walked tree in several places:
 
 ### Phase 20 end state
 
-1. **No `extractDdlObjectTypeText` / `extractCreateTypeText`** — deleted; replaced by `joinWalkedTerminalChildren(subMap)` (or equivalent inline) on the rule's walked node map before promotion.
-2. **`exitDdl_object_type`** — join walked terminals → type string → `addToParent` + `SKIP` (DROP/ALTER read `subMap.get("1")`).
-3. **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`** — join walked `"1"`, `"2"`, … token children → opaque blob string → `addToParent` + `SKIP`; never discard walked map then scrape ctx.
-4. **CREATE exits** — `type` from walked keyword terminals; `parameters` / `clauses` / `options` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
+1. **Opaque DDL tails are verbatim source slices** via `verbatimRuleText` — not token-rejoined text; `extractDdlObjectTypeText` unused for options/paren blobs.
+2. **`exitDdl_object_type`** — promote type string → `addToParent` + `SKIP` (DROP/ALTER read walked child).
+3. **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`** — one verbatim string → `addToParent` + `SKIP`; never discard walked map then scrape/rejoin tokens.
+4. **CREATE exits** — `type` from walked keyword terminals; `parameters` / `clauses` / `options` / `columns` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
 5. **Function/procedure** — optional-arg layout inferred from walked `subMap` child count, not `ctx.generic_ddl_paren_content() != null`.
-6. **Dead code removed** — `passThroughDdlRuleValueToParent`.
+6. **Dead code removed** — `passThroughDdlRuleValueToParent`; eventually `extractDdlObjectTypeText` / `extractCreateTypeText`.
+
+### Phase 20 design note — verbatim opaque tails (Aug 2026)
+
+**Product intent:** After the structured DDL head (`CREATE|DROP|ALTER` + type + name [/ query]), capture the remaining command text as a **single verbatim string** so the statement can be regenerated/executed without understanding option dialects.
+
+**Mechanism:** `verbatimRuleText(ctx)` = CharStream interval `[start..stop]` (preserves punctuation, nested `()`, newlines/skipped whitespace between tokens). **Not** token-rejoin with inserted spaces.
+
+| Rule | Span | AST key(s) |
+|------|------|------------|
+| `generic_ddl_options` | tokens through next `SEMI_COLON` or EOF | `options` / `clauses` (CREATE sequence etc.) |
+| `generic_ddl_paren_content` | inside `(...)`, nested parens allowed | `parameters` / `columns` |
+
+**Rejected:** `joinWalkedTerminalChildren` space-join (lossy around `,` `(` `)`).
 
 ### Phase 20 substeps
 
 | Sub-step | Action | Primary files | Verify | Status |
 |----------|--------|---------------|--------|--------|
 | **20.0** | Inventory: grep `extractDdlObjectTypeText`, `extractCreateTypeText`, `ctx.generic_ddl_paren_content`, `ctx.ddl_object_type`, `passThroughDdlRuleValueToParent` in DDL section | worklist + `SqlParseEventWalker.java` | Matrix in this section | ✅ |
-| **20.1** | Add `joinWalkedTerminalChildren(Map)` helper (joins numbered `"1"`, `"2"`, … string entries only) | `SqlParseEventWalker.java` | Unit: no ctx args | ⏸️ |
-| **20.2** | **`exitDdl_object_type`**: join walked terminals → promote type string with `addToParent` + `SKIP` | Walker | DROP/ALTER type from `subMap.get("1")` | ⏸️ |
-| **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: join walked `subMap` → promote blob; stop `removeNodeMap` + ctx scrape | Walker | CREATE function/procedure/macro/sequence clauses; macro parameters | ⏸️ |
-| **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | `simpleDdlDropTableExpressionV1Test`, `simpleDdlAlterTableExpressionV1Test` | ⏸️ |
-| **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with walked keyword join from create-rule `subMap` (before `extractOrderedRuleChildren` consumes indices) | All `exitCreate_*_expression` | All CREATE DDL tests | ⏸️ |
-| **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro tests | ⏸️ |
+| **20.1** | Add `verbatimRuleText(ParserRuleContext)` (source-interval slice) | `SqlParseEventWalker.java` | Punctuation / newlines preserved | ✅ |
+| **20.2** | **`exitDdl_object_type`**: promote type string with `addToParent` + `SKIP` (walked or compact keyword text — not options path) | Walker | DROP/ALTER type from walked child | ⏸️ |
+| **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: promote **one verbatim string** + `SKIP`; nested-paren grammar for paren content; options remain `(~SEMI_COLON)+` | Grammar + Walker | `SqlEventWalkerDdlTests` paren/multiline/case goldens | ✅ |
+| **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | drop/alter goldens | ⏸️ |
+| **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with walked keyword text from create-rule children | All `exitCreate_*_expression` | All CREATE DDL tests | ⏸️ |
+| **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ⏸️ |
 | **20.7** | Delete `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` | Walker | Grep clean | ⏸️ |
-| **20.8** | Golden refresh if blob/key order shifts; full DDL + script + truncate endpoint gate | Tests | **20/20** + truncate endpoints + script DDL statements | ⏸️ |
+| **20.8** | Golden refresh if blob case/spacing shifts; full DDL + script + truncate endpoint gate | `SqlEventWalkerDdlTests` + Scripts/DDL + truncate | Gate green | ⏸️ |
 | **20.9** *(optional)* | Left-factor Jinja / set-op aliasing to reduce recoverable parser warnings in `{{ source(...) }} as alias` + parenthesized `EXCEPT` / `UNION` forms without changing AST or symbol-table output | Grammar + `SqlParseEventWalkerWithAccessObjectTest` canaries | Minimal left-factored tweak around `table_source_primary` / `subquery` / `set_operation_member`; validate warning count drops while final parse stays identical | ⏸️ |
 
 ### Phase 20 closeout checklist
 
-- [ ] All DDL object names, query bodies, types, and opaque option/parameter blobs come from walked grammar children — **20.2–20.6**
-- [ ] No `extractDdlObjectTypeText` / `extractCreateTypeText` / `buildFallbackTableNodeFromText` / ctx child-index scraping in DDL handlers — **20.7**
-- [ ] `generic_ddl_*` remains opaque blob (structured options ❌ spun off — see [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md)) but blob text is walker-joined, not ctx-joined — **20.3**
-- [ ] `SqlEventWalkerScriptsAndDDLTests` **20/20** + truncate endpoint tests + script DDL coverage — **20.8**
-- [ ] No symbol-table / convert egress changes (confirm diff scope: `SqlParseEventWalker.java` + DDL tests only)
+- [ ] All DDL object names, query bodies, types come from walked grammar children; opaque tails are **verbatim source slices** — **20.2–20.6**
+- [ ] No `extractDdlObjectTypeText` / `extractCreateTypeText` / `buildFallbackTableNodeFromText` / token-rejoin scraping in DDL handlers — **20.7**
+- [ ] `generic_ddl_*` remains opaque (structured options ❌ spun off — see [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md)) but blob text is **interval-verbatim**, not ctx child rejoin — **20.3**
+- [ ] `SqlEventWalkerDdlTests` + `SqlEventWalkerScriptsAndDDLTests` + truncate endpoints + script DDL coverage — **20.8**
+- [ ] No symbol-table / convert egress changes (confirm diff scope: grammar + `SqlParseEventWalker.java` + DDL tests only)
 
 ### Phase 20 vs spun-off DDL structured options
 

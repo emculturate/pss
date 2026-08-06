@@ -809,6 +809,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return builder.length() == 0 ? fallback : builder.toString();
 	}
 
+	/**
+	 * Verbatim source text covered by a parse-rule context (start..stop inclusive).
+	 * Preserves punctuation, nesting characters, and skipped whitespace/newlines between
+	 * the first and last tokens — unlike token-rejoin helpers that insert spaces.
+	 */
+	private String verbatimRuleText(ParserRuleContext ctx) {
+		if (ctx == null || ctx.start == null || ctx.stop == null) {
+			return "";
+		}
+		CharStream input = ctx.start.getInputStream();
+		if (input == null) {
+			return ctx.getText() == null ? "" : ctx.getText();
+		}
+		return input.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex()));
+	}
+
 	
 	private boolean isDdlCreateAsQueryParent(ParserRuleContext parentCtx) {
 		return parentCtx instanceof SQLSelectParserParser.Create_table_expressionContext
@@ -2696,17 +2712,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 		walker.removeNodeMap(ruleIndex, stackLevel);
-		walker.addToParent(parentRuleIndex, parentStackLevel, extractDdlObjectTypeText(ctx));
+		walker.addToParent(parentRuleIndex, parentStackLevel, verbatimRuleText(ctx));
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	@Override
 	public void exitGeneric_ddl_paren_content( SQLSelectParserParser.Generic_ddl_paren_contentContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 		walker.removeNodeMap(ruleIndex, stackLevel);
-		walker.addToParent(parentRuleIndex, parentStackLevel, extractDdlObjectTypeText(ctx));
+		// Nested same-rule spans share ruleIndex; only the outermost interval is promoted.
+		// Its verbatim slice already includes inner parentheses from the source text.
+		if (ctx.getParent() instanceof SQLSelectParserParser.Generic_ddl_paren_contentContext) {
+			walker.asTree.put("SKIP", "TRUE");
+			return;
+		}
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		walker.addToParent(parentRuleIndex, parentStackLevel, verbatimRuleText(ctx));
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	private String extractDdlObjectTypeText(ParserRuleContext ctx) {
