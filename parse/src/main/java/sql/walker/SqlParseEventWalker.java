@@ -4145,18 +4145,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
-	public void exitQuery_primary( SQLSelectParserParser.Query_primaryContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_QUERY_KEY);
-
-		walker.handleOneChild(ruleIndex);
-	}
-
-	@Override
 	public void exitSubquery( SQLSelectParserParser.SubqueryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 

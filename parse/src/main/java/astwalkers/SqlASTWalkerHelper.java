@@ -354,8 +354,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return false;
 		}
 
-		return subqueryParentRuleIndex == SQLSelectParserParser.RULE_query_primary
-				|| subqueryParentRuleIndex == SQLSelectParserParser.RULE_tuple_primary;
+		return subqueryParentRuleIndex == SQLSelectParserParser.RULE_tuple_primary;
 	}
 
 	/**

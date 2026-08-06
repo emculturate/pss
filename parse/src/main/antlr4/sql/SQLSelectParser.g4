@@ -734,15 +734,12 @@ union_operator
 
 /*
 ===============================================================================
-  SELECT Statement <query primary>
+  SELECT Statement — subquery / query specification
+  (former query_primary nonterminal removed: unreachable; set-op members and
+   other parents reference subquery | query_specification | variable_identifier
+   directly.)
 ===============================================================================
 */
-
-query_primary
-  : subquery
-  | query_specification
-  | variable_identifier
-  ;
 
 subquery
   :  LEFT_PAREN query_expression RIGHT_PAREN
