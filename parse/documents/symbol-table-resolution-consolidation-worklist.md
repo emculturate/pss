@@ -2371,9 +2371,9 @@ DDL handlers still bypass the walked tree in several places:
 |----------|--------|---------------|--------|--------|
 | **20.0** | Inventory: grep `extractDdlObjectTypeText`, `extractCreateTypeText`, `ctx.generic_ddl_paren_content`, `ctx.ddl_object_type`, `passThroughDdlRuleValueToParent` in DDL section | worklist + `SqlParseEventWalker.java` | Matrix in this section | ✅ |
 | **20.1** | Add `verbatimRuleText(ParserRuleContext)` (source-interval slice) | `SqlParseEventWalker.java` | Punctuation / newlines preserved | ✅ |
-| **20.2** | **`exitDdl_object_type`**: promote type string with `addToParent` + `SKIP` (walked or compact keyword text — not options path) | Walker | DROP/ALTER type from walked child | ⏸️ |
+| **20.2** | **`exitDdl_object_type`**: promote type string with `addToParent` + `SKIP` (walked or compact keyword text — not options path) | Walker | DROP/ALTER type from walked child | ✅ |
 | **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: promote **one verbatim string** + `SKIP`; nested-paren grammar for paren content; options remain `(~SEMI_COLON)+` | Grammar + Walker | `SqlEventWalkerDdlTests` paren/multiline/case goldens | ✅ |
-| **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | drop/alter goldens | ⏸️ |
+| **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | drop/alter goldens | ✅ |
 | **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with walked keyword text from create-rule children | All `exitCreate_*_expression` | All CREATE DDL tests | ⏸️ |
 | **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ⏸️ |
 | **20.7** | Delete `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` | Walker | Grep clean | ⏸️ |

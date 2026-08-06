@@ -250,11 +250,11 @@ public class SqlEventWalkerScriptsAndDDLTests extends AbstractSqlParseEventWalke
 						.get("table"));
 
 		Assert.assertTrue("Statement 2 should be ALTER", alterStmt.containsKey(MUMBLE_ALTER_KEY));
-		Assert.assertEquals("table",
+		Assert.assertEquals("TABLE",
 				((Map<String, Object>) alterStmt.get(MUMBLE_ALTER_KEY)).get(MUMBLE_TYPE_KEY));
 
 		Assert.assertTrue("Statement 3 should be DROP", dropStmt.containsKey(MUMBLE_DROP_KEY));
-		Assert.assertEquals("table",
+		Assert.assertEquals("TABLE",
 				((Map<String, Object>) dropStmt.get(MUMBLE_DROP_KEY)).get(MUMBLE_TYPE_KEY));
 		Assert.assertTrue("Statement 3 DROP should retain IF EXISTS option text",
 				dropStmt.toString().toLowerCase().contains("if exists"));

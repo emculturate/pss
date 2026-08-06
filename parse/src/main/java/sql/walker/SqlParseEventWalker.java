@@ -2491,7 +2491,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> dropNode = new LinkedHashMap<String, Object>();
-		dropNode.put(MUMBLE_TYPE_KEY, extractDdlObjectTypeText(ctx.ddl_object_type()));
+		// key "1" = type string from exitDdl_object_type
+		Object typeChild = subMap.get("1");
+		if (typeChild != null) {
+			dropNode.put(MUMBLE_TYPE_KEY, typeChild);
+		}
 
 		if (subMap.containsKey("2")) {
 			dropNode.put(MUMBLE_NAME_KEY, subMap.get("2"));
@@ -2513,14 +2517,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitDdl_object_type( SQLSelectParserParser.Ddl_object_typeContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		if (subMap == null) {
-			// No node map for ddl_object_type
-			return;
-		}
-		subMap.clear();
-		subMap.put(MUMBLE_TYPE_KEY, extractDdlObjectTypeText(ctx));
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		walker.removeNodeMap(ruleIndex, stackLevel);
+		// Promote a single type string (supports multi-token FILE FORMAT / MATERIALIZED VIEW).
+		walker.addToParent(parentRuleIndex, parentStackLevel, verbatimRuleText(ctx));
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	@Override
@@ -2570,7 +2574,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> alterNode = new LinkedHashMap<String, Object>();
-		alterNode.put(MUMBLE_TYPE_KEY, extractDdlObjectTypeText(ctx.ddl_object_type()));
+		// key "1" = type string from exitDdl_object_type
+		Object typeChild = subMap.get("1");
+		if (typeChild != null) {
+			alterNode.put(MUMBLE_TYPE_KEY, typeChild);
+		}
 
 		if (subMap.containsKey("2")) {
 			alterNode.put(MUMBLE_NAME_KEY, subMap.get("2"));
