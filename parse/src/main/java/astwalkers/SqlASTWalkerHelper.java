@@ -161,12 +161,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
     private String getASTWALKER_TYPE_KEY() {
         return astKeyCrosswalkMap.get(ASTWALKER_TYPE_KEY);
     }
-    private String getASTWALKER_COLUMN_KEY() {
-        return astKeyCrosswalkMap.get(ASTWALKER_COLUMN_KEY);
-    }
-    private String getASTWALKER_UNKNOWN_KEY() {
-        return astKeyCrosswalkMap.get(ASTWALKER_UNKNOWN_KEY);
-    }
     private String getASTWALKER_VALUES_KEY() {
         return astKeyCrosswalkMap.get(ASTWALKER_VALUES_KEY);
     }
@@ -461,11 +455,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (!(existing instanceof Map<?, ?>)) {
 			tableDictionary.put(reference, new HashMap<String, Object>());
 		}
-	}
-
-	public boolean isTopLevelSymbolScope() {
-		Integer symbolScopeLevel = stackSymbols.get("symbolTable");
-		return symbolScopeLevel == null || symbolScopeLevel == 1;
 	}
 
  
@@ -1172,44 +1161,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Object normalizeUnresolvedColumnItem(Object item) {
-		if (item == null) {
-			return null;
-		}
-
-		if (item instanceof String) {
-			return item;
-		}
-
-		if (!(item instanceof Map<?, ?> itemMap)) {
-			return null;
-		}
-
-		if (itemMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-			if (!isColumnTypeSubstitution(itemMap.get(MUMBLE_SUBSTITUTION_KEY))) {
-				return null;
-			}
-			return item;
-		}
-
-		Object columnObj = itemMap.get(MUMBLE_COLUMN_KEY);
-		if (columnObj instanceof Map<?, ?> columnMap) {
-			if (columnMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-				if (!isColumnTypeSubstitution(columnMap.get(MUMBLE_SUBSTITUTION_KEY))) {
-					return null;
-				}
-				return columnMap;
-			}
-			Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
-			if (nameObj instanceof String) {
-				return nameObj;
-			}
-		}
-
-		return null;
-	}
-
-	@SuppressWarnings("unchecked")
 	private boolean isColumnTypeSubstitution(Object substitutionObj) {
 		if (!(substitutionObj instanceof Map<?, ?> substitutionMapObj)) {
 			return false;
@@ -1219,109 +1170,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return typeObj instanceof String && MUMBLE_COLUMN_KEY.equals(typeObj);
 	}
 
-	/* Find table name for table alias, ignore case */
-	private String findTableAliasIgnoreCase(String tableReference) {
-		if (tableReference == null || symbolTable == null || symbolTable.isEmpty()) {
-			return null;
-		}
-
-		Object qryTableAliasObject = symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
-		if (!(qryTableAliasObject instanceof Map<?, ?>)) {
-			qryTableAliasObject = new HashMap<String, Object>();
-			symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, qryTableAliasObject);
-		}
-		Map<String, Object> qryTableAlias = (Map<String, Object>) qryTableAliasObject;
-		
-		for (Map.Entry<String, Object> entry : qryTableAlias.entrySet()) {
-			if (!(entry.getValue() instanceof String)) {
-				continue;
-			}
-			if (entry.getKey().equalsIgnoreCase(tableReference)) {
-				return entry.getKey();
-			}
-		}
-
-		return null;
-	}
-	
     
-	/**
-	 * 
-	 * Adds column references and column substitution variables to the symbol table. If the item is a column reference, 
-	 * it gets added to the symbol table under the column name and collects an array of tokens for each reference to that 
-	 * column in the SQL statement. Columns that appear in multiple locations will have multiple token strings, which
-	 * can be used later to locate the reference position in the original SQL string.
-	 * 
-	 * If the item is a column substitution variable, it gets added to the symbol table under its name with its own 
-	 * nested symbol table for its properties and references. 
-	 * 
-	 * If the item is a predicate substitution variable, it gets added to the symbol table with its own nested symbol 
-	 * table for its properties and references. If the item is a subquery, it gets added to the symbol table under a 
-	 * "subquery" key with its own nested symbol table for its properties and references.
-	 * 
-	 * @param localSymbolTable
-	 * @param item
-	 * @param token
-	 */
-	@SuppressWarnings("unchecked")
-	public void addColumnTokenToColumnDict(Object tableDictObject, Object item, Token token) {
-		if (item instanceof String) {
-			HashMap<String, Object> tableDictMap = (HashMap<String, Object>) tableDictObject;
-			String itemKey = (String) item;
-			String existingKey = findMatchingColumnKey(tableDictMap, itemKey);
-			String targetKey = existingKey == null ? itemKey : existingKey;
-			// Item is a column reference, add it if we haven't captured it yet
-			if (existingKey == null) {
-				ArrayList<String> tokenList = new ArrayList<String>();
-				tokenList.add(token.toString());
-				tableDictMap.put(targetKey, tokenList);
-			} else {
-				String tokenStr = token.toString();
-	                Object  entry = tableDictMap.get(targetKey);
-				ArrayList<String> tokenList = (ArrayList<String>) entry;
-				if (!tokenList.contains(tokenStr))
-					tokenList.add(tokenStr);
-			}
-		}
-		else {
-			HashMap<String, Object> node = (HashMap<String, Object>) item;
-			if (node.containsKey(getASTWALKER_SUBSTITUTION_KEY())) {
-
-				node = (HashMap<String, Object>) node.get(getASTWALKER_SUBSTITUTION_KEY());
-				if (node.get(ASTWALKER_TYPE_KEY).equals(getASTWALKER_COLUMN_KEY()))
-					// Item is a Column Substitution Variable
-					((HashMap<String, Object>) tableDictObject).put((String) node.get("name"),
-							(HashMap<String, Object>) item);
-				// else
-				// 	// Item is a Predicate Substitution Variable
-				// 	((HashMap<String, Object>) tableDictObject).putAll((HashMap<String, Object>) item);
-			} else {
-				showTrace(symbolTrace, "Error collecting item: " + item);
-			}
-		}
-	}
-
-    /**
-	 * Consolidate SQL VALUES Statement Symbol Table; 
-	 * Parser Walker creates a virtual column list if a real one is not there.
-	 *  But if there is a real column list, then you don't need the virtual one so get rid of it.
-	 * @param alias 
-	 */
-	@SuppressWarnings("unchecked")
-	public void consolidateValuesStatementSymbolTable(String alias) {
-		
-		if (symbolTable.keySet().contains(getASTWALKER_UNKNOWN_KEY())) {
-			Map<String, Object> unknownSet = (HashMap<String, Object>)symbolTable.remove(getASTWALKER_UNKNOWN_KEY());
-			if (symbolTable.keySet().contains(getASTWALKER_VALUES_KEY())) {
-				Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(getASTWALKER_VALUES_KEY());
-			}
-			symbolTable.put(alias, unknownSet);
-		} else  {
-			Map<String, Object> valuesSet = (HashMap<String, Object>)symbolTable.remove(getASTWALKER_VALUES_KEY());
-			symbolTable.put(alias, valuesSet);
-		}
-	}
-
 	/**
 	 * Put the query Interface (its output column list) into the Symbol Table
 	 */
@@ -3029,80 +2878,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		return sourceRef;
 	}
 
-	/**
-	 * Limits table references to those visible at the current query level.
-	 * Nested-only aliases declared inside def_query/def_union/def_intersect blocks are excluded.
-	 */
-	@SuppressWarnings("unchecked")
-	public HashMap<String, Object> scopeTableCollectionToCurrentLevel(
-			HashMap<String, Object> tableCollection,
-			HashMap<String, Object> tableAliasCollection,
-			HashMap<String, Object> symbolTableCollection) {
-		if (tableCollection == null || tableCollection.isEmpty()) {
-			return tableCollection;
-		}
-
-		HashSet<String> nestedAliasRefs = new HashSet<String>();
-		if (symbolTableCollection != null) {
-			for (Object definitionEntryObj : symbolTableCollection.values()) {
-				collectNestedAliasKeysFromDefinitionEntry(definitionEntryObj, nestedAliasRefs);
-			}
-		}
-
-		if (nestedAliasRefs.isEmpty()) {
-			return tableCollection;
-		}
-
-		HashMap<String, Object> scoped = new HashMap<String, Object>();
-		for (Map.Entry<String, Object> tableEntry : tableCollection.entrySet()) {
-			String tableRef = tableEntry.getKey();
-			boolean nestedOnlyAlias = setContainsIgnoreCase(nestedAliasRefs, tableRef)
-					&& !mapContainsKeyIgnoreCase(tableAliasCollection, tableRef)
-					&& !mapContainsValueIgnoreCase(tableAliasCollection, tableRef);
-
-			if (!nestedOnlyAlias) {
-				scoped.put(tableRef, tableEntry.getValue());
-			}
-		}
-
-		return scoped;
-	}
-
-	/**
-	 * Limits query references for validation during set operations (UNION/INTERSECT)
-	 * to non-table query sources reachable from aliases at the current level.
-	 */
-	public HashMap<String, Object> scopeQueryCollectionForSetOperationValidation(
-			HashMap<String, Object> queryCollection,
-			HashMap<String, Object> tableAliasCollection) {
-		if (queryCollection == null || queryCollection.isEmpty()) {
-			return queryCollection;
-		}
-
-		if (tableAliasCollection == null || tableAliasCollection.isEmpty()) {
-			return new HashMap<String, Object>();
-		}
-
-		HashMap<String, Object> scoped = new HashMap<String, Object>();
-		for (Object aliasTargetObj : tableAliasCollection.values()) {
-			if (!(aliasTargetObj instanceof String aliasTarget)) {
-				continue;
-			}
-
-			if (!isNonTableQuerySource(aliasTarget)) {
-				continue;
-			}
-
-			String queryKey = MUMBLE_VALUES_KEY.equals(aliasTarget) ? aliasTarget : aliasTarget;
-			Object queryEntry = queryCollection.get(queryKey);
-			if (queryEntry != null) {
-				scoped.put(queryKey, queryEntry);
-			}
-		}
-
-		return scoped;
-	}
-
 	@SuppressWarnings("unchecked")
 	private void collectNestedAliasKeysFromDefinitionEntry(Object definitionEntryObj, HashSet<String> nestedAliasRefs) {
 		if (!(definitionEntryObj instanceof Map<?, ?> definitionMap)) {
@@ -3117,34 +2892,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				collectNestedAliasKeysFromDefinitionEntry(entry.getValue(), nestedAliasRefs);
 			}
 		}
-	}
-
-	private boolean setContainsIgnoreCase(HashSet<String> values, String candidate) {
-		if (values == null || candidate == null) {
-			return false;
-		}
-
-		for (String value : values) {
-			if (value != null && value.equalsIgnoreCase(candidate)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private boolean mapContainsValueIgnoreCase(HashMap<String, Object> map, String value) {
-		if (map == null || value == null) {
-			return false;
-		}
-
-		for (Object candidate : map.values()) {
-			if (candidate instanceof String source && source.equalsIgnoreCase(value)) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**
@@ -3839,133 +3586,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 	}
 
-	/**
-	 * Partition unresolved columns into qualified and unqualified sets by checking
-	 * reference entries from the query interface first, then the filter list.
-	 * This method does not modify unresolved, interface, or filter inputs.
-	 */
-	@SuppressWarnings("unchecked")
-	public void splitExplicitlyQualifiedUnknownEntriesFromUnqualified(
-			HashMap<String, Object> unresolvedColumnMap,
-			HashMap<String, Object> localInterface,
-			Object filtersList,
-			HashMap<String, Object> qualifiedUnknownEntries,
-			HashMap<String, Object> unqualifiedUnknownEntries) {
-		if (qualifiedUnknownEntries != null) {
-			qualifiedUnknownEntries.clear();
-		}
-		if (unqualifiedUnknownEntries != null) {
-			unqualifiedUnknownEntries.clear();
-		}
-
-		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
-			return;
-		}
-
-		// Pass 1: interface references
-		if (localInterface != null) {
-			for (Object refsObj : localInterface.values()) {
-				if (!(refsObj instanceof List<?> refs)) {
-					continue;
-				}
-				for (Object refObj : refs) {
-					if (!(refObj instanceof Map<?, ?>)) {
-						continue;
-					}
-					Map<String, Object> interfaceRefMap = (Map<String, Object>) refObj;
-					String columnName = extractReferenceNameFromInterfaceEntry(interfaceRefMap);
-					if (columnName == null) {
-						continue;
-					}
-
-					String interfaceTableRef = extractReferenceTableRefFromInterfaceEntry(interfaceRefMap);
-					String unresolvedKey = (interfaceTableRef == null)
-							? columnName
-							: interfaceTableRef + "." + columnName;
-
-					Object unresolvedLocations = unresolvedColumnMap.get(unresolvedKey);
-					if (unresolvedLocations == null) {
-						unresolvedLocations = unresolvedColumnMap.get(columnName);
-					}
-					if (unresolvedLocations == null) {
-						continue;
-					}
-
-					Object locationList = unresolvedLocations;
-					if (unresolvedLocations instanceof Map<?, ?> unresolvedEntryMap) {
-						Object extractedLocations = ((Map<String, Object>) unresolvedEntryMap).get("locations");
-						if (extractedLocations != null) {
-							locationList = extractedLocations;
-						}
-					}
-
-					HashMap<String, Object> resultEntry = new HashMap<String, Object>();
-					resultEntry.put(MUMBLE_COLUMN_KEY, interfaceRefMap);
-					resultEntry.put("locations", locationList);
-
-					String tableRef = interfaceTableRef;
-					if (tableRef == null) {
-						if (unqualifiedUnknownEntries != null) {
-							unqualifiedUnknownEntries.put(columnName, resultEntry);
-						}
-					} else {
-						if (qualifiedUnknownEntries != null) {
-							qualifiedUnknownEntries.put(columnName, resultEntry);
-						}
-					}
-				}
-			}
-		}
-
-		// Pass 2: filter references
-		if (filtersList instanceof List<?> filters) {
-			for (Object filterObj : filters) {
-				if (!(filterObj instanceof Map<?, ?>)) {
-					continue;
-				}
-				Map<String, Object> filterEntry = (Map<String, Object>) filterObj;
-				String columnName = extractReferenceNameFromInterfaceEntry(filterEntry);
-				if (columnName == null) {
-					continue;
-				}
-
-				String tableRef = extractReferenceTableRefFromInterfaceEntry(filterEntry);
-				String unresolvedKey = (tableRef == null)
-						? columnName
-						: tableRef + "." + columnName;
-				Object unresolvedLocations = unresolvedColumnMap.get(unresolvedKey);
-				if (unresolvedLocations == null) {
-					unresolvedLocations = unresolvedColumnMap.get(columnName);
-				}
-				if (unresolvedLocations == null) {
-					continue;
-				}
-
-				Object locationList = unresolvedLocations;
-				if (unresolvedLocations instanceof Map<?, ?> unresolvedEntryMap) {
-					Object extractedLocations = ((Map<String, Object>) unresolvedEntryMap).get("locations");
-					if (extractedLocations != null) {
-						locationList = extractedLocations;
-					}
-				}
-
-				HashMap<String, Object> resultEntry = new HashMap<String, Object>();
-				resultEntry.put(MUMBLE_COLUMN_KEY, filterEntry);
-				resultEntry.put("locations", locationList);
-
-				if (tableRef == null) {
-					if (unqualifiedUnknownEntries != null) {
-						unqualifiedUnknownEntries.put(columnName, resultEntry);
-					}
-				} else {
-					if (qualifiedUnknownEntries != null) {
-						qualifiedUnknownEntries.put(columnName, resultEntry);
-					}
-				}
-			}
-		}
-	}
-
 	// @SuppressWarnings("unchecked")
 	// public HashMap<String, Object> flattenUnresolvedColumnMap(HashMap<String, Object> unresolvedMap) {
 	// 	if (unresolvedMap == null || unresolvedMap.isEmpty()) {
@@ -4247,157 +3867,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		return "tuple".equals(substitutionType);
-	}
-
-	/**
-	 * Reclassifies explicit alias-qualified refs from table collection when alias points to non-table sources.
-	 */
-	@SuppressWarnings("unchecked")
-	public void reconcileExplicitAliasReferencesAgainstNonTableSources(
-			HashMap<String, Object> tableCollection,
-			HashMap<String, Object> queryCollection,
-			HashMap<String, Object> localInterface,
-			HashMap<String, Object> pinnedUnknowns,
-			HashSet<String> forcedUnknownExplicitRefs) {
-		
-		boolean missingTableInputs = (tableCollection == null) || ((tableCollection != null) && tableCollection.isEmpty());
-		boolean missingQueryInputs = (queryCollection == null) || ((queryCollection != null) && queryCollection.isEmpty());
-
-		if (missingTableInputs && missingQueryInputs) {
-			return;
-		}
-
-		HashSet<String> explicitInterfaceRefs = new HashSet<String>();
-		if (localInterface != null) {
-			for (Object refsObj : localInterface.values()) {
-				if (!(refsObj instanceof ArrayList<?> refs)) {
-					continue;
-				}
-				for (Object refObj : refs) {
-					String refColumn = extractReferenceNameFromInterfaceEntry(refObj);
-					String refTable = extractReferenceTableRefFromInterfaceEntry(refObj);
-					if (refColumn != null && refTable != null) {
-						explicitInterfaceRefs.add(refTable + "." + refColumn);
-					}
-				}
-			}
-		}
-
-		if (explicitInterfaceRefs.isEmpty()) {
-			return;
-		}
-
-		// If there are explicit table reference and column entries, then we need to check if any of the 
-		// explicit refs are qualified with an alias that maps to a non-table source.
-		HashMap<String, HashSet<String>> nonTableAliasAvailableColumns = new HashMap<String, HashSet<String>>();
-		HashMap<String, String> nonTableAliasSourceQueryKeys = new HashMap<String, String>();
-
-		for (String queryKey : queryCollection.keySet()) {
-			Object queryEntryObj = queryCollection.get(queryKey);
-			if (!(queryEntryObj instanceof Map<?, ?> queryEntry)) {
-				continue;
-			}
-
-			for (Map.Entry<?, ?> querySubEntry : queryEntry.entrySet()) {
-				Object aliasObj = querySubEntry.getKey();
-				Object mappedObj = querySubEntry.getValue();
-				if (!(aliasObj instanceof String alias) || !(mappedObj instanceof String mappedSource)) {
-					continue;
-				}
-
-				boolean queryOrSetBackedAlias = mappedSource.startsWith("query")
-						|| mappedSource.startsWith(MUMBLE_UNION_KEY)
-						|| mappedSource.startsWith(MUMBLE_INTERSECT_KEY)
-						|| mappedSource.startsWith(MUMBLE_VALUES_KEY)
-						|| MUMBLE_VALUES_KEY.equals(mappedSource);
-
-				if (!queryOrSetBackedAlias) {
-					continue;
-				}
-
-				HashSet<String> availableColumns = new HashSet<String>();
-				String sourceQueryKey = MUMBLE_VALUES_KEY.equals(mappedSource) ? queryKey : mappedSource;
-				Object sourceQueryDictObj = queryColumnDictionaryMap.get(sourceQueryKey);
-				if (sourceQueryDictObj instanceof Map<?, ?> sourceQueryDict) {
-					for (Object sourceColumnKey : sourceQueryDict.keySet()) {
-						if (sourceColumnKey instanceof String) {
-							availableColumns.add((String) sourceColumnKey);
-						}
-					}
-				}
-
-				if (availableColumns.isEmpty()) {
-					Object interfaceObj = queryEntry.get(MUMBLE_INTERFACE_KEY);
-					if (interfaceObj instanceof Map<?, ?> sourceInterface) {
-						for (Object sourceColumnKey : sourceInterface.keySet()) {
-							if (sourceColumnKey instanceof String) {
-								availableColumns.add((String) sourceColumnKey);
-							}
-						}
-					}
-				}
-
-				nonTableAliasAvailableColumns.put(alias, availableColumns);
-				nonTableAliasSourceQueryKeys.put(alias, sourceQueryKey);
-				if (sourceQueryKey != null) {
-					nonTableAliasAvailableColumns.put(sourceQueryKey, availableColumns);
-					nonTableAliasSourceQueryKeys.put(sourceQueryKey, sourceQueryKey);
-				}
-			}
-		}
-
-		if (nonTableAliasAvailableColumns.isEmpty()) {
-			return;
-		}
-
-		// For each alias that maps to a non-table source, we need to check if any explicit refs are 
-		// qualified with that alias.
-		ArrayList<String> candidateAliases = new ArrayList<String>(tableCollection.keySet());
-		for (String aliasRef : candidateAliases) {
-			if (!nonTableAliasAvailableColumns.containsKey(aliasRef)) {
-				continue;
-			}
-
-			Object aliasColumnsObj = tableCollection.get(aliasRef);
-			if (!(aliasColumnsObj instanceof Map<?, ?> aliasColumns)) {
-				continue;
-			}
-
-			HashSet<String> availableColumns = nonTableAliasAvailableColumns.get(aliasRef);
-			String targetQueryKey = nonTableAliasSourceQueryKeys.get(aliasRef);
-			ArrayList<String> columnsToRemove = new ArrayList<String>();
-			for (Map.Entry<?, ?> aliasColumnEntry : aliasColumns.entrySet()) {
-				if (!(aliasColumnEntry.getKey() instanceof String columnName)) {
-					continue;
-				}
-
-				String explicitRefKey = aliasRef + "." + columnName;
-				if (!explicitInterfaceRefs.contains(explicitRefKey)) {
-					continue;
-				}
-
-				if (availableColumns.contains(columnName) && targetQueryKey != null) {
-					mergeColumnReferenceIntoQueryDictionary(targetQueryKey, columnName, aliasColumnEntry.getValue());
-				} else {
-					HashMap<String, Object> singleUnknownEntry = new HashMap<String, Object>();
-					singleUnknownEntry.put(columnName, aliasColumnEntry.getValue());
-					mergeUnknownEntries(pinnedUnknowns, singleUnknownEntry);
-					forcedUnknownExplicitRefs.add(explicitRefKey);
-				}
-
-				columnsToRemove.add(columnName);
-			}
-
-			// Remove all explicit refs from the alias column map, leaving only non-explicit refs if they exist.
-			for (String columnToRemove : columnsToRemove) {
-				((Map<String, Object>) aliasColumns).remove(columnToRemove);
-			}
-
-			// If no non-explicit refs remain for the alias, then we can remove the alias entry from the table collection.
-			if (((Map<String, Object>) aliasColumns).isEmpty()) {
-				tableCollection.remove(aliasRef);
-			}
-		}
 	}
 
 	/**
@@ -4688,21 +4157,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 	}
 
-	public boolean validateFilterReferences(Object filtersList,
-			HashMap<String, Object> localCurrentQueryDictionary,
-			HashMap<String, Object> tableAliasCollection,
-			HashMap<String, Object> tableCollection) {
-		if (!(filtersList instanceof List<?> refs)) {
-			return true;
-		}
-
-		return validateReferenceEntries(
-				refs,
-				tableAliasCollection,
-				tableCollection,
-				localCurrentQueryDictionary);
-	}
-
 	@SuppressWarnings("unchecked")
 	private boolean queryDictionaryContainsColumn(String queryRef, String columnName) {
 		if (queryRef == null || columnName == null || queryColumnDictionaryMap == null) {
@@ -4767,67 +4221,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		return false;
-	}
-
-	@SuppressWarnings("unchecked")
-	public String formatInterfaceValuesListWithLocations(HashMap<String, Object> localInterface,
-			HashMap<String, Object> localCurrentQueryDictionary) {
-		if (localInterface == null || localInterface.isEmpty()) {
-			return "[]";
-		}
-
-		ArrayList<String> entries = new ArrayList<String>();
-		for (String interfaceColumn : localInterface.keySet()) {
-			Object interfaceValue = localInterface.get(interfaceColumn);
-			String refs = formatInterfaceColumnReferences(interfaceValue);
-			Integer[] location = (localCurrentQueryDictionary == null)
-					? new Integer[] { null, null }
-					: getLineAndCharacterFromEntry(localCurrentQueryDictionary.get(interfaceColumn));
-
-			if (location[0] != null && location[1] != null) {
-				entries.add(interfaceColumn + " <- " + refs + " (l:" + location[0] + " c:" + location[1] + ")");
-			} else {
-				entries.add(interfaceColumn + " <- " + refs);
-			}
-		}
-
-		return entries.toString();
-	}
-
-	@SuppressWarnings("unchecked")
-	public String formatInterfaceColumnReferences(Object interfaceValue) {
-		if (!(interfaceValue instanceof ArrayList<?>)) {
-			return "[]";
-		}
-
-		ArrayList<String> refs = new ArrayList<String>();
-		for (Object refObj : (ArrayList<Object>) interfaceValue) {
-			if (refObj instanceof Map<?, ?>) {
-				Map<String, Object> refMap = (Map<String, Object>) refObj;
-				if (refMap.containsKey(MUMBLE_COLUMN_KEY)) {
-					Map<String, Object> columnMap = (Map<String, Object>) refMap.get(MUMBLE_COLUMN_KEY);
-					Object tableRef = columnMap.get(MUMBLE_TABLE_REF_KEY);
-					Object columnName = columnMap.get(MUMBLE_NAME_KEY);
-					if (columnName != null && tableRef != null) {
-						refs.add(tableRef + "." + columnName);
-					} else if (columnName != null) {
-						refs.add(columnName.toString());
-					} else {
-						refs.add(columnMap.toString());
-					}
-				} else if (refMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
-					Map<String, Object> substitution = (Map<String, Object>) refMap.get(MUMBLE_SUBSTITUTION_KEY);
-					Object name = substitution.get(MUMBLE_NAME_KEY);
-					refs.add((name == null) ? substitution.toString() : ("<" + name + ">"));
-				} else {
-					refs.add(refMap.toString());
-				}
-			} else {
-				refs.add(String.valueOf(refObj));
-			}
-		}
-
-		return refs.toString();
 	}
 
 	@SuppressWarnings("unchecked")

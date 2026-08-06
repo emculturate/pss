@@ -58,8 +58,6 @@ public interface InterfaceASTWalkerHelper {
      public Map<String, Object> collectNewRuleMap(int ruleIndex, Integer stackLvl);
      public void collectTableAlias(String alias, Object tableReference);
      public void collectUnresolvedColumnReference(Object tableReference, Object item, Token token);
-     public void addColumnTokenToColumnDict(Object localSymbolTable, Object item, Token token);
-     public void consolidateValuesStatementSymbolTable(String alias);
      public HashMap<String, Object> captureQueryInterface();
     public void validateSetOperationInterface(HashMap<String, Object> interfaceMap, String locationTokenString);
      public HashMap<String, Object> getInterfaceFromQuery(String hdr);

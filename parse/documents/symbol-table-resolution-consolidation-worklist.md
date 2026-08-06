@@ -21,6 +21,7 @@ Independent plans (product-triggered; **not** consolidation blockers):
 |------|--------|----------------|
 | [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md) (ex–13.5) | ⏸️ Not started | Product needs structured DDL options (`IF NOT EXISTS`, `OR REPLACE`, …), not opaque blobs only |
 | [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) (ex–13.6) | ⏸️ Milestone done; expansion not started | AST→SQL coverage beyond ~51 round-trip smokes |
+| [helper-dead-code-hygiene-workplan.md](helper-dead-code-hygiene-workplan.md) | 🚧 A–B ✅; C–D optional | Post-consolidation zero-caller helper cleanup (caller audit > JaCoCo) |
 
 **Optional / low priority (not tracked as open phases):**
 
