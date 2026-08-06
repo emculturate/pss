@@ -784,29 +784,49 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return children;
 	}
 
-	private String extractCreateTypeText(ParserRuleContext ctx, String fallback, int... childIndexes) {
+	/**
+	 * Verbatim source text covering selected parse-tree children (inclusive span from the
+	 * first listed child through the last). Used for CREATE type keywords that are bare
+	 * terminals under the create rule (no separate {@code ddl_object_type} wrapper).
+	 */
+	private String verbatimChildSpanText(ParserRuleContext ctx, String fallback, int... childIndexes) {
 		if (ctx == null || childIndexes == null || childIndexes.length == 0) {
 			return fallback;
 		}
 
-		StringBuilder builder = new StringBuilder();
+		Token startToken = null;
+		Token stopToken = null;
 		for (int childIndex : childIndexes) {
 			if (childIndex < 0 || childIndex >= ctx.getChildCount()) {
 				continue;
 			}
-
-			String tokenText = ctx.getChild(childIndex).getText();
-			if (tokenText == null || tokenText.isBlank()) {
+			ParseTree child = ctx.getChild(childIndex);
+			Token childStart = null;
+			Token childStop = null;
+			if (child instanceof TerminalNode terminal) {
+				childStart = terminal.getSymbol();
+				childStop = childStart;
+			} else if (child instanceof ParserRuleContext ruleChild) {
+				childStart = ruleChild.start;
+				childStop = ruleChild.stop;
+			}
+			if (childStart == null || childStop == null) {
 				continue;
 			}
-
-			if (builder.length() > 0) {
-				builder.append(' ');
+			if (startToken == null) {
+				startToken = childStart;
 			}
-			builder.append(tokenText);
+			stopToken = childStop;
 		}
 
-		return builder.length() == 0 ? fallback : builder.toString();
+		if (startToken == null || stopToken == null) {
+			return fallback;
+		}
+		CharStream input = startToken.getInputStream();
+		if (input == null) {
+			return fallback;
+		}
+		return input.getText(Interval.of(startToken.getStartIndex(), stopToken.getStopIndex()));
 	}
 
 	/**
@@ -2118,7 +2138,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		List<Object> children = extractOrderedRuleChildren(subMap);
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "table", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "table", 1));
 
 		Object queryNode = null;
 		if (ctx.query_expression() != null) {
@@ -2159,7 +2179,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object tableChild = subMap.get("2");
 		Object columnsChild = subMap.get("3");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "index", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "index", 1));
 
 		if (indexNameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, indexNameChild);
@@ -2184,7 +2204,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		List<Object> children = extractOrderedRuleChildren(subMap);
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "view", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "view", 1));
 
 		if (children.size() >= 1) {
 			createNode.put(MUMBLE_NAME_KEY, children.get(0));
@@ -2207,7 +2227,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		List<Object> children = extractOrderedRuleChildren(subMap);
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "materialized view", 1, 2));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "materialized view", 1, 2));
 
 		if (children.size() >= 1) {
 			createNode.put(MUMBLE_NAME_KEY, children.get(0));
@@ -2233,7 +2253,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object dataTypeChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "3" : "2");
 		Object clausesChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "4" : "3");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "function", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "function", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2264,7 +2284,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object argContentChild = subMap.get("2");
 		Object clausesChild = subMap.get(ctx.generic_ddl_paren_content() != null ? "3" : "2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "procedure", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "procedure", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2292,7 +2312,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object queryChild = subMap.remove(MUMBLE_QUERY_KEY);
 
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "macro", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "macro", 1));
 
 		if (!children.isEmpty()) {
 			createNode.put(MUMBLE_NAME_KEY, children.get(0));
@@ -2321,7 +2341,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "sequence", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "sequence", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2344,7 +2364,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "schema", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "schema", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2367,7 +2387,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "database", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "database", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2390,7 +2410,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "role", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "role", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2413,7 +2433,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "user", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "user", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2436,7 +2456,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "stage", 1));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "stage", 1));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);
@@ -2459,7 +2479,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object nameChild = subMap.get("1");
 		Object clausesChild = subMap.get("2");
 		Map<String, Object> createNode = new LinkedHashMap<String, Object>();
-		createNode.put(MUMBLE_TYPE_KEY, extractCreateTypeText(ctx, "file format", 1, 2));
+		createNode.put(MUMBLE_TYPE_KEY, verbatimChildSpanText(ctx, "file format", 1, 2));
 
 		if (nameChild != null) {
 			createNode.put(MUMBLE_NAME_KEY, nameChild);

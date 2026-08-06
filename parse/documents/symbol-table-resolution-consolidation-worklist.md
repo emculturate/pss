@@ -2336,7 +2336,7 @@ DDL handlers still bypass the walked tree in several places:
 | Anti-pattern | Locations | Issue |
 |--------------|-----------|-------|
 | **`extractDdlObjectTypeText(ctx)`** | `exitDrop_statement_primary`, `exitAlter_statement_primary`, `exitDdl_object_type`, `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content`, `exitCreate_macro_expression` | Iterates `ctx.getChild(i).getText()` instead of joining walked `subMap` entries |
-| **`extractCreateTypeText(ctx, …)`** | All 14 `exitCreate_*_expression` handlers | Reads CREATE keyword tokens from ctx child indices; terminals are already in parent `subMap` via `exitEveryRule` |
+| **`extractCreateTypeText(ctx, …)`** | ~~All 14 `exitCreate_*_expression` handlers~~ → **20.5 ✅** `verbatimChildSpanText` | Was ctx child-index token rejoin; now source-interval span over type-keyword children |
 | **Discard walked `subMap`** | `exitGeneric_ddl_options`, `exitGeneric_ddl_paren_content` | `removeNodeMap` then ignore; re-scrape ctx for blob text |
 | **`ctx.generic_ddl_paren_content() != null` guards** | `exitCreate_function_expression`, `exitCreate_procedure_expression`, `exitCreate_macro_expression` | Child index arithmetic from ctx introspection instead of walked child count/order |
 | **`passThroughDdlRuleValueToParent`** | Defined, never called | Dead code |
@@ -2348,9 +2348,9 @@ DDL handlers still bypass the walked tree in several places:
 1. **Opaque DDL tails are verbatim source slices** via `verbatimRuleText` — not token-rejoined text; `extractDdlObjectTypeText` unused for options/paren blobs.
 2. **`exitDdl_object_type`** — promote type string → `addToParent` + `SKIP` (DROP/ALTER read walked child).
 3. **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`** — one verbatim string → `addToParent` + `SKIP`; never discard walked map then scrape/rejoin tokens.
-4. **CREATE exits** — `type` from walked keyword terminals; `parameters` / `clauses` / `options` / `columns` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
+4. **CREATE exits** — `type` from `verbatimChildSpanText` over type-keyword children; `parameters` / `clauses` / `options` / `columns` from walked children only; macro `parameters` from walked `generic_ddl_paren_content` child, not `ctx.generic_ddl_paren_content()`.
 5. **Function/procedure** — optional-arg layout inferred from walked `subMap` child count, not `ctx.generic_ddl_paren_content() != null`.
-6. **Dead code removed** — `passThroughDdlRuleValueToParent`; eventually `extractDdlObjectTypeText` / `extractCreateTypeText`.
+6. **Dead code removed** — `passThroughDdlRuleValueToParent`; `extractCreateTypeText` retired in **20.5**; eventually `extractDdlObjectTypeText`.
 
 ### Phase 20 design note — verbatim opaque tails (Aug 2026)
 
@@ -2374,9 +2374,9 @@ DDL handlers still bypass the walked tree in several places:
 | **20.2** | **`exitDdl_object_type`**: promote type string with `addToParent` + `SKIP` (walked or compact keyword text — not options path) | Walker | DROP/ALTER type from walked child | ✅ |
 | **20.3** | **`exitGeneric_ddl_options` / `exitGeneric_ddl_paren_content`**: promote **one verbatim string** + `SKIP`; nested-paren grammar for paren content; options remain `(~SEMI_COLON)+` | Grammar + Walker | `SqlEventWalkerDdlTests` paren/multiline/case goldens | ✅ |
 | **20.4** | **DROP/ALTER**: `MUMBLE_TYPE_KEY` from walked child `"1"` only — remove `extractDdlObjectTypeText(ctx.ddl_object_type())` | Walker | drop/alter goldens | ✅ |
-| **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with walked keyword text from create-rule children | All `exitCreate_*_expression` | All CREATE DDL tests | ⏸️ |
+| **20.5** | **CREATE `type`**: replace `extractCreateTypeText` with `verbatimChildSpanText` over type-keyword children (terminals under create rule; no `ddl_object_type` wrapper) | All `exitCreate_*_expression` | All CREATE DDL tests | ✅ |
 | **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ⏸️ |
-| **20.7** | Delete `extractDdlObjectTypeText`, `extractCreateTypeText`, `passThroughDdlRuleValueToParent` | Walker | Grep clean | ⏸️ |
+| **20.7** | Delete `extractDdlObjectTypeText`, `passThroughDdlRuleValueToParent` (`extractCreateTypeText` already retired in **20.5**) | Walker | Grep clean | ⏸️ |
 | **20.8** | Golden refresh if blob case/spacing shifts; full DDL + script + truncate endpoint gate | `SqlEventWalkerDdlTests` + Scripts/DDL + truncate | Gate green | ⏸️ |
 | **20.9** *(optional)* | Left-factor Jinja / set-op aliasing to reduce recoverable parser warnings in `{{ source(...) }} as alias` + parenthesized `EXCEPT` / `UNION` forms without changing AST or symbol-table output | Grammar + `SqlParseEventWalkerWithAccessObjectTest` canaries | Minimal left-factored tweak around `table_source_primary` / `subquery` / `set_operation_member`; validate warning count drops while final parse stays identical | ⏸️ |
 
