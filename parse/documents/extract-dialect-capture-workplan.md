@@ -44,7 +44,7 @@ Regenerate parser (`mvn generate-sources` / normal `parse` build).
 ## Phase 2 — Walker ✅
 
 - `MUMBLE_EXTRACT_KEY` and related keys in `MumbleConstants`.
-- `exitExtract_expression`: build `extract={part, part_form, source}` from labeled children.
+- `exitExtract_expression`: build `extract={part, part_form, source[, source_type]}`; typed `DATE`/`TIME`/`TIMESTAMP` literals promote `source_type` on the extract node and `source={literal=…}`.
 - `exitExtract_source`: `handleOneChild` so `source` is the lifted value subtree (not `{1=…, Type=…}`).
 - `exitExtract_field` / `exitCharacter_literal` path: normalize string literals (strip quotes, uppercase `part`).
 

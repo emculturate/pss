@@ -63,6 +63,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_EXTRACT_PART_FORM_KEYWORD = "KEYWORD";
     public static final String MUMBLE_EXTRACT_PART_FORM_STRING = "STRING";
     public static final String MUMBLE_EXTRACT_SOURCE_KEY = "source";
+    public static final String MUMBLE_EXTRACT_SOURCE_TYPE_KEY = "source_type";
     public static final String MUMBLE_FILES_KEY = "files";
     public static final String MUMBLE_FILE_FORMAT_KEY = "file_format";
     public static final String MUMBLE_FILTERS_KEY = "filters";

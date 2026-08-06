@@ -76,7 +76,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong",
-				"{SQL={select={1={extract={part_form=KEYWORD, part=YEAR, source={literal={Type=314}}}}}, from={table={alias=null, table=orders}}}}",
+				"{SQL={select={1={extract={part_form=KEYWORD, part=YEAR, source_type=DATE, source={literal=2020-01-01}}}}, from={table={alias=null, table=orders}}}}",
 				extractor.getAsTree().toString());
 	}
 

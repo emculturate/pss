@@ -10109,10 +10109,44 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> item = new HashMap<String, Object>();
 		item.put(MUMBLE_EXTRACT_PART_KEY, normalizeExtractPartText(fieldObj));
 		item.put(MUMBLE_EXTRACT_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
-		item.put(MUMBLE_EXTRACT_SOURCE_KEY, liftExtractSourceNode(sourceObj));
+		attachExtractSource(item, liftExtractSourceNode(sourceObj));
 
 		subMap.clear();
 		subMap.put(MUMBLE_EXTRACT_KEY, item);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void attachExtractSource(Map<String, Object> extractItem, Object sourceObj) {
+		if (!(sourceObj instanceof Map)) {
+			extractItem.put(MUMBLE_EXTRACT_SOURCE_KEY, sourceObj);
+			return;
+		}
+		Map<String, Object> sourceMap = (Map<String, Object>) sourceObj;
+		Object sourceType = sourceMap.remove(MUMBLE_EXTRACT_SOURCE_TYPE_KEY);
+		extractItem.put(MUMBLE_EXTRACT_SOURCE_KEY, sourceMap);
+		if (sourceType != null) {
+			extractItem.put(MUMBLE_EXTRACT_SOURCE_TYPE_KEY, sourceType);
+		}
+	}
+
+	private static void populateTypedDatetimeLiteralSourceMap(Map<String, Object> subMap, String sourceType,
+			String characterStringLiteralText) {
+		subMap.clear();
+		if (characterStringLiteralText != null) {
+			subMap.put(MUMBLE_LITERAL_KEY, stripSqlCharacterStringLiteral(characterStringLiteralText));
+		}
+		subMap.put(MUMBLE_EXTRACT_SOURCE_TYPE_KEY, sourceType);
+	}
+
+	private static String stripSqlCharacterStringLiteral(String text) {
+		if (text == null) {
+			return null;
+		}
+		String trimmed = text.trim();
+		if (trimmed.length() >= 2 && trimmed.charAt(0) == '\'' && trimmed.charAt(trimmed.length() - 1) == '\'') {
+			return trimmed.substring(1, trimmed.length() - 1);
+		}
+		return trimmed;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -10678,7 +10712,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (keys.length == 1) {
 			Object item = subMap.remove(keys[0]);
-			subMap.put(MUMBLE_LITERAL_KEY, item);
+			if (item instanceof Map<?, ?> typed
+					&& ((Map<?, ?>) typed).containsKey(MUMBLE_EXTRACT_SOURCE_TYPE_KEY)) {
+				subMap.putAll((Map<String, Object>) item);
+			} else {
+				subMap.put(MUMBLE_LITERAL_KEY, item);
+			}
 		} else {
 			// Too many entries
 		}
@@ -10706,6 +10745,36 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitDatetime_literal( SQLSelectParserParser.Datetime_literalContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
+	public void exitDate_literal(SQLSelectParserParser.Date_literalContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		String literalText = ctx.date_string == null ? null : ctx.date_string.getText();
+		populateTypedDatetimeLiteralSourceMap(subMap, "DATE", literalText);
+	}
+
+	@Override
+	public void exitTime_literal(SQLSelectParserParser.Time_literalContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		String literalText = ctx.time_string == null ? null : ctx.time_string.getText();
+		populateTypedDatetimeLiteralSourceMap(subMap, "TIME", literalText);
+	}
+
+	@Override
+	public void exitTimestamp_literal(SQLSelectParserParser.Timestamp_literalContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		String literalText = ctx.timestamp_string == null ? null : ctx.timestamp_string.getText();
+		populateTypedDatetimeLiteralSourceMap(subMap, "TIMESTAMP", literalText);
 	}
 
 	@Override
