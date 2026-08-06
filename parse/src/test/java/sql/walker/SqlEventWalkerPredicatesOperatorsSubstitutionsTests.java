@@ -2473,13 +2473,24 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain quantified ALL comparison", ast.contains("quantifier=ALL"));
-		Assert.assertTrue("AST should contain = operator", ast.contains("operator=="));
-		Assert.assertTrue("AST should contain inner subquery select", ast.contains("table=tab2"));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=a, table_ref=tab1}}, right={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, quantifier=ALL, operator==}}}}",
+				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}, tab2={b=[[@12,46:46='b',<381>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={b=[[@12,46:46='b',<381>,1:46]]}, query2={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={a=[[@1,7:7='a',<381>,1:7]]}, table_dictionary={tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}}, dependent_queries={quantified1={query=query0, type=filters}}, def_query0={query_dictionary={b=[[@12,46:46='b',<381>,1:46]]}, table_dictionary={tab2={b=[[@12,46:46='b',<381>,1:46]]}}, interface={b=[{name=b, table_ref=tab2}]}}, filters=[{name=a, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -2488,11 +2499,24 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain quantified ANY comparison", ast.contains("quantifier=ANY"));
-		Assert.assertTrue("AST should contain inner subquery select", ast.contains("table=tab2"));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=a, table_ref=tab1}}, right={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, quantifier=ANY, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}, tab2={b=[[@12,46:46='b',<381>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={b=[[@12,46:46='b',<381>,1:46]]}, query2={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={a=[[@1,7:7='a',<381>,1:7]]}, table_dictionary={tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}}, dependent_queries={quantified1={query=query0, type=filters}}, def_query0={query_dictionary={b=[[@12,46:46='b',<381>,1:46]]}, table_dictionary={tab2={b=[[@12,46:46='b',<381>,1:46]]}}, interface={b=[{name=b, table_ref=tab2}]}}, filters=[{name=a, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -2501,10 +2525,24 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain quantified SOME comparison", ast.contains("quantifier=SOME"));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=a, table_ref=tab1}}, right={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, quantifier=SOME, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}, tab2={b=[[@12,47:47='b',<381>,1:47]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={b=[[@12,47:47='b',<381>,1:47]]}, query2={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={a=[[@1,7:7='a',<381>,1:7]]}, table_dictionary={tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}}, dependent_queries={quantified1={query=query0, type=filters}}, def_query0={query_dictionary={b=[[@12,47:47='b',<381>,1:47]]}, table_dictionary={tab2={b=[[@12,47:47='b',<381>,1:47]]}}, interface={b=[{name=b, table_ref=tab2}]}}, filters=[{name=a, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -2513,11 +2551,24 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain quantified ALL with !=", ast.contains("quantifier=ALL"));
-		Assert.assertTrue("AST should contain != operator", ast.contains("operator=!="));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=a, table_ref=tab1}}, right={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, quantifier=ALL, operator=!=}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}, tab2={b=[[@12,47:47='b',<381>,1:47]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={b=[[@12,47:47='b',<381>,1:47]]}, query2={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={a=[[@1,7:7='a',<381>,1:7]]}, table_dictionary={tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}}, dependent_queries={quantified1={query=query0, type=filters}}, def_query0={query_dictionary={b=[[@12,47:47='b',<381>,1:47]]}, table_dictionary={tab2={b=[[@12,47:47='b',<381>,1:47]]}}, interface={b=[{name=b, table_ref=tab2}]}}, filters=[{name=a, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 	@Test
@@ -2526,11 +2577,24 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String ast = extractor.getAsTree().toString();
-		Assert.assertTrue("AST should contain > ANY quantified comparison", ast.contains("quantifier=ANY"));
-		Assert.assertTrue("AST should contain > operator", ast.contains("operator=>"));
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=tab1}}, where={condition={left={column={name=a, table_ref=tab1}}, right={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=tab2}}}, quantifier=ANY, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}, tab2={b=[[@12,46:46='b',<381>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={b=[[@12,46:46='b',<381>,1:46]]}, query2={a=[[@1,7:7='a',<381>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={a=[[@1,7:7='a',<381>,1:7]]}, table_dictionary={tab1={a=[[@5,25:28='tab1',<381>,1:25], [@1,7:7='a',<381>,1:7]]}}, dependent_queries={quantified1={query=query0, type=filters}}, def_query0={query_dictionary={b=[[@12,46:46='b',<381>,1:46]]}, table_dictionary={tab2={b=[[@12,46:46='b',<381>,1:46]]}}, interface={b=[{name=b, table_ref=tab2}]}}, filters=[{name=a, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 }

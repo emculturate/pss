@@ -9607,7 +9607,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			@SuppressWarnings("unchecked")
 			Map<String, Object> subqueryReference = walker.checkForSubstitutionVariable(
 					(Map<String, Object>) subMap.remove("4"),
-					MUMBLE_QUANTIFIED_SUBQUERY_KEY);
+					MUMBLE_QUANTIFIED_KEY);
 			symbolTreeHelper.exitPredicateSubqueryFrame(
 					subqueryReference,
 					walker.symbolTable,

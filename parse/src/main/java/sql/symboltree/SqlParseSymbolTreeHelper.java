@@ -17094,7 +17094,7 @@ public class SqlParseSymbolTreeHelper {
 			case IN -> recordDependentQueryReference(
 					predicateFrameSymbols, MUMBLE_IN_LIST_KEY, liveQueryRefKey);
 			case QUANTIFIED -> recordDependentQueryReference(
-					predicateFrameSymbols, MUMBLE_QUANTIFIED_SUBQUERY_KEY, liveQueryRefKey);
+					predicateFrameSymbols, MUMBLE_QUANTIFIED_KEY, liveQueryRefKey);
 		}
 
 		promotePublishedQueryScopeToDefPrefix(predicateFrameSymbols, liveQueryRefKey);

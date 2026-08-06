@@ -2771,6 +2771,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				if ((tab_ref.startsWith(MUMBLE_IN_LIST_KEY))
 					|| (tab_ref.startsWith(MUMBLE_PREDICAND_KEY))
 					|| (tab_ref.startsWith(MUMBLE_EXISTS_KEY))
+					|| (tab_ref.startsWith(MUMBLE_QUANTIFIED_KEY))
 					|| MUMBLE_DEPENDENT_QUERIES_KEY.equals(tab_ref)
 					|| (tab_ref.startsWith("def_"))) {
 						continue; // skip symbol table items that are not table or query references

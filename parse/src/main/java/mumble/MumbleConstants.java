@@ -45,7 +45,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DELETE_KEY = "delete";
     public static final String MUMBLE_DEFAULT_VALUES_KEY = "default_values";
-    /** Submap grouping predicandN, in_listN, and existsN query references on a scope. */
+    /** Submap grouping predicandN, in_listN, existsN, and quantifiedN query references on a scope. */
     public static final String MUMBLE_DEPENDENT_QUERIES_KEY = "dependent_queries";
     /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). */
     public static final String MUMBLE_DEPENDENT_QUERY_TYPE_KEY = "type";
@@ -139,7 +139,7 @@ public final class MumbleConstants {
     public static final String MUMBLE_PUML_CONSTANT_KEY = "puml_constant";
     public static final String MUMBLE_QUALIFIER_KEY = "qualifier";
     public static final String MUMBLE_QUALIFY_KEY = "qualify";
-    public static final String MUMBLE_QUANTIFIED_SUBQUERY_KEY = "quantified_subquery";
+    public static final String MUMBLE_QUANTIFIED_KEY = "quantified";
     public static final String MUMBLE_QUANTIFIER_KEY = "quantifier";
     public static final String MUMBLE_QUERY_DICTIONARY_KEY = "query_dictionary"; // Special key for the symbol table to store query references
     public static final String MUMBLE_QUERY_KEY = "query";
