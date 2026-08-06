@@ -9589,6 +9589,62 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void enterQuantified_comparison_predicate(
+			SQLSelectParserParser.Quantified_comparison_predicateContext ctx) {
+		symbolTreeHelper.pushDependentQueryContextForFrame(ctx);
+		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+	}
+
+	@Override
+	public void exitQuantified_comparison_predicate(
+			SQLSelectParserParser.Quantified_comparison_predicateContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		if (subMap.size() == 4) {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> subqueryReference = walker.checkForSubstitutionVariable(
+					(Map<String, Object>) subMap.remove("4"),
+					MUMBLE_QUANTIFIED_SUBQUERY_KEY);
+			symbolTreeHelper.exitPredicateSubqueryFrame(
+					subqueryReference,
+					walker.symbolTable,
+					SqlParseSymbolTreeHelper.PredicateSubqueryMergeKind.QUANTIFIED);
+			symbolTreeHelper.popDependentQueryContextForFrame();
+
+			Map<String, Object> condition = new HashMap<String, Object>();
+			condition.put(
+					MUMBLE_LEFT_FACTOR_KEY,
+					walker.stampSubstitutionVariableFromContext((Map<String, Object>) subMap.remove("1"), ctx));
+
+			Object operator = subMap.remove("2");
+			if (operator instanceof String) {
+				condition.put(MUMBLE_OPERATOR_KEY, operator);
+			} else if (operator instanceof Map<?, ?> operatorMap) {
+				condition.put(MUMBLE_OPERATOR_KEY, ((Map<String, Object>) operatorMap).get("1"));
+			}
+
+			Object quantifier = subMap.remove("3");
+			if (quantifier instanceof String) {
+				condition.put(MUMBLE_QUANTIFIER_KEY, quantifier);
+			} else if (quantifier instanceof Map<?, ?> quantifierMap) {
+				condition.put(MUMBLE_QUANTIFIER_KEY, ((Map<String, Object>) quantifierMap).get("1"));
+			}
+
+			condition.put(MUMBLE_RIGHT_FACTOR_KEY, subqueryReference);
+			subMap.put(MUMBLE_CONDITION_KEY, condition);
+		}
+	}
+
+	@Override
+	public void exitQuantifier(SQLSelectParserParser.QuantifierContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		walker.handleOneChild(ruleIndex);
+	}
+
+	@Override
 	public void exitComparison_operator( SQLSelectParserParser.Comparison_operatorContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 

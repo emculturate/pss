@@ -1676,6 +1676,7 @@ predicate
   | like_any_predicate
   | null_predicate
   | exists_predicate
+  | quantified_comparison_predicate
   | substitution_predicate
   ;
 

@@ -2467,4 +2467,70 @@ public class SqlEventWalkerPredicatesOperatorsSubstitutionsTests extends Abstrac
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void whereColumnEqualsAllSubqueryTest() {
+		final String query = "SELECT a FROM tab1 WHERE tab1.a = ALL (SELECT b FROM tab2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String ast = extractor.getAsTree().toString();
+		Assert.assertTrue("AST should contain quantified ALL comparison", ast.contains("quantifier=ALL"));
+		Assert.assertTrue("AST should contain = operator", ast.contains("operator=="));
+		Assert.assertTrue("AST should contain inner subquery select", ast.contains("table=tab2"));
+		Assert.assertEquals("Interface is wrong", "[a]", extractor.getInterface().toString());
+	}
+
+	@Test
+	public void whereColumnEqualsAnySubqueryTest() {
+		final String query = "SELECT a FROM tab1 WHERE tab1.a = ANY (SELECT b FROM tab2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String ast = extractor.getAsTree().toString();
+		Assert.assertTrue("AST should contain quantified ANY comparison", ast.contains("quantifier=ANY"));
+		Assert.assertTrue("AST should contain inner subquery select", ast.contains("table=tab2"));
+	}
+
+	@Test
+	public void whereColumnEqualsSomeSubqueryTest() {
+		final String query = "SELECT a FROM tab1 WHERE tab1.a = SOME (SELECT b FROM tab2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String ast = extractor.getAsTree().toString();
+		Assert.assertTrue("AST should contain quantified SOME comparison", ast.contains("quantifier=SOME"));
+	}
+
+	@Test
+	public void whereColumnNotEqualAllSubqueryTest() {
+		final String query = "SELECT a FROM tab1 WHERE tab1.a != ALL (SELECT b FROM tab2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String ast = extractor.getAsTree().toString();
+		Assert.assertTrue("AST should contain quantified ALL with !=", ast.contains("quantifier=ALL"));
+		Assert.assertTrue("AST should contain != operator", ast.contains("operator=!="));
+	}
+
+	@Test
+	public void whereColumnGreaterThanAnySubqueryTest() {
+		final String query = "SELECT a FROM tab1 WHERE tab1.a > ANY (SELECT b FROM tab2)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		String ast = extractor.getAsTree().toString();
+		Assert.assertTrue("AST should contain > ANY quantified comparison", ast.contains("quantifier=ANY"));
+		Assert.assertTrue("AST should contain > operator", ast.contains("operator=>"));
+	}
+
 }
