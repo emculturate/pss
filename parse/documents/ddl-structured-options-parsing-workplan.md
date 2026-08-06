@@ -1,6 +1,7 @@
 # DDL structured options parsing — independent work plan
 
 **Status:** ⏸️ Not started (spun off from consolidation Phase **13.5**, Aug 2026)  
+**Prerequisite:** Phase **20** DDL walker hygiene ✅ complete (Aug 2026) — new DDL exits must use walked `subMap` / verbatim slices, not ctx scrape.
 **Origin:** `symbol-table-resolution-consolidation-worklist.md` §13.5  
 **Primary code:** `SqlParseEventWalker` DDL exits, `SQLSelectParser.g4` (`generic_ddl_options`, `generic_ddl_paren_content`, CREATE/ALTER/DROP/TRUNCATE)  
 **Primary tests:** `SqlEventWalkerScriptsAndDDLTests`  
@@ -12,7 +13,7 @@
 
 Consolidation only needs reliable DDL **statement kind**, **object type**, and **qualified object name** for script isolation and access-object routing. Unmodeled tails are already captured as **opaque** `options` / `columns` / `parameters` blobs. Structured parsing of `IF NOT EXISTS`, `OR REPLACE`, etc. is product work (catalog rules, migration tooling, policy engines) — not symbol-table consolidation.
 
-**Do not start** until a concrete product requirement needs to *query or transform* individual option clauses. Until then Phase **20** may still improve blob *collection* without expanding grammar structure.
+**Until then Phase 20 is complete** — opaque blob *collection* is done; this plan only adds structured option nodes when required.
 
 ---
 
@@ -51,7 +52,7 @@ Consolidation only needs reliable DDL **statement kind**, **object type**, and *
 
 1. Record the concrete consumer (catalog metadata? policy? UI edit?).
 2. Freeze a **v1 clause list** (suggested starter below).
-3. Confirm Phase 20 status: prefer completing **20.1–20.7** so new grammar exits follow walked-`subMap` style.
+3. Phase **20** is ✅ complete — new grammar exits must follow walked-`subMap` / verbatim-slice style (**20.1–20.8**).
 
 **Suggested v1 clauses:**
 

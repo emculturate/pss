@@ -13,9 +13,8 @@ import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 
 /**
- * Decision probe for optional Phase 20.9: does FULL_CONTEXT / AMBIGUITY noise
- * around {@code ... as alias} come only from Jinja table sources, or also from
- * plain tables / subqueries / nested set-ops?
+ * Observational probe for FULL_CONTEXT / AMBIGUITY noise around {@code ... as alias}
+ * (consolidation **20.9** closed — does not assert warning counts).
  *
  * Clones the shape of {@code subqueryUnionJinjaSourceUnionInterfaceValidationV1Test}
  * / Except twin, plus a minimal {@code source(...) as alias} form.

@@ -5,7 +5,7 @@
 
 **Related docs:**
 
-- [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md) — Phase 16–18 execution tracking
+- [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md) — Phases 1–20 **complete** (historical); policy for Phases 16–18
 - [table-and-query-dictionary-design.md](table-and-query-dictionary-design.md) — dictionary collection contract
 
 ---

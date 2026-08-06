@@ -1,13 +1,31 @@
 # Symbol Table Resolution Consolidation — Ultimate Worklist
 
-Use this document as the single handoff for consolidating column resolution in the SQL parse walker and `SqlParseSymbolTreeHelper`. It merges planning from:
+> **✅ WORKLIST COMPLETE (Aug 2026).** Phases **1–20** are closed for this program. **Do not** use this document to answer “what’s next” — use **[Open work outside this worklist](#open-work-outside-this-worklist)** below.
+
+Use this document as the **historical handoff** for consolidating column resolution in the SQL parse walker and `SqlParseSymbolTreeHelper`. It merges planning from:
 
 - `def-query-canonicalization-phases1-4-checklist.md` (Phases 1–4, **done**)
 - Qualified-column egress unification (`nestedQueryDemoTest` canary)
 - Clause-list / `convertSymbolTableToTableDictionary` consolidation thread
 - INSERT/VALUES and DML parity notes (where they touch shared resolution)
 
-**Last updated:** 2026-07-23 (§ Final actions for rolling out the parser)
+**Last updated:** 2026-08-06 (worklist **closed**; **20.9** ❌ will not pursue)
+
+---
+
+## Open work outside this worklist
+
+Independent plans (product-triggered; **not** consolidation blockers):
+
+| Plan | Status | When to start |
+|------|--------|----------------|
+| [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md) (ex–13.5) | ⏸️ Not started | Product needs structured DDL options (`IF NOT EXISTS`, `OR REPLACE`, …), not opaque blobs only |
+| [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) (ex–13.6) | ⏸️ Milestone done; expansion not started | AST→SQL coverage beyond ~51 round-trip smokes |
+
+**Optional / low priority (not tracked as open phases):**
+
+- **§17.7.7-deferred-large-sample-goldens** — `@Ignore` live-sample queries; refresh only if product wants locked goldens on those shapes.
+- Recoverable parser **FULL_CONTEXT / AMBIGUITY** warnings with `SqlParserAccess` flags on — accepted as benign; **20.9** closed after `table_primary` hygiene (`7a1de9f`) and failed `select_item` experiment.
 
 ---
 
@@ -169,7 +187,7 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 | **17** UNPIVOT derived columns | ✅ Done | 100% | **17.6** ✅; **17.7.1–17.7.10** ✅; **17.7.7** catalog + **17.7.8** closeout + **17.7.8** gap-fill (`gapFill17_7_8_*`) ✅; **17.7.9** ❌ dropped; **17.7.11** ❌ abandoned. **Optional only:** **§17.7.7-deferred-large-sample-goldens** (`largeStudentgeneralQueryParse*`). |
 | **18** PIVOT IN-list output + IN-identifier | ✅ **Closed policy-only** | n/a | **18.0** inventory ✅; **18.1**/**18.4**/**18.5** ❌ dropped/N/A; **18.2**/**18.3** ✅; reformulation policy in `relational-modifier-resolution-policy.md` |
 | **19** Query dictionary publish consolidation | ✅ Done | 100% | **19.0–19.5** ✅; sync **retained** as intentional handoff (**19.4**); egress bundle wired (**19.5**) |
-| **20** DDL event-walker AST construction hygiene | ✅ Done | 100%* | **20.0–20.8** ✅; opaque tails are interval-verbatim; optional **20.9** left-factor warnings deferred |
+| **20** DDL event-walker AST construction hygiene | ✅ Done | 100% | **20.0–20.8** ✅; **20.9** ❌ closed (won’t pursue) |
 | **13** Language feature gap closure | ✅ Closed for consolidation | 100%* | **13.1–13.4** ✅; **13.5** ❌ spun off → [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md); **13.6** ❌ spun off → [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) |
 
 **Recent wins (Jul 2026):**
@@ -222,9 +240,9 @@ Empty global query dict or alias token where column token expected: `simpleVaria
 - **`6c9e5fc`** (Aug 2026) — Worklist: full-suite baseline documented; deferred large-sample status updated.
 - **17.6.1** (Aug 2026) — **Human golden sign-off** for triple / multi-modifier pivot-unpivot tests (tiers **A–C** below). Triple\* / closeout / `*SubqueryFromV17_6_7Test` goldens are **accepted** for `derivation`, `table_dictionary`, `interface`, diagnostics, and symbol tables per design contract.
 
-**Active blockers:** None for default `mvn test`. Large-sample live queries still `@Ignore` (**§17.7.7-deferred-large-sample-goldens**).
+**Active blockers:** None for this worklist. Default `mvn test` is green.
 
-**Suggested next focus:** Phase **20** (DDL walker hygiene). Consolidation language gaps **13.1–13.4** are done; **13.5**/**13.6** are ❌ spun off to independent work plans (not part of closing this worklist).
+**Consolidation program:** ✅ **Complete.** Further work lives only in the [independent plans](#open-work-outside-this-worklist) above (or ad-hoc product tasks).
 
 ---
 
@@ -2378,7 +2396,7 @@ DDL handlers still bypass the walked tree in several places:
 | **20.6** | **CREATE function/procedure/macro**: parameters/clauses from walked children; drop `ctx.generic_ddl_paren_content()` index guards | Walker | function/procedure/macro + nested-paren tests | ✅ |
 | **20.7** | Delete `extractDdlObjectTypeText`, `passThroughDdlRuleValueToParent` (`extractCreateTypeText` already retired in **20.5**) | Walker | Grep clean | ✅ |
 | **20.8** | Golden refresh if blob case/spacing shifts; full DDL + script + truncate endpoint gate | `SqlEventWalkerDdlTests` + Scripts/DDL + truncate | Gate green | ✅ |
-| **20.9** *(optional)* | Left-factor Jinja / set-op aliasing to reduce recoverable parser warnings in `{{ source(...) }} as alias` + parenthesized `EXCEPT` / `UNION` forms without changing AST or symbol-table output | Grammar + `SqlParseEventWalkerWithAccessObjectTest` canaries | Minimal left-factored tweak around `table_source_primary` / `subquery` / `set_operation_member`; validate warning count drops while final parse stays identical | ⏸️ |
+| **20.9** | Left-factor parser aliases to reduce recoverable FULL_CONTEXT/AMBIGUITY on Jinja/set-op canaries | Grammar + AccessObject canaries | Warning count drop without AST change | ❌ **Closed (Aug 2026)** — `table_primary` left-factor shipped (`7a1de9f`); `select_item` left-factor reverted (no noise win); remaining warnings accepted benign |
 
 ### Phase 20 closeout checklist
 
@@ -2387,6 +2405,7 @@ DDL handlers still bypass the walked tree in several places:
 - [x] `generic_ddl_*` remains opaque (structured options ❌ spun off — see [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md)) but blob text is **interval-verbatim**, not ctx child rejoin — **20.3**
 - [x] `SqlEventWalkerDdlTests` (**55**) + `SqlEventWalkerScriptsAndDDLTests` (**20**) + truncate endpoints + script DDL coverage + generator DDL round-trips — **20.8**
 - [x] No symbol-table / convert egress changes (diff scope: grammar + `SqlParseEventWalker.java` + DDL/script tests + worklist)
+- [x] **20.9** closed — parser warning reduction not pursued further (see substeps table)
 
 ### Phase 20 vs spun-off DDL structured options
 
@@ -2743,7 +2762,7 @@ Each test asserts: AST `type=`, `substitutionsMap`, and symbol-table `interface`
 
 **Why spun off:** Opaque `generic_ddl_options` / `generic_ddl_paren_content` blobs plus reliable statement typing are enough for consolidation, scripts, and access-object routing. Structured `IF NOT EXISTS` / `OR REPLACE` / … is product-triggered grammar+walker expansion, not symbol-table consolidation. Phase **20** only fixes how opaque blobs are collected.
 
-**Historical note (Jul 2026):** Originally deferred long-term inside Phase 13; Aug 2026 spin-off clears consolidation closeout so this worklist can finish with Phase **20** (and any remaining consolidation-only items).
+**Historical note (Aug 2026):** Spin-off cleared consolidation closeout; worklist is **closed** — see [symbol-table-resolution-consolidation-worklist.md](symbol-table-resolution-consolidation-worklist.md) § Open work outside this worklist.
 
 ### 13.6 — SQL statement generator ❌ SPUN OFF (Aug 2026)
 
@@ -2944,10 +2963,10 @@ Phase 16 — PIVOT operand materialization                               ✅ DON
   16.3 grep clean — single convert call site ✅
   16.4 PIVOT physical-operand qualifier policy ✅
 
-Phase 17 — UNPIVOT derived columns                                     🔄 IN PROGRESS
+Phase 17 — UNPIVOT derived columns                                     ✅ DONE (Aug 2026)
   17.0 handler inventory + 26-test matrix ✅ (Jul 2026)
   17.0b derived-column operand qualifier guard ✅ (Jul 2026)
-  17.1–17.5: enforce signed ownership policy; VALUE/FOR/IN outcomes; retire duplicate convert hooks
+  17.1–17.7: enforce signed ownership policy; VALUE/FOR/IN outcomes; retire duplicate convert hooks
 
 Phase 18 — PIVOT IN-list output + IN-identifier                        ✅ closed policy-only
   18.0–18.5: inventory + reformulation policy; 18.1/18.4/18.5 dropped
@@ -2957,7 +2976,7 @@ Phase 19 — Query dictionary publish path consolidation                   ✅ D
 
 Phase 20 — DDL event-walker AST construction hygiene                     ✅ DONE (Aug 2026)
   20.0–20.8: verbatim opaque tails; walked DROP/ALTER type; CREATE type/params from walk; scrapers deleted
-  20.9 optional: Jinja / set-op left-factor warning reduction (deferred)
+  20.9: ❌ closed (won’t pursue — see substeps table)
 ```
 
 **Do not start with:** DML golden bulk update, CTE redesign, or PIVOT/UNPIVOT golden bulk refresh.
@@ -3071,9 +3090,9 @@ Phases 6–7 and 8 can overlap carefully (same files); prefer **6 before 8** so 
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **20** | DDL event-walker AST construction hygiene (`SqlParseEventWalker` — verbatim opaque tails; retire ctx scrapers) | ✅ **20.0–20.8** done (Aug 2026); optional **20.9** deferred |
+| **20** | DDL event-walker AST construction hygiene (`SqlParseEventWalker` — verbatim opaque tails; retire ctx scrapers) | ✅ **20.0–20.9** closed (Aug 2026; **20.9** won’t pursue) |
 
-Do **not** start the production validation checklist until Phase **20** closeout is ✅ (or explicitly deferred) and every row in the table above is ✅.
+Consolidation program **complete**. Do **not** extend this table — use [Open work outside this worklist](#open-work-outside-this-worklist).
 
 ---
 
@@ -3131,48 +3150,11 @@ Run against production or production-equivalent data and tooling. Record environ
 
 ## Prompt to paste into a new agent session
 
+**Historical only — consolidation is complete (Aug 2026).** For new work, read [Open work outside this worklist](#open-work-outside-this-worklist) (DDL structured options, SQL generator completion) or the user’s current product task. Do **not** resume Phases 15–20 from this file.
+
 ```
-We are continuing symbol-table resolution consolidation for the SQL parse walker.
-
-Read parse/documents/symbol-table-resolution-consolidation-worklist.md first — especially:
-- Progress dashboard (Jul 2026) — Phase 15 ✅ DONE (15.1–15.6 + closeout); **Phase 16** next
-- Phase 15 — Unified convert egress loop (15.1–15.6; **15.6** = ConvertEgressScopeBundle)
-- Phase 14 Step E — **E.5 CLOSED** in Phase 15.3
-- Phase 19 — Query dictionary publish path consolidation (after 15.6)
-- Phase 20 — DDL event-walker AST construction hygiene ✅ DONE (Aug 2026; optional 20.9 deferred)
-- Shortest path to dead-code removal
-- Published scope vs global dictionary rules
-- Phase 8 unified resolver (RESOLVED_DERIVED_COLUMN, isPhysicalTableRefVisibleInScope)
-
-Current state (Spring-2026-Extensions):
-- Phases 1–12 + Phase 14 Steps C–F done; Phase **15** done (closeout Jul 2026); gate 195/195; `-Pphase15-derived-gate` 67/67; full suite green.
-- **Phase 16** next (PIVOT operand materialization); Phase **19** (query-dict publish) unblocked.
-
-Your mission this session — follow Phase 16 substeps unless user directs otherwise; see Phases 17–20 for later work:
-1. Phase 16.0: audit triple `resolvePivotOperandColumnsFromUnresolvedMap` call sites
-2. Re-run `mvn -Pphase15-derived-gate test` + `mvn -Psmoketest-quality-gate test` + full suite after each sub-step.
-
-Contract to preserve:
-- Embedded scope payloads are canonicalized as def_*.
-- Local alias maps and unaliased source refs remain queryN/valuesN/unionN/intersectN (or real alias/table names), not def_*.
-- AST stays syntactic (table_ref=null for unqualified/unreferenced columns); resolution only in symbol table/dictionaries.
-- Never backpatch finalized def_queryN child payloads.
-- Never add new fallback/recovery readers without explicit user approval.
-- Local query_dictionary is output-token storage — NOT a substitute for querySourceExportsColumn proof.
-
-Validation (run after each step — full quality gate):
-
-  cd parse
-  mvn -Psmoketest-quality-gate test
-
-Gate = 107 tests: nested demo (2), query dictionary source routing canaries (3), correlated scalar predicand (16), correlated IN (8), correlated EXISTS (5), UPDATE V1–V14 (14), INSERT VALUES V1–V7 (7), unaliased V1–V16 (16), CTE unqualified refs CTEV1–CTEV15 (15), scalar subquery symbol-table matrix V1–V9 + correlated (10), production scalar/EXISTS probes (4), nested formula subqueries (1), subquery semantics probes (6).
-See "Quality gate" section at top of worklist for method names.
-
-Out of scope this session:
-- CTE behavior redesign, DML golden bulk refresh.
-- Phase 13 consolidation items (**13.1–13.4**) are done; **13.5**/**13.6** ❌ spun off to independent work plans (see Phase 13 section).
-
-Keep diffs minimal. One logical change per commit if committing.
+Consolidation worklist CLOSED. See parse/documents/symbol-table-resolution-consolidation-worklist.md
+"Open work outside this worklist" for active plans.
 ```
 
 ---

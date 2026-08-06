@@ -12,7 +12,7 @@
 
 ## Why this is its own plan
 
-Consolidation needed a **usable** AST→SQL path for DML / SCRIPT / DDL / PIVOT smoke coverage. That milestone is done. Full grammar-surface generation is a multi-month track and must not block Phase **20** or closing the consolidation worklist.
+Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface generation is a multi-month track on this independent plan.
 
 ---
 
