@@ -20,6 +20,7 @@ import static mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DELETE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_INSERT_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_IN_LIST_TREE_KEY;
+import static mumble.SQLParserEndPoints.SQLPARSER_LITERAL_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_JOIN_EXTENSION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_PREDICAND_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_QUERY_TREE_KEY;
@@ -46,7 +47,8 @@ import sql.walker.SqlParseEventWalker;
  * method with the SQL query string and the type of parse you want to perform.
  * 
  * The END POINTS of the GRAMMAR define the end point type strings and can be "sql", "column_value", "predicand_value",
- * "in_list_predicate_value", "condition_value", "tuple_value", "values_statement_end", "query_value", or "join_extension_value".
+ * "in_list_predicate_value", "condition_value", "tuple_value", "values_statement_end", "query_value",
+ * "join_extension_value", or "literal_value".
  * 
  * Then retrieve the parser results Snippet object using the getSnippet() method. This will have all of the available
  * information extracted from the parse tree, including the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary,
@@ -168,6 +170,8 @@ public class SqlParserAccess extends AbstractParserAccess {
             this.parserEmitPoint = parser.script();
         } else if (type.equals(SQLPARSER_JOIN_EXTENSION_TREE_KEY)) {
             this.parserEmitPoint = parser.join_extension_value();
+        } else if (type.equals(SQLPARSER_LITERAL_TREE_KEY)) {
+            this.parserEmitPoint = parser.literal_value();
         } else if (type.equals(SQLPARSER_INSERT_TREE_KEY)) {
             this.parserEmitPoint = parser.insert_end_point();
         } else if (type.equals(SQLPARSER_UPDATE_TREE_KEY)) {

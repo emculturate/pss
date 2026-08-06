@@ -1771,6 +1771,54 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 
 
 	@Test
+	public void literalNumericValueEndpointTest() {
+		assertLiteralEndpoint("25", "{LITERAL={literal=25}}");
+	}
+
+	@Test
+	public void literalNegativeIntegerEndpointTest() {
+		assertLiteralEndpoint("-42", "{LITERAL={literal=-42}}");
+	}
+
+	@Test
+	public void literalRealNumberEndpointTest() {
+		assertLiteralEndpoint("3.14", "{LITERAL={literal=3.14}}");
+	}
+
+	@Test
+	public void literalScientificNotationEndpointTest() {
+		assertLiteralEndpoint("1.5e2", "{LITERAL={literal=1.5e2}}");
+	}
+
+	@Test
+	public void literalCharacterStringEndpointTest() {
+		assertLiteralEndpoint("'hello'", "{LITERAL={literal='hello'}}");
+	}
+
+	@Test
+	public void literalStringWithPunctuationEndpointTest() {
+		assertLiteralEndpoint("'O''Reilly, Inc.!'", "{LITERAL={literal='O''Reilly, Inc.!'}}");
+	}
+
+	@Test
+	public void literalBooleanTrueEndpointTest() {
+		assertLiteralEndpoint("true", "{LITERAL={literal=true}}");
+	}
+
+	private void assertLiteralEndpoint(String sql, String expectedAst) {
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runLiteralParsertest(sql, parser);
+
+		Assert.assertEquals("AST is wrong", expectedAst, extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{}", extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{}", extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void conditionBasicConditionTest() {
 		String sql = "table1.emp_sales_count >= 25";
 		final SQLSelectParserParser parser = parse(sql);

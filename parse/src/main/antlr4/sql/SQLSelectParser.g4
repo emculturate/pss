@@ -142,7 +142,7 @@ options {
 
   Standalone parse entry points not duplicated here (same underlying rules):
     sql, ddl, insert_end_point, update_end_point, delete_end_point, truncate_end_point,
-    values_statement_end, column_value, predicand_value, ...
+    values_statement_end, column_value, predicand_value, literal_value, ...
 ===============================================================================
 */
 script

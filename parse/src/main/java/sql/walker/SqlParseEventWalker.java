@@ -2041,6 +2041,73 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	  Literal Value Start Symbol
 	===============================================================================
 	*/
+	@Override
+	public void exitLiteral_value(SQLSelectParserParser.Literal_valueContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object child = subMap.remove("1");
+		walker.asTree.put(SQLPARSER_LITERAL_TREE_KEY, buildLiteralValueEndpointTree(child));
+
+		walker.addQueryInputColumnsToTableDictionary();
+	}
+
+	private HashMap<String, Object> buildLiteralValueEndpointTree(Object child) {
+		HashMap<String, Object> literalTree = new HashMap<>();
+		if (child instanceof Map<?, ?> childMap) {
+			@SuppressWarnings("unchecked")
+			HashMap<String, Object> map = new HashMap<>((Map<String, Object>) childMap);
+			populateLiteralValueEndpointTree(literalTree, map);
+		} else {
+			literalTree.put(MUMBLE_LITERAL_KEY, child);
+		}
+		return literalTree;
+	}
+
+	private void populateLiteralValueEndpointTree(
+			HashMap<String, Object> literalTree,
+			HashMap<String, Object> map) {
+		map.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (map.containsKey(MUMBLE_LITERAL_KEY)) {
+			literalTree.putAll(map);
+			return;
+		}
+		Object first = map.get("1");
+		if (map.containsKey("2") && first instanceof String sign && ("-".equals(sign) || "+".equals(sign))) {
+			Object magnitude = unwrapLiteralEndpointMagnitude(map.get("2"));
+			String literalText = "-".equals(sign) ? sign + magnitude : String.valueOf(magnitude);
+			literalTree.put(MUMBLE_LITERAL_KEY, literalText);
+			return;
+		}
+		if (map.containsKey("1")) {
+			literalTree.put(MUMBLE_LITERAL_KEY, unwrapLiteralEndpointMagnitude(first));
+			return;
+		}
+		if (map.size() == 1) {
+			literalTree.put(MUMBLE_LITERAL_KEY, map.values().iterator().next());
+			return;
+		}
+		literalTree.putAll(map);
+	}
+
+	private Object unwrapLiteralEndpointMagnitude(Object node) {
+		if (node instanceof Map<?, ?> nodeMap) {
+			@SuppressWarnings("unchecked")
+			HashMap<String, Object> map = new HashMap<>((Map<String, Object>) nodeMap);
+			map.remove(ASTWALKER_RULE_TYPE_KEY);
+			if (map.containsKey(MUMBLE_LITERAL_KEY)) {
+				return map.get(MUMBLE_LITERAL_KEY);
+			}
+			if (map.containsKey("1")) {
+				return unwrapLiteralEndpointMagnitude(map.get("1"));
+			}
+			if (map.size() == 1) {
+				return map.values().iterator().next();
+			}
+		}
+		return node;
+	}
 
 		/*
 	===============================================================================

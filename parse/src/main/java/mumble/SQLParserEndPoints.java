@@ -23,6 +23,7 @@ public class SQLParserEndPoints {
     public static final String SQLPARSER_SCRIPT_TREE_KEY = "SCRIPT";
     public static final String SQLPARSER_SQL_TREE_KEY = "SQL";
     public static final String SQLPARSER_QUERY_TREE_KEY = "QUERY";
+    public static final String SQLPARSER_LITERAL_TREE_KEY = "LITERAL";
     
     // Maps to lookup constants by name or value
     private static final Map<String, String> NAME_TO_VALUE_MAP = new HashMap<>();
