@@ -7223,6 +7223,37 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		boolean crossNaturalInvalidCondition = false;
+		if (ctx.getParent() instanceof SQLSelectParserParser.Table_reference_listContext tableReferenceList) {
+			SQLSelectParserParser.Unqualified_joinContext unqualifiedJoin = null;
+			for (int childIndex = 0; childIndex < tableReferenceList.getChildCount(); childIndex++) {
+				ParseTree child = tableReferenceList.getChild(childIndex);
+				if (child instanceof SQLSelectParserParser.Unqualified_joinContext uj) {
+					unqualifiedJoin = uj;
+					break;
+				}
+			}
+			if (unqualifiedJoin != null) {
+				String joinKeyword = crossOrNaturalJoinKeyword(unqualifiedJoin);
+				if (joinKeyword != null) {
+					String conditionKeyword = ctx.named_columns_join() != null ? "USING" : "ON";
+					Token joinAnchor = unqualifiedJoin.getStart();
+					int joinLine = joinAnchor.getLine();
+					int joinCharPos = joinAnchor.getCharPositionInLine() + 1;
+					Token conditionAnchor = joinSpecificationConditionStartToken(ctx);
+					int conditionLine = conditionAnchor.getLine();
+					int conditionCharPos = conditionAnchor.getCharPositionInLine() + 1;
+					symbolTreeHelper.emitCrossNaturalJoinInvalidConditionFatal(
+							joinKeyword,
+							joinLine,
+							joinCharPos,
+							conditionKeyword,
+							conditionLine,
+							conditionCharPos);
+					crossNaturalInvalidCondition = true;
+				}
+			}
+		}
 		if (subMap.size() == 1) {
 			Map<String, Object> pMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
 			Map<String, Object> join = null;
@@ -7241,7 +7272,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					join.put(MUMBLE_USING_KEY, usingColumns);
 				} else {
 					join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
-					symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
+					if (!crossNaturalInvalidCondition) {
+						symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
+					}
 				}
 			} else {
 				//Could not locate join map for ON clause
@@ -7250,6 +7283,59 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Wrong number of entries
 		}
 		 walker.asTree.put("SKIP", "TRUE");
+	}
+
+	private static String crossOrNaturalJoinKeyword(SQLSelectParserParser.Unqualified_joinContext unqualifiedJoin) {
+		if (unqualifiedJoin.CROSS() != null) {
+			return "CROSS";
+		}
+		if (unqualifiedJoin.NATURAL() != null) {
+			return "NATURAL";
+		}
+		return null;
+	}
+
+	private static Token joinSpecificationConditionStartToken(
+			SQLSelectParserParser.Join_specificationContext ctx) {
+		if (ctx.named_columns_join() != null) {
+			SQLSelectParserParser.Using_termContext usingTerm = ctx.named_columns_join().using_term();
+			if (usingTerm != null && usingTerm.USING() != null) {
+				return usingTerm.USING().getSymbol();
+			}
+			if (usingTerm != null) {
+				return usingTerm.getStart();
+			}
+		}
+		SQLSelectParserParser.Join_conditionContext joinCondition = ctx.join_condition();
+		if (joinCondition != null && joinCondition.ON() != null) {
+			return joinCondition.ON().getSymbol();
+		}
+		if (joinCondition != null) {
+			return joinCondition.getStart();
+		}
+		return ctx.getStart();
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean joinPartMapContainsCrossOrNaturalInvalidCondition(Map<String, Object> joinPartMap) {
+		for (Object value : joinPartMap.values()) {
+			if (!(value instanceof Map<?, ?> bucket)) {
+				continue;
+			}
+			Object joinTypeObj = ((Map<String, Object>) bucket).get(MUMBLE_JOIN_KEY);
+			if (!(joinTypeObj instanceof String joinType)) {
+				continue;
+			}
+			String normalized = joinType.toLowerCase(Locale.ROOT);
+			boolean crossOrNatural = "crossjoin".equals(normalized) || normalized.startsWith("natural");
+			if (!crossOrNatural) {
+				continue;
+			}
+			if (bucket.containsKey(MUMBLE_USING_KEY) || bucket.containsKey(MUMBLE_JOIN_ON_KEY)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -7303,6 +7389,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@SuppressWarnings("unchecked")
 	private void captureJoinUsingDependenciesForJoinPartMap(Map<String, Object> joinPartMap) {
 		if (joinPartMap == null || joinPartMap.size() < 2) {
+			return;
+		}
+		if (joinPartMapContainsCrossOrNaturalInvalidCondition(joinPartMap)) {
 			return;
 		}
 		Object leftOperandObj = joinPartMap.get("1");

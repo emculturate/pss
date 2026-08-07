@@ -1394,6 +1394,74 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 	// Join USING Tests end here
 
 	/**************************************************** */
+	// CROSS / NATURAL join with invalid ON or USING
+	/**************************************************** */
+
+	@Test
+	public void crossJoinUsingInvalidConditionFatalTest() {
+		final String query = "SELECT * FROM third a CROSS JOIN fourth b USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
+				"CROSS JOIN at (l:1 c:23) has invalid USING condition (l:1 c:43).",
+				"CROSS JOIN",
+				1,
+				23);
+	}
+
+	@Test
+	public void crossJoinOnInvalidConditionFatalTest() {
+		final String query = "SELECT * FROM third a CROSS JOIN fourth b ON a.a = b.a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
+				"CROSS JOIN at (l:1 c:23) has invalid ON condition (l:1 c:43).",
+				"CROSS JOIN",
+				1,
+				23);
+	}
+
+	@Test
+	public void naturalJoinUsingInvalidConditionFatalTest() {
+		final String query = "SELECT * FROM third a NATURAL JOIN fourth b USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
+				"NATURAL JOIN at (l:1 c:23) has invalid USING condition (l:1 c:45).",
+				"NATURAL JOIN",
+				1,
+				23);
+	}
+
+	@Test
+	public void naturalJoinOnInvalidConditionFatalTest() {
+		final String query = "SELECT * FROM third a NATURAL JOIN fourth b ON a.a = b.a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
+				"NATURAL JOIN at (l:1 c:23) has invalid ON condition (l:1 c:45).",
+				"NATURAL JOIN",
+				1,
+				23);
+	}
+
+	/**************************************************** */
 	// Join ON Tests start here
 	/**************************************************** */
 	@Test

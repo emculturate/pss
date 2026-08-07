@@ -809,14 +809,14 @@ join_extension
   
 table_reference_list
   : table_primary ((COMMA lateral_modifier? table_primary)
-    | (unqualified_join lateral_modifier? right=table_primary)
+    | (unqualified_join lateral_modifier? right=table_primary s=join_specification?)
     | (qualified_join lateral_modifier? right=table_primary s=join_specification?))*
   ;
   
   // Used for inserting optional Join Clauses to a query with a Join Extension variable
 join_extension_primary
   : ((COMMA lateral_modifier? table_primary)
-     | (unqualified_join lateral_modifier? right=table_primary)
+     | (unqualified_join lateral_modifier? right=table_primary s=join_specification?)
      | (qualified_join lateral_modifier? right=table_primary s=join_specification?))*  join_extension?
   ;
 

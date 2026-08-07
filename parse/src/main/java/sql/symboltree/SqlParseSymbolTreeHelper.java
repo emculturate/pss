@@ -16491,6 +16491,40 @@ public class SqlParseSymbolTreeHelper {
 		markJoinUsingColumnDisqualified(columnName);
 	}
 
+	public void emitCrossNaturalJoinInvalidConditionFatal(
+			String joinKeyword,
+			Integer joinLine,
+			Integer joinCharPos,
+			String conditionKeyword,
+			Integer conditionLine,
+			Integer conditionCharPos) {
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_CROSS_NATURAL_JOIN_INVALID_CONDITION);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_CROSS_NATURAL_JOIN_INVALID_CONDITION);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"%s JOIN at (l:%s c:%s) has invalid %s condition (l:%s c:%s).",
+						joinKeyword,
+						String.valueOf(joinLine),
+						String.valueOf(joinCharPos),
+						conditionKeyword,
+						String.valueOf(conditionLine),
+						String.valueOf(conditionCharPos))
+				: String.format(
+						diagTemplate,
+						joinKeyword,
+						String.valueOf(joinLine),
+						String.valueOf(joinCharPos),
+						conditionKeyword,
+						String.valueOf(conditionLine),
+						String.valueOf(conditionCharPos));
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				joinLine,
+				joinCharPos,
+				joinKeyword + "/" + conditionKeyword);
+	}
+
 	@SuppressWarnings("unchecked")
 	private void markJoinUsingColumnDisqualified(String columnName) {
 		if (columnName == null || columnName.isBlank()) {
