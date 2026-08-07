@@ -1,7 +1,9 @@
 # Coverage Gap Report: sql.walker and astwalkers
 
-- Source data: parse/target/site/jacoco/jacoco.xml
-- Detailed method gap CSV: parse/documents/coverage/sql_walker_astwalkers_method_gaps.csv
+- Source data: parse/target/site/jacoco/jacoco.xml (refresh via `cd parse && mvn verify`)
+- **Exit-method workplan:** [sql_walker_exit_method_coverage-workplan.md](sql_walker_exit_method_coverage-workplan.md)
+- **Exit-method gap summary:** [sql_walker_exit_method_gaps.md](sql_walker_exit_method_gaps.md)
+- Detailed method gap CSV: parse/documents/coverage/sql_walker_astwalkers_method_gaps.csv *(may be stale until regenerated from jacoco.xml)*
 - **Hygiene (Jul 2026):** Removed rows for retired dead code — `rehomeUpdateUnqualifiedUnknownsToSingleFromTable`, `getSingleUpdateFromTableReference` (Step A, `36f7aa0`).
 
 ## astwalkers :: astwalkers/AbstractASTWalkerHelper
