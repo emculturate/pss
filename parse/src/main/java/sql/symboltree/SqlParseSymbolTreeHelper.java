@@ -16777,7 +16777,6 @@ public class SqlParseSymbolTreeHelper {
 						tokenPosition[1],
 						formatJoinUsingMissingSourcesList(
 								leftSource, rightSource, leftAccepts, rightAccepts));
-				continue;
 			}
 
 			if (leftAccepts) {
