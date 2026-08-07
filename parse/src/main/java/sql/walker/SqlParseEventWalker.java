@@ -7294,16 +7294,34 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@SuppressWarnings("unchecked")
 	private void captureJoinUsingDependenciesFromTableReferenceSubMap(Map<String, Object> tableReferenceSubMap) {
-		if (tableReferenceSubMap == null || tableReferenceSubMap.size() < 2) {
+		if (tableReferenceSubMap == null) {
 			return;
 		}
+		captureJoinUsingDependenciesForJoinPartMap(tableReferenceSubMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void captureJoinUsingDependenciesForJoinPartMap(Map<String, Object> joinPartMap) {
+		if (joinPartMap == null || joinPartMap.size() < 2) {
+			return;
+		}
+		Object leftOperandObj = joinPartMap.get("1");
+		if (leftOperandObj instanceof Map<?, ?> leftOperandMapObj) {
+			Map<String, Object> leftOperandMap = (Map<String, Object>) leftOperandMapObj;
+			if (isNestedJoinOperandMap(leftOperandMap)) {
+				Object nestedJoinObj = leftOperandMap.get(MUMBLE_JOIN_KEY);
+				if (nestedJoinObj instanceof Map<?, ?> nestedJoinMapObj) {
+					captureJoinUsingDependenciesForJoinPartMap((Map<String, Object>) nestedJoinMapObj);
+				}
+			}
+		}
 		Map<String, Object> usingColumns =
-				extractJoinUsingColumnsFromTableReferenceJoinBucket(tableReferenceSubMap.get("2"));
+				extractJoinUsingColumnsFromTableReferenceJoinBucket(joinPartMap.get("2"));
 		if (usingColumns == null || usingColumns.isEmpty()) {
 			return;
 		}
-		Map<String, Object> left = coerceJoinUsingOperandSource(tableReferenceSubMap.get("1"));
-		Map<String, Object> right = coerceJoinUsingOperandSource(tableReferenceSubMap.get("3"));
+		Map<String, Object> left = coerceJoinUsingOperandSource(joinPartMap.get("1"));
+		Map<String, Object> right = coerceJoinUsingOperandSource(joinPartMap.get("3"));
 		if (left == null || right == null || left == right) {
 			return;
 		}

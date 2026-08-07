@@ -16830,6 +16830,42 @@ public class SqlParseSymbolTreeHelper {
 		columnMap.put(MUMBLE_NAME_KEY, columnName);
 		columnMap.put(MUMBLE_TABLE_REF_KEY, qualifiedSourceRef);
 		walker.collectUnresolvedColumnReference(qualifiedSourceRef, columnMap, token);
+		mergeJoinUsingOperandColumnIntoSubstitutionOrJinjaTableDictionary(
+				sourceResult, columnName, token);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeJoinUsingOperandColumnIntoSubstitutionOrJinjaTableDictionary(
+			Map<String, Object> sourceResult,
+			String columnName,
+			Token token) {
+		if (token == null || columnName == null || columnName.isBlank()) {
+			return;
+		}
+		if (!isJoinUsingTupleSubstitutionJoinSource(sourceResult)
+				&& !isJoinUsingJinjaTableJoinSource(sourceResult)) {
+			return;
+		}
+		String aliasRef = resolveJoinUsingSourceReference(sourceResult);
+		String dictionaryKey = resolveJoinUsingPhysicalDictionaryKey(sourceResult, aliasRef);
+		if (dictionaryKey == null || dictionaryKey.isBlank()) {
+			return;
+		}
+		walker.ensureTableDictionaryEntry(dictionaryKey);
+		Object tableDictionaryObj = walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (!(tableDictionaryObj instanceof Map<?, ?> tableDictionaryObjMap)) {
+			return;
+		}
+		Map<String, Object> tableDictionary = (Map<String, Object>) tableDictionaryObjMap;
+		Object tableBucketObj = tableDictionary.get(dictionaryKey);
+		if (!(tableBucketObj instanceof Map<?, ?> tableBucketMapObj)) {
+			return;
+		}
+		HashMap<String, Object> tableBucket = new HashMap<String, Object>((Map<String, Object>) tableBucketMapObj);
+		ArrayList<String> tokenRefs = new ArrayList<String>();
+		tokenRefs.add(token.toString());
+		walker.mergeResolvedColumnIntoDictionary(tableBucket, columnName, tokenRefs);
+		tableDictionary.put(dictionaryKey, tableBucket);
 	}
 
 	private Token lookupJoinUsingOperandToken(String columnName) {
@@ -16898,7 +16934,7 @@ public class SqlParseSymbolTreeHelper {
 		if (isDirectTableJoinSource(sourceResult)) {
 			return true;
 		}
-		if (isJoinUsingTableFunctionSource(sourceResult)) {
+		if (isJoinUsingPermissiveTableLikeSource(sourceResult)) {
 			return true;
 		}
 		if (isJoinUsingValuesSource(sourceResult)) {
@@ -16923,6 +16959,83 @@ public class SqlParseSymbolTreeHelper {
 		}
 		String canonicalRef = resolveJoinUsingCanonicalSourceRef(sourceResult);
 		return canonicalRef != null && isTableFunctionSourceReference(canonicalRef);
+	}
+
+	/**
+	 * Tuple substitutions, Jinja table refs, and table functions cannot be schema-checked like
+	 * physical tables; treat them like direct tables for JOIN USING acceptance.
+	 */
+	private boolean isJoinUsingPermissiveTableLikeSource(Map<String, Object> sourceResult) {
+		return isJoinUsingTableFunctionSource(sourceResult)
+				|| isJoinUsingTupleSubstitutionJoinSource(sourceResult)
+				|| isJoinUsingJinjaTableJoinSource(sourceResult);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractJoinUsingSubstitutionPayload(Map<String, Object> sourceResult) {
+		if (sourceResult == null) {
+			return null;
+		}
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableObj instanceof Map<?, ?> tableMapObj) {
+			Object substitutionObj = ((Map<String, Object>) tableMapObj).get(MUMBLE_SUBSTITUTION_KEY);
+			if (substitutionObj instanceof Map<?, ?> substitutionMap) {
+				return (Map<String, Object>) substitutionMap;
+			}
+		}
+		Object directSubstitution = sourceResult.get(MUMBLE_SUBSTITUTION_KEY);
+		if (directSubstitution instanceof Map<?, ?> substitutionMap) {
+			return (Map<String, Object>) substitutionMap;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isJoinUsingTupleSubstitutionJoinSource(Map<String, Object> sourceResult) {
+		Map<String, Object> substitution = extractJoinUsingSubstitutionPayload(sourceResult);
+		if (substitution == null) {
+			return false;
+		}
+		Object typeObj = substitution.get(MUMBLE_TYPE_KEY);
+		return typeObj != null && MUMBLE_TUPLE_KEY.equals(typeObj.toString());
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isJoinUsingJinjaTableJoinSource(Map<String, Object> sourceResult) {
+		Map<String, Object> substitution = extractJoinUsingSubstitutionPayload(sourceResult);
+		if (substitution == null) {
+			return false;
+		}
+		Object partsObj = substitution.get(MUMBLE_PARTS_KEY);
+		if (partsObj instanceof Map<?, ?> partsMap
+				&& partsMap.containsKey(MUMBLE_JINJA_TABLE_KEY)) {
+			return true;
+		}
+		Object nameObj = substitution.get(MUMBLE_NAME_KEY);
+		return nameObj instanceof String name && name.contains("{{");
+	}
+
+	public String resolveJoinUsingPhysicalDictionaryKey(
+			Map<String, Object> sourceResult,
+			String qualifiedSourceRef) {
+		if (qualifiedSourceRef == null || qualifiedSourceRef.isBlank()) {
+			return qualifiedSourceRef;
+		}
+		Map<String, Object> substitution = extractJoinUsingSubstitutionPayload(sourceResult);
+		if (substitution != null) {
+			Object nameObj = substitution.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String substitutionName && !substitutionName.isBlank()) {
+				return substitutionName;
+			}
+		}
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasMapObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(qualifiedSourceRef)) {
+			Object mapped = aliasMap.get(qualifiedSourceRef);
+			if (mapped instanceof String mappedRef && mappedRef.startsWith("<")) {
+				return mappedRef;
+			}
+		}
+		return qualifiedSourceRef;
 	}
 
 	@SuppressWarnings("unchecked")
