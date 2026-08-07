@@ -7404,17 +7404,58 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 		}
-		Map<String, Object> usingColumns =
-				extractJoinUsingColumnsFromTableReferenceJoinBucket(joinPartMap.get("2"));
-		if (usingColumns == null || usingColumns.isEmpty()) {
-			return;
+		List<String> sequenceKeys = joinPartSequenceKeys(joinPartMap);
+		for (int sequenceIndex = 0; sequenceIndex < sequenceKeys.size(); sequenceIndex++) {
+			String joinBucketKey = sequenceKeys.get(sequenceIndex);
+			Map<String, Object> usingColumns =
+					extractJoinUsingColumnsFromTableReferenceJoinBucket(joinPartMap.get(joinBucketKey));
+			if (usingColumns == null || usingColumns.isEmpty()) {
+				continue;
+			}
+			// Each USING bucket pairs with the nearest tuple operands earlier/later in the
+			// join sequence (not necessarily adjacent slots — e.g. LATERAL modifiers).
+			Map<String, Object> left =
+					findNearestJoinTupleOperandInSequence(joinPartMap, sequenceKeys, sequenceIndex, -1);
+			Map<String, Object> right =
+					findNearestJoinTupleOperandInSequence(joinPartMap, sequenceKeys, sequenceIndex, 1);
+			if (left != null && left == right) {
+				continue;
+			}
+			symbolTreeHelper.captureJoinUsingClauseDependencies(usingColumns, left, right);
 		}
-		Map<String, Object> left = coerceJoinUsingOperandSource(joinPartMap.get("1"));
-		Map<String, Object> right = coerceJoinUsingOperandSource(joinPartMap.get("3"));
-		if (left != null && left == right) {
-			return;
+	}
+
+	private List<String> joinPartSequenceKeys(Map<String, Object> joinPartMap) {
+		List<String> keys = new ArrayList<>();
+		for (int index = 1; joinPartMap.containsKey(String.valueOf(index)); index++) {
+			keys.add(String.valueOf(index));
 		}
-		symbolTreeHelper.captureJoinUsingClauseDependencies(usingColumns, left, right);
+		return keys;
+	}
+
+	private Map<String, Object> findNearestJoinTupleOperandInSequence(
+			Map<String, Object> joinPartMap,
+			List<String> sequenceKeys,
+			int usingSequenceIndex,
+			int direction) {
+		if (direction < 0) {
+			for (int index = usingSequenceIndex - 1; index >= 0; index--) {
+				Map<String, Object> operand =
+						coerceJoinUsingOperandSource(joinPartMap.get(sequenceKeys.get(index)));
+				if (operand != null) {
+					return operand;
+				}
+			}
+			return null;
+		}
+		for (int index = usingSequenceIndex + 1; index < sequenceKeys.size(); index++) {
+			Map<String, Object> operand =
+					coerceJoinUsingOperandSource(joinPartMap.get(sequenceKeys.get(index)));
+			if (operand != null) {
+				return operand;
+			}
+		}
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
