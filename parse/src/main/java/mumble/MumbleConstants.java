@@ -199,6 +199,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_PIVOT_LITERAL_KEY = "pivot_literal";
     public static final String MUMBLE_PIVOT_PREFIX_KEY = "pivot_prefix";
     public static final String MUMBLE_UNPIVOT_KEY = "unpivot";
+    /** UNPIVOT {@code INCLUDE NULLS} / {@code EXCLUDE NULLS} — value is {@code include} or {@code exclude}. */
+    public static final String MUMBLE_UNPIVOT_NULLS_POLICY_KEY = "nulls_policy";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
     public static final String MUMBLE_UPDATE_DICTIONARY_KEY = "update_dictionary"; // Special key for update statement assignment token references
     public static final String MUMBLE_UPDATE_KEY = "update";

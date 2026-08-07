@@ -6210,4 +6210,44 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		Assert.assertEquals("Symbol Table is wrong", "{table_dictionary={tab1={col2=[[@8,26:29='col2',<391>,1:26]], col1=[[@5,16:19='col1',<391>,1:16]]}}, unresolved_column={col2={column={name=col2, table_ref=null}, locations=[[@8,26:29='col2',<391>,1:26]]}, col1={column={name=col1, table_ref=null}, locations=[[@5,16:19='col1',<391>,1:16]]}}, derivation={source_columns={tuple_0=[{name=col2, table_ref=tab1}, {name=col1, table_ref=tab1}]}, interface_source_ref=tab1, pivot_derived_source_bindings={tuple_0={B_sum=col1, A_sum=col1}}, source_ref=tab1, derived_columns={tuple_0={A_sum=[[@3,12:14='sum',<141>,1:12], [@11,35:37=''A'',<399>,1:35]], B_sum=[[@3,12:14='sum',<141>,1:12], [@13,40:42=''B'',<399>,1:40]]}}}}", extractor.getSymbolTable().toString());
 	}
 
+	/** Walker coverage T1.2 — {@code exitUnpivot_null_policy} / INCLUDE NULLS AST shape. */
+	@Test
+	public void unpivotIncludeNullsNullPolicyAstShapeTest() {
+		final String query =
+				"SELECT id, metric_name, metric_value\n"
+						+ "FROM my_table\n"
+						+ "UNPIVOT INCLUDE NULLS (\n"
+						+ "  metric_value FOR metric_name IN (jan_sales, feb_sales));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=null}}, 2={column={name=metric_name, table_ref=null}}, 3={column={name=metric_value, table_ref=null}}}, from={unpivot={nulls_policy=include, value={column={name=metric_value, table_ref=null}}, for={column={name=metric_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, table={alias=null, table=my_table}}}}",
+				extractor.getAsTree().toString());
+	}
+
+	/** Walker coverage T1.2 — {@code exitUnpivot_null_policy} / EXCLUDE NULLS AST shape. */
+	@Test
+	public void unpivotExcludeNullsNullPolicyAstShapeTest() {
+		final String query =
+				"SELECT id, metric_name, metric_value\n"
+						+ "FROM my_table\n"
+						+ "UNPIVOT EXCLUDE NULLS (\n"
+						+ "  metric_value FOR metric_name IN (jan_sales, feb_sales));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=id, table_ref=null}}, 2={column={name=metric_name, table_ref=null}}, 3={column={name=metric_value, table_ref=null}}}, from={unpivot={nulls_policy=exclude, value={column={name=metric_value, table_ref=null}}, for={column={name=metric_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, table={alias=null, table=my_table}}}}",
+				extractor.getAsTree().toString());
+	}
+
 }

@@ -7554,7 +7554,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	// Handles the main UNPIVOT clause, building a subtree rooted at MUMBLE_UNPIVOT_KEY.
 	// Each child type is identified by inspecting its content rather than by slot position,
 	// so optional children do not affect the classification of required ones:
-	//   - unpivot_null_policy  → Map containing MUMBLE_NULLS_POLICY_KEY
+	//   - unpivot_null_policy  → marker map with MUMBLE_UNPIVOT_NULLS_POLICY_KEY (include|exclude)
 	//   - unpivot_list         → numbered map whose "1" entry is a flattened in-item map
 	//                            (name/table_ref[/alias])
 	//   - value / name columns → column_reference map ({column={name, table_ref}})
@@ -7582,7 +7582,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object nullPolicy = null;
+		Object nullPolicyValue = null;
 		Object inList     = null;
 		List<Object> nameSlots = new ArrayList<>();   // valueCol then nameCol, in arrival order
 
@@ -7592,8 +7592,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		for (int i = 1; subMap.containsKey(String.valueOf(i)); i++) {
 			Object entry = subMap.get(String.valueOf(i));
 			if (entry instanceof Map<?, ?> entryMap) {
-				if (entryMap.containsKey(MUMBLE_NULLS_POLICY_KEY)) {
-					nullPolicy = entry;
+				if (entryMap.containsKey(MUMBLE_UNPIVOT_NULLS_POLICY_KEY)) {
+					nullPolicyValue = entryMap.get(MUMBLE_UNPIVOT_NULLS_POLICY_KEY);
 				} else if (isRelationalModifierOperandColumnEntry(entryMap)) {
 					// nameSlots.add(entry);
 					// first RelationalModifierOperandColumn is the Unpivot "value" derived column, second is the "name" derived column;
@@ -7619,8 +7619,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		   Map<String, Object> unpivotMap = new LinkedHashMap<>();
-		   if (nullPolicy != null)
-			   unpivotMap.put(MUMBLE_NULLS_POLICY_KEY, nullPolicy);
+		   if (nullPolicyValue != null) {
+			   unpivotMap.put(MUMBLE_UNPIVOT_NULLS_POLICY_KEY, nullPolicyValue);
+		   }
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_VALUE_KEY, valueCol);
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_FOR_KEY, nameCol);
 		   unpivotMap.put(mumble.MumbleConstants.MUMBLE_IN_KEY, inList);
@@ -7640,14 +7641,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-		
-		String item = ctx.getChild(0).getText();
-		
-		Map<String, Object> subMap = new HashMap<String, Object>();
-		subMap.put(MUMBLE_NULLS_POLICY_KEY, item);
-		subMap.put(ASTWALKER_RULE_TYPE_KEY, SQLSelectParserParser.RULE_unpivot_null_policy);
-		
-		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+
+		walker.removeNodeMap(ruleIndex, stackLevel);
+
+		String keyword = ctx.getChild(0).getText();
+		String policy = "INCLUDE".equalsIgnoreCase(keyword) ? "include" : "exclude";
+
+		Map<String, Object> marker = new LinkedHashMap<>();
+		marker.put(MUMBLE_UNPIVOT_NULLS_POLICY_KEY, policy);
+		walker.addToParent(parentRuleIndex, parentStackLevel, marker);
 	}
 
 	// relational_modifier_value_column and relational_modifier_name_column each wrap operand_column — propagate directly.
