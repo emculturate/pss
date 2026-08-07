@@ -310,7 +310,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE TABLE demo.stage AS SELECT id FROM demo.src",
 				"{DDL={create={type=TABLE, table={schema=demo, table=stage}, query={select={1={column={name=id, table_ref=null}}}, from={table={schema=demo, alias=null, table=src}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@7,34:35='id',<390>,1:34]]}, table_dictionary={demo.src={id=[[@7,34:35='id',<390>,1:34]]}}, interface={id=[{name=id, table_ref=demo.src}]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@7,34:35='id',<391>,1:34]]}, table_dictionary={demo.src={id=[[@7,34:35='id',<391>,1:34]]}}, interface={id=[{name=id, table_ref=demo.src}]}}}}");
 	}
 
 	@Test
@@ -334,7 +334,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE INDEX mydb.myschema.idx_events_ts ON mydb.myschema.events (event_ts)",
 				"{DDL={create={type=INDEX, name={schema=myschema, dbname=mydb, table=idx_events_ts}, table={schema=myschema, dbname=mydb, table=events}, columns={1={column={name=event_ts, table_ref=null}}}}}}",
-				"{def_create0={unresolved_column={event_ts={column={name=event_ts, table_ref=null}, locations=[[@14,66:73='event_ts',<390>,1:66]]}}}}");
+				"{def_create0={unresolved_column={event_ts={column={name=event_ts, table_ref=null}, locations=[[@14,66:73='event_ts',<391>,1:66]]}}}}");
 	}
 
 	@Test
@@ -342,7 +342,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE VIEW reporting.daily_summary AS SELECT id FROM demo.stage",
 				"{DDL={create={type=VIEW, name={schema=reporting, table=daily_summary}, query={select={1={column={name=id, table_ref=null}}}, from={table={schema=demo, alias=null, table=stage}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@7,46:47='id',<390>,1:46]]}, table_dictionary={demo.stage={id=[[@7,46:47='id',<390>,1:46]]}}, interface={id=[{name=id, table_ref=demo.stage}]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@7,46:47='id',<391>,1:46]]}, table_dictionary={demo.stage={id=[[@7,46:47='id',<391>,1:46]]}}, interface={id=[{name=id, table_ref=demo.stage}]}}}}");
 	}
 
 	@Test
@@ -350,7 +350,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE MATERIALIZED VIEW analytics.mv_daily AS SELECT id FROM demo.stage",
 				"{DDL={create={type=MATERIALIZED VIEW, name={schema=analytics, table=mv_daily}, query={select={1={column={name=id, table_ref=null}}}, from={table={schema=demo, alias=null, table=stage}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@8,54:55='id',<390>,1:54]]}, table_dictionary={demo.stage={id=[[@8,54:55='id',<390>,1:54]]}}, interface={id=[{name=id, table_ref=demo.stage}]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@8,54:55='id',<391>,1:54]]}, table_dictionary={demo.stage={id=[[@8,54:55='id',<391>,1:54]]}}, interface={id=[{name=id, table_ref=demo.stage}]}}}}");
 	}
 
 	@Test
@@ -382,7 +382,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE MACRO mydb.myschema.mac_one(arg1 int) AS SELECT 1 AS id",
 				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_one}, parameters=arg1 int, query={select={1={alias=id, literal=1}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@15,60:61='id',<390>,1:60]]}, interface={id=[]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@15,60:61='id',<391>,1:60]]}, interface={id=[]}}}}");
 	}
 
 	@Test
@@ -390,7 +390,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE MACRO mydb.myschema.mac_pi() AS SELECT 3 AS id",
 				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_pi}, query={select={1={alias=id, literal=3}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@13,51:52='id',<390>,1:51]]}, interface={id=[]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@13,51:52='id',<391>,1:51]]}, interface={id=[]}}}}");
 	}
 
 	@Test
@@ -398,7 +398,7 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"CREATE MACRO mydb.myschema.mac_typed(Arg1 INT) AS SELECT 1 AS id",
 				"{DDL={create={type=MACRO, name={schema=myschema, dbname=mydb, table=mac_typed}, parameters=Arg1 INT, query={select={1={alias=id, literal=1}}}}}}",
-				"{def_create1={def_query0={query_dictionary={id=[[@15,62:63='id',<390>,1:62]]}, interface={id=[]}}}}");
+				"{def_create1={def_query0={query_dictionary={id=[[@15,62:63='id',<391>,1:62]]}, interface={id=[]}}}}");
 	}
 
 	@Test
