@@ -3,6 +3,8 @@ package sql.walker;
 import org.junit.Assert;
 import org.junit.Test;
 
+import access.Snippet;
+import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 /**
@@ -16,13 +18,37 @@ import sql.SQLSelectParserParser;
 public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 
 	private void assertDdlAstSymbolDiagnostics(String query, String expectedAst, String expectedSymbols) {
+		assertDdlAstSymbolDiagnostics(query, expectedAst, expectedSymbols, null, null, null, -1, -1);
+	}
+
+	private void assertDdlAstSymbolDiagnostics(
+			String query,
+			String expectedAst,
+			String expectedSymbols,
+			String expectedDialectWarningCode,
+			String expectedDialectMessageFragment,
+			String expectedDialectTokenFragment,
+			int expectedDialectLine,
+			int expectedDialectCharPosition) {
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runDdlParsertest(query, parser);
 		Assert.assertEquals("AST is wrong for: " + query, expectedAst, extractor.getAsTree().toString());
 		Assert.assertEquals("Symbol Table is wrong for: " + query, expectedSymbols,
 				extractor.getSymbolTable().toString());
-		Assert.assertEquals("Diagnostics are wrong for: " + query, "[]",
-				extractor.getSnippet().getParserDiagnosticList().toString());
+		Snippet snippet = extractor.getSnippet();
+		if (expectedDialectWarningCode == null) {
+			Assert.assertEquals("Diagnostics are wrong for: " + query, "[]",
+					snippet.getParserDiagnosticList().toString());
+			return;
+		}
+		assertDiagnosticAtPosition(
+				snippet,
+				expectedDialectWarningCode,
+				ParseDiagnostic.Severity.WARNING,
+				expectedDialectMessageFragment,
+				expectedDialectTokenFragment,
+				expectedDialectLine,
+				expectedDialectCharPosition);
 	}
 
 	// -------------------------------------------------------------------------
@@ -466,7 +492,12 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"TRUNCATE TABLE demo.stage",
 				"{DDL={truncate={type=TABLE, name={schema=demo, table=stage}}}}",
-				"{def_truncate0={}}");
+				"{def_truncate0={}}",
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				"truncate_snowflake_expression",
+				null,
+				1,
+				0);
 	}
 
 	@Test
@@ -474,7 +505,12 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"TRUNCATE demo.stage",
 				"{DDL={truncate={type=TABLE, name={schema=demo, table=stage}}}}",
-				"{def_truncate0={}}");
+				"{def_truncate0={}}",
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				"truncate_postgres_expression",
+				null,
+				1,
+				0);
 	}
 
 	@Test
@@ -482,6 +518,11 @@ public class SqlEventWalkerDdlTests extends AbstractSqlParseEventWalkerTest {
 		assertDdlAstSymbolDiagnostics(
 				"TRUNCATE TABLE demo.stage, demo.archive",
 				"{DDL={truncate={type=TABLE, list={1={schema=demo, table=stage}, 2={schema=demo, table=archive}}}}}",
-				"{def_truncate0={}}");
+				"{def_truncate0={}}",
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				"truncate_postgres_expression",
+				null,
+				1,
+				0);
 	}
 }

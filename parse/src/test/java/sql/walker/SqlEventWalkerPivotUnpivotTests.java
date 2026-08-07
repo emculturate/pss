@@ -379,8 +379,22 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
-		assertNoFatalErrors(extractor);
-		assertNoWalkerDiagnostics(extractor);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"unpivot_clause",
+				null,
+				3,
+				0);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				6,
+				0);
 		Assert.assertEquals("Interface is wrong", "[metric_name, metric_value]",
 				extractor.getInterface().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{delete0={metric_name=[[@32,163:173='metric_name',<391>,6:12], [@24,123:133='metric_name',<391>,5:8], [@28,139:149='metric_name',<391>,5:24], [@10,63:73='metric_name',<391>,4:19]], metric_value=[[@36,178:189='metric_value',<391>,6:27], [@8,46:57='metric_value',<391>,4:2]]}}",
@@ -3662,9 +3676,17 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 
 		assertNoFatalErrors(extractor);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"pivot_clause",
+				null,
+				3,
+				0);
 		Assert.assertEquals("Redundant qualifier warnings should be absent",
 				0,
-				extractor.getSnippet().getDiagnosticCountBySeverity(ParseDiagnostic.Severity.WARNING));
+				extractor.getSnippet().getDiagnosticCountByCode("RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT"));
 		assertDiagnosticAtPosition(
 				extractor.getSnippet(),
 				"AMBIGUOUS_COLUMN_REFERENCE",
@@ -3861,9 +3883,17 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				"msl.sales_amount",
 				3,
 				9);
+		assertDiagnosticAtPosition(
+				extractor.getSnippet(),
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"unpivot_clause",
+				null,
+				3,
+				0);
 		Assert.assertEquals("Redundant qualifier warnings should be absent",
 				0,
-				extractor.getSnippet().getDiagnosticCountBySeverity(ParseDiagnostic.Severity.WARNING));
+				extractor.getSnippet().getDiagnosticCountByCode("RELATIONAL_MODIFIER_QUALIFIED_OPERAND_REDUNDANT"));
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=empid, table_ref=null}}, 2={column={name=month_name, table_ref=null}}, 3={column={name=sales_amount, table_ref=null}}}, from={unpivot={value={column={name=sales_amount, table_ref=msl}}, for={column={name=month_name, table_ref=null}}, in={1={name=jan_sales, table_ref=null}, 2={name=feb_sales, table_ref=null}}}, table={alias=msl, table=monthly_sales}}}}",
 				extractor.getAsTree().toString());
