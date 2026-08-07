@@ -24,6 +24,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_CALCULATION_KEY = "calc";
     public static final String MUMBLE_CASE_KEY = "case";
     public static final String MUMBLE_CAST_FUNCTION_NAME = "cast";
+    /** Semantic {@link #MUMBLE_TYPE_KEY} value for cast function nodes (including {@code ::} casts). */
+    public static final String MUMBLE_CAST_FUNCTION_TYPE = "CAST";
     public static final String MUMBLE_CLAUSES_KEY = "clauses";
     public static final String MUMBLE_COLUMNS_KEY = "columns";
     public static final String MUMBLE_COLUMN_KEY = "column";
@@ -64,6 +66,11 @@ public final class MumbleConstants {
     public static final String MUMBLE_EXTRACT_PART_FORM_STRING = "STRING";
     public static final String MUMBLE_EXTRACT_SOURCE_KEY = "source";
     public static final String MUMBLE_EXTRACT_SOURCE_TYPE_KEY = "source_type";
+    /** {@link #MUMBLE_EXTRACT_SOURCE_TYPE_KEY} values for typed SQL literals in extract sources. */
+    public static final String MUMBLE_EXTRACT_SOURCE_TYPE_DATE = "DATE";
+    public static final String MUMBLE_EXTRACT_SOURCE_TYPE_TIME = "TIME";
+    public static final String MUMBLE_EXTRACT_SOURCE_TYPE_TIMESTAMP = "TIMESTAMP";
+    public static final String MUMBLE_EXTRACT_SOURCE_TYPE_INTERVAL = "INTERVAL";
     public static final String MUMBLE_FILES_KEY = "files";
     public static final String MUMBLE_FILE_FORMAT_KEY = "file_format";
     public static final String MUMBLE_FILTERS_KEY = "filters";

@@ -22,7 +22,7 @@
 | Layer | Approach |
 |-------|----------|
 | **Grammar** | Single `extract_field` = keyword union (standard + `extended_datetime_field` + `snowflake_extract_field`) **or** `character_literal`. Snowflake part lexer rules are placed **before** `Identifier`. |
-| **Walker** | Canonical `part` (normalized name); `part_form` = `KEYWORD` \| `STRING`. |
+| **Walker** | `part` = field text as written (keyword/identifier token spelling, or string literal body without SQL quotes); `part_form` = `KEYWORD` \| `STRING`. |
 | **Validation** | Optional later: engine profile warns on unsupported part for type (not in this batch). |
 
 **Postgres exemplar parts:** `DOW`, `MILLENNIUM`, string `'year'`.  
@@ -56,9 +56,9 @@ Regenerate parser (`mvn generate-sources` / normal `parse` build).
 
 | Key | Meaning |
 |-----|---------|
-| `part` | Normalized uppercase field name |
+| `part` | Field name as authored (lexer token text or unquoted string literal); no case folding |
 | `part_form` | `KEYWORD` or `STRING` |
-| `source_type` | Present for typed SQL literals: `DATE`, `TIME`, `TIMESTAMP` |
+| `source_type` | Present for typed SQL literals: `MUMBLE_EXTRACT_SOURCE_TYPE_*` (`DATE`, `TIME`, `TIMESTAMP`, `INTERVAL`) |
 | `source` | Semantic subtree only — e.g. `{column=…}`, `{literal=…}`, `{parentheses=…}`, `{calc=…}`, `{function=…}`, nested `{extract=…}` |
 
 No grammar rule index keys (`Type=NNN`) anywhere under `extract` or `source`.
@@ -67,7 +67,7 @@ No grammar rule index keys (`Type=NNN`) anywhere under `extract` or `source`.
 
 ## Phase 3 — Exemplar tests ✅ (expanded)
 
-Class: `SqlEventWalkerExtractTests.java` — **22** cases. Each test: `assertNoWalkerDiagnostics`, golden `getAsTree()`, and **rejects** any `Type=\d+` in the AST string.
+Class: `SqlEventWalkerExtractTests.java` — **56** cases (25 full `SELECT`, 25 `predicand_value`, 6 predicand-substitution exemplars). Each test: `assertNoFatalErrors`, `assertNoWalkerDiagnostics`, golden `getAsTree()`, and **rejects** any `Type=\d+` in the AST string. Substitution exemplars also assert substitution map and symbol table goldens.
 
 | Area | Examples covered |
 |------|------------------|

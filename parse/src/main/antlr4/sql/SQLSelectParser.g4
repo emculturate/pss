@@ -1217,6 +1217,7 @@ predicand_primary
   : value_expression_primary
   | string_value_expression
   | sign numeric_primary
+  | extract_expression
   | trim_function
   | null_literal
   | variable_identifier
@@ -1569,6 +1570,7 @@ snowflake_extract_field
   : DAYOFMONTH | DAYOFWEEK | DAYOFWEEKISO | DAYOFYEAR
   | WEEKISO | WEEKOFYEAR
   | EPOCH_SECOND | EPOCH_MILLISECOND | EPOCH_MICROSECOND
+  | identifier
   ;
 
 time_zone_field
@@ -2466,7 +2468,12 @@ exponent : EXPONEN   NUMBER ;
 general_literal
   : character_literal
   | datetime_literal
+  | interval_literal
   | boolean_literal
+  ;
+
+interval_literal
+  : INTERVAL interval_string=Character_String_Literal
   ;
 
 character_literal
