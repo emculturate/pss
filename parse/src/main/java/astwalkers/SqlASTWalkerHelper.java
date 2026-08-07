@@ -41,6 +41,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				"SQL_RELATIONAL_MODIFIER_DERIVED_OPERAND_QUALIFIED";
 		public static final String DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED =
 				"SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED";
+		public static final String DIAG_SQL_JOIN_USING_COLUMN_NOT_FOUND = "SQL_JOIN_USING_COLUMN_NOT_FOUND";
+		public static final String DIAG_SQL_QUALIFIED_COLUMN_IN_JOIN_USING = "SQL_QUALIFIED_COLUMN_IN_JOIN_USING";
 		public static final String DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS =
 				"SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS";
 		public static final String DIAG_SQL_EXTRACT_FIELD_SNOWFLAKE_ONLY = "SQL_EXTRACT_FIELD_SNOWFLAKE_ONLY";
@@ -266,6 +268,14 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED,
 				 "RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED",
 				 "%s source operand '%s' at (l:%s c:%s) cannot be resolved against the %s source interface.");
+		 registerDiagnostic(
+				 DIAG_SQL_JOIN_USING_COLUMN_NOT_FOUND,
+				 "JOIN_USING_COLUMN_NOT_FOUND",
+				 "Join Using column '%s' at (l:%s c:%s) not found in Join Sources (%s). ");
+		 registerDiagnostic(
+				 DIAG_SQL_QUALIFIED_COLUMN_IN_JOIN_USING,
+				 "QUALIFIED_COLUMN_IN_JOIN_USING",
+				 "Join Using column '%s' at (l:%s c:%s) must not be qualified.");
 		 registerDiagnostic(
 				 DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS,
 				 "RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS",

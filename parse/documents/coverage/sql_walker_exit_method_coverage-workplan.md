@@ -37,8 +37,10 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 ### T1.1 `exitNamed_columns_join` — `named_columns_join`
 
-- [ ] Add SELECT (or DML) using **`JOIN … USING (col1, col2)`** (named columns join, not `ON`).
+- [x] Add SELECT (or DML) using **`JOIN … USING (col1, col2)`** (named columns join, not `ON`).
 - **Verify:** `exitNamed_columns_join` covered; AST/symbol smoke as needed.
+
+**Follow-up (not in scope for T1.1):** predicand/function expressions in `USING (...)` if grammar allows; derived vs regular column operands; wildcard `USING` shapes.
 
 ### T1.2 `exitUnpivot_null_policy` — `unpivot_null_policy`
 

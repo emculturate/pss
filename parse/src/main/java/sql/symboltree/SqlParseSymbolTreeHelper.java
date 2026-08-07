@@ -108,6 +108,12 @@ public class SqlParseSymbolTreeHelper {
 			SqlASTWalkerHelper.TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY;
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
 	public static final String RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY = "modifier_operand_token_refs";
+	/** Depth counter while walking {@code JOIN … USING (column_reference_list)}. */
+	public static final String JOIN_USING_COLUMN_LIST_DEPTH_KEY = "join_using_column_list_depth";
+	/** Unqualified USING column name → token ref string for resolution/materialization. */
+	public static final String JOIN_USING_OPERAND_TOKEN_REFS_KEY = "join_using_operand_token_refs";
+	/** Last {@link org.antlr.v4.runtime.Token} per USING column name for qualified unresolved handoff at join exit. */
+	public static final String JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY = "join_using_operand_token_by_name";
 	public static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
 	public static final String RELATIONAL_MODIFIER_SOURCE_REF_KEY = "source_ref";
@@ -16403,6 +16409,542 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		walker.symbolTable.put(MUMBLE_FILTERS_KEY, flatList);
+	}
+
+	public void beginJoinUsingColumnListScope() {
+		Object depthObj = walker.symbolTable.get(JOIN_USING_COLUMN_LIST_DEPTH_KEY);
+		int depth = (depthObj instanceof Number number) ? number.intValue() : 0;
+		walker.symbolTable.put(JOIN_USING_COLUMN_LIST_DEPTH_KEY, depth + 1);
+	}
+
+	public void endJoinUsingColumnListScope() {
+		Object depthObj = walker.symbolTable.get(JOIN_USING_COLUMN_LIST_DEPTH_KEY);
+		int depth = (depthObj instanceof Number number) ? number.intValue() : 0;
+		if (depth <= 1) {
+			walker.symbolTable.remove(JOIN_USING_COLUMN_LIST_DEPTH_KEY);
+		} else {
+			walker.symbolTable.put(JOIN_USING_COLUMN_LIST_DEPTH_KEY, depth - 1);
+		}
+	}
+
+	public boolean isInJoinUsingColumnListScope() {
+		Object depthObj = walker.symbolTable.get(JOIN_USING_COLUMN_LIST_DEPTH_KEY);
+		return depthObj instanceof Number number && number.intValue() > 0;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void recordJoinUsingOperandTokenRef(String columnName, Token token) {
+		if (columnName == null || columnName.isBlank() || token == null) {
+			return;
+		}
+		Object refsObj = walker.symbolTable.get(JOIN_USING_OPERAND_TOKEN_REFS_KEY);
+		HashMap<String, Object> refsMap;
+		if (refsObj instanceof HashMap<?, ?> existing) {
+			refsMap = (HashMap<String, Object>) existing;
+		} else {
+			refsMap = new HashMap<String, Object>();
+			walker.symbolTable.put(JOIN_USING_OPERAND_TOKEN_REFS_KEY, refsMap);
+		}
+		ArrayList<String> tokenRefs = new ArrayList<String>();
+		tokenRefs.add(token.toString());
+		walker.mergeResolvedColumnIntoDictionary(refsMap, columnName, tokenRefs);
+		Object tokenByNameObj = walker.symbolTable.get(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY);
+		HashMap<String, Token> tokenByName;
+		if (tokenByNameObj instanceof HashMap<?, ?> existing) {
+			tokenByName = (HashMap<String, Token>) existing;
+		} else {
+			tokenByName = new HashMap<String, Token>();
+			walker.symbolTable.put(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY, tokenByName);
+		}
+		tokenByName.put(columnName, token);
+	}
+
+	public void emitJoinUsingQualifiedColumnFatal(
+			String operandTableRef,
+			String columnName,
+			Integer line,
+			Integer charPos) {
+		String qualifiedColumnLabel = (operandTableRef != null && !operandTableRef.isBlank())
+				? operandTableRef + "." + columnName
+				: columnName;
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_IN_JOIN_USING);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_IN_JOIN_USING);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Join Using column '%s' at (l:%s c:%s) must not be qualified.",
+						qualifiedColumnLabel,
+						String.valueOf(line),
+						String.valueOf(charPos))
+				: String.format(
+						diagTemplate,
+						qualifiedColumnLabel,
+						String.valueOf(line),
+						String.valueOf(charPos));
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				line,
+				charPos,
+				qualifiedColumnLabel);
+	}
+
+	private void emitJoinUsingColumnNotFoundFatal(
+			String columnName,
+			Integer line,
+			Integer charPos,
+			String joinSourcesList) {
+		if (joinSourcesList == null || joinSourcesList.isBlank()) {
+			joinSourcesList = "?";
+		}
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_JOIN_USING_COLUMN_NOT_FOUND);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_JOIN_USING_COLUMN_NOT_FOUND);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Join Using column '%s' at (l:%s c:%s) not found in Join Sources (%s). ",
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos),
+						joinSourcesList)
+				: String.format(
+						diagTemplate,
+						columnName,
+						String.valueOf(line),
+						String.valueOf(charPos),
+						joinSourcesList);
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, columnName);
+	}
+
+	private String formatJoinUsingMissingSourcesList(
+			Map<String, Object> leftSource,
+			Map<String, Object> rightSource,
+			boolean leftAccepts,
+			boolean rightAccepts) {
+		ArrayList<String> missing = new ArrayList<String>();
+		if (!leftAccepts) {
+			missing.add(resolveJoinUsingDisplaySourceLabel(leftSource));
+		}
+		if (!rightAccepts) {
+			missing.add(resolveJoinUsingDisplaySourceLabel(rightSource));
+		}
+		return String.join(", ", missing);
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveJoinUsingDisplaySourceLabel(Map<String, Object> sourceResult) {
+		if (sourceResult == null) {
+			return "?";
+		}
+		String sourceRef = resolveJoinUsingSourceReference(sourceResult);
+		if (sourceRef != null && !sourceRef.isBlank()) {
+			Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+			if (aliasMapObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(sourceRef)) {
+				return sourceRef;
+			}
+			if (aliasMapObj instanceof Map<?, ?> aliasMap) {
+				for (Map.Entry<String, Object> entry : ((Map<String, Object>) aliasMap).entrySet()) {
+					if (entry.getValue() instanceof String target
+							&& target.equalsIgnoreCase(sourceRef)) {
+						return entry.getKey();
+					}
+				}
+			}
+			return sourceRef;
+		}
+		return "?";
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> coerceJoinUsingColumnListAst(Object usingColumnsObj) {
+		if (!(usingColumnsObj instanceof Map<?, ?> rawMap)) {
+			return new LinkedHashMap<String, Object>();
+		}
+		Map<String, Object> raw = (Map<String, Object>) rawMap;
+		if (raw.containsKey(MUMBLE_COLUMN_KEY)) {
+			LinkedHashMap<String, Object> single = new LinkedHashMap<String, Object>();
+			single.put("1", raw);
+			return normalizeJoinUsingColumnListAst(single);
+		}
+		boolean hasNumericColumnEntry = false;
+		for (String key : raw.keySet()) {
+			if (key != null && key.matches("\\d+")) {
+				hasNumericColumnEntry = true;
+				break;
+			}
+		}
+		if (hasNumericColumnEntry) {
+			return normalizeJoinUsingColumnListAst(raw);
+		}
+		return new LinkedHashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> normalizeJoinUsingColumnListAst(Object usingColumnsObj) {
+		LinkedHashMap<String, Object> normalized = new LinkedHashMap<String, Object>();
+		if (!(usingColumnsObj instanceof Map<?, ?> rawMap)) {
+			return normalized;
+		}
+		int index = 1;
+		for (Map.Entry<?, ?> entry : ((Map<String, Object>) rawMap).entrySet()) {
+			if (entry.getKey() == null || !entry.getKey().toString().matches("\\d+")) {
+				continue;
+			}
+			Object columnEntry = entry.getValue();
+			Map<String, Object> columnSubTree = extractColumnSubTreeFromAstNode(columnEntry);
+			if (columnSubTree == null) {
+				continue;
+			}
+			String columnName = (String) columnSubTree.get(MUMBLE_NAME_KEY);
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			HashMap<String, Object> usingColumn = new HashMap<String, Object>();
+			usingColumn.put(MUMBLE_NAME_KEY, columnName);
+			usingColumn.put(MUMBLE_TABLE_REF_KEY, null);
+			HashMap<String, Object> wrapper = new HashMap<String, Object>();
+			wrapper.put(MUMBLE_COLUMN_KEY, usingColumn);
+			normalized.put(String.valueOf(index++), wrapper);
+		}
+		return normalized;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractColumnSubTreeFromAstNode(Object columnEntry) {
+		if (columnEntry instanceof Map<?, ?> columnEntryMap) {
+			if (columnEntryMap.containsKey(MUMBLE_COLUMN_KEY)) {
+				Object inner = columnEntryMap.get(MUMBLE_COLUMN_KEY);
+				if (inner instanceof Map<?, ?> innerMap) {
+					return (Map<String, Object>) innerMap;
+				}
+			}
+			if (columnEntryMap.containsKey(MUMBLE_NAME_KEY)) {
+				return (Map<String, Object>) columnEntryMap;
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void captureJoinUsingClauseDependencies(
+			Object usingColumnsObj,
+			Map<String, Object> leftSource,
+			Map<String, Object> rightSource) {
+		if (leftSource == null || rightSource == null) {
+			Map<String, Object>[] operands = resolveJoinUsingOperandsFromTableAliasMap();
+			if (operands != null) {
+				if (leftSource == null) {
+					leftSource = operands[0];
+				}
+				if (rightSource == null) {
+					rightSource = operands[1];
+				}
+			}
+		}
+		if (leftSource == null || rightSource == null) {
+			return;
+		}
+		Map<String, Object> normalizedUsing = normalizeJoinUsingColumnListAst(usingColumnsObj);
+		processJoinUsingColumnsAtJoinSpecification(normalizedUsing, leftSource, rightSource);
+		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_REFS_KEY);
+		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object>[] resolveJoinUsingOperandsFromTableAliasMap() {
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (!(aliasMapObj instanceof LinkedHashMap<?, ?> aliasMap) || aliasMap.size() < 2) {
+			return null;
+		}
+		ArrayList<String> aliases = new ArrayList<String>();
+		for (Object aliasObj : aliasMap.keySet()) {
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				aliases.add(alias);
+			}
+		}
+		if (aliases.size() < 2) {
+			return null;
+		}
+		String leftAlias = aliases.get(aliases.size() - 2);
+		String rightAlias = aliases.get(aliases.size() - 1);
+		return new Map[] {
+				buildMinimalJoinUsingSourceForAlias(leftAlias),
+				buildMinimalJoinUsingSourceForAlias(rightAlias)
+		};
+	}
+
+	private Map<String, Object> buildMinimalJoinUsingSourceForAlias(String alias) {
+		HashMap<String, Object> tablePayload = new HashMap<String, Object>();
+		tablePayload.put(MUMBLE_ALIAS_KEY, alias);
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasMapObj instanceof Map<?, ?> aliasMap) {
+			Object target = aliasMap.get(alias);
+			if (target instanceof String targetRef && targetRef.startsWith(MUMBLE_QUERY_KEY)) {
+				tablePayload.put(MUMBLE_QUERY_KEY, new HashMap<String, Object>());
+			}
+		}
+		HashMap<String, Object> source = new HashMap<String, Object>();
+		source.put(MUMBLE_TABLE_KEY, tablePayload);
+		return source;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void processJoinUsingColumnsAtJoinSpecification(
+			Map<String, Object> normalizedUsing,
+			Map<String, Object> leftSource,
+			Map<String, Object> rightSource) {
+		if (normalizedUsing == null || normalizedUsing.isEmpty()) {
+			return;
+		}
+		for (Object columnWrapperObj : normalizedUsing.values()) {
+			Map<String, Object> columnSubTree = extractColumnSubTreeFromAstNode(columnWrapperObj);
+			if (columnSubTree == null) {
+				continue;
+			}
+			String columnName = (String) columnSubTree.get(MUMBLE_NAME_KEY);
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			Object tableRefObj = columnSubTree.get(MUMBLE_TABLE_REF_KEY);
+			if (tableRefObj instanceof String tableRef && tableRef != null && !tableRef.isBlank()) {
+				Integer[] tokenPosition = lookupJoinUsingOperandTokenPosition(columnName);
+				emitJoinUsingQualifiedColumnFatal(
+						tableRef,
+						columnName,
+						tokenPosition[0],
+						tokenPosition[1]);
+				continue;
+			}
+
+			Token token = lookupJoinUsingOperandToken(columnName);
+			Integer[] tokenPosition = lookupJoinUsingOperandTokenPosition(columnName);
+
+			boolean leftAccepts = joinUsingSourceAcceptsColumn(leftSource, columnName);
+			boolean rightAccepts = joinUsingSourceAcceptsColumn(rightSource, columnName);
+			if (!leftAccepts || !rightAccepts) {
+				emitJoinUsingColumnNotFoundFatal(
+						columnName,
+						tokenPosition[0],
+						tokenPosition[1],
+						formatJoinUsingMissingSourcesList(
+								leftSource, rightSource, leftAccepts, rightAccepts));
+				continue;
+			}
+
+			if (leftAccepts) {
+				enqueueQualifiedJoinUsingColumnForStandardResolution(leftSource, columnName, token);
+			}
+			if (rightAccepts) {
+				enqueueQualifiedJoinUsingColumnForStandardResolution(rightSource, columnName, token);
+			}
+		}
+	}
+
+	private void enqueueQualifiedJoinUsingColumnForStandardResolution(
+			Map<String, Object> sourceResult,
+			String columnName,
+			Token token) {
+		String qualifiedSourceRef = resolveJoinUsingSourceReference(sourceResult);
+		if (qualifiedSourceRef == null || qualifiedSourceRef.isBlank()) {
+			return;
+		}
+		HashMap<String, Object> columnMap = new HashMap<String, Object>();
+		columnMap.put(MUMBLE_NAME_KEY, columnName);
+		columnMap.put(MUMBLE_TABLE_REF_KEY, qualifiedSourceRef);
+		walker.collectUnresolvedColumnReference(qualifiedSourceRef, columnMap, token);
+	}
+
+	private Token lookupJoinUsingOperandToken(String columnName) {
+		Object tokenByNameObj = walker.symbolTable.get(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY);
+		if (!(tokenByNameObj instanceof Map<?, ?> tokenByName)) {
+			return null;
+		}
+		Object token = ((Map<String, Object>) tokenByName).get(columnName);
+		if (token instanceof Token direct) {
+			return direct;
+		}
+		for (Map.Entry<String, Object> entry : ((Map<String, Object>) tokenByName).entrySet()) {
+			if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(columnName)
+					&& entry.getValue() instanceof Token matched) {
+				return matched;
+			}
+		}
+		return null;
+	}
+
+	private Integer[] lookupJoinUsingOperandTokenPosition(String columnName) {
+		Integer[] result = new Integer[] { null, null };
+		Token token = lookupJoinUsingOperandToken(columnName);
+		if (token != null) {
+			result[0] = token.getLine();
+			result[1] = token.getCharPositionInLine();
+			return result;
+		}
+		Object refsObj = walker.symbolTable.get(JOIN_USING_OPERAND_TOKEN_REFS_KEY);
+		if (!(refsObj instanceof Map<?, ?> refsMap)) {
+			return result;
+		}
+		Object tokenListObj = ((Map<String, Object>) refsMap).get(columnName);
+		if (tokenListObj == null) {
+			for (Map.Entry<String, Object> entry : ((Map<String, Object>) refsMap).entrySet()) {
+				if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(columnName)) {
+					tokenListObj = entry.getValue();
+					break;
+				}
+			}
+		}
+		if (tokenListObj instanceof List<?> tokenList && !tokenList.isEmpty()) {
+			String tokenString = tokenList.get(0) == null ? null : tokenList.get(0).toString();
+			int lastComma = tokenString == null ? -1 : tokenString.lastIndexOf(',');
+			if (lastComma >= 0 && lastComma + 1 < tokenString.length()) {
+				String tail = tokenString.substring(lastComma + 1).replace("]", "").trim();
+				int colon = tail.indexOf(':');
+				if (colon > 0) {
+					try {
+						result[0] = Integer.parseInt(tail.substring(0, colon).trim());
+						result[1] = Integer.parseInt(tail.substring(colon + 1).trim());
+					} catch (NumberFormatException ignored) {
+						// leave nulls
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean joinUsingSourceAcceptsColumn(Map<String, Object> sourceResult, String columnName) {
+		if (sourceResult == null || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		if (isDirectTableJoinSource(sourceResult)) {
+			return true;
+		}
+		Map<String, Object> interfaceMap = resolveJoinUsingSourceInterface(sourceResult);
+		return interfaceMap.containsKey("*") || containsKeyIgnoreCase(interfaceMap, columnName);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isDirectTableJoinSource(Map<String, Object> sourceResult) {
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (!(tableObj instanceof Map<?, ?> tableMapObj)) {
+			return false;
+		}
+		Object tableNameObj = ((Map<String, Object>) tableMapObj).get(MUMBLE_TABLE_KEY);
+		return tableNameObj instanceof String tableName && !tableName.isBlank();
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> resolveJoinUsingSourceInterface(Map<String, Object> sourceResult) {
+		String sourceRef = resolveJoinUsingSourceReference(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return new HashMap<String, Object>();
+		}
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasMapObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(sourceRef)) {
+			Object aliasTarget = aliasMap.get(sourceRef);
+			if (aliasTarget instanceof String aliasTargetRef && !aliasTargetRef.isBlank()) {
+				sourceRef = aliasTargetRef;
+			}
+		}
+		ArrayList<Map<String, Object>> scopes = new ArrayList<>(getAncestorSymbolTables());
+		scopes.add(walker.symbolTable);
+		for (Map<String, Object> scope : scopes) {
+			Map<String, Object> interfaceMap = lookupJoinUsingInterfaceInScope(scope, sourceRef);
+			if (interfaceMap != null) {
+				return interfaceMap;
+			}
+		}
+		Map<String, Object> interfaceFromDefinitions =
+				lookupJoinUsingInterfaceInDefinitionScopes(sourceRef, null, walker.symbolTable);
+		if (interfaceFromDefinitions != null) {
+			return interfaceFromDefinitions;
+		}
+		Object queryDefObj = getQueryDefinitionSymbol(sourceRef);
+		if (queryDefObj instanceof Map<?, ?> queryDefMap) {
+			Object interfaceObj = ((Map<String, Object>) queryDefMap).get(MUMBLE_INTERFACE_KEY);
+			if (interfaceObj instanceof Map<?, ?> interfaceMap) {
+				return (Map<String, Object>) interfaceMap;
+			}
+		}
+		return new HashMap<String, Object>();
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> lookupJoinUsingInterfaceInDefinitionScopes(
+			String sourceRef,
+			Map<String, Object> scopeSymbols,
+			Map<String, Object> liveSymbolTable) {
+		ArrayList<Map<String, Object>> definitionHosts = new ArrayList<Map<String, Object>>();
+		if (scopeSymbols != null) {
+			definitionHosts.add(scopeSymbols);
+		}
+		if (liveSymbolTable != null) {
+			definitionHosts.add(liveSymbolTable);
+		}
+		for (Map<String, Object> host : definitionHosts) {
+			Object directPayload = host.get("def_" + sourceRef);
+			if (directPayload instanceof Map<?, ?> directMap) {
+				Object interfaceObj = ((Map<String, Object>) directMap).get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObj instanceof Map<?, ?> interfaceMap) {
+					return (Map<String, Object>) interfaceMap;
+				}
+			}
+			for (String key : host.keySet()) {
+				if (key == null || !key.startsWith("def_")) {
+					continue;
+				}
+				String liveRef = key.substring("def_".length());
+				if (!sourceRef.equalsIgnoreCase(liveRef)) {
+					continue;
+				}
+				Object payloadObj = host.get(key);
+				if (!(payloadObj instanceof Map<?, ?> payloadMap)) {
+					continue;
+				}
+				Object interfaceObj = ((Map<String, Object>) payloadMap).get(MUMBLE_INTERFACE_KEY);
+				if (interfaceObj instanceof Map<?, ?> interfaceMap) {
+					return (Map<String, Object>) interfaceMap;
+				}
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> lookupJoinUsingInterfaceInScope(Map<String, Object> scope, String sourceRef) {
+		if (scope == null || sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+		Object scopeObj = scope.get(sourceRef);
+		if (!(scopeObj instanceof Map<?, ?> scopeMap)) {
+			scopeObj = scope.get("def_" + sourceRef);
+		}
+		if (!(scopeObj instanceof Map<?, ?> scopeMap)) {
+			return null;
+		}
+		Object interfaceObj = ((Map<String, Object>) scopeMap).get(MUMBLE_INTERFACE_KEY);
+		if (interfaceObj instanceof Map<?, ?> interfaceMap) {
+			return (Map<String, Object>) interfaceMap;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveJoinUsingSourceReference(Map<String, Object> sourceResult) {
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableObj instanceof Map<?, ?> tableMapObj) {
+			Object aliasObj = ((Map<String, Object>) tableMapObj).get(MUMBLE_ALIAS_KEY);
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				return alias;
+			}
+			String tableRef = getQualifiedTableReference((Map<String, Object>) tableMapObj);
+			if (tableRef != null && !tableRef.isBlank()) {
+				return tableRef;
+			}
+			if (((Map<String, Object>) tableMapObj).containsKey(MUMBLE_QUERY_KEY)) {
+				return getSubqueryReferenceKey(walker.symbolTable);
+			}
+		}
+		return null;
 	}
 
 	// Standardize the filters reference map into a flat map of column references and not the entire AST subtree

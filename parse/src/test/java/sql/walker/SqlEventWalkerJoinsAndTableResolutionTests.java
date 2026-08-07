@@ -8,6 +8,202 @@ import sql.SQLSelectParserParser;
 
 public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParseEventWalkerTest {
 
+	/*
+	 * JOIN … USING (column list) — T1.1 / named_columns_join scenarios.
+	 * Variation naming: <scenarioBaseName>V<n>Test (V0 = initial golden for that scenario).
+	 */
+
+	@Test
+	public void basicJoinWithUsingSingleColumnV0Test() {
+		final String query = " SELECT a.* FROM third a join fourth b using (a) ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=join}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicJoinWithUsingTwoColumnsV0Test() {
+		final String query = " SELECT a.* FROM third a join fourth b using (a, b) ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}, join=join}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void basicLeftJoinWithUsingAndWhereV0Test() {
+		final String query = " SELECT a.* FROM third a left join fourth b using (a) "
+				+ "\n where b.c = 1 ";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=left}, 3={table={alias=b, table=fourth}}}}, where={condition={left={column={name=c, table_ref=b}}, right={literal=1}, operator==}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@13,51:51='a',<391>,1:51]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@13,51:51='a',<391>,1:51]], c=[[@16,62:62='b',<391>,2:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@13,51:51='a',<391>,1:51]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@13,51:51='a',<391>,1:51]], c=[[@16,62:62='b',<391>,2:7]]}}, filters=[{name=c, table_ref=b}], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinSubquerySourcesWithUsingV0Test() {
+		final String query = "SELECT x.* FROM (SELECT a FROM third) x JOIN (SELECT a FROM fourth) y USING (a)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=x}}}, from={join={1={table={alias=x, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=y, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@7,24:24='a',<391>,1:24]]}, fourth={a=[[@15,53:53='a',<391>,1:53]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,24:24='a',<391>,1:24], [@22,77:77='a',<391>,1:77]], *=[[@1,7:7='x',<391>,1:7]]}, query1={a=[[@15,53:53='a',<391>,1:53], [@22,77:77='a',<391>,1:77]]}, query2={*=[[@3,9:9='*',<291>,1:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={*=[[@3,9:9='*',<291>,1:9]]}, def_query1={query_dictionary={a=[[@15,53:53='a',<391>,1:53], [@22,77:77='a',<391>,1:77]]}, table_dictionary={fourth={a=[[@15,53:53='a',<391>,1:53]]}}, interface={a=[{name=a, table_ref=fourth}]}}, def_query0={query_dictionary={a=[[@7,24:24='a',<391>,1:24], [@22,77:77='a',<391>,1:77]], *=[[@1,7:7='x',<391>,1:7]]}, table_dictionary={third={a=[[@7,24:24='a',<391>,1:24]]}}, interface={a=[{name=a, table_ref=third}], *=wildcard}}, interface={*=[{name=*, table_ref=x}]}, table_alias={x=query0, y=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUsingQualifiedColumnFatalV0Test() {
+		final String query = " SELECT a.* FROM third a JOIN fourth b USING (a.a) ";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=a}}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"QUALIFIED_COLUMN_IN_JOIN_USING",
+				"Join Using column 'a.a' at (l:1 c:46) must not be qualified.",
+				"a.a",
+				1,
+				46);
+	}
+
+	@Test
+	public void joinUsingMissingColumnOnSubqueryOperandFatalV0Test() {
+		final String query = "SELECT x.* FROM (SELECT a FROM third) x JOIN (SELECT b FROM fourth) y USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=x}}}, from={join={1={table={alias=x, query={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=third}}}}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=y, query={select={1={column={name=b, table_ref=null}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{third={a=[[@7,24:24='a',<391>,1:24]]}, fourth={b=[[@15,53:53='b',<391>,1:53]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={a=[[@7,24:24='a',<391>,1:24]], *=[[@1,7:7='x',<391>,1:7]]}, query1={b=[[@15,53:53='b',<391>,1:53]]}, query2={*=[[@3,9:9='*',<291>,1:9]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={query_dictionary={*=[[@3,9:9='*',<291>,1:9]]}, def_query1={query_dictionary={b=[[@15,53:53='b',<391>,1:53]]}, table_dictionary={fourth={b=[[@15,53:53='b',<391>,1:53]]}}, interface={b=[{name=b, table_ref=fourth}]}}, def_query0={query_dictionary={a=[[@7,24:24='a',<391>,1:24]], *=[[@1,7:7='x',<391>,1:7]]}, table_dictionary={third={a=[[@7,24:24='a',<391>,1:24]]}}, interface={a=[{name=a, table_ref=third}], *=wildcard}}, interface={*=[{name=*, table_ref=x}]}, table_alias={x=query0, y=query1}}}",
+				extractor.getSymbolTable().toString());
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"JOIN_USING_COLUMN_NOT_FOUND",
+				"Join Using column 'a' at (l:1 c:77) not found in Join Sources (y). ",
+				"a",
+				1,
+				77);
+	}
+
+	@Test
+	public void joinUsingMissingColumnOnLeftSubqueryOperandFatalV1Test() {
+		final String query = "SELECT x.* FROM (SELECT b FROM third) x JOIN (SELECT a FROM fourth) y USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"JOIN_USING_COLUMN_NOT_FOUND",
+				"Join Using column 'a' at (l:1 c:77) not found in Join Sources (x). ",
+				"a",
+				1,
+				77);
+	}
+
+	@Test
+	public void joinUsingMissingColumnOnBothSubqueryOperandsFatalV1Test() {
+		final String query = "SELECT x.* FROM (SELECT b FROM third) x JOIN (SELECT c FROM fourth) y USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"JOIN_USING_COLUMN_NOT_FOUND",
+				"Join Using column 'a' at (l:1 c:77) not found in Join Sources (x, y). ",
+				"a",
+				1,
+				77);
+	}
+
 	@Test
 	public void basicJoinWithOnTest() {
 		final String query = " SELECT a.* FROM third a join fourth b on  a.a = b.b "; 

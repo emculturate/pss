@@ -1223,8 +1223,39 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
                     sql.append(" ON ");
                     emitFilterExpression(onObj, sql);
                 }
+                Object usingObj = partMap.get(MUMBLE_USING_KEY);
+                if (usingObj != null) {
+                    sql.append(" USING (");
+                    emitJoinUsingColumnList(usingObj, sql);
+                    sql.append(')');
+                }
             } else {
                 emitFromSource((Map<String, Object>) partMap, sql);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitJoinUsingColumnList(Object usingObj, StringBuilder sql) {
+        List<Object> columns = orderedNumericKeyedList(usingObj);
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            Object columnEntry = columns.get(i);
+            if (columnEntry instanceof Map<?, ?> columnMap) {
+                Object columnObj = columnMap.get(MUMBLE_COLUMN_KEY);
+                if (columnObj instanceof Map<?, ?> innerColumn) {
+                    Object nameObj = innerColumn.get(MUMBLE_NAME_KEY);
+                    if (nameObj != null) {
+                        sql.append(nameObj);
+                        continue;
+                    }
+                }
+                Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
+                if (nameObj != null) {
+                    sql.append(nameObj);
+                }
             }
         }
     }

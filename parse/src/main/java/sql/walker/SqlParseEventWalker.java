@@ -7220,10 +7220,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		if (subMap.size() == 1) {
-			// get the most recent JOIN condition — scan backwards to skip any lateral
-			// modifier entries that may sit between the qualified_join map and the right table
 			Map<String, Object> pMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
 			Map<String, Object> join = null;
 			for (int i = pMap.size() - 1; i >= 1; i--) {
@@ -7235,11 +7233,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				}
 			}
 			if (join != null) {
-				// Add On clause to previous Join statement; condition may be a Map (expression)
-				// or a plain String (e.g. boolean literal TRUE from ON TRUE)
 				Object rawCondition = subMap.remove("1");
-				join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
-				symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
+				if (ctx.named_columns_join() != null) {
+					Map<String, Object> usingColumns = extractJoinUsingColumnsFromContext(ctx, rawCondition);
+					join.put(MUMBLE_USING_KEY, usingColumns);
+					Map<String, Object>[] operands = resolveJoinUsingLeftAndRightSources(ctx);
+					symbolTreeHelper.captureJoinUsingClauseDependencies(
+							usingColumns,
+							operands == null ? null : operands[0],
+							operands == null ? null : operands[1]);
+				} else {
+					join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
+					symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
+				}
 			} else {
 				//Could not locate join map for ON clause
 			}
@@ -7247,6 +7253,109 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Wrong number of entries
 		}
 		 walker.asTree.put("SKIP", "TRUE");
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> extractJoinUsingColumnsFromContext(
+			SQLSelectParserParser.Join_specificationContext ctx,
+			Object rawCondition) {
+		Map<String, Object> usingColumns = symbolTreeHelper.coerceJoinUsingColumnListAst(rawCondition);
+		if (!usingColumns.isEmpty()) {
+			return usingColumns;
+		}
+		if (rawCondition instanceof Map<?, ?> rawMap) {
+			for (Object nested : rawMap.values()) {
+				usingColumns = symbolTreeHelper.coerceJoinUsingColumnListAst(nested);
+				if (!usingColumns.isEmpty()) {
+					return usingColumns;
+				}
+			}
+		}
+		if (ctx.named_columns_join() == null || ctx.named_columns_join().f == null) {
+			return usingColumns;
+		}
+		LinkedHashMap<String, Object> built = new LinkedHashMap<String, Object>();
+		int index = 1;
+		for (SQLSelectParserParser.Column_referenceContext columnCtx
+				: ctx.named_columns_join().f.column_reference()) {
+			if (columnCtx == null || columnCtx.name == null) {
+				continue;
+			}
+			String columnName = columnCtx.name.getText();
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			HashMap<String, Object> column = new HashMap<String, Object>();
+			column.put(MUMBLE_NAME_KEY, columnName);
+			column.put(MUMBLE_TABLE_REF_KEY, null);
+			HashMap<String, Object> wrapper = new HashMap<String, Object>();
+			wrapper.put(MUMBLE_COLUMN_KEY, column);
+			built.put(String.valueOf(index++), wrapper);
+		}
+		return built;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object>[] resolveJoinUsingLeftAndRightSources(
+			SQLSelectParserParser.Join_specificationContext ctx) {
+		ArrayList<Map<String, Object>> tableSources = new ArrayList<Map<String, Object>>();
+		ParserRuleContext qualifiedJoin = ctx.getParent();
+		if (qualifiedJoin != null) {
+			Integer qualifiedJoinStackLevel = walker.currentStackLevel(qualifiedJoin.getRuleIndex());
+			if (qualifiedJoinStackLevel != null) {
+				Map<String, Object> qualifiedJoinMap =
+						walker.getNodeMap(qualifiedJoin.getRuleIndex(), qualifiedJoinStackLevel);
+				collectJoinTableSourceEntries(qualifiedJoinMap, tableSources);
+			}
+		}
+		ParserRuleContext ancestor = ctx.getParent();
+		while (ancestor != null && !(ancestor instanceof SQLSelectParserParser.Table_reference_listContext)) {
+			ancestor = ancestor.getParent();
+		}
+		if (ancestor == null) {
+			return null;
+		}
+		int tableReferenceListRuleIndex = ancestor.getRuleIndex();
+		Integer tableReferenceListStackLevel = walker.currentStackLevel(tableReferenceListRuleIndex);
+		if (tableReferenceListStackLevel == null) {
+			return null;
+		}
+		Map<String, Object> tableReferenceListMap =
+				walker.getNodeMap(tableReferenceListRuleIndex, tableReferenceListStackLevel);
+		if (tableReferenceListMap == null) {
+			return tableSources.size() >= 2
+					? new Map[] { tableSources.get(tableSources.size() - 2), tableSources.get(tableSources.size() - 1) }
+					: null;
+		}
+
+		collectJoinTableSourceEntries(tableReferenceListMap, tableSources);
+		if (tableSources.size() < 2) {
+			return null;
+		}
+		int rightIndex = tableSources.size() - 1;
+		int leftIndex = tableSources.size() - 2;
+		return new Map[] { tableSources.get(leftIndex), tableSources.get(rightIndex) };
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectJoinTableSourceEntries(Object node, ArrayList<Map<String, Object>> tableSources) {
+		if (!(node instanceof Map<?, ?> nodeMap)) {
+			return;
+		}
+		Object tableWrapperObj = nodeMap.get(MUMBLE_TABLE_KEY);
+		if (tableWrapperObj instanceof Map<?, ?> tableWrapperMap
+				&& (tableWrapperMap.containsKey(MUMBLE_TABLE_KEY)
+						|| tableWrapperMap.containsKey(MUMBLE_QUERY_KEY))) {
+			tableSources.add((Map<String, Object>) nodeMap);
+			if (tableWrapperMap.containsKey(MUMBLE_QUERY_KEY)) {
+				return;
+			}
+		}
+		for (Object value : nodeMap.values()) {
+			if (value instanceof Map<?, ?>) {
+				collectJoinTableSourceEntries(value, tableSources);
+			}
+		}
 	}
 
 	@Override
@@ -7271,9 +7380,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void enterNamed_columns_join( SQLSelectParserParser.Named_columns_joinContext ctx) {
+		symbolTreeHelper.beginJoinUsingColumnListScope();
+	}
+
+	@Override
 	public void exitNamed_columns_join( SQLSelectParserParser.Named_columns_joinContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		walker.handleOneChild(ruleIndex);
+		walker.handlePushDown(ruleIndex);
+		symbolTreeHelper.endJoinUsingColumnListScope();
 	}
 	
 	// using_term does NOT need its own methods
@@ -8187,6 +8302,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		if (columnRef != null) {
+			boolean joinUsingColumnList = symbolTreeHelper.isInJoinUsingColumnListScope();
+			if (joinUsingColumnList && tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName) {
+				symbolTreeHelper.emitJoinUsingQualifiedColumnFatal(
+						tableRef,
+						columnName,
+						ctx.getStart().getLine(),
+						ctx.getStart().getCharPositionInLine());
+			}
+			if (joinUsingColumnList) {
+				tableRef = null;
+				tableRefKey = MUMBLE_UNKNOWN_KEY;
+			}
 			// Add column to SQL AST Tree
 			columnSubTree.put(MUMBLE_TABLE_REF_KEY, tableRef);
 			if (columnRef instanceof HashMap<?, ?>) {
@@ -8200,8 +8327,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.clear();
 			subMap.put(MUMBLE_COLUMN_KEY, columnSubTree);
 
-			// Capture walker.symbolTable entry
-			walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
+			if (!joinUsingColumnList) {
+				walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
+			}
+			if (joinUsingColumnList && columnRef instanceof String joinUsingColumnName) {
+				symbolTreeHelper.recordJoinUsingOperandTokenRef(joinUsingColumnName, ctx.getStart());
+			}
 			if (walker.shouldCaptureClauseColumnSiteTokenForActiveColumnReference()) {
 				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));
 				if (clauseSiteTokenText != null) {

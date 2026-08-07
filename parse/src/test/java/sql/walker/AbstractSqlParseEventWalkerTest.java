@@ -166,6 +166,29 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		}
 	}
 
+	/**
+	 * Like {@link #assertFatalDiagnosticAtPosition} but also golden-matches the full walker fatal
+	 * message text so tests document the exact developer-facing wording (including reused pivot/unpivot templates).
+	 */
+	protected void assertFatalDiagnosticAtPositionWithFullMessage(
+			Snippet snippet,
+			String code,
+			String expectedFullMessage,
+			String searchFragment,
+			int expectedLine,
+			int expectedCharPositionInLine) {
+		String lookupFragment = searchFragment != null ? searchFragment : expectedFullMessage;
+		ParseDiagnostic diagnostic = findFatalDiagnosticByCodeAndFragment(snippet, code, lookupFragment);
+		Assert.assertNotNull("Expected fatal diagnostic with code " + code + " (lookup fragment: " + lookupFragment + ")",
+				diagnostic);
+		Assert.assertNotNull("Expected diagnostic line", diagnostic.line());
+		Assert.assertNotNull("Expected diagnostic character position", diagnostic.charPositionInLine());
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), diagnostic.line());
+		Assert.assertEquals("Unexpected diagnostic character position",
+				Integer.valueOf(expectedCharPositionInLine), diagnostic.charPositionInLine());
+		Assert.assertEquals("Fatal diagnostic message is wrong", expectedFullMessage, diagnostic.message());
+	}
+
 	protected void assertDiagnosticAtPosition(
 			Snippet snippet,
 			String code,
