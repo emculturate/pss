@@ -16663,33 +16663,40 @@ public class SqlParseSymbolTreeHelper {
 			Object usingColumnsObj,
 			Map<String, Object> leftSource,
 			Map<String, Object> rightSource) {
-		if (leftSource == null || rightSource == null) {
-			Map<String, Object>[] operands = resolveJoinUsingOperandsFromTableAliasMap();
-			if (operands != null) {
-				if (leftSource == null) {
-					leftSource = operands[0];
-				}
-				if (rightSource == null) {
-					rightSource = operands[1];
+		try {
+			if (leftSource == null || rightSource == null) {
+				Map<String, Object>[] operands = resolveJoinUsingOperandsFromTableAliasMap();
+				if (operands != null) {
+					if (leftSource == null) {
+						leftSource = operands[0];
+					}
+					if (rightSource == null) {
+						rightSource = operands[1];
+					}
 				}
 			}
+			if (leftSource == null || rightSource == null) {
+				return;
+			}
+			Map<String, Object> normalizedUsing = normalizeJoinUsingColumnListAst(usingColumnsObj);
+			Object existingFilters = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
+			ArrayList<Object> filtersList;
+			if (existingFilters instanceof ArrayList<?>) {
+				filtersList = (ArrayList<Object>) existingFilters;
+			} else {
+				filtersList = new ArrayList<Object>();
+			}
+			processJoinUsingColumnsAtJoinSpecification(
+					normalizedUsing, leftSource, rightSource, filtersList);
+			if (!filtersList.isEmpty()) {
+				walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
+			}
+		} finally {
+			clearJoinUsingOperandScratchState();
 		}
-		if (leftSource == null || rightSource == null) {
-			return;
-		}
-		Map<String, Object> normalizedUsing = normalizeJoinUsingColumnListAst(usingColumnsObj);
-		Object existingFilters = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
-		ArrayList<Object> filtersList;
-		if (existingFilters instanceof ArrayList<?>) {
-			filtersList = (ArrayList<Object>) existingFilters;
-		} else {
-			filtersList = new ArrayList<Object>();
-		}
-		processJoinUsingColumnsAtJoinSpecification(
-				normalizedUsing, leftSource, rightSource, filtersList);
-		if (!filtersList.isEmpty()) {
-			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
-		}
+	}
+
+	private void clearJoinUsingOperandScratchState() {
 		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_REFS_KEY);
 		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY);
 		walker.symbolTable.remove(JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY);
@@ -16726,6 +16733,10 @@ public class SqlParseSymbolTreeHelper {
 			Object target = aliasMap.get(alias);
 			if (target instanceof String targetRef && targetRef.startsWith(MUMBLE_QUERY_KEY)) {
 				tablePayload.put(MUMBLE_QUERY_KEY, new HashMap<String, Object>());
+			} else if (target instanceof String targetRef && isTableFunctionSourceReference(targetRef)) {
+				tablePayload.put(MUMBLE_TABLE_FUNCTION_KEY, new HashMap<String, Object>());
+			} else if (target instanceof String targetRef && targetRef.startsWith(MUMBLE_VALUES_KEY)) {
+				tablePayload.put(MUMBLE_VALUES_KEY, new HashMap<String, Object>());
 			}
 		}
 		HashMap<String, Object> source = new HashMap<String, Object>();
@@ -16887,8 +16898,137 @@ public class SqlParseSymbolTreeHelper {
 		if (isDirectTableJoinSource(sourceResult)) {
 			return true;
 		}
+		if (isJoinUsingTableFunctionSource(sourceResult)) {
+			return true;
+		}
+		if (isJoinUsingValuesSource(sourceResult)) {
+			return joinUsingValuesOperandDeclaresColumn(sourceResult, columnName)
+					|| joinUsingValuesOperandDeclaresColumnViaInterface(sourceResult, columnName);
+		}
+		if (isJoinUsingCompositeOperand(sourceResult)) {
+			return joinUsingCompositeOperandAcceptsColumn(sourceResult, columnName);
+		}
 		Map<String, Object> interfaceMap = resolveJoinUsingSourceInterface(sourceResult);
 		return interfaceMap.containsKey("*") || containsKeyIgnoreCase(interfaceMap, columnName);
+	}
+
+	private boolean isJoinUsingTableFunctionSource(Map<String, Object> sourceResult) {
+		if (sourceResult.containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+			return true;
+		}
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		if (tableObj instanceof Map<?, ?> tableMapObj
+				&& ((Map<String, Object>) tableMapObj).containsKey(MUMBLE_TABLE_FUNCTION_KEY)) {
+			return true;
+		}
+		String canonicalRef = resolveJoinUsingCanonicalSourceRef(sourceResult);
+		return canonicalRef != null && isTableFunctionSourceReference(canonicalRef);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isJoinUsingValuesSource(Map<String, Object> sourceResult) {
+		if (sourceResult.containsKey(MUMBLE_VALUES_KEY)) {
+			return true;
+		}
+		Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+		return tableObj instanceof Map<?, ?> tableMapObj
+				&& ((Map<String, Object>) tableMapObj).containsKey(MUMBLE_VALUES_KEY);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean joinUsingValuesOperandDeclaresColumn(
+			Map<String, Object> sourceResult,
+			String columnName) {
+		Object valuesObj = sourceResult.get(MUMBLE_VALUES_KEY);
+		if (!(valuesObj instanceof Map<?, ?>)) {
+			Object tableObj = sourceResult.get(MUMBLE_TABLE_KEY);
+			if (tableObj instanceof Map<?, ?> tableMapObj) {
+				valuesObj = ((Map<String, Object>) tableMapObj).get(MUMBLE_VALUES_KEY);
+			}
+		}
+		if (!(valuesObj instanceof Map<?, ?> valuesMapObj)) {
+			return false;
+		}
+		Object columnsObj = ((Map<String, Object>) valuesMapObj).get(MUMBLE_COLUMNS_KEY);
+		if (!(columnsObj instanceof Map<?, ?> columnsMapObj)) {
+			return false;
+		}
+		for (Object columnWrapperObj : ((Map<String, Object>) columnsMapObj).values()) {
+			Map<String, Object> columnSubTree = extractColumnSubTreeFromAstNode(columnWrapperObj);
+			if (columnSubTree == null) {
+				continue;
+			}
+			Object nameObj = columnSubTree.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String declaredName
+					&& declaredName.equalsIgnoreCase(columnName)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean joinUsingValuesOperandDeclaresColumnViaInterface(
+			Map<String, Object> sourceResult,
+			String columnName) {
+		Map<String, Object> interfaceMap = resolveJoinUsingSourceInterface(sourceResult);
+		return interfaceMap.containsKey("*") || containsKeyIgnoreCase(interfaceMap, columnName);
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isJoinUsingCompositeOperand(Map<String, Object> sourceResult) {
+		Object joinObj = sourceResult.get(MUMBLE_JOIN_KEY);
+		return joinObj instanceof Map<?, ?>;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean joinUsingCompositeOperandAcceptsColumn(
+			Map<String, Object> sourceResult,
+			String columnName) {
+		Object joinObj = sourceResult.get(MUMBLE_JOIN_KEY);
+		if (!(joinObj instanceof Map<?, ?> joinMapObj)) {
+			return false;
+		}
+		Map<String, Object> joinMap = (Map<String, Object>) joinMapObj;
+		Object leftObj = joinMap.get("1");
+		Object rightObj = joinMap.get("3");
+		Map<String, Object> left = coerceJoinUsingOperandMapForAcceptance(leftObj);
+		Map<String, Object> right = coerceJoinUsingOperandMapForAcceptance(rightObj);
+		boolean leftAccepts = left != null && joinUsingSourceAcceptsColumn(left, columnName);
+		boolean rightAccepts = right != null && joinUsingSourceAcceptsColumn(right, columnName);
+		return leftAccepts || rightAccepts;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> coerceJoinUsingOperandMapForAcceptance(Object operandObj) {
+		if (!(operandObj instanceof Map<?, ?> operandMapObj)) {
+			return null;
+		}
+		Map<String, Object> operandMap = (Map<String, Object>) operandMapObj;
+		if (operandMap.containsKey(MUMBLE_TABLE_KEY)
+				|| operandMap.containsKey(MUMBLE_VALUES_KEY)) {
+			return operandMap;
+		}
+		Object joinObj = operandMap.get(MUMBLE_JOIN_KEY);
+		if (joinObj instanceof Map<?, ?>) {
+			return operandMap;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String resolveJoinUsingCanonicalSourceRef(Map<String, Object> sourceResult) {
+		String sourceRef = resolveJoinUsingSourceReference(sourceResult);
+		if (sourceRef == null || sourceRef.isBlank()) {
+			return null;
+		}
+		Object aliasMapObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (aliasMapObj instanceof Map<?, ?> aliasMap && aliasMap.containsKey(sourceRef)) {
+			Object aliasTarget = aliasMap.get(sourceRef);
+			if (aliasTarget instanceof String aliasTargetRef && !aliasTargetRef.isBlank()) {
+				return aliasTargetRef;
+			}
+		}
+		return sourceRef;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -17011,6 +17151,13 @@ public class SqlParseSymbolTreeHelper {
 			}
 			if (((Map<String, Object>) tableMapObj).containsKey(MUMBLE_QUERY_KEY)) {
 				return getSubqueryReferenceKey(walker.symbolTable);
+			}
+		}
+		Object valuesObj = sourceResult.get(MUMBLE_VALUES_KEY);
+		if (valuesObj instanceof Map<?, ?> valuesMapObj) {
+			Object aliasObj = ((Map<String, Object>) valuesMapObj).get(MUMBLE_ALIAS_KEY);
+			if (aliasObj instanceof String alias && !alias.isBlank()) {
+				return alias;
 			}
 		}
 		return null;

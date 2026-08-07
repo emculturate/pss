@@ -4747,6 +4747,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		normalizeLateralModifierEntries(subMap);
 
+		captureJoinUsingDependenciesFromTableReferenceSubMap(subMap);
+
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
 			walker.collect(ruleIndex, stackLevel, item);
@@ -7237,11 +7239,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				if (ctx.named_columns_join() != null) {
 					Map<String, Object> usingColumns = extractJoinUsingColumnsFromContext(ctx, rawCondition);
 					join.put(MUMBLE_USING_KEY, usingColumns);
-					Map<String, Object>[] operands = resolveJoinUsingLeftAndRightSources(ctx);
-					symbolTreeHelper.captureJoinUsingClauseDependencies(
-							usingColumns,
-							operands == null ? null : operands[0],
-							operands == null ? null : operands[1]);
 				} else {
 					join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
 					symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
@@ -7296,66 +7293,65 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, Object>[] resolveJoinUsingLeftAndRightSources(
-			SQLSelectParserParser.Join_specificationContext ctx) {
-		ArrayList<Map<String, Object>> tableSources = new ArrayList<Map<String, Object>>();
-		ParserRuleContext qualifiedJoin = ctx.getParent();
-		if (qualifiedJoin != null) {
-			Integer qualifiedJoinStackLevel = walker.currentStackLevel(qualifiedJoin.getRuleIndex());
-			if (qualifiedJoinStackLevel != null) {
-				Map<String, Object> qualifiedJoinMap =
-						walker.getNodeMap(qualifiedJoin.getRuleIndex(), qualifiedJoinStackLevel);
-				collectJoinTableSourceEntries(qualifiedJoinMap, tableSources);
-			}
+	private void captureJoinUsingDependenciesFromTableReferenceSubMap(Map<String, Object> tableReferenceSubMap) {
+		if (tableReferenceSubMap == null || tableReferenceSubMap.size() < 2) {
+			return;
 		}
-		ParserRuleContext ancestor = ctx.getParent();
-		while (ancestor != null && !(ancestor instanceof SQLSelectParserParser.Table_reference_listContext)) {
-			ancestor = ancestor.getParent();
+		Map<String, Object> usingColumns =
+				extractJoinUsingColumnsFromTableReferenceJoinBucket(tableReferenceSubMap.get("2"));
+		if (usingColumns == null || usingColumns.isEmpty()) {
+			return;
 		}
-		if (ancestor == null) {
-			return null;
+		Map<String, Object> left = coerceJoinUsingOperandSource(tableReferenceSubMap.get("1"));
+		Map<String, Object> right = coerceJoinUsingOperandSource(tableReferenceSubMap.get("3"));
+		if (left == null || right == null || left == right) {
+			return;
 		}
-		int tableReferenceListRuleIndex = ancestor.getRuleIndex();
-		Integer tableReferenceListStackLevel = walker.currentStackLevel(tableReferenceListRuleIndex);
-		if (tableReferenceListStackLevel == null) {
-			return null;
-		}
-		Map<String, Object> tableReferenceListMap =
-				walker.getNodeMap(tableReferenceListRuleIndex, tableReferenceListStackLevel);
-		if (tableReferenceListMap == null) {
-			return tableSources.size() >= 2
-					? new Map[] { tableSources.get(tableSources.size() - 2), tableSources.get(tableSources.size() - 1) }
-					: null;
-		}
-
-		collectJoinTableSourceEntries(tableReferenceListMap, tableSources);
-		if (tableSources.size() < 2) {
-			return null;
-		}
-		int rightIndex = tableSources.size() - 1;
-		int leftIndex = tableSources.size() - 2;
-		return new Map[] { tableSources.get(leftIndex), tableSources.get(rightIndex) };
+		symbolTreeHelper.captureJoinUsingClauseDependencies(usingColumns, left, right);
 	}
 
 	@SuppressWarnings("unchecked")
-	private void collectJoinTableSourceEntries(Object node, ArrayList<Map<String, Object>> tableSources) {
-		if (!(node instanceof Map<?, ?> nodeMap)) {
-			return;
+	private Map<String, Object> extractJoinUsingColumnsFromTableReferenceJoinBucket(Object joinBucketObj) {
+		if (!(joinBucketObj instanceof Map<?, ?> joinBucketMapObj)) {
+			return null;
 		}
-		Object tableWrapperObj = nodeMap.get(MUMBLE_TABLE_KEY);
-		if (tableWrapperObj instanceof Map<?, ?> tableWrapperMap
-				&& (tableWrapperMap.containsKey(MUMBLE_TABLE_KEY)
-						|| tableWrapperMap.containsKey(MUMBLE_QUERY_KEY))) {
-			tableSources.add((Map<String, Object>) nodeMap);
-			if (tableWrapperMap.containsKey(MUMBLE_QUERY_KEY)) {
-				return;
+		Map<String, Object> joinBucketMap = (Map<String, Object>) joinBucketMapObj;
+		Object directUsing = joinBucketMap.get(MUMBLE_USING_KEY);
+		Map<String, Object> coercedDirect = symbolTreeHelper.coerceJoinUsingColumnListAst(directUsing);
+		if (coercedDirect != null && !coercedDirect.isEmpty()) {
+			return coercedDirect;
+		}
+		for (Object value : joinBucketMap.values()) {
+			if (!(value instanceof Map<?, ?> nestedMapObj)) {
+				continue;
+			}
+			Object nestedUsing = ((Map<String, Object>) nestedMapObj).get(MUMBLE_USING_KEY);
+			Map<String, Object> coercedNested = symbolTreeHelper.coerceJoinUsingColumnListAst(nestedUsing);
+			if (coercedNested != null && !coercedNested.isEmpty()) {
+				return coercedNested;
 			}
 		}
-		for (Object value : nodeMap.values()) {
-			if (value instanceof Map<?, ?>) {
-				collectJoinTableSourceEntries(value, tableSources);
-			}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> coerceJoinUsingOperandSource(Object operandObj) {
+		if (!(operandObj instanceof Map<?, ?> operandMapObj)) {
+			return null;
 		}
+		Map<String, Object> operandMap = (Map<String, Object>) operandMapObj;
+		if (operandMap.containsKey(MUMBLE_TABLE_KEY)
+				|| operandMap.containsKey(MUMBLE_VALUES_KEY)
+				|| isNestedJoinOperandMap(operandMap)) {
+			return operandMap;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean isNestedJoinOperandMap(Map<String, Object> operandMap) {
+		Object joinObj = operandMap.get(MUMBLE_JOIN_KEY);
+		return joinObj instanceof Map<?, ?>;
 	}
 
 	@Override
