@@ -825,7 +825,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 
 
 	@Test
-	public void joinSubquerySourcesWithUsingV5Test() {
+	public void joinSubquerySourcesWithUsingV5ATest() {
 		final String query = "SELECT x.a AS xa, x.d, y.value AS ye FROM (VALUES (1, 3)) AS "
 				+ "\n x(a, d) JOIN TABLE(SPLIT_TO_TABLE('2,4', ',')) y USING "
 				+ "\n (value)";
@@ -855,6 +855,32 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				"value",
 				3,
 				2);
+	}
+
+	@Test
+	public void joinSubquerySourcesWithUsingV5BTest() {
+		final String query = "SELECT x.value AS xa, x.d, y.value AS ye FROM (VALUES (1, 3)) AS "
+				+ "\n x(value, d) JOIN TABLE(SPLIT_TO_TABLE('2,4', ',')) y USING "
+				+ "\n (value)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=value, table_ref=x}, alias=xa}, 2={column={name=d, table_ref=x}}, 3={column={name=value, table_ref=y}, alias=ye}}, from={join={1={values={columns={1={column={name=value, table_ref=null}}, 2={column={name=d, table_ref=null}}}, alias=x, matrix={1={row={1={literal=1}, 2={literal=3}}}}}}, 2={using={1={column={name=value, table_ref=null}}}, join=JOIN}, 3={table={alias=y, table_function={function={function_name=SPLIT_TO_TABLE, parameters={1={literal='2,4'}, 2={literal=','}}}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[d, xa, ye]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{table_function0={value=[[@11,27:27='y',<391>,1:27], [@45,129:133='value',<391>,3:2]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{values0={d=[[@30,76:76='d',<391>,2:10], [@7,22:22='x',<391>,1:22]], value=[[@28,69:73='value',<391>,2:3], [@1,7:7='x',<391>,1:7], [@45,129:133='value',<391>,3:2]]}, query1={xa=[[@5,18:19='xa',<391>,1:18]], d=[[@9,24:24='d',<391>,1:24]], ye=[[@15,38:39='ye',<391>,1:38]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={d=[[@9,24:24='d',<391>,1:24]], xa=[[@5,18:19='xa',<391>,1:18]], ye=[[@15,38:39='ye',<391>,1:38]]}, table_dictionary={table_function0={value=[[@11,27:27='y',<391>,1:27], [@45,129:133='value',<391>,3:2]]}}, def_values0={query_dictionary={d=[[@30,76:76='d',<391>,2:10], [@7,22:22='x',<391>,1:22]], value=[[@28,69:73='value',<391>,2:3], [@1,7:7='x',<391>,1:7], [@45,129:133='value',<391>,3:2]]}, interface={d=[], value=[]}}, filters=[{name=value, table_ref=x}, {name=value, table_ref=y}], interface={d=[{name=d, table_ref=x}], xa=[{name=value, table_ref=x}], ye=[{name=value, table_ref=y}]}, table_alias={x=values0, y=table_function0}}}",
+				extractor.getSymbolTable().toString());
 	}
 
 
