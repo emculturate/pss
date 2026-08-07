@@ -43,6 +43,16 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				"SQL_RELATIONAL_MODIFIER_SOURCE_OPERAND_UNRESOLVED";
 		public static final String DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS =
 				"SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS";
+		public static final String DIAG_SQL_EXTRACT_FIELD_SNOWFLAKE_ONLY = "SQL_EXTRACT_FIELD_SNOWFLAKE_ONLY";
+		public static final String DIAG_SQL_EXTRACT_FIELD_POSTGRES_ONLY = "SQL_EXTRACT_FIELD_POSTGRES_ONLY";
+		public static final String DIAG_SQL_EXTRACT_FIELD_MIXED_DIALECT_AFFINITY =
+				"SQL_EXTRACT_FIELD_MIXED_DIALECT_AFFINITY";
+		public static final String DIAG_SQL_STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR =
+				"SQL_STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR";
+		public static final String DIAG_SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR =
+				"SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR";
+		public static final String DIAG_SQL_STATEMENT_MIXED_DIALECT_GRAMMAR =
+				"SQL_STATEMENT_MIXED_DIALECT_GRAMMAR";
 		public static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY = "_tmp_set_operation_interface_summary_map";
 		public static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY = "_tmp_query_set_operation_summary_keys_map";
 		public static final String TEMP_SET_OPERATION_OPERATOR_ANCHOR_LINE_KEY = "_tmp_set_operation_operator_anchor_line";
@@ -260,6 +270,26 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				 DIAG_SQL_RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS,
 				 "RELATIONAL_MODIFIER_DERIVED_REFERENCE_USE_MODIFIER_ALIAS",
 				 "Derived column '%s' qualified with source alias '%s' at (l:%s c:%s); use relational modifier alias '%s' instead.");
+		 registerDiagnostic(
+				 DIAG_SQL_EXTRACT_FIELD_SNOWFLAKE_ONLY,
+				 "EXTRACT_FIELD_SNOWFLAKE_ONLY",
+				 "EXTRACT/DATE_PART option '%s' at (l:%s c:%s) is recognized as valid only on Snowflake.");
+		 registerDiagnostic(
+				 DIAG_SQL_EXTRACT_FIELD_POSTGRES_ONLY,
+				 "EXTRACT_FIELD_POSTGRES_ONLY",
+				 "EXTRACT/DATE_PART option '%s' at (l:%s c:%s) is recognized as valid only on PostgreSQL.");
+		 registerDiagnostic(
+				 DIAG_SQL_STATEMENT_MIXED_DIALECT_GRAMMAR,
+				 "STATEMENT_MIXED_DIALECT_GRAMMAR",
+				 "Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:%s c:%s); unlikely to run on either engine.");
+		 registerDiagnostic(
+				 DIAG_SQL_STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR,
+				 "STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				 "%s at (l:%s c:%s) is recognized as Snowflake-specific grammar.");
+		 registerDiagnostic(
+				 DIAG_SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR,
+				 "STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				 "%s at (l:%s c:%s) is recognized as PostgreSQL-specific grammar.");
 	 }
 
 	@SuppressWarnings("unchecked")

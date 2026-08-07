@@ -1,10 +1,13 @@
 package sql.walker;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import access.Snippet;
+import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 /**
@@ -18,11 +21,15 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 
 	private static final Pattern GRAMMAR_RULE_TYPE_IN_AST = Pattern.compile("Type=\\d+");
 
+	private static final Set<String> EXTRACT_FIELD_AFFINITY_WARNING_CODES = Set.of(
+			"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+			"STATEMENT_POSTGRES_DIALECT_GRAMMAR");
+
 	private SqlParseEventWalker assertExtractAst(String query, String expectedAst) {
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoFatalErrors(extractor);
-		assertNoWalkerDiagnostics(extractor);
+		assertNoWalkerDiagnostics(extractor, EXTRACT_FIELD_AFFINITY_WARNING_CODES);
 		String ast = extractor.getAsTree().toString();
 		Assert.assertFalse(
 				"AST must not contain grammar rule Type= entries (use semantic keys only): " + ast,
@@ -35,7 +42,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 		final SQLSelectParserParser parser = parse(predicandSql);
 		SqlParseEventWalker extractor = runPredicandParsertest(predicandSql, parser);
 		assertNoFatalErrors(extractor);
-		assertNoWalkerDiagnostics(extractor);
+		assertNoWalkerDiagnostics(extractor, EXTRACT_FIELD_AFFINITY_WARNING_CODES);
 		String ast = extractor.getAsTree().toString();
 		Assert.assertFalse(
 				"AST must not contain grammar rule Type= entries (use semantic keys only): " + ast,
@@ -554,5 +561,323 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"{PREDICAND={extract={invocation=DATE_PART, part_form=KEYWORD, part=HOUR, source={substitution={name=<order_date>, type=predicand}}}}}",
 				"{<order_date>=predicand}",
 				"{}");
+	}
+
+	// --- EXTRACT/DATE_PART dialect affinity diagnostics (position + mixed fatal) ---
+
+	private SqlParseEventWalker runExtractSelectForDiagnostics(String query) {
+		final SQLSelectParserParser parser = parse(query);
+		return runParsertest(query, parser);
+	}
+
+	private SqlParseEventWalker runExtractPredicandForDiagnostics(String predicandSql) {
+		final SQLSelectParserParser parser = parse(predicandSql);
+		return runPredicandParsertest(predicandSql, parser);
+	}
+
+	@Test
+	public void extractSnowflakeAffinityWarningAnchoredAtExtract() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT EXTRACT(epoch_second FROM ts) FROM t");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void datePartSnowflakeAffinityWarningAnchoredAtDatePart() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT DATE_PART(epoch_second FROM ts) FROM t");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void extractPostgresAffinityWarningAnchoredAtExtract() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT EXTRACT(DOW FROM order_date) FROM orders");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"DOW",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void datePartPostgresAffinityWarningAnchoredAtDatePart() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT DATE_PART(DOW FROM order_date) FROM orders");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"DOW",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void predicandExtractSnowflakeAffinityWarningAnchoredAtExtract() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("EXTRACT(epoch_second FROM ts)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void predicandDatePartSnowflakeAffinityWarningAnchoredAtDatePart() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("DATE_PART(epoch_second FROM ts)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void predicandExtractPostgresAffinityWarningAnchoredAtExtract() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("EXTRACT(DOW FROM order_date)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"DOW",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void predicandDatePartPostgresAffinityWarningAnchoredAtDatePart() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("DATE_PART(DOW FROM order_date)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"DOW",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void mixedSnowflakeAndPostgresExtractPartsFatalOnSecondExtract() {
+		String query = "SELECT EXTRACT(epoch_second FROM ts), EXTRACT(DOW FROM order_date) FROM orders";
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				38);
+	}
+
+	@Test
+	public void mixedSnowflakeExtractAndPostgresDatePartFatalOnDatePart() {
+		String query = "SELECT EXTRACT(epoch_second FROM ts), DATE_PART(DOW FROM order_date) FROM orders";
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				38);
+	}
+
+	@Test
+	public void mixedNestedPostgresDatePartOverSnowflakeExtractFatalOnOuterDatePart() {
+		String query = "SELECT DATE_PART(DOW FROM EXTRACT(epoch_second FROM ts)) FROM t";
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				26);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void mixedNestedPredicandPostgresDatePartOverSnowflakeExtractFatalOnOuterDatePart() {
+		String query = "DATE_PART(DOW FROM EXTRACT(epoch_second FROM ts))";
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				19);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void extractCommaSnowflakeAffinityWarningAnchoredAtFunctionName() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT EXTRACT('epoch_second', ts) FROM t");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void datePartCommaPostgresAffinityWarningAnchoredAtFunctionName() {
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(
+				"SELECT date_part('dow', order_date) FROM orders");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"dow",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void predicandExtractCommaSnowflakeAffinityWarning() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("EXTRACT('epoch_second', ts)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void predicandDatePartCommaPostgresAffinityWarning() {
+		SqlParseEventWalker extractor = runExtractPredicandForDiagnostics("date_part('dow', order_date)");
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"dow",
+				null,
+				1,
+				0);
+	}
+
+	@Test
+	public void mixedCommaFromAndCommaFormsFatalOnSecondFunction() {
+		String query = "SELECT EXTRACT('epoch_second', ts), date_part('dow', order_date) FROM orders";
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				36);
+	}
+
+	@Test
+	public void mixedCommaFormNestedInSecondArgumentFatalOnOuterDatePart() {
+		String query = "SELECT date_part('dow', EXTRACT('epoch_second', ts)) FROM t";
+		SqlParseEventWalker extractor = runExtractSelectForDiagnostics(query);
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"epoch_second",
+				null,
+				1,
+				24);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				7);
 	}
 }

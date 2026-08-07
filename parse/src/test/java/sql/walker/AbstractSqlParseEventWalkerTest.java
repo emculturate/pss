@@ -651,7 +651,17 @@ public abstract class AbstractSqlParseEventWalkerTest {
 				0, snippet.getFatalErrorStringList().size());
 	}
 
+	protected static final Set<String> DEFAULT_IGNORABLE_DIALECT_GRAMMAR_WARNING_CODES = Set.of(
+			"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+			"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+			"EXTRACT_FIELD_SNOWFLAKE_ONLY",
+			"EXTRACT_FIELD_POSTGRES_ONLY");
+
 	protected void assertNoWalkerDiagnostics(SqlParseEventWalker extractor) {
+		assertNoWalkerDiagnostics(extractor, DEFAULT_IGNORABLE_DIALECT_GRAMMAR_WARNING_CODES);
+	}
+
+	protected void assertNoWalkerDiagnostics(SqlParseEventWalker extractor, Set<String> ignoredWarningCodes) {
 		Assert.assertNotNull(
 				"Parser/walker run did not produce an extractor (likely parser rejection or walker setup failure). "
 						+ "Use ParserRunResult#getFailure and parser diagnostics for details.",
@@ -672,16 +682,40 @@ public abstract class AbstractSqlParseEventWalkerTest {
 						+ snippet.getErrorStringList(ParseDiagnostic.Severity.SEVERE_WARNING),
 				0,
 				snippet.getDiagnosticCountBySeverity(ParseDiagnostic.Severity.SEVERE_WARNING));
+		int unexpectedWarnings = countDiagnosticsBySeverityExcludingCodes(
+				snippet,
+				ParseDiagnostic.Severity.WARNING,
+				ignoredWarningCodes);
 		Assert.assertEquals(
 				"Unexpected WARNING diagnostics from Walker/WalkerHelper: "
 						+ snippet.getErrorStringList(ParseDiagnostic.Severity.WARNING),
 				0,
-				snippet.getDiagnosticCountBySeverity(ParseDiagnostic.Severity.WARNING));
+				unexpectedWarnings);
 		Assert.assertEquals(
 				"Unexpected INFO diagnostics from Walker/WalkerHelper: "
 						+ snippet.getErrorStringList(ParseDiagnostic.Severity.INFO),
 				0,
 				snippet.getDiagnosticCountBySeverity(ParseDiagnostic.Severity.INFO));
+	}
+
+	private static int countDiagnosticsBySeverityExcludingCodes(
+			Snippet snippet,
+			ParseDiagnostic.Severity severity,
+			Set<String> ignoredCodes) {
+		if (snippet == null || snippet.getParserDiagnosticList() == null) {
+			return 0;
+		}
+		int count = 0;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic == null || diagnostic.severity() != severity) {
+				continue;
+			}
+			if (ignoredCodes != null && ignoredCodes.contains(diagnostic.code())) {
+				continue;
+			}
+			count++;
+		}
+		return count;
 	}
 
 	protected static final class ParserRunResult {

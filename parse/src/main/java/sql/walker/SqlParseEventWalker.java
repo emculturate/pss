@@ -48,7 +48,10 @@ import errorhandling.ParseDiagnostic;
 
 import sql.SQLSelectParserBaseListener;
 import sql.SQLSelectParserParser;
+import sql.diagnostics.ExtractDatetimeFieldAffinity;
 import sql.diagnostics.SqlParseDiagnosticService;
+import sql.grammar.SqlGrammarDialect;
+import sql.grammar.SqlGrammarDialectRuleRegistry;
 import sql.symboltree.SqlParseSymbolTreeHelper;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
@@ -98,6 +101,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final ArrayDeque<Integer> setOperationWrapAnchorStackLevels;
 	private int relationalModifierTupleBucketSequence = 0;
 	private int tableSourcePrimaryNestingDepth;
+	private int snowflakeDialectGrammarCount;
+	private int postgresDialectGrammarCount;
+	private boolean snowflakeDialectGrammarWarningEmitted;
+	private boolean postgresDialectGrammarWarningEmitted;
+	private boolean mixedDialectGrammarFatalEmitted;
 
 
 	// Constructors
@@ -113,6 +121,138 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		this.tableSourcePrimaryNestingDepth = 0;
 
 
+	}
+
+	public int getSnowflakeDialectGrammarCount() {
+		return snowflakeDialectGrammarCount;
+	}
+
+	public int getPostgresDialectGrammarCount() {
+		return postgresDialectGrammarCount;
+	}
+
+	private void resetStatementDialectGrammarCounters() {
+		snowflakeDialectGrammarCount = 0;
+		postgresDialectGrammarCount = 0;
+		snowflakeDialectGrammarWarningEmitted = false;
+		postgresDialectGrammarWarningEmitted = false;
+		mixedDialectGrammarFatalEmitted = false;
+	}
+
+	public void recordStatementDialectGrammarHit(
+			SqlGrammarDialect dialect,
+			Integer line,
+			Integer charPos,
+			String constructLabel) {
+		if (dialect == null || line == null || charPos == null) {
+			return;
+		}
+		if (mixedDialectGrammarFatalEmitted) {
+			incrementDialectGrammarCount(dialect);
+			return;
+		}
+		incrementDialectGrammarCount(dialect);
+		if (dialect == SqlGrammarDialect.SNOWFLAKE && postgresDialectGrammarCount > 0) {
+			emitStatementMixedDialectGrammarFatal(line, charPos);
+			return;
+		}
+		if (dialect == SqlGrammarDialect.POSTGRES && snowflakeDialectGrammarCount > 0) {
+			emitStatementMixedDialectGrammarFatal(line, charPos);
+			return;
+		}
+		if (dialect == SqlGrammarDialect.SNOWFLAKE) {
+			if (!snowflakeDialectGrammarWarningEmitted) {
+				snowflakeDialectGrammarWarningEmitted = true;
+				emitStatementSnowflakeDialectGrammarWarning(constructLabel, line, charPos);
+			}
+			return;
+		}
+		if (dialect == SqlGrammarDialect.POSTGRES && !postgresDialectGrammarWarningEmitted) {
+			postgresDialectGrammarWarningEmitted = true;
+			emitStatementPostgresDialectGrammarWarning(constructLabel, line, charPos);
+		}
+	}
+
+	private void incrementDialectGrammarCount(SqlGrammarDialect dialect) {
+		if (dialect == SqlGrammarDialect.SNOWFLAKE) {
+			snowflakeDialectGrammarCount++;
+		} else if (dialect == SqlGrammarDialect.POSTGRES) {
+			postgresDialectGrammarCount++;
+		}
+	}
+
+	private void recordDialectGrammarRuleIfApplicable(ParserRuleContext ctx) {
+		if (ctx == null) {
+			return;
+		}
+		int ruleIndex = ctx.getRuleIndex();
+		SqlGrammarDialectRuleRegistry.Registration registration =
+				SqlGrammarDialectRuleRegistry.registrationForRuleIndex(ruleIndex);
+		if (registration == null) {
+			registration = SqlGrammarDialectRuleRegistry.nestedWithInCteBodyRegistration(ctx);
+		}
+		if (registration == null) {
+			return;
+		}
+		Token start = ctx.getStart();
+		if (start == null) {
+			return;
+		}
+		recordStatementDialectGrammarHit(
+				registration.dialect(),
+				start.getLine(),
+				start.getCharPositionInLine(),
+				registration.constructLabel());
+	}
+
+	private void emitStatementSnowflakeDialectGrammarWarning(
+			String constructLabel,
+			Integer line,
+			Integer charPos) {
+		String label = constructLabel != null ? constructLabel : "Snowflake-specific grammar";
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"%s at (l:%s c:%s) is recognized as Snowflake-specific grammar.",
+						label,
+						String.valueOf(line),
+						String.valueOf(charPos))
+				: String.format(diagTemplate, label, String.valueOf(line), String.valueOf(charPos));
+		walker.addWalkerWarning(diagCode, diagMessage, line, charPos);
+	}
+
+	private void emitStatementPostgresDialectGrammarWarning(
+			String constructLabel,
+			Integer line,
+			Integer charPos) {
+		String label = constructLabel != null ? constructLabel : "PostgreSQL-specific grammar";
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_POSTGRES_DIALECT_GRAMMAR);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"%s at (l:%s c:%s) is recognized as PostgreSQL-specific grammar.",
+						label,
+						String.valueOf(line),
+						String.valueOf(charPos))
+				: String.format(diagTemplate, label, String.valueOf(line), String.valueOf(charPos));
+		walker.addWalkerWarning(diagCode, diagMessage, line, charPos);
+	}
+
+	private void emitStatementMixedDialectGrammarFatal(Integer line, Integer charPos) {
+		if (mixedDialectGrammarFatalEmitted) {
+			return;
+		}
+		mixedDialectGrammarFatalEmitted = true;
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_MIXED_DIALECT_GRAMMAR);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_STATEMENT_MIXED_DIALECT_GRAMMAR);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"Statement mixes Snowflake-only and PostgreSQL-only grammar at (l:%s c:%s); unlikely to run on either engine.",
+						String.valueOf(line),
+						String.valueOf(charPos))
+				: String.format(diagTemplate, String.valueOf(line), String.valueOf(charPos));
+		walker.addWalkerFatal(diagCode, diagMessage, line, charPos, null);
 	}
 
 	@Override
@@ -1688,6 +1828,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@Override
 	public void exitEveryRule( ParserRuleContext ctx) {
+		recordDialectGrammarRuleIfApplicable(ctx);
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Object item = null;
@@ -1808,6 +1949,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		scriptParseAccumulator.beginStatement();
 		walker.pushSymbolTable();
 		walker.resetPerStatementScope();
+		resetStatementDialectGrammarCounters();
 	}
 
 	@Override
@@ -10112,6 +10254,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		subMap.clear();
 		subMap.put(MUMBLE_EXTRACT_KEY, buildExtractMumbleItem(fieldObj, sourceObj, null));
+		emitExtractFieldDialectAffinityWarning(ctx.getStart(), normalizeExtractPartText(fieldObj));
 	}
 
 	@Override
@@ -10133,6 +10276,74 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.clear();
 		subMap.put(MUMBLE_EXTRACT_KEY,
 				buildExtractMumbleItem(fieldObj, sourceObj, MUMBLE_EXTRACT_INVOCATION_DATE_PART));
+		emitExtractFieldDialectAffinityWarning(ctx.getStart(), normalizeExtractPartText(fieldObj));
+	}
+
+	private void emitExtractFieldDialectAffinityWarning(Token anchor, String part) {
+		ExtractDatetimeFieldAffinity.Affinity affinity = ExtractDatetimeFieldAffinity.affinityForPart(part);
+		if (affinity == null || anchor == null) {
+			return;
+		}
+		SqlGrammarDialect dialect = affinity == ExtractDatetimeFieldAffinity.Affinity.SNOWFLAKE
+				? SqlGrammarDialect.SNOWFLAKE
+				: SqlGrammarDialect.POSTGRES;
+		String partLabel = part != null ? part : "";
+		recordStatementDialectGrammarHit(
+				dialect,
+				anchor.getLine(),
+				anchor.getCharPositionInLine(),
+				"EXTRACT/DATE_PART option '" + partLabel + "'");
+	}
+
+	@SuppressWarnings("unchecked")
+	private void maybeEmitExtractDatetimeCommaFormDialectDiagnostics(Token anchor, Object functionObj) {
+		if (!(functionObj instanceof Map)) {
+			return;
+		}
+		Map<String, Object> function = (Map<String, Object>) functionObj;
+		String functionName = (String) function.get(MUMBLE_FUNCTION_NAME_KEY);
+		if (functionName == null) {
+			return;
+		}
+		if (!functionName.equalsIgnoreCase("EXTRACT") && !functionName.equalsIgnoreCase("DATE_PART")) {
+			return;
+		}
+		Object parametersObj = function.get(MUMBLE_PARAMETERS_KEY);
+		if (!(parametersObj instanceof Map)) {
+			return;
+		}
+		Map<String, Object> parameters = (Map<String, Object>) parametersObj;
+		String part = resolveExtractPartFromCommaFormArgument(parameters.get("1"));
+		if (part == null || part.isBlank()) {
+			return;
+		}
+		emitExtractFieldDialectAffinityWarning(anchor, part);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static String resolveExtractPartFromCommaFormArgument(Object firstArg) {
+		if (firstArg == null) {
+			return null;
+		}
+		if (firstArg instanceof String) {
+			return normalizeExtractPartText(firstArg);
+		}
+		if (!(firstArg instanceof Map)) {
+			return null;
+		}
+		Map<String, Object> map = (Map<String, Object>) firstArg;
+		Object literal = map.get(MUMBLE_LITERAL_KEY);
+		if (literal != null) {
+			return normalizeExtractPartText(literal.toString());
+		}
+		Object columnObj = map.get(MUMBLE_COLUMN_KEY);
+		if (columnObj instanceof Map) {
+			Object name = ((Map<String, Object>) columnObj).get(MUMBLE_NAME_KEY);
+			if (name != null) {
+				return normalizeExtractPartText(name.toString());
+			}
+		}
+		return normalizeExtractPartText(firstArg);
 	}
 
 	private Map<String, Object> buildExtractMumbleItem(Object fieldObj, Object sourceObj, String invocation) {
@@ -10544,6 +10755,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		} else {
 			// Wrong number of entries
 		}
+		maybeEmitExtractDatetimeCommaFormDialectDiagnostics(ctx.getStart(), subMap.get(MUMBLE_FUNCTION_KEY));
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 	}
 

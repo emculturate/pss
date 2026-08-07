@@ -3599,5 +3599,79 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				1,
 				7);
 	}
+
+	@Test
+	public void qualifyClauseSnowflakeDialectWarningAndCounter() {
+		final String query =
+				"SELECT order_date FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals(1, extractor.getSnowflakeDialectGrammarCount());
+		Assert.assertEquals(0, extractor.getPostgresDialectGrammarCount());
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"qualify_clause",
+				null,
+				1,
+				30);
+	}
+
+	@Test
+	public void extractDowPostgresDialectWarningAndCounterInBasicSelect() {
+		final String query = "SELECT EXTRACT(DOW FROM order_date) FROM orders";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());
+		Assert.assertEquals(1, extractor.getPostgresDialectGrammarCount());
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"EXTRACT/DATE_PART option 'DOW'",
+				null,
+				1,
+				7);
+	}
+
+	@Test
+	public void mixedPostgresExtractAndSnowflakeQualifyFatalWithCounters() {
+		final String query =
+				"SELECT EXTRACT(DOW FROM order_date) FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Assert.assertEquals(1, extractor.getSnowflakeDialectGrammarCount());
+		Assert.assertEquals(1, extractor.getPostgresDialectGrammarCount());
+		Snippet snippet = extractor.getSnippet();
+		assertDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_POSTGRES_DIALECT_GRAMMAR",
+				ParseDiagnostic.Severity.WARNING,
+				"DOW",
+				null,
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"STATEMENT_MIXED_DIALECT_GRAMMAR",
+				"unlikely to run on either engine",
+				null,
+				1,
+				48);
+	}
+
+	@Test
+	public void scriptResetsDialectGrammarCountersPerStatement() {
+		final String script =
+				"SELECT order_date FROM orders QUALIFY ROW_NUMBER() OVER (ORDER BY order_date) = 1;"
+						+ " SELECT EXTRACT(DOW FROM order_date) FROM orders;";
+		final SQLSelectParserParser parser = parse(script);
+		SqlParseEventWalker extractor = runScriptParsertest(script, parser);
+		Assert.assertEquals(0, extractor.getSnowflakeDialectGrammarCount());
+		Assert.assertEquals(1, extractor.getPostgresDialectGrammarCount());
+	}
 }
 
