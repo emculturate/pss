@@ -1533,6 +1533,94 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 	}
 
 
+	/*
+	 * Triple-join chains (12 deconstructed FROM operands from V1A/V2/V5/V8/V9/V10/V1D):
+	 * table third, VALUES, query, UNION setop, TABLE function, tuple substitution,
+	 * Jinja ref, INTERSECT, EXCEPT, fourth/fifth tables, compound subqueries.
+	 */
+
+	@Test
+	public void tripleJoinSourcesUsingUsingUsingMixedOperandsW1Test() {
+		final String query = "SELECT t.a AS ca, v.a AS cb, u.a AS cc FROM third t "
+				+ "JOIN (VALUES (1)) AS v(a) USING (a) "
+				+ "JOIN (SELECT a, e FROM fourth UNION SELECT a, e FROM fourth) u USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=ca}, 2={column={name=a, table_ref=v}, alias=cb}, 3={column={name=a, table_ref=u}, alias=cc}}, from={join={1={table={alias=t, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={values={columns={1={column={name=a, table_ref=null}}}, alias=v, matrix={1={row={1={literal=1}}}}}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=u, query={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}}}, from={table={alias=null, table=fourth}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}}}, from={table={alias=null, table=fourth}}}}}}}}}}}",
+				"[cc, ca, cb]",
+				"{}",
+				"{third={a=[[@1,7:7='t',<391>,1:7], [@56,158:158='a',<391>,1:158]]}, fourth={a=[[@40,101:101='a',<391>,1:101], [@47,131:131='a',<391>,1:131]], e=[[@42,104:104='e',<391>,1:104], [@49,134:134='e',<391>,1:134]]}}",
+				"{values0={a=[[@31,75:75='a',<391>,1:75], [@7,18:18='v',<391>,1:18], [@56,158:158='a',<391>,1:158]]}, union3={a=[[@13,29:29='u',<391>,1:29]]}, query4={cc=[[@17,36:37='cc',<391>,1:36]], ca=[[@5,14:15='ca',<391>,1:14]], cb=[[@11,25:26='cb',<391>,1:25]]}, query1={a=[[@40,101:101='a',<391>,1:101]], e=[[@42,104:104='e',<391>,1:104]]}, query2={a=[[@47,131:131='a',<391>,1:131]], e=[[@49,134:134='e',<391>,1:134]]}}",
+				"{def_query4={def_union3={query_dictionary={a=[[@13,29:29='u',<391>,1:29]]}, def_query1={query_dictionary={a=[[@40,101:101='a',<391>,1:101]], e=[[@42,104:104='e',<391>,1:104]]}, table_dictionary={fourth={a=[[@40,101:101='a',<391>,1:101], [@47,131:131='a',<391>,1:131]], e=[[@42,104:104='e',<391>,1:104], [@49,134:134='e',<391>,1:134]]}}, interface={a=[{name=a, table_ref=fourth}], e=[{name=e, table_ref=fourth}]}}, interface={a=query_column, e=query_column}, def_query2={query_dictionary={a=[[@47,131:131='a',<391>,1:131]], e=[[@49,134:134='e',<391>,1:134]]}, table_dictionary={fourth={a=[[@47,131:131='a',<391>,1:131]], e=[[@49,134:134='e',<391>,1:134]]}}, setop=UNION, interface={a=[{name=a, table_ref=fourth}], e=[{name=e, table_ref=fourth}]}}}, query_dictionary={cc=[[@17,36:37='cc',<391>,1:36]], ca=[[@5,14:15='ca',<391>,1:14]], cb=[[@11,25:26='cb',<391>,1:25]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7], [@56,158:158='a',<391>,1:158]]}}, def_values0={query_dictionary={a=[[@31,75:75='a',<391>,1:75], [@7,18:18='v',<391>,1:18], [@56,158:158='a',<391>,1:158]]}, interface={a=[]}}, filters=[{name=a, table_ref=t}, {name=a, table_ref=v}], interface={cc=[{name=a, table_ref=u}], ca=[{name=a, table_ref=t}], cb=[{name=a, table_ref=v}]}, table_alias={t=third, u=union3, v=values0}}}");
+	}
+
+	@Test
+	public void tripleJoinSourcesUsingUsingOnMixedOperandsW2Test() {
+		final String query = "SELECT x.a AS xa, y.a AS ya, z.seq AS za FROM "
+				+ "(SELECT a, d FROM third INTERSECT SELECT a, d FROM third) x "
+				+ "JOIN {{ ref('fourth') }} y USING (a) "
+				+ "JOIN TABLE(SPLIT_TO_TABLE('1,2', ',')) z ON y.a = z.seq";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=x}, alias=xa}, 2={column={name=a, table_ref=y}, alias=ya}, 3={column={name=seq, table_ref=z}, alias=za}}, from={join={1={table={alias=x, query={intersect={1={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=y, substitution={name={{ ref('fourth') }}, parts={jinja_table={function_name=ref, parameters={1={literal='fourth'}}}}, type=tuple}}}, 4={join=JOIN, on={condition={left={column={name=a, table_ref=y}}, right={column={name=seq, table_ref=z}}, operator==}}}, 5={table={alias=z, table_function={function={function_name=SPLIT_TO_TABLE, parameters={1={literal='1,2'}, 2={literal=','}}}}}}}}}}",
+				"[za, ya, xa]",
+				"{{{ ref('fourth') }}=tuple}",
+				"{third={a=[[@21,54:54='a',<391>,1:54], [@28,87:87='a',<391>,1:87]], d=[[@23,57:57='d',<391>,1:57], [@30,90:90='d',<391>,1:90]]}, {{ ref('fourth') }}={a=[[@7,18:18='y',<391>,1:18], [@59,187:187='y',<391>,1:187], [@45,140:140='a',<391>,1:140]]}, table_function0={seq=[[@13,29:29='z',<391>,1:29], [@63,193:193='z',<391>,1:193]]}}",
+				"{intersect2={a=[[@1,7:7='x',<391>,1:7], [@45,140:140='a',<391>,1:140]]}, query0={d=[[@23,57:57='d',<391>,1:57]], a=[[@21,54:54='a',<391>,1:54]]}, query1={d=[[@30,90:90='d',<391>,1:90]], a=[[@28,87:87='a',<391>,1:87]]}, query3={ya=[[@11,25:26='ya',<391>,1:25]], xa=[[@5,14:15='xa',<391>,1:14]], za=[[@17,38:39='za',<391>,1:38]]}}",
+				"{def_query3={query_dictionary={za=[[@17,38:39='za',<391>,1:38]], ya=[[@11,25:26='ya',<391>,1:25]], xa=[[@5,14:15='xa',<391>,1:14]]}, table_dictionary={{{ ref('fourth') }}={a=[[@45,140:140='a',<391>,1:140], [@7,18:18='y',<391>,1:18], [@59,187:187='y',<391>,1:187]]}, table_function0={seq=[[@13,29:29='z',<391>,1:29], [@63,193:193='z',<391>,1:193]]}}, def_intersect2={query_dictionary={a=[[@1,7:7='x',<391>,1:7], [@45,140:140='a',<391>,1:140]]}, def_query1={query_dictionary={a=[[@28,87:87='a',<391>,1:87]], d=[[@30,90:90='d',<391>,1:90]]}, table_dictionary={third={a=[[@28,87:87='a',<391>,1:87]], d=[[@30,90:90='d',<391>,1:90]]}}, setop=INTERSECTION, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, def_query0={query_dictionary={a=[[@21,54:54='a',<391>,1:54]], d=[[@23,57:57='d',<391>,1:57]]}, table_dictionary={third={a=[[@21,54:54='a',<391>,1:54], [@28,87:87='a',<391>,1:87]], d=[[@23,57:57='d',<391>,1:57], [@30,90:90='d',<391>,1:90]]}}, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, interface={a=query_column, d=query_column}}, filters=[{name=a, table_ref=y}, {name=seq, table_ref=z}, {name=a, table_ref=x}], interface={za=[{name=seq, table_ref=z}], ya=[{name=a, table_ref=y}], xa=[{name=a, table_ref=x}]}, table_alias={x=intersect2, y={{ ref('fourth') }}, z=table_function0}}}");
+	}
+
+	@Test
+	public void tripleJoinSourcesOnOnMixedOperandsW3Test() {
+		final String query = "SELECT g.a AS ga, h.a AS ha, w.a AS wa FROM third g "
+				+ "JOIN <[Leg A].[Tuple Feed]> h ON g.a = h.a "
+				+ "JOIN (VALUES (1, 3)) AS w(a, d) ON h.a = w.a";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=g}, alias=ga}, 2={column={name=a, table_ref=h}, alias=ha}, 3={column={name=a, table_ref=w}, alias=wa}}, from={join={1={table={alias=g, table=third}}, 2={join=JOIN, on={condition={left={column={name=a, table_ref=g}}, right={column={name=a, table_ref=h}}, operator==}}}, 3={table={alias=h, substitution={name=<[Leg A].[Tuple Feed]>, parts={1=[Leg A], 2=[Tuple Feed]}, type=tuple}}}, 4={join=JOIN, on={condition={left={column={name=a, table_ref=h}}, right={column={name=a, table_ref=w}}, operator==}}}, 5={values={columns={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, alias=w, matrix={1={row={1={literal=1}, 2={literal=3}}}}}}}}}}",
+				"[ha, ga, wa]",
+				"{<[Leg A].[Tuple Feed]>=tuple}",
+				"{<[Leg A].[Tuple Feed]>={a=[[@7,18:18='h',<391>,1:18], [@29,91:91='h',<391>,1:91], [@49,130:130='h',<391>,1:130]]}, third={a=[[@1,7:7='g',<391>,1:7], [@25,85:85='g',<391>,1:85]]}}",
+				"{values0={d=[[@46,124:124='d',<391>,1:124]], a=[[@44,121:121='a',<391>,1:121], [@13,29:29='w',<391>,1:29], [@53,136:136='w',<391>,1:136]]}, query1={ha=[[@11,25:26='ha',<391>,1:25]], ga=[[@5,14:15='ga',<391>,1:14]], wa=[[@17,36:37='wa',<391>,1:36]]}}",
+				"{def_query1={query_dictionary={ha=[[@11,25:26='ha',<391>,1:25]], ga=[[@5,14:15='ga',<391>,1:14]], wa=[[@17,36:37='wa',<391>,1:36]]}, table_dictionary={third={a=[[@1,7:7='g',<391>,1:7], [@25,85:85='g',<391>,1:85]]}, <[Leg A].[Tuple Feed]>={a=[[@7,18:18='h',<391>,1:18], [@29,91:91='h',<391>,1:91], [@49,130:130='h',<391>,1:130]]}}, def_values0={query_dictionary={a=[[@44,121:121='a',<391>,1:121], [@13,29:29='w',<391>,1:29], [@53,136:136='w',<391>,1:136]], d=[[@46,124:124='d',<391>,1:124]]}, interface={a=[], d=[]}}, filters=[{name=a, table_ref=g}, {name=a, table_ref=h}, {name=a, table_ref=w}], interface={ha=[{name=a, table_ref=h}], ga=[{name=a, table_ref=g}], wa=[{name=a, table_ref=w}]}, table_alias={g=third, w=values0, h=<[Leg A].[Tuple Feed]>}}}");
+	}
+
+	@Test
+	public void tripleJoinSourcesOnUsingMixedOperandsW4Test() {
+		final String query = "SELECT k.a AS ka, m.a AS ma, n.a AS na FROM "
+				+ "(SELECT a, d FROM third EXCEPT SELECT a, d FROM third) k "
+				+ "JOIN (SELECT a, e FROM fifth) m ON k.a = m.a "
+				+ "JOIN <[Leg B].[Tuple Feed]> n USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=k}, alias=ka}, 2={column={name=a, table_ref=m}, alias=ma}, 3={column={name=a, table_ref=n}, alias=na}}, from={join={1={table={alias=k, query={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}, 2={join=JOIN, on={condition={left={column={name=a, table_ref=k}}, right={column={name=a, table_ref=m}}, operator==}}}, 3={table={alias=m, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}}}, from={table={alias=null, table=fifth}}}}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=n, substitution={name=<[Leg B].[Tuple Feed]>, parts={1=[Leg B], 2=[Tuple Feed]}, type=tuple}}}}}}}",
+				"[na, ma, ka]",
+				"{<[Leg B].[Tuple Feed]>=tuple}",
+				"{third={a=[[@21,52:52='a',<391>,1:52], [@28,82:82='a',<391>,1:82]], d=[[@23,55:55='d',<391>,1:55], [@30,85:85='d',<391>,1:85]]}, <[Leg B].[Tuple Feed]>={a=[[@13,29:29='n',<391>,1:29]]}, fifth={a=[[@38,114:114='a',<391>,1:114]], e=[[@40,117:117='e',<391>,1:117]]}}",
+				"{union2={a=[[@1,7:7='k',<391>,1:7], [@46,136:136='k',<391>,1:136]]}, query4={na=[[@17,36:37='na',<391>,1:36]], ma=[[@11,25:26='ma',<391>,1:25]], ka=[[@5,14:15='ka',<391>,1:14]]}, query0={d=[[@23,55:55='d',<391>,1:55]], a=[[@21,52:52='a',<391>,1:52]]}, query1={d=[[@30,85:85='d',<391>,1:85]], a=[[@28,82:82='a',<391>,1:82]]}, query3={a=[[@38,114:114='a',<391>,1:114], [@7,18:18='m',<391>,1:18], [@50,142:142='m',<391>,1:142]], e=[[@40,117:117='e',<391>,1:117]]}}",
+				"{def_query4={def_union2={query_dictionary={a=[[@1,7:7='k',<391>,1:7], [@46,136:136='k',<391>,1:136]]}, def_query1={query_dictionary={a=[[@28,82:82='a',<391>,1:82]], d=[[@30,85:85='d',<391>,1:85]]}, table_dictionary={third={a=[[@28,82:82='a',<391>,1:82]], d=[[@30,85:85='d',<391>,1:85]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, def_query0={query_dictionary={a=[[@21,52:52='a',<391>,1:52]], d=[[@23,55:55='d',<391>,1:55]]}, table_dictionary={third={a=[[@21,52:52='a',<391>,1:52], [@28,82:82='a',<391>,1:82]], d=[[@23,55:55='d',<391>,1:55], [@30,85:85='d',<391>,1:85]]}}, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, interface={a=query_column, d=query_column}}, table_dictionary={<[Leg B].[Tuple Feed]>={a=[[@13,29:29='n',<391>,1:29]]}}, join_using_operand_token_refs={a=[[@58,183:183='a',<391>,1:183]]}, filters=[{name=a, table_ref=k}, {name=a, table_ref=m}], interface={na=[{name=a, table_ref=n}], ma=[{name=a, table_ref=m}], ka=[{name=a, table_ref=k}]}, def_query3={query_dictionary={a=[[@38,114:114='a',<391>,1:114], [@7,18:18='m',<391>,1:18], [@50,142:142='m',<391>,1:142]], e=[[@40,117:117='e',<391>,1:117]]}, table_dictionary={fifth={a=[[@38,114:114='a',<391>,1:114]], e=[[@40,117:117='e',<391>,1:117]]}}, interface={a=[{name=a, table_ref=fifth}], e=[{name=e, table_ref=fifth}]}}, join_using_operand_token_by_name={a=[@58,183:183='a',<391>,1:183]}, query_dictionary={na=[[@17,36:37='na',<391>,1:36]], ma=[[@11,25:26='ma',<391>,1:25]], ka=[[@5,14:15='ka',<391>,1:14]]}, table_alias={k=union2, m=query3, n=<[Leg B].[Tuple Feed]>}}}");
+	}
+
+	private void assertTripleJoinMixedOperandsHappyPath(
+			final String query,
+			final String expectedAst,
+			final String expectedInterface,
+			final String expectedSubstitutions,
+			final String expectedTableDictionary,
+			final String expectedQueryColumnDictionary,
+			final String expectedSymbolTable) {
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong", expectedAst, extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", expectedInterface, extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", expectedSubstitutions,
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", expectedTableDictionary,
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", expectedQueryColumnDictionary,
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", expectedSymbolTable,
+				extractor.getSymbolTable().toString());
+	}
+
 	// Join USING Tests end here
 
 	/**************************************************** */
