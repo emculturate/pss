@@ -114,6 +114,8 @@ public class SqlParseSymbolTreeHelper {
 	public static final String JOIN_USING_OPERAND_TOKEN_REFS_KEY = "join_using_operand_token_refs";
 	/** Last {@link org.antlr.v4.runtime.Token} per USING column name for qualified unresolved handoff at join exit. */
 	public static final String JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY = "join_using_operand_token_by_name";
+	/** USING list column names rejected as qualified (must not resolve or appear in filters). */
+	public static final String JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY = "join_using_disqualified_column_names";
 	public static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
 	public static final String RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY = "derived_columns";
 	public static final String RELATIONAL_MODIFIER_SOURCE_REF_KEY = "source_ref";
@@ -16486,6 +16488,39 @@ public class SqlParseSymbolTreeHelper {
 				line,
 				charPos,
 				qualifiedColumnLabel);
+		markJoinUsingColumnDisqualified(columnName);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void markJoinUsingColumnDisqualified(String columnName) {
+		if (columnName == null || columnName.isBlank()) {
+			return;
+		}
+		Object existing = walker.symbolTable.get(JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY);
+		HashSet<String> disqualified;
+		if (existing instanceof HashSet<?> set) {
+			disqualified = (HashSet<String>) set;
+		} else {
+			disqualified = new HashSet<String>();
+			walker.symbolTable.put(JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY, disqualified);
+		}
+		disqualified.add(columnName);
+	}
+
+	public boolean isJoinUsingColumnDisqualified(String columnName) {
+		if (columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		Object existing = walker.symbolTable.get(JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY);
+		if (!(existing instanceof HashSet<?> disqualified)) {
+			return false;
+		}
+		for (Object entry : disqualified) {
+			if (entry instanceof String name && name.equalsIgnoreCase(columnName)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void emitJoinUsingColumnNotFoundFatal(
@@ -16643,9 +16678,21 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		Map<String, Object> normalizedUsing = normalizeJoinUsingColumnListAst(usingColumnsObj);
-		processJoinUsingColumnsAtJoinSpecification(normalizedUsing, leftSource, rightSource);
+		Object existingFilters = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
+		ArrayList<Object> filtersList;
+		if (existingFilters instanceof ArrayList<?>) {
+			filtersList = (ArrayList<Object>) existingFilters;
+		} else {
+			filtersList = new ArrayList<Object>();
+		}
+		processJoinUsingColumnsAtJoinSpecification(
+				normalizedUsing, leftSource, rightSource, filtersList);
+		if (!filtersList.isEmpty()) {
+			walker.symbolTable.put(MUMBLE_FILTERS_KEY, filtersList);
+		}
 		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_REFS_KEY);
 		walker.symbolTable.remove(JOIN_USING_OPERAND_TOKEN_BY_NAME_KEY);
+		walker.symbolTable.remove(JOIN_USING_DISQUALIFIED_COLUMN_NAMES_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -16690,7 +16737,8 @@ public class SqlParseSymbolTreeHelper {
 	private void processJoinUsingColumnsAtJoinSpecification(
 			Map<String, Object> normalizedUsing,
 			Map<String, Object> leftSource,
-			Map<String, Object> rightSource) {
+			Map<String, Object> rightSource,
+			ArrayList<Object> filtersList) {
 		if (normalizedUsing == null || normalizedUsing.isEmpty()) {
 			return;
 		}
@@ -16701,6 +16749,9 @@ public class SqlParseSymbolTreeHelper {
 			}
 			String columnName = (String) columnSubTree.get(MUMBLE_NAME_KEY);
 			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			if (isJoinUsingColumnDisqualified(columnName)) {
 				continue;
 			}
 			Object tableRefObj = columnSubTree.get(MUMBLE_TABLE_REF_KEY);
@@ -16731,11 +16782,30 @@ public class SqlParseSymbolTreeHelper {
 
 			if (leftAccepts) {
 				enqueueQualifiedJoinUsingColumnForStandardResolution(leftSource, columnName, token);
+				appendJoinUsingQualifiedColumnToFilters(filtersList, leftSource, columnName);
 			}
 			if (rightAccepts) {
 				enqueueQualifiedJoinUsingColumnForStandardResolution(rightSource, columnName, token);
+				appendJoinUsingQualifiedColumnToFilters(filtersList, rightSource, columnName);
 			}
 		}
+	}
+
+	private void appendJoinUsingQualifiedColumnToFilters(
+			ArrayList<Object> filtersList,
+			Map<String, Object> sourceResult,
+			String columnName) {
+		if (filtersList == null || columnName == null || columnName.isBlank()) {
+			return;
+		}
+		String qualifiedSourceRef = resolveJoinUsingSourceReference(sourceResult);
+		if (qualifiedSourceRef == null || qualifiedSourceRef.isBlank()) {
+			return;
+		}
+		HashMap<String, Object> columnRef = new HashMap<String, Object>();
+		columnRef.put(MUMBLE_NAME_KEY, columnName);
+		columnRef.put(MUMBLE_TABLE_REF_KEY, qualifiedSourceRef);
+		appendClauseColumnReferenceForConvertEgress(filtersList, columnRef);
 	}
 
 	private void enqueueQualifiedJoinUsingColumnForStandardResolution(

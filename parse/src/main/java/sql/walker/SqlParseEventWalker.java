@@ -8331,7 +8331,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				walker.collectUnresolvedColumnReference(tableRefKey, columnSubTree, ctx.getStart());
 			}
 			if (joinUsingColumnList && columnRef instanceof String joinUsingColumnName) {
-				symbolTreeHelper.recordJoinUsingOperandTokenRef(joinUsingColumnName, ctx.getStart());
+				if (!symbolTreeHelper.isJoinUsingColumnDisqualified(joinUsingColumnName)) {
+					symbolTreeHelper.recordJoinUsingOperandTokenRef(joinUsingColumnName, ctx.getStart());
+				}
 			}
 			if (walker.shouldCaptureClauseColumnSiteTokenForActiveColumnReference()) {
 				String clauseSiteTokenText = formatClauseColumnSiteToken(resolveClauseColumnSiteToken(ctx));

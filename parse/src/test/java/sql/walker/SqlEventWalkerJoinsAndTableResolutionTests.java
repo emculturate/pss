@@ -33,7 +33,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}, filters=[{name=a, table_ref=a}, {name=a, table_ref=b}], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -57,7 +57,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]], b=[[@14,49:49='b',<391>,1:49]]}}, filters=[{name=a, table_ref=a}, {name=a, table_ref=b}, {name=b, table_ref=a}, {name=b, table_ref=b}], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -82,7 +82,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@13,51:51='a',<391>,1:51]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@13,51:51='a',<391>,1:51]], c=[[@16,62:62='b',<391>,2:7]]}}, filters=[{name=c, table_ref=b}], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@13,51:51='a',<391>,1:51]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@13,51:51='a',<391>,1:51]], c=[[@16,62:62='b',<391>,2:7]]}}, filters=[{name=a, table_ref=a}, {name=a, table_ref=b}, {name=c, table_ref=b}], interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -107,7 +107,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				"{query0={a=[[@7,24:24='a',<391>,1:24], [@22,77:77='a',<391>,1:77]], *=[[@1,7:7='x',<391>,1:7]]}, query1={a=[[@15,53:53='a',<391>,1:53], [@22,77:77='a',<391>,1:77]]}, query2={*=[[@3,9:9='*',<291>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query2={query_dictionary={*=[[@3,9:9='*',<291>,1:9]]}, def_query1={query_dictionary={a=[[@15,53:53='a',<391>,1:53], [@22,77:77='a',<391>,1:77]]}, table_dictionary={fourth={a=[[@15,53:53='a',<391>,1:53]]}}, interface={a=[{name=a, table_ref=fourth}]}}, def_query0={query_dictionary={a=[[@7,24:24='a',<391>,1:24], [@22,77:77='a',<391>,1:77]], *=[[@1,7:7='x',<391>,1:7]]}, table_dictionary={third={a=[[@7,24:24='a',<391>,1:24]]}}, interface={a=[{name=a, table_ref=third}], *=wildcard}}, interface={*=[{name=*, table_ref=x}]}, table_alias={x=query0, y=query1}}}",
+				"{def_query2={query_dictionary={*=[[@3,9:9='*',<291>,1:9]]}, def_query1={query_dictionary={a=[[@15,53:53='a',<391>,1:53], [@22,77:77='a',<391>,1:77]]}, table_dictionary={fourth={a=[[@15,53:53='a',<391>,1:53]]}}, interface={a=[{name=a, table_ref=fourth}]}}, def_query0={query_dictionary={a=[[@7,24:24='a',<391>,1:24], [@22,77:77='a',<391>,1:77]], *=[[@1,7:7='x',<391>,1:7]]}, table_dictionary={third={a=[[@7,24:24='a',<391>,1:24]]}}, interface={a=[{name=a, table_ref=third}], *=wildcard}}, filters=[{name=a, table_ref=x}, {name=a, table_ref=y}], interface={*=[{name=*, table_ref=x}]}, table_alias={x=query0, y=query1}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -124,12 +124,12 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}",
+				"{third={*=[[@1,8:8='a',<391>,1:8]]}, fourth={}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={*=[[@3,10:10='*',<291>,1:10]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={a=[[@12,46:46='a',<391>,1:46]], *=[[@1,8:8='a',<391>,1:8]]}, fourth={a=[[@12,46:46='a',<391>,1:46]]}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				"{def_query0={query_dictionary={*=[[@3,10:10='*',<291>,1:10]]}, table_dictionary={third={*=[[@1,8:8='a',<391>,1:8]]}, fourth={}}, interface={*=[{name=*, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
 				extractor.getSymbolTable().toString());
 
 		assertFatalDiagnosticAtPositionWithFullMessage(
