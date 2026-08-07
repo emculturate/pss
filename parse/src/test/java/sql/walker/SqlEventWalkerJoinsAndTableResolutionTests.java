@@ -580,10 +580,10 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				"{}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{values0={d=[[@34,67:67='d',<391>,1:67], [@7,18:18='x',<391>,1:18]], a=[[@32,64:64='a',<391>,1:64], [@1,7:7='x',<391>,1:7]]}, values1={a=[[@48,96:96='a',<391>,1:96], [@11,23:23='y',<391>,1:23]], e=[[@50,99:99='e',<391>,1:99], [@17,34:34='y',<391>,1:34]]}, query2={ya=[[@15,30:31='ya',<391>,1:30]], xa=[[@5,14:15='xa',<391>,1:14]], d=[[@9,20:20='d',<391>,1:20]], e=[[@19,36:36='e',<391>,1:36]]}}",
+				"{values0={d=[[@34,67:67='d',<391>,1:67], [@7,18:18='x',<391>,1:18]], a=[[@32,64:64='a',<391>,1:64], [@1,7:7='x',<391>,1:7], [@54,109:109='a',<391>,1:109]]}, values1={a=[[@48,96:96='a',<391>,1:96], [@11,23:23='y',<391>,1:23], [@54,109:109='a',<391>,1:109]], e=[[@50,99:99='e',<391>,1:99], [@17,34:34='y',<391>,1:34]]}, query2={ya=[[@15,30:31='ya',<391>,1:30]], xa=[[@5,14:15='xa',<391>,1:14]], d=[[@9,20:20='d',<391>,1:20]], e=[[@19,36:36='e',<391>,1:36]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query2={join_using_operand_token_by_name={a=[@54,109:109='a',<391>,1:109]}, query_dictionary={d=[[@9,20:20='d',<391>,1:20]], e=[[@19,36:36='e',<391>,1:36]], ya=[[@15,30:31='ya',<391>,1:30]], xa=[[@5,14:15='xa',<391>,1:14]]}, def_values1={query_dictionary={a=[[@48,96:96='a',<391>,1:96], [@11,23:23='y',<391>,1:23]], e=[[@50,99:99='e',<391>,1:99], [@17,34:34='y',<391>,1:34]]}, interface={a=[], e=[]}}, def_values0={query_dictionary={a=[[@32,64:64='a',<391>,1:64], [@1,7:7='x',<391>,1:7]], d=[[@34,67:67='d',<391>,1:67], [@7,18:18='x',<391>,1:18]]}, interface={a=[], d=[]}}, join_using_operand_token_refs={a=[[@54,109:109='a',<391>,1:109]]}, interface={d=[{name=d, table_ref=x}], e=[{name=e, table_ref=y}], ya=[{name=a, table_ref=y}], xa=[{name=a, table_ref=x}]}, table_alias={x=values0, y=values1}}}",
+				"{def_query2={query_dictionary={d=[[@9,20:20='d',<391>,1:20]], e=[[@19,36:36='e',<391>,1:36]], ya=[[@15,30:31='ya',<391>,1:30]], xa=[[@5,14:15='xa',<391>,1:14]]}, def_values1={query_dictionary={a=[[@48,96:96='a',<391>,1:96], [@11,23:23='y',<391>,1:23], [@54,109:109='a',<391>,1:109]], e=[[@50,99:99='e',<391>,1:99], [@17,34:34='y',<391>,1:34]]}, interface={a=[], e=[]}}, def_values0={query_dictionary={a=[[@32,64:64='a',<391>,1:64], [@1,7:7='x',<391>,1:7], [@54,109:109='a',<391>,1:109]], d=[[@34,67:67='d',<391>,1:67], [@7,18:18='x',<391>,1:18]]}, interface={a=[], d=[]}}, filters=[{name=a, table_ref=x}, {name=a, table_ref=y}], interface={d=[{name=d, table_ref=x}], e=[{name=e, table_ref=y}], ya=[{name=a, table_ref=y}], xa=[{name=a, table_ref=x}]}, table_alias={x=values0, y=values1}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -831,8 +831,7 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				+ "\n (value)";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		assertNoWalkerDiagnostics(extractor);
-		assertNoFatalErrors(extractor);
+		Snippet snippet = extractor.getSnippet();
 
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=a, table_ref=x}, alias=xa}, 2={column={name=d, table_ref=x}}, 3={column={name=value, table_ref=y}, alias=ye}}, from={join={1={values={columns={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, alias=x, matrix={1={row={1={literal=1}, 2={literal=3}}}}}}, 2={using={1={column={name=value, table_ref=null}}}, join=JOIN}, 3={table={alias=y, table_function={function={function_name=SPLIT_TO_TABLE, parameters={1={literal='2,4'}, 2={literal=','}}}}}}}}}}",
@@ -840,14 +839,22 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 		Assert.assertEquals("Interface is wrong", "[d, xa, ye]", extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{table_function0={value=[[@11,23:23='y',<391>,1:23]]}}",
+				"{table_function0={value=[[@11,23:23='y',<391>,1:23], [@45,121:125='value',<391>,3:2]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
 				"{values0={d=[[@30,68:68='d',<391>,2:6], [@7,18:18='x',<391>,1:18]], a=[[@28,65:65='a',<391>,2:3], [@1,7:7='x',<391>,1:7]]}, query1={xa=[[@5,14:15='xa',<391>,1:14]], d=[[@9,20:20='d',<391>,1:20]], ye=[[@15,34:35='ye',<391>,1:34]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query1={join_using_operand_token_by_name={value=[@45,121:125='value',<391>,3:2]}, query_dictionary={d=[[@9,20:20='d',<391>,1:20]], xa=[[@5,14:15='xa',<391>,1:14]], ye=[[@15,34:35='ye',<391>,1:34]]}, table_dictionary={table_function0={value=[[@11,23:23='y',<391>,1:23]]}}, def_values0={query_dictionary={a=[[@28,65:65='a',<391>,2:3], [@1,7:7='x',<391>,1:7]], d=[[@30,68:68='d',<391>,2:6], [@7,18:18='x',<391>,1:18]]}, interface={a=[], d=[]}}, join_using_operand_token_refs={value=[[@45,121:125='value',<391>,3:2]]}, interface={d=[{name=d, table_ref=x}], xa=[{name=a, table_ref=x}], ye=[{name=value, table_ref=y}]}, table_alias={x=values0, y=table_function0}}}",
+				"{def_query1={query_dictionary={d=[[@9,20:20='d',<391>,1:20]], xa=[[@5,14:15='xa',<391>,1:14]], ye=[[@15,34:35='ye',<391>,1:34]]}, table_dictionary={table_function0={value=[[@11,23:23='y',<391>,1:23], [@45,121:125='value',<391>,3:2]]}}, def_values0={query_dictionary={a=[[@28,65:65='a',<391>,2:3], [@1,7:7='x',<391>,1:7]], d=[[@30,68:68='d',<391>,2:6], [@7,18:18='x',<391>,1:18]]}, interface={a=[], d=[]}}, filters=[{name=value, table_ref=y}], interface={d=[{name=d, table_ref=x}], xa=[{name=a, table_ref=x}], ye=[{name=value, table_ref=y}]}, table_alias={x=values0, y=table_function0}}}",
 				extractor.getSymbolTable().toString());
+
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"JOIN_USING_COLUMN_NOT_FOUND",
+				"Join Using column 'value' at (l:3 c:2) not found in Join Sources (x). ",
+				"value",
+				3,
+				2);
 	}
 
 

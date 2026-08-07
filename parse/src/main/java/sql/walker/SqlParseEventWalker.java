@@ -7411,7 +7411,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		Map<String, Object> left = coerceJoinUsingOperandSource(joinPartMap.get("1"));
 		Map<String, Object> right = coerceJoinUsingOperandSource(joinPartMap.get("3"));
-		if (left == null || right == null || left == right) {
+		if (left != null && left == right) {
 			return;
 		}
 		symbolTreeHelper.captureJoinUsingClauseDependencies(usingColumns, left, right);
