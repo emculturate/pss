@@ -10110,15 +10110,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			sourceObj = subMap.remove("2");
 		}
 
+		subMap.clear();
+		subMap.put(MUMBLE_EXTRACT_KEY, buildExtractMumbleItem(fieldObj, sourceObj, null));
+	}
+
+	@Override
+	public void exitDate_part_expression(SQLSelectParserParser.Date_part_expressionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+		Object fieldObj = subMap.remove("date_part_field");
+		if (fieldObj == null) {
+			fieldObj = subMap.remove("1");
+		}
+		Object sourceObj = subMap.remove("date_part_source");
+		if (sourceObj == null) {
+			sourceObj = subMap.remove("2");
+		}
+
+		subMap.clear();
+		subMap.put(MUMBLE_EXTRACT_KEY,
+				buildExtractMumbleItem(fieldObj, sourceObj, MUMBLE_EXTRACT_INVOCATION_DATE_PART));
+	}
+
+	private Map<String, Object> buildExtractMumbleItem(Object fieldObj, Object sourceObj, String invocation) {
 		Map<String, Object> item = new HashMap<String, Object>();
 		item.put(MUMBLE_EXTRACT_PART_KEY, normalizeExtractPartText(fieldObj));
 		item.put(MUMBLE_EXTRACT_PART_FORM_KEY, classifyExtractPartForm(fieldObj));
+		if (invocation != null) {
+			item.put(MUMBLE_EXTRACT_INVOCATION_KEY, invocation);
+		}
 		Object liftedSource = liftExtractSourceNode(sourceObj);
 		liftedSource = stampPredicandSubstitutionsInExtractSource(liftedSource);
 		attachExtractSource(item, liftedSource);
-
-		subMap.clear();
-		subMap.put(MUMBLE_EXTRACT_KEY, item);
+		return item;
 	}
 
 	@SuppressWarnings("unchecked")

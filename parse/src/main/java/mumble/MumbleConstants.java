@@ -71,6 +71,9 @@ public final class MumbleConstants {
     public static final String MUMBLE_EXTRACT_SOURCE_TYPE_TIME = "TIME";
     public static final String MUMBLE_EXTRACT_SOURCE_TYPE_TIMESTAMP = "TIMESTAMP";
     public static final String MUMBLE_EXTRACT_SOURCE_TYPE_INTERVAL = "INTERVAL";
+    /** Distinguishes {@link #MUMBLE_EXTRACT_KEY} produced by {@code EXTRACT(...)} vs {@code DATE_PART(...)}. */
+    public static final String MUMBLE_EXTRACT_INVOCATION_KEY = "invocation";
+    public static final String MUMBLE_EXTRACT_INVOCATION_DATE_PART = "DATE_PART";
     public static final String MUMBLE_FILES_KEY = "files";
     public static final String MUMBLE_FILE_FORMAT_KEY = "file_format";
     public static final String MUMBLE_FILTERS_KEY = "filters";

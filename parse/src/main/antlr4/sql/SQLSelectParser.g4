@@ -1214,10 +1214,11 @@ column_primary
 */
    
 predicand_primary
-  : value_expression_primary
+  : extract_expression
+  | date_part_expression
+  | value_expression_primary
   | string_value_expression
   | sign numeric_primary
-  | extract_expression
   | trim_function
   | null_literal
   | variable_identifier
@@ -1535,8 +1536,9 @@ factor
   ;
 
 numeric_primary
-  : value_expression_primary
-  | extract_expression
+  : extract_expression
+  | date_part_expression
+  | value_expression_primary
   ;
 
 sign
@@ -1555,6 +1557,14 @@ sign
 
 extract_expression
   : EXTRACT LEFT_PAREN extract_field_string=extract_field FROM extract_source RIGHT_PAREN
+  ;
+
+// Comma form EXTRACT(part, source) is not this rule — it parses as routine_invocation (function AST).
+// Only the FROM keyword between field and source selects extract_expression (same policy as date_part_expression).
+
+// Comma form DATE_PART(part, source) parses as routine_invocation, not this rule.
+date_part_expression
+  : DATE_PART LEFT_PAREN date_part_field=extract_field FROM date_part_source=extract_source RIGHT_PAREN
   ;
 
 extract_field
@@ -2220,6 +2230,7 @@ nonreserved_keywords
   | 	COUNT
   | 	CUBE
   | 	DATE
+  | 	DATE_PART
   | 	DATETIME     // SNOWFLAKE
   | 	DAY
   | 	DEC
@@ -2903,7 +2914,7 @@ ESCAPE: E S C A P E;
 EVERY : E V E R Y;
 EXISTS : E X I S T S;
 EXTERNAL : E X T E R N A L;
-EXTRACT : E X T R A C T;
+EXTRACT : [Ee] [Xx] [Tt] [Rr] [Aa] [Cc] [Tt] ;
 
 
 FILTER : F I L T E R;
@@ -3306,6 +3317,13 @@ EPOCH_MICROSECOND : E P O C H UNDERLINE M I C R O S E C O N D;
 EPOCH_MILLISECOND : E P O C H UNDERLINE M I L L I S E C O N D;
 EPOCH_SECOND : E P O C H UNDERLINE S E C O N D;
 
+/*
+  New lexer keywords for grammar extensions: append HERE (after PIVOT/Snowflake extract
+  parts, immediately before Identifier). Do NOT insert among mid-alphabet keyword blocks
+  (e.g. after DATE) — that renumbers hundreds of legacy token IDs in walker test goldens.
+*/
+DATE_PART : [Dd] [Aa] [Tt] [Ee] '_' [Pp] [Aa] [Rr] [Tt] ;
+
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
   | DOUBLE_QUOTE ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_'|'-')* DOUBLE_QUOTE
@@ -3415,6 +3433,9 @@ White_Space
 ===============================================================================
   Late-added keywords (Postgres INSERT ON CONFLICT, etc.)
   Keep near the end to avoid renumbering legacy token IDs used in tests.
+  Same policy as DATE_PART / Snowflake extract parts: new reserved words go
+  immediately before Identifier (or in this trailing block after literals), never
+  in the middle of the main keyword alphabet.
 ===============================================================================
 */
 CONFLICT : C O N F L I C T;

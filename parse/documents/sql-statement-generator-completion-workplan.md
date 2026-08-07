@@ -212,15 +212,24 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 3. Nested CASE; CASE in SELECT / WHERE / ORDER BY.
 4. IFF shorthand if walker emits distinct AST (grammar has `IFF` token usage via functions — treat as routine unless dedicated node).
 
-### 2.7 EXTRACT and datetime fields
+### 2.7 EXTRACT, DATE_PART, and datetime fields
 
-SQL `EXTRACT(field FROM expr)` uses `exitExtract_expression` → `extract={part, part_form, source}` (see `extract-dialect-capture-workplan.md`). `part_form` is `KEYWORD` or `STRING`; `part` is normalized uppercase.
+Walker shape (capture plan closed Aug 2026): `extract={part, part_form, source[, source_type][, invocation]}`.
+
+| Key | Emit |
+|-----|------|
+| `part` / `part_form` | Keyword as authored, or quoted string when `part_form=STRING` |
+| `source` | Recursive emit for column, literal, calc, cast/function, nested `extract`, parentheses |
+| `source_type` | Prefix typed literal when present (`DATE '…'`, `TIMESTAMP '…'`, etc.) |
+| `invocation` | Absent or default → `EXTRACT(part FROM source)`; `DATE_PART` → `DATE_PART(part FROM source)` only (`FROM` differentiates extract AST from comma `function` calls) |
 
 | Grammar | Walker | Actions |
 |---------|--------|---------|
-| `extract_expression`, `extract_field`, `extract_source`, datetime field rules | `exitExtract_expression`, `exitExtract_field` | Emit `EXTRACT(part FROM source)`; honor `part_form` for string vs keyword |
+| `extract_expression`, `date_part_expression`, `extract_field`, `extract_source` | `exitExtract_expression`, `exitDate_part_expression`, `exitExtract_field`, `exitExtract_source` | Emit per table above |
 
-**Optional later (not grammar hygiene):** add dedicated `exitExtract_*` handlers only if you want a stable, named AST node for the generator — not required for parsing or symbol tables today.
+**Verify:** Round-trip SELECT items mirroring `SqlEventWalkerExtractTests` exemplars (EXTRACT + DATE_PART comma/FROM, string/keyword parts, typed sources).
+
+**Status:** 🔴 Not started (walker AST ready).
 
 ### 2.8 Window functions (value-expression family)
 

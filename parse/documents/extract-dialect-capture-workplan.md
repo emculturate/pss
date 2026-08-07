@@ -1,19 +1,22 @@
-# EXTRACT dialect capture — short workplan
+# EXTRACT / DATE_PART dialect capture — short workplan
 
-**Status:** ✅ Phases 1–3 done (Aug 2026)  
+**Status:** ✅ Phases 1–3 + DATE_PART done (Aug 2026)  
 **Branch context:** `Spring-2026-Extensions`  
-**Grammar:** `SQLSelectParser.g4` — `extract_expression`, `extract_field`, `extract_source`  
-**Walker:** `SqlParseEventWalker.exitExtract_expression` (+ field normalization)  
+**Grammar:** append new lexer keywords **immediately before `Identifier`** (see comment in `SQLSelectParser.g4`); never insert mid-alphabet (e.g. after `DATE`).  
+**Walker:** `SqlParseEventWalker.exitExtract_expression`, `exitDate_part_expression` (+ field normalization)  
 **Out of scope:** Delimited-identifier field (`EXTRACT("year" FROM …)`).
+
+**DATE_PART / EXTRACT policy:** Only **`name(field FROM source)`** uses the shared **`extract`** AST (`invocation=DATE_PART` for date-part names; `EXTRACT` omits `invocation`). The **`FROM`** between field and source is the discriminator. Comma forms **`name('year', source)`** parse as **`routine_invocation`** / `function` AST. Lexer names **`EXTRACT`** and **`DATE_PART`** are **case-insensitive** (`extract`, `date_part`, etc.); comma calls preserve author spelling on `function_name`.
 
 ---
 
 ## Goals
 
 1. Parse **Snowflake** and **Postgres** `EXTRACT` surface forms in one grammar (union of parts + string-literal fields).
-2. Widen **`extract_source`** to real datetime **value expressions** (column, literals, functions, parentheses, arithmetic).
-3. Emit a **stable walker node** (`extract={part, part_form, source}`) for generator work (Phase 2.7).
-4. **Exemplar tests** — representative pairings, not exhaustive part lists.
+2. Parse **`DATE_PART`** with the same **field** and **source** productions (comma and `FROM` forms).
+3. Widen **`extract_source`** to real datetime **value expressions** (column, literals, functions, parentheses, arithmetic).
+4. Emit a **stable walker node** (`extract={part, part_form, source[, source_type][, invocation]}`).
+5. **Exemplar tests** — representative pairings, not exhaustive part lists (`SqlEventWalkerExtractTests`).
 
 ---
 
@@ -21,8 +24,8 @@
 
 | Layer | Approach |
 |-------|----------|
-| **Grammar** | Single `extract_field` = keyword union (standard + `extended_datetime_field` + `snowflake_extract_field`) **or** `character_literal`. Snowflake part lexer rules are placed **before** `Identifier`. |
-| **Walker** | `part` = field text as written (keyword/identifier token spelling, or string literal body without SQL quotes); `part_form` = `KEYWORD` \| `STRING`. |
+| **Grammar** | Single `extract_field` = keyword union (standard + `extended_datetime_field` + `snowflake_extract_field`) **or** `character_literal`. Snowflake part lexer rules are placed **before** `Identifier`. `DATE_PART` is a dedicated keyword + `date_part_expression` rule. |
+| **Walker** | `part` = field text as written; `part_form` = `KEYWORD` \| `STRING`. `invocation=DATE_PART` only for `DATE_PART(...)`; `EXTRACT(...)` omits `invocation`. |
 | **Validation** | Optional later: engine profile warns on unsupported part for type (not in this batch). |
 
 **Postgres exemplar parts:** `DOW`, `MILLENNIUM`, string `'year'`.  
@@ -35,6 +38,7 @@
 
 - `extract_source` → `value_expression`.
 - `extract_field` → add `character_literal`; `snowflake_extract_field` keyword rules + matching lexer tokens **immediately before** `Identifier` (shifts token type IDs ≥ former `Identifier`; update test goldens via replacement matrix).
+- `date_part_expression` → `DATE_PART ( extract_field FROM extract_source )` only (`DATE_PART` lexer matches `date_part` / `DATE_PART` case-insensitively). Comma form is **not** this rule — it parses as `routine_invocation`.
 - Keep existing `extended_datetime_field` for Postgres (`DOW`, `DOY`, `MICROSECONDS`, …).
 
 Regenerate parser (`mvn generate-sources` / normal `parse` build).
@@ -43,45 +47,29 @@ Regenerate parser (`mvn generate-sources` / normal `parse` build).
 
 ## Phase 2 — Walker ✅
 
-- `MUMBLE_EXTRACT_KEY` and related keys in `MumbleConstants`.
-- `exitExtract_expression`: build `extract={part, part_form, source[, source_type]}`; typed `DATE`/`TIME`/`TIMESTAMP` literals promote `source_type` on the extract node and `source={literal=…}`.
-- `exitExtract_source`: `handleOneChild` so `source` is the lifted value subtree (not `{1=…, Type=…}`).
-- `exitExtract_field`: `handleOneChild` for part tokens / string literal.
-- `exitDate_literal` / `exitTime_literal` / `exitTimestamp_literal`: `{literal, source_type}` before `unsigned_literal` merge.
-- `attachExtractSource`: promote `source_type` onto `extract` (no post-hoc `Type` stripping — rely on dedicated exits / `handleOneChild`).
+- `MUMBLE_EXTRACT_*` keys in `MumbleConstants` (including `invocation` / `DATE_PART`).
+- `exitExtract_expression` / `exitDate_part_expression`: shared `buildExtractMumbleItem`; typed literals promote `source_type`; predicand substitution stamping on sources.
+- `exitExtract_source` / `exitExtract_field`: `handleOneChild` for lifted subtrees.
 
-### AST contract (generator / round-trip)
+### AST contract
 
-`extract={part, part_form, source[, source_type]}`
+`extract={part, part_form, source[, source_type][, invocation]}`
 
 | Key | Meaning |
 |-----|---------|
-| `part` | Field name as authored (lexer token text or unquoted string literal); no case folding |
+| `part` | Field name as authored; no case folding |
 | `part_form` | `KEYWORD` or `STRING` |
-| `source_type` | Present for typed SQL literals: `MUMBLE_EXTRACT_SOURCE_TYPE_*` (`DATE`, `TIME`, `TIMESTAMP`, `INTERVAL`) |
-| `source` | Semantic subtree only — e.g. `{column=…}`, `{literal=…}`, `{parentheses=…}`, `{calc=…}`, `{function=…}`, nested `{extract=…}` |
+| `source_type` | `MUMBLE_EXTRACT_SOURCE_TYPE_*` for typed SQL literals |
+| `invocation` | `DATE_PART` when parsed from `date_part_expression` (`… FROM …`); absent for `EXTRACT` |
+| `source` | Semantic subtree only |
 
-No grammar rule index keys (`Type=NNN`) anywhere under `extract` or `source`.
+No grammar rule index keys (`Type=NNN`) under `extract` or `source`.
 
 ---
 
-## Phase 3 — Exemplar tests ✅ (expanded)
+## Phase 3 — Exemplar tests ✅
 
-Class: `SqlEventWalkerExtractTests.java` — **56** cases (25 full `SELECT`, 25 `predicand_value`, 6 predicand-substitution exemplars). Each test: `assertNoFatalErrors`, `assertNoWalkerDiagnostics`, golden `getAsTree()`, and **rejects** any `Type=\d+` in the AST string. Substitution exemplars also assert substitution map and symbol table goldens.
-
-| Area | Examples covered |
-|------|------------------|
-| Field keyword / string | `YEAR`, `'month'`, `'dow'` |
-| Postgres extended | `DOW`, `CENTURY`, `MICROSECONDS` |
-| Snowflake parts | `DAYOFWEEK`, `WEEKISO`, `EPOCH_SECOND`, `EPOCH_MICROSECOND` |
-| Timezone parts | `TIMEZONE`, `TIMEZONE_HOUR` |
-| Typed literals | `DATE '…'`, `TIMESTAMP '…'`, `TIME '…'` → `source_type` + `source.literal` |
-| Column / qual / paren | `d`, `o.d`, `(d)` |
-| Expression source | `d + 1` (`calc`), `CAST(… AS TIMESTAMP)`, `'…'::timestamp`, nested `EXTRACT` |
-
-One test also asserts symbol table goldens (`extractKeywordYearFromColumn`).
-
-**Gate:**
+Class: `SqlEventWalkerExtractTests.java` — EXTRACT + DATE_PART cases (SELECT, `predicand_value`, substitution). Gate:
 
 ```bash
 cd parse && mvn -q test -Dtest=SqlEventWalkerExtractTests
@@ -91,13 +79,12 @@ cd parse && mvn -q test -Dtest=SqlEventWalkerExtractTests
 
 ## Phase 4 — Follow-ons (not this batch)
 
-- `DATE_PART` / `date_part` as shared field + source productions (comma and `FROM` forms).
 - Dialect profile diagnostics (invalid part for `DATE` vs `TIMESTAMP`).
-- `SQLStatementGenerator` emit for `extract` node (workplan §2.7).
+- SQL regeneration for `extract` / `DATE_PART` → [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) §2.7.
 
 ---
 
 ## References
 
-- Snowflake: [EXTRACT](https://docs.snowflake.com/en/sql-reference/functions/extract) — quoted or unquoted `date_or_time_part`.
-- Postgres: [§9.9.1 EXTRACT](https://www.postgresql.org/docs/current/functions-datetime.html) — field as identifier **or** string.
+- Snowflake: [EXTRACT](https://docs.snowflake.com/en/sql-reference/functions/extract), [DATE_PART](https://docs.snowflake.com/en/sql-reference/functions/date_part).
+- Postgres: [§9.9.1 EXTRACT / date_part](https://www.postgresql.org/docs/current/functions-datetime.html).

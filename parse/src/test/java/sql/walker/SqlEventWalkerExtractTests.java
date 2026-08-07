@@ -8,7 +8,7 @@ import org.junit.Test;
 import sql.SQLSelectParserParser;
 
 /**
- * EXTRACT AST coverage: field forms (keyword, string, Snowflake/Postgres parts), source shapes
+ * EXTRACT and DATE_PART AST coverage: field forms (keyword, string, Snowflake/Postgres parts), source shapes
  * (column, typed literals, parentheses, calc, cast, nested extract). Every test asserts the
  * walker tree contains no grammar {@code Type=NNN} rule stubs.
  *
@@ -68,7 +68,7 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 				"SELECT EXTRACT(YEAR FROM order_date) FROM orders",
 				"{SQL={select={1={extract={part_form=KEYWORD, part=YEAR, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={unnamed_0=[[@6,35:35=')',<288>,1:35]]}, table_dictionary={orders={order_date=[[@5,25:34='order_date',<390>,1:25]]}}, interface={unnamed_0=[{name=order_date, table_ref=orders}]}}}",
+				"{def_query0={query_dictionary={unnamed_0=[[@6,35:35=')',<288>,1:35]]}, table_dictionary={orders={order_date=[[@5,25:34='order_date',<391>,1:25]]}}, interface={unnamed_0=[{name=order_date, table_ref=orders}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -485,6 +485,73 @@ public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest 
 		assertExtractSubstitutionPredicand(
 				"EXTRACT(YEAR FROM <order_date>)",
 				"{PREDICAND={extract={part_form=KEYWORD, part=YEAR, source={substitution={name=<order_date>, type=predicand}}}}}",
+				"{<order_date>=predicand}",
+				"{}");
+	}
+
+	// --- DATE_PART(... FROM ...) → extract AST; comma forms → routine_invocation ---
+
+	@Test
+	public void extractCommaFormIsRoutineInvocation() {
+		assertExtractAst(
+				"SELECT EXTRACT('year', order_date) FROM orders",
+				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=EXTRACT}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void extractCommaLowercaseNameIsRoutineInvocation() {
+		assertExtractAst(
+				"SELECT extract('year', order_date) FROM orders",
+				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=extract}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void extractFromLowercaseNameYearFromColumn() {
+		assertExtractAst(
+				"SELECT extract(YEAR FROM order_date) FROM orders",
+				"{SQL={select={1={extract={part_form=KEYWORD, part=YEAR, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartCommaStringYearFromColumnIsRoutineInvocation() {
+		assertExtractAst(
+				"SELECT DATE_PART('year', order_date) FROM orders",
+				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=DATE_PART}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartCommaLowercaseNameIsRoutineInvocation() {
+		assertExtractAst(
+				"SELECT date_part('year', order_date) FROM orders",
+				"{SQL={select={1={function={parameters={1={literal='year'}, 2={column={name=order_date, table_ref=null}}}, function_name=date_part}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartFromKeywordYearFromColumn() {
+		assertExtractAst(
+				"SELECT DATE_PART(YEAR FROM order_date) FROM orders",
+				"{SQL={select={1={extract={invocation=DATE_PART, part_form=KEYWORD, part=YEAR, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartFromLowercaseNameYearFromColumn() {
+		assertExtractAst(
+				"SELECT date_part(MONTH FROM order_date) FROM orders",
+				"{SQL={select={1={extract={invocation=DATE_PART, part_form=KEYWORD, part=MONTH, source={column={name=order_date, table_ref=null}}}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartFromNestedExtractSource() {
+		assertExtractAst(
+				"SELECT DATE_PART(MONTH FROM EXTRACT(DAY FROM order_date)) FROM orders",
+				"{SQL={select={1={extract={invocation=DATE_PART, part_form=KEYWORD, part=MONTH, source={extract={part_form=KEYWORD, part=DAY, source={column={name=order_date, table_ref=null}}}}}}}, from={table={alias=null, table=orders}}}}");
+	}
+
+	@Test
+	public void datePartFromPredicandEndpointSubstitution() {
+		assertExtractSubstitutionPredicand(
+				"date_part(HOUR FROM <order_date>)",
+				"{PREDICAND={extract={invocation=DATE_PART, part_form=KEYWORD, part=HOUR, source={substitution={name=<order_date>, type=predicand}}}}}",
 				"{<order_date>=predicand}",
 				"{}");
 	}
