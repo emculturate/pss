@@ -18,9 +18,15 @@
 
 ## Tier 1 — No test hits these `exit*` methods (priority for new exemplars)
 
+### Tier 1.1 complete — `exitNamed_columns_join`
+
+| `exit*` method | Grammar rule / path | Status |
+|----------------|---------------------|--------|
+| `exitNamed_columns_join` | `named_columns_join` | **Covered** — see [workplan T1.1](sql_walker_exit_method_coverage-workplan.md#t11-exitnamed_columns_join--named_columns_join--complete) and `SqlEventWalkerJoinsAndTableResolutionTests` (JOIN USING section). |
+
+Remaining Tier 1 gaps:
+
 | `exit*` method | Grammar rule / path | What to exercise (sketch) |
-|----------------|---------------------|---------------------------|
-| `exitNamed_columns_join` | `named_columns_join` | `FROM t1 JOIN t2 USING (col1, col2)` (USING column list join) |
 | `exitUnpivot_null_policy` | `unpivot_null_policy` | `UNPIVOT INCLUDE NULLS` / `EXCLUDE NULLS` (Snowflake) on a table source |
 | `exitPivot_in_any` | `pivot_in_any` | `PIVOT … IN (ANY)` or `IN (ANY ORDER BY …)` |
 | `exitPivot_in_subquery` | `pivot_in_subquery` | `PIVOT … IN (SELECT …)` |

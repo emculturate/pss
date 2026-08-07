@@ -35,12 +35,29 @@
 
 Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
-### T1.1 `exitNamed_columns_join` — `named_columns_join`
+### T1.1 `exitNamed_columns_join` — `named_columns_join` — **COMPLETE**
 
 - [x] Add SELECT (or DML) using **`JOIN … USING (col1, col2)`** (named columns join, not `ON`).
 - **Verify:** `exitNamed_columns_join` covered; AST/symbol smoke as needed.
 
-**Follow-up (not in scope for T1.1):** predicand/function expressions in `USING (...)` if grammar allows; derived vs regular column operands; wildcard `USING` shapes.
+**Status (Spring 2026):** Tier 1.1 is **closed**. The original bar was walker exit coverage plus light smoke; the corpus now also locks down **JOIN USING** symbol behavior (not required to mark T1.1 done).
+
+**Where tests live:** `SqlEventWalkerJoinsAndTableResolutionTests` — section *JOIN … USING (column list) — T1.1 / named_columns_join scenarios* (V0–V12, triple-join W1–W4, extension block before `// Join USING Tests end here`). CROSS/NATURAL + invalid `USING`/`ON` fatals are in the following section of the same class.
+
+**Beyond minimum coverage (product hardening, same tier closure):**
+
+- Unqualified `USING` columns only; qualified names → fatal (`QUALIFIED_COLUMN_IN_JOIN_USING`).
+- `filters` entries pair each `USING` column with **both** join operands (alias `table_ref`), including **flat** chained joins (`join={1…N}`): walk the join sequence, find the nearest tuple operand before/after each `USING` bucket (skip `LATERAL` / modifier slots).
+- Query-like operands (subquery, VALUES, set-op, pivot, table function, tuple/Jinja) validated via finalized **`def_*`** interfaces; fatals when a column is missing on a resolvable operand (`JOIN_USING_COLUMN_NOT_FOUND`).
+- Chained joins: multiple `USING` clauses, `LEFT` / `RIGHT` / `FULL OUTER`, comma + `LATERAL` + `USING`, quad chain (three `USING`), partial multi-column fatal (earlier columns may still land in `filters` before fatal on a later column).
+
+**Caveats / out of dialect (documented; no further T1.1 tests):**
+
+- **`table_reference_list` AST is always flat** (`1=t, 2=using, 3=…`) — not left-deep `join={1={join={…}}, 2=using, 3=…}`. Recurse-on-nested-slot-1 in the walker is defensive only; this dialect does not emit that shape for SELECT `FROM`.
+- **Physical base tables** are treated as permissive for `USING` column acceptance (no catalog-backed `JOIN_USING_COLUMN_NOT_FOUND` for `third`/`fourth` alone); validation targets resolvable query/VALUES/set-op interfaces.
+- Capture runs at **`exitTable_reference_list`** (SELECT-style `FROM` join chains). **DELETE … USING (**subquery**)** and other DML `USING` shapes are separate grammar paths (covered elsewhere, not part of T1.1).
+
+**Follow-up (not in scope for T1.1 — promote to a new tier if needed):** predicand/function expressions in `USING (...)` if grammar allows; derived vs regular column operands; wildcard `USING` shapes; schema-checked `USING` on physical tables.
 
 ### T1.2 `exitUnpivot_null_policy` — `unpivot_null_policy`
 

@@ -1538,6 +1538,9 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 	 * table third, VALUES, query, UNION setop, TABLE function, tuple substitution,
 	 * Jinja ref, INTERSECT, EXCEPT, fourth/fifth tables, compound subqueries.
 	 * W1 second join uses LATERAL (AST slot 5) between USING (4) and union operand (6).
+	 *
+	 * Not tested (out of dialect): left-deep FROM AST join={1={join={…}}, 2=using, 3=…}.
+	 * table_reference_list always emits a flat numbered join map; no golden is required.
 	 */
 
 	@Test
@@ -1596,6 +1599,131 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				"{third={a=[[@21,52:52='a',<391>,1:52], [@28,82:82='a',<391>,1:82]], d=[[@23,55:55='d',<391>,1:55], [@30,85:85='d',<391>,1:85]]}, <[Leg B].[Tuple Feed]>={a=[[@13,29:29='n',<391>,1:29], [@58,183:183='a',<391>,1:183]]}, fifth={a=[[@38,114:114='a',<391>,1:114]], e=[[@40,117:117='e',<391>,1:117]]}}",
 				"{union2={a=[[@1,7:7='k',<391>,1:7], [@46,136:136='k',<391>,1:136]]}, query4={na=[[@17,36:37='na',<391>,1:36]], ma=[[@11,25:26='ma',<391>,1:25]], ka=[[@5,14:15='ka',<391>,1:14]]}, query0={d=[[@23,55:55='d',<391>,1:55]], a=[[@21,52:52='a',<391>,1:52]]}, query1={d=[[@30,85:85='d',<391>,1:85]], a=[[@28,82:82='a',<391>,1:82]]}, query3={a=[[@38,114:114='a',<391>,1:114], [@7,18:18='m',<391>,1:18], [@50,142:142='m',<391>,1:142], [@58,183:183='a',<391>,1:183]], e=[[@40,117:117='e',<391>,1:117]]}}",
 				"{def_query4={def_union2={query_dictionary={a=[[@1,7:7='k',<391>,1:7], [@46,136:136='k',<391>,1:136]]}, def_query1={query_dictionary={a=[[@28,82:82='a',<391>,1:82]], d=[[@30,85:85='d',<391>,1:85]]}, table_dictionary={third={a=[[@28,82:82='a',<391>,1:82]], d=[[@30,85:85='d',<391>,1:85]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, def_query0={query_dictionary={a=[[@21,52:52='a',<391>,1:52]], d=[[@23,55:55='d',<391>,1:55]]}, table_dictionary={third={a=[[@21,52:52='a',<391>,1:52], [@28,82:82='a',<391>,1:82]], d=[[@23,55:55='d',<391>,1:55], [@30,85:85='d',<391>,1:85]]}}, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, interface={a=query_column, d=query_column}}, table_dictionary={<[Leg B].[Tuple Feed]>={a=[[@58,183:183='a',<391>,1:183], [@13,29:29='n',<391>,1:29]]}}, filters=[{name=a, table_ref=k}, {name=a, table_ref=m}, {name=a, table_ref=n}], interface={na=[{name=a, table_ref=n}], ma=[{name=a, table_ref=m}], ka=[{name=a, table_ref=k}]}, def_query3={query_dictionary={a=[[@38,114:114='a',<391>,1:114], [@7,18:18='m',<391>,1:18], [@50,142:142='m',<391>,1:142], [@58,183:183='a',<391>,1:183]], e=[[@40,117:117='e',<391>,1:117]]}, table_dictionary={fifth={a=[[@38,114:114='a',<391>,1:114]], e=[[@40,117:117='e',<391>,1:117]]}}, interface={a=[{name=a, table_ref=fifth}], e=[{name=e, table_ref=fifth}]}}, query_dictionary={na=[[@17,36:37='na',<391>,1:36]], ma=[[@11,25:26='ma',<391>,1:25]], ka=[[@5,14:15='ka',<391>,1:14]]}, table_alias={k=union2, m=query3, n=<[Leg B].[Tuple Feed]>}}}");
+	}
+
+	/*
+	 * JOIN USING extension coverage: join qualifiers, longer chains, partial multi-column
+	 * validation, set-op RHS, comma + LATERAL + USING, LATERAL before first USING operand.
+	 */
+
+	@Test
+	public void joinUsingLateralBeforeRhsOfFirstUsingTripleChainTest() {
+		final String query = "SELECT t.a AS ca, v.a AS cb, u.a AS cc FROM third t "
+				+ "JOIN LATERAL (VALUES (1)) AS v(a) USING (a) "
+				+ "JOIN (SELECT a, e FROM fourth) u USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=ca}, 2={column={name=a, table_ref=v}, alias=cb}, 3={column={name=a, table_ref=u}, alias=cc}}, from={join={1={table={alias=t, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={modifier=LATERAL}, 4={values={columns={1={column={name=a, table_ref=null}}}, alias=v, matrix={1={row={1={literal=1}}}}}}, 5={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 6={table={alias=u, query={select={1={column={name=a, table_ref=null}}, 2={column={name=e, table_ref=null}}}, from={table={alias=null, table=fourth}}}}}}}}}",
+				"[cc, ca, cb]",
+				"{}",
+				"{third={a=[[@1,7:7='t',<391>,1:7], [@50,136:136='a',<391>,1:136]]}, fourth={a=[[@41,109:109='a',<391>,1:109]], e=[[@43,112:112='e',<391>,1:112]]}}",
+				"{values0={a=[[@32,83:83='a',<391>,1:83], [@7,18:18='v',<391>,1:18], [@50,136:136='a',<391>,1:136]]}, query1={a=[[@41,109:109='a',<391>,1:109], [@13,29:29='u',<391>,1:29]], e=[[@43,112:112='e',<391>,1:112]]}, query2={cc=[[@17,36:37='cc',<391>,1:36]], ca=[[@5,14:15='ca',<391>,1:14]], cb=[[@11,25:26='cb',<391>,1:25]]}}",
+				"{def_query2={query_dictionary={cc=[[@17,36:37='cc',<391>,1:36]], ca=[[@5,14:15='ca',<391>,1:14]], cb=[[@11,25:26='cb',<391>,1:25]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7], [@50,136:136='a',<391>,1:136]]}}, def_values0={query_dictionary={a=[[@32,83:83='a',<391>,1:83], [@7,18:18='v',<391>,1:18], [@50,136:136='a',<391>,1:136]]}, interface={a=[]}}, def_query1={query_dictionary={a=[[@41,109:109='a',<391>,1:109], [@13,29:29='u',<391>,1:29]], e=[[@43,112:112='e',<391>,1:112]]}, table_dictionary={fourth={a=[[@41,109:109='a',<391>,1:109]], e=[[@43,112:112='e',<391>,1:112]]}}, interface={a=[{name=a, table_ref=fourth}], e=[{name=e, table_ref=fourth}]}}, filters=[{name=a, table_ref=t}, {name=a, table_ref=v}, {name=a, table_ref=u}], interface={cc=[{name=a, table_ref=u}], ca=[{name=a, table_ref=t}], cb=[{name=a, table_ref=v}]}, table_alias={t=third, u=query1, v=values0}}}");
+	}
+
+	@Test
+	public void joinUsingRightJoinSingleColumnTest() {
+		final String query = "SELECT a.a AS ca, b.a AS da FROM third a RIGHT JOIN fourth b USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=a}, alias=ca}, 2={column={name=a, table_ref=b}, alias=da}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=RIGHT}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={da=[[@11,25:26='da',<391>,1:25]], ca=[[@5,14:15='ca',<391>,1:14]]}, table_dictionary={third={a=[[@1,7:7='a',<391>,1:7], [@21,68:68='a',<391>,1:68]]}, fourth={a=[[@7,18:18='b',<391>,1:18], [@21,68:68='a',<391>,1:68]]}}, filters=[{name=a, table_ref=a}, {name=a, table_ref=b}], interface={da=[{name=a, table_ref=b}], ca=[{name=a, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUsingFullOuterJoinSingleColumnTest() {
+		final String query = "SELECT a.a AS ca, b.a AS da FROM third a FULL OUTER JOIN fourth b USING (a)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=a}, alias=ca}, 2={column={name=a, table_ref=b}, alias=da}}, from={join={1={table={alias=a, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=FULLOUTER}, 3={table={alias=b, table=fourth}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={da=[[@11,25:26='da',<391>,1:25]], ca=[[@5,14:15='ca',<391>,1:14]]}, table_dictionary={third={a=[[@1,7:7='a',<391>,1:7], [@22,73:73='a',<391>,1:73]]}, fourth={a=[[@7,18:18='b',<391>,1:18], [@22,73:73='a',<391>,1:73]]}}, filters=[{name=a, table_ref=a}, {name=a, table_ref=b}], interface={da=[{name=a, table_ref=b}], ca=[{name=a, table_ref=a}]}, table_alias={a=third, b=fourth}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void joinUsingQuadChainThreeUsingClausesTest() {
+		final String query = "SELECT t.a AS t1, v.a AS t2, u.a AS t3, w.a AS t4 FROM third t "
+				+ "JOIN (VALUES (1)) AS v(a) USING (a) "
+				+ "JOIN fourth u USING (a) "
+				+ "JOIN fifth w USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=t1}, 2={column={name=a, table_ref=v}, alias=t2}, 3={column={name=a, table_ref=u}, alias=t3}, 4={column={name=a, table_ref=w}, alias=t4}}, from={join={1={table={alias=t, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={values={columns={1={column={name=a, table_ref=null}}}, alias=v, matrix={1={row={1={literal=1}}}}}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=u, table=fourth}}, 6={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 7={table={alias=w, table=fifth}}}}}}",
+				"[t4, t1, t2, t3]",
+				"{}",
+				"{third={a=[[@1,7:7='t',<391>,1:7], [@55,143:143='a',<391>,1:143]]}, fifth={a=[[@19,40:40='w',<391>,1:40]]}, fourth={a=[[@13,29:29='u',<391>,1:29]]}}",
+				"{values0={a=[[@37,86:86='a',<391>,1:86], [@7,18:18='v',<391>,1:18], [@55,143:143='a',<391>,1:143]]}, query1={t4=[[@23,47:48='t4',<391>,1:47]], t1=[[@5,14:15='t1',<391>,1:14]], t2=[[@11,25:26='t2',<391>,1:25]], t3=[[@17,36:37='t3',<391>,1:36]]}}",
+				"{def_query1={query_dictionary={t4=[[@23,47:48='t4',<391>,1:47]], t1=[[@5,14:15='t1',<391>,1:14]], t2=[[@11,25:26='t2',<391>,1:25]], t3=[[@17,36:37='t3',<391>,1:36]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7], [@55,143:143='a',<391>,1:143]]}, fifth={a=[[@19,40:40='w',<391>,1:40]]}, fourth={a=[[@13,29:29='u',<391>,1:29]]}}, def_values0={query_dictionary={a=[[@37,86:86='a',<391>,1:86], [@7,18:18='v',<391>,1:18], [@55,143:143='a',<391>,1:143]]}, interface={a=[]}}, filters=[{name=a, table_ref=t}, {name=a, table_ref=v}, {name=a, table_ref=u}, {name=a, table_ref=w}], interface={t4=[{name=a, table_ref=w}], t1=[{name=a, table_ref=t}], t2=[{name=a, table_ref=v}], t3=[{name=a, table_ref=u}]}, table_alias={t=third, u=fourth, v=values0, w=fifth}}}");
+	}
+
+	@Test
+	public void joinUsingMultiColumnPartialMissingOnRhsOperandFatalTest() {
+		// Column 'a' is validated and recorded in filters before fatal on missing 'b' on RHS.
+		final String query = "SELECT x.a AS xa, x.b AS xb FROM third x "
+				+ "JOIN (SELECT a FROM fourth) y USING (a, b)";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={xa=[[@5,14:15='xa',<391>,1:14]], xb=[[@11,25:26='xb',<391>,1:25]]}, table_dictionary={third={a=[[@1,7:7='x',<391>,1:7], [@25,78:78='a',<391>,1:78]], b=[[@7,18:18='x',<391>,1:18], [@27,81:81='b',<391>,1:81]]}}, def_query0={query_dictionary={a=[[@18,54:54='a',<391>,1:54], [@25,78:78='a',<391>,1:78]]}, table_dictionary={fourth={a=[[@18,54:54='a',<391>,1:54]]}}, interface={a=[{name=a, table_ref=fourth}]}}, filters=[{name=a, table_ref=x}, {name=a, table_ref=y}, {name=b, table_ref=x}], interface={xa=[{name=a, table_ref=x}], xb=[{name=b, table_ref=x}]}, table_alias={x=third, y=query0}}}",
+				extractor.getSymbolTable().toString());
+		assertFatalDiagnosticAtPositionWithFullMessage(
+				snippet,
+				"JOIN_USING_COLUMN_NOT_FOUND",
+				"Join Using column 'b' at (l:1 c:81) not found in Join Sources (y). ",
+				"b",
+				1,
+				81);
+	}
+
+	@Test
+	public void tripleJoinRhsIntersectSetOpUsingTest() {
+		final String query = "SELECT t.a AS ta, x.a AS xa, y.a AS ya FROM third t "
+				+ "JOIN fourth x USING (a) "
+				+ "JOIN (SELECT a, d FROM third INTERSECT SELECT a, d FROM third) y USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=ta}, 2={column={name=a, table_ref=x}, alias=xa}, 3={column={name=a, table_ref=y}, alias=ya}}, from={join={1={table={alias=t, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=x, table=fourth}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=y, query={intersect={1={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={intersect={qualifier=null, operator=INTERSECT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}}}}}",
+				"[ya, xa, ta]",
+				"{}",
+				"{third={a=[[@31,89:89='a',<391>,1:89], [@38,122:122='a',<391>,1:122], [@1,7:7='t',<391>,1:7], [@47,148:148='a',<391>,1:148]], d=[[@33,92:92='d',<391>,1:92], [@40,125:125='d',<391>,1:125]]}, fourth={a=[[@7,18:18='x',<391>,1:18], [@47,148:148='a',<391>,1:148]]}}",
+				"{intersect2={a=[[@13,29:29='y',<391>,1:29]]}, query0={d=[[@33,92:92='d',<391>,1:92]], a=[[@31,89:89='a',<391>,1:89]]}, query1={d=[[@40,125:125='d',<391>,1:125]], a=[[@38,122:122='a',<391>,1:122]]}, query3={ya=[[@17,36:37='ya',<391>,1:36]], xa=[[@11,25:26='xa',<391>,1:25]], ta=[[@5,14:15='ta',<391>,1:14]]}}",
+				"{def_query3={query_dictionary={ya=[[@17,36:37='ya',<391>,1:36]], xa=[[@11,25:26='xa',<391>,1:25]], ta=[[@5,14:15='ta',<391>,1:14]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7], [@47,148:148='a',<391>,1:148]]}, fourth={a=[[@7,18:18='x',<391>,1:18], [@47,148:148='a',<391>,1:148]]}}, def_intersect2={query_dictionary={a=[[@13,29:29='y',<391>,1:29]]}, def_query1={query_dictionary={a=[[@38,122:122='a',<391>,1:122]], d=[[@40,125:125='d',<391>,1:125]]}, table_dictionary={third={a=[[@38,122:122='a',<391>,1:122]], d=[[@40,125:125='d',<391>,1:125]]}}, setop=INTERSECTION, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, def_query0={query_dictionary={a=[[@31,89:89='a',<391>,1:89]], d=[[@33,92:92='d',<391>,1:92]]}, table_dictionary={third={a=[[@31,89:89='a',<391>,1:89], [@38,122:122='a',<391>,1:122], [@1,7:7='t',<391>,1:7], [@47,148:148='a',<391>,1:148]], d=[[@33,92:92='d',<391>,1:92], [@40,125:125='d',<391>,1:125]]}}, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, interface={a=query_column, d=query_column}}, filters=[{name=a, table_ref=t}, {name=a, table_ref=x}, {name=a, table_ref=y}], interface={ya=[{name=a, table_ref=y}], xa=[{name=a, table_ref=x}], ta=[{name=a, table_ref=t}]}, table_alias={t=third, x=fourth, y=intersect2}}}");
+	}
+
+	@Test
+	public void tripleJoinRhsExceptSetOpUsingTest() {
+		final String query = "SELECT t.a AS ta, x.a AS xa, y.a AS ya FROM third t "
+				+ "JOIN fourth x USING (a) "
+				+ "JOIN (SELECT a, d FROM third EXCEPT SELECT a, d FROM third) y USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=ta}, 2={column={name=a, table_ref=x}, alias=xa}, 3={column={name=a, table_ref=y}, alias=ya}}, from={join={1={table={alias=t, table=third}}, 2={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 3={table={alias=x, table=fourth}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=y, query={union={1={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}, 2={union={qualifier=null, operator=EXCEPT}}, 3={select={1={column={name=a, table_ref=null}}, 2={column={name=d, table_ref=null}}}, from={table={alias=null, table=third}}}}}}}}}}}",
+				"[ya, xa, ta]",
+				"{}",
+				"{third={a=[[@31,89:89='a',<391>,1:89], [@38,119:119='a',<391>,1:119], [@1,7:7='t',<391>,1:7], [@47,145:145='a',<391>,1:145]], d=[[@33,92:92='d',<391>,1:92], [@40,122:122='d',<391>,1:122]]}, fourth={a=[[@7,18:18='x',<391>,1:18], [@47,145:145='a',<391>,1:145]]}}",
+				"{union2={a=[[@13,29:29='y',<391>,1:29]]}, query0={d=[[@33,92:92='d',<391>,1:92]], a=[[@31,89:89='a',<391>,1:89]]}, query1={d=[[@40,122:122='d',<391>,1:122]], a=[[@38,119:119='a',<391>,1:119]]}, query3={ya=[[@17,36:37='ya',<391>,1:36]], xa=[[@11,25:26='xa',<391>,1:25]], ta=[[@5,14:15='ta',<391>,1:14]]}}",
+				"{def_query3={def_union2={query_dictionary={a=[[@13,29:29='y',<391>,1:29]]}, def_query1={query_dictionary={a=[[@38,119:119='a',<391>,1:119]], d=[[@40,122:122='d',<391>,1:122]]}, table_dictionary={third={a=[[@38,119:119='a',<391>,1:119]], d=[[@40,122:122='d',<391>,1:122]]}}, setop=EXCEPT, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, def_query0={query_dictionary={a=[[@31,89:89='a',<391>,1:89]], d=[[@33,92:92='d',<391>,1:92]]}, table_dictionary={third={a=[[@31,89:89='a',<391>,1:89], [@38,119:119='a',<391>,1:119], [@1,7:7='t',<391>,1:7], [@47,145:145='a',<391>,1:145]], d=[[@33,92:92='d',<391>,1:92], [@40,122:122='d',<391>,1:122]]}}, interface={a=[{name=a, table_ref=third}], d=[{name=d, table_ref=third}]}}, interface={a=query_column, d=query_column}}, query_dictionary={ya=[[@17,36:37='ya',<391>,1:36]], xa=[[@11,25:26='xa',<391>,1:25]], ta=[[@5,14:15='ta',<391>,1:14]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7], [@47,145:145='a',<391>,1:145]]}, fourth={a=[[@7,18:18='x',<391>,1:18], [@47,145:145='a',<391>,1:145]]}}, filters=[{name=a, table_ref=t}, {name=a, table_ref=x}, {name=a, table_ref=y}], interface={ya=[{name=a, table_ref=y}], xa=[{name=a, table_ref=x}], ta=[{name=a, table_ref=t}]}, table_alias={t=third, x=fourth, y=union2}}}");
+	}
+
+	@Test
+	public void joinUsingCommaLateralThenJoinUsingTest() {
+		final String query = "SELECT t.a AS ta, v.a AS va, f.a AS fa FROM third t, "
+				+ "LATERAL (VALUES (1)) AS v(a) JOIN fourth f USING (a)";
+		assertTripleJoinMixedOperandsHappyPath(query,
+				"{SQL={select={1={column={name=a, table_ref=t}, alias=ta}, 2={column={name=a, table_ref=v}, alias=va}, 3={column={name=a, table_ref=f}, alias=fa}}, from={join={1={table={alias=t, table=third}}, 2={modifier=LATERAL}, 3={values={columns={1={column={name=a, table_ref=null}}}, alias=v, matrix={1={row={1={literal=1}}}}}}, 4={using={1={column={name=a, table_ref=null}}}, join=JOIN}, 5={table={alias=f, table=fourth}}}}}}",
+				"[va, fa, ta]",
+				"{}",
+				"{third={a=[[@1,7:7='t',<391>,1:7]]}, fourth={a=[[@13,29:29='f',<391>,1:29], [@39,103:103='a',<391>,1:103]]}}",
+				"{values0={a=[[@32,79:79='a',<391>,1:79], [@7,18:18='v',<391>,1:18], [@39,103:103='a',<391>,1:103]]}, query1={va=[[@11,25:26='va',<391>,1:25]], fa=[[@17,36:37='fa',<391>,1:36]], ta=[[@5,14:15='ta',<391>,1:14]]}}",
+				"{def_query1={query_dictionary={va=[[@11,25:26='va',<391>,1:25]], fa=[[@17,36:37='fa',<391>,1:36]], ta=[[@5,14:15='ta',<391>,1:14]]}, table_dictionary={third={a=[[@1,7:7='t',<391>,1:7]]}, fourth={a=[[@13,29:29='f',<391>,1:29], [@39,103:103='a',<391>,1:103]]}}, def_values0={query_dictionary={a=[[@32,79:79='a',<391>,1:79], [@7,18:18='v',<391>,1:18], [@39,103:103='a',<391>,1:103]]}, interface={a=[]}}, filters=[{name=a, table_ref=v}, {name=a, table_ref=f}], interface={va=[{name=a, table_ref=v}], fa=[{name=a, table_ref=f}], ta=[{name=a, table_ref=t}]}, table_alias={t=third, v=values0, f=fourth}}}");
 	}
 
 	private void assertTripleJoinMixedOperandsHappyPath(

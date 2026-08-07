@@ -7397,6 +7397,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object leftOperandObj = joinPartMap.get("1");
 		if (leftOperandObj instanceof Map<?, ?> leftOperandMapObj) {
 			Map<String, Object> leftOperandMap = (Map<String, Object>) leftOperandMapObj;
+			// Dialect table_reference_list uses a flat 1..N join map, not left-deep
+			// join={1={join=…}, 2=using, 3=…}; recurse only if that shape appears elsewhere.
 			if (isNestedJoinOperandMap(leftOperandMap)) {
 				Object nestedJoinObj = leftOperandMap.get(MUMBLE_JOIN_KEY);
 				if (nestedJoinObj instanceof Map<?, ?> nestedJoinMapObj) {
