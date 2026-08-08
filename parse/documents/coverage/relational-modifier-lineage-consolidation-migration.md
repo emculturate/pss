@@ -76,13 +76,17 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 **Problem:** `shouldCaptureClauseColumnSiteTokenForActiveColumnReference()` is false for most SELECT-list column refs, so interface `refObj` lacks `locations` unless unresolved still holds them.
 
-**Changes (partial, uncommitted):**
+**Approach (no `query_dictionary` operand publish):** Phase-1 `query_dictionary` keys stay **output alias / name tokens only** (`table-and-query-dictionary-design.md`). Operand sites for convert use **ephemeral `locations` on interface dependency refs** (per-SELECT-item unresolved delta attach) → materialize into `table_dictionary` / `derivation.derived_columns`, not onto `query_dictionary[alias]`.
 
-1. [x] UNPIVOT VALUE: `materializeInterfaceUnpivotValueOperandDependencyLineage` merges SELECT expression sites into `derived_columns` (unresolved + interface coalesce).
-2. [ ] Scoped SELECT-list clause capture (global capture caused widespread `table_dictionary` golden drift — needs modifier-scoped or convert-only policy).
-3. [x] `unpivotValueOperandSelectExpressionSitesContractTest` enabled (relaxed assertion).
+**Implemented locally:**
 
-**Gate:** TBD after scoped capture; full `mvn test` regression required before M4 done.
+1. [x] Per-SELECT-item unresolved delta attach at `exitSelect_item` + rotate snapshot per query.
+2. [x] UNPIVOT VALUE convert: expanded-derived interface path + expression-shaped derived materialize; structured bucket merge.
+3. [ ] M4 contract green on **`derived_columns`** (not `query_dictionary`).
+
+**Removed:** deferred flush of operand sites into `query_dictionary` (caused `feb_tot` / `tax` style alias pollution — see `pivotWithTaxAndWhereV4Test` goldens).
+
+**Gate:** `unpivotValueOperandSelectExpressionSitesContractTest`; pivot suite + full `mvn test` without qdict drift.
 
 ---
 

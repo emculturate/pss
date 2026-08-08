@@ -54,6 +54,8 @@ public class SqlParseSymbolTreeHelper {
 	private WindowSelectInterfaceClauseDeps latchedWindowOverClauseDepsForNextSelectItem;
 	private String lastWindowSelectListOutputInterfaceAlias;
 	private String lastSelectListOutputInterfaceAlias;
+	/** M4: unresolved map snapshot at prior {@code exitSelect_item} for per-item site attach. */
+	private HashMap<String, Object> unresolvedColumnSnapshotBeforeSelectItem = new HashMap<>();
 	private final HashMap<String, WindowSelectInterfaceClauseDeps> windowOutputInterfaceClauseDepsByAlias =
 			new LinkedHashMap<>();
 
@@ -1614,6 +1616,15 @@ public class SqlParseSymbolTreeHelper {
 							localTableAliasMap,
 							true,
 							localDerivedColumns) != null) {
+						return;
+					}
+					if (MUMBLE_INTERFACE_KEY.equals(siteKey)
+							&& localInterface != null
+							&& countUnqualifiedInterfaceRefsForColumnName(localInterface, columnName)
+									< countUnresolvedColumnRefSiteLocations(
+											localUnresolvedColumnMap,
+											columnName)) {
+						diagnosedAmbiguousColumnNames.add(columnName);
 						return;
 					}
 					diagnosedAmbiguousColumnNames.add(columnName);
@@ -3463,13 +3474,81 @@ public class SqlParseSymbolTreeHelper {
 		((Map<String, Object>) egressMapObj).put("locations", locations);
 	}
 
+	public void resetSelectItemUnresolvedColumnSnapshot() {
+		unresolvedColumnSnapshotBeforeSelectItem = new HashMap<>();
+	}
+
+	public void rotateSelectItemUnresolvedColumnSnapshot() {
+		unresolvedColumnSnapshotBeforeSelectItem = snapshotUnresolvedColumnMap();
+	}
+
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Object> snapshotUnresolvedColumnMap() {
+		HashMap<String, Object> snapshot = new HashMap<>();
+		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(unresolvedObj instanceof Map<?, ?> unresolvedMapObj) || unresolvedMapObj.isEmpty()) {
+			return snapshot;
+		}
+		for (Map.Entry<?, ?> entry : unresolvedMapObj.entrySet()) {
+			if (entry.getKey() instanceof String key && entry.getValue() != null) {
+				snapshot.put(key, cloneMaterializationTokenEntry(entry.getValue()));
+			}
+		}
+		return snapshot;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object cloneMaterializationTokenEntry(Object entry) {
+		if (entry == null) {
+			return null;
+		}
+		if (entry instanceof List<?> tokenList) {
+			return new ArrayList<>(tokenList);
+		}
+		if (entry instanceof Map<?, ?> entryMap) {
+			HashMap<String, Object> copy = new HashMap<>((Map<String, Object>) entryMap);
+			Object locationsObj = copy.get("locations");
+			if (locationsObj instanceof List<?> locationList) {
+				copy.put("locations", new ArrayList<>(locationList));
+			}
+			return copy;
+		}
+		return entry;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Object materializationRefTokensAddedSinceSnapshot(
+			Object currentEntry,
+			Object snapshotEntry) {
+		ArrayList<Object> added = new ArrayList<>();
+		appendMaterializationRefTokens(added, currentEntry);
+		if (snapshotEntry != null) {
+			ArrayList<Object> prior = new ArrayList<>();
+			appendMaterializationRefTokens(prior, snapshotEntry);
+			added.removeIf(prior::contains);
+		}
+		return added.isEmpty() ? null : added;
+	}
+
 	/**
-	 * M3/M4 bridge: copy walk-time {@code unresolved_column} site tokens onto flattened SELECT-item
-	 * dependency refs so convert egress can materialize expression operand lineage without the M0
-	 * bare-column {@code query_dictionary} gate.
+	 * M3/M4 bridge: ephemeral {@code locations} on interface dependency refs from per-SELECT-item
+	 * unresolved deltas (convert egress only — not written to {@code query_dictionary}).
 	 */
 	@SuppressWarnings("unchecked")
 	public void attachWalkCapturedSiteTokensToSelectItemDependencyRefs(ArrayList<Object> columnList) {
+		attachWalkCapturedSiteTokensToSelectItemDependencyRefs(
+				columnList,
+				unresolvedColumnSnapshotBeforeSelectItem);
+	}
+
+	/**
+	 * M4: attach only unresolved tokens recorded while the current SELECT item was walking (delta
+	 * since the prior {@code exitSelect_item} snapshot), avoiding cross-item column-name bleed.
+	 */
+	@SuppressWarnings("unchecked")
+	public void attachWalkCapturedSiteTokensToSelectItemDependencyRefs(
+			ArrayList<Object> columnList,
+			HashMap<String, Object> unresolvedSnapshotBeforeSelectItem) {
 		if (columnList == null || columnList.isEmpty()) {
 			return;
 		}
@@ -3478,6 +3557,9 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
+		HashMap<String, Object> snapshot = unresolvedSnapshotBeforeSelectItem != null
+				? unresolvedSnapshotBeforeSelectItem
+				: new HashMap<>();
 		for (Object refObj : columnList) {
 			if (!(refObj instanceof Map<?, ?> refMapObj)) {
 				continue;
@@ -3490,6 +3572,13 @@ public class SqlParseSymbolTreeHelper {
 			if (unresolvedEntry == null) {
 				continue;
 			}
+			Object snapshotEntry = getUnqualifiedUnknownEntry(snapshot, columnName);
+			Object deltaTokens = materializationRefTokensAddedSinceSnapshot(
+					unresolvedEntry,
+					snapshotEntry);
+			if (deltaTokens == null) {
+				continue;
+			}
 			ArrayList<Object> siteTokens = new ArrayList<Object>();
 			Object existingLocationsObj = ((Map<String, Object>) refMapObj).get("locations");
 			if (existingLocationsObj instanceof List<?> existingLocations) {
@@ -3499,7 +3588,7 @@ public class SqlParseSymbolTreeHelper {
 					}
 				}
 			}
-			appendMaterializationRefTokens(siteTokens, unresolvedEntry);
+			appendMaterializationRefTokens(siteTokens, deltaTokens);
 			if (!siteTokens.isEmpty()) {
 				((Map<String, Object>) refObj).put("locations", siteTokens);
 			}
@@ -5041,7 +5130,28 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										tableRef,
 										interfaceQualifiedCtx);
+						if (egressResult.hasExpandedDerivedSourceLineage()) {
+							materializeUnpivotValueOperandFromInterfaceIfNeeded(
+									activeConvertEgressRelationalModifierContext,
+									outputCol,
+									columnName,
+									refObj,
+									refIndex,
+									localCurrentQueryDictionary,
+									localDerivedColumns,
+									localUnresolvedColumnMap);
+							continue;
+						}
 						if (egressResult.isDerivedColumn()) {
+							materializeUnpivotValueOperandFromInterfaceIfNeeded(
+									activeConvertEgressRelationalModifierContext,
+									outputCol,
+									columnName,
+									refObj,
+									refIndex,
+									localCurrentQueryDictionary,
+									localDerivedColumns,
+									localUnresolvedColumnMap);
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -5294,7 +5404,28 @@ public class SqlParseSymbolTreeHelper {
 										columnName,
 										null,
 										interfaceUnqualifiedCtx);
+						if (egressResult.hasExpandedDerivedSourceLineage()) {
+							materializeUnpivotValueOperandFromInterfaceIfNeeded(
+									activeConvertEgressRelationalModifierContext,
+									outputCol,
+									columnName,
+									refObj,
+									refIndex,
+									localCurrentQueryDictionary,
+									localDerivedColumns,
+									localUnresolvedColumnMap);
+							continue;
+						}
 						if (egressResult.isDerivedColumn()) {
+							materializeUnpivotValueOperandFromInterfaceIfNeeded(
+									activeConvertEgressRelationalModifierContext,
+									outputCol,
+									columnName,
+									refObj,
+									refIndex,
+									localCurrentQueryDictionary,
+									localDerivedColumns,
+									localUnresolvedColumnMap);
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
@@ -11623,6 +11754,32 @@ public class SqlParseSymbolTreeHelper {
 	 * M4: UNPIVOT VALUE operand sites from SELECT expressions → structured {@code derived_columns} bucket.
 	 */
 	@SuppressWarnings("unchecked")
+	private void materializeUnpivotValueOperandFromInterfaceIfNeeded(
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			String interfaceOutputColumn,
+			String operandColumnName,
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> unresolvedColumnMap) {
+		if (interfaceOutputColumn != null
+				&& operandColumnName != null
+				&& interfaceOutputColumn.equalsIgnoreCase(operandColumnName)) {
+			return;
+		}
+		materializeInterfaceUnpivotValueOperandDependencyLineage(
+				relationalModifierContext,
+				operandColumnName,
+				interfaceRefObj,
+				interfaceRefIndex,
+				interfaceOutputColumn,
+				localCurrentQueryDictionary,
+				localDerivedColumns,
+				unresolvedColumnMap);
+	}
+
+	@SuppressWarnings("unchecked")
 	private void materializeInterfaceUnpivotValueOperandDependencyLineage(
 			RelationalModifierConvertEgressContext relationalModifierContext,
 			String valueColumnName,
@@ -11657,11 +11814,45 @@ public class SqlParseSymbolTreeHelper {
 				unresolvedEntry,
 				dependencySiteTokens);
 		if (dependencySiteTokens != null) {
-			walker.mergeResolvedColumnIntoDictionary(
+			mergeUnpivotValueOperandSitesIntoStructuredDerivedColumns(
 					localDerivedColumns,
 					valueColumnName,
 					dependencySiteTokens);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeUnpivotValueOperandSitesIntoStructuredDerivedColumns(
+			HashMap<String, Object> localDerivedColumns,
+			String valueColumnName,
+			Object dependencySiteTokens) {
+		if (localDerivedColumns == null || valueColumnName == null || dependencySiteTokens == null) {
+			return;
+		}
+		for (Object bucketObj : localDerivedColumns.values()) {
+			if (bucketObj instanceof Map<?, ?> bucketMapObj) {
+				HashMap<String, Object> bucketMap = (HashMap<String, Object>) bucketMapObj;
+				boolean bucketHasValueColumn = false;
+				for (String bucketColumnKey : bucketMap.keySet()) {
+					if (bucketColumnKey != null
+							&& bucketColumnKey.equalsIgnoreCase(valueColumnName)) {
+						bucketHasValueColumn = true;
+						break;
+					}
+				}
+				if (bucketHasValueColumn) {
+					walker.mergeResolvedColumnIntoDictionary(
+							bucketMap,
+							valueColumnName,
+							dependencySiteTokens);
+					return;
+				}
+			}
+		}
+		walker.mergeResolvedColumnIntoDictionary(
+				localDerivedColumns,
+				valueColumnName,
+				dependencySiteTokens);
 	}
 
 	/**
@@ -13683,6 +13874,48 @@ public class SqlParseSymbolTreeHelper {
 					possibleModifierSources,
 					emittedDiagnosticLocations);
 		}
+	}
+
+	private int countUnqualifiedInterfaceRefsForColumnName(
+			HashMap<String, Object> localInterface,
+			String columnName) {
+		if (localInterface == null || localInterface.isEmpty() || columnName == null || columnName.isBlank()) {
+			return 0;
+		}
+		int count = 0;
+		for (Object refsObj : localInterface.values()) {
+			if (!(refsObj instanceof ArrayList<?> refs)) {
+				continue;
+			}
+			for (Object refObj : refs) {
+				String refColumnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				String refTableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+				if (columnName.equalsIgnoreCase(refColumnName) && isUnqualifiedColumnRef(refTableRef)) {
+					count++;
+				}
+			}
+		}
+		return count;
+	}
+
+	private int countUnresolvedColumnRefSiteLocations(
+			HashMap<String, Object> localUnresolvedColumnMap,
+			String columnName) {
+		Object unresolvedEntry = getUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
+		if (!(unresolvedEntry instanceof Map<?, ?> unresolvedMap)) {
+			return 0;
+		}
+		Object locationsObj = unresolvedMap.get("locations");
+		if (!(locationsObj instanceof ArrayList<?> locations)) {
+			return 0;
+		}
+		int count = 0;
+		for (Object locationObj : locations) {
+			if (locationObj != null) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private Integer[] resolveAmbiguousDerivedColumnRefSiteLocation(

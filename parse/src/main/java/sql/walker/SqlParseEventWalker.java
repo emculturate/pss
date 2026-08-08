@@ -4379,6 +4379,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void enterQuery_specification( SQLSelectParserParser.Query_specificationContext ctx) {
 		relationalModifierTupleBucketSequence = 0;
 		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		symbolTreeHelper.resetSelectItemUnresolvedColumnSnapshot();
 		walker.beginQuerySpecificationFromClause();
 	}
 
@@ -4580,6 +4581,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		ArrayList<Object> columnList = new ArrayList<Object>();
 		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
 		symbolTreeHelper.attachWalkCapturedSiteTokensToSelectItemDependencyRefs(columnList);
+		symbolTreeHelper.rotateSelectItemUnresolvedColumnSnapshot();
 		if (symbolTreeHelper.isWindowFunctionSelectItemSubtree(interfaceReference)
 				|| symbolTreeHelper.hasLatchedWindowOverClauseDepsForNextSelectItem()
 				|| symbolTreeHelper.hasPendingWindowSelectInterfaceOverDeps()) {
