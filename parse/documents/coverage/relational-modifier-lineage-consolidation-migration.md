@@ -41,18 +41,18 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 ---
 
-## M2 — Reorder convert egress: interface lineage before operand drain
+## M2 — Reorder convert egress: interface lineage before operand drain (done)
 
 **Problem:** Phase 16.2 (`resolvePivotOperandColumnsFromUnresolvedMap`) runs **before** the interface loop and can consume shared unresolved buckets.
 
 **Changes:**
 
-1. Move `resolvePivotOperandColumnsFromUnresolvedMap` to **after** interface validation / lineage pass, **or**
-2. Split unresolved: interface pass materializes per **interface dependency ref** (flattened list); phase 16.2 only drains **non-interface** stragglers (WHERE/GROUP BY/ORDER BY not yet processed).
+1. [x] **Split phase 16.2:** `materializePivotOperandStructuredBucketsAtConvertEgress` stays post-wildcard / pre-interface (preserves `table_dictionary` key order on JOIN pivot patterns).
+2. [x] `drainPivotOperandColumnsFromUnresolvedMap` runs **after** the interface egress loop so shared `unresolved_column` keys are available to interface materialization first.
 
-**Tests:** Enable no contract tests yet; re-run migration tests; optional golden tweaks.
+**Tests:** `SqlEventWalkerPivotUnpivotTests` + smoketest quality gate.
 
-**Gate:** `SqlEventWalkerPivotUnpivotTests` + migration tests.
+**Gate:** Full pivot class + `SmoketestQualityGateTestSuite` green.
 
 ---
 

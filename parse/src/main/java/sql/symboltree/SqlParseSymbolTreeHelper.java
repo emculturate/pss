@@ -3813,15 +3813,37 @@ public class SqlParseSymbolTreeHelper {
 				tokenPayload);
 	}
 
-	/**
-	 * Materialize PIVOT aggregate/FOR operand columns captured as unqualified refs and
-	 * clear them from {@code unresolved_column} so scope exit does not emit false
-	 * unresolved diagnostics. Operand tokens bind to the local physical table that is
-	 * not the pivot source's underlying physical lineage (typically the joined target
-	 * table in PIVOT ... JOIN patterns).
-	 */
 	@SuppressWarnings("unchecked")
-	private void resolvePivotOperandColumnsFromUnresolvedMap(
+	private void materializePivotOperandStructuredBucketsAtConvertEgress(
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localPhysicalTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		if (relationalModifierContext == null
+				|| relationalModifierContext.isEmpty()
+				|| !relationalModifierContext.isPivot()
+				|| localTableCollection == null
+				|| localPhysicalTableCollection == null
+				|| localPhysicalTableCollection.isEmpty()) {
+			return;
+		}
+
+		String materializeTableRef = resolvePivotOperandMaterializationTableRefFromContext(
+				relationalModifierContext,
+				localPhysicalTableCollection,
+				localTableAliasMap);
+		if (materializeTableRef == null || materializeTableRef.isBlank()) {
+			return;
+		}
+
+		materializePivotOperandColumnsFromStructuredSourceBuckets(
+				relationalModifierContext,
+				materializeTableRef,
+				localTableCollection);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void drainPivotOperandColumnsFromUnresolvedMap(
 			RelationalModifierConvertEgressContext relationalModifierContext,
 			HashMap<String, Object> unresolvedColumnMap,
 			HashMap<String, Object> localTableCollection,
@@ -3852,10 +3874,6 @@ public class SqlParseSymbolTreeHelper {
 		if (pivotSourceRef != null && !pivotSourceRef.isBlank()) {
 			pivotSourceRef = resolveCanonicalPhysicalTableRef(pivotSourceRef, localTableAliasMap);
 		}
-		materializePivotOperandColumnsFromStructuredSourceBuckets(
-				relationalModifierContext,
-				materializeTableRef,
-				localTableCollection);
 		for (String operandColumnName : collectPivotOperandColumnNamesFromContext(relationalModifierContext)) {
 			materializePivotOperandColumnAtConvertEgress(
 					operandColumnName,
@@ -3866,6 +3884,33 @@ public class SqlParseSymbolTreeHelper {
 					localTableCollection,
 					localTableAliasMap);
 		}
+	}
+
+	/**
+	 * Materialize PIVOT aggregate/FOR operand columns captured as unqualified refs and
+	 * clear them from {@code unresolved_column} so scope exit does not emit false
+	 * unresolved diagnostics. Operand tokens bind to the local physical table that is
+	 * not the pivot source's underlying physical lineage (typically the joined target
+	 * table in PIVOT ... JOIN patterns).
+	 */
+	@SuppressWarnings("unchecked")
+	private void resolvePivotOperandColumnsFromUnresolvedMap(
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localPhysicalTableCollection,
+			HashMap<String, Object> localTableAliasMap) {
+		materializePivotOperandStructuredBucketsAtConvertEgress(
+				relationalModifierContext,
+				localTableCollection,
+				localPhysicalTableCollection,
+				localTableAliasMap);
+		drainPivotOperandColumnsFromUnresolvedMap(
+				relationalModifierContext,
+				unresolvedColumnMap,
+				localTableCollection,
+				localPhysicalTableCollection,
+				localTableAliasMap);
 	}
 
 	private String resolvePivotOperandMaterializationTableRefFromContext(
@@ -4746,6 +4791,11 @@ public class SqlParseSymbolTreeHelper {
 		// Physical FROM refs for convert egress (M2: operand drain runs after interface loop).
 		HashMap<String, Object> localFromTableCollection =
 				buildLocalPhysicalFromTableCollection(localTableCollection);
+		materializePivotOperandStructuredBucketsAtConvertEgress(
+				activeConvertEgressRelationalModifierContext,
+				localTableCollection,
+				localFromTableCollection,
+				localTableAliasMap);
 
 		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		propagateUnqualifiedSelectStarToScopeTables(
@@ -5273,9 +5323,8 @@ public class SqlParseSymbolTreeHelper {
 		}
 		}
 
-		// Phase 16.2 (M2): PIVOT operand materialization after interface lineage pass so shared
-		// unresolved keys are available to interface materialization first (16.1 stragglers in-loop).
-		resolvePivotOperandColumnsFromUnresolvedMap(
+		// Phase 16.2 (M2): drain operand unresolved after interface lineage pass (buckets pre-interface).
+		drainPivotOperandColumnsFromUnresolvedMap(
 				activeConvertEgressRelationalModifierContext,
 				localUnresolvedColumnMap,
 				localTableCollection,
