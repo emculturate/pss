@@ -1,6 +1,6 @@
 # SqlParseEventWalker `exit*` coverage — workplan
 
-**Status:** 🚧 Not started (inventory Aug 2026)  
+**Status:** 🚧 In progress — pivot/unpivot walker exits T1.3–T1.4, T2.10, T3.25 closed (Spring 2026); remaining Tier 1/2 items open.  
 **Branch context:** `Spring-2026-Extensions` (or follow-on)  
 **Goal:** At least one exemplar test per **main-grammar** `exit*` path so the full suite exercises every listener exit that corresponds to a user-visible SQL construct.
 
@@ -68,15 +68,19 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 **Where tests live:** `SqlEventWalkerPivotUnpivotTests` — `unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest` (end of class).
 
-### T1.3 `exitPivot_in_any` — `pivot_in_any`
+### T1.3 `exitPivot_in_any` — `pivot_in_any` — **COMPLETE**
 
-- [ ] Add **`PIVOT … IN (ANY)`** or **`IN (ANY ORDER BY …)`** on a pivot source.
+- [x] Add **`PIVOT … IN (ANY)`** or **`IN (ANY ORDER BY …)`** on a pivot source.
 - **Verify:** `exitPivot_in_any` covered.
 
-### T1.4 `exitPivot_in_subquery` — `pivot_in_subquery`
+**Status (Spring 2026):** Closed via `pivotInAnyAstShapeTest`, `pivotInAnyOrderBy*`, and lineage migration test in `SqlEventWalkerPivotUnpivotTests`.
 
-- [ ] Add **`PIVOT … IN (SELECT …)`** (subquery as pivot IN list).
+### T1.4 `exitPivot_in_subquery` — `pivot_in_subquery` — **COMPLETE**
+
+- [x] Add **`PIVOT … IN (SELECT …)`** (subquery as pivot IN list).
 - **Verify:** `exitPivot_in_subquery` covered.
+
+**Status (Spring 2026):** `pivotInSubqueryAstShapeTest` in `SqlEventWalkerPivotUnpivotTests` (goldens via `PivotWalkerTierGoldenCaptureOnce`).
 
 ### T1.5 `exitTable_argument_boolean` — `table_argument_boolean`
 
@@ -150,9 +154,12 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 - [ ] WITH variants: **RECURSIVE**, multiple CTEs, nested WITH (see also nested `with_query` under `cte_body`).
 
-### T2.10 `exitUnpivot_clause` — `unpivot_clause` (~87% lines but 5 missed)
+### T2.10 `exitUnpivot_clause` — `unpivot_clause` — **COMPLETE**
 
-- [ ] UNPIVOT shapes beyond current matrix (null policy covered under T1.2).
+- [x] UNPIVOT shapes beyond null policy (T1.2): IN-list item aliases and clause assembly.
+- **Verify:** `exitUnpivot_clause` fully line-covered.
+
+**Status (Spring 2026):** `unpivotClauseInListItemAliasesAstShapeTest` plus existing UNPIVOT matrix in `SqlEventWalkerPivotUnpivotTests`.
 
 ### T2.11 `exitFlatten_argument` — `flatten_argument` (~74%)
 
@@ -316,9 +323,12 @@ Method executed; **1–2 missed lines** and **≥85%** line coverage. Optional b
 
 - [ ] PIVOT/UNPIVOT relation `AS` alias.
 
-### T3.25 `exitPivot_in_literal` — `pivot_in_literal`
+### T3.25 `exitPivot_in_literal` — `pivot_in_literal` — **COMPLETE**
 
-- [ ] PIVOT IN literal list variant.
+- [x] PIVOT IN string literal with optional `AS` prefix label (`exitPivot_in_prefix`).
+- **Verify:** `exitPivot_in_literal` / prefix exits covered.
+
+**Status (Spring 2026):** `pivotInLiteralStringWithAsPrefixAstShapeTest` in `SqlEventWalkerPivotUnpivotTests`.
 
 ### T3.26 `exitFlatten_table_function` — `flatten_table_function`
 

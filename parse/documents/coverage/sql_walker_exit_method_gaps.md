@@ -30,11 +30,16 @@
 |----------------|---------------------|--------|
 | `exitUnpivot_null_policy` | `unpivot_null_policy` | **Covered** — see [workplan T1.2](sql_walker_exit_method_coverage-workplan.md#t12-exitunpivot_null_policy--unpivot_null_policy--complete) and `SqlEventWalkerPivotUnpivotTests` (`unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest`). |
 
+### Tier 1.3–1.4 complete — pivot `IN (ANY)` / `IN (SELECT …)`
+
+| `exit*` method | Grammar rule / path | Status |
+|----------------|---------------------|--------|
+| `exitPivot_in_any` | `pivot_in_any` | **Covered** — `pivotInAnyAstShapeTest`, `pivotInAnyOrderBy*` in `SqlEventWalkerPivotUnpivotTests`. |
+| `exitPivot_in_subquery` | `pivot_in_subquery` | **Covered** — `pivotInSubqueryAstShapeTest`. |
+
 Remaining Tier 1 gaps:
 
 | `exit*` method | Grammar rule / path | What to exercise (sketch) |
-| `exitPivot_in_any` | `pivot_in_any` | `PIVOT … IN (ANY)` or `IN (ANY ORDER BY …)` |
-| `exitPivot_in_subquery` | `pivot_in_subquery` | `PIVOT … IN (SELECT …)` |
 | `exitTable_argument_boolean` | `table_argument_boolean` | Table-function named arg with boolean literal (e.g. FLATTEN / similar `=> true`) |
 | `exitInfer_schema_files_argument` | `infer_schema_files_argument` | `INFER_SCHEMA` / `INFER_SCHEMA` with `FILES => (…)` argument shape |
 | `exitValidate_table_function` | `validate_table_function` | `VALIDATE` table function call in FROM |
@@ -56,7 +61,6 @@ Methods with **≥5 missed lines** and **&lt;80%** line coverage on the method (
 | `exitInsert_target_table_primary` | INSERT target (no table-function) | 41 / 10 |
 | `exitJinja_arg` / `exitJinja_function_call` | Jinja in SQL | partial |
 | `exitRelational_modifier_in_item` | PIVOT/UNPIVOT `IN` list | 22 / 6 |
-| `exitUnpivot_clause` | UNPIVOT (policy branch aside) | 33 / 5 |
 | `exitQuantified_comparison_predicate` | `ANY`/`ALL` subquery compares | 21 / 4 |
 
 Full JaCoCo detail: `parse/target/site/jacoco/index.html` → `SqlParseEventWalker`; legacy aggregate CSV may be stale — regenerate from `jacoco.xml` if needed.
