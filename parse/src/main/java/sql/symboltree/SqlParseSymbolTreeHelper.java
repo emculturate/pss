@@ -11621,6 +11621,183 @@ public class SqlParseSymbolTreeHelper {
 		}
 	}
 
+	/**
+	 * Walk-time (M1): relocate matching {@code unresolved_column} payloads into modifier registries
+	 * and/or the scope {@code table_dictionary} instead of discarding them when UNPIVOT/PIVOT claims
+	 * an operand name.
+	 */
+	@SuppressWarnings("unchecked")
+	public void relocateUnresolvedModifierScopeColumnReferences(
+			String operandColumnName,
+			String derivedColumnsRegistryKey,
+			String physicalSourceTableRef,
+			String sourceColumnsRegistryKey) {
+		relocateUnresolvedModifierScopeColumnReferences(
+				operandColumnName,
+				derivedColumnsRegistryKey,
+				physicalSourceTableRef,
+				sourceColumnsRegistryKey,
+				physicalSourceTableRef != null && !physicalSourceTableRef.isBlank());
+	}
+
+	@SuppressWarnings("unchecked")
+	public void relocateUnresolvedModifierScopeColumnReferences(
+			String operandColumnName,
+			String derivedColumnsRegistryKey,
+			String physicalSourceTableRef,
+			String sourceColumnsRegistryKey,
+			boolean includeQualifiedUnresolvedKeys) {
+		if (operandColumnName == null || operandColumnName.isBlank()) {
+			return;
+		}
+
+		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(unresolvedObj instanceof HashMap<?, ?> unresolvedMapObj) || unresolvedMapObj.isEmpty()) {
+			return;
+		}
+
+		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
+		ArrayList<String> keysToRelocate = collectModifierScopeUnresolvedKeysForOperand(
+				unresolvedMap,
+				operandColumnName,
+				includeQualifiedUnresolvedKeys);
+		for (String keyToRelocate : keysToRelocate) {
+			Object unresolvedEntry = unresolvedMap.remove(keyToRelocate);
+			if (unresolvedEntry == null) {
+				continue;
+			}
+			relocateModifierScopeUnresolvedEntry(
+					operandColumnName,
+					keyToRelocate,
+					unresolvedEntry,
+					derivedColumnsRegistryKey,
+					physicalSourceTableRef,
+					sourceColumnsRegistryKey);
+		}
+
+		if (unresolvedMap.isEmpty()) {
+			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		}
+	}
+
+	public void relocateUnresolvedModifierScopeColumnReferencesForDerivedOperand(String operandColumnName) {
+		relocateUnresolvedModifierScopeColumnReferences(
+				operandColumnName,
+				RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
+				null,
+				null);
+	}
+
+	private ArrayList<String> collectModifierScopeUnresolvedKeysForOperand(
+			HashMap<String, Object> unresolvedMap,
+			String operandColumnName,
+			boolean includeQualifiedUnresolvedKeys) {
+		ArrayList<String> keysToRelocate = new ArrayList<String>();
+		String operandLower = operandColumnName.toLowerCase(java.util.Locale.ROOT);
+		for (String unresolvedKey : unresolvedMap.keySet()) {
+			if (unresolvedKey == null) {
+				continue;
+			}
+			if (unresolvedKey.equalsIgnoreCase(operandColumnName)) {
+				keysToRelocate.add(unresolvedKey);
+				continue;
+			}
+			if (!includeQualifiedUnresolvedKeys || !unresolvedKey.contains(".")) {
+				continue;
+			}
+			if (unresolvedKey.toLowerCase(java.util.Locale.ROOT).endsWith("." + operandLower)) {
+				keysToRelocate.add(unresolvedKey);
+			}
+		}
+		return keysToRelocate;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void relocateModifierScopeUnresolvedEntry(
+			String operandColumnName,
+			String unresolvedKey,
+			Object unresolvedEntry,
+			String derivedColumnsRegistryKey,
+			String physicalSourceTableRef,
+			String sourceColumnsRegistryKey) {
+		if (derivedColumnsRegistryKey != null && !derivedColumnsRegistryKey.isBlank()) {
+			Object registryObj = walker.symbolTable.get(derivedColumnsRegistryKey);
+			if (registryObj instanceof HashMap<?, ?> registryMapObj) {
+				walker.mergeResolvedColumnIntoDictionary(
+						(HashMap<String, Object>) registryMapObj,
+						operandColumnName,
+						unresolvedEntry);
+			}
+		}
+
+		if (sourceColumnsRegistryKey != null && !sourceColumnsRegistryKey.isBlank()) {
+			Object registryObj = walker.symbolTable.get(sourceColumnsRegistryKey);
+			if (registryObj instanceof HashMap<?, ?> registryMapObj) {
+				walker.mergeResolvedColumnIntoDictionary(
+						(HashMap<String, Object>) registryMapObj,
+						operandColumnName,
+						unresolvedEntry);
+			}
+		}
+
+		if (physicalSourceTableRef == null || physicalSourceTableRef.isBlank()) {
+			return;
+		}
+
+		String tableRefForLineage = physicalSourceTableRef;
+		String columnNameForLineage = operandColumnName;
+		int separatorIndex = unresolvedKey == null ? -1 : unresolvedKey.lastIndexOf('.');
+		if (separatorIndex > 0 && separatorIndex + 1 < unresolvedKey.length()) {
+			String qualifier = unresolvedKey.substring(0, separatorIndex);
+			String qualifiedColumn = unresolvedKey.substring(separatorIndex + 1);
+			if (!qualifiedColumn.isBlank()) {
+				columnNameForLineage = qualifiedColumn;
+			}
+			if (!qualifier.isBlank()) {
+				tableRefForLineage = qualifier;
+			}
+		}
+
+		HashMap<String, Object> tableAliasMap = null;
+		Object tableAliasObj = walker.symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (tableAliasObj instanceof Map<?, ?> tableAliasMapObj && !tableAliasMapObj.isEmpty()) {
+			tableAliasMap = new HashMap<String, Object>((Map<String, Object>) tableAliasMapObj);
+		}
+		String canonicalPhysicalRef = resolveCanonicalPhysicalTableRef(tableRefForLineage, tableAliasMap);
+		if (canonicalPhysicalRef == null || canonicalPhysicalRef.isBlank()) {
+			canonicalPhysicalRef = normalizeTableRef(tableRefForLineage);
+		}
+		String canonicalOperandSource = resolveCanonicalPhysicalTableRef(physicalSourceTableRef, tableAliasMap);
+		if (canonicalOperandSource == null || canonicalOperandSource.isBlank()) {
+			canonicalOperandSource = normalizeTableRef(physicalSourceTableRef);
+		}
+		if (canonicalPhysicalRef == null
+				|| canonicalOperandSource == null
+				|| !canonicalPhysicalRef.equalsIgnoreCase(canonicalOperandSource)) {
+			return;
+		}
+
+		Object tableDictionaryObj = walker.symbolTable.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		HashMap<String, Object> tableDictionary;
+		if (tableDictionaryObj instanceof HashMap<?, ?> tableDictionaryMapObj) {
+			tableDictionary = (HashMap<String, Object>) tableDictionaryMapObj;
+		} else {
+			tableDictionary = new HashMap<String, Object>();
+			walker.symbolTable.put(MUMBLE_TABLE_DICTIONARY_KEY, tableDictionary);
+		}
+		HashMap<String, Object> physicalDictionary = walker.getTableDictionaryForReference(
+				canonicalPhysicalRef,
+				tableDictionary);
+		if (physicalDictionary == null) {
+			physicalDictionary = new HashMap<String, Object>();
+			tableDictionary.put(canonicalPhysicalRef, physicalDictionary);
+		}
+		walker.mergeResolvedColumnIntoDictionary(
+				physicalDictionary,
+				columnNameForLineage,
+				unresolvedEntry);
+	}
+
 	public Object consumeUnqualifiedUnknownEntry(
 			HashMap<String, Object> unresolvedColumnMap,
 			String columnName) {

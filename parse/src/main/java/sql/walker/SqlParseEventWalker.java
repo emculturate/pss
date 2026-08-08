@@ -5958,7 +5958,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY,
 				columnName,
 				columnToken);
-		consumeUnresolvedColumnReferenceFromModifierScope(columnName);
+		symbolTreeHelper.relocateUnresolvedModifierScopeColumnReferencesForDerivedOperand(columnName);
 	}
 
 	private void recordRelationalModifierDerivedColumnToken(
@@ -5986,36 +5986,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		recordRelationalModifierSourceColumnToken(
 				columnName,
 				columnToken == null ? null : columnToken.toString());
-	}
-
-	@SuppressWarnings("unchecked")
-	private void consumeUnresolvedColumnReferenceFromModifierScope(String columnName) {
-		if (columnName == null || columnName.isBlank()) {
-			return;
-		}
-
-		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		if (!(unresolvedObj instanceof HashMap<?, ?> unresolvedMapObj) || unresolvedMapObj.isEmpty()) {
-			return;
-		}
-
-		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
-		ArrayList<String> keysToRemove = new ArrayList<String>();
-		for (String unresolvedKey : unresolvedMap.keySet()) {
-			if (unresolvedKey == null) {
-				continue;
-			}
-			if (unresolvedKey.equalsIgnoreCase(columnName)
-					|| unresolvedKey.toLowerCase(Locale.ROOT).endsWith("." + columnName.toLowerCase(Locale.ROOT))) {
-				keysToRemove.add(unresolvedKey);
-			}
-		}
-		for (String keyToRemove : keysToRemove) {
-			unresolvedMap.remove(keyToRemove);
-		}
-		if (unresolvedMap.isEmpty()) {
-			walker.symbolTable.remove(MUMBLE_UNRESOLVED_COLUMN_KEY);
-		}
 	}
 
 	@SuppressWarnings("unchecked")

@@ -25,21 +25,19 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 ---
 
-## M1 — Stop discarding unresolved without materialize
+## M1 — Stop discarding unresolved without materialize (done)
 
 **Problem:** `consumeUnresolvedColumnReferenceFromModifierScope` (walk-time, some derived operand paths) removes `unresolved_column` keys with no `table_dictionary` merge.
 
 **Changes:**
 
-1. Replace with `relocateUnresolvedOperandToTableDictionary(columnName, physicalTableRef)`:
-   - `getUnqualifiedUnknownEntry` / qualified variants
-   - `mergeSourceLineageIntoPhysicalTableDictionary` (or append tokens to `RELATIONAL_MODIFIER_SOURCE_COLUMNS` bucket)
-   - then remove from unresolved
-2. Audit callers (`recordRelationalModifierDerivedColumnToken` path and any similar).
+1. [x] `relocateUnresolvedModifierScopeColumnReferences` / `relocateUnresolvedModifierScopeColumnReferencesForDerivedOperand`: merge unresolved tokens into `RELATIONAL_MODIFIER_DERIVED_COLUMNS_KEY` (or physical `source_columns` when table ref provided), then remove keys.
+2. [x] UNPIVOT derived VALUE/FOR path calls relocate instead of blind consume.
+3. [x] Derived-operand relocate is **unqualified keys only** so fatal tests with wrong qualifiers (`wrong.sales_amount`, `msl.month_name`) stay in `unresolved_column`.
 
-**Tests:** Existing pivot/unpivot tests; add one focused test where walk-time consume previously dropped a SELECT site (if identifiable).
+**Tests:** `SqlEventWalkerPivotUnpivotTests` (193); migration tests unchanged.
 
-**Gate:** No behavior change on happy paths except new tokens where discard happened; full `SqlEventWalkerPivotUnpivotTests`.
+**Gate:** Full `SqlEventWalkerPivotUnpivotTests` green.
 
 ---
 
