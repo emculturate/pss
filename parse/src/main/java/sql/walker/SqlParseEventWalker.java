@@ -5749,6 +5749,150 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		return nameComponents;
 	}
 
+	private static final String PIVOT_IN_ANY_VALUE_KEY = "any";
+
+	@SuppressWarnings("unchecked")
+	private boolean isPivotInAnyPayload(Map<String, Object> payload) {
+		return payload != null
+				&& payload.containsKey(PIVOT_IN_ANY_VALUE_KEY)
+				&& "any".equalsIgnoreCase(String.valueOf(payload.get(PIVOT_IN_ANY_VALUE_KEY)));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void attachPivotInClauseToPivotMap(
+			Map<String, Object> pivotMap,
+			Object inClauseObj,
+			SQLSelectParserParser.Pivot_clauseContext pivotClauseCtx) {
+		if (!(inClauseObj instanceof Map<?, ?> inClauseMapObj)) {
+			pivotMap.put(MUMBLE_IN_KEY, inClauseObj);
+			return;
+		}
+
+		Map<String, Object> inClauseMap = (Map<String, Object>) inClauseMapObj;
+		if (!isPivotInAnyPayload(inClauseMap)) {
+			pivotMap.put(MUMBLE_IN_KEY, inClauseObj);
+			return;
+		}
+
+		Object orderbyObj = inClauseMap.get(MUMBLE_ORDERBY_KEY);
+		if (orderbyObj != null) {
+			Map<String, Object> inAnyOrder = new LinkedHashMap<>();
+			inAnyOrder.put(PIVOT_IN_ANY_VALUE_KEY, "any");
+			Map<String, Object> orderColumns = normalizePivotInAnyOrderByColumns(orderbyObj);
+			inAnyOrder.put(MUMBLE_ORDERBY_KEY, orderColumns);
+			pivotMap.put(MUMBLE_PIVOT_IN_ANY_ORDER_KEY, inAnyOrder);
+			recordPivotInAnyOrderBySourceColumnTokens(pivotClauseCtx, orderColumns);
+			return;
+		}
+
+		pivotMap.put(MUMBLE_PIVOT_IN_ANY_KEY, "any");
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> normalizePivotInAnyOrderByColumns(Object orderbyObj) {
+		ArrayList<Map<String, Object>> columnMaps = new ArrayList<>();
+		collectPivotInAnyOrderByColumnMaps(orderbyObj, columnMaps);
+		Map<String, Object> numbered = new LinkedHashMap<>();
+		for (int index = 0; index < columnMaps.size(); index++) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put(MUMBLE_COLUMN_KEY, columnMaps.get(index));
+			numbered.put(String.valueOf(index + 1), item);
+		}
+		return numbered;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectPivotInAnyOrderByColumnMaps(Object node, ArrayList<Map<String, Object>> columnMaps) {
+		if (node == null) {
+			return;
+		}
+		if (node instanceof Map<?, ?> mapObj) {
+			Map<String, Object> map = (Map<String, Object>) mapObj;
+			if (map.containsKey(MUMBLE_COLUMN_KEY) && map.get(MUMBLE_COLUMN_KEY) instanceof Map<?, ?> columnMapObj) {
+				Map<String, Object> columnMap = (Map<String, Object>) columnMapObj;
+				Object nameObj = columnMap.get(MUMBLE_NAME_KEY);
+				if (nameObj instanceof String name
+						&& !name.isBlank()
+						&& !"any".equalsIgnoreCase(name)) {
+					columnMaps.add(new LinkedHashMap<>(columnMap));
+					return;
+				}
+			}
+			if (map.containsKey(MUMBLE_NAME_KEY)
+					&& map.get(MUMBLE_NAME_KEY) instanceof String name
+					&& !name.isBlank()
+					&& !"any".equalsIgnoreCase(name)
+					&& !map.containsKey("1")) {
+				columnMaps.add(new LinkedHashMap<>(map));
+				return;
+			}
+			for (Object value : map.values()) {
+				collectPivotInAnyOrderByColumnMaps(value, columnMaps);
+			}
+			return;
+		}
+		if (node instanceof List<?> list) {
+			for (Object element : list) {
+				collectPivotInAnyOrderByColumnMaps(element, columnMaps);
+			}
+		}
+	}
+
+	private void recordPivotInAnyOrderBySourceColumnTokens(
+			SQLSelectParserParser.Pivot_clauseContext pivotClauseCtx,
+			Map<String, Object> orderColumns) {
+		if (pivotClauseCtx == null
+				|| pivotClauseCtx.pivot_in_clause() == null
+				|| pivotClauseCtx.pivot_in_clause().pivot_in_content() == null
+				|| pivotClauseCtx.pivot_in_clause().pivot_in_content().pivot_in_any() == null
+				|| pivotClauseCtx.pivot_in_clause().pivot_in_content().pivot_in_any().orderby_clause() == null
+				|| orderColumns == null
+				|| orderColumns.isEmpty()) {
+			return;
+		}
+
+		SQLSelectParserParser.Orderby_clauseContext orderbyCtx =
+				pivotClauseCtx.pivot_in_clause().pivot_in_content().pivot_in_any().orderby_clause();
+		SQLSelectParserParser.Sort_specifier_listContext sortListCtx = orderbyCtx.sort_specifier_list();
+		if (sortListCtx == null) {
+			return;
+		}
+		for (SQLSelectParserParser.Sort_specifierContext sortCtx : sortListCtx.sort_specifier()) {
+			String columnName = extractPivotInAnyOrderBySortColumnName(sortCtx);
+			if (columnName == null || columnName.isBlank() || "any".equalsIgnoreCase(columnName)) {
+				continue;
+			}
+			org.antlr.v4.runtime.Token token = sortCtx.row_value_predicand() == null
+					? null
+					: sortCtx.row_value_predicand().getStart();
+			recordRelationalModifierSourceColumnToken(
+					columnName,
+					token == null ? null : token.toString());
+		}
+	}
+
+	private String extractPivotInAnyOrderBySortColumnName(
+			SQLSelectParserParser.Sort_specifierContext sortCtx) {
+		if (sortCtx == null || sortCtx.row_value_predicand() == null) {
+			return null;
+		}
+		return sortCtx.row_value_predicand().getText();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectRelationalModifierOperandReferencesFromPivotInAnyOrder(
+			Object inAnyOrderObj,
+			ArrayList<RelationalModifierOperandReference> operandReferences) {
+		if (!(inAnyOrderObj instanceof Map<?, ?> inAnyOrderMapObj)) {
+			return;
+		}
+		Map<String, Object> inAnyOrderMap = (Map<String, Object>) inAnyOrderMapObj;
+		collectRelationalModifierOperandReferencesFromSubtree(
+				inAnyOrderMap.get(MUMBLE_ORDERBY_KEY),
+				RelationalModifierOperandRole.IN_LIST,
+				operandReferences);
+	}
+
 	private String stripSingleQuotedPivotComponent(String component) {
 		if (component == null) {
 			return null;
@@ -6056,9 +6200,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				modifier.get(MUMBLE_FOR_KEY),
 				RelationalModifierOperandRole.FOR,
 				operandReferences);
-		collectRelationalModifierOperandReferencesFromInList(
-				modifier.get(MUMBLE_IN_KEY),
+		collectRelationalModifierOperandReferencesFromPivotInAnyOrder(
+				modifier.get(MUMBLE_PIVOT_IN_ANY_ORDER_KEY),
 				operandReferences);
+		if (modifier.containsKey(MUMBLE_IN_KEY)) {
+			collectRelationalModifierOperandReferencesFromInList(
+					modifier.get(MUMBLE_IN_KEY),
+					operandReferences);
+		}
 		return operandReferences;
 	}
 
@@ -6103,6 +6252,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			Map<String, Object> inItemMap = (Map<String, Object>) inItemMapObj;
 			if (inItemMap.containsKey(MUMBLE_PIVOT_LITERAL_KEY) || inItemMap.containsKey(MUMBLE_PIVOT_PREFIX_KEY)) {
+				continue;
+			}
+			Object nameObj = inItemMap.get(MUMBLE_NAME_KEY);
+			if (nameObj instanceof String name && "any".equalsIgnoreCase(name)) {
 				continue;
 			}
 
@@ -7815,7 +7968,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> pivotMap = new LinkedHashMap<>();
 		pivotMap.put(MUMBLE_VALUE_KEY, aggregate);
 		pivotMap.put(MUMBLE_FOR_KEY, nameCol);
-		pivotMap.put(MUMBLE_IN_KEY, inList);
+		attachPivotInClauseToPivotMap(pivotMap, inList, ctx);
 
 		Map<String, Object> wrapper = new LinkedHashMap<>();
 		wrapper.put(MUMBLE_PIVOT_KEY, pivotMap);
@@ -7985,17 +8138,23 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitPivot_in_any( SQLSelectParserParser.Pivot_in_anyContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
-		Map<String, Object> anyMap = new LinkedHashMap<String, Object>();
-		anyMap.put(MUMBLE_NAME_KEY, "ANY");
-		if (subMap.containsKey("1")) {
-			anyMap.put(MUMBLE_ORDERBY_KEY, subMap.remove("1"));
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		}
-		subMap.clear();
-		subMap.putAll(anyMap);
+
+		Map<String, Object> payload = new LinkedHashMap<>();
+		payload.put(PIVOT_IN_ANY_VALUE_KEY, "any");
+		if (ctx.orderby_clause() != null && subMap != null && subMap.containsKey("1")) {
+			payload.put(MUMBLE_ORDERBY_KEY, subMap.get("1"));
+		}
+
+		walker.addToParent(parentRuleIndex, parentStackLevel, payload);
 	}
 
 	@Override

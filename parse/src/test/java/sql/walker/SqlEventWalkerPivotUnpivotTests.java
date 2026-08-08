@@ -6250,4 +6250,51 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getAsTree().toString());
 	}
 
+	/** Walker coverage T1.3 — {@code exitPivot_in_any} / {@code IN (ANY)} AST shape (no {@code any} column). */
+	@Test
+	public void pivotInAnyAstShapeTest() {
+		final String query =
+				"SELECT empid\n"
+						+ "FROM monthly_sales_long\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN (ANY));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, IN_ANY=any}, table={alias=null, table=monthly_sales_long}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertFalse(
+				"ANY must not appear as a source/derived column",
+				extractor.getTableColumnDictionaryMap().toString().contains("any="));
+	}
+
+	/** Walker coverage T1.3 — {@code exitPivot_in_any} + ORDER BY / {@code IN_ANY_ORDER} column refs. */
+	@Test
+	public void pivotInAnyOrderByMonthNameAstShapeTest() {
+		final String query =
+				"SELECT empid\n"
+						+ "FROM monthly_sales_long\n"
+						+ "PIVOT (SUM(sales_amount) FOR month_name IN (ANY ORDER BY month_name));";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=empid, table_ref=null}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, IN_ANY_ORDER={any=any, orderby={1={column={name=month_name, table_ref=null}}}}}, table={alias=null, table=monthly_sales_long}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertTrue(
+				"ORDER BY pivot axis column should resolve on source table",
+				extractor.getTableColumnDictionaryMap().toString().contains("month_name="));
+		Assert.assertFalse(
+				"ANY must not appear as a source/derived column",
+				extractor.getTableColumnDictionaryMap().toString().contains("any="));
+	}
+
 }

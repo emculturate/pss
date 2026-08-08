@@ -38,8 +38,11 @@ import static mumble.MumbleConstants.MUMBLE_OPTIONS_KEY;
 import static mumble.MumbleConstants.MUMBLE_OR_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERBY_KEY;
 import static mumble.MumbleConstants.MUMBLE_PARAMETERS_KEY;
+import static mumble.MumbleConstants.MUMBLE_PIVOT_IN_ANY_KEY;
+import static mumble.MumbleConstants.MUMBLE_PIVOT_IN_ANY_ORDER_KEY;
 import static mumble.MumbleConstants.MUMBLE_PIVOT_KEY;
 import static mumble.MumbleConstants.MUMBLE_PIVOT_LITERAL_KEY;
+import static mumble.MumbleConstants.MUMBLE_ORDERBY_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUALIFIER_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUALIFY_KEY;
 import static mumble.MumbleConstants.MUMBLE_QUERY_KEY;
@@ -1317,8 +1320,33 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
         sql.append(" FOR ");
         emitValueExpression(pivotMap.get(MUMBLE_FOR_KEY), sql);
         sql.append(" IN (");
-        emitPivotInList(pivotMap.get(MUMBLE_IN_KEY), sql);
+        if (pivotMap.containsKey(MUMBLE_PIVOT_IN_ANY_ORDER_KEY)) {
+            emitPivotInAnyOrder(pivotMap.get(MUMBLE_PIVOT_IN_ANY_ORDER_KEY), sql);
+        } else if (pivotMap.containsKey(MUMBLE_PIVOT_IN_ANY_KEY)) {
+            sql.append("ANY");
+        } else {
+            emitPivotInList(pivotMap.get(MUMBLE_IN_KEY), sql);
+        }
         sql.append("))");
+    }
+
+    private void emitPivotInAnyOrder(Object inAnyOrderObj, StringBuilder sql) {
+        sql.append("ANY");
+        if (!(inAnyOrderObj instanceof Map<?, ?> inAnyOrderMap)) {
+            return;
+        }
+        Object orderbyObj = inAnyOrderMap.get(MUMBLE_ORDERBY_KEY);
+        List<Object> orderItems = orderedNumericKeyedList(orderbyObj);
+        if (orderItems.isEmpty()) {
+            return;
+        }
+        sql.append(" ORDER BY ");
+        for (int i = 0; i < orderItems.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            emitValueExpression(orderItems.get(i), sql);
+        }
     }
 
     private void emitPivotAggregateList(Object valueObj, StringBuilder sql) {

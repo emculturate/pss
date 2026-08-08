@@ -59,10 +59,14 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 **Follow-up (not in scope for T1.1 — promote to a new tier if needed):** predicand/function expressions in `USING (...)` if grammar allows; derived vs regular column operands; wildcard `USING` shapes; schema-checked `USING` on physical tables.
 
-### T1.2 `exitUnpivot_null_policy` — `unpivot_null_policy`
+### T1.2 `exitUnpivot_null_policy` — `unpivot_null_policy` — **COMPLETE**
 
-- [ ] Add FROM clause with **`UNPIVOT INCLUDE NULLS`** or **`EXCLUDE NULLS`** before the `(` payload.
+- [x] Add FROM clause with **`UNPIVOT INCLUDE NULLS`** or **`EXCLUDE NULLS`** before the `(` payload.
 - **Verify:** `exitUnpivot_null_policy` covered.
+
+**Status (Spring 2026):** Tier 1.2 is **closed**. Walker emits **`nulls_policy=include|exclude`** on the `unpivot={}` map (no rule-type leakage on the AST root).
+
+**Where tests live:** `SqlEventWalkerPivotUnpivotTests` — `unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest` (end of class).
 
 ### T1.3 `exitPivot_in_any` — `pivot_in_any`
 
@@ -148,7 +152,7 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 ### T2.10 `exitUnpivot_clause` — `unpivot_clause` (~87% lines but 5 missed)
 
-- [ ] UNPIVOT shapes beyond current matrix (after T1.2 null policy).
+- [ ] UNPIVOT shapes beyond current matrix (null policy covered under T1.2).
 
 ### T2.11 `exitFlatten_argument` — `flatten_argument` (~74%)
 

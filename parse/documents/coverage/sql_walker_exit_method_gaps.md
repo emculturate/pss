@@ -24,10 +24,15 @@
 |----------------|---------------------|--------|
 | `exitNamed_columns_join` | `named_columns_join` | **Covered** — see [workplan T1.1](sql_walker_exit_method_coverage-workplan.md#t11-exitnamed_columns_join--named_columns_join--complete) and `SqlEventWalkerJoinsAndTableResolutionTests` (JOIN USING section). |
 
+### Tier 1.2 complete — `exitUnpivot_null_policy`
+
+| `exit*` method | Grammar rule / path | Status |
+|----------------|---------------------|--------|
+| `exitUnpivot_null_policy` | `unpivot_null_policy` | **Covered** — see [workplan T1.2](sql_walker_exit_method_coverage-workplan.md#t12-exitunpivot_null_policy--unpivot_null_policy--complete) and `SqlEventWalkerPivotUnpivotTests` (`unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest`). |
+
 Remaining Tier 1 gaps:
 
 | `exit*` method | Grammar rule / path | What to exercise (sketch) |
-| `exitUnpivot_null_policy` | `unpivot_null_policy` | `UNPIVOT INCLUDE NULLS` / `EXCLUDE NULLS` (Snowflake) on a table source |
 | `exitPivot_in_any` | `pivot_in_any` | `PIVOT … IN (ANY)` or `IN (ANY ORDER BY …)` |
 | `exitPivot_in_subquery` | `pivot_in_subquery` | `PIVOT … IN (SELECT …)` |
 | `exitTable_argument_boolean` | `table_argument_boolean` | Table-function named arg with boolean literal (e.g. FLATTEN / similar `=> true`) |
