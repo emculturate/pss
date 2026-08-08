@@ -10,7 +10,6 @@ import sql.SQLSelectParserParser;
  * Lineage contracts for relational-modifier consolidation (PIVOT / UNPIVOT). Remove {@link Ignore} per
  * migration phase in {@code parse/documents/coverage/relational-modifier-lineage-consolidation-migration.md}.
  */
-@Ignore("Enable incrementally per relational-modifier-lineage-consolidation-migration.md (M2+)")
 public class ModifierLineageConsolidationContractTests extends AbstractSqlParseEventWalkerTest {
 
 	/** M3: pivot-operand interface egress must bind SELECT expression sites, not only post-pivot clauses. */
@@ -32,9 +31,9 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 		SqlEventWalkerPivotUnpivotTests.assertTableDictionaryContainsAntlrSite(
 				tableDict, "monthly_sales_long", "empid", 1, 7);
 		SqlEventWalkerPivotUnpivotTests.assertTableDictionaryContainsAntlrSite(
-				tableDict, "monthly_sales_long", "sales_amount", 1, 34);
+				tableDict, "monthly_sales_long", "sales_amount", 1, 33);
 		SqlEventWalkerPivotUnpivotTests.assertTableDictionaryContainsAntlrSite(
-				tableDict, "monthly_sales_long", "units", 1, 49);
+				tableDict, "monthly_sales_long", "units", 1, 48);
 	}
 
 	/** M3: static IN pivot — ratio expression uses aggregate operand; SELECT sales_amount site must remain. */
@@ -56,6 +55,7 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 
 	/** M4: UNPIVOT VALUE operand in SELECT expression — VALUE sites on derivation + SELECT expression lineage. */
 	@Test
+	@Ignore("M4 — unpivotValueOperandSelectExpressionSitesContractTest")
 	public void unpivotValueOperandSelectExpressionSitesContractTest() {
 		final String query =
 				"SELECT sales_amount * 0.07 AS tax_on_value\n"

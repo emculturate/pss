@@ -3464,6 +3464,49 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * M3/M4 bridge: copy walk-time {@code unresolved_column} site tokens onto flattened SELECT-item
+	 * dependency refs so convert egress can materialize expression operand lineage without the M0
+	 * bare-column {@code query_dictionary} gate.
+	 */
+	@SuppressWarnings("unchecked")
+	public void attachWalkCapturedSiteTokensToSelectItemDependencyRefs(ArrayList<Object> columnList) {
+		if (columnList == null || columnList.isEmpty()) {
+			return;
+		}
+		Object unresolvedObj = walker.symbolTable.get(MUMBLE_UNRESOLVED_COLUMN_KEY);
+		if (!(unresolvedObj instanceof Map<?, ?> unresolvedMapObj) || unresolvedMapObj.isEmpty()) {
+			return;
+		}
+		HashMap<String, Object> unresolvedMap = (HashMap<String, Object>) unresolvedMapObj;
+		for (Object refObj : columnList) {
+			if (!(refObj instanceof Map<?, ?> refMapObj)) {
+				continue;
+			}
+			String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (columnName == null || columnName.isBlank()) {
+				continue;
+			}
+			Object unresolvedEntry = getUnqualifiedUnknownEntry(unresolvedMap, columnName);
+			if (unresolvedEntry == null) {
+				continue;
+			}
+			ArrayList<Object> siteTokens = new ArrayList<Object>();
+			Object existingLocationsObj = ((Map<String, Object>) refMapObj).get("locations");
+			if (existingLocationsObj instanceof List<?> existingLocations) {
+				for (Object existingLocation : existingLocations) {
+					if (existingLocation != null && !siteTokens.contains(existingLocation)) {
+						siteTokens.add(existingLocation);
+					}
+				}
+			}
+			appendMaterializationRefTokens(siteTokens, unresolvedEntry);
+			if (!siteTokens.isEmpty()) {
+				((Map<String, Object>) refObj).put("locations", siteTokens);
+			}
+		}
+	}
+
+	/**
 	 * Detached egress copy of a clause/interface column ref (never the AST {@code column} subtree).
 	 * Omits ephemeral {@code locations}; token payloads live on {@code unresolved_column_map} until materialized.
 	 */
@@ -5015,6 +5058,17 @@ public class SqlParseSymbolTreeHelper {
 								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 										refObj,
 										materializeTableRef));
+								materializeInterfacePivotOperandDependencyLineage(
+										materializeTableRef,
+										columnName,
+										refObj,
+										refIndex,
+										outputCol,
+										localCurrentQueryDictionary,
+										localUnresolvedColumnMap,
+										localFromTableCollection,
+										localTableAliasMap,
+										visibleQuerySourceCollection);
 							}
 							continue;
 						}
@@ -5032,6 +5086,17 @@ public class SqlParseSymbolTreeHelper {
 								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 										refObj,
 										materializeTableRef));
+								materializeInterfaceUnpivotInSourceDependencyLineage(
+										materializeTableRef,
+										columnName,
+										refObj,
+										refIndex,
+										outputCol,
+										localCurrentQueryDictionary,
+										localUnresolvedColumnMap,
+										localFromTableCollection,
+										localTableAliasMap,
+										visibleQuerySourceCollection);
 							}
 							continue;
 						}
@@ -5104,6 +5169,17 @@ public class SqlParseSymbolTreeHelper {
 									refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 											refObj,
 											materializeTableRef));
+									materializeInterfacePivotOperandDependencyLineage(
+											materializeTableRef,
+											columnName,
+											refObj,
+											refIndex,
+											outputCol,
+											localCurrentQueryDictionary,
+											localUnresolvedColumnMap,
+											localFromTableCollection,
+											localTableAliasMap,
+											visibleQuerySourceCollection);
 								}
 							}
 							case RESOLVED_UNPIVOT_IN_SOURCE -> {
@@ -5120,6 +5196,17 @@ public class SqlParseSymbolTreeHelper {
 									refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 											refObj,
 											materializeTableRef));
+									materializeInterfaceUnpivotInSourceDependencyLineage(
+											materializeTableRef,
+											columnName,
+											refObj,
+											refIndex,
+											outputCol,
+											localCurrentQueryDictionary,
+											localUnresolvedColumnMap,
+											localFromTableCollection,
+											localTableAliasMap,
+											visibleQuerySourceCollection);
 								}
 							}
 							case DEFERRED -> {
@@ -5201,31 +5288,7 @@ public class SqlParseSymbolTreeHelper {
 						}
 						if (egressResult.isPivotOperandColumn()) {
 							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
-							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
-								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
-										refObj,
-										materializeTableRef));
-								// SELECT-list tokens are on query_dictionary, not unresolved; still
-								// bind interface ref sites into table_dictionary like other outputs.
-								Object outputSiteTokens = refObj;
-								if (outputCol != null && outputCol.equalsIgnoreCase(columnName)) {
-									outputSiteTokens = coalesceMaterializationRefTokens(
-											refObj,
-											queryDictionaryRefTokenAtSiteIndex(
-													localCurrentQueryDictionary == null
-															? null
-															: localCurrentQueryDictionary.get(outputCol),
-													refIndex));
-								}
-								materializeInterfaceOutputSourceLineage(
-										materializeTableRef,
-										columnName,
-										outputSiteTokens,
-										localUnresolvedColumnMap,
-										localFromTableCollection,
-										localTableAliasMap,
-										visibleQuerySourceCollection);
-							} else {
+							if (materializeTableRef == null || materializeTableRef.isBlank()) {
 								applyConvertEgressPivotOperandMaterialization(
 										egressResult,
 										columnName,
@@ -5234,7 +5297,22 @@ public class SqlParseSymbolTreeHelper {
 										localTableCollection,
 										activeConvertEgressRelationalModifierContext,
 										localTableAliasMap);
+								continue;
 							}
+							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
+									refObj,
+									materializeTableRef));
+							materializeInterfacePivotOperandDependencyLineage(
+									materializeTableRef,
+									columnName,
+									refObj,
+									refIndex,
+									outputCol,
+									localCurrentQueryDictionary,
+									localUnresolvedColumnMap,
+									localFromTableCollection,
+									localTableAliasMap,
+									visibleQuerySourceCollection);
 							continue;
 						}
 						if (egressResult.isUnpivotInSourceColumn()) {
@@ -5251,6 +5329,17 @@ public class SqlParseSymbolTreeHelper {
 								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 										refObj,
 										materializeTableRef));
+								materializeInterfaceUnpivotInSourceDependencyLineage(
+										materializeTableRef,
+										columnName,
+										refObj,
+										refIndex,
+										outputCol,
+										localCurrentQueryDictionary,
+										localUnresolvedColumnMap,
+										localFromTableCollection,
+										localTableAliasMap,
+										visibleQuerySourceCollection);
 							}
 							continue;
 						}
@@ -11416,6 +11505,107 @@ public class SqlParseSymbolTreeHelper {
 				columnName,
 				archivedRefTokens,
 				false);
+	}
+
+	/** Tokens in an output {@code query_dictionary} entry that name {@code operandColumnName} (SELECT expression deps). */
+	private Object queryDictionaryOperandDependencyTokens(
+			Object queryColumnRefs,
+			String operandColumnName) {
+		if (queryColumnRefs == null || operandColumnName == null || operandColumnName.isBlank()) {
+			return null;
+		}
+		String needle = "='" + operandColumnName + "'";
+		ArrayList<Object> matches = new ArrayList<Object>();
+		if (queryColumnRefs instanceof List<?> tokenList) {
+			for (Object tokenObj : tokenList) {
+				if (tokenObj != null && tokenObj.toString().contains(needle)) {
+					matches.add(tokenObj);
+				}
+			}
+		} else if (queryColumnRefs.toString().contains(needle)) {
+			matches.add(queryColumnRefs);
+		}
+		return matches.isEmpty() ? null : matches;
+	}
+
+	private Object coalesceInterfaceOperandDependencySiteTokens(
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			String operandColumnName,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		Object queryColumnRefs = localCurrentQueryDictionary == null
+				? null
+				: localCurrentQueryDictionary.get(interfaceOutputColumn);
+		Object queryDictionarySites;
+		if (interfaceOutputColumn != null && interfaceOutputColumn.equalsIgnoreCase(operandColumnName)) {
+			queryDictionarySites = queryDictionaryRefTokenAtSiteIndex(queryColumnRefs, interfaceRefIndex);
+		} else {
+			queryDictionarySites = queryDictionaryOperandDependencyTokens(queryColumnRefs, operandColumnName);
+		}
+		return coalesceMaterializationRefTokens(interfaceRefObj, queryDictionarySites);
+	}
+
+	/**
+	 * M3: bind interface dependency sites for pivot operands onto the operand physical table.
+	 * Coalesces walk/interface ref tokens with SELECT expression operand sites from
+	 * {@code query_dictionary} (by column name, not output alias).
+	 */
+	private void materializeInterfacePivotOperandDependencyLineage(
+			String materializeTableRef,
+			String operandColumnName,
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> visibleQuerySourceCollection) {
+		if (materializeTableRef == null || materializeTableRef.isBlank()) {
+			return;
+		}
+		Object dependencySiteTokens = coalesceInterfaceOperandDependencySiteTokens(
+				interfaceRefObj,
+				interfaceRefIndex,
+				operandColumnName,
+				interfaceOutputColumn,
+				localCurrentQueryDictionary);
+		materializeInterfaceOutputSourceLineage(
+				materializeTableRef,
+				operandColumnName,
+				dependencySiteTokens,
+				unresolvedColumnMap,
+				tableCollection,
+				tableAliasCollection,
+				visibleQuerySourceCollection);
+	}
+
+	/**
+	 * M3: unpivot IN-list source columns referenced from the interface — physical lineage only.
+	 */
+	private void materializeInterfaceUnpivotInSourceDependencyLineage(
+			String materializeTableRef,
+			String inSourceColumnName,
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> tableCollection,
+			HashMap<String, Object> tableAliasCollection,
+			HashMap<String, Object> visibleQuerySourceCollection) {
+		materializeInterfacePivotOperandDependencyLineage(
+				materializeTableRef,
+				inSourceColumnName,
+				interfaceRefObj,
+				interfaceRefIndex,
+				interfaceOutputColumn,
+				localCurrentQueryDictionary,
+				unresolvedColumnMap,
+				tableCollection,
+				tableAliasCollection,
+				visibleQuerySourceCollection);
 	}
 
 	/**

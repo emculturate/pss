@@ -4579,6 +4579,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
 		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
+		symbolTreeHelper.attachWalkCapturedSiteTokensToSelectItemDependencyRefs(columnList);
 		if (symbolTreeHelper.isWindowFunctionSelectItemSubtree(interfaceReference)
 				|| symbolTreeHelper.hasLatchedWindowOverClauseDepsForNextSelectItem()
 				|| symbolTreeHelper.hasPendingWindowSelectInterfaceOverDeps()) {

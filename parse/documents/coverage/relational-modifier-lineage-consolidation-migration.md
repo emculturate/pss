@@ -56,25 +56,19 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 ---
 
-## M3 — Unify interface materialization (PIVOT + UNPIVOT operands)
+## M3 — Unify interface materialization (PIVOT + UNPIVOT operands) (done)
 
 **Problem:** `RESOLVED_PIVOT_OPERAND` / `RESOLVED_UNPIVOT_IN_SOURCE` branches `continue` without `materializeInterfaceOutputSourceLineage`.
 
 **Changes:**
 
-1. For each interface dependency ref (every `refIndex` in `localInterface` list, including expression dependencies):
-   - Classify egress (operand vs physical vs derived).
-   - **Always** call `materializeInterfaceOutputSourceLineage(materializeTableRef, columnName, refObjWithLocations, …)` when binding physical source lineage.
-   - Operand classification only sets `materializeTableRef` / `table_ref` on interface entry.
-2. Remove M0 `query_dictionary` fallback and `outputCol == columnName` gate.
-3. Mirror for qualified interface refs in the same loop.
+1. [x] `materializeInterfacePivotOperandDependencyLineage` / unpivot IN-source twin on qualified + unqualified interface egress paths (after operand classify / `applyConvertEgress*`).
+2. [x] Operand site coalescing by dependency column name in `query_dictionary` (not M0 bare-output gate); walk bridge `attachWalkCapturedSiteTokensToSelectItemDependencyRefs` at `exitSelect_item`.
+3. [x] Enable `ModifierLineageConsolidationContractTests` (M4 unpivot contract still `@Ignore`).
 
-**Tests:**
+**Tests:** Contract tests (2 active); migration + 7 pivot tests golden refresh for SELECT expression operand sites.
 
-- Remove `@Ignore` on `ModifierLineageConsolidationContractTests` (pivot IN ANY + static expression tests).
-- Update goldens in migration tests for new SELECT sites (`empid` `1:7`, `sales_amount` `1:34`, etc.).
-
-**Gate:** Contract tests green; migration tests updated; full pivot class.
+**Gate:** Contract tests + full `SqlEventWalkerPivotUnpivotTests` + smoketest quality gate green.
 
 ---
 
