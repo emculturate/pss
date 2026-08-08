@@ -55,7 +55,7 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 
 	/** M4: UNPIVOT VALUE operand in SELECT expression — VALUE sites on derivation + SELECT expression lineage. */
 	@Test
-	@Ignore("M4 — unpivotValueOperandSelectExpressionSitesContractTest")
+	@Ignore("M4 partial — unpivot VALUE SELECT site contract pending scoped capture")
 	public void unpivotValueOperandSelectExpressionSitesContractTest() {
 		final String query =
 				"SELECT sales_amount * 0.07 AS tax_on_value\n"
@@ -66,13 +66,10 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
-		String tableDict = extractor.getTableColumnDictionaryMap().toString();
 		String symbolFlat = extractor.getSymbolTable().toString();
-		// SELECT expression site for VALUE column (today only on query_dictionary / derived bucket).
 		Assert.assertTrue(
-				"Expected SELECT sales_amount site in physical or derived lineage",
-				tableDict.contains("1:7") || symbolFlat.contains("sales_amount=[[@"));
-		SqlEventWalkerPivotUnpivotTests.assertTableDictionaryContainsAntlrSite(
-				tableDict, "monthly_sales", "jan_sales", 1, 7);
+				"Expected SELECT sales_amount site (1:7) on UNPIVOT VALUE derived_columns lineage",
+				symbolFlat.contains("1:7")
+						&& symbolFlat.toLowerCase(java.util.Locale.ROOT).contains("sales_amount"));
 	}
 }

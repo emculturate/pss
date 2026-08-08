@@ -5152,8 +5152,19 @@ public class SqlParseSymbolTreeHelper {
 											tokenPayload);
 								}
 							}
-							case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_VALUE, RESOLVED_UNPIVOT_FOR -> {
+							case RESOLVED_DERIVED_COLUMN, RESOLVED_UNPIVOT_FOR -> {
 								break;
+							}
+							case RESOLVED_UNPIVOT_VALUE -> {
+								materializeInterfaceUnpivotValueOperandDependencyLineage(
+										activeConvertEgressRelationalModifierContext,
+										columnName,
+										refObj,
+										refIndex,
+										outputCol,
+										localCurrentQueryDictionary,
+										localDerivedColumns,
+										localUnresolvedColumnMap);
 							}
 							case RESOLVED_PIVOT_OPERAND -> {
 								applyConvertEgressPivotOperandMaterialization(
@@ -11606,6 +11617,51 @@ public class SqlParseSymbolTreeHelper {
 				tableCollection,
 				tableAliasCollection,
 				visibleQuerySourceCollection);
+	}
+
+	/**
+	 * M4: UNPIVOT VALUE operand sites from SELECT expressions → structured {@code derived_columns} bucket.
+	 */
+	@SuppressWarnings("unchecked")
+	private void materializeInterfaceUnpivotValueOperandDependencyLineage(
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			String valueColumnName,
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> unresolvedColumnMap) {
+		if (relationalModifierContext == null
+				|| !relationalModifierContext.isUnpivot()
+				|| valueColumnName == null
+				|| valueColumnName.isBlank()
+				|| localDerivedColumns == null) {
+			return;
+		}
+		InferredUnpivotDerivedOutputs unpivotOutputs =
+				inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
+		if (unpivotOutputs == null
+				|| unpivotOutputs.valueColumn == null
+				|| !unpivotOutputs.valueColumn.equalsIgnoreCase(valueColumnName)) {
+			return;
+		}
+		Object dependencySiteTokens = coalesceInterfaceOperandDependencySiteTokens(
+				interfaceRefObj,
+				interfaceRefIndex,
+				valueColumnName,
+				interfaceOutputColumn,
+				localCurrentQueryDictionary);
+		Object unresolvedEntry = getUnqualifiedUnknownEntry(unresolvedColumnMap, valueColumnName);
+		dependencySiteTokens = coalesceMaterializationRefTokens(
+				unresolvedEntry,
+				dependencySiteTokens);
+		if (dependencySiteTokens != null) {
+			walker.mergeResolvedColumnIntoDictionary(
+					localDerivedColumns,
+					valueColumnName,
+					dependencySiteTokens);
+		}
 	}
 
 	/**

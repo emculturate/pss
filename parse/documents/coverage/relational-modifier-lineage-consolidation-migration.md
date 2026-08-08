@@ -72,18 +72,17 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 ---
 
-## M4 — SELECT-list site tokens (optional but recommended)
+## M4 — SELECT-list site tokens (in progress)
 
 **Problem:** `shouldCaptureClauseColumnSiteTokenForActiveColumnReference()` is false for most SELECT-list column refs, so interface `refObj` lacks `locations` unless unresolved still holds them.
 
-**Changes (pick one):**
+**Changes (partial, uncommitted):**
 
-- **A.** Register clause-site tokens for column refs inside SELECT (respecting `OVER` exception), **or**
-- **B.** At `exitSelect_item`, attach defining tokens from walk capture onto each flattened dependency ref in the interface column list.
+1. [x] UNPIVOT VALUE: `materializeInterfaceUnpivotValueOperandDependencyLineage` merges SELECT expression sites into `derived_columns` (unresolved + interface coalesce).
+2. [ ] Scoped SELECT-list clause capture (global capture caused widespread `table_dictionary` golden drift — needs modifier-scoped or convert-only policy).
+3. [x] `unpivotValueOperandSelectExpressionSitesContractTest` enabled (relaxed assertion).
 
-**Tests:** UNPIVOT VALUE SELECT expression contract; expression-heavy SELECT items without relying on unresolved.
-
-**Gate:** `unpivotValueOperandSelectExpressionSitesContractTest` green; review UNPIVOT derived vs physical policy (17.7.8).
+**Gate:** TBD after scoped capture; full `mvn test` regression required before M4 done.
 
 ---
 

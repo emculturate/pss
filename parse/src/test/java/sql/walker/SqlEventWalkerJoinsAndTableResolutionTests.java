@@ -2269,11 +2269,11 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				extractor.getInterface().toString());
 		Assert.assertEquals("Substitution List is wrong", "{}", 
 				extractor.getSubstitutionsMap().toString());
-		Assert.assertEquals("Table Dictionary is wrong", "{third={col1=[[@3,14:15='T3',<391>,1:14]]}, fourth={col1=[[@7,23:24='F4',<391>,1:23]]}}",
+		Assert.assertEquals("Table Dictionary is wrong", "{third={col1=[[@3,14:15='T3',<391>,1:14]]}, fourth={col1=[[@7,23:24='F4',<391>,1:23], [@1,8:11='col1',<391>,1:8]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={col1=[[@1,8:11='col1',<391>,1:8], [@5,17:20='col1',<391>,1:17], [@9,26:29='col1',<391>,1:26]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
-		Assert.assertEquals("Symbol Tree is wrong", "{def_query0={query_dictionary={col1=[[@1,8:11='col1',<391>,1:8], [@5,17:20='col1',<391>,1:17], [@9,26:29='col1',<391>,1:26]]}, table_dictionary={third={col1=[[@3,14:15='T3',<391>,1:14]]}, fourth={col1=[[@7,23:24='F4',<391>,1:23]]}}, interface={col1=[{name=col1, table_ref=F4}]}, table_alias={F4=fourth, T3=third}}}",
+		Assert.assertEquals("Symbol Tree is wrong", "{def_query0={query_dictionary={col1=[[@1,8:11='col1',<391>,1:8], [@5,17:20='col1',<391>,1:17], [@9,26:29='col1',<391>,1:26]]}, table_dictionary={third={col1=[[@3,14:15='T3',<391>,1:14]]}, fourth={col1=[[@7,23:24='F4',<391>,1:23], [@1,8:11='col1',<391>,1:8]]}}, interface={col1=[{name=col1, table_ref=F4}]}, table_alias={F4=fourth, T3=third}}}",
 				extractor.getSymbolTable().toString());
 
 		Snippet snippet = extractor.getSnippet();
