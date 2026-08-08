@@ -37,6 +37,13 @@
 | `exitPivot_in_any` | `pivot_in_any` | **Covered** — `pivotInAnyAstShapeTest`, `pivotInAnyOrderBy*` in `SqlEventWalkerPivotUnpivotTests`. |
 | `exitPivot_in_subquery` | `pivot_in_subquery` | **Covered** — `pivotInSubqueryAstShapeTest`. |
 
+### Tier 2.8 complete — UNPIVOT `relational_modifier_in_item`
+
+| `exit*` method | Grammar rule / path | Status |
+|----------------|---------------------|--------|
+| `exitRelational_modifier_in_item` | UNPIVOT `IN (...)` column items | **Covered** — `unpivotInList*` ast-shape tests + existing IN-list matrix. |
+| `exitRelational_modifier_alias` | Optional `AS` / label on IN item | **Covered** — same tests (identifier without `AS`, string literal with `AS`). |
+
 Remaining Tier 1 gaps:
 
 | `exit*` method | Grammar rule / path | What to exercise (sketch) |
@@ -60,7 +67,6 @@ Methods with **≥5 missed lines** and **&lt;80%** line coverage on the method (
 | `exitSubquery` | `subquery` in FROM | 5 / 8 |
 | `exitInsert_target_table_primary` | INSERT target (no table-function) | 41 / 10 |
 | `exitJinja_arg` / `exitJinja_function_call` | Jinja in SQL | partial |
-| `exitRelational_modifier_in_item` | PIVOT/UNPIVOT `IN` list | 22 / 6 |
 | `exitQuantified_comparison_predicate` | `ANY`/`ALL` subquery compares | 21 / 4 |
 
 Full JaCoCo detail: `parse/target/site/jacoco/index.html` → `SqlParseEventWalker`; legacy aggregate CSV may be stale — regenerate from `jacoco.xml` if needed.

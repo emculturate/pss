@@ -1,6 +1,6 @@
 # SqlParseEventWalker `exit*` coverage — workplan
 
-**Status:** 🚧 In progress — pivot/unpivot walker exits T1.3–T1.4, T2.10, T3.25 closed (Spring 2026); remaining Tier 1/2 items open.  
+**Status:** 🚧 In progress — pivot/unpivot walker exits through T2.8 closed (Spring 2026); remaining Tier 1/2 (non-modifier) open.  
 **Branch context:** `Spring-2026-Extensions` (or follow-on)  
 **Goal:** At least one exemplar test per **main-grammar** `exit*` path so the full suite exercises every listener exit that corresponds to a user-visible SQL construct.
 
@@ -146,9 +146,14 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 - [ ] CAST/DDL/type parse using static type names not in current goldens.
 
-### T2.8 `exitRelational_modifier_in_item` — `relational_modifier_in_item` (~79%)
+### T2.8 `exitRelational_modifier_in_item` — `relational_modifier_in_item` — **COMPLETE**
 
-- [ ] PIVOT/UNPIVOT **IN** list items: alias, qualified column, extra variants.
+- [x] UNPIVOT **IN** list items: alias without `AS`, qualified column + string label, single-item list.
+- **Verify:** `exitRelational_modifier_in_item` fully line-covered (`exitRelational_modifier_alias` exercised via same tests).
+
+**Note:** This exit is **UNPIVOT IN (...)** only; PIVOT `IN` uses `pivot_in_*` rules (T1.3/T1.4/T3.25).
+
+**Status (Spring 2026):** `unpivotInListAliasWithoutAsAstShapeTest`, `unpivotInListQualifiedColumnWithStringLabelAstShapeTest`, `unpivotInListSingleItemAstShapeTest` in `SqlEventWalkerPivotUnpivotTests`.
 
 ### T2.9 `exitWith_clause` — `with_clause` (~74%)
 
@@ -319,9 +324,11 @@ Method executed; **1–2 missed lines** and **≥85%** line coverage. Optional b
 
 - [ ] Qualified join type token not hit.
 
-### T3.24 `exitRelational_modifier_alias` — `relational_modifier_alias`
+### T3.24 `exitRelational_modifier_alias` — `relational_modifier_alias` — **COMPLETE**
 
-- [ ] PIVOT/UNPIVOT relation `AS` alias.
+- [x] UNPIVOT IN alias forms: identifier with/without `AS`, string literal label (covered by T2.8 exemplars + existing `AS 'JAN'` matrix).
+
+**Status (Spring 2026):** See T2.8 tests and `unpivotClauseInListItemAliasesAstShapeTest`.
 
 ### T3.25 `exitPivot_in_literal` — `pivot_in_literal` — **COMPLETE**
 

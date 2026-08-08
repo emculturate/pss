@@ -22,6 +22,20 @@ public class PivotWalkerTierGoldenCaptureOnce extends AbstractSqlParseEventWalke
 								+ "FROM monthly_sales\n"
 								+ "UNPIVOT (sales_amount FOR month_name IN (\n"
 								+ "  jan_sales AS JAN, feb_sales AS FEB, mar_sales));" },
+				{ "unpivotInListAliasWithoutAsAstShapeTest",
+						"SELECT empid, month_name, sales_amount\n"
+								+ "FROM monthly_sales\n"
+								+ "UNPIVOT (sales_amount FOR month_name IN (\n"
+								+ "  jan_sales JAN, feb_sales FEB, mar_sales));" },
+				{ "unpivotInListQualifiedColumnWithStringLabelAstShapeTest",
+						"SELECT empid, month_name, sales_amount\n"
+								+ "FROM monthly_sales msl\n"
+								+ "UNPIVOT (sales_amount FOR month_name IN (\n"
+								+ "  msl.jan_sales AS 'JAN', feb_sales));" },
+				{ "unpivotInListSingleItemAstShapeTest",
+						"SELECT empid, month_name, sales_amount\n"
+								+ "FROM monthly_sales\n"
+								+ "UNPIVOT (sales_amount FOR month_name IN (jan_sales));" },
 		};
 		PivotWalkerTierGoldenCaptureOnce runner = new PivotWalkerTierGoldenCaptureOnce();
 		for (String[] c : cases) {
