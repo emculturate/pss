@@ -53,9 +53,13 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 				tableDict, "monthly_sales_long", "sales_amount", 1, 7);
 	}
 
-	/** M4: UNPIVOT VALUE operand in SELECT expression — VALUE sites on derivation + SELECT expression lineage. */
+	/**
+	 * M4 (scoped): UNPIVOT VALUE in a SELECT expression — published lineage does not require the
+	 * SELECT operand token on {@code derived_columns.sales_amount}; we require UNPIVOT derivation
+	 * (VALUE + IN sources) and output interface deps that trace to those physical sources after
+	 * convert egress expands VALUE refs to IN-list columns.
+	 */
 	@Test
-	@Ignore("M4 — derived_columns SELECT site via interface ref dual lookup (in progress)")
 	public void unpivotValueOperandSelectExpressionSitesContractTest() {
 		final String query =
 				"SELECT sales_amount * 0.07 AS tax_on_value\n"
@@ -66,10 +70,26 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 
+		Assert.assertEquals("[tax_on_value]", extractor.getInterface().toString());
+
 		String symbolFlat = extractor.getSymbolTable().toString();
+		String lower = symbolFlat.toLowerCase(java.util.Locale.ROOT);
 		Assert.assertTrue(
-				"Expected SELECT sales_amount site (1:7) on UNPIVOT VALUE derived_columns lineage",
-				symbolFlat.contains("1:7")
-						&& symbolFlat.toLowerCase(java.util.Locale.ROOT).contains("sales_amount"));
+				"Expected UNPIVOT VALUE column sales_amount on structured derived_columns",
+				lower.contains("derived_columns")
+						&& lower.contains("tuple_0")
+						&& lower.contains("sales_amount"));
+		Assert.assertTrue(
+				"Expected UNPIVOT IN sources on derivation.source_columns",
+				lower.contains("source_columns")
+						&& lower.contains("jan_sales")
+						&& lower.contains("feb_sales")
+						&& lower.contains("monthly_sales"));
+		Assert.assertTrue(
+				"Expected tax_on_value to retain UNPIVOT VALUE hop and IN-list physical deps",
+				symbolFlat.contains("tax_on_value=[{name=sales_amount, table_ref=tuple_0}")
+						&& symbolFlat.contains("jan_sales")
+						&& symbolFlat.contains("feb_sales")
+						&& symbolFlat.contains("monthly_sales"));
 	}
 }

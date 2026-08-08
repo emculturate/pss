@@ -2410,7 +2410,9 @@ public class SqlParseSymbolTreeHelper {
 					valueColumn,
 					forColumn,
 					sourceRef,
-					inColumnsObj);
+					inColumnsObj,
+					interfaceEntry.getKey(),
+					localDerivedColumns);
 
 			if (!rewrittenRefs.equals(refs)) {
 				interfaceEntry.setValue(rewrittenRefs);
@@ -2424,13 +2426,56 @@ public class SqlParseSymbolTreeHelper {
 			String forColumn,
 			String sourceRef,
 			ArrayList<Object> inColumnsObj) {
+		return rewriteReferenceListForSingleUnpivotHint(
+				refs,
+				valueColumn,
+				forColumn,
+				sourceRef,
+				inColumnsObj,
+				null,
+				null);
+	}
+
+	public ArrayList<Object> rewriteReferenceListForSingleUnpivotHint(
+			ArrayList<Object> refs,
+			String valueColumn,
+			String forColumn,
+			String sourceRef,
+			ArrayList<Object> inColumnsObj,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localDerivedColumns) {
 		ArrayList<Object> rewrittenRefs = new ArrayList<Object>();
 		boolean valueColumnReferenceFound = false;
+		boolean retainDerivedValueHop = interfaceOutputColumn != null
+				&& !interfaceOutputColumn.isBlank()
+				&& valueColumn != null
+				&& !interfaceOutputColumn.equalsIgnoreCase(valueColumn);
+
+		boolean suppressInColumnRefsAfterValueExpand = false;
 
 		for (Object refObj : refs) {
 			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
 			if (refName != null && refName.equalsIgnoreCase(valueColumn)) {
+				if (retainDerivedValueHop
+						&& !isUnpivotValueDerivedColumnInterfaceRef(
+								refObj,
+								sourceRef,
+								localDerivedColumns)) {
+					appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
+					continue;
+				}
 				valueColumnReferenceFound = true;
+				String inListTableRef = sourceRef;
+				if (retainDerivedValueHop && refObj instanceof Map<?, ?> valueRefMap) {
+					Object valueTableRefObj = valueRefMap.get(MUMBLE_TABLE_REF_KEY);
+					if (valueTableRefObj instanceof String valueTableRef
+							&& !valueTableRef.isBlank()) {
+						inListTableRef = valueTableRef;
+					}
+				}
+				if (retainDerivedValueHop) {
+					appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
+				}
 				for (Object inColumnObj : inColumnsObj) {
 					if (!(inColumnObj instanceof String inColumn) || inColumn.isBlank()) {
 						continue;
@@ -2438,13 +2483,18 @@ public class SqlParseSymbolTreeHelper {
 
 					HashMap<String, Object> derivedRef = new HashMap<String, Object>();
 					derivedRef.put(MUMBLE_NAME_KEY, inColumn);
-					derivedRef.put(MUMBLE_TABLE_REF_KEY, sourceRef);
+					derivedRef.put(MUMBLE_TABLE_REF_KEY, inListTableRef);
 					appendInterfaceReferenceIfMissing(rewrittenRefs, derivedRef);
 				}
+				suppressInColumnRefsAfterValueExpand = retainDerivedValueHop;
 			} else if (forColumn != null
 					&& refName != null
 					&& refName.equalsIgnoreCase(forColumn)) {
 				appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
+			} else if (suppressInColumnRefsAfterValueExpand
+					&& refName != null
+					&& unpivotInListContainsColumnName(inColumnsObj, refName)) {
+				continue;
 			} else {
 				appendInterfaceReferenceIfMissing(rewrittenRefs, refObj);
 			}
@@ -2455,6 +2505,42 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		return rewrittenRefs;
+	}
+
+	private boolean unpivotInListContainsColumnName(ArrayList<Object> inColumnsObj, String columnName) {
+		if (inColumnsObj == null || inColumnsObj.isEmpty() || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		for (Object inColumnObj : inColumnsObj) {
+			if (inColumnObj instanceof String inColumn
+					&& inColumn.equalsIgnoreCase(columnName)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isUnpivotValueDerivedColumnInterfaceRef(
+			Object refObj,
+			String modifierInterfaceSourceRef,
+			HashMap<String, Object> localDerivedColumns) {
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+		if (tableRef == null || tableRef.isBlank()) {
+			return true;
+		}
+		if (modifierInterfaceSourceRef != null
+				&& tableRef.equalsIgnoreCase(modifierInterfaceSourceRef)) {
+			return false;
+		}
+		if (localDerivedColumns == null || localDerivedColumns.isEmpty()) {
+			return false;
+		}
+		for (String bucketKey : localDerivedColumns.keySet()) {
+			if (bucketKey != null && bucketKey.equalsIgnoreCase(tableRef)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@SuppressWarnings("unchecked")

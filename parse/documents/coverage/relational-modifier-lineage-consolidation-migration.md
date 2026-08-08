@@ -72,21 +72,18 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 ---
 
-## M4 — SELECT-list site tokens (in progress)
+## M4 — SELECT-list site tokens (deferred / narrowed)
 
-**Problem:** `shouldCaptureClauseColumnSiteTokenForActiveColumnReference()` is false for most SELECT-list column refs, so interface `refObj` lacks `locations` unless unresolved still holds them.
+**Original problem:** `shouldCaptureClauseColumnSiteTokenForActiveColumnReference()` is false for most SELECT-list column refs, so interface `refObj` lacks `locations` unless unresolved still holds them.
 
-**Approach (no `query_dictionary` operand publish):** Phase-1 `query_dictionary` keys stay **output alias / name tokens only** (`table-and-query-dictionary-design.md`). Operand sites for convert use **ephemeral `locations` on interface dependency refs** (per-SELECT-item unresolved delta attach) → materialize into `table_dictionary` / `derivation.derived_columns`, not onto `query_dictionary[alias]`.
+**Narrowed product goal:** For UNPIVOT VALUE used inside a SELECT expression, **do not** require the SELECT operand token on `derivation.derived_columns[value]` when VALUE is a derived column. Require:
 
-**Implemented locally:**
+- Structured **derivation** (`derived_columns` VALUE + `source_columns` IN-list), and
+- Output **interface** that traces the alias to physical IN sources (VALUE refs expanded at convert egress).
 
-1. [x] Per-SELECT-item unresolved delta attach at `exitSelect_item` + rotate snapshot per query.
-2. [x] UNPIVOT VALUE convert: expanded-derived interface path + expression-shaped derived materialize; structured bucket merge.
-3. [ ] M4 contract green on **`derived_columns`** via convert-time dual lookup (interface ref `locations` + operand tokens on `query_dictionary[output]`; no walk-time merge of `unresolved_column` into derived buckets).
+**Baseline (`d96bb68+`):** `unpivotValueOperandSelectExpressionSitesContractTest` encodes derivation + interface with **both** retained VALUE hop (`sales_amount` @ modifier bucket) **and** expanded IN-list physical deps when output alias ≠ VALUE name (`rewriteReferenceListForSingleUnpivotHint`).
 
-**Removed:** deferred flush of operand sites into `query_dictionary` (caused `feb_tot` / `tax` style alias pollution — see `pivotWithTaxAndWhereV4Test` goldens).
-
-**Gate:** `unpivotValueOperandSelectExpressionSitesContractTest`; pivot suite + full `mvn test` without qdict drift.
+**Gate:** Contract test above + full `mvn test` green.
 
 ---
 
