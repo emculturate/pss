@@ -3576,6 +3576,11 @@ public class SqlParseSymbolTreeHelper {
 			Object deltaTokens = materializationRefTokensAddedSinceSnapshot(
 					unresolvedEntry,
 					snapshotEntry);
+			if (deltaTokens == null && snapshotEntry == null) {
+				ArrayList<Object> initialSites = new ArrayList<>();
+				appendMaterializationRefTokens(initialSites, unresolvedEntry);
+				deltaTokens = initialSites.isEmpty() ? null : initialSites;
+			}
 			if (deltaTokens == null) {
 				continue;
 			}
@@ -5561,6 +5566,13 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localFromTableCollection,
 				localTableAliasMap);
+
+		materializeUnpivotValueOperandSelectExpressionSitesBeforeDerivationRewrite(
+				localInterface,
+				activeConvertEgressRelationalModifierContext,
+				localDerivedColumns,
+				localUnresolvedColumnMap,
+				localCurrentQueryDictionary);
 
 		applyUnpivotDerivationsToQueryScope(
 				localInterface,
@@ -11670,6 +11682,87 @@ public class SqlParseSymbolTreeHelper {
 		return matches.isEmpty() ? null : matches;
 	}
 
+	/**
+	 * M4 convert egress: dual lookup for UNPIVOT VALUE operand sites — (1) ephemeral {@code locations}
+	 * on the interface dependency ref (SELECT attach), (2) operand-named tokens already on
+	 * {@code query_dictionary[output]} if present. Does not merge the full {@code unresolved_column}
+	 * bucket for the VALUE name (that would leak clause/unknown sites into {@code derived_columns}).
+	 */
+	private Object coalesceUnpivotValueOperandDependencySiteTokensAtConvertEgress(
+			Object interfaceRefObj,
+			int interfaceRefIndex,
+			String valueColumnName,
+			String interfaceOutputColumn,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> unresolvedColumnMap) {
+		Object siteTokens = coalesceMaterializationRefTokens(null, interfaceRefObj);
+		Object queryColumnRefs = localCurrentQueryDictionary == null
+				? null
+				: localCurrentQueryDictionary.get(interfaceOutputColumn);
+		siteTokens = coalesceMaterializationRefTokens(
+				siteTokens,
+				queryDictionaryOperandDependencyTokens(queryColumnRefs, valueColumnName));
+		return siteTokens;
+	}
+
+	/**
+	 * Before {@link #applyUnpivotDerivationsToQueryScope} rewrites VALUE refs to IN-list physical
+	 * columns, materialize SELECT expression sites onto structured {@code derived_columns} via dual
+	 * lookup (interface ref sites + {@code query_dictionary} operand tokens only).
+	 */
+	@SuppressWarnings("unchecked")
+	private void materializeUnpivotValueOperandSelectExpressionSitesBeforeDerivationRewrite(
+			HashMap<String, Object> localInterface,
+			RelationalModifierConvertEgressContext relationalModifierContext,
+			HashMap<String, Object> localDerivedColumns,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		if (localInterface == null
+				|| localInterface.isEmpty()
+				|| relationalModifierContext == null
+				|| !relationalModifierContext.isUnpivot()
+				|| localDerivedColumns == null) {
+			return;
+		}
+		InferredUnpivotDerivedOutputs unpivotOutputs =
+				inferUnpivotDerivedOutputColumnsFromContext(relationalModifierContext);
+		if (unpivotOutputs == null
+				|| unpivotOutputs.valueColumn == null
+				|| unpivotOutputs.valueColumn.isBlank()) {
+			return;
+		}
+		String valueColumn = unpivotOutputs.valueColumn;
+		for (Map.Entry<String, Object> interfaceEntry : localInterface.entrySet()) {
+			String interfaceOutputColumn = interfaceEntry.getKey();
+			if (interfaceOutputColumn == null
+					|| interfaceOutputColumn.isBlank()
+					|| interfaceOutputColumn.equalsIgnoreCase(valueColumn)) {
+				continue;
+			}
+			Object refsObj = interfaceEntry.getValue();
+			if (!(refsObj instanceof ArrayList<?> refs)) {
+				continue;
+			}
+			ArrayList<Object> mutableRefs = (ArrayList<Object>) refs;
+			for (int refIndex = 0; refIndex < mutableRefs.size(); refIndex++) {
+				Object refObj = mutableRefs.get(refIndex);
+				String refColumnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+				if (refColumnName == null || !refColumnName.equalsIgnoreCase(valueColumn)) {
+					continue;
+				}
+				materializeInterfaceUnpivotValueOperandDependencyLineage(
+						relationalModifierContext,
+						valueColumn,
+						refObj,
+						refIndex,
+						interfaceOutputColumn,
+						localCurrentQueryDictionary,
+						localDerivedColumns,
+						unresolvedColumnMap);
+			}
+		}
+	}
+
 	private Object coalesceInterfaceOperandDependencySiteTokens(
 			Object interfaceRefObj,
 			int interfaceRefIndex,
@@ -11803,16 +11896,13 @@ public class SqlParseSymbolTreeHelper {
 				|| !unpivotOutputs.valueColumn.equalsIgnoreCase(valueColumnName)) {
 			return;
 		}
-		Object dependencySiteTokens = coalesceInterfaceOperandDependencySiteTokens(
+		Object dependencySiteTokens = coalesceUnpivotValueOperandDependencySiteTokensAtConvertEgress(
 				interfaceRefObj,
 				interfaceRefIndex,
 				valueColumnName,
 				interfaceOutputColumn,
-				localCurrentQueryDictionary);
-		Object unresolvedEntry = getUnqualifiedUnknownEntry(unresolvedColumnMap, valueColumnName);
-		dependencySiteTokens = coalesceMaterializationRefTokens(
-				unresolvedEntry,
-				dependencySiteTokens);
+				localCurrentQueryDictionary,
+				unresolvedColumnMap);
 		if (dependencySiteTokens != null) {
 			mergeUnpivotValueOperandSitesIntoStructuredDerivedColumns(
 					localDerivedColumns,

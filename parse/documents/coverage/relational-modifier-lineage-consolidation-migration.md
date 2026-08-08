@@ -82,7 +82,7 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 1. [x] Per-SELECT-item unresolved delta attach at `exitSelect_item` + rotate snapshot per query.
 2. [x] UNPIVOT VALUE convert: expanded-derived interface path + expression-shaped derived materialize; structured bucket merge.
-3. [ ] M4 contract green on **`derived_columns`** (not `query_dictionary`).
+3. [ ] M4 contract green on **`derived_columns`** via convert-time dual lookup (interface ref `locations` + operand tokens on `query_dictionary[output]`; no walk-time merge of `unresolved_column` into derived buckets).
 
 **Removed:** deferred flush of operand sites into `query_dictionary` (caused `feb_tot` / `tax` style alias pollution — see `pivotWithTaxAndWhereV4Test` goldens).
 

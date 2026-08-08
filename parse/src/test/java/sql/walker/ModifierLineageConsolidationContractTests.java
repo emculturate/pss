@@ -55,7 +55,7 @@ public class ModifierLineageConsolidationContractTests extends AbstractSqlParseE
 
 	/** M4: UNPIVOT VALUE operand in SELECT expression — VALUE sites on derivation + SELECT expression lineage. */
 	@Test
-	@Ignore("M4 — derived_columns SELECT site via interface ref locations (no query_dictionary operand publish)")
+	@Ignore("M4 — derived_columns SELECT site via interface ref dual lookup (in progress)")
 	public void unpivotValueOperandSelectExpressionSitesContractTest() {
 		final String query =
 				"SELECT sales_amount * 0.07 AS tax_on_value\n"
