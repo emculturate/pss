@@ -9,7 +9,7 @@ Reference tests:
 | `pivotSelectAndPostClausesFormulaLineageMigrationTest` | PIVOT static IN + SELECT / WHERE / GROUP BY / ORDER BY formulas |
 | `pivotInAnySelectExpressionOperandLineageMigrationTest` | PIVOT `IN (ANY ORDER BY …)` + same clause mix |
 | `unpivotSelectAndPostClausesFormulaLineageMigrationTest` | UNPIVOT + SELECT / WHERE / GROUP BY / ORDER BY formulas |
-| `ModifierLineageConsolidationContractTests` | `@Ignore` until M2–M4; enable per phase |
+| `ModifierLineageConsolidationContractTests` | Contract for pivot/unpivot SELECT + clause lineage (all active) |
 
 Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
@@ -64,15 +64,15 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 
 1. [x] `materializeInterfacePivotOperandDependencyLineage` / unpivot IN-source twin on qualified + unqualified interface egress paths (after operand classify / `applyConvertEgress*`).
 2. [x] Operand site coalescing by dependency column name in `query_dictionary` (not M0 bare-output gate); walk bridge `attachWalkCapturedSiteTokensToSelectItemDependencyRefs` at `exitSelect_item`.
-3. [x] Enable `ModifierLineageConsolidationContractTests` (M4 unpivot contract still `@Ignore`).
+3. [x] Enable `ModifierLineageConsolidationContractTests` (pivot + unpivot contracts).
 
-**Tests:** Contract tests (2 active); migration + 7 pivot tests golden refresh for SELECT expression operand sites.
+**Tests:** Contract tests (3 active); migration + pivot golden refresh for SELECT expression operand sites.
 
 **Gate:** Contract tests + full `SqlEventWalkerPivotUnpivotTests` + smoketest quality gate green.
 
 ---
 
-## M4 — SELECT-list site tokens (deferred / narrowed)
+## M4 — SELECT-list site tokens (narrowed) (done)
 
 **Original problem:** `shouldCaptureClauseColumnSiteTokenForActiveColumnReference()` is false for most SELECT-list column refs, so interface `refObj` lacks `locations` unless unresolved still holds them.
 
@@ -81,17 +81,20 @@ Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
 - Structured **derivation** (`derived_columns` VALUE + `source_columns` IN-list), and
 - Output **interface** that traces the alias to physical IN sources (VALUE refs expanded at convert egress).
 
-**Baseline (`d96bb68+`):** `unpivotValueOperandSelectExpressionSitesContractTest` encodes derivation + interface with **both** retained VALUE hop (`sales_amount` @ modifier bucket) **and** expanded IN-list physical deps when output alias ≠ VALUE name (`rewriteReferenceListForSingleUnpivotHint`).
+**Baseline (`d96bb68+`, `0083323`):** `unpivotValueOperandSelectExpressionSitesContractTest` encodes derivation + interface with **both** retained VALUE hop (`sales_amount` @ modifier bucket) **and** expanded IN-list physical deps when output alias ≠ VALUE name (`rewriteReferenceListForSingleUnpivotHint`).
 
 **Gate:** Contract test above + full `mvn test` green.
 
 ---
 
-## M5 — Cleanup and docs
+## M5 — Cleanup and docs (done)
 
-- Delete dead branches (special pivot-operand interface `continue`, duplicate materialization in filter pass where redundant).
-- Document invariant in `sql_walker_exit_method_gaps.md` / workplan: *operand classification ≠ skip lineage*.
-- Run broader walker suites (`SqlEventWalkerJoinsAndTableResolutionTests` sample) if time permits.
+- [x] Remove duplicate qualified-interface switch arms (operand statuses handled by egress early path).
+- [x] Remove redundant clause-archive pivot/unpivot operand materialization (egress early path + remaining-unresolved drain).
+- [x] Align unqualified interface pivot operand path with qualified (`applyConvertEgress*` before interface lineage).
+- [x] Document invariant below and in [sql_walker_exit_method_gaps.md](sql_walker_exit_method_gaps.md#relational-modifier-lineage-operand-classification).
+
+**Gate:** Full `mvn test` green.
 
 ---
 

@@ -72,5 +72,18 @@ Re-run the exit-method vs JaCoCo comparison (same approach as Aug 2026 gap pass)
 
 ## Related docs
 
+- [relational-modifier-lineage-consolidation-migration.md](relational-modifier-lineage-consolidation-migration.md) — PIVOT/UNPIVOT convert-egress lineage migration (M0–M5).
 - [sql_walker_astwalkers_gap_report.md](sql_walker_astwalkers_gap_report.md) — broader walker + helper method gaps (older snapshot).
 - [helper-dead-code-hygiene-workplan.md](../helper-dead-code-hygiene-workplan.md) — caller audit vs JaCoCo policy.
+
+## Relational-modifier lineage — operand classification
+
+**Invariant:** *operand classification ≠ skip lineage.* When convert egress classifies a column ref as `RESOLVED_PIVOT_OPERAND`, `RESOLVED_UNPIVOT_IN_SOURCE`, or derived UNPIVOT VALUE/FOR, that classification selects **how** to materialize (`applyConvertEgress*`, `materializeInterface*DependencyLineage`, derivation buckets)—not whether to skip interface/clause lineage.
+
+Single owner paths (post-M5):
+
+- **Interface loop:** `classifyColumnRefAtConvertEgress` → early egress blocks materialize operands before the qualified `switch` drain.
+- **Clause archive:** `archiveClauseColumnRefAtConvertEgress` handles operands on `clauseEgressResult` before unqualified `switch`.
+- **Remaining unresolved drain:** pivot/unpivot operands via `applyConvertEgress*` then `continue` (no duplicate `materializePivotOperandColumnAtConvertEgress` in `applyUnqualifiedScopeResolutionResult`).
+
+See [migration plan — design invariant](relational-modifier-lineage-consolidation-migration.md#design-invariant-target-end-state).
