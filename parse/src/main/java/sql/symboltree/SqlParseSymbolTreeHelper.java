@@ -5157,19 +5157,40 @@ public class SqlParseSymbolTreeHelper {
 							continue;
 						}
 						if (egressResult.isPivotOperandColumn()) {
-							applyConvertEgressPivotOperandMaterialization(
-									egressResult,
-									columnName,
-									null,
-									localUnresolvedColumnMap,
-									localTableCollection,
-									activeConvertEgressRelationalModifierContext,
-									localTableAliasMap);
 							String materializeTableRef = egressResult.pivotOperandMaterializeTableRef();
 							if (materializeTableRef != null && !materializeTableRef.isBlank()) {
 								refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 										refObj,
 										materializeTableRef));
+								// SELECT-list tokens are on query_dictionary, not unresolved; still
+								// bind interface ref sites into table_dictionary like other outputs.
+								Object outputSiteTokens = refObj;
+								if (outputCol != null && outputCol.equalsIgnoreCase(columnName)) {
+									outputSiteTokens = coalesceMaterializationRefTokens(
+											refObj,
+											queryDictionaryRefTokenAtSiteIndex(
+													localCurrentQueryDictionary == null
+															? null
+															: localCurrentQueryDictionary.get(outputCol),
+													refIndex));
+								}
+								materializeInterfaceOutputSourceLineage(
+										materializeTableRef,
+										columnName,
+										outputSiteTokens,
+										localUnresolvedColumnMap,
+										localFromTableCollection,
+										localTableAliasMap,
+										visibleQuerySourceCollection);
+							} else {
+								applyConvertEgressPivotOperandMaterialization(
+										egressResult,
+										columnName,
+										null,
+										localUnresolvedColumnMap,
+										localTableCollection,
+										activeConvertEgressRelationalModifierContext,
+										localTableAliasMap);
 							}
 							continue;
 						}
@@ -11546,6 +11567,26 @@ public class SqlParseSymbolTreeHelper {
 		appendMaterializationRefTokens(combined, primaryEntry);
 		appendMaterializationRefTokens(combined, supplementalEntry);
 		return combined.isEmpty() ? null : combined;
+	}
+
+	/** One output-interface site token from {@code query_dictionary} (excludes later clause refs). */
+	private Object queryDictionaryRefTokenAtSiteIndex(Object queryColumnRefs, int siteIndex) {
+		if (queryColumnRefs == null || siteIndex < 0) {
+			return null;
+		}
+		if (queryColumnRefs instanceof List<?> tokenList) {
+			if (siteIndex >= tokenList.size()) {
+				return null;
+			}
+			Object token = tokenList.get(siteIndex);
+			if (token == null) {
+				return null;
+			}
+			ArrayList<Object> singleSite = new ArrayList<Object>();
+			singleSite.add(token);
+			return singleSite;
+		}
+		return siteIndex == 0 ? queryColumnRefs : null;
 	}
 
 	@SuppressWarnings("unchecked")
