@@ -198,10 +198,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_PIVOT_KEY = "pivot";
     public static final String MUMBLE_PIVOT_LITERAL_KEY = "pivot_literal";
     public static final String MUMBLE_PIVOT_PREFIX_KEY = "pivot_prefix";
-    /** Snowflake {@code PIVOT … IN (ANY)} — scalar {@code any}. */
-    public static final String MUMBLE_PIVOT_IN_ANY_KEY = "IN_ANY";
-    /** Snowflake {@code PIVOT … IN (ANY ORDER BY …)}. */
-    public static final String MUMBLE_PIVOT_IN_ANY_ORDER_KEY = "IN_ANY_ORDER";
+    /** Snowflake {@code PIVOT … IN (ANY [ORDER BY …])} — submap {@code {any=any[, orderby=…]}}. */
+    public static final String MUMBLE_PIVOT_IN_ANY_KEY = "in_any";
     public static final String MUMBLE_UNPIVOT_KEY = "unpivot";
     /** UNPIVOT {@code INCLUDE NULLS} / {@code EXCLUDE NULLS} — value is {@code include} or {@code exclude}. */
     public static final String MUMBLE_UNPIVOT_NULLS_POLICY_KEY = "nulls_policy";

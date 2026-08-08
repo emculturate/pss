@@ -5436,11 +5436,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				aggregateObj,
 				pivotClauseCtx);
 		ArrayList<PivotInValueCapture> inValueCaptures = capturePivotInValuesFromClause(pivotClauseCtx, inListObj);
+		recordPivotOperandSourceColumns(aggregateCaptures, pivotClauseCtx, nameColObj);
 		if (aggregateCaptures.isEmpty() || inValueCaptures.isEmpty()) {
 			return;
 		}
-
-		recordPivotForSourceColumnToken(pivotClauseCtx, nameColObj);
 
 		HashMap<String, String> pivotBindings = (HashMap<String, String>) walker.symbolTable.get(
 				SqlParseSymbolTreeHelper.RELATIONAL_MODIFIER_PIVOT_DERIVED_SOURCE_BINDINGS_KEY);
@@ -5480,6 +5479,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 							aggregateCapture.dependencyTokenString);
 				}
 			}
+		}
+	}
+
+	private void recordPivotOperandSourceColumns(
+			ArrayList<PivotAggregateCapture> aggregateCaptures,
+			SQLSelectParserParser.Pivot_clauseContext pivotClauseCtx,
+			Object nameColObj) {
+		recordPivotForSourceColumnToken(pivotClauseCtx, nameColObj);
+		if (aggregateCaptures == null) {
+			return;
+		}
+		for (PivotAggregateCapture aggregateCapture : aggregateCaptures) {
+			if (aggregateCapture.dependencyColumnName == null
+					|| aggregateCapture.dependencyColumnName.isBlank()) {
+				continue;
+			}
+			recordRelationalModifierSourceColumnToken(
+					aggregateCapture.dependencyColumnName,
+					aggregateCapture.dependencyTokenString);
 		}
 	}
 
@@ -5775,17 +5793,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		Object orderbyObj = inClauseMap.get(MUMBLE_ORDERBY_KEY);
+		Map<String, Object> inAnyMap = new LinkedHashMap<>();
+		inAnyMap.put(PIVOT_IN_ANY_VALUE_KEY, "any");
 		if (orderbyObj != null) {
-			Map<String, Object> inAnyOrder = new LinkedHashMap<>();
-			inAnyOrder.put(PIVOT_IN_ANY_VALUE_KEY, "any");
 			Map<String, Object> orderColumns = normalizePivotInAnyOrderByColumns(orderbyObj);
-			inAnyOrder.put(MUMBLE_ORDERBY_KEY, orderColumns);
-			pivotMap.put(MUMBLE_PIVOT_IN_ANY_ORDER_KEY, inAnyOrder);
+			inAnyMap.put(MUMBLE_ORDERBY_KEY, orderColumns);
 			recordPivotInAnyOrderBySourceColumnTokens(pivotClauseCtx, orderColumns);
-			return;
 		}
-
-		pivotMap.put(MUMBLE_PIVOT_IN_ANY_KEY, "any");
+		pivotMap.put(MUMBLE_PIVOT_IN_ANY_KEY, inAnyMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -5880,15 +5895,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void collectRelationalModifierOperandReferencesFromPivotInAnyOrder(
-			Object inAnyOrderObj,
+	private void collectRelationalModifierOperandReferencesFromPivotInAny(
+			Object inAnyObj,
 			ArrayList<RelationalModifierOperandReference> operandReferences) {
-		if (!(inAnyOrderObj instanceof Map<?, ?> inAnyOrderMapObj)) {
+		if (!(inAnyObj instanceof Map<?, ?> inAnyMapObj)) {
 			return;
 		}
-		Map<String, Object> inAnyOrderMap = (Map<String, Object>) inAnyOrderMapObj;
+		Map<String, Object> inAnyMap = (Map<String, Object>) inAnyMapObj;
 		collectRelationalModifierOperandReferencesFromSubtree(
-				inAnyOrderMap.get(MUMBLE_ORDERBY_KEY),
+				inAnyMap.get(MUMBLE_ORDERBY_KEY),
 				RelationalModifierOperandRole.IN_LIST,
 				operandReferences);
 	}
@@ -6200,8 +6215,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				modifier.get(MUMBLE_FOR_KEY),
 				RelationalModifierOperandRole.FOR,
 				operandReferences);
-		collectRelationalModifierOperandReferencesFromPivotInAnyOrder(
-				modifier.get(MUMBLE_PIVOT_IN_ANY_ORDER_KEY),
+		collectRelationalModifierOperandReferencesFromPivotInAny(
+				modifier.get(MUMBLE_PIVOT_IN_ANY_KEY),
 				operandReferences);
 		if (modifier.containsKey(MUMBLE_IN_KEY)) {
 			collectRelationalModifierOperandReferencesFromInList(

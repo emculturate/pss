@@ -39,7 +39,6 @@ import static mumble.MumbleConstants.MUMBLE_OR_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERBY_KEY;
 import static mumble.MumbleConstants.MUMBLE_PARAMETERS_KEY;
 import static mumble.MumbleConstants.MUMBLE_PIVOT_IN_ANY_KEY;
-import static mumble.MumbleConstants.MUMBLE_PIVOT_IN_ANY_ORDER_KEY;
 import static mumble.MumbleConstants.MUMBLE_PIVOT_KEY;
 import static mumble.MumbleConstants.MUMBLE_PIVOT_LITERAL_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERBY_KEY;
@@ -1320,22 +1319,20 @@ public class SQLStatementGenerator extends AbstractSQLASTGenerator {
         sql.append(" FOR ");
         emitValueExpression(pivotMap.get(MUMBLE_FOR_KEY), sql);
         sql.append(" IN (");
-        if (pivotMap.containsKey(MUMBLE_PIVOT_IN_ANY_ORDER_KEY)) {
-            emitPivotInAnyOrder(pivotMap.get(MUMBLE_PIVOT_IN_ANY_ORDER_KEY), sql);
-        } else if (pivotMap.containsKey(MUMBLE_PIVOT_IN_ANY_KEY)) {
-            sql.append("ANY");
+        if (pivotMap.containsKey(MUMBLE_PIVOT_IN_ANY_KEY)) {
+            emitPivotInAny(pivotMap.get(MUMBLE_PIVOT_IN_ANY_KEY), sql);
         } else {
             emitPivotInList(pivotMap.get(MUMBLE_IN_KEY), sql);
         }
         sql.append("))");
     }
 
-    private void emitPivotInAnyOrder(Object inAnyOrderObj, StringBuilder sql) {
+    private void emitPivotInAny(Object inAnyObj, StringBuilder sql) {
         sql.append("ANY");
-        if (!(inAnyOrderObj instanceof Map<?, ?> inAnyOrderMap)) {
+        if (!(inAnyObj instanceof Map<?, ?> inAnyMap)) {
             return;
         }
-        Object orderbyObj = inAnyOrderMap.get(MUMBLE_ORDERBY_KEY);
+        Object orderbyObj = inAnyMap.get(MUMBLE_ORDERBY_KEY);
         List<Object> orderItems = orderedNumericKeyedList(orderbyObj);
         if (orderItems.isEmpty()) {
             return;
