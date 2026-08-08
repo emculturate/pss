@@ -4743,16 +4743,9 @@ public class SqlParseSymbolTreeHelper {
 				localTableCollection,
 				localCurrentQueryDictionary);
 
-		// Phase 16.2: single PIVOT operand materialization pass (post-wildcard, pre-egress).
-		// Stragglers are drained by RESOLVED_PIVOT_OPERAND in resolveColumnRefAtConvertEgress (16.1).
+		// Physical FROM refs for convert egress (M2: operand drain runs after interface loop).
 		HashMap<String, Object> localFromTableCollection =
 				buildLocalPhysicalFromTableCollection(localTableCollection);
-		resolvePivotOperandColumnsFromUnresolvedMap(
-				activeConvertEgressRelationalModifierContext,
-				localUnresolvedColumnMap,
-				localTableCollection,
-				localFromTableCollection,
-				localTableAliasMap);
 
 		HashMap<String, Object> currentTableDictionary = walker.getCurrentTableDictionary();
 		propagateUnqualifiedSelectStarToScopeTables(
@@ -5279,6 +5272,15 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 		}
+
+		// Phase 16.2 (M2): PIVOT operand materialization after interface lineage pass so shared
+		// unresolved keys are available to interface materialization first (16.1 stragglers in-loop).
+		resolvePivotOperandColumnsFromUnresolvedMap(
+				activeConvertEgressRelationalModifierContext,
+				localUnresolvedColumnMap,
+				localTableCollection,
+				localFromTableCollection,
+				localTableAliasMap);
 
 		applyUnpivotDerivationsToQueryScope(
 				localInterface,
