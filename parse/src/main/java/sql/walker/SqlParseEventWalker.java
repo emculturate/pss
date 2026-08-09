@@ -2756,7 +2756,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			// Missing DROP options map: ctx.getText()
 			return;
 		}
 
@@ -2764,11 +2763,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object value = subMap;
 		if (subMap.size() == 1 && subMap.containsKey("1")) {
 			value = subMap.remove("1");
-			if (value instanceof Map<?, ?> valueMapObj) {
-				
-				Map<String, Object> valueMap = (Map<String, Object>) valueMapObj;
-				valueMap.remove(ASTWALKER_RULE_TYPE_KEY);
-			}
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, value);
@@ -2914,7 +2908,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		if (subMap == null) {
-			// Missing ALTER options map: ctx.getText()
 			return;
 		}
 
@@ -2922,11 +2915,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object value = subMap;
 		if (subMap.size() == 1 && subMap.containsKey("1")) {
 			value = subMap.remove("1");
-			if (value instanceof Map<?, ?> valueMapObj) {
-				
-				Map<String, Object> valueMap = (Map<String, Object>) valueMapObj;
-				valueMap.remove(ASTWALKER_RULE_TYPE_KEY);
-			}
 		}
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, value);
@@ -3455,16 +3443,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 
-		if (ctx.getChildCount() <= 2) {
-			// just the insert into statement
-			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_KEY);
-		} else if (ctx.getChildCount() == 3) {
-			// Insert with override
-			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (ctx.getChildCount() == 3) {
 			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_OVERWRITE_KEY);
 		} else {
-			// Wrong number of entries for insert preamble context: ctx.getText()
+			subMap.put(MUMBLE_INSERT_PREAMBLE_KEY, MUMBLE_INSERT_INTO_KEY);
 		}
 
 		walker.handleOneChild(ruleIndex);
@@ -3798,14 +3781,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitAssignment_expression_list( SQLSelectParserParser.Assignment_expression_listContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
-		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_partition_by_clause)) {
-			walker.handleListList(ruleIndex, parentRuleIndex);
-		} else {
-			// then parent is normal query
-			walker.handlePushDown(ruleIndex);
-		}
+		walker.handlePushDown(ctx.getRuleIndex());
 	}
 
 	@Override
@@ -9274,27 +9250,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 			subMap = walker.makeRuleMap(ruleIndex);
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-			
+
 			if (ctx.getChildCount() == 1) {
-				String part = ctx.getChild(0).getText().toUpperCase();
-				subMap.put("1", part);
-			} else if (ctx.getChildCount() == 2) {
-				String part = ctx.getChild(0).getText().toUpperCase();
-				part = part + " " + ctx.getChild(1).getText().toUpperCase();
-				subMap.put("1", part);
-			} else if (ctx.getChildCount() == 3) {
-				String part = ctx.getChild(0).getText().toUpperCase();
-				part = part + " " + ctx.getChild(1).getText().toUpperCase();
-				part = part + " " + ctx.getChild(2).getText().toUpperCase();
-				subMap.put("1", part);
-			} else if (ctx.getChildCount() == 4) {
-				String part = ctx.getChild(0).getText().toUpperCase();
-				part = part + " " + ctx.getChild(1).getText().toUpperCase();
-				part = part + " " + ctx.getChild(2).getText().toUpperCase();
-				part = part + " " + ctx.getChild(3).getText().toUpperCase();
-				subMap.put("1", part);
+				subMap.put("1", ctx.getChild(0).getText().toUpperCase());
+			} else {
+				StringBuilder part = new StringBuilder();
+				for (int i = 0; i < ctx.getChildCount(); i++) {
+					if (i > 0) {
+						part.append(' ');
+					}
+					part.append(ctx.getChild(i).getText().toUpperCase());
+				}
+				subMap.put("1", part.toString());
 			}
-			// Add item to parent map
 			walker.addToParent(parentRuleIndex, parentStackLevel, subMap);	
 		}
 
