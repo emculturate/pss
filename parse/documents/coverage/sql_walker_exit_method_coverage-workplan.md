@@ -144,9 +144,9 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 - [x] Exemplars: `inferSchemaLiteralsAndNumericT2_1Test`, `flattenModeArrayLiteralT2_1Test`, `flattenPathStringLiteralT2_1Test` in `SqlEventWalkerTableFunctionTests` (regen: `TableFunctionArgumentLiteralGoldenCaptureOnce`). Numeric/string kwargs scalarize (`max_file_count=10`, `path='a'`).
 - [ ] Close remaining JaCoCo branches if any (defensive early returns).
 
-### T2.2 `exitInsert_target_table_primary` — `insert_target_table_primary` (JaCoCo Aug 2026: 41/51 lines, 80%, missed=10)
+### T2.2 `exitInsert_target_table_primary` — `insert_target_table_primary` (JaCoCo Aug 2026: 50/51 lines, 98%, missed=1) — **COMPLETE** (Tier 3 polish: 1 missed line)
 
-- [ ] Cover INSERT target shapes not using table-function primary (partition list, alias edge, or substitution on target).
+- [x] Exemplars: `insertTargetSubstitutionVariableT2_2Test`, `insertTargetJinjaRefT2_2Test`, `insertTargetRelationAliasT2_2Test`, `insertTargetNoColumnListT2_2Test` in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (regen: `InsertTargetTablePrimaryGoldenCaptureOnce`).
 
 ### T2.3 `exitInfer_schema_argument` — `infer_schema_argument` (JaCoCo Aug 2026: 18/23 lines, 78%, missed=5)
 
