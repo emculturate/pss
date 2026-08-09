@@ -48,6 +48,12 @@ public class GroupByGroupingSetsGoldenCaptureOnce extends AbstractSqlParseEventW
 			{ "groupByDistinctTwoColumnsTable", "SELECT a, b, SUM(c) AS s FROM tab1 GROUP BY DISTINCT a, b" },
 			{ "groupByDistinctTwoColumnsSubquery",
 					"SELECT x, y, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY DISTINCT x, y" },
+			{ "groupByCommaRollupTable", "SELECT x, SUM(v) AS s FROM tab1 GROUP BY x, ROLLUP(y, z)" },
+			{ "groupByDistinctRollupTable", "SELECT a, b, SUM(c) AS s FROM tab1 GROUP BY DISTINCT ROLLUP(a, b)" },
+			{ "groupByCommaRollupSubquery",
+					"SELECT x, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY x, ROLLUP(y, z)" },
+			{ "groupByDistinctRollupSubquery",
+					"SELECT x, y, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY DISTINCT ROLLUP(x, y)" },
 	};
 
 	public static void main(String[] args) throws Exception {

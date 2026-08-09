@@ -11387,6 +11387,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		subMap.put(MUMBLE_GROUPBY_OPTION_KEY, MUMBLE_GROUPBY_OPTION_DISTINCT);
+		promoteCombinatorGroupingElementBesideOption(subMap);
 		foldPlainNumberedOperandsIntoSet(subMap);
 	}
 
@@ -11451,23 +11452,27 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		Object listItem;
-		if (isUnderGroupingSetsList(ctx)) {
-			listItem = normalizeOrdinaryGroupingSetOperandForList(liftGroupingSetOperand(subMap));
-		} else if (ctx.LEFT_PAREN() != null) {
-			Map<String, Object> lifted = liftGroupingSetOperand(subMap);
-			if (lifted.containsKey(MUMBLE_SET_KEY)) {
-				listItem = lifted;
-			} else {
-				listItem = normalizeOrdinaryGroupingSetOperandForList(lifted);
-			}
-		} else if (subMap.size() == 1 && subMap.containsKey("1")) {
-			listItem = unwrapGroupingSetLeafOperand(subMap.get("1"));
-		} else {
-			listItem = subMap;
-		}
+		Object listItem = buildOrdinaryGroupingSetListItem(ctx, subMap);
 		appendGroupingOperandToParentList(parentRuleIndex, listItem);
 		walker.asTree.put("SKIP", "TRUE");
+	}
+
+	private Object buildOrdinaryGroupingSetListItem(SQLSelectParserParser.Ordinary_grouping_setContext ctx,
+			Map<String, Object> subMap) {
+		if (isUnderGroupingSetsList(ctx)) {
+			return normalizeOrdinaryGroupingSetOperandForList(liftGroupingSetOperand(subMap));
+		}
+		if (ctx.LEFT_PAREN() != null) {
+			Map<String, Object> lifted = liftGroupingSetOperand(subMap);
+			if (lifted.containsKey(MUMBLE_SET_KEY)) {
+				return lifted;
+			}
+			return normalizeOrdinaryGroupingSetOperandForList(lifted);
+		}
+		if (subMap.size() == 1 && subMap.containsKey("1")) {
+			return unwrapGroupingSetLeafOperand(subMap.get("1"));
+		}
+		return subMap;
 	}
 
 	@Override
@@ -11718,6 +11723,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	/** For {@code GROUP BY DISTINCT} with a plain column list, emit {@code set={1=…, 2=…}} beside {@code option=DISTINCT}. */
 	private static void foldPlainNumberedOperandsIntoSet(Map<String, Object> groupByMap) {
+		if (groupByMap.containsKey(MUMBLE_ROLLUP_KEY)
+				|| groupByMap.containsKey(MUMBLE_CUBE_KEY)
+				|| groupByMap.containsKey(MUMBLE_GROUPING_SETS_KEY)) {
+			return;
+		}
 		Map<String, Object> numbered = copyNumberedGroupingOperands(groupByMap);
 		if (numbered.isEmpty()) {
 			return;
@@ -11726,6 +11736,25 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			groupByMap.remove(key);
 		}
 		groupByMap.put(MUMBLE_SET_KEY, numbered);
+	}
+
+	/** Hoist a sole {@code rollup}/{@code cube}/{@code grouping_sets} operand beside {@code option=DISTINCT}. */
+	@SuppressWarnings("unchecked")
+	private static void promoteCombinatorGroupingElementBesideOption(Map<String, Object> groupByMap) {
+		if (!groupByMap.containsKey(MUMBLE_GROUPBY_OPTION_KEY) || !groupByMap.containsKey("1")) {
+			return;
+		}
+		Object soleEntry = groupByMap.get("1");
+		if (!(soleEntry instanceof Map<?, ?> soleMapObj)) {
+			return;
+		}
+		Map<String, Object> soleMap = (Map<String, Object>) soleMapObj;
+		if (soleMap.containsKey(MUMBLE_ROLLUP_KEY)
+				|| soleMap.containsKey(MUMBLE_CUBE_KEY)
+				|| soleMap.containsKey(MUMBLE_GROUPING_SETS_KEY)) {
+			groupByMap.remove("1");
+			groupByMap.putAll(soleMap);
+		}
 	}
 
 	/** Drop stray lexer keyword leaves (e.g. {@code 2=ALL}) beside {@code option=ALL|DISTINCT}. */

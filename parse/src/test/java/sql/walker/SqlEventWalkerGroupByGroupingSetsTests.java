@@ -8,6 +8,12 @@ import sql.SQLSelectParserParser;
 /**
  * GROUP BY / ROLLUP / CUBE / GROUPING SETS AST shapes ({@code set}, {@code rollup}, {@code cube},
  * {@code grouping_sets}) and {@code grouped_by} clause harvesting.
+ * <p>
+ * Comma-separated {@code grouping_element} items produce numbered siblings under {@code groupby}
+ * (e.g. {@code GROUP BY x, ROLLUP(y, z)} → {@code 1=x}, {@code 2={rollup=…}}). {@code ROLLUP}/{@code CUBE}
+ * are not modifiers on the whole clause. Clause-level {@code GROUP BY DISTINCT} uses {@code option=DISTINCT}
+ * (with {@code set={…}} for column lists or {@code rollup}/{@code cube} beside the option for
+ * {@code GROUP BY DISTINCT ROLLUP(…)}).
  */
 public class SqlEventWalkerGroupByGroupingSetsTests extends AbstractSqlParseEventWalkerTest {
 
@@ -442,6 +448,73 @@ public class SqlEventWalkerGroupByGroupingSetsTests extends AbstractSqlParseEven
 				"{tab1={a=[[@14,38:38='a',<392>,1:38]], b=[[@18,46:46='b',<392>,1:46]], c=[[@22,54:54='c',<392>,1:54]]}}",
 				"{query0={x=[[@16,43:43='x',<392>,1:43], [@1,7:7='x',<392>,1:7], [@32,92:92='x',<392>,1:92]], y=[[@20,51:51='y',<392>,1:51], [@3,10:10='y',<392>,1:10], [@34,95:95='y',<392>,1:95]], z=[[@24,59:59='z',<392>,1:59], [@7,17:17='z',<392>,1:17]]}, query1={x=[[@1,7:7='x',<392>,1:7]], y=[[@3,10:10='y',<392>,1:10]], s=[[@10,23:23='s',<392>,1:23]]}}",
 				"{def_query1={query_dictionary={s=[[@10,23:23='s',<392>,1:23]], x=[[@1,7:7='x',<392>,1:7]], y=[[@3,10:10='y',<392>,1:10]]}, grouped_by=[{name=x, table_ref=query0}, {name=y, table_ref=query0}], def_query0={query_dictionary={x=[[@16,43:43='x',<392>,1:43], [@1,7:7='x',<392>,1:7], [@32,92:92='x',<392>,1:92]], y=[[@20,51:51='y',<392>,1:51], [@3,10:10='y',<392>,1:10], [@34,95:95='y',<392>,1:95]], z=[[@24,59:59='z',<392>,1:59], [@7,17:17='z',<392>,1:17]]}, table_dictionary={tab1={a=[[@14,38:38='a',<392>,1:38]], b=[[@18,46:46='b',<392>,1:46]], c=[[@22,54:54='c',<392>,1:54]]}}, interface={x=[{name=a, table_ref=tab1}], y=[{name=b, table_ref=tab1}], z=[{name=c, table_ref=tab1}]}}, interface={s=[{name=z, table_ref=query0}], x=[{name=x, table_ref=query0}], y=[{name=y, table_ref=query0}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void groupByCommaRollupTable() {
+		final String query = "SELECT x, SUM(v) AS s FROM tab1 GROUP BY x, ROLLUP(y, z)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertGroupByWalkerOutputs(extractor,
+				"{SQL={select={1={column={name=x, table_ref=null}}, 2={function={function_name=SUM, qualifier=null, parameters={column={name=v, table_ref=null}}}, alias=s}}, from={table={alias=null, table=tab1}}, groupby={1={column={name=x, table_ref=null}}, 2={rollup={set={1={column={name=y, table_ref=null}}, 2={column={name=z, table_ref=null}}}}}}}}",
+				"[s, x]",
+				"{}",
+				"{tab1={v=[[@5,14:14='v',<392>,1:14]], x=[[@1,7:7='x',<392>,1:7], [@13,41:41='x',<392>,1:41]], y=[[@17,51:51='y',<392>,1:51]], z=[[@19,54:54='z',<392>,1:54]]}}",
+				"{query0={x=[[@1,7:7='x',<392>,1:7]], s=[[@8,20:20='s',<392>,1:20]]}}",
+				"{def_query0={query_dictionary={s=[[@8,20:20='s',<392>,1:20]], x=[[@1,7:7='x',<392>,1:7]]}, table_dictionary={tab1={v=[[@5,14:14='v',<392>,1:14]], x=[[@1,7:7='x',<392>,1:7], [@13,41:41='x',<392>,1:41]], y=[[@17,51:51='y',<392>,1:51]], z=[[@19,54:54='z',<392>,1:54]]}}, grouped_by=[{name=x, table_ref=tab1}, {name=y, table_ref=null}, {name=z, table_ref=null}], interface={s=[{name=v, table_ref=tab1}], x=[{name=x, table_ref=tab1}]}}}");
+	}
+
+	/** Postgres-style {@code GROUP BY DISTINCT} applied to a {@code ROLLUP} grouping element. */
+	@Test
+	public void groupByDistinctRollupTable() {
+		final String query = "SELECT a, b, SUM(c) AS s FROM tab1 GROUP BY DISTINCT ROLLUP(a, b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertGroupByWalkerOutputs(extractor,
+				"{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=c, table_ref=null}}}, alias=s}}, from={table={alias=null, table=tab1}}, groupby={option=DISTINCT, rollup={set={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}}}}}}",
+				"[a, b, s]",
+				"{}",
+				"{tab1={a=[[@1,7:7='a',<392>,1:7], [@18,60:60='a',<392>,1:60]], b=[[@3,10:10='b',<392>,1:10], [@20,63:63='b',<392>,1:63]], c=[[@7,17:17='c',<392>,1:17]]}}",
+				"{query0={a=[[@1,7:7='a',<392>,1:7]], b=[[@3,10:10='b',<392>,1:10]], s=[[@10,23:23='s',<392>,1:23]]}}",
+				"{def_query0={query_dictionary={a=[[@1,7:7='a',<392>,1:7]], b=[[@3,10:10='b',<392>,1:10]], s=[[@10,23:23='s',<392>,1:23]]}, table_dictionary={tab1={a=[[@1,7:7='a',<392>,1:7], [@18,60:60='a',<392>,1:60]], b=[[@3,10:10='b',<392>,1:10], [@20,63:63='b',<392>,1:63]], c=[[@7,17:17='c',<392>,1:17]]}}, grouped_by=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}], interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}], s=[{name=c, table_ref=tab1}]}}}");
+	}
+
+	@Test
+	public void groupByCommaRollupSubquery() {
+		final String query =
+				"SELECT x, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY x, ROLLUP(y, z)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertGroupByWalkerOutputs(extractor,
+				"{SQL={select={1={column={name=x, table_ref=null}}, 2={function={function_name=SUM, qualifier=null, parameters={column={name=z, table_ref=null}}}, alias=s}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}, 3={column={name=c, table_ref=null}, alias=z}}, from={table={alias=null, table=tab1}}}}}, groupby={1={column={name=x, table_ref=null}}, 2={rollup={set={1={column={name=y, table_ref=null}}, 2={column={name=z, table_ref=null}}}}}}}}",
+				"[s, x]",
+				"{}",
+				"{tab1={a=[[@12,35:35='a',<392>,1:35]], b=[[@16,43:43='b',<392>,1:43]], c=[[@20,51:51='c',<392>,1:51]]}}",
+				"{query0={x=[[@14,40:40='x',<392>,1:40], [@1,7:7='x',<392>,1:7], [@29,80:80='x',<392>,1:80]], y=[[@18,48:48='y',<392>,1:48], [@33,90:90='y',<392>,1:90]], z=[[@22,56:56='z',<392>,1:56], [@5,14:14='z',<392>,1:14], [@35,93:93='z',<392>,1:93]]}, query1={x=[[@1,7:7='x',<392>,1:7]], s=[[@8,20:20='s',<392>,1:20]]}}",
+				"{def_query1={query_dictionary={s=[[@8,20:20='s',<392>,1:20]], x=[[@1,7:7='x',<392>,1:7]]}, grouped_by=[{name=x, table_ref=query0}, {name=y, table_ref=query0}, {name=z, table_ref=query0}], def_query0={query_dictionary={x=[[@14,40:40='x',<392>,1:40], [@1,7:7='x',<392>,1:7], [@29,80:80='x',<392>,1:80]], y=[[@18,48:48='y',<392>,1:48], [@33,90:90='y',<392>,1:90]], z=[[@22,56:56='z',<392>,1:56], [@5,14:14='z',<392>,1:14], [@35,93:93='z',<392>,1:93]]}, table_dictionary={tab1={a=[[@12,35:35='a',<392>,1:35]], b=[[@16,43:43='b',<392>,1:43]], c=[[@20,51:51='c',<392>,1:51]]}}, interface={x=[{name=a, table_ref=tab1}], y=[{name=b, table_ref=tab1}], z=[{name=c, table_ref=tab1}]}}, interface={s=[{name=z, table_ref=query0}], x=[{name=x, table_ref=query0}]}, table_alias={q=query0}}}");
+	}
+
+	@Test
+	public void groupByDistinctRollupSubquery() {
+		final String query =
+				"SELECT x, y, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY DISTINCT ROLLUP(x, y)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertGroupByWalkerOutputs(extractor,
+				"{SQL={select={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=z, table_ref=null}}}, alias=s}}, from={table={alias=q, query={select={1={column={name=a, table_ref=null}, alias=x}, 2={column={name=b, table_ref=null}, alias=y}, 3={column={name=c, table_ref=null}, alias=z}}, from={table={alias=null, table=tab1}}}}}, groupby={option=DISTINCT, rollup={set={1={column={name=x, table_ref=null}}, 2={column={name=y, table_ref=null}}}}}}}",
+				"[s, x, y]",
+				"{}",
+				"{tab1={a=[[@14,38:38='a',<392>,1:38]], b=[[@18,46:46='b',<392>,1:46]], c=[[@22,54:54='c',<392>,1:54]]}}",
+				"{query0={x=[[@16,43:43='x',<392>,1:43], [@1,7:7='x',<392>,1:7], [@34,99:99='x',<392>,1:99]], y=[[@20,51:51='y',<392>,1:51], [@3,10:10='y',<392>,1:10], [@36,102:102='y',<392>,1:102]], z=[[@24,59:59='z',<392>,1:59], [@7,17:17='z',<392>,1:17]]}, query1={x=[[@1,7:7='x',<392>,1:7]], y=[[@3,10:10='y',<392>,1:10]], s=[[@10,23:23='s',<392>,1:23]]}}",
+				"{def_query1={query_dictionary={s=[[@10,23:23='s',<392>,1:23]], x=[[@1,7:7='x',<392>,1:7]], y=[[@3,10:10='y',<392>,1:10]]}, grouped_by=[{name=x, table_ref=query0}, {name=y, table_ref=query0}], def_query0={query_dictionary={x=[[@16,43:43='x',<392>,1:43], [@1,7:7='x',<392>,1:7], [@34,99:99='x',<392>,1:99]], y=[[@20,51:51='y',<392>,1:51], [@3,10:10='y',<392>,1:10], [@36,102:102='y',<392>,1:102]], z=[[@24,59:59='z',<392>,1:59], [@7,17:17='z',<392>,1:17]]}, table_dictionary={tab1={a=[[@14,38:38='a',<392>,1:38]], b=[[@18,46:46='b',<392>,1:46]], c=[[@22,54:54='c',<392>,1:54]]}}, interface={x=[{name=a, table_ref=tab1}], y=[{name=b, table_ref=tab1}], z=[{name=c, table_ref=tab1}]}}, interface={s=[{name=z, table_ref=query0}], x=[{name=x, table_ref=query0}], y=[{name=y, table_ref=query0}]}, table_alias={q=query0}}}");
 	}
 
 }
