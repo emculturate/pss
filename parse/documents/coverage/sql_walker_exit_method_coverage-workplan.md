@@ -1,6 +1,6 @@
 # SqlParseEventWalker `exit*` coverage — workplan
 
-**Status:** 🚧 Tier 1 exemplars largely complete (Spring 2026); **T1.8/T1.10** AST work open (tests red on purpose); **T1.9** grammar/exit removed (dead path).  
+**Status:** 🚧 Tier 1 exemplars largely complete (Spring 2026); **GROUP BY** rollup/cube/grouping sets AST + `SqlEventWalkerGroupByGroupingSetsTests`; **T1.9** grammar/exit removed (dead path).  
 **Branch context:** `Spring-2026-Extensions` (or follow-on)  
 **Goal:** At least one exemplar test per **main-grammar** `exit*` path so the full suite exercises every listener exit that corresponds to a user-visible SQL construct.
 
@@ -108,19 +108,19 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 **Status (Spring 2026):** `validateTableFunctionT1_7Test` in `SqlEventWalkerTableFunctionTests`.
 
-### T1.8 `exitRow_value_predicand_list` — `row_value_predicand_list` — **PARTIAL** (exit covered; AST follow-up)
+### T1.8 `exitRow_value_predicand_list` — `row_value_predicand_list` — **COMPLETE**
 
 - [x] Add **`GROUP BY (a, b)`** or grouping set using **parenthesized predicand list**.
 - **Verify:** `exitRow_value_predicand_list` covered.
 
-**Status (Spring 2026):** `groupByRowValuePredicandListT1_8Test` — JaCoCo hits exit; **test intentionally failing** until `groupby` AST is materialized.
+**Status (Spring 2026):** `groupByRowValuePredicandListT1_8Test` — `groupby={set={1=…, 2=…}}`; `grouped_by` populated.
 
-### T1.10 `exitOrdinary_grouping_set_list` — `ordinary_grouping_set_list` — **PARTIAL** (exit covered; AST follow-up)
+### T1.10 `exitOrdinary_grouping_set_list` — `ordinary_grouping_set_list` — **COMPLETE**
 
 - [x] Add **`ROLLUP`/`CUBE`** (or grouping sets) with **multiple** entries in `ordinary_grouping_set_list`.
 - **Verify:** `exitOrdinary_grouping_set_list` covered.
 
-**Status (Spring 2026):** `rollupOrdinaryGroupingSetListT1_10Test` — JaCoCo hits exit; **test intentionally failing** until rollup `groupby` drops `Type=` leak.
+**Status (Spring 2026):** `rollupOrdinaryGroupingSetListT1_10Test` plus **`SqlEventWalkerGroupByGroupingSetsTests`** (22 cases); grammar **`GROUPING SETS`**, lexer **`SETS`** before `Identifier`; `grouping_body` disambiguates `GROUP BY` vs positional `select_list`.
 
 ---
 

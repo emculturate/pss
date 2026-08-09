@@ -9915,10 +9915,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitGroupby_clause( SQLSelectParserParser.Groupby_clauseContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		int stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_GROUPED_BY_KEY);
-		walker.handlePushDown(ruleIndex);
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> clauseMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (clauseMap == null) {
+			return;
+		}
+		clauseMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		promoteSingleGroupingWrapperToGroupByRoot(clauseMap);
+		symbolTreeHelper.captureClauseDependencies(clauseMap, MUMBLE_GROUPED_BY_KEY);
+
+		Map<String, Object> wrapper = walker.collectNewRuleMap(ruleIndex, stackLevel);
+		wrapper.put(String.valueOf(ruleIndex), clauseMap);
 	}
 
 	@Override
@@ -10646,7 +10653,14 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void exitRow_value_predicand_list( SQLSelectParserParser.Row_value_predicand_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		walker.handleOneChild(ruleIndex);
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Map<String, Object> wrapped = wrapGroupingOperandsAsSet(copyNumberedGroupingOperands(subMap));
+		walker.collect(ruleIndex, stackLevel, wrapped);
 	}
 
 	@Override
@@ -11344,6 +11358,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitGrouping_body( SQLSelectParserParser.Grouping_bodyContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		walker.handleListList(ruleIndex, parentRuleIndex);
+	}
+
+	@Override
 	public void exitGrouping_element_list( SQLSelectParserParser.Grouping_element_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -11358,19 +11379,69 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitRollup_list( SQLSelectParserParser.Rollup_listContext ctx) {
+		finishCombinatorGroupingElement(ctx.getRuleIndex(), MUMBLE_ROLLUP_KEY);
+	}
+
+	@Override
+	public void exitCube_list( SQLSelectParserParser.Cube_listContext ctx) {
+		finishCombinatorGroupingElement(ctx.getRuleIndex(), MUMBLE_CUBE_KEY);
+	}
+
+	@Override
+	public void exitGrouping_sets_list( SQLSelectParserParser.Grouping_sets_listContext ctx) {
+		finishCombinatorGroupingElement(ctx.getRuleIndex(), MUMBLE_GROUPING_SETS_KEY);
+	}
+
+	@Override
+	public void exitEmpty_grouping_set( SQLSelectParserParser.Empty_grouping_setContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> emptySet = wrapGroupingOperandsAsSet(new LinkedHashMap<String, Object>());
+		walker.collect(ruleIndex, stackLevel, emptySet);
+	}
+
+	@Override
 	public void exitOrdinary_grouping_set_list( SQLSelectParserParser.Ordinary_grouping_set_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
-		walker.handleOneChild(ruleIndex);
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		}
 	}
 
 	@Override
 	public void exitOrdinary_grouping_set( SQLSelectParserParser.Ordinary_grouping_setContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
-		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_grouping_element))
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_grouping_element)) {
 			walker.handleOneChild(ruleIndex);
-		else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_ordinary_grouping_set_list))
-			walker.handleListItem(ruleIndex, parentRuleIndex);
+			return;
+		}
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object listItem;
+		if (isUnderGroupingSetsList(ctx)) {
+			listItem = normalizeOrdinaryGroupingSetOperandForList(liftGroupingSetOperand(subMap));
+		} else if (ctx.LEFT_PAREN() != null) {
+			Map<String, Object> lifted = liftGroupingSetOperand(subMap);
+			if (lifted.containsKey(MUMBLE_SET_KEY)) {
+				listItem = lifted;
+			} else {
+				listItem = normalizeOrdinaryGroupingSetOperandForList(lifted);
+			}
+		} else if (subMap.size() == 1 && subMap.containsKey("1")) {
+			listItem = unwrapGroupingSetLeafOperand(subMap.get("1"));
+		} else {
+			listItem = subMap;
+		}
+		appendGroupingOperandToParentList(parentRuleIndex, listItem);
+		walker.asTree.put("SKIP", "TRUE");
 	}
 
 	@Override
@@ -11532,6 +11603,144 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		// Add item to parent map
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
+	}
+
+	private boolean isUnderGroupingSetsList(ParserRuleContext ctx) {
+		for (ParserRuleContext parent = ctx.getParent(); parent != null; parent = parent.getParent()) {
+			if (parent.getRuleIndex() == SQLSelectParserParser.RULE_grouping_sets_list) {
+				return true;
+			}
+			if (parent.getRuleIndex() == SQLSelectParserParser.RULE_rollup_list
+					|| parent.getRuleIndex() == SQLSelectParserParser.RULE_cube_list) {
+				return false;
+			}
+		}
+		return false;
+	}
+
+	private void appendGroupingOperandToParentList(int parentRuleIndex, Object operandMap) {
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		Map<String, Object> parentMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
+		int next = 1;
+		while (parentMap.containsKey(String.valueOf(next))) {
+			next++;
+		}
+		parentMap.put(String.valueOf(next), operandMap);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> liftGroupingSetOperand(Map<String, Object> subMap) {
+		if (subMap.containsKey(MUMBLE_SET_KEY)) {
+			return subMap;
+		}
+		if (subMap.size() == 1 && subMap.get("1") instanceof Map<?, ?> innerObj) {
+			Map<String, Object> inner = (Map<String, Object>) innerObj;
+			if (inner.containsKey(MUMBLE_SET_KEY)) {
+				return inner;
+			}
+		}
+		return subMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object unwrapGroupingSetLeafOperand(Object operand) {
+		if (!(operand instanceof Map<?, ?> mapObj)) {
+			return operand;
+		}
+		Map<String, Object> map = (Map<String, Object>) mapObj;
+		if (map.containsKey(MUMBLE_PARENTHESES_KEY) && map.size() == 1) {
+			return map.get(MUMBLE_PARENTHESES_KEY);
+		}
+		return operand;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> normalizeOrdinaryGroupingSetOperandForList(Map<String, Object> subMap) {
+		subMap = liftGroupingSetOperand(subMap);
+		if (subMap.containsKey(MUMBLE_SET_KEY)) {
+			return subMap;
+		}
+		Map<String, Object> inner = new LinkedHashMap<String, Object>();
+		if (subMap.size() == 1 && subMap.containsKey("1")) {
+			inner.put("1", unwrapGroupingSetLeafOperand(subMap.get("1")));
+		} else {
+			for (Map.Entry<String, Object> entry : subMap.entrySet()) {
+				inner.put(entry.getKey(), unwrapGroupingSetLeafOperand(entry.getValue()));
+			}
+		}
+		Map<String, Object> wrapped = new LinkedHashMap<String, Object>();
+		wrapped.put(MUMBLE_SET_KEY, inner);
+		return wrapped;
+	}
+
+	private static Map<String, Object> copyNumberedGroupingOperands(Map<String, Object> subMap) {
+		Map<String, Object> numbered = new LinkedHashMap<String, Object>();
+		if (subMap == null) {
+			return numbered;
+		}
+		for (int index = 1; subMap.containsKey(String.valueOf(index)); index++) {
+			numbered.put(String.valueOf(index), subMap.get(String.valueOf(index)));
+		}
+		return numbered;
+	}
+
+	private static Map<String, Object> wrapGroupingOperandsAsSet(Map<String, Object> numberedOperands) {
+		Map<String, Object> setNode = new LinkedHashMap<String, Object>();
+		setNode.put(MUMBLE_SET_KEY, numberedOperands);
+		return setNode;
+	}
+
+	private void finishCombinatorGroupingElement(int ruleIndex, String combinatorKey) {
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap = peelSingleChildGroupingWrapper(subMap);
+		Map<String, Object> numbered = copyNumberedGroupingOperands(subMap);
+		Map<String, Object> combinatorNode = new LinkedHashMap<String, Object>();
+		combinatorNode.put(combinatorKey, wrapGroupingOperandsAsSet(numbered));
+		walker.collect(ruleIndex, stackLevel, combinatorNode);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> peelSingleChildGroupingWrapper(Map<String, Object> subMap) {
+		if (subMap == null || subMap.size() != 1 || !subMap.containsKey("1")) {
+			return subMap;
+		}
+		Object inner = subMap.get("1");
+		if (!(inner instanceof Map<?, ?> innerMapObj)) {
+			return subMap;
+		}
+		Map<String, Object> innerMap = (Map<String, Object>) innerMapObj;
+		if (innerMap.containsKey("1")
+				|| innerMap.containsKey(MUMBLE_SET_KEY)
+				|| innerMap.containsKey(MUMBLE_ROLLUP_KEY)
+				|| innerMap.containsKey(MUMBLE_CUBE_KEY)
+				|| innerMap.containsKey(MUMBLE_GROUPING_SETS_KEY)) {
+			return innerMap;
+		}
+		return subMap;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void promoteSingleGroupingWrapperToGroupByRoot(Map<String, Object> groupByMap) {
+		if (groupByMap == null || groupByMap.size() != 1) {
+			return;
+		}
+		Object soleEntry = groupByMap.get("1");
+		if (!(soleEntry instanceof Map<?, ?> soleMapObj)) {
+			return;
+		}
+		Map<String, Object> soleMap = (Map<String, Object>) soleMapObj;
+		if (soleMap.containsKey(MUMBLE_SET_KEY)
+				|| soleMap.containsKey(MUMBLE_ROLLUP_KEY)
+				|| soleMap.containsKey(MUMBLE_CUBE_KEY)
+				|| soleMap.containsKey(MUMBLE_GROUPING_SETS_KEY)) {
+			groupByMap.clear();
+			groupByMap.putAll(soleMap);
+		}
 	}
 
 }

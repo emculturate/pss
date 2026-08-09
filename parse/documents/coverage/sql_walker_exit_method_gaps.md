@@ -48,7 +48,7 @@
 | ~~`exitOther_trim_operands`~~ | — | **Removed** — no path from `sql()`; grammar alt deleted |
 | `exitOrdinary_grouping_set_list` | `rollupOrdinaryGroupingSetListT1_10Test` | **PARTIAL** — failing golden until rollup `Type=` fixed |
 
-**Tier 1 open:** T1.8/T1.10 AST work (tests left red on purpose).
+**Tier 1 open:** none (T1.8/T1.10 GROUP BY AST complete; see `SqlEventWalkerGroupByGroupingSetsTests`).
 
 ### Tier 2.8 complete — UNPIVOT `relational_modifier_in_item`
 

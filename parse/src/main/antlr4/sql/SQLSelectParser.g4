@@ -1781,7 +1781,12 @@ limit_clause
 */
 
 groupby_clause
-  : GROUP BY (grouping_element_list | select_list)
+  : GROUP BY grouping_body
+  ;
+
+grouping_body
+  : grouping_element_list
+  | select_list
   ;
 
 grouping_element_list
@@ -1791,8 +1796,13 @@ grouping_element_list
 grouping_element
   : rollup_list
   | cube_list
+  | grouping_sets_list
   | empty_grouping_set
   | ordinary_grouping_set
+  ;
+
+grouping_sets_list
+  : GROUPING SETS LEFT_PAREN ordinary_grouping_set_list RIGHT_PAREN
   ;
 
 ordinary_grouping_set_list
@@ -3321,6 +3331,7 @@ EPOCH_SECOND : E P O C H UNDERLINE S E C O N D;
   (e.g. after DATE) — that renumbers hundreds of legacy token IDs in walker test goldens.
 */
 DATE_PART : [Dd] [Aa] [Tt] [Ee] '_' [Pp] [Aa] [Rr] [Tt] ;
+SETS : S E T S;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
