@@ -2368,6 +2368,69 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getSymbolTable().toString());
 	}
 
+	// T2.9 exitWith_clause — multi-CTE list, substitution tuple CTE (no parens), nested WITH in CTE body.
+	@Test
+	public void withClauseThreeChainedCtesT2_9Test() {
+		final String query = "WITH a AS (SELECT 1 AS x), b AS (SELECT x FROM a), c AS (SELECT x FROM b) SELECT x FROM c";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={select={1={alias=x, literal=1}}}, alias=a}, 2={cte={select={1={column={name=x, table_ref=null}}}, from={table={alias=null, table=a}}}, alias=b}, 3={cte={select={1={column={name=x, table_ref=null}}}, from={table={alias=null, table=b}}}, alias=c}}, query={select={1={column={name=x, table_ref=null}}}, from={table={alias=null, table=c}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={x=[[@7,23:23='x',<392>,1:23], [@14,40:40='x',<392>,1:40]]}, query1={x=[[@14,40:40='x',<392>,1:40], [@23,64:64='x',<392>,1:64]]}, query2={x=[[@23,64:64='x',<392>,1:64], [@28,81:81='x',<392>,1:81]]}, query3={x=[[@28,81:81='x',<392>,1:81]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query3={context_list={a=query0, b=query1, c=query2}, query_dictionary={x=[[@28,81:81='x',<392>,1:81]]}, def_query1={context_list={a=query0}, query_dictionary={x=[[@14,40:40='x',<392>,1:40], [@23,64:64='x',<392>,1:64]]}, interface={x=[{name=x, table_ref=query0}]}, table_alias={a=query0}}, def_query0={query_dictionary={x=[[@7,23:23='x',<392>,1:23], [@14,40:40='x',<392>,1:40]]}, interface={x=[]}}, interface={x=[{name=x, table_ref=query2}]}, table_alias={a=query0, b=query1, c=query2}, def_query2={context_list={a=query0, b=query1}, query_dictionary={x=[[@23,64:64='x',<392>,1:64], [@28,81:81='x',<392>,1:81]]}, interface={x=[{name=x, table_ref=query1}]}, table_alias={a=query0, b=query1}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void withClauseSubstitutionTupleCteT2_9Test() {
+		final String query = "WITH staged AS <stg_src> SELECT 1 AS n FROM staged";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={substitution={name=<stg_src>, type=tuple}}, alias=staged}}, query={select={1={alias=n, literal=1}}, from={table={alias=null, table=staged}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[n]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{<stg_src>=tuple}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query1={n=[[@7,37:37='n',<392>,1:37]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query1={query_dictionary={n=[[@7,37:37='n',<392>,1:37]]}, interface={n=[]}, table_alias={staged=query0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void withClauseNestedCteBodyT2_9Test() {
+		final String query = "WITH outer_cte AS (WITH inner_cte AS (SELECT 1 AS n) SELECT n FROM inner_cte) SELECT n FROM outer_cte";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={with={1={cte={select={1={alias=n, literal=1}}}, alias=inner_cte}}, query={select={1={column={name=n, table_ref=null}}}, from={table={alias=null, table=inner_cte}}}}, alias=outer_cte}}, query={select={1={column={name=n, table_ref=null}}}, from={table={alias=null, table=outer_cte}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[n]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{}", extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={n=[[@11,50:50='n',<392>,1:50], [@14,60:60='n',<392>,1:60]]}, query1={n=[[@14,60:60='n',<392>,1:60], [@19,85:85='n',<392>,1:85]]}, query2={n=[[@19,85:85='n',<392>,1:85]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query2={context_list={outer_cte=query1}, query_dictionary={n=[[@19,85:85='n',<392>,1:85]]}, def_query1={context_list={inner_cte=query0}, query_dictionary={n=[[@14,60:60='n',<392>,1:60], [@19,85:85='n',<392>,1:85]]}, def_query0={query_dictionary={n=[[@11,50:50='n',<392>,1:50], [@14,60:60='n',<392>,1:60]]}, interface={n=[]}}, interface={n=[{name=n, table_ref=query0}]}, table_alias={inner_cte=query0}}, interface={n=[{name=n, table_ref=query1}]}, table_alias={outer_cte=query1}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 	@Test
 	public void correlatedScalarPredicandMiddleCteReferencesFirstCteTest() {
 		final String query = "WITH w1 AS (SELECT aa.a1, aa.a2 FROM tab_a AS aa),"

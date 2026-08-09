@@ -3104,15 +3104,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				newMap.put(String.valueOf(withIndex++), child);
 			}
 		}
-		if (!subMap.isEmpty()) {
-			String[] keys = subMap.keySet().toArray(new String[0]);
-			for (String key : keys) {
-				Object child = subMap.remove(key);
-				if (child != null) {
-					newMap.put(String.valueOf(withIndex++), child);
-				}
-			}
-		}
 
 	}
 
