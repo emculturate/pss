@@ -1,6 +1,6 @@
 # SqlParseEventWalker `exit*` coverage — workplan
 
-**Status:** 🚧 Tier 1 exemplars largely complete (Spring 2026); **GROUP BY** rollup/cube/grouping sets AST + `SqlEventWalkerGroupByGroupingSetsTests`; **T1.9** grammar/exit removed (dead path).  
+**Status:** ✅ Tier 1 exemplars complete (Spring 2026); **GROUP BY** rollup/cube/grouping sets AST + `SqlEventWalkerGroupByGroupingSetsTests`; **T1.9** grammar/exit removed (dead path); **T1.11** empty `GROUP BY ()`.  
 **Branch context:** `Spring-2026-Extensions` (or follow-on)  
 **Goal:** At least one exemplar test per **main-grammar** `exit*` path so the full suite exercises every listener exit that corresponds to a user-visible SQL construct.
 
@@ -123,6 +123,13 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 **Status (Spring 2026):** `rollupOrdinaryGroupingSetListT1_10Test` plus **`SqlEventWalkerGroupByGroupingSetsTests`** (22 cases); grammar **`GROUPING SETS`**, lexer **`SETS`** before `Identifier`; `grouping_body` disambiguates `GROUP BY` vs positional `select_list`.
 
 **Note:** JaCoCo target is `exitOrdinary_grouping_set_list`; most behavioral coverage is shared with **T1.8** (parenthesized `row_value_predicand_list` inside `ordinary_grouping_set`). The walker does not emit a literal `ordinary_grouping_set_list` node—operands fold into `rollup` / `cube` / `grouping_sets` / `set` under `groupby`. Snowflake **`GROUP BY ALL`** and Postgres **`GROUP BY DISTINCT`** use `groupby={option=…}` (optional `set={…}` for explicit DISTINCT columns).
+
+### T1.11 `exitEmpty_grouping_set` — `empty_grouping_set` — **COMPLETE**
+
+- [x] Add **`GROUP BY ()`** (empty grouping element via `empty_grouping_set`).
+- **Verify:** `exitEmpty_grouping_set` covered; AST `groupby={set={}}`; `grouped_by` empty.
+
+**Status (Spring 2026):** `emptyGroupingSetT1_11Test` in `SqlEventWalkerGroupByGroupingSetsTests`. Grammar path is top-level `()` (`grouping_element` → `empty_grouping_set`), not `GROUPING SETS (())` (inner `()` requires a non-empty `row_value_predicand_list` today).
 
 ---
 
@@ -433,7 +440,7 @@ Method executed; **1–2 missed lines** and **≥85%** line coverage. Optional b
 
 ## Execution order (recommended)
 
-1. **Tier 1** (10 items) — largest holes; unblocks dialect and feature families.
+1. **Tier 1** — complete (T1.1–T1.8, T1.10–T1.11; T1.9 removed).
 2. **Tier 2** table functions + pivot/unpivot + Jinja (T2.1–T2.12, T2.21–T2.22) — aligns with generator and Snowflake surface.
 3. **Tier 2** DML/DDL/script (remaining T2.x).
 4. **Tier 3** — as time permits or when touching nearby tests.

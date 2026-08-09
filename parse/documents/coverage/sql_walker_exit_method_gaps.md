@@ -10,9 +10,9 @@
 | Metric | Count |
 |--------|------:|
 | `exit*` methods | 277 |
-| **Never executed** (0 lines covered by full test suite) | **10** |
-| Executed with **some** missed lines (partial) | 70 |
-| Fully line-covered (0 missed lines in JaCoCo) | 197 |
+| **Never executed** (0 lines covered by full test suite) | **0** |
+| Executed with **some** missed lines (partial) | 72 |
+| Fully line-covered (0 missed lines in JaCoCo) | 211 |
 
 **Interpretation:** A method with **0 covered lines** has no test that walks that grammar alternative end-to-end. **Partial** methods are hit by at least one test but still have branches or error paths uncovered — useful for a second pass, not listed exhaustively below.
 
@@ -44,11 +44,12 @@
 | `exitTable_argument_boolean` | `inferSchemaIgnoreCaseFalseTableArgumentBooleanT1_5Test` | **COMPLETE** — `ignore_case=FALSE` scalar |
 | `exitInfer_schema_files_argument` | `inferSchemaFilesArgumentT1_6Test` | AST clean |
 | `exitValidate_table_function` | `validateTableFunctionT1_7Test` | AST clean |
-| `exitRow_value_predicand_list` | `groupByRowValuePredicandListT1_8Test` | **PARTIAL** — failing golden until `groupby` fixed |
+| `exitRow_value_predicand_list` | `groupByRowValuePredicandListT1_8Test` | **COMPLETE** |
 | ~~`exitOther_trim_operands`~~ | — | **Removed** — no path from `sql()`; grammar alt deleted |
-| `exitOrdinary_grouping_set_list` | `rollupOrdinaryGroupingSetListT1_10Test` | **PARTIAL** — failing golden until rollup `Type=` fixed |
+| `exitOrdinary_grouping_set_list` | `rollupOrdinaryGroupingSetListT1_10Test` | **COMPLETE** — plus `SqlEventWalkerGroupByGroupingSetsTests` |
+| `exitEmpty_grouping_set` | `emptyGroupingSetT1_11Test` | **COMPLETE** — `GROUP BY ()` → `groupby={set={}}` |
 
-**Tier 1 open:** none (T1.8/T1.10 GROUP BY AST complete; see `SqlEventWalkerGroupByGroupingSetsTests`).
+**Tier 1 open:** none.
 
 ### Tier 2.8 complete — UNPIVOT `relational_modifier_in_item`
 

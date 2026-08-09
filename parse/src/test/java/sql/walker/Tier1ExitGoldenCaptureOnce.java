@@ -2,7 +2,7 @@ package sql.walker;
 
 import sql.SQLSelectParserParser;
 
-/** Capture goldens for Tier 1 exit* coverage (T1.5–T1.10). */
+/** Capture goldens for Tier 1 exit* coverage (T1.5–T1.11). */
 public class Tier1ExitGoldenCaptureOnce extends AbstractSqlParseEventWalkerTest {
 
 	public static void main(String[] args) throws Exception {
@@ -19,6 +19,8 @@ public class Tier1ExitGoldenCaptureOnce extends AbstractSqlParseEventWalkerTest 
 						"SELECT a, b, SUM(c) FROM tab1 GROUP BY (a, b)" },
 				{ "rollupOrdinaryGroupingSetListT1_10Test",
 						"SELECT a, b, c, SUM(d) FROM tab1 GROUP BY ROLLUP((a, b), c)" },
+				{ "emptyGroupingSetT1_11Test",
+						"SELECT a, SUM(b) AS s FROM tab1 GROUP BY ()" },
 		};
 		Tier1ExitGoldenCaptureOnce runner = new Tier1ExitGoldenCaptureOnce();
 		for (String[] c : cases) {

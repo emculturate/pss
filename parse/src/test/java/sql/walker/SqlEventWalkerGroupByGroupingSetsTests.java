@@ -517,4 +517,21 @@ public class SqlEventWalkerGroupByGroupingSetsTests extends AbstractSqlParseEven
 				"{def_query1={query_dictionary={s=[[@10,23:23='s',<392>,1:23]], x=[[@1,7:7='x',<392>,1:7]], y=[[@3,10:10='y',<392>,1:10]]}, grouped_by=[{name=x, table_ref=query0}, {name=y, table_ref=query0}], def_query0={query_dictionary={x=[[@16,43:43='x',<392>,1:43], [@1,7:7='x',<392>,1:7], [@34,99:99='x',<392>,1:99]], y=[[@20,51:51='y',<392>,1:51], [@3,10:10='y',<392>,1:10], [@36,102:102='y',<392>,1:102]], z=[[@24,59:59='z',<392>,1:59], [@7,17:17='z',<392>,1:17]]}, table_dictionary={tab1={a=[[@14,38:38='a',<392>,1:38]], b=[[@18,46:46='b',<392>,1:46]], c=[[@22,54:54='c',<392>,1:54]]}}, interface={x=[{name=a, table_ref=tab1}], y=[{name=b, table_ref=tab1}], z=[{name=c, table_ref=tab1}]}}, interface={s=[{name=z, table_ref=query0}], x=[{name=x, table_ref=query0}], y=[{name=y, table_ref=query0}]}, table_alias={q=query0}}}");
 	}
 
+	/** Walker coverage T1.11 — {@code exitEmpty_grouping_set} via {@code GROUP BY ()} (empty grouping element). */
+	@Test
+	public void emptyGroupingSetT1_11Test() {
+		final String query = "SELECT a, SUM(b) AS s FROM tab1 GROUP BY ()";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertGroupByWalkerOutputs(extractor,
+				"{SQL={select={1={column={name=a, table_ref=null}}, 2={function={function_name=SUM, qualifier=null, parameters={column={name=b, table_ref=null}}}, alias=s}}, from={table={alias=null, table=tab1}}, groupby={set={}}}}",
+				"[a, s]",
+				"{}",
+				"{tab1={a=[[@1,7:7='a',<392>,1:7]], b=[[@5,14:14='b',<392>,1:14]]}}",
+				"{query0={a=[[@1,7:7='a',<392>,1:7]], s=[[@8,20:20='s',<392>,1:20]]}}",
+				"{def_query0={query_dictionary={a=[[@1,7:7='a',<392>,1:7]], s=[[@8,20:20='s',<392>,1:20]]}, table_dictionary={tab1={a=[[@1,7:7='a',<392>,1:7]], b=[[@5,14:14='b',<392>,1:14]]}}, grouped_by=[], interface={a=[{name=a, table_ref=tab1}], s=[{name=b, table_ref=tab1}]}}}");
+	}
+
 }

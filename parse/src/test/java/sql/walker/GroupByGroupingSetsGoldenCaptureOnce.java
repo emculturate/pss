@@ -54,6 +54,7 @@ public class GroupByGroupingSetsGoldenCaptureOnce extends AbstractSqlParseEventW
 					"SELECT x, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY x, ROLLUP(y, z)" },
 			{ "groupByDistinctRollupSubquery",
 					"SELECT x, y, SUM(z) AS s FROM (SELECT a AS x, b AS y, c AS z FROM tab1) q GROUP BY DISTINCT ROLLUP(x, y)" },
+			{ "emptyGroupingSetT1_11Test", "SELECT a, SUM(b) AS s FROM tab1 GROUP BY ()" },
 	};
 
 	public static void main(String[] args) throws Exception {
