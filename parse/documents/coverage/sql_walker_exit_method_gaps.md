@@ -65,12 +65,12 @@ Methods with **≥3 missed lines** or **<85%** line coverage (19 total on checkl
 
 | ID | `exit*` | Lines (cov/total) | % | Missed |
 |----|---------|-------------------|---|--------|
-| T2.1 | `exitTable_argument_literal` | 6/20 | 30% | 14 |
 | T2.2 | `exitInsert_target_table_primary` | 41/51 | 80% | 10 |
 | T2.4 | `exitJinja_arg` | 15/24 | 62% | 9 |
 | T2.5 | `exitJinja_function_call` | 25/34 | 74% | 9 |
 | T2.6 | `exitSubquery` | 5/13 | 38% | 8 |
 | T2.7 | `exitStatic_data_type_name` | 20/27 | 74% | 7 |
+| T2.1 | `exitTable_argument_literal` | 14/20 | 70% | 6 |
 | T2.8 | `exitRelational_modifier_in_item` | 24/30 | 80% | 6 |
 | T2.13 | `exitEveryRule` | 25/31 | 81% | 6 |
 | T2.9 | `exitWith_clause` | 14/19 | 74% | 5 |

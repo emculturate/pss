@@ -1060,9 +1060,9 @@ flatten_argument
   ;
 
 flatten_argument_value
-  : value_expression
-  | table_argument_literal
+  : table_argument_literal
   | table_argument_boolean
+  | value_expression
   ;
 
 flatten_function_name

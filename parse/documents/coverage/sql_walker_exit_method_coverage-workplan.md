@@ -139,9 +139,10 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt;85%** line coverage on that method. **19** methods meet this bar today (see sorted [gaps table](sql_walker_exit_method_gaps.md#tier-2--substantial-gaps-jacoco-aug-2026)). Checklist items **T2.12, T2.14, T2.21–T2.23, T2.25** now fall under **Tier 3** thresholds but keep their IDs for traceability.
 
-### T2.1 `exitTable_argument_literal` — `table_argument_literal` (JaCoCo Aug 2026: 6/20 lines, 30%, missed=14)
+### T2.1 `exitTable_argument_literal` — `table_argument_literal` (JaCoCo Aug 2026: 14/20 lines, 70%, missed=6)
 
-- [ ] Exercise table-function **literal** arguments (string/number) not yet hit; extend `SqlEventWalkerTableFunctionTests` or equivalent.
+- [x] Exemplars: `inferSchemaLiteralsAndNumericT2_1Test`, `flattenModeArrayLiteralT2_1Test`, `flattenPathStringLiteralT2_1Test` in `SqlEventWalkerTableFunctionTests` (regen: `TableFunctionArgumentLiteralGoldenCaptureOnce`). Numeric/string kwargs scalarize (`max_file_count=10`, `path='a'`).
+- [ ] Close remaining JaCoCo branches if any (defensive early returns).
 
 ### T2.2 `exitInsert_target_table_primary` — `insert_target_table_primary` (JaCoCo Aug 2026: 41/51 lines, 80%, missed=10)
 

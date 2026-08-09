@@ -8232,7 +8232,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object argumentValue = subMap.remove("1");
+		Object argumentValue = promoteTableFunctionKeywordArgumentValue(subMap.remove("1"));
 		Map<String, Object> argument = new LinkedHashMap<String, Object>();
 
 		if (ctx.INPUT() != null) {
@@ -8272,20 +8272,15 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object scalar;
 		if (subMap.isEmpty()) {
-			subMap.put(MUMBLE_LITERAL_KEY, ctx.getText());
-			return;
-		}
-
-		Object child = subMap.remove("1");
-		subMap.clear();
-		if (child instanceof Map<?, ?> childMapObj) {
-			subMap.putAll((Map<String, Object>) childMapObj);
-		} else if (child != null) {
-			subMap.put(MUMBLE_LITERAL_KEY, child);
+			scalar = ctx.getText();
 		} else {
-			subMap.put(MUMBLE_LITERAL_KEY, ctx.getText());
+			Object child = subMap.remove("1");
+			scalar = coerceTableArgumentLiteralScalar(child, ctx.getText());
 		}
+		subMap.clear();
+		subMap.put(MUMBLE_LITERAL_KEY, scalar);
 	}
 
 	@Override
@@ -8433,7 +8428,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
-		Object argumentValue = subMap.remove("1");
+		Object argumentValue = promoteTableFunctionKeywordArgumentValue(subMap.remove("1"));
 		Map<String, Object> argument = new LinkedHashMap<String, Object>();
 
 		if (ctx.LOCATION() != null) {
@@ -10853,6 +10848,42 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return trimmed.substring(1, trimmed.length() - 1);
 		}
 		return trimmed;
+	}
+
+	/** Unwrap {@code signed_numeric_literal} / nested maps for {@code table_argument_literal}. */
+	@SuppressWarnings("unchecked")
+	private static Object coerceTableArgumentLiteralScalar(Object child, String fallbackText) {
+		if (child instanceof Map<?, ?> childMapObj) {
+			Map<String, Object> childMap = new LinkedHashMap<>((Map<String, Object>) childMapObj);
+			childMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			if (childMap.containsKey(MUMBLE_LITERAL_KEY)) {
+				return childMap.get(MUMBLE_LITERAL_KEY);
+			}
+			if (childMap.containsKey("1")) {
+				return coerceTableArgumentLiteralScalar(childMap.get("1"), fallbackText);
+			}
+			if (childMap.size() == 1) {
+				return childMap.values().iterator().next();
+			}
+		}
+		if (child != null) {
+			return child;
+		}
+		return fallbackText;
+	}
+
+	/** Scalarize {@code {literal=…}} kwargs on Snowflake table functions (FLATTEN / INFER_SCHEMA). */
+	@SuppressWarnings("unchecked")
+	private static Object promoteTableFunctionKeywordArgumentValue(Object argumentValue) {
+		if (!(argumentValue instanceof Map<?, ?> mapObj)) {
+			return argumentValue;
+		}
+		Map<String, Object> map = (Map<String, Object>) mapObj;
+		map.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (map.size() == 1 && map.containsKey(MUMBLE_LITERAL_KEY)) {
+			return map.get(MUMBLE_LITERAL_KEY);
+		}
+		return argumentValue;
 	}
 
 	@SuppressWarnings("unchecked")

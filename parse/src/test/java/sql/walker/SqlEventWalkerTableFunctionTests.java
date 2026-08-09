@@ -535,7 +535,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 		Assert.assertEquals("AST is wrong",
-				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}, outer={literal=TRUE}}}}}}}}}",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=t}}, 2={modifier=LATERAL}, 3={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}, outer=TRUE}}}}}}}}",
 				extractor.getAsTree().toString());
 		Assert.assertEquals("Interface is wrong", "[*]",
 				extractor.getInterface().toString());
@@ -1653,6 +1653,107 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		Assert.assertEquals(
 				"Symbol Table is wrong",
 				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={my_db.my_schema.my_table={*=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T2.1 — {@code exitTable_argument_literal} via INFER_SCHEMA string + numeric kwargs. */
+	@Test
+	public void inferSchemaLiteralsAndNumericT2_1Test() {
+		final String query =
+				"SELECT * FROM TABLE(INFER_SCHEMA("
+						+ "LOCATION => '@db.schema.stage/path/', "
+						+ "FILE_FORMAT => 'JSON', "
+						+ "MAX_FILE_COUNT => 10, "
+						+ "KIND => 'JSON'))";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table_function={function_name=INFER_SCHEMA, parameters={max_file_count=10, kind='JSON', location='@db.schema.stage/path/', file_format='JSON'}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T2.1 — {@code exitTable_argument_literal} via FLATTEN {@code mode => 'ARRAY'}. */
+	@Test
+	public void flattenModeArrayLiteralT2_1Test() {
+		final String query =
+				"SELECT * FROM TABLE(FLATTEN("
+						+ "input => PARSE_JSON('[1,2]'), "
+						+ "mode => 'ARRAY')) f";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=f, table_function={function_name=FLATTEN, parameters={mode='ARRAY', input={function={parameters={1={literal='[1,2]'}}, function_name=PARSE_JSON}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{flatten0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T2.1 — {@code exitTable_argument_literal} via FLATTEN {@code path => 'a'}. */
+	@Test
+	public void flattenPathStringLiteralT2_1Test() {
+		final String query =
+				"SELECT * FROM TABLE(FLATTEN("
+						+ "input => PARSE_JSON('{\"a\":1}'), "
+						+ "path => 'a')) f";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table={alias=f, table_function={function_name=FLATTEN, parameters={input={function={parameters={1={literal='{\"a\":1}'}}, function_name=PARSE_JSON}}, path='a'}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{flatten0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={flatten0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={f=flatten0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
