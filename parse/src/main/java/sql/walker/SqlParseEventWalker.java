@@ -9921,6 +9921,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			return;
 		}
 		clauseMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		sanitizeGroupByOptionClauseMap(clauseMap);
 		promoteSingleGroupingWrapperToGroupByRoot(clauseMap);
 		symbolTreeHelper.captureClauseDependencies(clauseMap, MUMBLE_GROUPED_BY_KEY);
 
@@ -11365,6 +11366,31 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitGroupby_all_option( SQLSelectParserParser.Groupby_all_optionContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> optionNode = new LinkedHashMap<String, Object>();
+		optionNode.put(MUMBLE_GROUPBY_OPTION_KEY, MUMBLE_GROUPBY_OPTION_ALL);
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		walker.getNodeMap(parentRuleIndex, parentStackLevel).putAll(optionNode);
+		walker.removeNodeMap(ruleIndex, stackLevel);
+	}
+
+	@Override
+	public void exitGroupby_distinct_body( SQLSelectParserParser.Groupby_distinct_bodyContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		subMap.put(MUMBLE_GROUPBY_OPTION_KEY, MUMBLE_GROUPBY_OPTION_DISTINCT);
+		foldPlainNumberedOperandsIntoSet(subMap);
+	}
+
+	@Override
 	public void exitGrouping_element_list( SQLSelectParserParser.Grouping_element_listContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -11688,6 +11714,32 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> setNode = new LinkedHashMap<String, Object>();
 		setNode.put(MUMBLE_SET_KEY, numberedOperands);
 		return setNode;
+	}
+
+	/** For {@code GROUP BY DISTINCT} with a plain column list, emit {@code set={1=…, 2=…}} beside {@code option=DISTINCT}. */
+	private static void foldPlainNumberedOperandsIntoSet(Map<String, Object> groupByMap) {
+		Map<String, Object> numbered = copyNumberedGroupingOperands(groupByMap);
+		if (numbered.isEmpty()) {
+			return;
+		}
+		for (String key : numbered.keySet()) {
+			groupByMap.remove(key);
+		}
+		groupByMap.put(MUMBLE_SET_KEY, numbered);
+	}
+
+	/** Drop stray lexer keyword leaves (e.g. {@code 2=ALL}) beside {@code option=ALL|DISTINCT}. */
+	private static void sanitizeGroupByOptionClauseMap(Map<String, Object> groupByMap) {
+		if (groupByMap == null || !groupByMap.containsKey(MUMBLE_GROUPBY_OPTION_KEY)) {
+			return;
+		}
+		String option = String.valueOf(groupByMap.get(MUMBLE_GROUPBY_OPTION_KEY));
+		groupByMap.entrySet().removeIf(entry -> {
+			if (!entry.getKey().matches("\\d+")) {
+				return false;
+			}
+			return option.equals(String.valueOf(entry.getValue()));
+		});
 	}
 
 	private void finishCombinatorGroupingElement(int ruleIndex, String combinatorKey) {

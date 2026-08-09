@@ -122,6 +122,8 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 **Status (Spring 2026):** `rollupOrdinaryGroupingSetListT1_10Test` plus **`SqlEventWalkerGroupByGroupingSetsTests`** (22 cases); grammar **`GROUPING SETS`**, lexer **`SETS`** before `Identifier`; `grouping_body` disambiguates `GROUP BY` vs positional `select_list`.
 
+**Note:** JaCoCo target is `exitOrdinary_grouping_set_list`; most behavioral coverage is shared with **T1.8** (parenthesized `row_value_predicand_list` inside `ordinary_grouping_set`). The walker does not emit a literal `ordinary_grouping_set_list` node—operands fold into `rollup` / `cube` / `grouping_sets` / `set` under `groupby`. Snowflake **`GROUP BY ALL`** and Postgres **`GROUP BY DISTINCT`** use `groupby={option=…}` (optional `set={…}` for explicit DISTINCT columns).
+
 ---
 
 ## Tier 2 — Partial coverage (substantial gaps)
@@ -226,7 +228,7 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 ### T2.23 `exitOrdinary_grouping_set` — `ordinary_grouping_set` (~71%)
 
-- [ ] Single grouping set unit paths paired with T1.8/T1.10.
+- [x] Single grouping set unit paths paired with T1.8/T1.10 (`SqlEventWalkerGroupByGroupingSetsTests`, T1.8/T1.10 exemplars).
 
 ### T2.24 `exitAssignment_expression_list` — `assignment_expression_list` (~83%)
 

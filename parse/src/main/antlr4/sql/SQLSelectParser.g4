@@ -1785,8 +1785,18 @@ groupby_clause
   ;
 
 grouping_body
-  : grouping_element_list
+  : groupby_all_option
+  | groupby_distinct_body
+  | grouping_element_list
   | select_list
+  ;
+
+groupby_all_option
+  : ALL
+  ;
+
+groupby_distinct_body
+  : DISTINCT grouping_element_list
   ;
 
 grouping_element_list

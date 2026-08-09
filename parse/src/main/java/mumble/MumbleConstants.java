@@ -87,6 +87,9 @@ public final class MumbleConstants {
     public static final String MUMBLE_ROLLUP_KEY = "rollup";
     public static final String MUMBLE_CUBE_KEY = "cube";
     public static final String MUMBLE_GROUPING_SETS_KEY = "grouping_sets";
+    public static final String MUMBLE_GROUPBY_OPTION_KEY = "option";
+    public static final String MUMBLE_GROUPBY_OPTION_ALL = "ALL";
+    public static final String MUMBLE_GROUPBY_OPTION_DISTINCT = "DISTINCT";
     public static final String MUMBLE_HAVING_KEY = "having";
     public static final String MUMBLE_IGNORE_CASE_KEY = "ignore_case";
     public static final String MUMBLE_ILIKE_ANY_KEY = "ilike_any";
