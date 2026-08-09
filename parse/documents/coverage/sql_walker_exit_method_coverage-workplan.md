@@ -82,7 +82,7 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 - [x] Add **`PIVOT … IN (SELECT …)`** (subquery as pivot IN list).
 - **Verify:** `exitPivot_in_subquery` covered.
 
-**Status (Spring 2026):** `pivotInSubqueryAstShapeTest` in `SqlEventWalkerPivotUnpivotTests` (goldens via `PivotWalkerTierGoldenCaptureOnce`).
+**Status (Spring 2026):** `pivotInSubqueryAstShapeTest` in `SqlEventWalkerPivotUnpivotTests` (goldens via `parse/tools/refresh_pivot_unpivot_goldens.py` + `WalkerGoldenCaptureOnce --pivot-unpivot`).
 
 ### T1.5 `exitTable_argument_boolean` — `table_argument_boolean` (JaCoCo Aug 2026: 2/2 lines, 100%, missed=0) — **COMPLETE**
 
@@ -141,12 +141,12 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 ### T2.1 `exitTable_argument_literal` — `table_argument_literal` (JaCoCo Aug 2026: 14/20 lines, 70%, missed=6)
 
-- [x] Exemplars: `inferSchemaLiteralsAndNumericT2_1Test`, `flattenModeArrayLiteralT2_1Test`, `flattenPathStringLiteralT2_1Test` in `SqlEventWalkerTableFunctionTests` (regen: `TableFunctionArgumentLiteralGoldenCaptureOnce`). Numeric/string kwargs scalarize (`max_file_count=10`, `path='a'`).
+- [x] Exemplars: `inferSchemaLiteralsAndNumericT2_1Test`, `flattenModeArrayLiteralT2_1Test`, `flattenPathStringLiteralT2_1Test` in `SqlEventWalkerTableFunctionTests` (regen: `WalkerGoldenCaptureOnce` with ad-hoc `INLINE_CASES`).
 - [ ] Close remaining JaCoCo branches if any (defensive early returns).
 
 ### T2.2 `exitInsert_target_table_primary` — `insert_target_table_primary` (JaCoCo Aug 2026: 50/51 lines, 98%, missed=1) — **COMPLETE** (Tier 3 polish: 1 missed line)
 
-- [x] Exemplars: `insertTargetSubstitutionVariableT2_2Test`, `insertTargetJinjaRefT2_2Test`, `insertTargetRelationAliasT2_2Test`, `insertTargetNoColumnListT2_2Test` in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (regen: `InsertTargetTablePrimaryGoldenCaptureOnce`).
+- [x] Exemplars: `insertTargetSubstitutionVariableT2_2Test`, `insertTargetJinjaRefT2_2Test`, `insertTargetRelationAliasT2_2Test`, `insertTargetNoColumnListT2_2Test` in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` (regen: `WalkerGoldenCaptureOnce`).
 
 ### T2.3 `exitInfer_schema_argument` — `infer_schema_argument` (JaCoCo Aug 2026: 18/23 lines, 78%, missed=5)
 
@@ -163,7 +163,7 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 ### T2.6 `exitSubquery` — `subquery` (JaCoCo Aug 2026: 2/2 lines, 100%, missed=0) — COMPLETE
 
 - [x] Removed unreachable LOOKUP/`handleListItem` branch (parent is never `nonparenthesized_value_expression_primary`; scalar wrapping is `exitPredicand_subquery` / select-item paths).
-- [x] Exemplars: `SqlEventWalkerSubqueryExitT2_6Tests` (8 scenarios); regen `SubqueryExitT2_6GoldenCaptureOnce`.
+- [x] Exemplars: `SqlEventWalkerSubqueryExitT2_6Tests` (8 scenarios).
 
 ### T2.7 `exitStatic_data_type_name` — `static_data_type_name` (JaCoCo Aug 2026: 20/27 lines, 74%, missed=7)
 

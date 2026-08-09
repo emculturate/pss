@@ -89,7 +89,7 @@ def run_capture() -> dict[tuple[str, str], str]:
     ).strip()
     full_cp = f"{REPO / 'target/test-classes'}:{REPO / 'target/classes'}:{cp}"
     out = subprocess.run(
-        ["java", "-cp", full_cp, "sql.walker.PivotUnpivotGoldenCaptureOnce"],
+        ["java", "-cp", full_cp, "sql.walker.WalkerGoldenCaptureOnce", "--pivot-unpivot"],
         cwd=REPO,
         text=True,
         capture_output=True,

@@ -11,7 +11,7 @@ Reference tests:
 | `unpivotSelectAndPostClausesFormulaLineageMigrationTest` | UNPIVOT + SELECT / WHERE / GROUP BY / ORDER BY formulas |
 | `ModifierLineageConsolidationContractTests` | Contract for pivot/unpivot SELECT + clause lineage (all active) |
 
-Golden refresh: `ModifierLineageMigrationGoldenCaptureOnce` (main).
+Golden refresh: `WalkerGoldenCaptureOnce` (edit `INLINE_CASES` or pass a `.properties` file; pivot suite: `--pivot-unpivot`).
 
 ---
 
