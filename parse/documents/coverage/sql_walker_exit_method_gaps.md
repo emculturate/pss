@@ -60,14 +60,13 @@
 
 ## Tier 2 — Substantial gaps (JaCoCo Aug 2026)
 
-Methods with **≥3 missed lines** or **<85%** line coverage (19 total on checklist below; **19** across all `exit*`).
+Methods with **≥3 missed lines** or **<85%** line coverage (18 total on checklist below; **18** across all `exit*`).
 
 
 | ID | `exit*` | Lines (cov/total) | % | Missed |
 |----|---------|-------------------|---|--------|
 | T2.4 | `exitJinja_arg` | 15/24 | 62% | 9 |
 | T2.5 | `exitJinja_function_call` | 25/34 | 74% | 9 |
-| T2.6 | `exitSubquery` | 5/13 | 38% | 8 |
 | T2.7 | `exitStatic_data_type_name` | 20/27 | 74% | 7 |
 | T2.1 | `exitTable_argument_literal` | 14/20 | 70% | 6 |
 | T2.8 | `exitRelational_modifier_in_item` | 24/30 | 80% | 6 |
@@ -84,7 +83,7 @@ Methods with **≥3 missed lines** or **<85%** line coverage (19 total on checkl
 | T2.24 | `exitAssignment_expression_list` | 5/7 | 71% | 2 |
 | T2.18 | `exitInsert_preamble` | 10/12 | 83% | 2 |
 
-**Reclassified from Tier 2 checklist to Tier 3** (1–2 missed, ≥85%): T2.2 `exitInsert_target_table_primary`, T2.12 `exitQuantified_comparison_predicate`, T2.14 `exitScript`, T2.21 `exitGenerator_argument`, T2.22 `exitJinja_name`, T2.23 `exitOrdinary_grouping_set`, T2.25 `exitRow_value_expression`.
+**Reclassified from Tier 2 checklist to Tier 3** (1–2 missed, ≥85%): T2.2 `exitInsert_target_table_primary`, T2.6 `exitSubquery` (dead branch removed; 2/2 lines), T2.12 `exitQuantified_comparison_predicate`, T2.14 `exitScript`, T2.21 `exitGenerator_argument`, T2.22 `exitJinja_name`, T2.23 `exitOrdinary_grouping_set`, T2.25 `exitRow_value_expression`.
 
 **Not on numbered checklist (Tier 3):** `exitGroupby_clause`, `exitGroupby_distinct_body` (GROUP BY clause exits; 1 missed line each).
 

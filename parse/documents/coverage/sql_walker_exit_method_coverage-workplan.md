@@ -160,9 +160,10 @@ Method runs in some test but JaCoCo still reports **≥3 missed lines** or **&lt
 
 - [ ] Additional `{{ … }}` function patterns in SELECT/FROM (nested calls, multiple args).
 
-### T2.6 `exitSubquery` — `subquery` (JaCoCo Aug 2026: 5/13 lines, 38%, missed=8)
+### T2.6 `exitSubquery` — `subquery` (JaCoCo Aug 2026: 2/2 lines, 100%, missed=0) — COMPLETE
 
-- [ ] FROM/subquery contexts that bypass current subquery tests (correlated, parenthesized, DML subselect).
+- [x] Removed unreachable LOOKUP/`handleListItem` branch (parent is never `nonparenthesized_value_expression_primary`; scalar wrapping is `exitPredicand_subquery` / select-item paths).
+- [x] Exemplars: `SqlEventWalkerSubqueryExitT2_6Tests` (8 scenarios); regen `SubqueryExitT2_6GoldenCaptureOnce`.
 
 ### T2.7 `exitStatic_data_type_name` — `static_data_type_name` (JaCoCo Aug 2026: 20/27 lines, 74%, missed=7)
 

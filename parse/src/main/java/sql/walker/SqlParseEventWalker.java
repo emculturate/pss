@@ -4355,24 +4355,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitSubquery( SQLSelectParserParser.SubqueryContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-
-		Integer parentRuleIndex = (Integer) ctx.getParent().getRuleIndex();
-		if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_nonparenthesized_value_expression_primary)) {
-			// Subquery is acting as a lookup function
-			Integer stackLevel = walker.currentStackLevel(ruleIndex);
-			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-			Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-			HashMap<String, Object> item = new HashMap<String, Object>();
-
-			item.put(MUMBLE_LOOKUP_KEY, subMap.remove("1"));
-
-			subMap.put("1", item);
-			walker.handleListItem(ruleIndex, parentRuleIndex);
-		} else {
-			// then parent is any non-list parent
-			walker.handleOneChild(ruleIndex);
-		}
+		// Parent is usually predicand_subquery, table_primary, in_predicate_value, etc.
+		// Scalar lookup wrapping lives in exitPredicand_subquery / exitSelect_item, not here.
+		walker.handleOneChild(ctx.getRuleIndex());
 	}
 
 	@Override
