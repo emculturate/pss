@@ -1,0 +1,11 @@
+---
+description: Spring 2026 work — local edits only; user commits/pushes on Spring-2026-Extensions
+alwaysApply: true
+---
+
+# Spring 2026 extension — git workflow
+
+- **Branch**: Do all work on **`Spring-2026-Extensions`** unless the user names another branch. Before editing, ensure the working tree is on that branch (or tell the user if not).
+- **Local first**: Implement changes in the working tree only. Summarize what changed so the user can inspect diffs in the IDE.
+- **No git publish by default**: Do **not** `git commit`, `git push`, create branches for shipping, or open PRs/MRs unless the user **explicitly** asks (e.g. “commit and push”, “create a PR”). This applies even if the user repeats back a plan that mentioned committing—unless they clearly request commit/push in that message.
+- **User owns publish**: The user reviews locally, then commits and pushes (e.g. Publish) when ready.
