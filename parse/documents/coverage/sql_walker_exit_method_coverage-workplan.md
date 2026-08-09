@@ -1,6 +1,6 @@
 # SqlParseEventWalker `exit*` coverage — workplan
 
-**Status:** 🚧 In progress — pivot/unpivot walker exits through T2.8 closed (Spring 2026); remaining Tier 1/2 (non-modifier) open.  
+**Status:** 🚧 Tier 1 exemplars largely complete (Spring 2026); **T1.8/T1.10** AST work open (tests red on purpose); **T1.9** grammar/exit removed (dead path).  
 **Branch context:** `Spring-2026-Extensions` (or follow-on)  
 **Goal:** At least one exemplar test per **main-grammar** `exit*` path so the full suite exercises every listener exit that corresponds to a user-visible SQL construct.
 
@@ -82,35 +82,45 @@ Each item is one grammar alternative with **zero** JaCoCo line hits today.
 
 **Status (Spring 2026):** `pivotInSubqueryAstShapeTest` in `SqlEventWalkerPivotUnpivotTests` (goldens via `PivotWalkerTierGoldenCaptureOnce`).
 
-### T1.5 `exitTable_argument_boolean` — `table_argument_boolean`
+### T1.5 `exitTable_argument_boolean` — `table_argument_boolean` — **COMPLETE**
 
-- [ ] Add table-function call with a **boolean** named argument (e.g. `=> TRUE` / `=> FALSE`) where grammar uses `table_argument_boolean`.
-- **Verify:** `exitTable_argument_boolean` covered.
+- [x] Exemplar SQL: `INFER_SCHEMA(… IGNORE_CASE => FALSE)`.
+- **Verify:** `exitTable_argument_boolean` covered; AST `ignore_case=FALSE` (scalar, not `{literal=…}`).
 
-### T1.6 `exitInfer_schema_files_argument` — `infer_schema_files_argument`
+**Status (Spring 2026):** Grammar prefers `table_argument_boolean` over `additive_expression` for kwargs; `inferSchemaIgnoreCaseFalseTableArgumentBooleanT1_5Test`.
 
-- [ ] Add **`INFER_SCHEMA(… FILES => (…))`** (or equivalent `FILES` argument list shape).
+### T1.9 `exitOther_trim_operands` — **REMOVED** (no active parse path)
+
+- Comma `TRIM(a, ' ')` from the `sql()` endpoint parses as **`routine_invocation`**, not `trim_function` / `#other_trim_operands`.
+- Removed dead grammar alt and `exitOther_trim_operands` (Aug 2026).
+
+### T1.6 `exitInfer_schema_files_argument` — `infer_schema_files_argument` — **COMPLETE**
+
+- [x] Add **`INFER_SCHEMA(… FILES => (…))`** (or equivalent `FILES` argument list shape).
 - **Verify:** `exitInfer_schema_files_argument` covered.
 
-### T1.7 `exitValidate_table_function` — `validate_table_function`
+**Status (Spring 2026):** `inferSchemaFilesArgumentT1_6Test` in `SqlEventWalkerTableFunctionTests`.
 
-- [ ] Add **`VALIDATE(…)`** table function in **FROM**.
+### T1.7 `exitValidate_table_function` — `validate_table_function` — **COMPLETE**
+
+- [x] Add **`VALIDATE(…)`** table function in **FROM**.
 - **Verify:** `exitValidate_table_function` covered.
 
-### T1.8 `exitRow_value_predicand_list` — `row_value_predicand_list`
+**Status (Spring 2026):** `validateTableFunctionT1_7Test` in `SqlEventWalkerTableFunctionTests`.
 
-- [ ] Add **`GROUP BY (a, b)`** or grouping set using **parenthesized predicand list** (`ROLLUP`/`CUBE` / ordinary grouping set).
+### T1.8 `exitRow_value_predicand_list` — `row_value_predicand_list` — **PARTIAL** (exit covered; AST follow-up)
+
+- [x] Add **`GROUP BY (a, b)`** or grouping set using **parenthesized predicand list**.
 - **Verify:** `exitRow_value_predicand_list` covered.
 
-### T1.9 `exitOther_trim_operands` — `trim_operands` (#other_trim_operands)
+**Status (Spring 2026):** `groupByRowValuePredicandListT1_8Test` — JaCoCo hits exit; **test intentionally failing** until `groupby` AST is materialized.
 
-- [ ] Add **`TRIM(source, trim_char)`** comma form (non-MySQL `# other_trim_operands` alternative).
-- **Verify:** `exitOther_trim_operands` covered.
+### T1.10 `exitOrdinary_grouping_set_list` — `ordinary_grouping_set_list` — **PARTIAL** (exit covered; AST follow-up)
 
-### T1.10 `exitOrdinary_grouping_set_list` — `ordinary_grouping_set_list`
-
-- [ ] Add **`ROLLUP`/`CUBE`** (or grouping sets) with **multiple** entries in `ordinary_grouping_set_list`.
+- [x] Add **`ROLLUP`/`CUBE`** (or grouping sets) with **multiple** entries in `ordinary_grouping_set_list`.
 - **Verify:** `exitOrdinary_grouping_set_list` covered.
+
+**Status (Spring 2026):** `rollupOrdinaryGroupingSetListT1_10Test` — JaCoCo hits exit; **test intentionally failing** until rollup `groupby` drops `Type=` leak.
 
 ---
 

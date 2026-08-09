@@ -1555,4 +1555,105 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				extractor.getSymbolTable().toString());
 	}
 
+	/** Walker coverage T1.5 — {@code exitTable_argument_boolean} via INFER_SCHEMA {@code IGNORE_CASE => FALSE}. */
+	@Test
+	public void inferSchemaIgnoreCaseFalseTableArgumentBooleanT1_5Test() {
+		final String query =
+				"SELECT * FROM TABLE(INFER_SCHEMA(LOCATION => 's', IGNORE_CASE => FALSE))";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		String ast = extractor.getAsTree().toString();
+		Assert.assertFalse("AST should not leak rule Type keys", ast.contains("Type="));
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table_function={function_name=INFER_SCHEMA, parameters={ignore_case=FALSE, location='s'}}}}}",
+				ast);
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T1.6 — {@code exitInfer_schema_files_argument}. */
+	@Test
+	public void inferSchemaFilesArgumentT1_6Test() {
+		final String query =
+				"SELECT * FROM TABLE(INFER_SCHEMA("
+						+ "LOCATION => '@db.schema.stage/path/', "
+						+ "FILES => ('part-0001.json', 'part-0002.json')))";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		String ast = extractor.getAsTree().toString();
+		Assert.assertFalse("AST should not leak rule Type keys", ast.contains("Type="));
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table_function={function_name=INFER_SCHEMA, parameters={files={1={literal='part-0001.json'}, 2={literal='part-0002.json'}}, location='@db.schema.stage/path/'}}}}}",
+				ast);
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={infer_schema0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T1.7 — {@code exitValidate_table_function}. */
+	@Test
+	public void validateTableFunctionT1_7Test() {
+		final String query =
+				"SELECT * FROM TABLE(VALIDATE(my_db.my_schema.my_table, JOB_ID => '_last'))";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		String ast = extractor.getAsTree().toString();
+		Assert.assertFalse("AST should not leak rule Type keys", ast.contains("Type="));
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={table_function={function={function_name=VALIDATE, parameters={table={schema=my_schema, dbname=my_db, table=my_table}, job_id='_last'}}}}}}",
+				ast);
+		Assert.assertEquals("Interface is wrong", "[*]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{my_db.my_schema.my_table={*=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={*=[[@1,7:7='*',<291>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={*=[[@1,7:7='*',<291>,1:7]]}, table_dictionary={my_db.my_schema.my_table={*=[[@1,7:7='*',<291>,1:7]]}, table_function0={*=[[@1,7:7='*',<291>,1:7]]}}, interface={*=[{name=*, table_ref=*}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }

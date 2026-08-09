@@ -1146,10 +1146,10 @@ infer_schema_argument
   ;
 
 infer_schema_argument_value
-  : table_argument_literal
+  : table_argument_boolean
+  | table_argument_literal
   | infer_schema_files_argument
   | additive_expression
-  | table_argument_boolean
   ;
 
 infer_schema_function_name
@@ -1617,8 +1617,6 @@ trim_function_name
 trim_operands
   : ((trim_specification)? (trim_character=string_value_expression)? FROM)? 
      trim_source=value_expression  # mysql_trim_operands
-  | trim_source=value_expression COMMA 
-     trim_character=string_value_expression # other_trim_operands
   ;
 
 trim_specification

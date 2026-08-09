@@ -37,24 +37,25 @@
 | `exitPivot_in_any` | `pivot_in_any` | **Covered** — `pivotInAnyAstShapeTest`, `pivotInAnyOrderBy*` in `SqlEventWalkerPivotUnpivotTests`. |
 | `exitPivot_in_subquery` | `pivot_in_subquery` | **Covered** — `pivotInSubqueryAstShapeTest`. |
 
+### Tier 1.5–1.10 — exemplar tests (Aug 2026 JaCoCo refresh)
+
+| `exit*` method | Test | Notes |
+|----------------|------|--------|
+| `exitTable_argument_boolean` | `inferSchemaIgnoreCaseFalseTableArgumentBooleanT1_5Test` | **COMPLETE** — `ignore_case=FALSE` scalar |
+| `exitInfer_schema_files_argument` | `inferSchemaFilesArgumentT1_6Test` | AST clean |
+| `exitValidate_table_function` | `validateTableFunctionT1_7Test` | AST clean |
+| `exitRow_value_predicand_list` | `groupByRowValuePredicandListT1_8Test` | **PARTIAL** — failing golden until `groupby` fixed |
+| ~~`exitOther_trim_operands`~~ | — | **Removed** — no path from `sql()`; grammar alt deleted |
+| `exitOrdinary_grouping_set_list` | `rollupOrdinaryGroupingSetListT1_10Test` | **PARTIAL** — failing golden until rollup `Type=` fixed |
+
+**Tier 1 open:** T1.8/T1.10 AST work (tests left red on purpose).
+
 ### Tier 2.8 complete — UNPIVOT `relational_modifier_in_item`
 
 | `exit*` method | Grammar rule / path | Status |
 |----------------|---------------------|--------|
 | `exitRelational_modifier_in_item` | UNPIVOT `IN (...)` column items | **Covered** — `unpivotInList*` ast-shape tests + existing IN-list matrix. |
 | `exitRelational_modifier_alias` | Optional `AS` / label on IN item | **Covered** — same tests (identifier without `AS`, string literal with `AS`). |
-
-Remaining Tier 1 gaps:
-
-| `exit*` method | Grammar rule / path | What to exercise (sketch) |
-| `exitTable_argument_boolean` | `table_argument_boolean` | Table-function named arg with boolean literal (e.g. FLATTEN / similar `=> true`) |
-| `exitInfer_schema_files_argument` | `infer_schema_files_argument` | `INFER_SCHEMA` / `INFER_SCHEMA` with `FILES => (…)` argument shape |
-| `exitValidate_table_function` | `validate_table_function` | `VALIDATE` table function call in FROM |
-| `exitRow_value_predicand_list` | `row_value_predicand_list` | Parenthesized multi-column grouping set, e.g. `GROUP BY (a, b)` or `ROLLUP ((a,b), c)` |
-| `exitOther_trim_operands` | `trim_operands` alt `# other_trim_operands` | Non-MySQL `TRIM`: `TRIM(source, characters)` comma form |
-| `exitOrdinary_grouping_set_list` | `ordinary_grouping_set_list` | `ROLLUP` / `CUBE` / grouping sets with multiple parenthesized lists |
-
-These are **main-grammar** alternatives that the union parser accepts but the current walker test corpus does not drive.
 
 ## Tier 2 — Hit by tests but notable line gaps (sample)
 

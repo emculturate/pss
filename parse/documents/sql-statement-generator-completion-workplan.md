@@ -182,7 +182,7 @@ Consolidation milestone is done (worklist closed Aug 2026). Full grammar-surface
 |---------|--------|---------|
 | `string_value_expression`, `character_primary` | `exitString_value_expression`, `exitCharacter_primary` | Route to concat / trim / position / primary |
 | concatenate (AST `concatenate`) | (built in value expression exits) | Emit `\|\|` lists with paren policy |
-| `trim_function`, trim operands | `exitTrim_function`, `exitMysql_trim_operands`, `exitOther_trim_operands` | Emit TRIM / BOTH-LEADING-TRAILING forms |
+| `trim_function`, trim operands | `exitTrim_function`, `exitMysql_trim_operands` | Emit TRIM / BOTH-LEADING-TRAILING forms |
 | `position_function` (+ INSTR / CHARINDEX names) | `exitPosition_function` | Emit POSITION / CHARINDEX / INSTR per AST function name |
 
 ### 2.4 Routine invocation / aggregates

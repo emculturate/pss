@@ -8290,11 +8290,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitTable_argument_boolean( SQLSelectParserParser.Table_argument_booleanContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
-		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		subMap.put(MUMBLE_LITERAL_KEY, "TRUE".equalsIgnoreCase(ctx.getText()));
+		// Leaf rule (TRUE | FALSE): no rule map; promote token text via exitEveryRule.
+		walker.useAsLeaf = true;
 	}
 
 	@Override
@@ -11103,29 +11100,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Add item to parent map
 		walker.addToParent(parentRuleIndex, parentStackLevel, item);
 	}
-
-	@Override
-	public void exitOther_trim_operands( SQLSelectParserParser.Other_trim_operandsContext ctx) {
-		int ruleIndex = ctx.getRuleIndex();
-		int parentRuleIndex = ctx.getParent().getRuleIndex();
-
-		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
-
-		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-
-		Map<String, Object> item = new HashMap<String, Object>();
-
-		if (subMap.size() == 2) {
-			item.put(MUMBLE_TRIM_CHARACTER_KEY, subMap.remove("2"));
-			item.put(MUMBLE_VALUE_KEY, subMap.remove("1"));
-		}
-
-		// Add item to parent map
-		walker.addToParent(parentRuleIndex, parentStackLevel, item);
-	}
-
 
 	@Override
 	public void exitPosition_function( SQLSelectParserParser.Position_functionContext ctx) {

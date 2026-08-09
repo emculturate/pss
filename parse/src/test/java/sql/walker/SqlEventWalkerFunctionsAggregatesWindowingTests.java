@@ -2411,5 +2411,77 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getSymbolTable().toString());
 	}
 
+	/**
+	 * Walker coverage T1.8 — {@code exitRow_value_predicand_list} via {@code GROUP BY (a, b)}.
+	 *
+	 * <p>Known AST gap: {@code groupby={1=null}} — grouping set list not materialized in the tree
+	 * (rule-type / rollup path not fully handled in {@code exitGroupby_clause}).
+	 */
+	@Test
+	public void groupByRowValuePredicandListT1_8Test() {
+		final String query = "SELECT a, b, SUM(c) FROM tab1 GROUP BY (a, b)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={function={function_name=SUM, qualifier=null, parameters={column={name=c, table_ref=null}}}}}, from={table={alias=null, table=tab1}}, groupby={FIXME_T1_8_materialize_row_value_predicand_list}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, unnamed_0]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@1,7:7='a',<391>,1:7], [@14,40:40='a',<391>,1:40]], b=[[@3,10:10='b',<391>,1:10], [@16,43:43='b',<391>,1:43]], c=[[@7,17:17='c',<391>,1:17]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={a=[[@1,7:7='a',<391>,1:7]], b=[[@3,10:10='b',<391>,1:10]], unnamed_0=[[@8,18:18=')',<288>,1:18]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={a=[[@1,7:7='a',<391>,1:7]], b=[[@3,10:10='b',<391>,1:10]], unnamed_0=[[@8,18:18=')',<288>,1:18]]}, table_dictionary={tab1={a=[[@1,7:7='a',<391>,1:7], [@14,40:40='a',<391>,1:40]], b=[[@3,10:10='b',<391>,1:10], [@16,43:43='b',<391>,1:43]], c=[[@7,17:17='c',<391>,1:17]]}}, grouped_by=[], interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}], unnamed_0=[{name=c, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	/** Walker coverage T1.9 — removed: comma {@code TRIM} parses as {@code routine_invocation}, not {@code trim_operands}. */
+
+	/**
+	 * Walker coverage T1.10 — {@code exitOrdinary_grouping_set_list} via {@code ROLLUP((a,b), c)}.
+	 *
+	 * <p>Known AST gap: {@code groupby={1={1=null, Type=241}} — leaked ANTLR rule index on rollup
+	 * grouping element; child grouping columns not flattened into the tree.
+	 */
+	@Test
+	public void rollupOrdinaryGroupingSetListT1_10Test() {
+		final String query = "SELECT a, b, c, SUM(d) FROM tab1 GROUP BY ROLLUP((a, b), c)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		Assert.assertEquals(
+				"AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}}, 2={column={name=b, table_ref=null}}, 3={column={name=c, table_ref=null}}, 4={function={function_name=SUM, qualifier=null, parameters={column={name=d, table_ref=null}}}}}, from={table={alias=null, table=tab1}}, groupby={FIXME_T1_10_rollup_no_Type_leak}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b, c, unnamed_0]", extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}", extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={a=[[@1,7:7='a',<391>,1:7], [@18,50:50='a',<391>,1:50]], b=[[@3,10:10='b',<391>,1:10], [@20,53:53='b',<391>,1:53]], c=[[@5,13:13='c',<391>,1:13], [@23,57:57='c',<391>,1:57]], d=[[@9,20:20='d',<391>,1:20]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={a=[[@1,7:7='a',<391>,1:7]], b=[[@3,10:10='b',<391>,1:10]], c=[[@5,13:13='c',<391>,1:13]], unnamed_0=[[@10,21:21=')',<288>,1:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={a=[[@1,7:7='a',<391>,1:7]], b=[[@3,10:10='b',<391>,1:10]], c=[[@5,13:13='c',<391>,1:13]], unnamed_0=[[@10,21:21=')',<288>,1:21]]}, table_dictionary={tab1={a=[[@1,7:7='a',<391>,1:7], [@18,50:50='a',<391>,1:50]], b=[[@3,10:10='b',<391>,1:10], [@20,53:53='b',<391>,1:53]], c=[[@5,13:13='c',<391>,1:13], [@23,57:57='c',<391>,1:57]], d=[[@9,20:20='d',<391>,1:20]]}}, grouped_by=[], interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}], c=[{name=c, table_ref=tab1}], unnamed_0=[{name=d, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 }
 
