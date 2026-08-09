@@ -1,0 +1,166 @@
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel0 \b \fs34 SQL grammar extensions since 2026-01-01\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 {\b Scope:} {\f1 \fs24 parse/src/main/antlr4/sql/SQLSelectParser.g4} (and lexer tokens in the same file) on branch {\f1 \fs24 Spring-2026-Extensions}, compared to the last pre-2026 snapshot ({\f1 \fs24 f49203f}, 2025-12-31).\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 {\b Purpose:} Quick outline of {\b new or materially expanded} parse coverage\u8212-by statement/clause\u8212-not walker, generator, or test work unless the grammar itself changed.\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 {\b Build artifacts (2026-08-09):} {\f1 \fs24 mvn package} in {\f1 \fs24 parse/} produces:\par}
+{
+\trowd \trgaph120
+\clbrdrb\brdrs\cellx5400\clbrdrb\brdrs\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 Artifact\par}
+\cell}
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 Role\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx5400\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 {\f1 \fs24 target/pss-parse-5.1.3-1.jar}\par}
+\cell}
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 Main parser + runtime classes\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx5400\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 {\f1 \fs24 target/pss-parse-5.1.3-1-tests.jar}\par}
+\cell}
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 Test utilities ({\f1 \fs24 classifier: tests})\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx5400\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 {\f1 \fs24 target/pss-parse-5.1.3-1-fat.jar}\par}
+\cell}
+{{\pard\intbl \ql \f0 \fs24 \sa0 \li0 \fi0 Standalone jar-with-dependencies (Python/JS callers)\par}
+\cell}
+}
+\intbl\row}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Script and entry points\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls1\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 script} / {\f1 \fs24 sql_statement}} \u8212- New top-level: semicolon-separated mixes of DDL, DML, {\f1 \fs24 WITH \u8230 ?} pipelines, and bare {\f1 \fs24 query_expression}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls1\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Dedicated endpoints} \u8212- Formal start rules for {\f1 \fs24 update_end_point}, {\f1 \fs24 delete_end_point}, {\f1 \fs24 truncate_end_point} (update existed loosely before; delete/truncate endpoints are new).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls1\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 literal_value}} \u8212- Fragment endpoint wired for numeric/unsigned literals (walker key {\f1 \fs24 LITERAL}).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls1\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 predicand_value}} \u8212- Unchanged name; predicand/expression surface expanded (see Expressions).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 DDL\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls2\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Full DDL primaries} \u8212- {\f1 \fs24 ddl} / {\f1 \fs24 ddl_primary} with CREATE / DROP / ALTER / TRUNCATE (not only {\f1 \fs24 CREATE TABLE AS}).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls2\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b CREATE object types} \u8212- Table (column list + options tail, or {\f1 \fs24 AS query}), index, view, materialized view, function, procedure, macro, sequence, schema, database, role, user, stage, file format.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls2\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b DROP / ALTER} \u8212- {\f1 \fs24 ddl_object_type} + object name + optional tails.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls2\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Opaque option capture} \u8212- {\f1 \fs24 generic_ddl_paren_content} (nested parens) and {\f1 \fs24 generic_ddl_options} (verbatim tail to {\f1 \fs24 ;} or EOF); options are {\b not} fully decomposed in the grammar.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls2\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b TRUNCATE dialect split} \u8212- Snowflake ({\f1 \fs24 TRUNCATE TABLE name}) vs Postgres (optional {\f1 \fs24 TABLE}, multiple names).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 {\f1 \fs24 WITH} (CTE)\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls3\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b CTE body shapes} \u8212- {\f1 \fs24 query} under a CTE may be {\f1 \fs24 query_expression}, {\b INSERT}, {\b UPDATE}, {\b DELETE}, or {\b VALUES} (not only SELECT).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls3\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Substitution CTE body} \u8212- {\f1 \fs24 query_alias variable_identifier} (tuple/query substitution as CTE body).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls3\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Nested {\f1 \fs24 WITH}} \u8212- {\f1 \fs24 cte_body} allows {\f1 \fs24 with_query} (Snowflake-style nested WITH inside a CTE only).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls3\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b DML + outer {\f1 \fs24 WITH}} \u8212- Same {\f1 \fs24 with_query} wrapper used for leading CTEs on DML statements (per comment blocks in grammar).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 INSERT\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Postgres path as default} \u8212- {\f1 \fs24 insert_expression} \u8594 ? {\f1 \fs24 postgres_insert} (Snowflake insert remains {\f1 \fs24 snowflake_insert} building block).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 ON CONFLICT}} \u8212- {\f1 \fs24 conflict_target}, {\f1 \fs24 DO NOTHING}, {\f1 \fs24 DO UPDATE SET} + optional {\f1 \fs24 WHERE} (lexer keywords {\f1 \fs24 CONFLICT} / {\f1 \fs24 DO} / {\f1 \fs24 NOTHING} with {\f1 \fs24 Identifier} fallback when tokenized as names).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 RETURNING}} \u8212- Shared {\f1 \fs24 returning} rule on insert (Postgres-style).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Target table rule} \u8212- {\f1 \fs24 insert_target_table_primary} excludes table-function call shape from {\f1 \fs24 INSERT INTO \u8230 ? (cols)}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Sources} \u8212- {\f1 \fs24 query_expression}, substitution, {\f1 \fs24 VALUES}, {\f1 \fs24 DEFAULT VALUES}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls4\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Targets} \u8212- {\f1 \fs24 db_object_name}, substitutions, {\b Jinja/DBT} {\f1 \fs24 jinja_identifier}.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 UPDATE\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls5\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 update_end_point}} \u8212- First-class parse entry.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls5\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Clause options} \u8212- {\f1 \fs24 SET} assignment list, optional {\f1 \fs24 FROM}, {\f1 \fs24 WHERE}, {\b {\f1 \fs24 RETURNING}} (Postgres/Snowflake overlap; reuses {\f1 \fs24 select_list}).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls5\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Table resolution} \u8212- Uses {\f1 \fs24 table_primary} / left-factored aliasing (see FROM).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 DELETE\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls6\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Snowflake vs Postgres} \u8212- {\f1 \fs24 delete_snowflake_expression} (no {\f1 \fs24 RETURNING}) vs {\f1 \fs24 delete_postgres_expression} (requires {\f1 \fs24 delete_returning}).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls6\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 USING}} \u8212- {\f1 \fs24 delete_using_clause} with {\f1 \fs24 table_reference_list}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls6\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b CTE validity} \u8212- Grammar comments distinguish which variant may appear as a CTE data source.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 TRUNCATE\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls7\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Standalone} \u8212- {\f1 \fs24 truncate_end_point} and {\f1 \fs24 truncate_statement_primary} under DDL/script.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls7\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Dialect variants} \u8212- See DDL (Snowflake vs Postgres).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 SELECT / set operations\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls8\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 query_primary} removed} \u8212- Set-op members use {\f1 \fs24 set_operation_member}: {\f1 \fs24 subquery} | {\f1 \fs24 query_specification} | {\f1 \fs24 variable_identifier} (avoids dead {\f1 \fs24 query_primary} alternative).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls8\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 QUALIFY}} \u8212- Snowflake post-window filter: {\f1 \fs24 qualify_clause} after {\f1 \fs24 HAVING}, before {\f1 \fs24 ORDER BY}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls8\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Set ops} \u8212- {\f1 \fs24 UNION} / {\f1 \fs24 EXCEPT} / {\f1 \fs24 INTERSECT} with optional {\f1 \fs24 DISTINCT}/{\f1 \fs24 ALL} on qualifiers (structure retained; member rules updated).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 FROM / joins / relation sources\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls9\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 LATERAL}} \u8212- {\f1 \fs24 lateral_modifier} on comma and join operands.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls9\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Relation sources} \u8212- {\f1 \fs24 table_source_primary} adds {\b table functions}, {\b VALUES}, {\b Jinja}, substitutions; {\f1 \fs24 jinja_identifier} in FROM/INSERT targets.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls9\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b PIVOT / UNPIVOT} \u8212- Postfix {\f1 \fs24 table_relational_modifier} on {\f1 \fs24 table_primary} (see below).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls9\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Alias factoring} \u8212- Aliases on {\f1 \fs24 table_primary} / modifier aliases gated so PIVOT/UNPIVOT do not admit ambiguous double-optional {\f1 \fs24 AS} (left-factoring change).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls9\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Join extension} \u8212- {\f1 \fs24 join_extension} substitution variable still supported; {\f1 \fs24 join_extension_primary} for snippet endpoint.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 PIVOT / UNPIVOT (Snowflake)\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls10\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 UNPIVOT}} \u8212- Value/name columns, {\f1 \fs24 IN} list, {\f1 \fs24 INCLUDE NULLS} / {\f1 \fs24 EXCLUDE NULLS}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls10\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 PIVOT}} \u8212- Aggregate clause (single aggregate or Snowflake comma list: AVG/COUNT/MAX/MIN/SUM), {\f1 \fs24 FOR} column, {\f1 \fs24 IN} content:\par}
+{\pard \ql \f0 \fs24 \sa0 \li720 \fi-360\ls11\ilvl1\tx360 {\listtext\tab \endash \tab} literal value list (with optional {\f1 \fs24 AS} prefix labels),\par}
+{\pard \ql \f0 \fs24 \sa0 \li720 \fi-360\ls11\ilvl1\tx360 {\listtext\tab \endash \tab} {\f1 \fs24 ANY} [ {\f1 \fs24 ORDER BY} \u8230 ? ],\par}
+{\pard \ql \f0 \fs24 \sa0 \li720 \fi-360\ls11\ilvl1\tx360 {\listtext\tab \endash \tab} subquery.\sa180\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls10\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 DEFAULT ON NULL (...)}} \u8212- Optional pivot tail.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls10\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Shared IN-list helpers} \u8212- {\f1 \fs24 relational_modifier_*} rules shared between pivot and unpivot.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Table functions (Snowflake-oriented)\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls12\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 table_function_primary}} \u8212- {\f1 \fs24 TABLE(\u8230 ?)} wrapper or bare call.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls12\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Named functions} \u8212- FLATTEN (incl.\u160 ?{\f1 \fs24 LATERAL_FLATTEN} name), GENERATOR, RESULT_SCAN, INFER_SCHEMA, VALIDATE, plus {\b generic} {\f1 \fs24 identifier(\u8230 ?)} fallback.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls12\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Named arguments} \u8212- {\f1 \fs24 INPUT=>}, {\f1 \fs24 PATH=>}, {\f1 \fs24 ROWCOUNT=>}, {\f1 \fs24 LOCATION=>}, etc., with semantic predicates on argument lists where required.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls12\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 table_argument_literal}} \u8212- String/numeric args for TF kwargs (T2.1 coverage).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 GROUP BY / HAVING\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls13\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 GROUP BY ALL}} \u8212- {\f1 \fs24 groupby_all_option}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls13\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 GROUP BY DISTINCT}} \u8212- {\f1 \fs24 groupby_distinct_body} wrapping grouping elements.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls13\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 GROUPING SETS}} \u8212- First-class {\f1 \fs24 grouping_sets_list} / {\f1 \fs24 grouping_element} alternative (baseline had ROLLUP/CUBE/empty/parenthesized sets but not explicit {\f1 \fs24 GROUPING SETS} grouping element).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls13\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Legacy} \u8212- Still allows {\f1 \fs24 GROUP BY select_list} alternative.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 WHERE / predicates\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls14\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 quantified_comparison_predicate}} \u8212- Wired on {\f1 \fs24 predicate} ({\f1 \fs24 = ALL|ANY|SOME (subquery)}); rule existed pre-2026 but was not on the main predicate chain in the same way.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls14\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 substitution_predicate}} \u8212- Tuple/substitution in boolean context.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls14\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 exists_predicate}} \u8212- {\f1 \fs24 EXISTS} on subquery or substitution.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls14\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Removed} \u8212- {\f1 \fs24 unique_predicate} (SQL {\f1 \fs24 UNIQUE (subquery)}\u8212-not Snowflake).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls14\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b LIKE / ILIKE} \u8212- {\f1 \fs24 like_any_predicate} ({\f1 \fs24 LIKE ANY} / {\f1 \fs24 ILIKE ANY}) with optional {\f1 \fs24 ESCAPE}.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Expressions, casts, functions\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Unparenthesized arithmetic in predicands} \u8212- {\f1 \fs24 row_value_predicand} includes {\f1 \fs24 common_value_expression} ({\f1 \fs24 +}, {\f1 \fs24 *}, etc. without extra parens).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Postgres {\f1 \fs24 ::} casts} \u8212- Chained {\f1 \fs24 (expr)::type}, including {\f1 \fs24 NULL::type}; predicand and value-expression paths updated.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 CAST} / inline casts} \u8212- Broader NULL and chain casting support in value expressions.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b String / search functions} \u8212- {\f1 \fs24 POSITION} (incl.\u160 ?SQL {\f1 \fs24 IN} form), {\f1 \fs24 INSTR}, {\f1 \fs24 CHARINDEX} (2- and 3-argument shapes).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Snowflake scalars} \u8212- {\f1 \fs24 IFF}, {\f1 \fs24 MD5}, {\f1 \fs24 REVERSE} (lexer + routine names).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b TRIM} \u8212- Dropped unreachable {\f1 \fs24 trim_operands} alternative; MySQL-style and {\f1 \fs24 FROM} forms retained.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls15\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b JSON path columns} \u8212- Colon path segments on {\f1 \fs24 column_reference} / {\f1 \fs24 column_primary} (variant access).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 EXTRACT / DATE_PART\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls16\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 extract_expression}} \u8212- Expanded {\f1 \fs24 extract_field} (Postgres + {\b Snowflake} field tokens, case-insensitive {\f1 \fs24 EXTRACT} lexer).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls16\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 extract_source}} \u8212- Column, datetime literal, {\b interval}, broader predicand sources; dedicated {\b predicand} endpoint coverage.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls16\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 date_part_expression}} \u8212- Snowflake/Postgres {\f1 \fs24 DATE_PART(field FROM source)} with case-insensitive {\f1 \fs24 DATE_PART} lexer (new keyword placed after PIVOT block to limit token renumbering).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Substitutions, Jinja, DBT\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls17\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Angle-bracket substitutions} \u8212- Expanded use in columns, FROM, CTE bodies, predicates, set-op members.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls17\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b {\f1 \fs24 jinja_identifier}} \u8212- {\f1 \fs24 \{\{ ref|source|stream|var|env_var(...) \}\}}, {\f1 \fs24 config.get(...)}, {\f1 \fs24 \{\{ this \}\}} / {\f1 \fs24 \{\{ target.schema \}\}} chains, keyword args in calls.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls17\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Insert/update symbol tables} \u8212- Grammar allows DML shapes that carry substitutions (walker work; grammar enables targets/sources).\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 VALUES\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls18\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Script / CTE / FROM} \u8212- {\f1 \fs24 values_statement_primary} as relation source.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls18\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Insert} \u8212- {\f1 \fs24 insert_values_statement} / matrix forms unchanged in spirit; better integrated with DML and CTE rules.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Lexer / grammar hygiene\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls19\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Many new keywords} \u8212- DDL objects, DML ({\f1 \fs24 DELETE}, {\f1 \fs24 TRUNCATE}, {\f1 \fs24 RETURNING}, conflict words), PIVOT/UNPIVOT, table-function args, Snowflake extract parts, {\f1 \fs24 DATE_PART}, {\f1 \fs24 SETS}, etc.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls19\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Keyword placement policy} \u8212- Comment in lexer: append late-keyword block before {\f1 \fs24 Identifier} to avoid mass token ID churn in goldens.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls19\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Parser predicates} \u8212- Jinja recognition, disallowed join/set-op aliases, implicit alias gating, Snowflake TF mode literals, DDL not applicable here but same file.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Intentionally shallow or out of scope in the grammar\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls20\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b DDL interiors} \u8212- Captured as opaque text, not per-option rules (see {\f1 \fs24 generic_ddl_*}).\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls20\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Hive {\f1 \fs24 INSERT OVERWRITE}} \u8212- Documented in comments; not a first-class alternate in current {\f1 \fs24 insert_expression}.\par}
+{\pard \ql \f0 \fs24 \sa0 \li360 \fi-360\ls20\ilvl0\tx360 {\listtext\tab \bullet \tab} {\b Full Postgres INSERT} \u8212- {\f1 \fs24 postgres_insert} builds on Snowflake-shaped core; some Postgres-only insert variants may still be comment-only.\sa180\par}
+{\pard \qc \f0 \fs24 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 Related non-grammar work (same period, for context only)\par}
+{\pard \ql \f0 \fs24 \sa180 \li0 \fi0 Walker AST, symbol tables, dialect warnings, JaCoCo exit coverage, golden test consolidation, and {\f1 \fs24 SQLStatementGenerator} updates accompany these grammar changes but are not listed rule-by-rule here.\par}
