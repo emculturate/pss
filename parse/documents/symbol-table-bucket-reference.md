@@ -542,7 +542,108 @@ If your consumer sees these keys, it is likely reading a live in-progress frame 
 
 ---
 
+## Recursive column tracing (consumer algorithm)
+
+This is the **explicit traceability procedure** symbol-table consumers should implement. Every column reference recorded in the symbol table family — regardless of the **role** it plays (`interface`, `filters`, `grouped_by`, `ordered_by`, `window_partition_by`, `window_ordered_by`, `assignments`, `derivation`, clause archives, DML `RETURNING` outputs, etc.) — can be traced back to one or more **leaf sources** by following the same recursive pattern.
+
+This alternating walk is the **basis of column-reference traceability** in the symbol table structure family.
+
+### Starting point
+
+Begin with any **column reference** encountered in a published `def_*` scope. Column references have the shape:
+
+```
+{name: "<column_name>", table_ref: "<alias_or_source>"}
+```
+
+The reference may appear in any bucket that archives column lineage — not only `interface`. Examples:
+
+| Role bucket | Example use |
+|-------------|-------------|
+| **`interface`** | Output column dependency |
+| **`filters`**, **`grouped_by`**, **`ordered_by`**, **`window_partition_by`**, **`window_ordered_by`** | Clause-site column use |
+| **`assignments`** | UPDATE SET target ← source mapping |
+| **`derivation.source_columns`** | PIVOT/UNPIVOT operand lineage |
+| DML **`interface`** / **`query_dictionary`** | `INSERT` / `UPDATE` / `DELETE` **`RETURNING`** output columns |
+
+### The alternation pattern
+
+At each hop, alternate between two kinds of lookup **within the current `def_*` scope**:
+
+```
+column reference  →  table_alias  →  child def_*  →  interface  →  column reference  →  …
+```
+
+| Step | Where | What to do |
+|------|-------|------------|
+| **A** | Any lineage bucket in scope **S** | Hold a `{name, table_ref}` column reference |
+| **B** | **`table_alias`** in the **same scope S** | Resolve `table_ref` to the backing source string |
+| **C** | **Child `def_*`** scope | Open the nested published scope for that source |
+| **D** | **`interface`** in the child scope | Look up `name` to obtain the **next** `{name, table_ref}` reference(s) |
+| **E** | — | Repeat from step **A** in the child scope |
+
+When step **B** does not need a child scope (the source is already a leaf), stop — see **Leaf termination** below.
+
+### Resolving `table_ref` in `table_alias` (step B)
+
+| `table_alias` value | Next action |
+|---------------------|-------------|
+| **Physical table name** (e.g. `tab1`, `sch.tbl`) | **Leaf** — confirm column in **`table_dictionary`** for that table |
+| **`queryN`** | Open sibling/child **`def_queryN`** → go to step **D** |
+| **`valuesN`** | Open **`def_valuesN`** → go to step **D** |
+| **CTE name** listed in **`context_list`** | Resolve `context_list[cte_name]` → `queryN` → open **`def_queryN`** → step **D** |
+| **Modifier bucket key** (e.g. `tuple_0`, `outer_up`, `unpvt`) | Consult **`derivation.source_columns`** for that bucket → may yield further `{name, table_ref}` hops or physical sources |
+| **Set-op scope ref** (`unionN`, `intersectN`) | Open **`def_unionN`** / **`def_intersectN`** → resolve column via composite **`interface`** → continue into the matching branch **`def_query*`** |
+
+If `table_ref` is **null**, the reference may be unqualified within a single-table scope; check **`table_dictionary`** keys visible in the current scope for a unique physical match.
+
+### Leaf termination
+
+Stop recursion when the reference resolves to a **source leaf** — a column that is not further rewritten through another query's `interface`. Recognized leaf types:
+
+| Leaf type | How to recognize | Where tokens / proof live |
+|-----------|------------------|---------------------------|
+| **Physical table column** | `table_alias` resolves to a table name; column appears under that table in **`table_dictionary`** | `table_dictionary[<table>][<column>]` → token list |
+| **`VALUES` statement** | `table_alias` resolves to `valuesN`; child is **`def_valuesN`** | Child scope **`interface`** / **`query_dictionary`**; no further query hop |
+| **Table function** | `table_alias` maps to a generated function alias (e.g. `flatten0`); table name in **`table_dictionary`** | `table_dictionary[<function_alias>][<column>]` |
+| **PIVOT / UNPIVOT source column** | Hop lands in **`derivation.source_columns`** with `table_ref` pointing at a physical table or modifier bucket whose operands are physical | `derivation.source_columns[<bucket>]` + underlying **`table_dictionary`** |
+| **DML `RETURNING` output** | Trace enters **`def_insertN`**, **`def_updateN`**, or **`def_deleteN`** and the column is a declared returning output | Scope **`interface`** / **`query_dictionary`** on the DML `def_*` payload |
+| **Original source with no `queryN` indirection** | `table_ref` is a physical table or `VALUES`/function alias with no nested `def_query*` between current scope and the data origin | Current scope **`table_dictionary`** |
+
+A single starting reference may fan out to **multiple leaves** when step **D** returns more than one `{name, table_ref}` entry (e.g. an expression combining several columns, or a window output merging `OVER` dependencies).
+
+### Worked pattern (conceptual)
+
+```
+Scope def_query2
+  filters: [{name: "a", table_ref: "sub"}]
+  table_alias: {sub: query0}
+  def_query0:
+    interface: {x: [{name: "a", table_ref: "tab1"}]}
+    table_alias: {tab1}
+    table_dictionary: {tab1: {a: [[@...]]}}
+```
+
+Trace `filters[0]`:
+
+1. `{name: a, table_ref: sub}` in **def_query2**
+2. `table_alias[sub]` → `query0` → open **def_query0**
+3. `interface[x]` or match `name=a` → `{name: a, table_ref: tab1}` in **def_query0**
+4. `table_alias[tab1]` → `tab1` (physical) → **leaf** in `table_dictionary[tab1][a]`
+
+### Consumer obligations
+
+- Always read **`def_*` published payloads**, not ephemeral `queryN` live keys.
+- At each scope, consult **`table_alias`** and **`context_list`** before assuming a `table_ref` is physical.
+- When a hop enters **`derivation`**, use **`source_columns`** (and optionally **`pivot_derived_source_bindings`**) before giving up on modifier-derived names.
+- Do **not** skip scopes or jump to grandchild `def_*` payloads — each hop must pass through the **direct child's `interface`**.
+- Record every hop (scope id, bucket, `{name, table_ref}`) if building an audit trail; the **`query_dictionary`** token lists at each scope provide the text-position evidence for output-column names.
+
+---
+
 ## Quick traversal recipe
+
+> For full lineage resolution, implement [Recursive column tracing](#recursive-column-tracing-consumer-algorithm) above. The checklist below is a scope-entry orientation aid.
 
 1. Start at the statement root (`def_query0`, `def_insert0`, etc., or `SCRIPT["N"]` for scripts).
 2. Read `interface` to learn what the scope exports and where each output column comes from.
