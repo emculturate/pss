@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>pss</groupId>
+    <artifactId>pss-parent</artifactId>
+    <version>5.1.3-1</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>pss-parse-docs</artifactId>
+  <packaging>jar</packaging>
+  <name>pss-parse-docs</name>
+  <description>Versioned symbol-table consumer documentation bundle for pss-parse</description>
+
+  <properties>
+    <canonical.doc.path>${project.basedir}/../parse/documents/symbol-table-bucket-reference.md</canonical.doc.path>
+    <versioned.doc.filename>symbol-table-bucket-reference-pss-parse-${pss.parse.api.version}.md</versioned.doc.filename>
+  </properties>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/filtered</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven.resources.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>copy-consumer-docs-bundle</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/META-INF/pss-parse/${pss.parse.api.version}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/../parse/documents</directory>
+                  <includes>
+                    <include>symbol-table-bucket-reference.md</include>
+                    <include>table-and-query-dictionary-design.md</include>
+                    <include>relational-modifier-resolution-policy.md</include>
+                    <include>sql-grammar-extensions-since-2026-01-01.md</include>
+                    <include>phase-17.6.9-window-query-dictionary-policy.md</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>${maven.antrun.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>copy-versioned-doc-filename</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy file="${canonical.doc.path}"
+                      tofile="${project.build.outputDirectory}/${versioned.doc.filename}"
+                      overwrite="true"/>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sync-vendor-docs-tree</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <exec executable="${project.basedir}/../scripts/sync-pss-parse-docs-vendor.sh" failonerror="true">
+                  <arg value="${pss.parse.api.version}"/>
+                  <arg value="${project.version}"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${maven.jar.plugin.version}</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <PSS-Parser-Artifact>pss-parse</PSS-Parser-Artifact>
+              <PSS-Parser-Version>${project.version}</PSS-Parser-Version>
+              <PSS-Parser-Api-Version>${pss.parse.api.version}</PSS-Parser-Api-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

@@ -1,0 +1,38 @@
+{
+  "parserArtifact": "pss-parse",
+  "parserVersion": "5.1.3-1",
+  "parserApiVersion": "5.1.3",
+  "documents": [
+    {
+      "id": "symbol-table-bucket-reference",
+      "role": "Primary consumer guide for symbol-table buckets, tracing algorithms, and scope semantics",
+      "path": "symbol-table-bucket-reference.md",
+      "versionedFilename": "symbol-table-bucket-reference-pss-parse-5.1.3.md",
+      "parserVersionMin": "5.1.3"
+    },
+    {
+      "id": "table-and-query-dictionary-design",
+      "role": "Design contract for global and per-scope table_dictionary and query_dictionary collection",
+      "path": "table-and-query-dictionary-design.md",
+      "parserVersionMin": "5.1.3"
+    },
+    {
+      "id": "relational-modifier-resolution-policy",
+      "role": "PIVOT and UNPIVOT semantics, derivation buckets, and modifier column lineage",
+      "path": "relational-modifier-resolution-policy.md",
+      "parserVersionMin": "5.1.3"
+    },
+    {
+      "id": "sql-grammar-extensions-since-2026-01-01",
+      "role": "Parse coverage and grammar extensions available in pss-parse 5.1.3 and later",
+      "path": "sql-grammar-extensions-since-2026-01-01.md",
+      "parserVersionMin": "5.1.3"
+    },
+    {
+      "id": "window-query-dictionary-policy",
+      "role": "Window clause policy for window_partition_by and window_ordered_by versus query_dictionary",
+      "path": "phase-17.6.9-window-query-dictionary-policy.md",
+      "parserVersionMin": "5.1.3"
+    }
+  ]
+}
