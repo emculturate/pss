@@ -609,7 +609,7 @@ How common SQL constructs produce nested `def_*` trees. Scope keys are defined i
 1. Start at the statement root (`def_query0`, `def_insert0`, etc., or `SCRIPT["N"]` for scripts).
 2. Read **`interface`** to learn what the scope exports and where each output column comes from.
 3. Use **`table_dictionary`** for physical lineage; **`query_dictionary`** for output-name token positions.
-4. Check clause buckets (`filters`, `grouped_by`, `ordered_by`, `window_partition_by`, `window_ordered_by`) for columns used in those clauses.
+4. For each clause role you care about, trace **both** the archive bucket **and** matching **`dependent_queries`** entries (see [Clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries) below). Do not stop at `filters=[…]` alone — scalar and predicate subqueries in that clause may only appear under `dependent_queries`.
 5. Follow `table_alias` values of `queryN` form to nested **`def_queryN`** children.
 6. Follow **`dependent_queries`** entries to predicate subquery bodies.
 7. Check **`derivation`** when PIVOT/UNPIVOT is present.
@@ -646,6 +646,55 @@ Do not limit tracing to `interface`. A reference may originate in:
 | **`dependent_queries`** + nested child | Predicate/scalar subquery body (open child `def_queryN` first) |
 | DML **`interface`** / **`query_dictionary`** | `INSERT` / `UPDATE` / `DELETE` **`RETURNING`** outputs |
 
+### Clause-bucket tracing: column refs + dependent subqueries
+
+When your algorithm is collecting or tracing columns for a **specific SQL role** (filtering, grouping, ordering, windowing, UPDATE SET, PIVOT operands, SELECT output, etc.), treat each role as **two parallel sources** on the same `def_*` scope:
+
+1. **Archive bucket** — the flat column-ref list or map already named for that role (`filters`, `grouped_by`, `ordered_by`, `window_partition_by`, `window_ordered_by`, `assignments`, `derivation.source_columns`, or `interface`).
+2. **`dependent_queries`** — subquery bodies whose **`type`** field equals that same bucket name.
+
+**Rule:** For every role bucket you read, **also** scan `dependent_queries` and process every entry where `entry.type == <that bucket name>`. The archive list may be empty while `dependent_queries` still has work to do (unnamed scalar subqueries).
+
+| If you are tracing… | Read this archive bucket | Also scan `dependent_queries` where `type` is… |
+|---------------------|--------------------------|-----------------------------------------------|
+| Filtering columns | `filters` | `filters` |
+| GROUP BY columns | `grouped_by` | `grouped_by` |
+| ORDER BY columns (query-level) | `ordered_by` | `ordered_by` |
+| Window partition columns | `window_partition_by` | `window_partition_by` |
+| Window order columns | `window_ordered_by` | `window_ordered_by` |
+| UPDATE SET RHS lineage | `assignments` (per-LHS map values) | `assignments` |
+| PIVOT/UNPIVOT operand scalars | `derivation.source_columns` | `derivation` |
+| SELECT output / expressions | `interface` | `interface` |
+
+**Example — “find all filtering columns” on `def_query4`:**
+
+1. Recursively trace every `{name, table_ref}` in `def_query4.filters`.
+2. Iterate `def_query4.dependent_queries`. For each entry with `type == "filters"` (regardless of whether the key is `predicand1`, `exists2`, `in_list3`, or `quantified1`), open the nested subquery scope and trace columns inside it (see below).
+3. Union the leaf sources from both passes.
+
+**How to open a subquery scope from `dependent_queries` (three steps):**
+
+```
+entry   = scope.dependent_queries["predicand1"]   // or existsN, in_listN, quantifiedN
+queryRef = entry.query                            // live ref, e.g. "query0"
+child    = scope["def_" + queryRef]               // published sibling, e.g. scope.def_query0
+```
+
+In plain terms: **`dependent_queries` and `def_queryN` are siblings on the same parent scope.** The `query` pointer tells you which `def_queryN` key to open. Do not search the global tree — stay on the current `def_*` payload.
+
+Once `child` (`def_query0`, etc.) is open, run the full tracing procedure inside it: start from `child.interface`, `child.filters`, and any other buckets as needed. Correlated outer columns referenced inside the subquery resolve **up** to the parent scope via inherited visibility — they are not copied into the parent's archive buckets.
+
+**Entry kind hints for agents:**
+
+| `dependent_queries` key prefix | SQL form | Typical `type` when tracing… |
+|--------------------------------|----------|------------------------------|
+| `predicandN` | `(SELECT …)` scalar | matches enclosing clause bucket |
+| `existsN` | `EXISTS (SELECT …)` | usually `filters` |
+| `in_listN` | `IN (SELECT …)` | usually `filters` |
+| `quantifiedN` | `= ANY (SELECT …)` etc. | usually `filters` |
+
+For **`interface`** tracing, also walk `dependent_queries` entries with `type=interface` (scalar subqueries in the SELECT list). For **`assignments`**, walk map values under `assignments` **and** `dependent_queries` with `type=assignments`.
+
 ### The alternation pattern
 
 At each hop, alternate lookups **within the current `def_*` scope** and then **descend one child scope**:
@@ -681,12 +730,14 @@ When step **B** resolves to a source that needs no child scope, stop at **Leaf t
 
 ### Predicate and scalar subqueries
 
+The [clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries) rule above is the primary guide. This subsection restates the navigation steps when your starting point is explicitly a **`dependent_queries`** entry rather than an archive-bucket column ref.
+
 When the starting point is a subquery body (via **`dependent_queries`**):
 
 1. Read `dependent_queries.{predicand|exists|in_list|quantified}N` → `{query: queryN, type: <clause-bucket>}`.
-2. Use **`type`** to locate the outer SQL site (`filters`, `ordered_by`, `assignments`, `derivation`, etc.). The matching archive list may be empty for unnamed scalars.
-3. Open **`def_queryN`** nested in the parent scope (not merged into parent dictionaries).
-4. Begin step **A** inside that child with the column ref found in the child scope's buckets.
+2. Use **`type`** to know which archive bucket on the parent describes the outer SQL site (`filters`, `ordered_by`, `assignments`, `derivation`, etc.). That bucket may be **empty** — the `dependent_queries` entry is still authoritative.
+3. Open **`def_queryN`** on the **same parent scope** (`scope["def_" + entry.query]`). The child is a sibling of `dependent_queries`, not nested inside it.
+4. Begin step **A** inside that child: trace `child.interface`, `child.filters`, and other buckets as your task requires.
 5. Correlated outer columns inside the subquery trace **up** via inherited outer `table_alias` / `context_list` — the parent does not flatten inner aliases into its own buckets.
 
 ### Leaf termination
@@ -737,11 +788,28 @@ Trace `filters[0]` = `{name=a, table_ref=sub}`:
 2. At every scope, consult **`table_alias`** and **`context_list`** before assuming `table_ref` is physical.
 3. For modifier-derived names, consult **`derivation.source_columns`** (and **`pivot_derived_source_bindings`** for PIVOT aggregates) before treating a name as unresolvable.
 4. Never skip a scope — grandchild columns are invisible unless re-exported through each intervening child's **`interface`**.
-5. Record each hop `(scope_id, bucket, {name, table_ref})` when building an audit trail; use **`query_dictionary`** at each scope for SQL text-position evidence of output-column names.
+5. When tracing a clause role, always pair the archive bucket with a **`dependent_queries` scan** where `type` matches that bucket (see [Clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries)).
+6. Record each hop `(scope_id, bucket, {name, table_ref})` when building an audit trail; use **`query_dictionary`** at each scope for SQL text-position evidence of output-column names.
 
 ### Procedure summary (pseudocode)
 
 ```
+function trace_clause_role(scope, role_bucket_name):
+  leaves = []
+  // Pass 1: archive bucket column refs
+  for each ref in scope[role_bucket_name]:          // list or map values
+    leaves += trace(ref, scope, role_bucket_name)
+  // Pass 2: dependent subqueries in the same role
+  for each (kind_key, entry) in scope.dependent_queries:
+    if entry.type == role_bucket_name:
+      child = scope["def_" + entry.query]         // sibling def_queryN
+      leaves += trace_subquery_body(child)
+  return leaves
+
+function trace_subquery_body(child_scope):
+  // Start inside child; trace interface, filters, etc. as needed
+  ...
+
 function trace(ref, scope, bucket_name):
   record hop(scope, bucket_name, ref)
   if ref is substitution and unbound: return [substitution leaf]
