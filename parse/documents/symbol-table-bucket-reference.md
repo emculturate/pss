@@ -602,26 +602,24 @@ How common SQL constructs produce nested `def_*` trees. Scope keys are defined i
 
 ---
 
-## Quick traversal recipe
+## Recursive column tracing (consumer algorithm)
 
-> For full lineage resolution, implement [Recursive column tracing](#recursive-column-tracing-consumer-algorithm) below. The checklist here is a scope-entry orientation aid.
+This is the **explicit traceability procedure** every consumer should implement. Any `{name, table_ref}` appearing in **any role bucket** can be traced to one or more **leaf sources** by the same recursive walk. This alternation is the **basis of column-reference traceability** in the symbol table structure family.
+
+### 1. Quick traversal recipe
+
+Scope-entry orientation before the detailed steps in the subsections below:
 
 1. Start at the statement root (`def_query0`, `def_insert0`, etc., or `SCRIPT["N"]` for scripts).
 2. Read **`interface`** to learn what the scope exports and where each output column comes from.
 3. Use **`table_dictionary`** for physical lineage; **`query_dictionary`** for output-name token positions.
-4. For each clause role you care about, trace **both** the archive bucket **and** matching **`dependent_queries`** entries (see [Clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries) below). Do not stop at `filters=[…]` alone — scalar and predicate subqueries in that clause may only appear under `dependent_queries`.
+4. For each clause role you care about, trace **both** the archive bucket **and** matching **`dependent_queries`** entries (see [§4 Clause-bucket tracing](#4-clause-bucket-tracing-column-refs--dependent-subqueries)). Do not stop at `filters=[…]` alone — scalar and predicate subqueries in that clause may only appear under `dependent_queries`.
 5. Follow `table_alias` values of `queryN` form to nested **`def_queryN`** children.
 6. Follow **`dependent_queries`** entries to predicate subquery bodies.
 7. Check **`derivation`** when PIVOT/UNPIVOT is present.
 8. Use **`context_list`** to resolve CTE alias references.
 
----
-
-## Recursive column tracing (consumer algorithm)
-
-This is the **explicit traceability procedure** every consumer should implement. Any `{name, table_ref}` appearing in **any role bucket** can be traced to one or more **leaf sources** by the same recursive walk. This alternation is the **basis of column-reference traceability** in the symbol table structure family.
-
-### Column reference shape
+### 2. Column reference shape
 
 ```
 {name: "<column_name>", table_ref: "<alias_or_source>"}
@@ -629,7 +627,7 @@ This is the **explicit traceability procedure** every consumer should implement.
 
 Substitution objects use `{substitution: {name: "<var>", type: "column"}, table_ref: "…"}` — treat `substitution.name` as the logical column identity for tracing purposes; resolution may stop at the substitution if no physical binding exists.
 
-### Valid starting buckets (any role)
+### 3. Valid starting buckets (any role)
 
 Do not limit tracing to `interface`. A reference may originate in:
 
@@ -646,7 +644,7 @@ Do not limit tracing to `interface`. A reference may originate in:
 | **`dependent_queries`** + nested child | Predicate/scalar subquery body (open child `def_queryN` first) |
 | DML **`interface`** / **`query_dictionary`** | `INSERT` / `UPDATE` / `DELETE` **`RETURNING`** outputs |
 
-### Clause-bucket tracing: column refs + dependent subqueries
+### 4. Clause-bucket tracing: column refs + dependent subqueries
 
 When your algorithm is collecting or tracing columns for a **specific SQL role** (filtering, grouping, ordering, windowing, UPDATE SET, PIVOT operands, SELECT output, etc.), treat each role as **two parallel sources** on the same `def_*` scope:
 
@@ -695,7 +693,7 @@ Once `child` (`def_query0`, etc.) is open, run the full tracing procedure inside
 
 For **`interface`** tracing, also walk `dependent_queries` entries with `type=interface` (scalar subqueries in the SELECT list). For **`assignments`**, walk map values under `assignments` **and** `dependent_queries` with `type=assignments`.
 
-### The alternation pattern
+### 5. The alternation pattern
 
 At each hop, alternate lookups **within the current `def_*` scope** and then **descend one child scope**:
 
@@ -715,7 +713,7 @@ column reference  →  table_alias  →  child def_*  →  interface  →  colum
 
 When step **B** resolves to a source that needs no child scope, stop at **Leaf termination**.
 
-### Resolving `table_ref` (step B)
+### 6. Resolving `table_ref` (step B)
 
 | Resolved value | Next action |
 |----------------|-------------|
@@ -728,9 +726,9 @@ When step **B** resolves to a source that needs no child scope, stop at **Leaf t
 | **`intersectN`** / **`def_intersectN`** | Same as union composite handling |
 | **`table_ref` is `null`** | Unqualified ref in single-table scope — search visible **`table_dictionary`** for unique table proof; if exactly one physical table is visible, treat as leaf candidate |
 
-### Predicate and scalar subqueries
+### 7. Predicate and scalar subqueries
 
-The [clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries) rule above is the primary guide. This subsection restates the navigation steps when your starting point is explicitly a **`dependent_queries`** entry rather than an archive-bucket column ref.
+The [§4 Clause-bucket tracing](#4-clause-bucket-tracing-column-refs--dependent-subqueries) rule above is the primary guide. This subsection restates the navigation steps when your starting point is explicitly a **`dependent_queries`** entry rather than an archive-bucket column ref.
 
 When the starting point is a subquery body (via **`dependent_queries`**):
 
@@ -740,7 +738,7 @@ When the starting point is a subquery body (via **`dependent_queries`**):
 4. Begin step **A** inside that child: trace `child.interface`, `child.filters`, and other buckets as your task requires.
 5. Correlated outer columns inside the subquery trace **up** via inherited outer `table_alias` / `context_list` — the parent does not flatten inner aliases into its own buckets.
 
-### Leaf termination
+### 8. Leaf termination
 
 Stop a branch when the reference resolves to a **source leaf** — no further query `interface` rewrite applies.
 
@@ -753,11 +751,11 @@ Stop a branch when the reference resolves to a **source leaf** — no further qu
 | **DML `RETURNING` output** | Column is declared returning output on **`def_insertN`**, **`def_updateN`**, or **`def_deleteN`** | That scope's **`interface`** / **`query_dictionary`** |
 | **No `queryN` indirection** | `table_ref` is physical table, `VALUES`/function alias, with no intervening nested `def_query*` | Current scope **`table_dictionary`** |
 
-### Fan-out (multiple leaves)
+### 9. Fan-out (multiple leaves)
 
 One starting reference may produce **multiple terminal leaves** when step **D** returns more than one `{name, table_ref}` (combined expression, window output merging `OVER` dependencies, or multi-source `interface` entry). Trace **each** dependency as a separate branch; aggregate all leaves for the full lineage set.
 
-### Worked example
+### 10. Worked example
 
 ```sql
 SELECT * FROM (SELECT a FROM tab1) AS sub WHERE sub.a = 1
@@ -782,16 +780,16 @@ Trace `filters[0]` = `{name=a, table_ref=sub}`:
 3. Step **D** — in **def_query0**, `interface[a]` = `[{name=a, table_ref=tab1}]` → next hop `{name=a, table_ref=tab1}`.
 4. Step **B** — `table_alias[tab1]` → physical `tab1` → **leaf** at `table_dictionary[tab1][a]`.
 
-### Implementer checklist (consumer obligations)
+### 11. Implementer checklist (consumer obligations)
 
 1. Read **published `def_*`** payloads only — never ephemeral `queryN` keys on finalized trees.
 2. At every scope, consult **`table_alias`** and **`context_list`** before assuming `table_ref` is physical.
 3. For modifier-derived names, consult **`derivation.source_columns`** (and **`pivot_derived_source_bindings`** for PIVOT aggregates) before treating a name as unresolvable.
 4. Never skip a scope — grandchild columns are invisible unless re-exported through each intervening child's **`interface`**.
-5. When tracing a clause role, always pair the archive bucket with a **`dependent_queries` scan** where `type` matches that bucket (see [Clause-bucket tracing](#clause-bucket-tracing-column-refs--dependent-subqueries)).
+5. When tracing a clause role, always pair the archive bucket with a **`dependent_queries` scan** where `type` matches that bucket (see [§4 Clause-bucket tracing](#4-clause-bucket-tracing-column-refs--dependent-subqueries)).
 6. Record each hop `(scope_id, bucket, {name, table_ref})` when building an audit trail; use **`query_dictionary`** at each scope for SQL text-position evidence of output-column names.
 
-### Procedure summary (pseudocode)
+### 12. Procedure summary (pseudocode)
 
 ```
 function trace_clause_role(scope, role_bucket_name):
