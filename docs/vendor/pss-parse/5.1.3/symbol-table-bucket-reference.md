@@ -77,7 +77,7 @@ A single source column may support **multiple roles** at once, or appear for **o
 
 When interpreting a source column, walk **all relevant buckets** in each scope — not only **`interface`**, because a column may be essential even when it never surfaces in the final output.
 
-To trace any reference to its origin, follow [Recursive column tracing](#recursive-column-tracing-consumer-algorithm).
+To trace any reference to its origin, follow [Recursive column tracing](#recursive-column-tracing-consumer-algorithm). To audit how a physical source column is used across the statement — what actions it participates in and how derived names propagate outward — follow [Source column impact tracing](#source-column-impact-tracing-consumer-algorithm).
 
 | Role (summary) | Primary buckets |
 |----------------|-----------------|
@@ -844,22 +844,48 @@ function trace(ref, scope, bucket_name):
 
 ## Source column impact tracing (consumer algorithm)
 
-**Direction: source → impacts.** Given a physical table column from the **global table dictionary**, walk **outward** through nested scopes and report every bucket where that column (or a name derived from it) participates in the query's logic.
+**Direction: source → impacts (leaf-first, then upward).** Given a physical table column from the **global table dictionary**, start at the **leaf introduction sites** where that column enters the symbol tree, collect every **participation action** it takes in each scope, then walk **outward** through **`interface`** re-exports and **`table_alias`** / **`context_list`** bindings until you reach every consuming scope — including statement outputs, filters, grouping keys, window clauses, DML assignments, and correlated subqueries.
 
-This procedure answers: *“How is column `a` in table `tab1` used, and how is its value propagated through aliasing and nested queries?”* It is the **inverse** of [Recursive column tracing](#recursive-column-tracing-consumer-algorithm): start at a proven leaf source and fan out to clause roles, interface re-exports, DML targets, and statement outputs.
+This procedure answers: *“How was column `a` from table `tab1` used in this query — what kinds of actions did it participate in, and how did its value propagate through aliasing and nested queries?”* It is the **inverse** of [Recursive column tracing](#recursive-column-tracing-consumer-algorithm): recursive tracing holds a `{name, table_ref}` and walks **down** to physical leaves; impact tracing holds a physical leaf and walks **up** through derived references and scope boundaries.
+
+A single physical column may participate in **many actions at once** in the same scope (for example, exported in `interface`, used in `filters`, and listed in `grouped_by`). Record each action separately — do not collapse them into one “usage” label. See [§2 Participation roles](#2-participation-roles-what-actions-to-record).
 
 ### 1. Quick recipe
 
-1. **Anchor** the trace on `{physical_table, column}` using the global **table dictionary** token proof (e.g. `table_dictionary["tab1"]["a"]`).
-2. Open the statement root (`def_query0`, `def_insert0`, `SCRIPT["N"]`, …).
-3. Walk scopes **top-down** (parent before children). At each `def_*` scope, scan **all role buckets** for references that **match** the anchor (see §3).
-4. Every match is an **impact site** — record `(scope, bucket, matched_ref, commentary)`.
-5. When the anchor matches a dependency of **`interface.<output_col>`**, treat `<output_col>` as **propagated** at this scope; continue the trace **upward** in parent scopes that consume that output via `table_alias` / `context_list`.
-6. When a child `def_queryN` is visible through `table_alias`, **descend** into the child and repeat the bucket scan (the same physical column may impact both parent and child scopes).
-7. Scan **`dependent_queries`** on each scope: open nested `def_queryN` children and look for **correlated** uses of the anchor (inner `filters` / `interface` refs whose `table_ref` resolves back to the physical table through inherited outer visibility).
-8. Emit a **fan-out report** rooted at the origin (see §7).
+1. **Anchor** on `{physical_table, column}` using the global **table dictionary** token proof (e.g. `table_dictionary["tab1"]["a"]`).
+2. **Find leaf introduction sites** — every `def_*` scope whose local **`table_dictionary[anchor.table][anchor.column]`** carries tokens (the innermost scopes that read the physical column directly). See [§5 Leaf introduction sites](#5-leaf-introduction-sites).
+3. At each introduction scope, **scan all role buckets** for references matching the anchor (see [§6 Matching references](#6-matching-bucket-references-to-the-anchor)). Each match is an **impact site** with a **participation role** (see [§2](#2-participation-roles-what-actions-to-record)).
+4. When the anchor appears in **`interface.<out_col>`** dependency lists, record the action *“feeds output `<out_col>`”* and enqueue **`<out_col>` as a derived reference** at this scope.
+5. **Walk upward** through the [reverse alternation pattern](#4-reverse-alternation-pattern-leaf--derived-reference--parent-scope): for each derived reference `{name=<out_col>, table_ref=<alias>}`, open the **parent** scope where `table_alias[<alias>]` points at the child scope; scan parent buckets for uses of that derived name; repeat until the statement root.
+6. **Walk downward** into child `def_queryN` scopes visible through `table_alias` / `context_list` when the parent consumes only the child's output — the same physical column may be read and acted on at multiple nesting depths.
+7. On every scope visited, scan **`dependent_queries`**: open nested `def_queryN` children and collect **correlated** inner uses of the anchor (outer physical table visible inside the subquery body).
+8. Emit a **fan-out report** rooted at the physical origin, with sibling branches per action and per propagation path (see [§10 Report shape](#10-report-shape-fan-out-from-origin)).
 
-### 2. Anchor: global table dictionary entry
+### 2. Participation roles (what actions to record)
+
+When a bucket reference matches the anchor, attach a **participation role** — a plain-language label for the SQL action that column performed at that site. Use the bucket as the primary classifier; refine with context (LHS key on `assignments`, output column name on `interface`, `dependent_queries.type`, modifier bucket on `derivation`).
+
+| Bucket | Participation role (action) | What to record |
+|--------|----------------------------|----------------|
+| **`table_dictionary`** | **Physical read** | Direct touch — column token collected while walking this scope (proof of introduction) |
+| **`interface`** (as dependency) | **Input to output expression** | Anchor feeds output column `<out_col>` — record `{action: "feeds_output", output: "<out_col>"}` |
+| **`interface`** (output key equals anchor column, pass-through) | **Pass-through export** | Column exported under same or aliased name without intermediate rewrite |
+| **`filters`** | **Row restriction** | Predicate operand — WHERE, HAVING, QUALIFY, JOIN ON, or EXISTS/IN correlation site |
+| **`grouped_by`** | **Grouping key** | Column participates in GROUP BY / aggregation partition |
+| **`ordered_by`** | **Sort key** | Column participates in query-level ORDER BY |
+| **`window_partition_by`** | **Window partition** | Column partitions an analytic window (`OVER (PARTITION BY …)`) |
+| **`window_ordered_by`** | **Window order** | Column orders rows within a window frame |
+| **`assignments`** | **DML target update** | Anchor appears in RHS lineage for `SET <lhs> = …` — record `{action: "update_rhs", target_column: "<lhs>"}` |
+| **`derivation.source_columns`** | **Relational modifier operand** | PIVOT/UNPIVOT operand — record modifier bucket (`tuple_0`, `unpvt`, …) |
+| **`derivation.derived_columns`** | **Modifier-derived output** | Anchor operand fans out to derived column name — record derived name |
+| **`dependent_queries`** + inner bucket | **Subquery participation** | Anchor used inside subquery body — record `{subquery: "<kind>N", outer_type: "<type>", inner_bucket: "…"}` |
+| Substitution object | **Substitution placeholder** | Bound or unbound `substitution.name` matching anchor |
+
+**Derived references:** Whenever `interface.<out_col>` lists a dependency matching the anchor, treat `<out_col>` as a **new name** for the same logical value at that scope. Parent scopes never see the physical `{name=a, table_ref=tab1}` directly — they see `{name=a, table_ref=sub}` where `sub` aliases the child. Upward propagation always follows these **renamed hops** through `table_alias` / `context_list`, not raw physical refs.
+
+**Multiple roles:** The same match may satisfy more than one row in the table above when a column is archived in several buckets (uncommon but valid after modifier fan-out). Emit one impact record per bucket.
+
+### 3. Anchor: global table dictionary entry
 
 The anchor is always a **physical source column**, not a query output name:
 
@@ -872,7 +898,45 @@ proof  = global_table_dictionary["tab1"]["a"]   // List<token> — SQL text posi
 - Qualified table names in the dictionary key (`sch.tab1`) must match the anchor string exactly.
 - If the column appears under multiple physical tables in one statement, run **one trace per anchor** — do not merge unrelated homonyms.
 
-### 3. Matching bucket references to the anchor
+### 4. Reverse alternation pattern (leaf → derived reference → parent scope)
+
+[Recursive column tracing §5](#5-the-alternation-pattern) walks **down**:
+
+```
+column reference  →  table_alias  →  child def_*  →  interface  →  column reference  →  …  →  physical leaf
+```
+
+Impact tracing walks **up** from the leaf:
+
+```
+physical leaf  →  interface (export)  →  derived reference in parent  →  parent role buckets  →  parent interface  →  …  →  statement root
+```
+
+| Step | Where | What to do |
+|------|-------|------------|
+| **A** | **Leaf scope** `S` | Confirm `S.table_dictionary[anchor.table][anchor.column]` has tokens — this scope **introduces** the physical read. |
+| **B** | **All role buckets** in `S` | Scan every bucket ([§7](#7-impact-buckets-to-scan-at-each-scope)); record each matching ref with its [participation role](#2-participation-roles-what-actions-to-record). |
+| **C** | **`interface`** in `S` | For each `interface.<out_col>` whose dependency list matches the anchor, record *feeds output* and enqueue derived ref `{name=<out_col>, scope=S}`. |
+| **D** | **Parent scope** `P` | Find aliases where `P.table_alias[<alias>]` → `queryN` / `def_queryN` identifying child `S`. Search **all buckets in `P`** for refs `{name=<out_col>, table_ref=<alias>}` (or `context_list` CTE names). Each hit is a new impact site. |
+| **E** | **`P` becomes current scope** | Repeat **B–D** for each derived reference until no parent scope remains. Also descend into child scopes ([§1 step 6](#1-quick-recipe)) when the anchor is consumed only through nested reads. |
+
+**Block references (`dependent_queries`):** Subquery bodies are **siblings** of `def_queryN` on the parent payload, not nested inside archive buckets. When scanning upward, a parent may list `dependent_queries.predicand1` with `type=filters` while `filters` itself is empty — open `def_query0` via `scope["def_" + entry.query]` and scan the **child** buckets for correlated anchor matches. Record the action on both the inner bucket and the parent's `dependent_queries.<kind>N` index.
+
+**Set operations:** When child branch `def_queryN` exports an affected column, the composite parent's `interface` may use sentinel **`query_column`** until branches align — propagate impact to the composite output name at finalize.
+
+**PIVOT/UNPIVOT:** Operand impact on `derivation.source_columns` fans out to **derived** names in `derivation.derived_columns` and `interface` entries whose `table_ref` is a modifier bucket. Record the operand action and each derived output that lists the bucket as `table_ref`.
+
+### 5. Leaf introduction sites
+
+Before walking upward, locate **where the physical column enters** the symbol tree:
+
+1. Enumerate every `def_*` scope in the statement (depth-first from root is fine).
+2. At each scope `S`, if `S.table_dictionary[anchor.physical_table][anchor.column]` is non-empty, `S` is a **leaf introduction site** — the walk touched that physical column while resolving references inside `S`.
+3. Prefer **deepest** introduction sites first when building the report (inner subqueries before outers), but visit **all** sites — the same physical column may be read independently in sibling branches (`UNION` arms) or in both a child and a correlated subquery.
+
+Token positions in the global table dictionary are the authoritative **SQL location list** for “where was this column introduced in the text”; per-scope `table_dictionary` entries tie those tokens to a specific `def_*` scope.
+
+### 6. Matching bucket references to the anchor
 
 A bucket entry `{name, table_ref}` (or substitution object) **matches** the anchor when:
 
@@ -883,7 +947,9 @@ A bucket entry `{name, table_ref}` (or substitution object) **matches** the anch
 | `name == anchor.column` and `table_ref` is a **chain alias** resolving to the physical table | `table_alias={s=query0}`, child exports `a`, parent ref `{name=a, table_ref=s}` after one interface hop |
 | Substitution with `substitution.name == anchor.column` and resolvable `table_ref` | Treat like a column ref after substitution binding |
 
-**Resolution helper** (same logic as reverse tracing, used in the forward direction):
+**Matching derived references (upward walk):** After step **C**, a ref `{name=<out_col>, table_ref=<alias>}` matches the **propagated anchor** when `table_alias[<alias>]` resolves to the child scope that exported `<out_col>` from the anchor. Do not require `table_ref == anchor.physical_table` on parent hops — only on the leaf introduction sites.
+
+**Resolution helper** (same `resolve_table_ref` logic as recursive tracing, used in the forward direction):
 
 ```
 function resolves_to_physical(ref, scope):
@@ -893,58 +959,62 @@ function resolves_to_physical(ref, scope):
   if source is def_queryN / queryN:
     return child_exports_column(source, anchor.column)   // one interface hop
   return false
+
+function matches_propagated(ref, derived_name, child_alias, parent_scope):
+  return ref.name == derived_name and ref.table_ref == child_alias
+    and parent_scope.table_alias[child_alias] maps to child that exported derived_name
 ```
 
-Do **not** match on column name alone — `table_ref` must resolve to the anchored physical table (or to a child scope that re-exports that column).
+Do **not** match on column name alone at leaf sites — `table_ref` must resolve to the anchored physical table (or to a child scope that re-exports that column).
 
-### 4. Impact buckets to scan at each scope
+### 7. Impact buckets to scan at each scope
 
-At every `def_*` scope where the anchor is visible, scan **all** of the following. A single scope may yield **multiple** impact sites across buckets.
+At every `def_*` scope visited (introduction site, parent on upward walk, or child on downward walk), scan **all** of the following. A single scope may yield **multiple** impact sites across buckets.
 
-| Bucket | What to look for | Commentary to attach |
-|--------|------------------|----------------------|
-| **`filters`** | Matching refs in the list | “Used to restrict rows (WHERE / HAVING / QUALIFY / JOIN ON)” |
-| **`grouped_by`** | Matching refs | “Participates in grouping key” |
-| **`ordered_by`** | Matching refs | “Participates in sort order” |
-| **`window_partition_by`** | Matching refs | “Partitions a window” |
-| **`window_ordered_by`** | Matching refs | “Orders within a window” |
-| **`assignments`** | Matching refs in RHS lineage lists | “Contributes to UPDATE SET value for `<lhs>`” |
-| **`derivation.source_columns`** | Matching refs under modifier buckets | “PIVOT/UNPIVOT operand” |
-| **`interface`** | Matching refs inside any output column's dependency list | “Contributes to output `<output_col>`” — also enqueue `<output_col>` for upward propagation |
-| **`dependent_queries`** | Open each `def_queryN` child; scan its buckets for correlated matches | “Referenced inside `<kind>N` subquery (`type=<bucket>`)” |
+| Bucket | Participation role | Also scan `dependent_queries` where `type` equals… |
+|--------|-------------------|-----------------------------------------------------|
+| **`filters`** | Row restriction | `filters` |
+| **`grouped_by`** | Grouping key | `grouped_by` |
+| **`ordered_by`** | Sort key | `ordered_by` |
+| **`window_partition_by`** | Window partition | `window_partition_by` |
+| **`window_ordered_by`** | Window order | `window_ordered_by` |
+| **`assignments`** | DML update RHS (per-LHS map values) | `assignments` |
+| **`derivation.source_columns`** | Modifier operand | `derivation` |
+| **`interface`** | Output expression input / pass-through export | `interface` |
+| **`table_dictionary`** | Physical read | — |
+| **`dependent_queries`** | Subquery index (open child — see [§9](#9-dependent-subqueries-and-correlated-inner-use)) | — |
 
-Also consult scope-local **`table_dictionary[anchor.physical_table][anchor.column]`** — token proof that this scope **touches** the physical column directly (even if no role bucket lists it yet).
+Apply the [dual-source rule](#4-clause-bucket-tracing-column-refs--dependent-subqueries) from recursive tracing: for each role bucket, also process `dependent_queries` entries whose `type` matches that bucket name.
 
-### 5. Propagation through interface and aliases
+### 8. Propagation through interface, aliases, and derived references
 
-The forward trace **crosses scope boundaries** only through published exports:
+The upward trace **crosses scope boundaries** only through published exports and alias maps:
 
-1. **Downward (parent → child):** If `scope.table_alias[alias]` → `queryN` / `def_queryN`, open the child scope and run the full bucket scan. The anchor may impact the child even when the parent only references the child's **output** names.
-2. **Upward (child → parent):** When `interface[OUT]` lists a dependency matching the anchor, record the impact on `interface.OUT`, then in the **parent** scope search for refs to `{name=OUT, table_ref=<alias>}` where `table_alias[<alias>]` points at that child. Each parent hit is a new impact site; repeat until the statement root is reached.
-3. **Set operations:** When a branch `def_queryN` exports a column affected by the anchor, the composite parent's `interface` may use sentinel **`query_column`** — propagate impact to the aligned composite output name at finalize.
-4. **PIVOT/UNPIVOT:** Operand impact on `derivation.source_columns` may fan out to **derived** column names in `derivation.derived_columns`; record both the operand site and each derived output that lists the bucket as `table_ref`.
+1. **Upward (child → parent):** When `interface[OUT]` depends on the anchor at child scope `S`, record *feeds output `OUT`*, then in parent `P` find every ref `{name=OUT, table_ref=<alias>}` where `table_alias[<alias>]` → `queryN` identifying `S`. Each parent bucket hit is a new impact with the appropriate [participation role](#2-participation-roles-what-actions-to-record). Repeat recursively to the statement root.
+2. **Downward (parent → child):** If `P.table_alias[alias]` → `def_queryN`, open the child and run the full bucket scan. The anchor may be read and acted on inside the child even when the parent only references output names.
+3. **CTE (`context_list`):** Upward and downward hops use `context_list[cte_name]` → `queryN` the same way as `table_alias` for `FROM` subqueries.
+4. **Fan-out:** One physical column may produce **many** parallel branches (multiple outputs, multiple clause roles, multiple subqueries, multiple `UNION` arms). Preserve each path as a sibling branch — do not merge.
 
-**Fan-out rule:** One physical column may produce **many** parallel branches (multiple outputs, multiple clause roles, multiple subqueries). Do not collapse branches — the report should preserve each path.
-
-### 6. Dependent subqueries and correlated inner use
+### 9. Dependent subqueries and correlated inner use
 
 Predicate-frame subqueries are indexed on the parent but executed in a **child** scope:
 
 1. On parent scope `S`, iterate `S.dependent_queries`.
-2. Open `child = S["def_" + entry.query]`.
+2. Open `child = S["def_" + entry.query]` (sibling of `dependent_queries`, not nested inside it).
 3. Scan `child` buckets for refs matching the anchor **via outer correlation** (`table_ref` resolves to a table visible in `S`, not declared in `child`'s own `FROM`).
-4. Record: `(parent=S, bucket=dependent_queries.<kind>N, child_scope=def_queryM, inner_bucket=…, commentary="Correlated use inside subquery")`.
+4. Record: `{action: "subquery_participation", parent=S, index=dependent_queries.<kind>N, entry_type=<type>, child_scope=def_queryM, inner_bucket=…}`.
 
-Also apply [§4 dual-source rule](#4-clause-bucket-tracing-column-refs--dependent-subqueries) in the forward direction: for each `entry.type`, the inner body may affect the parent's clause role even when the parent's archive list is empty.
+The parent's archive bucket for `entry.type` may be **empty** — the `dependent_queries` entry and child body are still authoritative.
 
-### 7. Report shape: fan-out from origin
+### 10. Report shape: fan-out from origin
 
 Present results as a **tree** (or nested list) rooted at the physical source. Each node should carry:
 
 - **Scope** — `def_queryN` path from statement root (e.g. `def_query2 → def_query0`).
 - **Bucket** — role bucket or `dependent_queries.<kind>N`.
 - **Reference** — the matching `{name, table_ref}` (or substitution).
-- **Commentary** — plain-language role (filter, output, grouping, correlation, …).
+- **Participation role** — action label from [§2](#2-participation-roles-what-actions-to-record) (filter, feeds output, grouping, window partition, …).
+- **Derived reference** — when applicable, the output name propagated to the parent (`OUT` via alias `sub`).
 - **Tokens** — optional `query_dictionary` / `table_dictionary` positions for audit.
 
 **Example report skeleton:**
@@ -953,25 +1023,26 @@ Present results as a **tree** (or nested list) rooted at the physical source. Ea
 tab1.a  (origin — global table dictionary)
 │
 ├─ def_query0.table_dictionary
-│     └─ direct physical touch [@1,8:8='a']
+│     └─ [physical read] direct touch [@1,8:8='a']
 │
 ├─ def_query0.interface.a
-│     └─ exported as output column `a` from inner SELECT
+│     └─ [pass-through export] exported as output column `a`
+│         derived_ref: {name=a, scope=def_query0} → propagates as sub.a
 │
 ├─ def_query1.filters
-│     └─ {name=a, table_ref=sub}  — WHERE restricts on propagated alias
+│     └─ [row restriction] {name=a, table_ref=sub}  — WHERE restricts on propagated alias
 │
 ├─ def_query1.interface.*
-│     └─ statement output depends on `sub`, which re-exports tab1.a
+│     └─ [feeds output] statement output depends on `sub`, which re-exports tab1.a
 │
 └─ def_query1.dependent_queries.predicand1 → def_query2
       └─ def_query2.filters
-            └─ {name=a, table_ref=tab1}  — correlated scalar subquery in WHERE
+            └─ [row restriction] {name=a, table_ref=tab1}  — correlated scalar subquery in WHERE
 ```
 
-Agents may serialize this as JSON, indented text, or a graph — the **topology** (origin at root, impacts as child branches, propagation across scopes as nested paths) matters more than the encoding.
+Agents may serialize this as JSON, indented text, or a graph — the **topology** (origin at root, participation actions as labeled branches, derived-reference propagation as nested paths) matters more than the encoding.
 
-### 8. Worked example
+### 11. Worked example
 
 ```sql
 SELECT * FROM (SELECT a FROM tab1) AS sub WHERE sub.a = 1
@@ -979,74 +1050,77 @@ SELECT * FROM (SELECT a FROM tab1) AS sub WHERE sub.a = 1
 
 **Anchor:** `{physical_table: tab1, column: a}`
 
-**Forward trace (abbreviated):**
+**Impact trace (leaf-first, then upward):**
 
-| Step | Scope | Bucket | Match | Commentary |
-|------|-------|--------|-------|------------|
-| 1 | `def_query0` | `table_dictionary` | `tab1.a` tokens | Inner query reads physical column |
-| 2 | `def_query0` | `interface.a` | `{name=a, table_ref=tab1}` | Inner query exports `a` |
-| 3 | `def_query1` | `table_alias` | `sub=query0` | Outer query binds alias to inner scope |
-| 4 | `def_query1` | `filters` | `{name=a, table_ref=sub}` | WHERE compares propagated `a` |
-| 5 | `def_query1` | `interface.*` | deps include `{name=a, table_ref=sub}` | Statement output `*` pulls through `sub.a` → `tab1.a` |
+| Step | Scope | Bucket | Match | Participation role |
+|------|-------|--------|-------|-------------------|
+| 1 | `def_query0` | `table_dictionary` | `tab1.a` tokens | Physical read |
+| 2 | `def_query0` | `interface.a` | `{name=a, table_ref=tab1}` | Pass-through export → derived ref `a` |
+| 3 | `def_query1` | `table_alias` | `sub=query0` | (binding — enables upward match) |
+| 4 | `def_query1` | `filters` | `{name=a, table_ref=sub}` | Row restriction |
+| 5 | `def_query1` | `interface.*` | deps include `{name=a, table_ref=sub}` | Feeds output `*` |
 
 Fan-out tree:
 
 ```
 tab1.a
-├── def_query0 — reads and exports
-│     ├── table_dictionary[tab1][a]
-│     └── interface.a ← {name=a, table_ref=tab1}
-└── def_query1 — consumes via alias sub
-      ├── filters ← {name=a, table_ref=sub}
-      └── interface.* ← depends on sub.a
+├── def_query0 — introduces and exports
+│     ├── table_dictionary[tab1][a]     [physical read]
+│     └── interface.a                 [pass-through export] → derived ref `a`
+└── def_query1 — consumes via alias `sub`
+      ├── filters                     [row restriction] ← {name=a, table_ref=sub}
+      └── interface.*                 [feeds output]
 ```
 
-### 9. Implementer checklist
+### 12. Implementer checklist
 
 1. Anchor on **one** physical `{table, column}` from the global table dictionary — not a query output name.
-2. Walk scopes **top-down**; record impacts at each level before descending into children.
-3. Match on **name + resolved table_ref**, never name alone.
-4. Scan **all** role buckets plus **`dependent_queries`** children (correlated inner use).
-5. When `interface.<out>` depends on the anchor, **propagate `<out>` upward** through `table_alias` / `context_list` in parent scopes.
-6. Preserve **fan-out** — multiple outputs and clause roles produce sibling branches, not a single merged list.
-7. Pair each impact with **commentary** (human-readable role) and optional **token** proof from scope dictionaries.
-8. For audit trails, run [Recursive column tracing](#recursive-column-tracing-consumer-algorithm) on any ambiguous ref to confirm it resolves back to the same anchor.
+2. Start at **leaf introduction sites** (`table_dictionary` tokens per scope), then walk **upward** through `interface` / `table_alias` derived references.
+3. Match on **name + resolved table_ref** at leaf sites; match on **propagated derived names** on parent hops.
+4. Scan **all** role buckets plus **`dependent_queries`** children (correlated inner use); apply the dual-source rule per bucket.
+5. Record a **participation role** for every impact — not just the bucket name.
+6. When `interface.<out>` depends on the anchor, **propagate `<out>` upward** and continue scanning parent buckets.
+7. Preserve **fan-out** — multiple outputs and clause roles produce sibling branches, not a single merged list.
+8. Pair each impact with optional **token** proof from scope dictionaries.
+9. For audit trails, run [Recursive column tracing](#recursive-column-tracing-consumer-algorithm) on any ambiguous ref to confirm it resolves back to the same anchor.
 
-### 10. Procedure summary (pseudocode)
+### 13. Procedure summary (pseudocode)
 
 ```
 function trace_source_impacts(anchor, statement_root_scope):
-  report = TreeNode(anchor, commentary="origin")
-  visit_scope(statement_root_scope, anchor, report)
+  report = TreeNode(anchor, role="origin")
+  intro_sites = find_leaf_introduction_sites(statement_root_scope, anchor)
+  for each site in intro_sites sorted deepest_first:
+    collect_impacts_at_scope(site, anchor, report)
+    for each derived_ref exported from site.interface matching anchor:
+      propagate_upward(site, derived_ref, anchor, report)
+  // Also descend from root for scopes that only consume child outputs
+  visit_scope_downward(statement_root_scope, anchor, report)
   return report
 
-function visit_scope(scope, anchor, parent_node):
-  if not scope_sees_physical_table(scope, anchor.physical_table):
-    return
-
+function collect_impacts_at_scope(scope, anchor, parent_node):
   for each (bucket_name, entries) in all_role_buckets(scope):
     for each ref in entries:
       if matches_anchor(ref, anchor, scope):
-        parent_node.add_child(ImpactSite(scope, bucket_name, ref, role_commentary(bucket_name)))
+        parent_node.add_child(ImpactSite(scope, bucket_name, ref,
+          participation_role(bucket_name, ref, scope)))
+    for each entry in scope.dependent_queries where entry.type == bucket_name:
+      child = scope["def_" + entry.query]
+      collect_impacts_at_scope(child, anchor, parent_node.child(entry.key))
 
-  for each (out_col, deps) in scope.interface:
-    if any matches_anchor(d in deps, anchor, scope):
-      out_node = parent_node.add_child(PropagatedOutput(scope, out_col))
-      enqueue_upward_propagation(scope, out_col, out_node, anchor)
+function propagate_upward(child_scope, derived_name, anchor, report_node):
+  parent = find_parent_scope(child_scope)
+  alias = find_alias_in_parent(parent, child_scope)
+  for each (bucket_name, ref) in all_bucket_refs(parent):
+    if matches_propagated(ref, derived_name, alias, parent):
+      site = report_node.add_child(ImpactSite(parent, bucket_name, ref,
+        participation_role(bucket_name, ref, parent)))
+      if bucket_name == "interface" and ref is output dependency:
+        propagate_upward(parent, <next_out_col>, anchor, site)
+  if parent: propagate_upward(parent, derived_name, anchor, report_node)
 
-  for each (alias, source) in scope.table_alias where source is queryN/def_queryN:
-    visit_scope(scope["def_" + source], anchor, parent_node.child(alias))
-
-  for each (kind, entry) in scope.dependent_queries:
-    child = scope["def_" + entry.query]
-    visit_scope(child, anchor, parent_node.child("dependent_queries." + kind))
-
-function enqueue_upward_propagation(child_scope, out_col, node, anchor):
-  parent = find_parent_scope(child_scope)   // walker metadata or stack replay
-  alias = find_alias_mapping_to(parent, child_scope)
-  for each ref in all_bucket_refs(parent) where ref.name == out_col and ref.table_ref == alias:
-    node.add_child(ImpactSite(parent, bucket, ref, "consumes propagated " + out_col))
-  repeat upward until statement root
+function participation_role(bucket, ref, scope):
+  return ROLE_TABLE[bucket]   // see §2 — refine for assignments LHS, interface output name, etc.
 ```
 
 ---
