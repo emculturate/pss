@@ -2,10 +2,14 @@ package sql.grammar;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
+import static mumble.MumbleConstants.MUMBLE_ASSIGNMENTS_KEY;
+import static mumble.MumbleConstants.MUMBLE_DERIVATION_KEY;
 import static mumble.MumbleConstants.MUMBLE_FILTERS_KEY;
 import static mumble.MumbleConstants.MUMBLE_GROUPED_BY_KEY;
 import static mumble.MumbleConstants.MUMBLE_INTERFACE_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERED_BY_KEY;
+import static mumble.MumbleConstants.MUMBLE_WINDOW_ORDERED_BY_KEY;
+import static mumble.MumbleConstants.MUMBLE_WINDOW_PARTITION_BY_KEY;
 
 import sql.SQLSelectParserParser;
 
@@ -43,19 +47,39 @@ public final class SqlGrammarContextClassifier {
 	 * Dependent-query recording context for a subquery reference inside a predicate frame.
 	 * Returns the parent scope clause bucket key ({@link mumble.MumbleConstants#MUMBLE_INTERFACE_KEY}, etc.)
 	 * so {@code dependent_queries.*.type} matches the column-reference archive bucket name.
+	 * More specific clause contexts are checked before broader ones (e.g. {@code OVER} partition
+	 * before {@code select_item}).
 	 */
 	public static String inferDependentQueryContext(ParserRuleContext ctx) {
 		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
 			int ruleIndex = walk.getRuleIndex();
+			if (ruleIndex == SQLSelectParserParser.RULE_partition_by_clause) {
+				return MUMBLE_WINDOW_PARTITION_BY_KEY;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_pivot_clause
+					|| ruleIndex == SQLSelectParserParser.RULE_unpivot_clause) {
+				return MUMBLE_DERIVATION_KEY;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_assignment_expression
+					|| ruleIndex == SQLSelectParserParser.RULE_assignment_expression_list) {
+				return MUMBLE_ASSIGNMENTS_KEY;
+			}
+			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
+				if (hasAncestorRule(ctx, SQLSelectParserParser.RULE_over_clause)) {
+					return MUMBLE_WINDOW_ORDERED_BY_KEY;
+				}
+				if (hasAncestorRule(ctx, SQLSelectParserParser.RULE_pivot_clause)
+						|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_unpivot_clause)) {
+					return MUMBLE_DERIVATION_KEY;
+				}
+				return MUMBLE_ORDERED_BY_KEY;
+			}
 			if (ruleIndex == SQLSelectParserParser.RULE_select_list
 					|| ruleIndex == SQLSelectParserParser.RULE_select_item) {
 				return MUMBLE_INTERFACE_KEY;
 			}
 			if (ruleIndex == SQLSelectParserParser.RULE_groupby_clause) {
 				return MUMBLE_GROUPED_BY_KEY;
-			}
-			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
-				return MUMBLE_ORDERED_BY_KEY;
 			}
 			if (ruleIndex == SQLSelectParserParser.RULE_where_clause
 					|| ruleIndex == SQLSelectParserParser.RULE_having_clause

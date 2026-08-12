@@ -384,6 +384,28 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			operandReferencesForParent = new HashMap<String, Object>((HashMap<String, Object>) operandReferenceMapObj);
 		}
 
+		HashMap<String, Object> publishedQueryScopesForParent = new HashMap<>();
+		Object dependentQueriesObj = walker.symbolTable.get(MUMBLE_DEPENDENT_QUERIES_KEY);
+		HashMap<String, Object> dependentQueriesForParent = null;
+		if (dependentQueriesObj instanceof HashMap<?, ?> dependentQueriesMapObj
+				&& !dependentQueriesMapObj.isEmpty()) {
+			dependentQueriesForParent = new HashMap<String, Object>((HashMap<String, Object>) dependentQueriesMapObj);
+			for (Object entryObj : dependentQueriesForParent.values()) {
+				if (!(entryObj instanceof Map<?, ?> entryMap)) {
+					continue;
+				}
+				Object queryRefObj = entryMap.get(MUMBLE_QUERY_KEY);
+				if (!(queryRefObj instanceof String queryRefKey) || !queryRefKey.startsWith("query")) {
+					continue;
+				}
+				String defScopeKey = "def_" + queryRefKey;
+				Object scopePayload = walker.symbolTable.get(defScopeKey);
+				if (scopePayload != null) {
+					publishedQueryScopesForParent.put(defScopeKey, scopePayload);
+				}
+			}
+		}
+
 		walker.popSymbolTable("_tmp_relational_modifier_scope", new HashMap<String, Object>());
 		walker.symbolTable.remove("_tmp_relational_modifier_scope");
 
@@ -475,6 +497,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				walker.symbolTable.put(RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY, parentOperandReferences);
 			}
 			parentOperandReferences.putAll(operandReferencesForParent);
+		}
+
+		if (!publishedQueryScopesForParent.isEmpty()) {
+			walker.symbolTable.putAll(publishedQueryScopesForParent);
+		}
+
+		if (dependentQueriesForParent != null) {
+			Object parentDependentQueriesObj = walker.symbolTable.get(MUMBLE_DEPENDENT_QUERIES_KEY);
+			HashMap<String, Object> parentDependentQueries;
+			if (parentDependentQueriesObj instanceof HashMap<?, ?>) {
+				parentDependentQueries = (HashMap<String, Object>) parentDependentQueriesObj;
+			} else {
+				parentDependentQueries = new HashMap<String, Object>();
+				walker.symbolTable.put(MUMBLE_DEPENDENT_QUERIES_KEY, parentDependentQueries);
+			}
+			parentDependentQueries.putAll(dependentQueriesForParent);
 		}
 	}
 

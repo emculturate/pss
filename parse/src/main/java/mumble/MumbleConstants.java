@@ -47,9 +47,11 @@ public final class MumbleConstants {
     public static final String MUMBLE_DATATYPE_KEY = "data_type";
     public static final String MUMBLE_DELETE_KEY = "delete";
     public static final String MUMBLE_DEFAULT_VALUES_KEY = "default_values";
+    /** Parent-scope bucketed PIVOT/UNPIVOT lineage ({@code derived_columns}, {@code source_columns}, …). */
+    public static final String MUMBLE_DERIVATION_KEY = "derivation";
     /** Submap grouping predicandN, in_listN, existsN, and quantifiedN query references on a scope. */
     public static final String MUMBLE_DEPENDENT_QUERIES_KEY = "dependent_queries";
-    /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). Value matches the parent scope clause bucket key ({@link #MUMBLE_INTERFACE_KEY}, {@link #MUMBLE_FILTERS_KEY}, {@link #MUMBLE_GROUPED_BY_KEY}, {@link #MUMBLE_ORDERED_BY_KEY}). */
+    /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). Value matches the parent scope clause bucket key ({@link #MUMBLE_INTERFACE_KEY}, {@link #MUMBLE_FILTERS_KEY}, {@link #MUMBLE_GROUPED_BY_KEY}, {@link #MUMBLE_ORDERED_BY_KEY}, {@link #MUMBLE_WINDOW_PARTITION_BY_KEY}, {@link #MUMBLE_WINDOW_ORDERED_BY_KEY}, {@link #MUMBLE_ASSIGNMENTS_KEY}, {@link #MUMBLE_DERIVATION_KEY}). */
     public static final String MUMBLE_DEPENDENT_QUERY_TYPE_KEY = "type";
     public static final String MUMBLE_DROP_KEY = "drop";
     public static final String MUMBLE_ELSE_KEY = "else";

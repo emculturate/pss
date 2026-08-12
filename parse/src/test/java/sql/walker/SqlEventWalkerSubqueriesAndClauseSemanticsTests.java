@@ -3639,6 +3639,100 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 
 
 	@Test
+	public void scalarSubqueryWindowPartitionBySymbolTableTest() {
+		String query = "SELECT ROW_NUMBER() OVER (PARTITION BY (SELECT MAX(k) FROM dims)) AS rn FROM fact";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rn, window_function={over={partition_by={1={select={1={function={function_name=MAX, qualifier=null, parameters={column={name=k, table_ref=null}}}}}, from={table={alias=null, table=dims}}}}}, function={function_name=ROW_NUMBER, parameters=null}}}}, from={table={alias=null, table=fact}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fact={}, dims={k=[[@12,51:51='k',<392>,1:51]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@13,52:52=')',<288>,1:52]]}, query2={rn=[[@19,69:70='rn',<392>,1:69]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={rn=[[@19,69:70='rn',<392>,1:69]]}, table_dictionary={fact={}}, window_partition_by=[], dependent_queries={predicand1={query=query0, type=window_partition_by}}, def_query0={query_dictionary={unnamed_0=[[@13,52:52=')',<288>,1:52]]}, table_dictionary={dims={k=[[@12,51:51='k',<392>,1:51]]}}, interface={unnamed_0=[{name=k, table_ref=dims}]}}, interface={rn=[{name=k, table_ref=fact}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void scalarSubqueryWindowOrderedBySymbolTableTest() {
+		String query = "SELECT ROW_NUMBER() OVER (ORDER BY (SELECT MIN(ts) FROM bounds)) AS rn FROM fact";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={alias=rn, window_function={over={orderby={1={null_order=null, predicand={select={1={function={function_name=MIN, qualifier=null, parameters={column={name=ts, table_ref=null}}}}}, from={table={alias=null, table=bounds}}}, sort_order=ASC}}}, function={function_name=ROW_NUMBER, parameters=null}}}}, from={table={alias=null, table=fact}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[rn]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{fact={}, bounds={ts=[[@12,47:48='ts',<392>,1:47]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@13,49:49=')',<288>,1:49]]}, query2={rn=[[@19,68:69='rn',<392>,1:68]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={window_ordered_by=[], query_dictionary={rn=[[@19,68:69='rn',<392>,1:68]]}, table_dictionary={fact={}}, dependent_queries={predicand1={query=query0, type=window_ordered_by}}, def_query0={query_dictionary={unnamed_0=[[@13,49:49=')',<288>,1:49]]}, table_dictionary={bounds={ts=[[@12,47:48='ts',<392>,1:47]]}}, interface={unnamed_0=[{name=ts, table_ref=bounds}]}}, interface={rn=[{name=ts, table_ref=fact}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void scalarSubqueryUpdateAssignmentSymbolTableTest() {
+		String query = "UPDATE employees SET score = (SELECT AVG(salary) FROM benchmarks)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={update={table={alias=null, table=employees}, assignments={1={set={column={name=score, table_ref=null}}, to={select={1={function={function_name=AVG, qualifier=null, parameters={column={name=salary, table_ref=null}}}}}, from={table={alias=null, table=benchmarks}}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[score]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{benchmarks={salary=[[@9,41:46='salary',<392>,1:41]]}, employees={salary=[[@13,64:64=')',<288>,1:64]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@10,47:47=')',<288>,1:47]]}, update2={score=[[@3,21:25='score',<392>,1:21]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_update2={assignments={score=[{name=salary, table_ref=employees}]}, table_dictionary={employees={salary=[[@13,64:64=')',<288>,1:64]]}}, update_dictionary={score=[[@3,21:25='score',<392>,1:21]]}, dependent_queries={predicand1={query=query0, type=assignments}}, def_query0={query_dictionary={unnamed_0=[[@10,47:47=')',<288>,1:47]]}, table_dictionary={benchmarks={salary=[[@9,41:46='salary',<392>,1:41]]}}, interface={unnamed_0=[{name=salary, table_ref=benchmarks}]}}, target_table={employees={score=[[@3,21:25='score',<392>,1:21]]}}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@3,21:25='score',<392>,1:21]]}}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
+	public void scalarSubqueryPivotDerivationSymbolTableTest() {
+		String query = "SELECT empid FROM monthly_sales_long"
+				+ " PIVOT (SUM(sales_amount) FOR month_name IN ('jan_sales'))"
+				+ " DEFAULT ON NULL ((SELECT 0 FROM dual)) p";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong", "{SQL={select={1={column={name=empid, table_ref=null}}}, from={pivot={value={function={function_name=SUM, parameters={column={name=sales_amount, table_ref=null}}}}, for={column={name=month_name, table_ref=null}}, in={1={pivot_literal='jan_sales'}}}, alias=p, table={alias=null, table=monthly_sales_long}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[empid]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", "{dual={}, monthly_sales_long={month_name=[[@11,66:75='month_name',<392>,1:66]], empid=[[@1,7:11='empid',<392>,1:7]], sales_amount=[[@8,48:59='sales_amount',<392>,1:48]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={unnamed_0=[[@23,120:120='0',<300>,1:120]]}, query2={empid=[[@1,7:11='empid',<392>,1:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", "{def_query2={query_dictionary={empid=[[@1,7:11='empid',<392>,1:7]]}, table_dictionary={monthly_sales_long={month_name=[[@11,66:75='month_name',<392>,1:66]], empid=[[@1,7:11='empid',<392>,1:7]], sales_amount=[[@8,48:59='sales_amount',<392>,1:48]]}}, dependent_queries={predicand1={query=query0, type=derivation}}, def_query0={query_dictionary={unnamed_0=[[@23,120:120='0',<300>,1:120]]}, table_dictionary={dual={}}, interface={unnamed_0=[]}}, derivation={source_columns={p=[{name=month_name, table_ref=monthly_sales_long}, {name=sales_amount, table_ref=monthly_sales_long}]}, derived_columns={p={jan_sales_SUM=[[@6,44:46='SUM',<141>,1:44], [@14,81:91=''jan_sales'',<400>,1:81]]}}}, interface={empid=[{name=empid, table_ref=monthly_sales_long}]}, table_alias={p=monthly_sales_long}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+
+	@Test
 	public void subqueryParseTest() {
 		// traps that there's no COURSES table in the from statement
 		final String query = "SELECT aa.scbcrse_coll_code FROM scbcrse aa "

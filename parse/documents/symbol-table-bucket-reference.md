@@ -257,7 +257,7 @@ All bucket keys in one place. **Column-ref buckets** use `{name, table_ref}` lis
 | **`existsN`** | entry under above | `EXISTS (SELECT …)` | EXISTS subquery | — |
 | **`in_listN`** | entry under above | `IN (SELECT …)` | IN-list subquery | — |
 | **`quantifiedN`** | entry under above | `ANY` / `ALL` subquery | Quantified comparison | — |
-| **`type`** (on dependent entry) | string | Always on dependent entry | Clause context: `interface`, `filters`, `grouped_by`, `ordered_by` | — |
+| **`type`** (on dependent entry) | string | Always on dependent entry | Clause context — same string as a parent-scope archive bucket key: `interface`, `filters`, `grouped_by`, `ordered_by`, `window_partition_by`, `window_ordered_by`, `assignments`, `derivation` | `type=window_partition_by` |
 | **`derivation`** | map | PIVOT / UNPIVOT | Modifier lineage parent (**singular**, not `derivations`) | See sub-rows below |
 | **`derivation.derived_columns`** | `Map<bucket, Map<col, List<token>>>` | PIVOT/UNPIVOT | Generated output columns | `{outer_up={sales_amount=[[@…]]}}` |
 | **`derivation.source_columns`** | `Map<bucket, List<{name, table_ref}>>` | PIVOT/UNPIVOT | Operand source columns | `{outer_up=[{name=jan_sales, table_ref=my_table}]}` |
@@ -304,9 +304,34 @@ These buckets list columns referenced in specific SQL clauses. Values are **list
 
 **Predicate and dependent subqueries (`dependent_queries`, `predicandN`, `existsN`, `in_listN`, `quantifiedN`)**
 
-- **`dependent_queries`** indexes predicate/scalar subquery bodies on the parent scope.
-- Each entry carries `{query: queryN, type: …}` where `type` is the clause context (`interface`, `filters`, `grouped_by`, `ordered_by`).
-- **Important boundary:** Parent scopes do **not** drill into predicate subquery bodies for dictionary collection. Inner references belong to the child's **`def_queryN`**. Correlated outer columns bubble via `unresolved_column` during the walk.
+- **`dependent_queries`** is the parent-scope index of nested subquery bodies reached through predicate frames (scalar/`predicand_subquery`, `EXISTS`, `IN (SELECT …)`, quantified comparisons).
+- Each entry carries `{query: queryN, type: …}` where **`type` is always the same string as the parent-scope clause archive bucket** that encloses the subquery site in SQL. Consumers can treat `type` as the bucket name — there is no parallel vocabulary.
+- **Entry kinds** (map keys under `dependent_queries`):
+  - **`predicandN`** — scalar subquery `(SELECT …)` in a value position
+  - **`existsN`** — `EXISTS (SELECT …)`
+  - **`in_listN`** — `IN (SELECT …)` / `NOT IN (SELECT …)`
+  - **`quantifiedN`** — `= ANY (SELECT …)` / `ALL` / `SOME` comparisons
+- **`type` values** (complete set today — each matches a `MumbleConstants` bucket key):
+
+| `type` value | SQL site | Parent archive bucket (may be empty) |
+|--------------|----------|--------------------------------------|
+| `interface` | SELECT list / expression tree | `interface` |
+| `filters` | WHERE, HAVING, QUALIFY, JOIN ON, boolean predicates | `filters` |
+| `grouped_by` | GROUP BY expression | `grouped_by` |
+| `ordered_by` | Query-level ORDER BY sort key | `ordered_by` |
+| `window_partition_by` | `OVER (PARTITION BY …)` argument | `window_partition_by` |
+| `window_ordered_by` | `OVER (… ORDER BY …)` sort key | `window_ordered_by` |
+| `assignments` | UPDATE (or MERGE) `SET col = (SELECT …)` RHS | `assignments` |
+| `derivation` | PIVOT / UNPIVOT value positions (e.g. `DEFAULT ON NULL ((SELECT …))`, `IN (ANY ORDER BY (SELECT …))`) | `derivation` (operand lineage under `derivation.source_columns`) |
+
+- **Unnamed scalars:** A `dependent_queries` entry is recorded whenever a predicate frame closes, even when the scalar subquery has **no output name** and the corresponding clause archive list is **empty** (e.g. `ORDER BY (SELECT …)` with `ordered_by=[]`, or `PARTITION BY (SELECT …)` with `window_partition_by=[]`). The index exists to reach the nested **`def_queryN`** body; the clause bucket is optional column-ref metadata.
+- **How to consume:**
+  1. Read `dependent_queries.<kind>N` → `{query: queryN, type: <bucket>}` on the parent `def_*` scope.
+  2. Open nested **`def_queryN`** on that same parent payload (sibling of `dependent_queries`, not merged into parent dictionaries).
+  3. Use **`type`** to know which clause archive bucket describes the outer SQL site; use the child scope for everything inside the subquery.
+  4. For correlated references, trace **up** from the child via inherited outer `table_alias` / `context_list` — parents do not flatten inner aliases.
+- **Important boundary:** Parent scopes do **not** drill into predicate subquery bodies for dictionary collection during the walk. Inner references belong to the child's **`def_queryN`**. Correlated outer columns bubble via `unresolved_column` during the walk.
+- **Out of scope for `dependent_queries`:** `FROM` / `JOIN` derived tables, CTE bodies, `INSERT … SELECT` source queries, and PIVOT `IN (SELECT …)` list subqueries use nested **`def_queryN`** / `table_alias` / `insert_source_ref` instead — they are row sources, not predicate-frame dependents.
 
 **Relational modifiers — PIVOT / UNPIVOT (`derivation` and sub-buckets)**
 
@@ -547,12 +572,13 @@ How common SQL constructs produce nested `def_*` trees. Scope keys are defined i
 2. Non-anchor branches carry **`setop`**.
 3. Composite **`interface`** aligns column names across branches (`query_column` sentinel until aligned).
 
-### Predicate subqueries (scalar, EXISTS, IN, quantified)
+### Predicate and scalar subqueries (scalar, EXISTS, IN, quantified)
 
 1. Inner SELECT finalizes as `queryN` inside a predicate frame.
-2. On exit: `dependent_queries.{predicand|exists|in_list|quantified}N → {query: queryN, type: clause}`.
+2. On exit: `dependent_queries.{predicand|exists|in_list|quantified}N → {query: queryN, type: <clause-bucket>}` where **`type` matches the parent archive bucket** (`interface`, `filters`, `grouped_by`, `ordered_by`, `window_partition_by`, `window_ordered_by`, `assignments`, or `derivation`).
 3. Rename `queryN` → **`def_queryN`** nested in parent; merge via `popSymbolTablePutAll` (no extra `def_` wrapper around the predicate frame).
-4. Parent **`filters`** (or clause bucket per `type`) holds outer-side refs; inner body is under **`def_queryN`**.
+4. Parent clause bucket (named by `type`) may list outer-side column refs; it may also be **empty** when the subquery is an unnamed scalar. The **`dependent_queries` entry is still published** so consumers can open the child body.
+5. PIVOT/UNPIVOT predicate-frame dependents are hoisted from the short-lived modifier scope together with nested **`def_queryN`** children.
 
 ### Scalar subqueries in SELECT list
 
@@ -560,6 +586,13 @@ How common SQL constructs produce nested `def_*` trees. Scope keys are defined i
 - Published on parent as **`dependent_queries.predicandN`** with `type=interface`.
 - Parent **`interface`** maps the output alias to subquery result lineage.
 - Inner body is nested **`def_queryN`**.
+
+### Scalar subqueries in window specs, UPDATE SET, and PIVOT tails
+
+- **`OVER (PARTITION BY (SELECT …))`** → `dependent_queries.predicandN` with `type=window_partition_by`; archive list may be `window_partition_by=[]`.
+- **`OVER (ORDER BY (SELECT …))`** → `type=window_ordered_by`; archive list may be `window_ordered_by=[]`.
+- **`UPDATE … SET col = (SELECT …)`** → `type=assignments` on **`def_updateN`**; RHS lineage also appears under **`assignments`** when column refs resolve.
+- **PIVOT/UNPIVOT value positions** (e.g. `DEFAULT ON NULL ((SELECT …))`) → `type=derivation` on the enclosing **`def_queryN`**.
 
 ### DML with subqueries
 
@@ -650,10 +683,11 @@ When step **B** resolves to a source that needs no child scope, stop at **Leaf t
 
 When the starting point is a subquery body (via **`dependent_queries`**):
 
-1. Read `dependent_queries.{predicand\|exists\|in_list\|quantified}N` → `{query: queryN, type: …}`.
-2. Open **`def_queryN`** nested in the parent scope (not merged into parent dictionaries).
-3. Begin step **A** inside that child with the column ref found in the child scope's buckets.
-4. Correlated outer columns inside the subquery trace **up** via inherited outer `table_alias` / `context_list` — the parent does not flatten inner aliases into its own buckets.
+1. Read `dependent_queries.{predicand|exists|in_list|quantified}N` → `{query: queryN, type: <clause-bucket>}`.
+2. Use **`type`** to locate the outer SQL site (`filters`, `ordered_by`, `assignments`, `derivation`, etc.). The matching archive list may be empty for unnamed scalars.
+3. Open **`def_queryN`** nested in the parent scope (not merged into parent dictionaries).
+4. Begin step **A** inside that child with the column ref found in the child scope's buckets.
+5. Correlated outer columns inside the subquery trace **up** via inherited outer `table_alias` / `context_list` — the parent does not flatten inner aliases into its own buckets.
 
 ### Leaf termination
 
