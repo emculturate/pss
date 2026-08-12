@@ -49,12 +49,8 @@ public final class MumbleConstants {
     public static final String MUMBLE_DEFAULT_VALUES_KEY = "default_values";
     /** Submap grouping predicandN, in_listN, existsN, and quantifiedN query references on a scope. */
     public static final String MUMBLE_DEPENDENT_QUERIES_KEY = "dependent_queries";
-    /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). */
+    /** Clause context label on each {@link #MUMBLE_DEPENDENT_QUERIES_KEY} entry ({@code query=queryN} sibling). Value matches the parent scope clause bucket key ({@link #MUMBLE_INTERFACE_KEY}, {@link #MUMBLE_FILTERS_KEY}, {@link #MUMBLE_GROUPED_BY_KEY}, {@link #MUMBLE_ORDERED_BY_KEY}). */
     public static final String MUMBLE_DEPENDENT_QUERY_TYPE_KEY = "type";
-    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE = "interface";
-    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS = "filters";
-    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY = "group_by";
-    public static final String MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY = "order_by";
     public static final String MUMBLE_DROP_KEY = "drop";
     public static final String MUMBLE_ELSE_KEY = "else";
     public static final String MUMBLE_ESCAPE_KEY = "escape";

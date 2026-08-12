@@ -257,7 +257,7 @@ All bucket keys in one place. **Column-ref buckets** use `{name, table_ref}` lis
 | **`existsN`** | entry under above | `EXISTS (SELECT …)` | EXISTS subquery | — |
 | **`in_listN`** | entry under above | `IN (SELECT …)` | IN-list subquery | — |
 | **`quantifiedN`** | entry under above | `ANY` / `ALL` subquery | Quantified comparison | — |
-| **`type`** (on dependent entry) | string | Always on dependent entry | Clause context: `interface`, `filters`, `group_by`, `order_by` | — |
+| **`type`** (on dependent entry) | string | Always on dependent entry | Clause context: `interface`, `filters`, `grouped_by`, `ordered_by` | — |
 | **`derivation`** | map | PIVOT / UNPIVOT | Modifier lineage parent (**singular**, not `derivations`) | See sub-rows below |
 | **`derivation.derived_columns`** | `Map<bucket, Map<col, List<token>>>` | PIVOT/UNPIVOT | Generated output columns | `{outer_up={sales_amount=[[@…]]}}` |
 | **`derivation.source_columns`** | `Map<bucket, List<{name, table_ref}>>` | PIVOT/UNPIVOT | Operand source columns | `{outer_up=[{name=jan_sales, table_ref=my_table}]}` |
@@ -305,7 +305,7 @@ These buckets list columns referenced in specific SQL clauses. Values are **list
 **Predicate and dependent subqueries (`dependent_queries`, `predicandN`, `existsN`, `in_listN`, `quantifiedN`)**
 
 - **`dependent_queries`** indexes predicate/scalar subquery bodies on the parent scope.
-- Each entry carries `{query: queryN, type: …}` where `type` is the clause context (`interface`, `filters`, `group_by`, `order_by`).
+- Each entry carries `{query: queryN, type: …}` where `type` is the clause context (`interface`, `filters`, `grouped_by`, `ordered_by`).
 - **Important boundary:** Parent scopes do **not** drill into predicate subquery bodies for dictionary collection. Inner references belong to the child's **`def_queryN`**. Correlated outer columns bubble via `unresolved_column` during the walk.
 
 **Relational modifiers — PIVOT / UNPIVOT (`derivation` and sub-buckets)**

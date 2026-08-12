@@ -2,10 +2,10 @@ package sql.grammar;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
-import static mumble.MumbleConstants.MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
-import static mumble.MumbleConstants.MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY;
-import static mumble.MumbleConstants.MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE;
-import static mumble.MumbleConstants.MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY;
+import static mumble.MumbleConstants.MUMBLE_FILTERS_KEY;
+import static mumble.MumbleConstants.MUMBLE_GROUPED_BY_KEY;
+import static mumble.MumbleConstants.MUMBLE_INTERFACE_KEY;
+import static mumble.MumbleConstants.MUMBLE_ORDERED_BY_KEY;
 
 import sql.SQLSelectParserParser;
 
@@ -39,28 +39,32 @@ public final class SqlGrammarContextClassifier {
 		return hasAncestorRule(ctx, SQLSelectParserParser.RULE_predicand_subquery);
 	}
 
-	/** Dependent-query recording context for a subquery reference inside a predicate frame. */
+	/**
+	 * Dependent-query recording context for a subquery reference inside a predicate frame.
+	 * Returns the parent scope clause bucket key ({@link mumble.MumbleConstants#MUMBLE_INTERFACE_KEY}, etc.)
+	 * so {@code dependent_queries.*.type} matches the column-reference archive bucket name.
+	 */
 	public static String inferDependentQueryContext(ParserRuleContext ctx) {
 		for (ParserRuleContext walk = ctx; walk != null; walk = walk.getParent()) {
 			int ruleIndex = walk.getRuleIndex();
 			if (ruleIndex == SQLSelectParserParser.RULE_select_list
 					|| ruleIndex == SQLSelectParserParser.RULE_select_item) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_INTERFACE;
+				return MUMBLE_INTERFACE_KEY;
 			}
 			if (ruleIndex == SQLSelectParserParser.RULE_groupby_clause) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_GROUP_BY;
+				return MUMBLE_GROUPED_BY_KEY;
 			}
 			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_ORDER_BY;
+				return MUMBLE_ORDERED_BY_KEY;
 			}
 			if (ruleIndex == SQLSelectParserParser.RULE_where_clause
 					|| ruleIndex == SQLSelectParserParser.RULE_having_clause
 					|| ruleIndex == SQLSelectParserParser.RULE_qualify_clause
 					|| ruleIndex == SQLSelectParserParser.RULE_search_condition) {
-				return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
+				return MUMBLE_FILTERS_KEY;
 			}
 		}
-		return MUMBLE_DEPENDENT_QUERY_CONTEXT_FILTERS;
+		return MUMBLE_FILTERS_KEY;
 	}
 
 	/** Arithmetic (+, -, *, /) operands are predicands in every clause. */
