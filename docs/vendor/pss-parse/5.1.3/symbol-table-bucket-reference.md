@@ -28,7 +28,7 @@
 One of the hardest things to follow in SQL is how a value in one source variable moves through layers of logic to become the values under other variable names that emerge from the statement's output interface. PSS supports two complementary consumer procedures:
 
 - [Recursive column tracing](#recursive-column-tracing-consumer-algorithm) — **reference → sources** (given a `{name, table_ref}` in a bucket, find leaf origins).
-- [Source column impact tracing](#source-column-impact-tracing-consumer-algorithm) — **source → impacts** (given a physical table column from the global table dictionary, find every scope and bucket where it is used or re-exported).
+- [Source column impact tracing](#source-column-impact-tracing-consumer-algorithm) — **source → impacts** (given a physical table column from the global table dictionary, find every scope and participation action — filter, grouping, output, windowing, DML, correlation — and trace derived references outward).
 
 **Scopes, buckets, and nesting**
 
