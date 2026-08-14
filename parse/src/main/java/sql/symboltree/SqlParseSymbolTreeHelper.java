@@ -14253,6 +14253,15 @@ public class SqlParseSymbolTreeHelper {
 				// Operand / derived statuses materialized at convert egress before this helper (M5).
 			}
 			case RESOLVED -> {
+				if (consumeSelectListOutputAliasUnresolvedEntry(
+						columnName,
+						unresolvedColumnMap,
+						localCurrentQueryDictionary,
+						localInterface,
+						localTableCollection,
+						unresolvedEntry)) {
+					return;
+				}
 				if (clauseLocations != null && !clauseLocations.isEmpty()) {
 					updateTrackedClauseLocationsWithResolvedTableRef(
 							clauseLocations,
@@ -14285,6 +14294,15 @@ public class SqlParseSymbolTreeHelper {
 				}
 			}
 			case AMBIGUOUS -> {
+				if (consumeSelectListOutputAliasUnresolvedEntry(
+						columnName,
+						unresolvedColumnMap,
+						localCurrentQueryDictionary,
+						localInterface,
+						localTableCollection,
+						unresolvedEntry)) {
+					return;
+				}
 				if (suppressAmbiguousDiagnostic) {
 					return;
 				}
@@ -14413,8 +14431,13 @@ public class SqlParseSymbolTreeHelper {
 			// Later clauses (WHERE, HAVING, QUALIFY, GROUP BY, ORDER BY, …) may reference current-query
 			// SELECT-list output aliases (arithmetic, functions, aggregates, window). Consume against
 			// local interface before FROM-source resolution — especially when FROM is query-backed only.
-			if (isIntraQueryOutputAliasUsage(columnName, null, localInterface, localTableCollection)) {
-				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+			if (consumeSelectListOutputAliasUnresolvedEntry(
+					columnName,
+					unresolvedColumnMap,
+					localCurrentQueryDictionary,
+					localInterface,
+					localTableCollection,
+					unresolvedEntry)) {
 				continue;
 			}
 
@@ -14707,6 +14730,57 @@ public class SqlParseSymbolTreeHelper {
 		return isInterfaceOutputAliasOnly(localInterface, columnName);
 	}
 
+	/**
+	 * SELECT-list output alias referenced from a later clause: record on {@code query_dictionary},
+	 * consume unresolved ingress, and skip physical binding / ambiguity handling.
+	 */
+	private ArchivedClauseColumnRefResult trySkipSelectListOutputAliasArchivedClauseRef(
+			Object refObj,
+			String columnName,
+			String tableRef,
+			String clauseKey,
+			ArchivedClauseProbeContext probeContext) {
+		if (probeContext == null || columnName == null || columnName.isBlank()) {
+			return null;
+		}
+		if (!isIntraQueryOutputAliasUsage(
+				columnName,
+				tableRef,
+				probeContext.localInterface,
+				probeContext.localTableCollection)) {
+			return null;
+		}
+		recordInterfaceOutputClauseRefOnQueryDictionary(refObj, columnName, clauseKey, probeContext);
+		consumeUnqualifiedUnknownEntry(probeContext.localUnresolvedColumnMap, columnName);
+		return ArchivedClauseColumnRefResult.skip();
+	}
+
+	private boolean consumeSelectListOutputAliasUnresolvedEntry(
+			String columnName,
+			HashMap<String, Object> unresolvedColumnMap,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localTableCollection,
+			Object unresolvedEntry) {
+		if (!isIntraQueryOutputAliasUsage(columnName, null, localInterface, localTableCollection)) {
+			return false;
+		}
+		Object tokenPayload = unresolvedEntry;
+		if (tokenPayload == null && unresolvedColumnMap != null) {
+			tokenPayload = getUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		}
+		if (unresolvedColumnMap != null) {
+			consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		}
+		if (localCurrentQueryDictionary != null && tokenPayload != null) {
+			walker.mergeResolvedColumnIntoDictionary(
+					localCurrentQueryDictionary,
+					columnName,
+					tokenPayload);
+		}
+		return true;
+	}
+
 	private boolean isIntraQueryOutputClauseUsage(
 			String clauseKey,
 			String columnName,
@@ -14770,6 +14844,7 @@ public class SqlParseSymbolTreeHelper {
 	private ArchivedClauseColumnRefResult validateArchivedClauseColumnRef(
 			Object refObj,
 			String clauseKey,
+			ArchivedClauseProbeContext probeContext,
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localUnresolvedColumnMap,
@@ -14802,6 +14877,16 @@ public class SqlParseSymbolTreeHelper {
 				columnName,
 				refObj)) {
 			return ArchivedClauseColumnRefResult.skip();
+		}
+
+		ArchivedClauseColumnRefResult selectListAliasSkip = trySkipSelectListOutputAliasArchivedClauseRef(
+				refObj,
+				columnName,
+				tableRef,
+				clauseKey,
+				probeContext);
+		if (selectListAliasSkip != null) {
+			return selectListAliasSkip;
 		}
 
 		if (isAmbiguousUnqualifiedStructuredDerivedColumn(
@@ -14986,6 +15071,13 @@ public class SqlParseSymbolTreeHelper {
 				return ArchivedClauseColumnRefResult.skip();
 			}
 			case RESOLVED -> {
+				if (isIntraQueryOutputAliasUsage(
+						columnName,
+						tableRef,
+						localInterface,
+						localTableCollection)) {
+					return ArchivedClauseColumnRefResult.skip();
+				}
 				if (requiresOutputColumnProof
 						&& !isQueryOutputColumnProofForClause(
 								columnName,
@@ -15001,6 +15093,13 @@ public class SqlParseSymbolTreeHelper {
 				return ArchivedClauseColumnRefResult.resolved(resolutionResult.resolvedSourceRef);
 			}
 			case AMBIGUOUS -> {
+				if (isIntraQueryOutputAliasUsage(
+						columnName,
+						tableRef,
+						localInterface,
+						localTableCollection)) {
+					return ArchivedClauseColumnRefResult.skip();
+				}
 				return ArchivedClauseColumnRefResult.ambiguous(resolutionResult.ambiguousSourcesLabel);
 			}
 			case AMBIGUOUS_DERIVED_COLUMN -> {
@@ -15126,6 +15225,7 @@ public class SqlParseSymbolTreeHelper {
 			ArchivedClauseColumnRefResult result = validateArchivedClauseColumnRef(
 					columnRefObj,
 					clauseKey,
+					probeContext,
 					probeContext.localInterface,
 					probeContext.localCurrentQueryDictionary,
 					probeContext.localUnresolvedColumnMap,
