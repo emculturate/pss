@@ -5448,6 +5448,7 @@ public class SqlParseSymbolTreeHelper {
 								refIndex,
 								refObj,
 								columnName,
+								outputCol,
 								localInterface,
 								localTableCollection,
 								localUnresolvedColumnMap,
@@ -5588,6 +5589,7 @@ public class SqlParseSymbolTreeHelper {
 									refIndex,
 									refObj,
 									columnName,
+									outputCol,
 									localInterface,
 									localTableCollection,
 									localUnresolvedColumnMap,
@@ -14889,6 +14891,50 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * True when {@code dependencyOutputAliasName} is a SELECT-list output alias defined before
+	 * {@code consumingInterfaceOutputColumnName} in source order.
+	 */
+	private boolean isPrecedingSelectListOutputAliasInInterface(
+			String dependencyOutputAliasName,
+			String consumingInterfaceOutputColumnName,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localCurrentQueryDictionary) {
+		if (dependencyOutputAliasName == null
+				|| dependencyOutputAliasName.isBlank()
+				|| consumingInterfaceOutputColumnName == null
+				|| consumingInterfaceOutputColumnName.isBlank()
+				|| localInterface == null
+				|| localInterface.isEmpty()
+				|| !isInterfaceOutputAliasOnly(localInterface, dependencyOutputAliasName)) {
+			return false;
+		}
+		HashMap<String, Object> scopeStub = new HashMap<String, Object>();
+		if (localCurrentQueryDictionary != null) {
+			scopeStub.put(MUMBLE_QUERY_DICTIONARY_KEY, localCurrentQueryDictionary);
+		}
+		ArrayList<String> selectOrder = extractInterfaceColumnNamesInSelectTokenOrder(scopeStub, localInterface);
+		if (selectOrder.isEmpty()) {
+			return false;
+		}
+		int dependencyIndex = -1;
+		int consumingIndex = -1;
+		for (int index = 0; index < selectOrder.size(); index++) {
+			String outputColumnName = selectOrder.get(index);
+			if (dependencyIndex < 0
+					&& outputColumnName != null
+					&& outputColumnName.equalsIgnoreCase(dependencyOutputAliasName)) {
+				dependencyIndex = index;
+			}
+			if (consumingIndex < 0
+					&& outputColumnName != null
+					&& outputColumnName.equalsIgnoreCase(consumingInterfaceOutputColumnName)) {
+				consumingIndex = index;
+			}
+		}
+		return dependencyIndex >= 0 && consumingIndex >= 0 && dependencyIndex < consumingIndex;
+	}
+
+	/**
 	 * {@code interface} lineage for refs to preceding grounded SELECT-list output aliases:
 	 * stamp {@code queryN}, not a physical {@code table_dictionary} source.
 	 */
@@ -14897,6 +14943,7 @@ public class SqlParseSymbolTreeHelper {
 			int refIndex,
 			Object refObj,
 			String columnName,
+			String consumingInterfaceOutputColumnName,
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localTableCollection,
 			HashMap<String, Object> localUnresolvedColumnMap,
@@ -14908,6 +14955,11 @@ public class SqlParseSymbolTreeHelper {
 				|| refIndex >= refs.size()
 				|| columnName == null
 				|| columnName.isBlank()
+				|| !isPrecedingSelectListOutputAliasInInterface(
+						columnName,
+						consumingInterfaceOutputColumnName,
+						localInterface,
+						localCurrentQueryDictionary)
 				|| !isGroundedIntraQueryOutputAliasUsage(
 						columnName,
 						null,
