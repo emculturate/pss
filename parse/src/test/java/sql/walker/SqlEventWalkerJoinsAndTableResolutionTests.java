@@ -3492,6 +3492,65 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				trailingAliasTarget);
 	}
 
+	@Test
+	public void withCteConsecutiveLeftJoinSubqueriesKeepsEarlierAliasV0Test() {
+		// Live ALR query reduced: WITH + LEFT JOIN (subquery) AS soa3 + later
+		// LEFT JOIN (subquery). No UNION required; the second subquery join was
+		// dropping soa3 from table_alias ("No alias or table called 'soa3'").
+		final String query = "with cte_dummy as (\n"
+				+ "  select per.id as person_id from tab1 as per\n"
+				+ ")\n"
+				+ "select soa3.sort_value as distance_from_campus\n"
+				+ "from tab1 as per\n"
+				+ "left join (\n"
+				+ "  select a.sort_value, a.distance_from_campus from tab2 as a\n"
+				+ ") as soa3\n"
+				+ "  on soa3.distance_from_campus = per.distance_from_campus\n"
+				+ "left join (select 1 as person_id) as soa_inq\n"
+				+ "  on soa_inq.person_id = per.id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong", "[distance_from_campus]", extractor.getInterface().toString());
+		Object soa3Target = findMainQueryTableAliasTarget(extractor.getSymbolTable(), "soa3");
+		Assert.assertNotNull("Join alias soa3 missing from main-query table_alias", soa3Target);
+		Object soaInqTarget = findMainQueryTableAliasTarget(extractor.getSymbolTable(), "soa_inq");
+		Assert.assertNotNull("Join alias soa_inq missing from main-query table_alias", soaInqTarget);
+	}
+
+	@Test
+	public void withCteJoinedInsideFirstSubqueryThenLaterSubqueryKeepsSoa3V0Test() {
+		// Same alias on the inner table and the wrapping subquery is legal: inner
+		// soa3 lives in the child scope, outer soa3 is the parent join source.
+		// Reuse is not what dropped the alias; the later LEFT JOIN (subquery) did.
+		final String query = "with psfv as (\n"
+				+ "  select per.distance_from_campus, per.distance_from_campus as sort_value from tab1 as per\n"
+				+ ")\n"
+				+ "select soa3.sort_value as distance_from_campus\n"
+				+ "from tab1 as per\n"
+				+ "left join (\n"
+				+ "  select * from tab2 as soa3\n"
+				+ "  left join psfv on psfv.sort_value = soa3.sort_field_value\n"
+				+ ") as soa3\n"
+				+ "  on soa3.distance_from_campus = per.distance_from_campus\n"
+				+ "left join (select 1 as person_id) as soa_inq\n"
+				+ "  on soa_inq.person_id = per.id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Object soa3Target = findMainQueryTableAliasTarget(extractor.getSymbolTable(), "soa3");
+		Assert.assertNotNull("Join alias soa3 missing from main-query table_alias", soa3Target);
+		Assert.assertTrue(
+				"Outer soa3 should map to the subquery scope, not the inner table, got: " + soa3Target,
+				soa3Target instanceof String soa3Ref && soa3Ref.startsWith("query"));
+	}
+
 	@SuppressWarnings("unchecked")
 	private static Object findMainQueryTableAliasTarget(java.util.Map<String, Object> symbolTable, String alias) {
 		if (symbolTable == null || alias == null) {
