@@ -14410,6 +14410,14 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 
+			// Later clauses (WHERE, HAVING, QUALIFY, GROUP BY, ORDER BY, …) may reference current-query
+			// SELECT-list output aliases (arithmetic, functions, aggregates, window). Consume against
+			// local interface before FROM-source resolution — especially when FROM is query-backed only.
+			if (isIntraQueryOutputAliasUsage(columnName, null, localInterface, localTableCollection)) {
+				consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+				continue;
+			}
+
 			HashMap<String, Object> localPhysicalTableCollection =
 					buildLocalPhysicalFromTableCollection(localTableCollection);
 			Set<ClauseRefLocation> clauseLocations = (unresolvedColumnLocations != null)
