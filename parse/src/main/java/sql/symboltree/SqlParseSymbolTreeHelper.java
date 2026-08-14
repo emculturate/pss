@@ -22,12 +22,28 @@ import static mumble.SQLParserEndPoints.*;
 import astwalkers.SqlASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
+import sql.grammar.SqlBareValueExpressionRegistry;
+import sql.grammar.SqlBareValueExpressionRegistry.Affinity;
 import sql.grammar.SqlGrammarContextClassifier;
+import sql.grammar.SqlGrammarDialect;
 
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseSymbolTreeHelper {
 
 	private final SqlASTWalkerHelper walker;
+
+	/**
+	 * Convert-egress contract for bare ANSI/dialect value expressions ({@code CURRENT_TIMESTAMP},
+	 * {@code SESSION_USER}, …) captured as unqualified column refs during the walk.
+	 * <p>
+	 * <b>Site 1</b> ({@link #pruneBareValueExpressionsFromUnresolvedMap} at convert egress start)
+	 * removes them from {@code localUnresolvedColumnMap}. <b>Site 5</b>
+	 * ({@link #consumeLocallyResolvedUnqualifiedBeforeScopePassUp}) prunes again before nested-scope
+	 * pass-up. Nothing in between must {@code put} or {@code mergeUnknownEntries} unqualified bare-value
+	 * keys back into that map — ref-site handlers (site 2 / clause probe) consume or skip only.
+	 * <b>Site 6</b> ({@link #finalizeTopLevelUnresolvedColumns},
+	 * {@link #emitUnqualifiedUnresolvedColumnsError}) is the statement-boundary safety net.
+	 */
 
 	// Fields moved from SqlParseEventWalker
 	private int tableFunctionSourceCount = 0;
@@ -5051,6 +5067,11 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> effectiveAliasMap = buildEffectiveVisibleAliasMap(localTableAliasMap);
 		HashMap<String, Object> effectiveTableCollection = buildEffectiveVisibleTableCollection(localTableCollection);
 
+		// Bare-value egress site 1: batch prune before interface / clause column recognition.
+		// CONTRACT (class javadoc above): no unqualified bare-value re-inserts into
+		// localUnresolvedColumnMap until site 5 pass-up.
+		pruneBareValueExpressionsFromUnresolvedMap(localUnresolvedColumnMap);
+
 		if (!localUnresolvedColumnMap.isEmpty()) {
 			// Check for explicitly qualified columns whose table qualifiers do not exist
 			HashMap<String, Object> explicitQualifiedUnknownEntries = extractExplicitQualifiedUnknownEntries(
@@ -5392,6 +5413,15 @@ public class SqlParseSymbolTreeHelper {
 							}
 						}
 					} else {
+						// Bare-value egress site 2: ref-site skip before derived / scope resolution.
+						if (skipBareValueExpressionAtConvertEgressRefSite(
+								localUnresolvedColumnMap,
+								null,
+								columnName,
+								refObj)) {
+							continue;
+						}
+
 						// Pivot registry derived outputs (jan_sales_SUM / q1_total) — skip physical
 						// interface bind; shared egress treats them as RESOLVED_DERIVED_COLUMN.
 						if (outputCol.equalsIgnoreCase(columnName)
@@ -6085,6 +6115,9 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Bare-value egress site 6: statement-boundary safety net.
+		pruneBareValueExpressionsFromUnresolvedMap(unresolvedMap);
+
 		HashMap<String, Object> qualifiedUnresolved = new HashMap<String, Object>();
 		HashMap<String, Object> unqualifiedUnresolved = new HashMap<String, Object>();
 		splitUnresolvedEntriesByQualification(unresolvedMap, qualifiedUnresolved, unqualifiedUnresolved);
@@ -6167,6 +6200,12 @@ public class SqlParseSymbolTreeHelper {
 
 	public void emitUnqualifiedUnresolvedColumnsError(HashMap<String, Object> unqualifiedUnresolvedMap) {
 		if (unqualifiedUnresolvedMap == null || unqualifiedUnresolvedMap.isEmpty()) {
+			return;
+		}
+
+		// Bare-value egress site 6: prune before UNRESOLVED_UNQUALIFIED_COLUMNS emit.
+		pruneBareValueExpressionsFromUnresolvedMap(unqualifiedUnresolvedMap);
+		if (unqualifiedUnresolvedMap.isEmpty()) {
 			return;
 		}
 
@@ -12398,6 +12437,99 @@ public class SqlParseSymbolTreeHelper {
 				unresolvedEntry);
 	}
 
+	private boolean isBareValueExpressionUnqualifiedReference(String tableRef, String columnName) {
+		if (columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		if (tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef)) {
+			return false;
+		}
+		return SqlBareValueExpressionRegistry.classify(columnName) != null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private Integer[] resolveBareValueExpressionDiagnosticLocation(Object unresolvedEntry) {
+		Integer[] refLocation = walker.getLineAndCharacterFromEntry(unresolvedEntry);
+		if (refLocation[0] != null && refLocation[1] != null) {
+			return refLocation;
+		}
+		if (unresolvedEntry instanceof Map<?, ?> entryMap) {
+			refLocation = walker.getFirstEntryLineAndCharacter((HashMap<String, Object>) entryMap);
+			if (refLocation[0] != null && refLocation[1] != null) {
+				return refLocation;
+			}
+		}
+		return new Integer[] { null, null };
+	}
+
+	private void recordBareValueExpressionDialectHitIfNeeded(String columnName, Object unresolvedEntry) {
+		Affinity affinity = SqlBareValueExpressionRegistry.classify(columnName);
+		if (affinity == null || affinity == Affinity.COMMON) {
+			return;
+		}
+		Integer[] refLocation = resolveBareValueExpressionDiagnosticLocation(unresolvedEntry);
+		if (refLocation[0] == null || refLocation[1] == null) {
+			return;
+		}
+		SqlGrammarDialect dialect = affinity == Affinity.SNOWFLAKE_ONLY
+				? SqlGrammarDialect.SNOWFLAKE
+				: SqlGrammarDialect.POSTGRES;
+		walker.notifyStatementDialectGrammarHit(
+				dialect,
+				refLocation[0],
+				refLocation[1],
+				SqlBareValueExpressionRegistry.dialectConstructLabel(columnName));
+	}
+
+	/**
+	 * Returns {@code true} when {@code columnName} is an unqualified bare value expression and was
+	 * consumed (or was already absent) from {@code unresolvedColumnMap}.
+	 */
+	public boolean tryConsumeBareValueExpressionUnknown(
+			HashMap<String, Object> unresolvedColumnMap,
+			String tableRef,
+			String columnName,
+			Object unresolvedEntryHint) {
+		if (!isBareValueExpressionUnqualifiedReference(tableRef, columnName)) {
+			return false;
+		}
+		Object entryForDialect = unresolvedEntryHint;
+		if (entryForDialect == null && unresolvedColumnMap != null) {
+			entryForDialect = getUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		}
+		recordBareValueExpressionDialectHitIfNeeded(columnName, entryForDialect);
+		if (unresolvedColumnMap != null && !unresolvedColumnMap.isEmpty()) {
+			consumeUnqualifiedUnknownEntry(unresolvedColumnMap, columnName);
+		}
+		return true;
+	}
+
+	/** Convert-egress site 1 / site 6: O(n) batch prune of unqualified bare value keys. */
+	public void pruneBareValueExpressionsFromUnresolvedMap(HashMap<String, Object> unresolvedColumnMap) {
+		if (unresolvedColumnMap == null || unresolvedColumnMap.isEmpty()) {
+			return;
+		}
+		for (String unresolvedKey : new ArrayList<String>(unresolvedColumnMap.keySet())) {
+			if (unresolvedKey == null || unresolvedKey.isBlank() || unresolvedKey.contains(".")) {
+				continue;
+			}
+			Object unresolvedEntry = unresolvedColumnMap.get(unresolvedKey);
+			String columnName = extractColumnNameFromUnresolvedEntry(unresolvedKey, unresolvedEntry);
+			if (columnName == null || columnName.isBlank()) {
+				columnName = unresolvedKey;
+			}
+			tryConsumeBareValueExpressionUnknown(unresolvedColumnMap, null, columnName, unresolvedEntry);
+		}
+	}
+
+	private boolean skipBareValueExpressionAtConvertEgressRefSite(
+			HashMap<String, Object> unresolvedColumnMap,
+			String tableRef,
+			String columnName,
+			Object refObj) {
+		return tryConsumeBareValueExpressionUnknown(unresolvedColumnMap, tableRef, columnName, refObj);
+	}
+
 	public Object consumeUnqualifiedUnknownEntry(
 			HashMap<String, Object> unresolvedColumnMap,
 			String columnName) {
@@ -12947,6 +13079,15 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (extractTableRefFromUnresolvedEntry(unresolvedKey, unresolvedEntry) != null) {
+				continue;
+			}
+
+			// Bare-value egress site 5: prune before parent pass-up (see class javadoc contract).
+			if (tryConsumeBareValueExpressionUnknown(
+					unqualifiedUnresolvedForLocal,
+					null,
+					columnName,
+					unresolvedEntry)) {
 				continue;
 			}
 
@@ -14643,6 +14784,15 @@ public class SqlParseSymbolTreeHelper {
 			return ArchivedClauseColumnRefResult.skip();
 		}
 		if (columnName == null || columnName.isBlank() || "*".equals(columnName)) {
+			return ArchivedClauseColumnRefResult.skip();
+		}
+
+		// Bare-value egress site 2: archived clause lists (WHERE, GROUP BY, ORDER BY, window buckets).
+		if (skipBareValueExpressionAtConvertEgressRefSite(
+				localUnresolvedColumnMap,
+				tableRef,
+				columnName,
+				refObj)) {
 			return ArchivedClauseColumnRefResult.skip();
 		}
 

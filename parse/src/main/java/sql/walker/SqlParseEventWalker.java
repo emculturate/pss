@@ -121,6 +121,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Initialize the walker with the SqlASTWalkerHelper
 		this.walker = new SqlASTWalkerHelper();
+		this.walker.setStatementDialectGrammarHitCallback(this::recordStatementDialectGrammarHit);
 		this.diagnosticService = new SqlParseDiagnosticService(this.walker);
 		this.symbolTreeHelper = new SqlParseSymbolTreeHelper(this.walker);
 		this.invalidVariableDiagnosticKeys = new HashSet<String>();

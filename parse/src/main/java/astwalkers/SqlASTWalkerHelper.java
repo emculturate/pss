@@ -15,8 +15,30 @@ import static mumble.ASTWalkerHelperConstants.*;
 
 import sql.SQLSelectParserParser;
 import sql.grammar.SqlGrammarContextClassifier;
+import sql.grammar.SqlGrammarDialect;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
+
+	@FunctionalInterface
+	public interface StatementDialectGrammarHitCallback {
+		void onHit(SqlGrammarDialect dialect, Integer line, Integer charPos, String constructLabel);
+	}
+
+	private StatementDialectGrammarHitCallback statementDialectGrammarHitCallback;
+
+	public void setStatementDialectGrammarHitCallback(StatementDialectGrammarHitCallback callback) {
+		this.statementDialectGrammarHitCallback = callback;
+	}
+
+	public void notifyStatementDialectGrammarHit(
+			SqlGrammarDialect dialect,
+			Integer line,
+			Integer charPos,
+			String constructLabel) {
+		if (statementDialectGrammarHitCallback != null) {
+			statementDialectGrammarHitCallback.onHit(dialect, line, charPos, constructLabel);
+		}
+	}
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
