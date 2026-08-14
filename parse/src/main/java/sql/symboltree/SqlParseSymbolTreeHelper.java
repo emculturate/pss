@@ -14259,7 +14259,9 @@ public class SqlParseSymbolTreeHelper {
 						localCurrentQueryDictionary,
 						localInterface,
 						localTableCollection,
-						unresolvedEntry)) {
+						unresolvedEntry,
+						extractTableRefFromUnresolvedEntry(null, unresolvedEntry),
+						clauseKey)) {
 					return;
 				}
 				if (clauseLocations != null && !clauseLocations.isEmpty()) {
@@ -14300,7 +14302,9 @@ public class SqlParseSymbolTreeHelper {
 						localCurrentQueryDictionary,
 						localInterface,
 						localTableCollection,
-						unresolvedEntry)) {
+						unresolvedEntry,
+						extractTableRefFromUnresolvedEntry(null, unresolvedEntry),
+						clauseKey)) {
 					return;
 				}
 				if (suppressAmbiguousDiagnostic) {
@@ -14437,7 +14441,9 @@ public class SqlParseSymbolTreeHelper {
 					localCurrentQueryDictionary,
 					localInterface,
 					localTableCollection,
-					unresolvedEntry)) {
+					unresolvedEntry,
+					tableRef,
+					null)) {
 				continue;
 			}
 
@@ -14730,6 +14736,111 @@ public class SqlParseSymbolTreeHelper {
 		return isInterfaceOutputAliasOnly(localInterface, columnName);
 	}
 
+	private boolean isGroundedIntraQueryOutputAliasUsage(
+			String columnName,
+			String tableRef,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> tableCollection) {
+		if (!isIntraQueryOutputAliasUsage(columnName, tableRef, localInterface, tableCollection)) {
+			return false;
+		}
+		return isGroundedInterfaceOutputAlias(localInterface, columnName, new HashSet<String>());
+	}
+
+	private boolean isGroundedInterfaceOutputAlias(
+			HashMap<String, Object> localInterface,
+			String outputColumnName,
+			Set<String> activeOutputColumns) {
+		if (!isInterfaceOutputAliasOnly(localInterface, outputColumnName)) {
+			return false;
+		}
+		String matchedKey = findKeyIgnoreCase(localInterface, outputColumnName);
+		if (matchedKey == null) {
+			return true;
+		}
+		if (activeOutputColumns != null
+				&& activeOutputColumns.stream().anyMatch(key -> key != null && key.equalsIgnoreCase(matchedKey))) {
+			return false;
+		}
+		Set<String> nextActive = new HashSet<String>();
+		if (activeOutputColumns != null) {
+			nextActive.addAll(activeOutputColumns);
+		}
+		nextActive.add(matchedKey);
+
+		Object refsObj = localInterface.get(matchedKey);
+		if (!(refsObj instanceof ArrayList<?> refs) || refs.isEmpty()) {
+			return true;
+		}
+		for (Object refObj : refs) {
+			if (!isGroundedInterfaceDependencyRef(localInterface, refObj, nextActive)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private boolean isGroundedInterfaceDependencyRef(
+			HashMap<String, Object> localInterface,
+			Object refObj,
+			Set<String> activeOutputColumns) {
+		if (refObj instanceof Map<?, ?> refMap
+				&& refMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
+			return true;
+		}
+		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+		if (tableRef != null && !tableRef.isBlank() && !MUMBLE_UNKNOWN_KEY.equals(tableRef)) {
+			return true;
+		}
+		String dependencyName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+		if (dependencyName == null || dependencyName.isBlank()) {
+			return false;
+		}
+		if (isInterfaceOutputAliasOnly(localInterface, dependencyName)) {
+			return isGroundedInterfaceOutputAlias(localInterface, dependencyName, activeOutputColumns);
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private String extractUnresolvedIngressSite(Object unresolvedEntry) {
+		if (!(unresolvedEntry instanceof Map<?, ?> entryMap)) {
+			return null;
+		}
+		Object siteObj = ((Map<String, Object>) entryMap).get(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY);
+		return siteObj == null ? null : siteObj.toString();
+	}
+
+	private boolean isSelectListIngressUnresolvedEntry(Object unresolvedEntry) {
+		return MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST.equals(
+				extractUnresolvedIngressSite(unresolvedEntry));
+	}
+
+	private boolean isClauseIngressUnresolvedEntry(Object unresolvedEntry) {
+		return MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE.equals(
+				extractUnresolvedIngressSite(unresolvedEntry));
+	}
+
+	private boolean mayConsumeUnresolvedAsGroundedOutputAliasForLaterClause(
+			String columnName,
+			String tableRef,
+			Object unresolvedEntry,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localTableCollection,
+			String clauseKey) {
+		if (isSelectListIngressUnresolvedEntry(unresolvedEntry)) {
+			return false;
+		}
+		if (clauseKey == null && !isClauseIngressUnresolvedEntry(unresolvedEntry)) {
+			return false;
+		}
+		return isGroundedIntraQueryOutputAliasUsage(
+				columnName,
+				tableRef,
+				localInterface,
+				localTableCollection);
+	}
+
 	/**
 	 * SELECT-list output alias referenced from a later clause: record on {@code query_dictionary},
 	 * consume unresolved ingress, and skip physical binding / ambiguity handling.
@@ -14743,7 +14854,7 @@ public class SqlParseSymbolTreeHelper {
 		if (probeContext == null || columnName == null || columnName.isBlank()) {
 			return null;
 		}
-		if (!isIntraQueryOutputAliasUsage(
+		if (!isGroundedIntraQueryOutputAliasUsage(
 				columnName,
 				tableRef,
 				probeContext.localInterface,
@@ -14761,8 +14872,16 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> localInterface,
 			HashMap<String, Object> localTableCollection,
-			Object unresolvedEntry) {
-		if (!isIntraQueryOutputAliasUsage(columnName, null, localInterface, localTableCollection)) {
+			Object unresolvedEntry,
+			String tableRef,
+			String clauseKey) {
+		if (!mayConsumeUnresolvedAsGroundedOutputAliasForLaterClause(
+				columnName,
+				tableRef,
+				unresolvedEntry,
+				localInterface,
+				localTableCollection,
+				clauseKey)) {
 			return false;
 		}
 		Object tokenPayload = unresolvedEntry;
@@ -14792,7 +14911,7 @@ public class SqlParseSymbolTreeHelper {
 		if (isQualifiedPhysicalSourceRef(tableRef, effectiveAliasMap, visibleQuerySourceCollection)) {
 			return false;
 		}
-		if (isIntraQueryOutputAliasUsage(columnName, tableRef, localInterface, tableCollection)) {
+		if (isGroundedIntraQueryOutputAliasUsage(columnName, tableRef, localInterface, tableCollection)) {
 			return true;
 		}
 		return isGroupOrOrderClauseKey(clauseKey)
@@ -15071,7 +15190,7 @@ public class SqlParseSymbolTreeHelper {
 				return ArchivedClauseColumnRefResult.skip();
 			}
 			case RESOLVED -> {
-				if (isIntraQueryOutputAliasUsage(
+				if (isGroundedIntraQueryOutputAliasUsage(
 						columnName,
 						tableRef,
 						localInterface,
@@ -15093,7 +15212,7 @@ public class SqlParseSymbolTreeHelper {
 				return ArchivedClauseColumnRefResult.resolved(resolutionResult.resolvedSourceRef);
 			}
 			case AMBIGUOUS -> {
-				if (isIntraQueryOutputAliasUsage(
+				if (isGroundedIntraQueryOutputAliasUsage(
 						columnName,
 						tableRef,
 						localInterface,
@@ -15112,7 +15231,7 @@ public class SqlParseSymbolTreeHelper {
 				// Phase 13.4: ingress already proved true SELECT-list output aliases and skipped
 				// unresolved collection. Convert clause probe (esp. window OVER inside the select
 				// list) must not re-fatal those names when FROM sources cannot bind them.
-				if (isIntraQueryOutputAliasUsage(
+				if (isGroundedIntraQueryOutputAliasUsage(
 						columnName,
 						tableRef,
 						localInterface,

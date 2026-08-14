@@ -2407,7 +2407,7 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals(
 				"Symbol Table is wrong",
-				"{def_query0={query_dictionary={alias_from_select_list=[[@3,12:33='alias_from_select_list',<392>,1:12], [@12,68:89='alias_from_select_list',<392>,1:68]], rn=[[@15,95:96='rn',<392>,1:95]]}, table_dictionary={tab1={a=[[@1,7:7='a',<392>,1:7]]}}, window_partition_by=[{name=alias_from_select_list, table_ref=query0}], interface={alias_from_select_list=[{name=a, table_ref=tab1}], rn=[{name=alias_from_select_list, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={alias_from_select_list=[[@3,12:33='alias_from_select_list',<392>,1:12], [@12,68:89='alias_from_select_list',<392>,1:68]], rn=[[@15,95:96='rn',<392>,1:95]]}, table_dictionary={tab1={a=[[@1,7:7='a',<392>,1:7]]}}, window_partition_by=[{name=alias_from_select_list, table_ref=tab1}], interface={alias_from_select_list=[{name=a, table_ref=tab1}], rn=[{name=alias_from_select_list, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
