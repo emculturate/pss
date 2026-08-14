@@ -293,7 +293,7 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@18,86:87='rn',<392>,1:86], [@28,137:138='rn',<392>,1:137]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='t',<392>,1:7]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIME, table_ref=null}, {name=rn, table_ref=tab1}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
+				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@18,86:87='rn',<392>,1:86], [@28,137:138='rn',<392>,1:137]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='t',<392>,1:7]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIME, table_ref=null}, {name=rn, table_ref=query0}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
 				extractor.getSymbolTable().toString());
 
 	}

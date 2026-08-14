@@ -90,6 +90,8 @@ public class SqlParseSymbolTreeHelper {
 	/** Phase 15.6: active only during {@link #convertSymbolTableToTableDictionary}. */
 	private ConvertEgressScopeBundle activeConvertEgressScopeBundle;
 	private HashMap<String, Object> activeConvertEgressDerivedColumns;
+	/** Live {@code queryN} scope key for the query_specification being finalized at convert egress. */
+	private String activeConvertEgressCurrentQueryScopeKey;
 	private RelationalModifierConvertEgressContext activeConvertEgressRelationalModifierContext;
 	private HashMap<String, Object> activeConvertEgressRelationalModifierSourceColumns;
 	private HashMap<String, Object> activeConvertEgressPivotDerivedSourceBindingsByBucket;
@@ -2345,7 +2347,8 @@ public class SqlParseSymbolTreeHelper {
 				null,
 				null,
 				null,
-				false);
+				false,
+				activeConvertEgressCurrentQueryScopeKey);
 		recordInterfaceOutputClauseRefOnQueryDictionary(
 				columnRefObj,
 				columnName,
@@ -4910,6 +4913,22 @@ public class SqlParseSymbolTreeHelper {
 			String updateTargetTableRef,
 			boolean updateHasFromClause,
 			boolean retainRelationalModifierHintsForContinuedFrom) {
+		return convertSymbolTableToTableDictionary(
+				emitFinalUnresolvedUnknownFatal,
+				deferCorrelatedValueSubqueryQualifiedUnknowns,
+				updateTargetTableRef,
+				updateHasFromClause,
+				retainRelationalModifierHintsForContinuedFrom,
+				null);
+	}
+
+	public HashMap<String, Object> convertSymbolTableToTableDictionary(
+			boolean emitFinalUnresolvedUnknownFatal,
+			boolean deferCorrelatedValueSubqueryQualifiedUnknowns,
+			String updateTargetTableRef,
+			boolean updateHasFromClause,
+			boolean retainRelationalModifierHintsForContinuedFrom,
+			String currentQueryScopeKey) {
 	
 		clearClauseColumnSiteTokens();
 
@@ -5045,6 +5064,7 @@ public class SqlParseSymbolTreeHelper {
 		activeConvertEgressScopeBundle = buildConvertEgressScopeBundle(
 				localTableAliasMap,
 				localCurrentQueryDictionary);
+		activeConvertEgressCurrentQueryScopeKey = normalizeQuerySourceReference(currentQueryScopeKey);
 		try {
 		HashMap<String, Object> visibleQuerySourceCollection =
 				activeConvertEgressScopeBundle.visibleQuerySourceRefs;
@@ -5916,6 +5936,7 @@ public class SqlParseSymbolTreeHelper {
 			activeConvertEgressScopeBundle = null;
 			activeConvertEgressStructuredDerivedColumnCandidates = null;
 			activeConvertEgressDerivedColumns = null;
+			activeConvertEgressCurrentQueryScopeKey = null;
 			activeConvertEgressRelationalModifierContext = null;
 			activeConvertEgressRelationalModifierSourceColumns = null;
 			activeConvertEgressPivotDerivedSourceBindingsByBucket = null;
@@ -5934,7 +5955,13 @@ public class SqlParseSymbolTreeHelper {
 	 * statement-boundary fatals ({@code emitFinalUnresolvedUnknownFatal=false}).
 	 */
 	public void reconcileJoinExtensionSymbolTable() {
-		convertSymbolTableToTableDictionary(false, false, null, false, true);
+		convertSymbolTableToTableDictionary(
+				false,
+				false,
+				null,
+				false,
+				true,
+				MUMBLE_QUERY_KEY + walker.queryCount);
 	}
 
 	// =========================================================================
@@ -7959,7 +7986,10 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> scopeSymbols = convertSymbolTableToTableDictionary(
 				emitFinalUnresolvedUnknownFatal,
 				deferCorrelatedValueSubqueryQualifiedUnknowns,
-				null);
+				null,
+				false,
+				false,
+				scopeKey);
 
 		HashMap<String, Object> localCurrentQueryDictionary =
 				(HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_QUERY_DICTIONARY_KEY);
@@ -14263,6 +14293,14 @@ public class SqlParseSymbolTreeHelper {
 						unresolvedEntry,
 						extractTableRefFromUnresolvedEntry(null, unresolvedEntry),
 						clauseKey)) {
+					if (clauseLocations != null
+							&& !clauseLocations.isEmpty()
+							&& activeConvertEgressCurrentQueryScopeKey != null
+							&& !activeConvertEgressCurrentQueryScopeKey.isBlank()) {
+						updateTrackedClauseLocationsWithResolvedTableRef(
+								clauseLocations,
+								activeConvertEgressCurrentQueryScopeKey);
+					}
 					return;
 				}
 				if (clauseLocations != null && !clauseLocations.isEmpty()) {
@@ -14306,6 +14344,14 @@ public class SqlParseSymbolTreeHelper {
 						unresolvedEntry,
 						extractTableRefFromUnresolvedEntry(null, unresolvedEntry),
 						clauseKey)) {
+					if (clauseLocations != null
+							&& !clauseLocations.isEmpty()
+							&& activeConvertEgressCurrentQueryScopeKey != null
+							&& !activeConvertEgressCurrentQueryScopeKey.isBlank()) {
+						updateTrackedClauseLocationsWithResolvedTableRef(
+								clauseLocations,
+								activeConvertEgressCurrentQueryScopeKey);
+					}
 					return;
 				}
 				if (suppressAmbiguousDiagnostic) {
@@ -14539,6 +14585,7 @@ public class SqlParseSymbolTreeHelper {
 	private enum ArchivedClauseColumnRefDisposition {
 		SKIP,
 		RESOLVED,
+		RESOLVED_INTRA_QUERY_OUTPUT_ALIAS,
 		DEFERRED,
 		AMBIGUOUS,
 		AMBIGUOUS_DERIVED_COLUMN,
@@ -14572,6 +14619,14 @@ public class SqlParseSymbolTreeHelper {
 			return new ArchivedClauseColumnRefResult(
 					ArchivedClauseColumnRefDisposition.RESOLVED,
 					resolvedSourceRef,
+					null,
+					null);
+		}
+
+		static ArchivedClauseColumnRefResult resolvedIntraQueryOutputAlias(String queryScopeKey) {
+			return new ArchivedClauseColumnRefResult(
+					ArchivedClauseColumnRefDisposition.RESOLVED_INTRA_QUERY_OUTPUT_ALIAS,
+					queryScopeKey,
 					null,
 					null);
 		}
@@ -14629,6 +14684,7 @@ public class SqlParseSymbolTreeHelper {
 		final RelationalModifierConvertEgressContext relationalModifierContext;
 		final String deleteTargetTableRef;
 		final boolean deferCorrelatedSubqueries;
+		final String currentQueryScopeKey;
 
 		ArchivedClauseProbeContext(
 				HashMap<String, Object> scopeSymbols,
@@ -14644,7 +14700,8 @@ public class SqlParseSymbolTreeHelper {
 				HashMap<String, Object> localDerivedColumns,
 				RelationalModifierConvertEgressContext relationalModifierContext,
 				String deleteTargetTableRef,
-				boolean deferCorrelatedSubqueries) {
+				boolean deferCorrelatedSubqueries,
+				String currentQueryScopeKey) {
 			this.scopeSymbols = scopeSymbols;
 			this.localInterface = localInterface;
 			this.localCurrentQueryDictionary = localCurrentQueryDictionary;
@@ -14659,6 +14716,7 @@ public class SqlParseSymbolTreeHelper {
 			this.relationalModifierContext = relationalModifierContext;
 			this.deleteTargetTableRef = deleteTargetTableRef;
 			this.deferCorrelatedSubqueries = deferCorrelatedSubqueries;
+			this.currentQueryScopeKey = currentQueryScopeKey;
 		}
 	}
 
@@ -14800,7 +14858,7 @@ public class SqlParseSymbolTreeHelper {
 		if (isInterfaceOutputAliasOnly(localInterface, dependencyName)) {
 			return isGroundedInterfaceOutputAlias(localInterface, dependencyName, activeOutputColumns);
 		}
-		return false;
+		return SqlBareValueExpressionRegistry.classify(dependencyName) != null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -14864,6 +14922,10 @@ public class SqlParseSymbolTreeHelper {
 		}
 		recordInterfaceOutputClauseRefOnQueryDictionary(refObj, columnName, clauseKey, probeContext);
 		consumeUnqualifiedUnknownEntry(probeContext.localUnresolvedColumnMap, columnName);
+		String queryScopeKey = probeContext.currentQueryScopeKey;
+		if (queryScopeKey != null && !queryScopeKey.isBlank()) {
+			return ArchivedClauseColumnRefResult.resolvedIntraQueryOutputAlias(queryScopeKey);
+		}
 		return ArchivedClauseColumnRefResult.skip();
 	}
 
@@ -15283,7 +15345,8 @@ public class SqlParseSymbolTreeHelper {
 				localDerivedColumns,
 				relationalModifierContext,
 				deleteTargetTableRef,
-				deferCorrelatedValueSubqueryQualifiedUnknowns);
+				deferCorrelatedValueSubqueryQualifiedUnknowns,
+				activeConvertEgressCurrentQueryScopeKey);
 		probeArchivedScopeClauseColumns(probeContext);
 		probeUpdateAssignmentRhsClauseColumns(probeContext);
 	}
@@ -15456,6 +15519,13 @@ public class SqlParseSymbolTreeHelper {
 				columnRefs.addAll(
 						index,
 						copyInterfaceReferenceList(result.expandedDerivedSourceLineage));
+			}
+			case RESOLVED_INTRA_QUERY_OUTPUT_ALIAS -> {
+				if (result.resolvedSourceRef != null && !result.resolvedSourceRef.isBlank()) {
+					columnRefs.set(
+							index,
+							cloneReferenceWithResolvedTableRef(columnRefObj, result.resolvedSourceRef));
+				}
 			}
 			case RESOLVED -> {
 				if (result.resolvedSourceRef == null || result.resolvedSourceRef.isBlank()) {
