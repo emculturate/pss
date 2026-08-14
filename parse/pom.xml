@@ -159,6 +159,7 @@
           <configuration>
               <excludes>
                   <exclude>**/PUML3ParserTest.java</exclude>
+                  <exclude>**/DumpNestedCteSymbolGoldensTest.java</exclude>
               </excludes>
               <systemPropertyVariables>
                   <pss.walker.test.verbose>${pss.walker.test.verbose}</pss.walker.test.verbose>

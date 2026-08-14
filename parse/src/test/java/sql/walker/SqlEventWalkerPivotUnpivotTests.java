@@ -633,7 +633,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest() {
+	public void unpivotTableJoinOnWithUnqualifiedSalesAmountGateTest() {
 		final String query =
 			"SELECT month_name, sales_amount, t.target_amount \n" +
 			"FROM monthly_sales\n" +
@@ -663,7 +663,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableJoinOnWithUnqualifiedSalesAmountProbeWithTabAliasTest() {
+	public void unpivotTableJoinOnWithUnqualifiedSalesAmountGateWithTabAliasTest() {
 		final String query =
 			"SELECT month_name, sales_amount, t.target_amount \n" +
 			"FROM monthly_sales\n" +
@@ -693,7 +693,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableWithQualifySalesAmountProbeTest() {
+	public void unpivotTableWithQualifySalesAmountGateTest() {
 		final String query =
 			"SELECT month_name, sales_amount, units \n" +
 			"FROM monthly_sales\n" +
@@ -722,7 +722,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableWithQualifySalesAmountProbeWithTabAliasTest() {
+	public void unpivotTableWithQualifySalesAmountGateWithTabAliasTest() {
 		final String query =
 			"SELECT month_name, sales_amount, units \n" +
 			"FROM monthly_sales\n" +
@@ -751,7 +751,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableWithOrderByExpressionSalesAmountProbeTest() {
+	public void unpivotTableWithOrderByExpressionSalesAmountGateTest() {
 		final String query =
 			"SELECT month_name, sales_amount, units \n" +
 			"FROM monthly_sales\n" +
@@ -780,7 +780,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	public void unpivotTableWithOrderByExpressionSalesAmountProbeWithTabAliasTest() {
+	public void unpivotTableWithOrderByExpressionSalesAmountGateWithTabAliasTest() {
 		final String query =
 			"SELECT month_name, sales_amount, units \n" +
 			"FROM monthly_sales\n" +
@@ -2026,8 +2026,8 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	// IN-list alias in JOIN ON (E0e clause probe): jan_sales is not a derived_columns key.
-	public void pivotTableJoinOnWithUnqualifiedJanSalesProbeTest() {
+	// IN-list alias in JOIN ON (E0e clause-gate regression): jan_sales is not a derived_columns key.
+	public void pivotTableJoinOnWithUnqualifiedJanSalesGateTest() {
 		final String query =
 			"SELECT empid, jan_sales, p.target_amount\n" +
 			"FROM monthly_sales_long\n" +
@@ -2053,8 +2053,8 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 	}
 
 	@Test
-	// IN-list alias in QUALIFY (clause probe): jan_sales resolves to monthly_sales_long.
-	public void pivotTableWithQualifyJanSalesProbeTest() {
+	// IN-list alias in QUALIFY (clause-gate regression): jan_sales resolves to monthly_sales_long.
+	public void pivotTableWithQualifyJanSalesGateTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
 			"FROM monthly_sales_long\n" +
@@ -2081,7 +2081,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 	@Test
 	// IN-list alias in ORDER BY expression: jan_sales/feb_sales resolve to monthly_sales_long.
-	public void pivotTableWithOrderByExpressionJanFebProbeTest() {
+	public void pivotTableWithOrderByExpressionJanFebGateTest() {
 		final String query =
 			"SELECT empid, jan_sales, feb_sales, mar_sales\n" +
 			"FROM monthly_sales_long\n" +
@@ -2245,7 +2245,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 	@Test
 	// Derived column in JOIN ON (E0e probe): jan_sales_SUM has table_ref=null in filters.
-	public void pivotMonthlySalesLongJoinOnDerivedSumProbeTest() {
+	public void pivotMonthlySalesLongJoinOnDerivedSumGateTest() {
 		final String query =
 			"SELECT empid, jan_sales_SUM, p.target_amount\n" +
 			"FROM monthly_sales_long\n" +
@@ -2325,7 +2325,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 
 	@Test
 	// Derived column in ORDER BY expression: jan_sales_SUM/feb_sales_SUM have table_ref=null.
-	public void pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest() {
+	public void pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest() {
 		final String query =
 			"SELECT empid, jan_sales_SUM, feb_sales_SUM, mar_sales_SUM\n" +
 			"FROM monthly_sales_long\n" +
@@ -3958,7 +3958,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
-	// CTE source + derived-column clause surfaces (Category D): PIVOT on WITH body, all five probes.
+	// CTE source + derived-column clause surfaces (Category D): PIVOT on WITH body, all five clause-gate tests.
 	@Test
 	public void pivotCteSourceDerivedColumnClauseSurfacesV1Test() {
 		final String query =
@@ -3998,7 +3998,7 @@ public class SqlEventWalkerPivotUnpivotTests extends AbstractSqlParseEventWalker
 				extractor.getSymbolTable().toString());
 	}
 
-	// CTE source + derived-column clause surfaces (Category D): UNPIVOT on WITH body, VALUE/FOR in all five probes.
+	// CTE source + derived-column clause surfaces (Category D): UNPIVOT on WITH body, VALUE/FOR in all five clause-gate tests.
 	@Test
 	public void unpivotCteSourceDerivedColumnClauseSurfacesV1Test() {
 		final String query =

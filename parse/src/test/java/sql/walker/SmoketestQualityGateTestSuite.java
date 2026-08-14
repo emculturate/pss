@@ -19,19 +19,19 @@ import org.junit.Test;
  *   <li>Correlated subquery canaries (38): scalar predicand (18), IN-list (10), EXISTS (10) — includes middle-CTE predicand regression trio (resolve, unqualified fatal location, qualified missing-column fatal location)</li>
  *   <li>Nested WITH / CTE handling (4): {@code nestedWithExistsCarriesCteListAaaThenBbbCccThenDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddEee}, {@code nestedWithExistsCarriesCteListAaaBbbThenCccDddThenEee}, {@code nestedWithInnerJoinAaaBbbThenCccDddEeeParsesWithoutErrors}</li>
  *   <li>Nested WITH alias-boundary visibility (3): {@code nestedVisibilityWithExistsCarriesCteListAaaBbbThenCccDddThenEee}, {@code nestedVisibilityWithInnerJoinAaaBbbThenCccDddThenEeeParsesWithoutErrors}, {@code nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors}</li>
- *   <li>Nested WITH depth / cross-clause probes (2): {@code nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces}, {@code nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs}</li>
+ *   <li>Nested WITH depth / cross-clause gate tests (2): {@code nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces}, {@code nestedNestedWithExistsInAndScalarSubqueriesMapToQueryRefs}</li>
  *   <li>Table function smoke (7): FLATTEN/GENERATOR FROM shape, chained lateral, wildcard interface, CTAS, tuple endpoint syntax</li>
  *   <li>DML DELETE canary (1): {@code deleteDictionaryHandlingPostgresReturningQualifiedAcrossWhereSubclausesV2}</li>
  *   <li>SCRIPT / DDL smoke (3): {@code simpleScriptTest}, {@code simpleDdlCreateTableV1Test}, {@code mixedScriptStatementTypesTest}</li>
  *   <li>Endpoint / tuple parser smoke (3): {@code tupleSubstitutionVariableTestV1/V2}, {@code basicTupleTableTest}</li>
  *   <li>Snippet construction (1): {@code basicJoinWithOnOnConditionVariableTest}</li>
- *   <li>Production join_extension / ambiguity probes (1): {@code getMissingColumnFromTupleDictionaryTest}</li>
+ *   <li>Production join_extension / ambiguity gate test (1): {@code getMissingColumnFromTupleDictionaryTest}</li>
  *   <li>Phase 13.4 intra–select-list forward alias (5): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}; {@code selfReferenceColumnAliasInSameSelectListHappyPathV1Test}, {@code selfReferenceColumnAliasReversedOrderUnresolvedV2Test}, {@code selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test}, {@code selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test}</li>
  *   <li>Phase 13.4 ordered select-list alias matrix (6): plain column arithmetic, predicand substitution, bare value, window partition/order, column substitution in partition — from {@code SqlEventWalkerSelectListOrderedAliasRefTests}</li>
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
  *   <li>PIVOT / UNPIVOT multi-modifier gate (17): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}; Phase 17.6.7 subquery-backed triple variants ({@code triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test}, {@code tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test}, {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test}); Phase 17.7.11 single-modifier tuple-source gate ({@code singlePivotSubqueryFromV17_7_11Test}, {@code singlePivotVariableFromV17_7_11Test}, {@code singlePivotJinjaFromV17_7_11Test}, {@code singlePivotValuesFromV17_7_11Test}, {@code singlePivotTableFunctionFromV17_7_11Test}, {@code singleUnpivotSubqueryFromV17_7_11Test}, {@code singleUnpivotVariableFromV17_7_11Test}, {@code singleUnpivotJinjaFromV17_7_11Test}, {@code singleUnpivotValuesFromV17_7_11Test}, {@code singleUnpivotTableFunctionFromV17_7_11Test})</li>
- *   <li>PIVOT / UNPIVOT subset B clause probes (14): JOIN ON, GROUP/ORDER, HAVING/ORDER, QUALIFY, ORDER BY expression, FromDerived, WithTax, JoinTargets, {@code monthly_sales_long} join/tax-where/join-filter/order-by, pivot IN-list WHERE — see §17.7.7-matrix subset B</li>
+ *   <li>PIVOT / UNPIVOT subset B clause gate tests (14): JOIN ON, GROUP/ORDER, HAVING/ORDER, QUALIFY, ORDER BY expression, FromDerived, WithTax, JoinTargets, {@code monthly_sales_long} join/tax-where/join-filter/order-by, pivot IN-list WHERE — see §17.7.7-matrix subset B</li>
  *   <li>Nested WITH clause / set-op matrix (4): scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars</li>
  *   <li>Endpoint parser extensions (2): {@code basicTupleSubstitutionVariableTest}, {@code inListVariableSubstitutionTest}</li>
  *   <li>JOIN duplicate-interface fatal (1): {@code handlingRepeatingColumnNamesInTheInterfaceV1}</li>
@@ -45,9 +45,9 @@ import org.junit.Test;
  *   <li>Unaliased derived table V1–V16 (16)</li>
  *   <li>CTE unqualified column refs CTEV1–CTEV15 (15): full {@code SqlEventWalkerSubqueriesAndClauseSemanticsTests} WITH/CTE unqualified-ref matrix</li>
  *   <li>Scalar subquery symbol-table matrix (12): V1–V9 + correlated + filter variants (V1 with correlated WHERE-IN, V2 with correlated WHERE-scalar-comparison) — full clause egress matrix (SELECT predicand, JOIN ON, GROUP BY/HAVING, ORDER BY, QUALIFY, WHERE scalar/EXISTS, correlated)</li>
- *   <li>Production scalar / EXISTS probes (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
+ *   <li>Production scalar / EXISTS gate tests (4): {@code selectWhereScalarConditionCorrelatedSubquery}, {@code selectOrderByScalarCorrelatedSubquery}, {@code selectWhereVariableExists}, {@code selectWhereExistsCorrelatedSubquery}</li>
  *   <li>Nested formula subqueries (1): {@code nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest}</li>
- *   <li>Subquery semantics probes (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
+ *   <li>Subquery semantics gate tests (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
  *   <li>Diagnostic exemplars (9): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code intersectionWithMismatchColumnCountsAndNamesTest}, {@code exceptColumnCountMismatchEmitsFatalTest}, {@code threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
  *   <li>Three-level set-op nesting smoke (2): {@code threeLevelSetOpNestUnionIntersectExceptHappyPathTest}, {@code threeLevelSetOpNestExceptUnionIntersectHappyPathTest}</li>
  *   <li>Parser diagnostic exemplars (11): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
@@ -347,7 +347,7 @@ public class SmoketestQualityGateTestSuite {
 		unaliasedTests.nestedVisibilityWithScalarWhereAaaThenBbbCccThenDddEeeParsesWithoutErrors();
 	}
 
-	// --- Nested WITH depth / cross-clause probes (2) ---
+	// --- Nested WITH depth / cross-clause gate tests (2) ---
 
 	@Test
 	public void nestedNestedWithDepth2CarriesCteListsExistsRefsAndAliasInterfaces() {
@@ -454,7 +454,7 @@ public class SmoketestQualityGateTestSuite {
 		snippetTests.basicJoinWithOnOnConditionVariableTest();
 	}
 
-	// --- Production join_extension / ambiguity probes (2) ---
+	// --- Production join_extension / ambiguity gate tests (2) ---
 
 	@Test
 	public void donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest() {
@@ -577,11 +577,11 @@ public class SmoketestQualityGateTestSuite {
 		pivotUnpivotTests.singleUnpivotTableFunctionFromV17_7_11Test();
 	}
 
-	// --- PIVOT / UNPIVOT subset B clause probes (14) — §17.7.7-matrix ---
+	// --- PIVOT / UNPIVOT subset B clause gate tests (14) — §17.7.7-matrix ---
 
 	@Test
-	public void unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest() {
-		pivotUnpivotTests.unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest();
+	public void unpivotTableJoinOnWithUnqualifiedSalesAmountGateTest() {
+		pivotUnpivotTests.unpivotTableJoinOnWithUnqualifiedSalesAmountGateTest();
 	}
 
 	@Test
@@ -595,13 +595,13 @@ public class SmoketestQualityGateTestSuite {
 	}
 
 	@Test
-	public void unpivotTableWithQualifySalesAmountProbeTest() {
-		pivotUnpivotTests.unpivotTableWithQualifySalesAmountProbeTest();
+	public void unpivotTableWithQualifySalesAmountGateTest() {
+		pivotUnpivotTests.unpivotTableWithQualifySalesAmountGateTest();
 	}
 
 	@Test
-	public void unpivotTableWithOrderByExpressionSalesAmountProbeTest() {
-		pivotUnpivotTests.unpivotTableWithOrderByExpressionSalesAmountProbeTest();
+	public void unpivotTableWithOrderByExpressionSalesAmountGateTest() {
+		pivotUnpivotTests.unpivotTableWithOrderByExpressionSalesAmountGateTest();
 	}
 
 	@Test
@@ -630,8 +630,8 @@ public class SmoketestQualityGateTestSuite {
 	}
 
 	@Test
-	public void pivotMonthlySalesLongJoinOnDerivedSumProbeTest() {
-		pivotUnpivotTests.pivotMonthlySalesLongJoinOnDerivedSumProbeTest();
+	public void pivotMonthlySalesLongJoinOnDerivedSumGateTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongJoinOnDerivedSumGateTest();
 	}
 
 	@Test
@@ -645,8 +645,8 @@ public class SmoketestQualityGateTestSuite {
 	}
 
 	@Test
-	public void pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest() {
-		pivotUnpivotTests.pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest();
+	public void pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest() {
+		pivotUnpivotTests.pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest();
 	}
 
 	// --- Nested WITH clause / set-op matrix (4) ---
@@ -1158,7 +1158,7 @@ public class SmoketestQualityGateTestSuite {
 		unaliasedTests.scalarSubqueriesSymbolTableFilterV2();
 	}
 
-	// --- Production scalar / EXISTS probes (4) ---
+	// --- Production scalar / EXISTS gate tests (4) ---
 
 	@Test
 	public void selectWhereScalarConditionCorrelatedSubquery() {
@@ -1187,7 +1187,7 @@ public class SmoketestQualityGateTestSuite {
 		unaliasedTests.nestedFormulaSubqueriesUseQueryRefsInInterfaceAndFiltersTest();
 	}
 
-	// --- Subquery semantics probes (6) ---
+	// --- Subquery semantics gate tests (6) ---
 
 	@Test
 	public void queryOverQueriesSingleWildcardResolvesUnqualifiedColumn() {

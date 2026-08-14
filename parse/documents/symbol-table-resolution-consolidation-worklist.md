@@ -1087,7 +1087,7 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 | **E0b** | Interface loop unqualified/qualified derived skip | `isPivotDerivedInterfaceOutputColumn` + derived guard | V7 + `pivotMonthlySalesLong*` derived tests |
 | **E0c** | PIVOT aggregate/FOR **operand** columns on joined physical table | `resolvePivotOperandColumnsFromUnresolvedMap` (**keep** — not Step E) | `pivotBasicMonthSalesJoinV8Test`, JOIN patterns |
 | **E0d** | UNPIVOT walk-time VALUE/FOR/IN strip | `resolveUnpivotGeneratedColumnsFromUnresolvedMap` in walker (**keep**) | UNPIVOT test matrix |
-| **E0e** | Clause probe skip (WHERE / **JOIN ON** / GROUP BY / ORDER BY / HAVING / QUALIFY) | `probeArchivedScopeClauseColumns` → `validateArchivedClauseColumnRef` derived skip | `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest` (IN-list alias); `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` (derived); `pivotSameQuery*` per clause |
+| **E0e** | Clause probe skip (WHERE / **JOIN ON** / GROUP BY / ORDER BY / HAVING / QUALIFY) | `probeArchivedScopeClauseColumns` → `validateArchivedClauseColumnRef` derived skip | `pivotTableJoinOnWithUnqualifiedJanSalesGateTest` (IN-list alias); `pivotMonthlySalesLongJoinOnDerivedSumGateTest` (derived); `pivotSameQuery*` per clause |
 | **E0f** | PIVOT IN-identifier resolution | Dedicated fatal/warning paths | `pivotInIdentifier*` tests |
 | **E0g** | UPDATE assignment RHS derived re-entry | `resolveUpdateRhsUnqualifiedAssignmentColumnsToTargetTable` + `UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY` | `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` |
 
@@ -1101,10 +1101,10 @@ Removed `canResolveUnqualifiedFromSingleWildcardQuerySource` guard in `finalizeQ
 **E.0 test additions (Jul 2026):**
 
 - `pivotUpdateFromRhsUnqualifiedDerivedColumnReentryE0gTest` — UPDATE RHS `jan_sales_SUM`
-- `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` — JOIN ON derived
+- `pivotMonthlySalesLongJoinOnDerivedSumGateTest` — JOIN ON derived
 - `pivotMonthlySalesLongJoinFilterDerivedSumTest` — alias `u` + JOIN + WHERE + tax expr
 - `pivotMonthlySalesLongTaxWhereDerivedSumTest` — SELECT expr + WHERE
-- `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` — ORDER BY `jan_sales_SUM / feb_sales_SUM`
+- `pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest` — ORDER BY `jan_sales_SUM / feb_sales_SUM`
 
 #### E.2–E.4 retirement substeps
 
@@ -1607,12 +1607,12 @@ Walk-time strip and convert-time interface/dictionary shaping are **different pi
 | `unpivotTableWithGroupByAndOrderBySalesAmountV2GroupOrderWithTabAliasTest` | D + B | + alias | As above |
 | `unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderTest` | D Clauses | HAVING / ORDER BY | As GROUP BY row |
 | `unpivotTableWithHavingAndOrderBySalesAmountV2HavingOrderWithTabAliasTest` | D + B | + alias | As above |
-| `unpivotTableJoinOnWithUnqualifiedSalesAmountProbeTest` | D Clauses | JOIN ON VALUE | Multi-source + clause probe |
-| `unpivotTableJoinOnWithUnqualifiedSalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
-| `unpivotTableWithQualifySalesAmountProbeTest` | D Clauses | QUALIFY on VALUE | Clause probe |
-| `unpivotTableWithQualifySalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
-| `unpivotTableWithOrderByExpressionSalesAmountProbeTest` | D Clauses | ORDER BY expr with VALUE | Clause probe |
-| `unpivotTableWithOrderByExpressionSalesAmountProbeWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableJoinOnWithUnqualifiedSalesAmountGateTest` | D Clauses | JOIN ON VALUE | Multi-source + clause probe |
+| `unpivotTableJoinOnWithUnqualifiedSalesAmountGateWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableWithQualifySalesAmountGateTest` | D Clauses | QUALIFY on VALUE | Clause probe |
+| `unpivotTableWithQualifySalesAmountGateWithTabAliasTest` | D + B | + alias | As above |
+| `unpivotTableWithOrderByExpressionSalesAmountGateTest` | D Clauses | ORDER BY expr with VALUE | Clause probe |
+| `unpivotTableWithOrderByExpressionSalesAmountGateWithTabAliasTest` | D + B | + alias | As above |
 | `unpivotFromDerivedAdjustedColumnsV3Test` | E Query-backed | Subquery source + IN identifiers | Query interface sweep in walk strip |
 | `unpivotWithTaxAndWhereV4Test` | D Clauses | WHERE on VALUE; calc column | Clause + passthrough |
 | `unpivotJoinTargetsWithFilterV5Test` | F Multi-source | JOIN + WHERE; alias `u` | Join + filter + ambiguity paths |
@@ -2047,7 +2047,7 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 
 **Prerequisite:** Phase 15 closeout (**15.4b** may **defer** full IN-list alias model to Phase 18 — keep minimal skip until then).
 
-**Gate:** 11 IN-list alias annotated tests + `pivotInIdentifier*` family + `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest`; pivot **67/67**; gate **195/195**.
+**Gate:** 11 IN-list alias annotated tests + `pivotInIdentifier*` family + `pivotTableJoinOnWithUnqualifiedJanSalesGateTest`; pivot **67/67**; gate **195/195**.
 
 ### Phase 18 end state
 
@@ -2081,9 +2081,9 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | 2 | `pivotTableWithInAliasesJanFebMarV2Test` | SELECT + WHERE `units` | bare months | `monthly_sales_long` ✅ | Yes ✅ | (no exact pair; WHERE is physical `units`) |
 | 3 | `pivotTableWithGroupByAndOrderByV2GroupOrderTest` | GROUP BY / ORDER BY | bare months | interface ✅ source; **grouped_by/ordered_by often `null`** | Yes ✅ | — |
 | 4 | `pivotTableWithHavingAndOrderByV2HavingOrderTest` | HAVING / ORDER BY | bare months | interface ✅; filters/ordered_by often `null` | Yes ✅ | — |
-| 5 | `pivotTableJoinOnWithUnqualifiedJanSalesProbeTest` | JOIN ON | `jan_sales` | **`null` ⚠️** | **No ⚠️** (only operands on source dict) | `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` |
-| 6 | `pivotTableWithQualifyJanSalesProbeTest` | QUALIFY | `jan_sales` | interface ✅; filters `null` | Yes ✅ | — |
-| 7 | `pivotTableWithOrderByExpressionJanFebProbeTest` | ORDER BY expr | `jan_sales`/`feb_sales` | interface ✅; ordered_by `null` | Yes ✅ | `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` |
+| 5 | `pivotTableJoinOnWithUnqualifiedJanSalesGateTest` | JOIN ON | `jan_sales` | **`null` ⚠️** | **No ⚠️** (only operands on source dict) | `pivotMonthlySalesLongJoinOnDerivedSumGateTest` |
+| 6 | `pivotTableWithQualifyJanSalesGateTest` | QUALIFY | `jan_sales` | interface ✅; filters `null` | Yes ✅ | — |
+| 7 | `pivotTableWithOrderByExpressionJanFebGateTest` | ORDER BY expr | `jan_sales`/`feb_sales` | interface ✅; ordered_by `null` | Yes ✅ | `pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest` |
 | 8 | `pivotWithTaxAndWhereV4Test` | **Mixed** bare + `*_SUM` | both | bare → source; `*_SUM` → `tuple_0` | bare yes; derived no | `pivotMonthlySalesLongTaxWhereDerivedSumTest` |
 | 9 | `pivotJoinTargetsWithFilterV5Test` | JOIN + alias `u` + WHERE | bare + `u.jan_sales` | SELECT interface **`null` ⚠️**; ON sites on source | Partial (ON yes / SELECT no) | `pivotMonthlySalesLongJoinFilterDerivedSumTest` |
 | 10 | `pivotKeepingForColumnV6Test` | SELECT + FOR col | bare + `month_name` | source ✅ | Yes ✅ | `pivotBasicMonthSalesV7Test` (same FROM, derived names) |
@@ -2094,10 +2094,10 @@ Snowflake-style `UNPIVOT (value_expr FOR name_expr IN (col1, col2, …))` has **
 | Test | Role vs IN-list set |
 |------|---------------------|
 | `pivotBasicMonthSalesV7Test` | Same FROM as V6/V8; SELECT uses `*_SUM` |
-| `pivotMonthlySalesLongJoinOnDerivedSumProbeTest` | Pair of JoinOn bare probe (#5) |
+| `pivotMonthlySalesLongJoinOnDerivedSumGateTest` | Pair of JoinOn bare probe (#5) |
 | `pivotMonthlySalesLongJoinFilterDerivedSumTest` | Pair of V5 (#9) |
 | `pivotMonthlySalesLongTaxWhereDerivedSumTest` | Pair of V4 tax (#8) without bare mix |
-| `pivotMonthlySalesLongOrderByExpressionDerivedSumProbeTest` | Pair of OrderBy expr (#7) |
+| `pivotMonthlySalesLongOrderByExpressionDerivedSumGateTest` | Pair of OrderBy expr (#7) |
 | `pivotBasicMetricColumnsV0*` | Case-insensitive derived SELECT/`jan_sales_sum` |
 
 #### Gaps / risks for 18.1
