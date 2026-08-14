@@ -15083,8 +15083,8 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if ((MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
 						|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey))
-				&& !hasPrecedingSelectListOutputAliasForWindowClauseRef(
-						columnName, probeContext)) {
+				&& isForwardWindowSelectListOutputAliasRef(
+						columnName, clauseKey, probeContext)) {
 			return null;
 		}
 		if (!isGroundedIntraQueryOutputAliasUsage(
@@ -15103,33 +15103,6 @@ public class SqlParseSymbolTreeHelper {
 		return ArchivedClauseColumnRefResult.skip();
 	}
 
-	private boolean hasPrecedingSelectListOutputAliasForWindowClauseRef(
-			String dependencyColumnName,
-			ArchivedClauseProbeContext probeContext) {
-		if (probeContext == null || dependencyColumnName == null || dependencyColumnName.isBlank()) {
-			return false;
-		}
-		if (windowOutputInterfaceClauseDepsByAlias.isEmpty()) {
-			return false;
-		}
-		for (Map.Entry<String, WindowSelectInterfaceClauseDeps> entry :
-				windowOutputInterfaceClauseDepsByAlias.entrySet()) {
-			WindowSelectInterfaceClauseDeps overDeps = entry.getValue();
-			if (overDeps == null
-					|| !windowClauseDepsReferenceColumn(overDeps, dependencyColumnName)) {
-				continue;
-			}
-			if (isPrecedingSelectListOutputAliasInInterface(
-					dependencyColumnName,
-					entry.getKey(),
-					probeContext.localInterface,
-					probeContext.localCurrentQueryDictionary)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 	private boolean isForwardWindowSelectListOutputAliasRef(
 			String columnName,
 			String clauseKey,
@@ -15141,8 +15114,29 @@ public class SqlParseSymbolTreeHelper {
 				&& !MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)) {
 			return false;
 		}
-		return isInterfaceOutputAliasOnly(probeContext.localInterface, columnName)
-				&& !hasPrecedingSelectListOutputAliasForWindowClauseRef(columnName, probeContext);
+		if (!isInterfaceOutputAliasOnly(probeContext.localInterface, columnName)
+				|| windowOutputInterfaceClauseDepsByAlias.isEmpty()) {
+			return false;
+		}
+		for (Map.Entry<String, WindowSelectInterfaceClauseDeps> entry :
+				windowOutputInterfaceClauseDepsByAlias.entrySet()) {
+			WindowSelectInterfaceClauseDeps overDeps = entry.getValue();
+			if (overDeps == null
+					|| !windowClauseDepsReferenceColumn(overDeps, columnName)) {
+				continue;
+			}
+			String consumingInterfaceOutputColumnName = entry.getKey();
+			if (consumingInterfaceOutputColumnName == null
+					|| consumingInterfaceOutputColumnName.isBlank()) {
+				continue;
+			}
+			return !isPrecedingSelectListOutputAliasInInterface(
+					columnName,
+					consumingInterfaceOutputColumnName,
+					probeContext.localInterface,
+					probeContext.localCurrentQueryDictionary);
+		}
+		return false;
 	}
 
 	private boolean windowClauseDepsReferenceColumn(
@@ -17909,13 +17903,6 @@ public class SqlParseSymbolTreeHelper {
 					new WindowSelectInterfaceClauseDeps(partitionByRefs, orderByRefs);
 			pendingWindowSelectInterfaceOverDeps.addLast(overDeps);
 			latchedWindowOverClauseDepsForNextSelectItem = overDeps;
-			String targetAlias = lastWindowSelectListOutputInterfaceAlias;
-			if (targetAlias == null || targetAlias.isBlank()) {
-				targetAlias = lastSelectListOutputInterfaceAlias;
-			}
-			rememberWindowOutputInterfaceClauseDepsForAlias(
-					targetAlias,
-					copyWindowSelectInterfaceClauseDeps(overDeps));
 		}
 
 		walker.symbolTable.put(symbolTableKey, flatList);

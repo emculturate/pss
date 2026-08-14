@@ -45,11 +45,11 @@ For relational modifiers, **`window_partition_by`**, **`window_ordered_by`**, an
 - Full clause-site matrix (JOIN ON / GROUP BY / ORDER BY with window exprs) — see §Backlog below.
 - Query-backed FROM operand `query_dictionary` placement (**17.7.11** abandoned — out of scope).
 
-### Deprecated: 17.6.8 (b) modifier window tests
+### 17.6.8 (b) modifier + SELECT-list window contracts
 
-The four **17.6.8 (b)** pivot/unpivot window methods (`unpivotV0Window*QueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0Window*QueryDictionaryV17_6_8Test`) are **`@Deprecated`**. They kept interim “list every {@code OVER} name on {@code query_dictionary} when also in SELECT” assertions from before **17.6.9**.
+The four **17.6.8 (b)** pivot/unpivot window methods (`unpivotV0Window*QueryDictionaryV17_6_8Test`, `pivotBasicMetricColumnsV0Window*QueryDictionaryV17_6_8Test`) cover **modifier + SELECT-list window** when {@code OVER} names are also SELECT outputs. They complement **NewPolicy V1–V4** (window-only SELECT / query {@code ORDER BY}).
 
-**Use instead:** **NewPolicy V1–V4** for modifier + window egress policy. Other **17.6.8** tests (WHERE/HAVING/QUALIFY/RETURNING) remain valid for clause-site egress and are not deprecated.
+Refreshed Aug 2026 after the window interface merge fix: non-window SELECT outputs no longer inherit window deps from sibling select items or duplicate partition-only {@code tuple_0} refs on their {@code interface} entries; {@code interface.<windowAlias>} still carries full OVER lineage. Other **17.6.8** tests (WHERE/HAVING/QUALIFY/RETURNING) remain valid for clause-site egress.
 
 Physical-table window goldens in `SqlEventWalkerFunctionsAggregatesWindowingTests` now include **`window_partition_by` / `window_ordered_by`** on the outer scope where walk archives {@code OVER} harvest (aligned with 17.6.8 archive lists + 17.6.9 policy).
 
@@ -108,7 +108,7 @@ For every **window function that is itself an interface output** (a SELECT-list 
 |------|--------|---------------------------|
 | Physical SELECT + `OVER` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | `subqueryDictionaryExtensionWindowOverPartitionByV7`–`…MixedV30`, lag/lead/first_value window samples — symbol tables include `window_*` archives |
 | Modifier window contract | `SqlEventWalkerPivotUnpivotTests` | `*NewPolicyV1*`–`*NewPolicyV4*` |
-| Deprecated (modifier window) | `SqlEventWalkerPivotUnpivotTests` | `*Window*V17_6_8Test` on pivot/unpivot — superseded by **NewPolicy** |
+| Modifier + SELECT-list window | `SqlEventWalkerPivotUnpivotTests` | `*Window*V17_6_8Test` on pivot/unpivot — pairs with **NewPolicy** |
 | Multi-clause SELECT | `SqlEventWalkerCoreSelectFromAliasingTests` | `interfaceLoopDualRoleTrailingClauseSourceAndAliasRefTest` |
 | DML + window column | `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests` | `updateReturningWithFromSubqueryTest`, `insertComplexSubstitutionI5WithCteQualifyWindowSubstitution` |
 
@@ -126,7 +126,7 @@ For every **window function that is itself an interface output** (a SELECT-list 
 
 ## Execution plan (historical)
 
-Steps 0–3 **completed** (implementation + **NewPolicy** V1–V4). **17.6.8 (b) modifier window tests deprecated.** Optional: inner-scope `query_dictionary` audit on V7–V30.
+Steps 0–3 **completed** (implementation + **NewPolicy** V1–V4 + refreshed **17.6.8 (b)** SELECT-list window goldens). Optional: inner-scope `query_dictionary` audit on V7–V30.
 
 ### Step 2 sketch (optional P0 class — not added)
 
@@ -168,5 +168,5 @@ Prioritized **after** closure. Mostly **○** today.
 | Aug 2026 | Initial plan from window test cohort inventory + 17.6.8 (b) review |
 | Aug 2026 | §Interface lineage — window `interface.<alias>` must include PARTITION BY + ORDER BY on PIVOT/UNPIVOT (V7–V10 parity) |
 | Aug 2026 | **Closed:** `query_dictionary` gating + walk-captured OVER deps on `interface.<alias>`; locked contract **NewPolicy V1–V4** |
-| Aug 2026 | Deprecated **17.6.8 (b)** modifier window tests; refreshed physical window symbol goldens for `window_*` archives |
+| Aug 2026 | Refreshed **17.6.8 (b)** modifier + SELECT-list window goldens; removed interim deferral — non-window outputs no longer leak sibling window deps |
 | Aug 2026 | **17.6.9b closed (won’t implement):** archived `window_*` / modifier `ordered_by` accept phase-B derived **`source_columns`** fan-out; policy + worklist updated |
