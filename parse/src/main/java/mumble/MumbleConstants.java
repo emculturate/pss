@@ -208,6 +208,10 @@ public final class MumbleConstants {
     /** UNPIVOT {@code INCLUDE NULLS} / {@code EXCLUDE NULLS} — value is {@code include} or {@code exclude}. */
     public static final String MUMBLE_UNPIVOT_NULLS_POLICY_KEY = "nulls_policy";
     public static final String MUMBLE_UNRESOLVED_COLUMN_KEY = "unresolved_column"; // Special key for collecting unresolved column references in the symbol table
+    /** Walk-time origin for an {@link #MUMBLE_UNRESOLVED_COLUMN_KEY} bucket entry ({@code select_list} vs {@code clause}). */
+    public static final String MUMBLE_UNRESOLVED_INGRESS_SITE_KEY = "ingress_site";
+    public static final String MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST = "select_list";
+    public static final String MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE = "clause";
     public static final String MUMBLE_UPDATE_DICTIONARY_KEY = "update_dictionary"; // Special key for update statement assignment token references
     public static final String MUMBLE_UPDATE_KEY = "update";
     public static final String MUMBLE_VALUES_KEY = "values";

@@ -856,6 +856,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (!((Map<String, Object>) existingMap).containsKey(MUMBLE_COLUMN_KEY)) {
 				((Map<String, Object>) existingMap).put(MUMBLE_COLUMN_KEY, unresolvedColumnEntry.get(MUMBLE_COLUMN_KEY));
 			}
+			mergeUnresolvedIngressSite((Map<String, Object>) existingMap, unresolvedColumnEntry);
 		} else {
 			qryTableDict.put(unresolvedKey, unresolvedColumnEntry);
 		}
@@ -1052,7 +1053,43 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			locations.add(token.toString());
 		}
 		unresolvedEntry.put("locations", locations);
+		stampUnresolvedIngressSite(unresolvedEntry);
 		return unresolvedEntry;
+	}
+
+	private void stampUnresolvedIngressSite(HashMap<String, Object> unresolvedEntry) {
+		if (isInsideSelectListScope() && !isInsideWindowOverClauseScope()) {
+			unresolvedEntry.put(
+					MUMBLE_UNRESOLVED_INGRESS_SITE_KEY,
+					MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST);
+		} else if (shouldCaptureClauseColumnSiteTokenForActiveColumnReference()) {
+			unresolvedEntry.put(
+					MUMBLE_UNRESOLVED_INGRESS_SITE_KEY,
+					MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE);
+		}
+	}
+
+	private void mergeUnresolvedIngressSite(
+			Map<String, Object> existingEntry,
+			Map<String, Object> incomingEntry) {
+		String merged = mergeUnresolvedIngressSiteValues(
+				(String) existingEntry.get(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY),
+				(String) incomingEntry.get(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY));
+		if (merged != null) {
+			existingEntry.put(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY, merged);
+		}
+	}
+
+	private String mergeUnresolvedIngressSiteValues(String existingSite, String incomingSite) {
+		if (MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST.equals(existingSite)
+				|| MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST.equals(incomingSite)) {
+			return MUMBLE_UNRESOLVED_INGRESS_SITE_SELECT_LIST;
+		}
+		if (MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE.equals(existingSite)
+				|| MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE.equals(incomingSite)) {
+			return MUMBLE_UNRESOLVED_INGRESS_SITE_CLAUSE;
+		}
+		return existingSite != null ? existingSite : incomingSite;
 	}
 
 	@SuppressWarnings("unchecked")

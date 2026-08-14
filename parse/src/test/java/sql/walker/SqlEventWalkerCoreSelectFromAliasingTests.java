@@ -3561,6 +3561,59 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 	}
 
 	@Test
+	public void selfReferenceColumnAliasCircularSwapWhereUnresolvedV5Test() {
+		// Cross-renamed SELECT-list aliases over a query-only FROM; WHERE must not bind
+		// ungrounded output-interface names, and invalid SELECT-list sources must still fatal.
+		final String query = "select a as b, b as a from (select x from tab1) where x>a";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=a, table_ref=null}, alias=b}, 2={column={name=b, table_ref=null}, alias=a}}, from={select={1={column={name=x, table_ref=null}}}, from={table={alias=null, table=tab1}}}, where={condition={left={column={name=x, table_ref=null}}, right={column={name=a, table_ref=null}}, operator=>}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[a, b]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Query Column Dictionary is wrong",
+				"{query0={x=[[@11,35:35='x',<392>,1:35], [@16,54:54='x',<392>,1:54]]}, query1={a=[[@7,20:20='a',<392>,1:20]], b=[[@3,12:12='b',<392>,1:12], [@5,15:15='b',<392>,1:15]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Table Dictionary is wrong",
+				"{tab1={x=[[@11,35:35='x',<392>,1:35]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query1={query_dictionary={a=[[@7,20:20='a',<392>,1:20]], b=[[@3,12:12='b',<392>,1:12], [@5,15:15='b',<392>,1:15]]}, def_query0={query_dictionary={x=[[@11,35:35='x',<392>,1:35], [@16,54:54='x',<392>,1:54]]}, table_dictionary={tab1={x=[[@11,35:35='x',<392>,1:35]]}}, interface={x=[{name=x, table_ref=tab1}]}}, filters=[{name=x, table_ref=query0}, {name=a, table_ref=null}], interface={a=[{name=b, table_ref=null}], b=[{name=a, table_ref=null}]}, table_alias={query0=query0}}}",
+				extractor.getSymbolTable().toString());
+
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'a' at (l:1 c:7) was not found in output interface of any visible query alias [query0].",
+				"column 'a'",
+				1,
+				7);
+		assertFatalDiagnosticAtPosition(
+				snippet,
+				"UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES",
+				"Unqualified column 'a' at (l:1 c:56) was not found in output interface of any visible query alias [query0].",
+				"c:56",
+				1,
+				56);
+		assertDiagnosticAtPosition(
+				snippet,
+				"UNRESOLVED_UNQUALIFIED_COLUMNS",
+				ParseDiagnostic.Severity.ERROR,
+				"Unresolved unqualified column reference(s): [a [(l:1 c:7), (l:1 c:56)]]",
+				"a",
+				1,
+				7);
+	}
+
+	@Test
 	public void selectListArithmeticPredicandSubstitutionTest() {
 		final String query = "SELECT <a> + <b> FROM tab1";
 		final SQLSelectParserParser parser = parse(query);
