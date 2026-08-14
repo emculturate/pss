@@ -1820,6 +1820,66 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 				23);
 	}
 
+	@Test
+	public void sequentialJoinsOnBeforeCrossJoinV0Test() {
+		final String query =
+				"SELECT * FROM a JOIN b ON a.c1 = b.c1 JOIN c ON a.c2 = c.c2 CROSS JOIN d";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=a}}, 2={join=JOIN, on={condition={left={column={name=c1, table_ref=a}}, right={column={name=c1, table_ref=b}}, operator==}}}, 3={table={alias=null, table=b}}, 4={join=JOIN, on={condition={left={column={name=c2, table_ref=a}}, right={column={name=c2, table_ref=c}}, operator==}}}, 5={table={alias=null, table=c}}, 6={join=CROSSJOIN}, 7={table={alias=null, table=d}}}}}}",
+				extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void sequentialJoinsUsingBeforeCrossJoinV0Test() {
+		final String query =
+				"SELECT * FROM a JOIN b USING (c1) JOIN c USING (c2) CROSS JOIN d";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=a}}, 2={using={1={column={name=c1, table_ref=null}}}, join=JOIN}, 3={table={alias=null, table=b}}, 4={using={1={column={name=c2, table_ref=null}}}, join=JOIN}, 5={table={alias=null, table=c}}, 6={join=CROSSJOIN}, 7={table={alias=null, table=d}}}}}}",
+				extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void sequentialJoinsOnBeforeNaturalJoinV0Test() {
+		final String query =
+				"SELECT * FROM a JOIN b ON a.c1 = b.c1 JOIN c ON a.c2 = c.c2 NATURAL JOIN d";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=a}}, 2={join=JOIN, on={condition={left={column={name=c1, table_ref=a}}, right={column={name=c1, table_ref=b}}, operator==}}}, 3={table={alias=null, table=b}}, 4={join=JOIN, on={condition={left={column={name=c2, table_ref=a}}, right={column={name=c2, table_ref=c}}, operator==}}}, 5={table={alias=null, table=c}}, 6={join=NATURALJOIN}, 7={table={alias=null, table=d}}}}}}",
+				extractor.getAsTree().toString());
+	}
+
+	@Test
+	public void sequentialJoinsUsingBeforeNaturalJoinV0Test() {
+		final String query =
+				"SELECT * FROM a JOIN b USING (c1) JOIN c USING (c2) NATURAL JOIN d";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=null, table=a}}, 2={using={1={column={name=c1, table_ref=null}}}, join=JOIN}, 3={table={alias=null, table=b}}, 4={using={1={column={name=c2, table_ref=null}}}, join=JOIN}, 5={table={alias=null, table=c}}, 6={join=NATURALJOIN}, 7={table={alias=null, table=d}}}}}}",
+				extractor.getAsTree().toString());
+	}
+
 	/**************************************************** */
 	// Join ON Tests start here
 	/**************************************************** */

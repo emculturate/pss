@@ -79,6 +79,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private final Set<String> invalidVariableDiagnosticKeys;
 	private static final String PIVOT_IN_IDENTIFIER_REFERENCES_KEY = "pivot_in_identifier_references";
 	private static final String RELATIONAL_MODIFIER_OPERAND_REFERENCES_KEY = "relational_modifier_operand_references";
+	/** Stripped from join buckets before the AST is published; used only for diagnostics. */
+	private static final String JOIN_KEYWORD_DIAG_ANCHOR_KEY = "__join_keyword_diag_anchor__";
+	private static final String JOIN_CONDITION_DIAG_ANCHOR_KEY = "__join_condition_diag_anchor__";
+	private static final String JOIN_DIAG_LINE_KEY = "line";
+	private static final String JOIN_DIAG_CHAR_KEY = "char";
+	private static final String JOIN_DIAG_JOIN_KEYWORD_KEY = "joinKeyword";
+	private static final String JOIN_DIAG_CONDITION_KEYWORD_KEY = "conditionKeyword";
 
 	private enum RelationalModifierOperandRole {
 		VALUE,
@@ -4740,6 +4747,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		normalizeLateralModifierEntries(subMap);
 
+		validateAndStripCrossNaturalJoinDiagnostics(subMap);
+
 		captureJoinUsingDependenciesFromTableReferenceSubMap(subMap);
 
 		if (subMap.size() == 1) {
@@ -4767,6 +4776,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		normalizeLateralModifierEntries(subMap);
+
+		validateAndStripCrossNaturalJoinDiagnostics(subMap);
 
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 		symbolTreeHelper.reconcileJoinExtensionSymbolTable();
@@ -7311,6 +7322,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
 //			subMap.put(MUMBLE_JOIN_TYPE_KEY, type);
 		}
+		String crossNaturalJoinKeyword = crossOrNaturalJoinKeyword(ctx);
+		if (crossNaturalJoinKeyword != null) {
+			subMap.put(
+					JOIN_KEYWORD_DIAG_ANCHOR_KEY,
+					joinKeywordDiagnosticAnchorMap(ctx.getStart(), crossNaturalJoinKeyword));
+		}
 		// Add item to parent map
 		walker.addToParent(parentRuleIndex, parentStackLevel, subMap);
 	}
@@ -7354,37 +7371,6 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		boolean crossNaturalInvalidCondition = false;
-		if (ctx.getParent() instanceof SQLSelectParserParser.Table_reference_listContext tableReferenceList) {
-			SQLSelectParserParser.Unqualified_joinContext unqualifiedJoin = null;
-			for (int childIndex = 0; childIndex < tableReferenceList.getChildCount(); childIndex++) {
-				ParseTree child = tableReferenceList.getChild(childIndex);
-				if (child instanceof SQLSelectParserParser.Unqualified_joinContext uj) {
-					unqualifiedJoin = uj;
-					break;
-				}
-			}
-			if (unqualifiedJoin != null) {
-				String joinKeyword = crossOrNaturalJoinKeyword(unqualifiedJoin);
-				if (joinKeyword != null) {
-					String conditionKeyword = ctx.named_columns_join() != null ? "USING" : "ON";
-					Token joinAnchor = unqualifiedJoin.getStart();
-					int joinLine = joinAnchor.getLine();
-					int joinCharPos = joinAnchor.getCharPositionInLine() + 1;
-					Token conditionAnchor = joinSpecificationConditionStartToken(ctx);
-					int conditionLine = conditionAnchor.getLine();
-					int conditionCharPos = conditionAnchor.getCharPositionInLine() + 1;
-					symbolTreeHelper.emitCrossNaturalJoinInvalidConditionFatal(
-							joinKeyword,
-							joinLine,
-							joinCharPos,
-							conditionKeyword,
-							conditionLine,
-							conditionCharPos);
-					crossNaturalInvalidCondition = true;
-				}
-			}
-		}
 		if (subMap.size() == 1) {
 			Map<String, Object> pMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
 			Map<String, Object> join = null;
@@ -7398,12 +7384,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 			if (join != null) {
 				Object rawCondition = subMap.remove("1");
+				String conditionKeyword = ctx.named_columns_join() != null ? "USING" : "ON";
+				Token conditionAnchor = joinSpecificationConditionStartToken(ctx);
+				join.put(
+						JOIN_CONDITION_DIAG_ANCHOR_KEY,
+						joinConditionDiagnosticAnchorMap(conditionAnchor, conditionKeyword));
 				if (ctx.named_columns_join() != null) {
 					Map<String, Object> usingColumns = extractJoinUsingColumnsFromContext(ctx, rawCondition);
 					join.put(MUMBLE_USING_KEY, usingColumns);
 				} else {
 					join.put(MUMBLE_JOIN_ON_KEY, rawCondition);
-					if (!crossNaturalInvalidCondition) {
+					if (!isCrossOrNaturalJoinBucket(join)) {
 						symbolTreeHelper.captureJoinOnClauseDependencies(rawCondition);
 					}
 				}
@@ -7414,6 +7405,91 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			// Wrong number of entries
 		}
 		 walker.asTree.put("SKIP", "TRUE");
+	}
+
+	@SuppressWarnings("unchecked")
+	private void validateAndStripCrossNaturalJoinDiagnostics(Map<String, Object> joinPartMap) {
+		if (joinPartMap == null || joinPartMap.isEmpty()) {
+			return;
+		}
+		for (int index = 1; joinPartMap.containsKey(String.valueOf(index)); index++) {
+			Object entry = joinPartMap.get(String.valueOf(index));
+			if (!(entry instanceof Map<?, ?> entryMap)) {
+				continue;
+			}
+			Map<String, Object> joinBucket = (Map<String, Object>) entryMap;
+			if (isCrossOrNaturalJoinBucket(joinBucket)
+					&& (joinBucket.containsKey(MUMBLE_JOIN_ON_KEY)
+							|| joinBucket.containsKey(MUMBLE_USING_KEY))) {
+				String conditionKeyword = joinBucket.containsKey(MUMBLE_USING_KEY) ? "USING" : "ON";
+				emitCrossNaturalJoinInvalidConditionFromAnchors(joinBucket, conditionKeyword);
+			}
+			stripJoinDiagnosticAnchors(joinBucket);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void emitCrossNaturalJoinInvalidConditionFromAnchors(
+			Map<String, Object> joinBucket,
+			String conditionKeyword) {
+		Object keywordAnchorObj = joinBucket.get(JOIN_KEYWORD_DIAG_ANCHOR_KEY);
+		Object conditionAnchorObj = joinBucket.get(JOIN_CONDITION_DIAG_ANCHOR_KEY);
+		if (!(keywordAnchorObj instanceof Map<?, ?> keywordAnchorMap)
+				|| !(conditionAnchorObj instanceof Map<?, ?> conditionAnchorMap)) {
+			return;
+		}
+		String joinKeyword = (String) ((Map<String, Object>) keywordAnchorMap).get(JOIN_DIAG_JOIN_KEYWORD_KEY);
+		Integer joinLine = (Integer) ((Map<String, Object>) keywordAnchorMap).get(JOIN_DIAG_LINE_KEY);
+		Integer joinCharPos = (Integer) ((Map<String, Object>) keywordAnchorMap).get(JOIN_DIAG_CHAR_KEY);
+		Integer conditionLine = (Integer) ((Map<String, Object>) conditionAnchorMap).get(JOIN_DIAG_LINE_KEY);
+		Integer conditionCharPos = (Integer) ((Map<String, Object>) conditionAnchorMap).get(JOIN_DIAG_CHAR_KEY);
+		if (joinKeyword == null || joinLine == null || joinCharPos == null
+				|| conditionLine == null || conditionCharPos == null) {
+			return;
+		}
+		symbolTreeHelper.emitCrossNaturalJoinInvalidConditionFatal(
+				joinKeyword,
+				joinLine,
+				joinCharPos,
+				conditionKeyword,
+				conditionLine,
+				conditionCharPos);
+	}
+
+	private static void stripJoinDiagnosticAnchors(Map<String, Object> joinBucket) {
+		if (joinBucket == null) {
+			return;
+		}
+		joinBucket.remove(JOIN_KEYWORD_DIAG_ANCHOR_KEY);
+		joinBucket.remove(JOIN_CONDITION_DIAG_ANCHOR_KEY);
+	}
+
+	private static Map<String, Object> joinKeywordDiagnosticAnchorMap(Token token, String joinKeyword) {
+		Map<String, Object> anchor = new HashMap<>();
+		anchor.put(JOIN_DIAG_JOIN_KEYWORD_KEY, joinKeyword);
+		anchor.put(JOIN_DIAG_LINE_KEY, token.getLine());
+		anchor.put(JOIN_DIAG_CHAR_KEY, token.getCharPositionInLine() + 1);
+		return anchor;
+	}
+
+	private static Map<String, Object> joinConditionDiagnosticAnchorMap(Token token, String conditionKeyword) {
+		Map<String, Object> anchor = new HashMap<>();
+		anchor.put(JOIN_DIAG_CONDITION_KEYWORD_KEY, conditionKeyword);
+		anchor.put(JOIN_DIAG_LINE_KEY, token.getLine());
+		anchor.put(JOIN_DIAG_CHAR_KEY, token.getCharPositionInLine() + 1);
+		return anchor;
+	}
+
+	private static boolean isCrossOrNaturalJoinBucket(Map<String, Object> joinBucket) {
+		if (joinBucket == null) {
+			return false;
+		}
+		Object joinTypeObj = joinBucket.get(MUMBLE_JOIN_KEY);
+		if (!(joinTypeObj instanceof String joinType)) {
+			return false;
+		}
+		String normalized = joinType.toLowerCase(Locale.ROOT);
+		return "crossjoin".equals(normalized) || normalized.startsWith("natural");
 	}
 
 	private static String crossOrNaturalJoinKeyword(SQLSelectParserParser.Unqualified_joinContext unqualifiedJoin) {
@@ -7453,13 +7529,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (!(value instanceof Map<?, ?> bucket)) {
 				continue;
 			}
-			Object joinTypeObj = ((Map<String, Object>) bucket).get(MUMBLE_JOIN_KEY);
-			if (!(joinTypeObj instanceof String joinType)) {
-				continue;
-			}
-			String normalized = joinType.toLowerCase(Locale.ROOT);
-			boolean crossOrNatural = "crossjoin".equals(normalized) || normalized.startsWith("natural");
-			if (!crossOrNatural) {
+			if (!isCrossOrNaturalJoinBucket((Map<String, Object>) bucket)) {
 				continue;
 			}
 			if (bucket.containsKey(MUMBLE_USING_KEY) || bucket.containsKey(MUMBLE_JOIN_ON_KEY)) {

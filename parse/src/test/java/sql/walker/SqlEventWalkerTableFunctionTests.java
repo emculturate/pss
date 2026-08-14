@@ -763,15 +763,8 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		final String query = "SELECT o.id, f.sku AS sku, p.name FROM orders o CROSS JOIN LATERAL FLATTEN(input => o.items) f JOIN products p ON p.sku = f.sku";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		Snippet snippet = extractor.getSnippet();
 
-		assertFatalDiagnosticAtPositionWithFullMessage(
-				snippet,
-				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
-				"CROSS JOIN at (l:1 c:49) has invalid ON condition (l:1 c:112).",
-				"CROSS JOIN",
-				1,
-				49);
+		assertNoFatalErrors(extractor);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=id, table_ref=o}}, 2={column={name=sku, table_ref=f}, alias=sku}, 3={column={name=name, table_ref=p}}}, from={join={1={table={alias=o, table=orders}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=o}}}}}}, 5={join=JOIN, on={condition={left={column={name=sku, table_ref=p}}, right={column={name=sku, table_ref=f}}, operator==}}}, 6={table={alias=p, table=products}}}}}}",
 				extractor.getAsTree().toString());
@@ -821,15 +814,8 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		final String query = "SELECT * FROM big_table t CROSS JOIN LATERAL FLATTEN(input => t.items) f JOIN dim d ON d.id = f.id";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		Snippet snippet = extractor.getSnippet();
 
-		assertFatalDiagnosticAtPositionWithFullMessage(
-				snippet,
-				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
-				"CROSS JOIN at (l:1 c:27) has invalid ON condition (l:1 c:85).",
-				"CROSS JOIN",
-				1,
-				27);
+		assertNoFatalErrors(extractor);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=*, table_ref=*}}}, from={join={1={table={alias=t, table=big_table}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=t}}}}}}, 5={join=JOIN, on={condition={left={column={name=id, table_ref=d}}, right={column={name=id, table_ref=f}}, operator==}}}, 6={table={alias=d, table=dim}}}}}}",
 				extractor.getAsTree().toString());
@@ -1109,15 +1095,8 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 		final String query = "SELECT o.id, f.sku AS sku, p.name FROM orders o CROSS JOIN LATERAL FLATTEN(input => o.items) f JOIN products p ON p.sku = f.sku";
 		final SQLSelectParserParser parser = parse(query);
 		SqlParseEventWalker extractor = runParsertest(query, parser);
-		Snippet snippet = extractor.getSnippet();
 
-		assertFatalDiagnosticAtPositionWithFullMessage(
-				snippet,
-				"CROSS_NATURAL_JOIN_INVALID_CONDITION",
-				"CROSS JOIN at (l:1 c:49) has invalid ON condition (l:1 c:112).",
-				"CROSS JOIN",
-				1,
-				49);
+		assertNoFatalErrors(extractor);
 		Assert.assertEquals("AST is wrong",
 				"{SQL={select={1={column={name=id, table_ref=o}}, 2={column={name=sku, table_ref=f}, alias=sku}, 3={column={name=name, table_ref=p}}}, from={join={1={table={alias=o, table=orders}}, 2={join=CROSSJOIN}, 3={modifier=LATERAL}, 4={table={alias=f, table_function={function_name=FLATTEN, parameters={input={column={name=items, table_ref=o}}}}}}, 5={join=JOIN, on={condition={left={column={name=sku, table_ref=p}}, right={column={name=sku, table_ref=f}}, operator==}}}, 6={table={alias=p, table=products}}}}}}",
 				extractor.getAsTree().toString());
