@@ -379,6 +379,10 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor,
 				"chained bare-value WHERE rn",
 				"filters=[{name=rn, table_ref=query0}");
+		Assert.assertTrue(
+				"interface must route rn's PARTITION BY dep d through query0",
+				extractor.getSymbolTable().toString().contains(
+						"interface={d=[{name=CURRENT_DATE, table_ref=null}], rn=[{name=d, table_ref=query0}"));
 	}
 
 	@Test

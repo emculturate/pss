@@ -5443,6 +5443,21 @@ public class SqlParseSymbolTreeHelper {
 							continue;
 						}
 
+						if (tryStampGroundedOutputAliasInterfaceDependencyToQueryScope(
+								refs,
+								refIndex,
+								refObj,
+								columnName,
+								localInterface,
+								localTableCollection,
+								localUnresolvedColumnMap,
+								localCurrentQueryDictionary,
+								effectiveAliasMap,
+								visibleQuerySourceCollection,
+								archivedScopeColumnReferenceContainers)) {
+							continue;
+						}
+
 						// Pivot registry derived outputs (jan_sales_SUM / q1_total) — skip physical
 						// interface bind; shared egress treats them as RESOLVED_DERIVED_COLUMN.
 						if (outputCol.equalsIgnoreCase(columnName)
@@ -5569,6 +5584,20 @@ public class SqlParseSymbolTreeHelper {
 							continue;
 						}
 						if (resolutionResult.status == UnqualifiedScopeResolutionStatus.RESOLVED) {
+							if (tryStampGroundedOutputAliasInterfaceDependencyToQueryScope(
+									refs,
+									refIndex,
+									refObj,
+									columnName,
+									localInterface,
+									localTableCollection,
+									localUnresolvedColumnMap,
+									localCurrentQueryDictionary,
+									effectiveAliasMap,
+									visibleQuerySourceCollection,
+									archivedScopeColumnReferenceContainers)) {
+								continue;
+							}
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
 									refObj,
 									resolutionResult.resolvedSourceRef));
@@ -14859,6 +14888,101 @@ public class SqlParseSymbolTreeHelper {
 			return isGroundedInterfaceOutputAlias(localInterface, dependencyName, activeOutputColumns);
 		}
 		return SqlBareValueExpressionRegistry.classify(dependencyName) != null;
+	}
+
+	/**
+	 * Window {@code interface} lineage for in-{@code OVER} PARTITION BY / ORDER BY refs to
+	 * preceding SELECT-list output aliases: stamp {@code queryN}, not a physical {@code table_dictionary} source.
+	 */
+	private boolean archivedClauseListContainsUnqualifiedColumnName(
+			Object columnListObj,
+			String columnName) {
+		if (!(columnListObj instanceof ArrayList<?> columnRefs)
+				|| columnName == null
+				|| columnName.isBlank()) {
+			return false;
+		}
+		for (Object refObj : columnRefs) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+			if (columnName.equalsIgnoreCase(refName) && isUnqualifiedColumnRef(tableRef)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isWindowOverInterfaceDependencyColumn(
+			String dependencyColumnName,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers) {
+		if (dependencyColumnName == null
+				|| dependencyColumnName.isBlank()
+				|| archivedScopeColumnReferenceContainers == null) {
+			return false;
+		}
+		return archivedClauseListContainsUnqualifiedColumnName(
+				archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_PARTITION_BY_KEY),
+				dependencyColumnName)
+				|| archivedClauseListContainsUnqualifiedColumnName(
+						archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_ORDERED_BY_KEY),
+						dependencyColumnName);
+	}
+
+	private boolean tryStampGroundedOutputAliasInterfaceDependencyToQueryScope(
+			ArrayList<Object> refs,
+			int refIndex,
+			Object refObj,
+			String columnName,
+			HashMap<String, Object> localInterface,
+			HashMap<String, Object> localTableCollection,
+			HashMap<String, Object> localUnresolvedColumnMap,
+			HashMap<String, Object> localCurrentQueryDictionary,
+			HashMap<String, Object> effectiveAliasMap,
+			HashMap<String, Object> visibleQuerySourceCollection,
+			HashMap<String, Object> archivedScopeColumnReferenceContainers) {
+		if (refs == null
+				|| refIndex < 0
+				|| refIndex >= refs.size()
+				|| columnName == null
+				|| columnName.isBlank()
+				|| !isWindowOverInterfaceDependencyColumn(
+						columnName,
+						archivedScopeColumnReferenceContainers)
+				|| !isGroundedIntraQueryOutputAliasUsage(
+						columnName,
+						null,
+						localInterface,
+						localTableCollection)) {
+			return false;
+		}
+		String queryScopeKey = activeConvertEgressCurrentQueryScopeKey;
+		if (queryScopeKey == null || queryScopeKey.isBlank()) {
+			return false;
+		}
+		refs.set(refIndex, cloneReferenceWithResolvedTableRef(refObj, queryScopeKey));
+		ArchivedClauseProbeContext clauseProbeContext = new ArchivedClauseProbeContext(
+				null,
+				localInterface,
+				localCurrentQueryDictionary,
+				localUnresolvedColumnMap,
+				null,
+				localTableCollection,
+				visibleQuerySourceCollection,
+				effectiveAliasMap,
+				null,
+				null,
+				null,
+				null,
+				null,
+				false,
+				queryScopeKey);
+		recordInterfaceOutputClauseRefOnQueryDictionary(
+				refObj,
+				columnName,
+				MUMBLE_INTERFACE_KEY,
+				clauseProbeContext);
+		consumeUnqualifiedUnknownEntry(localUnresolvedColumnMap, columnName);
+		return true;
 	}
 
 	@SuppressWarnings("unchecked")
