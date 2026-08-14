@@ -678,9 +678,33 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	@SuppressWarnings("unchecked")
 	public void popSymbolTablePutAll(HashMap<String, Object> symbols) {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
-		symbolTable.putAll(symbols);
+		if (symbols != null) {
+			// Passthrough unionized/intersected frames seed table_alias with inherited CTE
+			// names. A raw putAll would replace the parent's join aliases with that CTE-only
+			// map (WITH + LEFT JOIN (union) + later LEFT JOIN (subquery)).
+			Object childTableAliasObj = symbols.remove(MUMBLE_TABLE_ALIAS_KEY);
+			symbolTable.putAll(symbols);
+			mergeChildTableAliasMapIntoCurrentSymbolTable(childTableAliasObj);
+		}
 
 		popFlagMap();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void mergeChildTableAliasMapIntoCurrentSymbolTable(Object childTableAliasObj) {
+		if (!(childTableAliasObj instanceof Map<?, ?> childAliasMapObj) || childAliasMapObj.isEmpty()) {
+			return;
+		}
+		Map<String, Object> childAliasMap = (Map<String, Object>) childAliasMapObj;
+		Object parentAliasObj = symbolTable.get(MUMBLE_TABLE_ALIAS_KEY);
+		if (!(parentAliasObj instanceof Map<?, ?> parentAliasMapObj)) {
+			symbolTable.put(MUMBLE_TABLE_ALIAS_KEY, new HashMap<String, Object>(childAliasMap));
+			return;
+		}
+		Map<String, Object> parentAliasMap = (Map<String, Object>) parentAliasMapObj;
+		for (Map.Entry<String, Object> entry : childAliasMap.entrySet()) {
+			parentAliasMap.putIfAbsent(entry.getKey(), entry.getValue());
+		}
 	}
 
 	/** Drops the current symbol-table frame without publishing it (e.g. ON CONFLICT DO NOTHING). */

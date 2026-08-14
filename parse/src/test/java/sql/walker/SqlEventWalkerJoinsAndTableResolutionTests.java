@@ -3447,6 +3447,70 @@ public class SqlEventWalkerJoinsAndTableResolutionTests extends AbstractSqlParse
 
 
 	@Test
+	public void withCteLeftJoinUnionThenTrailingJoinSubqueryKeepsUnionAliasV0Test() {
+		// WITH + LEFT JOIN (union …) AS alias + later LEFT JOIN (subquery).
+		// An unused CTE is enough: passthrough unionized_query frames used to putAll a
+		// CTE-only table_alias over the parent and drop the union join alias.
+		final String query = "with cte_dummy as (\n"
+				+ "  select per.dmp_eab_id as person_id\n"
+				+ "  from {{ source('CONTACTS', 'prc_dmp_contact_common_format') }} as per\n"
+				+ ")\n"
+				+ "select\n"
+				+ "  ref_standard_value_mapping_alr.eab_std_value as ethnicity\n"
+				+ "from {{ source('CONTACTS', 'prc_dmp_contact_common_format') }} as prc_dmp_contact_common_format\n"
+				+ "  left join (\n"
+				+ "    select source_value, eab_std_value\n"
+				+ "    from {{ source('COMMON','ref__standard_value_mapping') }} as a\n"
+				+ "    union\n"
+				+ "    select source_value, eab_std_value\n"
+				+ "    from {{ source('COMMON','ref__standard_value_mapping_alr') }} as b\n"
+				+ "  ) as ref_standard_value_mapping_alr\n"
+				+ "    on prc_dmp_contact_common_format.ethnicity = ref_standard_value_mapping_alr.source_value\n"
+				+ "  left join (select 1 as dmp_eab_id) as first_contact\n"
+				+ "    on first_contact.dmp_eab_id = prc_dmp_contact_common_format.dmp_eab_id";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong", "[ethnicity]", extractor.getInterface().toString());
+		Object unionAliasTarget = findMainQueryTableAliasTarget(
+				extractor.getSymbolTable(),
+				"ref_standard_value_mapping_alr");
+		Assert.assertNotNull(
+				"Union join alias ref_standard_value_mapping_alr missing from main-query table_alias",
+				unionAliasTarget);
+		Assert.assertTrue(
+				"Union join alias should map to a union scope, got: " + unionAliasTarget,
+				unionAliasTarget instanceof String unionRef && unionRef.startsWith("union"));
+		Object trailingAliasTarget = findMainQueryTableAliasTarget(
+				extractor.getSymbolTable(),
+				"first_contact");
+		Assert.assertNotNull(
+				"Trailing subquery alias first_contact missing from main-query table_alias",
+				trailingAliasTarget);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Object findMainQueryTableAliasTarget(java.util.Map<String, Object> symbolTable, String alias) {
+		if (symbolTable == null || alias == null) {
+			return null;
+		}
+		for (Object value : symbolTable.values()) {
+			if (!(value instanceof java.util.Map<?, ?> scopeObj)) {
+				continue;
+			}
+			java.util.Map<String, Object> scope = (java.util.Map<String, Object>) scopeObj;
+			Object tableAliasObj = scope.get("table_alias");
+			if (tableAliasObj instanceof java.util.Map<?, ?> tableAliasMap && tableAliasMap.containsKey(alias)) {
+				return tableAliasMap.get(alias);
+			}
+		}
+		return null;
+	}
+
+	@Test
 	public void simplifiedqualifiedNestedColumnResolutionOverUnionsTest() {
 		final String query = "with contact_streams_product_subproduct as (\n"
 				+ "  select cs.contact_key, str.product, cs.first_marketing_activity_segment_id,\n"
