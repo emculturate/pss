@@ -144,6 +144,7 @@ A **correlated reference** means the inner context of a subquery can access the 
 | **Sibling subqueries** | A query **cannot** see columns defined **inside a sibling** subquery. Siblings in `FROM` / `JOIN` are fully independent. Siblings in `WITH` are also encapsulated as separate **`def_queryN`** scopes, but **earlier** CTEs are visible to **later** ones via **`context_list`** (ordered forward visibility only — not backward). |
 | **Grandchild columns** | A query **cannot** see columns defined inside its **grandchild** queries (or deeper descendants) unless those columns have been **passed up** through each intermediate scope and appear in the **`interface`** of the query's **direct child** subquery. |
 | **Inner scope internals** | An outer query **cannot** drill into the internal aliases or private buckets of a child scope — only the child's published **`interface`** columns are visible outward. |
+| **Later select-list aliases (same query)** | While the select list is still being built, a select item **cannot** reference an output alias defined **later** in that same list. Earlier aliases **can** be referenced in later items (expressions, `OVER` clauses, etc.). Published lineage uses **`table_ref=queryN`** for those hops. See [ordered-select-list-output-alias-policy.md](ordered-select-list-output-alias-policy.md). |
 
 **Scalar subqueries and `FROM` subqueries**
 

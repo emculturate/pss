@@ -61,6 +61,7 @@ Map tasks to docs:
 | PIVOT/UNPIVOT, `derivation` | `relational-modifier-resolution-policy` |
 | New SQL grammar / endpoints | `sql-grammar-extensions-since-2026-01-01` |
 | Window PARTITION BY / ORDER BY buckets | `window-query-dictionary-policy` |
+| Ordered select-list output alias refs (`queryN` in `interface` / `window_*`) | `ordered-select-list-output-alias-policy` |
 
 ## Extract from the JAR (no vendor tree)
 

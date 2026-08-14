@@ -2558,6 +2558,8 @@ Delivered as **12** tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`: 
 | Method | Class | Proves |
 |--------|-------|--------|
 | `selectListAliasReferencedInPartitionByTest` | `SqlEventWalkerFunctionsAggregatesWindowingTests` | Minimal `ROW_NUMBER() OVER (PARTITION BY alias_from_select_list)` — no diagnostics |
+| `predicandSelectListAliasReferencedInPartitionByTest` | same | Predicand substitution origin + `PARTITION BY` |
+| `SqlEventWalkerSelectListOrderedAliasRefTests` | dedicated class | Origins × consumer sites matrix (arithmetic, function, window partition/order, bare value, …) — see [ordered-select-list-output-alias-policy.md](ordered-select-list-output-alias-policy.md) |
 | `selectListAliasNotVisibleInOuterQueryTest` | `SqlEventWalkerCoreSelectFromAliasingTests` | Negative control: outer `keep` does not resolve via inner alias `other` on subquery `q` |
 
 **Closeout (Aug 2026):** ✅ **13.4 done.** Gate five still green; convert-egress skip retained (`ca0f3a5`); optional partition + outer-leak tests landed.

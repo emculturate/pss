@@ -33,6 +33,12 @@
       "role": "Window clause policy for window_partition_by and window_ordered_by versus query_dictionary",
       "path": "META-INF/pss-parse/${pss.parse.api.version}/phase-17.6.9-window-query-dictionary-policy.md",
       "parserVersionMin": "${pss.parse.api.version}"
+    },
+    {
+      "id": "ordered-select-list-output-alias-policy",
+      "role": "Ordered intra-select-list output alias resolution, interface queryN lineage, and contract tests",
+      "path": "META-INF/pss-parse/${pss.parse.api.version}/ordered-select-list-output-alias-policy.md",
+      "parserVersionMin": "${pss.parse.api.version}"
     }
   ]
 }

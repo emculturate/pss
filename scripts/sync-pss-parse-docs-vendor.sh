@@ -24,6 +24,7 @@ DOCS=(
   "relational-modifier-resolution-policy|relational-modifier-resolution-policy.md|PIVOT and UNPIVOT semantics, derivation buckets, and modifier column lineage|"
   "sql-grammar-extensions-since-2026-01-01|sql-grammar-extensions-since-2026-01-01.md|Parse coverage and grammar extensions available in pss-parse 5.1.3 and later|"
   "window-query-dictionary-policy|phase-17.6.9-window-query-dictionary-policy.md|Window clause policy for window_partition_by and window_ordered_by versus query_dictionary|"
+  "ordered-select-list-output-alias-policy|ordered-select-list-output-alias-policy.md|Ordered intra-select-list output alias resolution, interface queryN lineage, and contract tests|"
 )
 
 mkdir -p "${DEST_DIR}"

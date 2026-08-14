@@ -12,6 +12,8 @@
 
 **Partition/order columns referenced only inside `OVER` must not gain `query_dictionary` keys at convert egress; their site tokens live on `window_partition_by` / `window_ordered_by` only.** Interface **output** names (SELECT list keys, e.g. `rn`) keep `query_dictionary` tokens for their defining sites; see also §Interface lineage for what belongs on `interface.<alias>` dependency lists.
 
+**Prior select-list aliases** in `PARTITION BY` / `ORDER BY` resolve to **`table_ref=queryN`** when grounded — see [ordered-select-list-output-alias-policy.md](ordered-select-list-output-alias-policy.md).
+
 ---
 
 ## Policy (locked — implemented)
