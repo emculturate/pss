@@ -263,6 +263,124 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 
 	}
 
+	private static final String BARE_VALUE_WINDOW_ALIAS_SELECT =
+			"SELECT t.col1, ROW_NUMBER() OVER (PARTITION BY CURRENT_DATE ORDER BY CURRENT_TIME) AS rn"
+					+ " FROM tab1 t";
+
+	private void assertBareValueWindowAliasLaterClauseRouting(
+			SqlParseEventWalker extractor,
+			String clauseLabel,
+			String expectedBucketFragment) {
+		assertBareValueOutputAliasLaterClauseRouting(
+				extractor,
+				clauseLabel,
+				"rn",
+				expectedBucketFragment);
+	}
+
+	private void assertBareValueOutputAliasLaterClauseRouting(
+			SqlParseEventWalker extractor,
+			String clauseLabel,
+			String outputAliasName,
+			String expectedBucketFragment) {
+		final String tableDictionary = extractor.getTableColumnDictionaryMap().toString();
+		final String queryDictionary = extractor.getQueryColumnDictionaryMap().toString();
+		final String symbolTable = extractor.getSymbolTable().toString();
+
+		Assert.assertFalse(
+				clauseLabel + " must not leak " + outputAliasName + " into table_dictionary.tab1: "
+						+ tableDictionary,
+				tableDictionary.matches("(?s).*tab1=\\{[^}]*" + outputAliasName + "=.*"));
+		Assert.assertTrue(
+				clauseLabel + " must retain " + outputAliasName + " in query_dictionary: " + queryDictionary,
+				queryDictionary.contains(outputAliasName + "="));
+		Assert.assertTrue(
+				clauseLabel + " must stamp " + outputAliasName + " with query0 in " + expectedBucketFragment
+						+ ": " + symbolTable,
+				symbolTable.contains(expectedBucketFragment));
+	}
+
+	@Test
+	public void bareValueExpressionWindowAliasWhereClauseV0Test() {
+		final String query = BARE_VALUE_WINDOW_ALIAS_SELECT + " WHERE rn = 1 AND LOCALTIME IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueWindowAliasLaterClauseRouting(
+				extractor,
+				"WHERE",
+				"filters=[{name=rn, table_ref=query0}");
+	}
+
+	@Test
+	public void bareValueExpressionWindowAliasHavingClauseV0Test() {
+		final String query = BARE_VALUE_WINDOW_ALIAS_SELECT
+				+ " GROUP BY t.col1 HAVING rn = 1 AND CURRENT_TIMESTAMP > LOCALTIME";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueWindowAliasLaterClauseRouting(
+				extractor,
+				"HAVING",
+				"filters=[{name=rn, table_ref=query0}");
+	}
+
+	@Test
+	public void bareValueExpressionWindowAliasGroupByClauseV0Test() {
+		final String query = BARE_VALUE_WINDOW_ALIAS_SELECT + " GROUP BY rn, t.col1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueWindowAliasLaterClauseRouting(
+				extractor,
+				"GROUP BY",
+				"grouped_by=[{name=rn, table_ref=query0}");
+	}
+
+	@Test
+	public void bareValueExpressionWindowAliasOrderByClauseV0Test() {
+		final String query = BARE_VALUE_WINDOW_ALIAS_SELECT + " ORDER BY rn, t.col1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueWindowAliasLaterClauseRouting(
+				extractor,
+				"ORDER BY",
+				"ordered_by=[{name=rn, table_ref=query0}");
+	}
+
+	@Test
+	public void bareValueExpressionScalarAliasWhereClauseV0Test() {
+		final String query = "SELECT CURRENT_TIMESTAMP AS ts_ref, t.col1 FROM tab1 t WHERE ts_ref IS NOT NULL";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueOutputAliasLaterClauseRouting(
+				extractor,
+				"scalar bare-value alias WHERE",
+				"ts_ref",
+				"filters=[{name=ts_ref, table_ref=query0}");
+	}
+
+	@Test
+	public void bareValueExpressionChainedBareValueWindowPartitionByV0Test() {
+		final String query = "SELECT CURRENT_DATE AS d,"
+				+ " ROW_NUMBER() OVER (PARTITION BY d ORDER BY CURRENT_TIME) AS rn"
+				+ " FROM tab1 t WHERE rn = 1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertBareValueHappyPathGoldens(extractor);
+		assertBareValueOutputAliasLaterClauseRouting(
+				extractor,
+				"chained bare-value PARTITION BY",
+				"d",
+				"window_partition_by=[{name=d, table_ref=query0}");
+		assertBareValueWindowAliasLaterClauseRouting(
+				extractor,
+				"chained bare-value WHERE rn",
+				"filters=[{name=rn, table_ref=query0}");
+	}
+
 	@Test
 	public void bareValueExpressionQualifyClauseV0Test() {
 		final String query = "SELECT t.col1, ROW_NUMBER() OVER (PARTITION BY CURRENT_DATE ORDER BY CURRENT_TIME) AS rn"
