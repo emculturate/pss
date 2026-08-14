@@ -14876,6 +14876,11 @@ public class SqlParseSymbolTreeHelper {
 				&& refMap.containsKey(MUMBLE_SUBSTITUTION_KEY)) {
 			return true;
 		}
+		String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(refObj);
+		if (MUMBLE_COLUMN_KEY.equals(substitutionType)
+				|| MUMBLE_PREDICAND_KEY.equals(substitutionType)) {
+			return true;
+		}
 		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
 		if (tableRef != null && !tableRef.isBlank() && !MUMBLE_UNKNOWN_KEY.equals(tableRef)) {
 			return true;

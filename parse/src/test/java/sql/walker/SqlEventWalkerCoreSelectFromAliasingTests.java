@@ -3504,7 +3504,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals(
 				"Symbol Table is wrong",
-				"{def_query1={query_dictionary={x=[[@3,21:21='x',<392>,1:21], [@5,24:24='x',<392>,1:24]], y=[[@11,37:37='y',<392>,1:37], [@13,40:40='y',<392>,1:40]], z=[[@19,53:53='z',<392>,1:53]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<392>,1:68]], b=[[@25,71:71='b',<392>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<392>,1:68]], b=[[@25,71:71='b',<392>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=null}, {name=<a>, type=predicand}], z=[{name=y, table_ref=null}, {name=<b>, type=predicand}]}, table_alias={query0=query0}}}",
+				"{def_query1={query_dictionary={x=[[@3,21:21='x',<392>,1:21], [@5,24:24='x',<392>,1:24]], y=[[@11,37:37='y',<392>,1:37], [@13,40:40='y',<392>,1:40]], z=[[@19,53:53='z',<392>,1:53]]}, def_query0={query_dictionary={a=[[@23,68:68='a',<392>,1:68]], b=[[@25,71:71='b',<392>,1:71]]}, table_dictionary={tab1={a=[[@23,68:68='a',<392>,1:68]], b=[[@25,71:71='b',<392>,1:71]]}}, interface={a=[{name=a, table_ref=tab1}], b=[{name=b, table_ref=tab1}]}}, interface={x=[{name=<a plus b>, type=predicand}], y=[{name=x, table_ref=query1}, {name=<a>, type=predicand}], z=[{name=y, table_ref=query1}, {name=<b>, type=predicand}]}, table_alias={query0=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 

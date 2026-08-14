@@ -2411,6 +2411,27 @@ public class SqlEventWalkerFunctionsAggregatesWindowingTests extends AbstractSql
 				extractor.getSymbolTable().toString());
 	}
 
+	@Test
+	public void predicandSelectListAliasReferencedInPartitionByTest() {
+		// Predicand substitution output aliases must be grounded so a later OVER PARTITION BY
+		// can bind an earlier select-list alias (donor-email style).
+		final String query =
+				"SELECT <partner_system_name> AS alias_from_predicand, ROW_NUMBER() OVER (PARTITION BY alias_from_predicand) AS rn FROM tab1";
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals(
+				"Substitution List is wrong",
+				"{<partner_system_name>=predicand}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals(
+				"Symbol Table is wrong",
+				"{def_query0={query_dictionary={alias_from_predicand=[[@3,32:51='alias_from_predicand',<392>,1:32], [@12,86:105='alias_from_predicand',<392>,1:86]], rn=[[@15,111:112='rn',<392>,1:111]]}, table_dictionary={tab1={}}, window_partition_by=[{name=alias_from_predicand, table_ref=query0}], interface={alias_from_predicand=[{name=<partner_system_name>, type=predicand}], rn=[{name=alias_from_predicand, table_ref=query0}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
 	/**
 	 * Walker coverage T1.8 — {@code exitRow_value_predicand_list} via {@code GROUP BY (a, b)}.
 	 */
