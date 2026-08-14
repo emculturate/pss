@@ -12,7 +12,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (234 tests):
+ * Gate composition (245 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -27,6 +27,7 @@ import org.junit.Test;
  *   <li>Snippet construction (1): {@code basicJoinWithOnOnConditionVariableTest}</li>
  *   <li>Production join_extension / ambiguity probes (1): {@code getMissingColumnFromTupleDictionaryTest}</li>
  *   <li>Phase 13.4 intra–select-list forward alias (5): {@code donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest}; {@code selfReferenceColumnAliasInSameSelectListHappyPathV1Test}, {@code selfReferenceColumnAliasReversedOrderUnresolvedV2Test}, {@code selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test}, {@code selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test}</li>
+ *   <li>Phase 13.4 ordered select-list alias matrix (6): plain column arithmetic, predicand substitution, bare value, window partition/order, column substitution in partition — from {@code SqlEventWalkerSelectListOrderedAliasRefTests}</li>
  *   <li>Table-function resolution diagnostic (1): {@code simpleTfCallFlattenSplitV5Test}</li>
  *   <li>PIVOT / UNPIVOT smoke (3): {@code unpivotV1Test}, {@code pivotV1Tab1Test}, {@code pivotInIdentifierResolvedFromSubqueryWarningV1Test}</li>
  *   <li>PIVOT / UNPIVOT multi-modifier gate (17): {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsV1Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsV1Test}; Phase 17.6.7 subquery-backed triple variants ({@code triplePivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotJoinDerivedColumnsSameOutputSelectAmbiguousSubqueryFromV17_6_7Test}, {@code tripleUnpivotJoinDerivedColumnsAcrossTuplesSubqueryFromV17_6_7Test}, {@code triplePivotUnpivotPivotJoinDerivedColumnsSubqueryFromV17_6_7Test}, {@code tripleUnpivotPivotUnpivotJoinDerivedColumnsSubqueryFromV17_6_7Test}); Phase 17.7.11 single-modifier tuple-source gate ({@code singlePivotSubqueryFromV17_7_11Test}, {@code singlePivotVariableFromV17_7_11Test}, {@code singlePivotJinjaFromV17_7_11Test}, {@code singlePivotValuesFromV17_7_11Test}, {@code singlePivotTableFunctionFromV17_7_11Test}, {@code singleUnpivotSubqueryFromV17_7_11Test}, {@code singleUnpivotVariableFromV17_7_11Test}, {@code singleUnpivotJinjaFromV17_7_11Test}, {@code singleUnpivotValuesFromV17_7_11Test}, {@code singleUnpivotTableFunctionFromV17_7_11Test})</li>
@@ -79,6 +80,8 @@ public class SmoketestQualityGateTestSuite {
 			new SqlParseEventWalkerWithAccessObjectTest();
 	private final SqlParserDiagnosticTests parserDiagnosticTests =
 			new SqlParserDiagnosticTests();
+	private final SqlEventWalkerSelectListOrderedAliasRefTests orderedSelectListAliasRefTests =
+			new SqlEventWalkerSelectListOrderedAliasRefTests();
 
 	// --- Nested demo canaries (2) ---
 
@@ -1288,6 +1291,38 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test() {
 		coreSelectTests.selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test();
+	}
+
+	// --- Phase 13.4 ordered select-list alias matrix (6) ---
+
+	@Test
+	public void orderedAliasFromPlainColumnInArithmeticConsumerTest() {
+		orderedSelectListAliasRefTests.orderedAliasFromPlainColumnInArithmeticConsumerTest();
+	}
+
+	@Test
+	public void orderedAliasFromPredicandSubstitutionInCalcConsumerTest() {
+		orderedSelectListAliasRefTests.orderedAliasFromPredicandSubstitutionInCalcConsumerTest();
+	}
+
+	@Test
+	public void orderedAliasFromBareValueInCalcConsumerTest() {
+		orderedSelectListAliasRefTests.orderedAliasFromBareValueInCalcConsumerTest();
+	}
+
+	@Test
+	public void orderedAliasReferencedInWindowPartitionByTest() {
+		orderedSelectListAliasRefTests.orderedAliasReferencedInWindowPartitionByTest();
+	}
+
+	@Test
+	public void orderedAliasReferencedInWindowOrderByTest() {
+		orderedSelectListAliasRefTests.orderedAliasReferencedInWindowOrderByTest();
+	}
+
+	@Test
+	public void orderedAliasFromColumnSubstitutionInWindowPartitionByTest() {
+		orderedSelectListAliasRefTests.orderedAliasFromColumnSubstitutionInWindowPartitionByTest();
 	}
 
 	// --- Parser diagnostic exemplars (7) ---

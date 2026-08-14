@@ -142,6 +142,7 @@ Do **not** treat `table_ref=null` on an intra-list alias ref as a physical colum
 | Class | Coverage |
 |-------|----------|
 | `SqlEventWalkerSelectListOrderedAliasRefTests` | Matrix: origins × consumers (arithmetic, function, window partition/order, predicand, bare value, …) |
+| `SmoketestQualityGateTestSuite` (Phase 13.4 ordered-alias group) | Six representative cases: plain column arithmetic, predicand substitution, bare value, window partition/order, column substitution in partition |
 | `SqlEventWalkerCoreSelectFromAliasingTests` | Chained arithmetic (`V1`), reversed order (`V2`), predicand chain (`V3`/`V4`), outer-scope negative |
 | `SqlEventWalkerFunctionsAggregatesWindowingTests` | Physical + predicand column in `PARTITION BY` |
 | `SqlEventWalkerLiveSampleQueriesTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` (production-shaped predicand + window) |
