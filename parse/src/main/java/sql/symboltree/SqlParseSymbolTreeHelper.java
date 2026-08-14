@@ -5453,8 +5453,7 @@ public class SqlParseSymbolTreeHelper {
 								localUnresolvedColumnMap,
 								localCurrentQueryDictionary,
 								effectiveAliasMap,
-								visibleQuerySourceCollection,
-								archivedScopeColumnReferenceContainers)) {
+								visibleQuerySourceCollection)) {
 							continue;
 						}
 
@@ -5594,8 +5593,7 @@ public class SqlParseSymbolTreeHelper {
 									localUnresolvedColumnMap,
 									localCurrentQueryDictionary,
 									effectiveAliasMap,
-									visibleQuerySourceCollection,
-									archivedScopeColumnReferenceContainers)) {
+									visibleQuerySourceCollection)) {
 								continue;
 							}
 							refs.set(refIndex, cloneReferenceWithResolvedTableRef(
@@ -14891,43 +14889,9 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Window {@code interface} lineage for in-{@code OVER} PARTITION BY / ORDER BY refs to
-	 * preceding SELECT-list output aliases: stamp {@code queryN}, not a physical {@code table_dictionary} source.
+	 * {@code interface} lineage for refs to preceding grounded SELECT-list output aliases:
+	 * stamp {@code queryN}, not a physical {@code table_dictionary} source.
 	 */
-	private boolean archivedClauseListContainsUnqualifiedColumnName(
-			Object columnListObj,
-			String columnName) {
-		if (!(columnListObj instanceof ArrayList<?> columnRefs)
-				|| columnName == null
-				|| columnName.isBlank()) {
-			return false;
-		}
-		for (Object refObj : columnRefs) {
-			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
-			String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
-			if (columnName.equalsIgnoreCase(refName) && isUnqualifiedColumnRef(tableRef)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private boolean isWindowOverInterfaceDependencyColumn(
-			String dependencyColumnName,
-			HashMap<String, Object> archivedScopeColumnReferenceContainers) {
-		if (dependencyColumnName == null
-				|| dependencyColumnName.isBlank()
-				|| archivedScopeColumnReferenceContainers == null) {
-			return false;
-		}
-		return archivedClauseListContainsUnqualifiedColumnName(
-				archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_PARTITION_BY_KEY),
-				dependencyColumnName)
-				|| archivedClauseListContainsUnqualifiedColumnName(
-						archivedScopeColumnReferenceContainers.get(MUMBLE_WINDOW_ORDERED_BY_KEY),
-						dependencyColumnName);
-	}
-
 	private boolean tryStampGroundedOutputAliasInterfaceDependencyToQueryScope(
 			ArrayList<Object> refs,
 			int refIndex,
@@ -14938,16 +14902,12 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localUnresolvedColumnMap,
 			HashMap<String, Object> localCurrentQueryDictionary,
 			HashMap<String, Object> effectiveAliasMap,
-			HashMap<String, Object> visibleQuerySourceCollection,
-			HashMap<String, Object> archivedScopeColumnReferenceContainers) {
+			HashMap<String, Object> visibleQuerySourceCollection) {
 		if (refs == null
 				|| refIndex < 0
 				|| refIndex >= refs.size()
 				|| columnName == null
 				|| columnName.isBlank()
-				|| !isWindowOverInterfaceDependencyColumn(
-						columnName,
-						archivedScopeColumnReferenceContainers)
 				|| !isGroundedIntraQueryOutputAliasUsage(
 						columnName,
 						null,
