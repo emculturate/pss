@@ -3737,6 +3737,7 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		((Map<String, Object>) refMapObj).remove("locations");
+		((Map<String, Object>) refMapObj).remove(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY);
 		Object columnObj = ((Map<String, Object>) refMapObj).get(MUMBLE_COLUMN_KEY);
 		if (columnObj instanceof Map<?, ?> columnMapObj) {
 			((Map<String, Object>) columnMapObj).remove("locations");
@@ -19386,11 +19387,45 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 		stripWalkTimeKeysFromScopePayload(scopePayload);
+		stripIngressSiteFromPublishedScopePayload(scopePayload);
 		for (Object nestedValue : scopePayload.values()) {
 			if (nestedValue instanceof HashMap<?, ?> nestedScopeObj) {
 				stripWalkTimeKeysFromPublishedScope((HashMap<String, Object>) nestedScopeObj);
 			}
 		}
+	}
+
+	/** Strip walk-time {@code ingress_site} from published {@code unresolved_column} bucket entries. */
+	@SuppressWarnings("unchecked")
+	private void stripIngressSiteFromPublishedScopePayload(HashMap<String, Object> scopePayload) {
+		if (scopePayload == null || scopePayload.isEmpty()) {
+			return;
+		}
+		stripIngressSiteFromUnresolvedColumnMap(scopePayload.get(MUMBLE_UNRESOLVED_COLUMN_KEY));
+		stripIngressSiteFromUnresolvedColumnMap(scopePayload.get(MUMBLE_LHS_UNRESOLVED_COLUMNS_KEY));
+		Object tableDictionaryObj = scopePayload.get(MUMBLE_TABLE_DICTIONARY_KEY);
+		if (tableDictionaryObj instanceof Map<?, ?> tableDictionaryMap) {
+			stripIngressSiteFromUnresolvedColumnMap(
+					tableDictionaryMap.get(MUMBLE_UNRESOLVED_COLUMN_KEY));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void stripIngressSiteFromUnresolvedColumnMap(Object unresolvedColumnMapObj) {
+		if (!(unresolvedColumnMapObj instanceof Map<?, ?> unresolvedColumnMap)) {
+			return;
+		}
+		for (Object entryValue : ((Map<String, Object>) unresolvedColumnMap).values()) {
+			stripIngressSiteFromUnresolvedEntryInPlace(entryValue);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void stripIngressSiteFromUnresolvedEntryInPlace(Object unresolvedEntry) {
+		if (!(unresolvedEntry instanceof Map<?, ?> entryMap)) {
+			return;
+		}
+		((Map<String, Object>) entryMap).remove(MUMBLE_UNRESOLVED_INGRESS_SITE_KEY);
 	}
 
 	@SuppressWarnings("unchecked")
