@@ -97,6 +97,9 @@ public class SqlParseSymbolTreeHelper {
 	private HashMap<String, Object> activeConvertEgressPivotDerivedSourceBindingsByBucket;
 	/** Per convert-egress frame only: column → structured derived bucket keys (PIVOT/UNPIVOT). */
 	private HashMap<String, ArrayList<String>> activeConvertEgressStructuredDerivedColumnCandidates;
+	/** Select-list output aliases backed by scalar / query-backed subtrees (grounded without physical egress). */
+	private HashSet<String> activeConvertEgressScalarSubqueryAliases;
+	private ArrayList<String> activeConvertEgressSelectListOutputAliasSourceOrder;
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -114,6 +117,8 @@ public class SqlParseSymbolTreeHelper {
 	public static final String TEMP_UPDATE_NODEFROM_TARGET_TABLE_COLLECTION_KEY = "_tmp_update_nodefrom_target_table_collection";
 	public static final String TEMP_UPDATE_ASSIGNMENT_RHS_TOKENS_KEY = "_tmp_update_assignment_rhs_tokens";
 	public static final String UPDATE_ASSIGNMENT_RHS_CLAUSE_PROBE_KEY = "_update_assignment_rhs_clause_probe";
+	public static final String TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY =
+			"_tmp_select_list_output_alias_source_order";
 	private static final String TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY =
 			SqlASTWalkerHelper.TEMP_SET_OPERATION_INTERFACE_SUMMARY_MAP_KEY;
 	private static final String TEMP_QUERY_SET_OPERATION_SUMMARY_KEYS_MAP_KEY =
@@ -4984,6 +4989,9 @@ public class SqlParseSymbolTreeHelper {
 
 		// Leave these null if they don't exist
 		HashSet<String> localScalarSubqueryAliases = (HashSet<String>) walker.symbolTable.remove(MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY);
+		activeConvertEgressScalarSubqueryAliases = localScalarSubqueryAliases;
+		activeConvertEgressSelectListOutputAliasSourceOrder =
+				(ArrayList<String>) walker.symbolTable.remove(TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY);
         Object  filtersList = walker.symbolTable.remove(MUMBLE_FILTERS_KEY);
 		Object groupedByList = walker.symbolTable.remove(MUMBLE_GROUPED_BY_KEY);
 		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
@@ -5969,6 +5977,8 @@ public class SqlParseSymbolTreeHelper {
 			activeConvertEgressRelationalModifierContext = null;
 			activeConvertEgressRelationalModifierSourceColumns = null;
 			activeConvertEgressPivotDerivedSourceBindingsByBucket = null;
+			activeConvertEgressScalarSubqueryAliases = null;
+			activeConvertEgressSelectListOutputAliasSourceOrder = null;
 		}
 	}
 
@@ -14846,6 +14856,11 @@ public class SqlParseSymbolTreeHelper {
 		if (matchedKey == null) {
 			return true;
 		}
+		if (activeConvertEgressScalarSubqueryAliases != null
+				&& activeConvertEgressScalarSubqueryAliases.stream()
+						.anyMatch(alias -> alias != null && alias.equalsIgnoreCase(matchedKey))) {
+			return true;
+		}
 		if (activeOutputColumns != null
 				&& activeOutputColumns.stream().anyMatch(key -> key != null && key.equalsIgnoreCase(matchedKey))) {
 			return false;
@@ -14912,6 +14927,18 @@ public class SqlParseSymbolTreeHelper {
 				|| localInterface.isEmpty()
 				|| !isInterfaceOutputAliasOnly(localInterface, dependencyOutputAliasName)) {
 			return false;
+		}
+		if (activeConvertEgressSelectListOutputAliasSourceOrder != null
+				&& !activeConvertEgressSelectListOutputAliasSourceOrder.isEmpty()) {
+			int dependencyIndex = indexOfIgnoreCase(
+					activeConvertEgressSelectListOutputAliasSourceOrder,
+					dependencyOutputAliasName);
+			int consumingIndex = indexOfIgnoreCase(
+					activeConvertEgressSelectListOutputAliasSourceOrder,
+					consumingInterfaceOutputColumnName);
+			return dependencyIndex >= 0
+					&& consumingIndex >= 0
+					&& dependencyIndex < consumingIndex;
 		}
 		HashMap<String, Object> scopeStub = new HashMap<String, Object>();
 		if (localCurrentQueryDictionary != null) {
@@ -15054,6 +15081,12 @@ public class SqlParseSymbolTreeHelper {
 		if (probeContext == null || columnName == null || columnName.isBlank()) {
 			return null;
 		}
+		if ((MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
+						|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey))
+				&& !hasPrecedingSelectListOutputAliasForWindowClauseRef(
+						columnName, probeContext)) {
+			return null;
+		}
 		if (!isGroundedIntraQueryOutputAliasUsage(
 				columnName,
 				tableRef,
@@ -15068,6 +15101,68 @@ public class SqlParseSymbolTreeHelper {
 			return ArchivedClauseColumnRefResult.resolvedIntraQueryOutputAlias(queryScopeKey);
 		}
 		return ArchivedClauseColumnRefResult.skip();
+	}
+
+	private boolean hasPrecedingSelectListOutputAliasForWindowClauseRef(
+			String dependencyColumnName,
+			ArchivedClauseProbeContext probeContext) {
+		if (probeContext == null || dependencyColumnName == null || dependencyColumnName.isBlank()) {
+			return false;
+		}
+		if (windowOutputInterfaceClauseDepsByAlias.isEmpty()) {
+			return false;
+		}
+		for (Map.Entry<String, WindowSelectInterfaceClauseDeps> entry :
+				windowOutputInterfaceClauseDepsByAlias.entrySet()) {
+			WindowSelectInterfaceClauseDeps overDeps = entry.getValue();
+			if (overDeps == null
+					|| !windowClauseDepsReferenceColumn(overDeps, dependencyColumnName)) {
+				continue;
+			}
+			if (isPrecedingSelectListOutputAliasInInterface(
+					dependencyColumnName,
+					entry.getKey(),
+					probeContext.localInterface,
+					probeContext.localCurrentQueryDictionary)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isForwardWindowSelectListOutputAliasRef(
+			String columnName,
+			String clauseKey,
+			ArchivedClauseProbeContext probeContext) {
+		if (probeContext == null || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		if (!MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
+				&& !MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)) {
+			return false;
+		}
+		return isInterfaceOutputAliasOnly(probeContext.localInterface, columnName)
+				&& !hasPrecedingSelectListOutputAliasForWindowClauseRef(columnName, probeContext);
+	}
+
+	private boolean windowClauseDepsReferenceColumn(
+			WindowSelectInterfaceClauseDeps overDeps,
+			String columnName) {
+		return clauseRefListContainsColumnName(overDeps.partitionByRefs, columnName)
+				|| clauseRefListContainsColumnName(overDeps.orderByRefs, columnName);
+	}
+
+	private boolean clauseRefListContainsColumnName(ArrayList<Object> refs, String columnName) {
+		if (refs == null || columnName == null || columnName.isBlank()) {
+			return false;
+		}
+		for (Object refObj : refs) {
+			String refName = walker.extractReferenceNameFromInterfaceEntry(refObj);
+			if (refName != null && refName.equalsIgnoreCase(columnName)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean consumeSelectListOutputAliasUnresolvedEntry(
@@ -15399,6 +15494,9 @@ public class SqlParseSymbolTreeHelper {
 						tableRef,
 						localInterface,
 						localTableCollection)) {
+					if (isForwardWindowSelectListOutputAliasRef(columnName, clauseKey, probeContext)) {
+						return ArchivedClauseColumnRefResult.unresolved();
+					}
 					return ArchivedClauseColumnRefResult.skip();
 				}
 				if (requiresOutputColumnProof
@@ -15421,6 +15519,9 @@ public class SqlParseSymbolTreeHelper {
 						tableRef,
 						localInterface,
 						localTableCollection)) {
+					if (isForwardWindowSelectListOutputAliasRef(columnName, clauseKey, probeContext)) {
+						return ArchivedClauseColumnRefResult.unresolved();
+					}
 					return ArchivedClauseColumnRefResult.skip();
 				}
 				return ArchivedClauseColumnRefResult.ambiguous(resolutionResult.ambiguousSourcesLabel);
@@ -15440,6 +15541,9 @@ public class SqlParseSymbolTreeHelper {
 						tableRef,
 						localInterface,
 						localTableCollection)) {
+					if (isForwardWindowSelectListOutputAliasRef(columnName, clauseKey, probeContext)) {
+						return ArchivedClauseColumnRefResult.unresolved();
+					}
 					return ArchivedClauseColumnRefResult.skip();
 				}
 				return ArchivedClauseColumnRefResult.unresolved();
@@ -15727,7 +15831,9 @@ public class SqlParseSymbolTreeHelper {
 					return;
 				}
 				if (!hasOnlyQueryBackedAliasSources(probeContext.localTableAliasMap)
-						|| hasLocalPhysicalFromTables(probeContext.localFromTableCollection)) {
+						|| hasLocalPhysicalFromTables(
+								buildLocalPhysicalFromTableCollection(
+										probeContext.localFromTableCollection))) {
 					return;
 				}
 				emitUnqualifiedNotFoundInQueryAliasFatal(
@@ -17613,6 +17719,10 @@ public class SqlParseSymbolTreeHelper {
 		} else if (overDeps != null) {
 			pendingWindowSelectInterfaceOverDeps.pollLast();
 		}
+		if (overDeps == null && !pendingWindowSelectInterfacePartitionDeps.isEmpty()) {
+			ArrayList<Object> partitionByRefs = pendingWindowSelectInterfacePartitionDeps.pollLast();
+			overDeps = new WindowSelectInterfaceClauseDeps(partitionByRefs, new ArrayList<Object>());
+		}
 		if (overDeps == null) {
 			return;
 		}
@@ -17704,7 +17814,31 @@ public class SqlParseSymbolTreeHelper {
 	public void recordSelectListOutputInterfaceAlias(String interfaceAlias) {
 		if (interfaceAlias != null && !interfaceAlias.isBlank()) {
 			lastSelectListOutputInterfaceAlias = interfaceAlias;
+			Object orderObj = walker.symbolTable.get(TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY);
+			ArrayList<String> sourceOrder;
+			if (orderObj instanceof ArrayList<?>) {
+				sourceOrder = (ArrayList<String>) orderObj;
+			} else {
+				sourceOrder = new ArrayList<String>();
+				walker.symbolTable.put(TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY, sourceOrder);
+			}
+			if (indexOfIgnoreCase(sourceOrder, interfaceAlias) < 0) {
+				sourceOrder.add(interfaceAlias);
+			}
 		}
+	}
+
+	private static int indexOfIgnoreCase(ArrayList<String> values, String candidate) {
+		if (values == null || candidate == null || candidate.isBlank()) {
+			return -1;
+		}
+		for (int index = 0; index < values.size(); index++) {
+			String value = values.get(index);
+			if (value != null && value.equalsIgnoreCase(candidate)) {
+				return index;
+			}
+		}
+		return -1;
 	}
 
 	public void recordWindowSelectListOutputInterfaceAlias(String interfaceAlias) {
