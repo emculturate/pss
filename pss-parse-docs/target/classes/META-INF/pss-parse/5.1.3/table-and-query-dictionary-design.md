@@ -89,6 +89,14 @@ The select list **defines** what this query exports and **names** where each out
 
 The same rule applies to **intra-query sibling clauses** (WHERE, HAVING, QUALIFY, JOIN ON, etc.): a qualified physical ref such as `ic.pd7` is still a **table-source** reference, not a reference to this query's output interface — even when the column name matches an output name (`ic.pd7 AS pd7`). Those tokens belong in the **table dictionary**, not the local query dictionary.
 
+#### Ordered select-list output aliases (same query, earlier items)
+
+Later select-list items may reference **prior** output aliases in the same `query_specification`. Resolution and published `interface` / `window_*` lineage for those hops are governed by [ordered-select-list-output-alias-policy.md](ordered-select-list-output-alias-policy.md):
+
+- **Grounded** prior aliases only (substitution, physical, bare value, or transitive grounded alias).
+- **Source order** gate for `interface` self-ref hops (`table_ref=queryN` only when the dependency alias is defined earlier in the list).
+- **Window `OVER`** and archived clause lists use groundedness without the source-order gate.
+
 #### Intra-query sibling clauses — output vs source
 
 | Reference style | Local query dict | Table dict | Source query dict |
