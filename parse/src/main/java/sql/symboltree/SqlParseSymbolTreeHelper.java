@@ -19701,6 +19701,7 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
 		scopePayload.remove(TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY);
 		scopePayload.remove(TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY);
+		scopePayload.remove(TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY);
 	}
 
 	private void stripWalkTimeKeysFromScopePayload(HashMap<String, Object> scopePayload) {

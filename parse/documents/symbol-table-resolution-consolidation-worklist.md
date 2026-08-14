@@ -32,7 +32,7 @@ Independent plans (product-triggered; **not** consolidation blockers):
 
 ## Quality gate (run before every consolidation change)
 
-**208 tests** — all passing in the current gate. Implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`.
+**245 tests** — implemented in `SmoketestQualityGateTestSuite` and runnable via Maven profile `smoketest-quality-gate`. (Aug 2026: +6 ordered select-list alias delegates, +31 other gate expansions since the prior **208** count.)
 
 **Full module suite (2026-07-22):** `mvn test` → **1399/1399** passing across all walker, access, CLI, and generator test classes.
 
@@ -59,6 +59,7 @@ mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test
 | Snippet construction | 1 | `access.SnippetTest` | `basicJoinWithOnOnConditionVariableTest` |
 | Live-sample probes | 1 | `SqlEventWalkerLiveSampleQueriesTests` | `getMissingColumnFromTupleDictionaryTest` |
 | Phase 13.4 intra–select-list forward alias | 5 | `SqlEventWalkerLiveSampleQueriesTests`, `SqlEventWalkerCoreSelectFromAliasingTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest`; `selfReferenceColumnAliasInSameSelectListHappyPathV1Test`, `selfReferenceColumnAliasReversedOrderUnresolvedV2Test`, `selfReferenceColumnAliasPredicandSubstitutionHappyPathV3Test`, `selfReferenceColumnAliasPredicandSubstitutionReversedOrderUnresolvedV4Test` |
+| Phase 13.4 ordered select-list alias matrix | 6 | `SqlEventWalkerSelectListOrderedAliasRefTests` (via gate delegates) | Plain column arithmetic, predicand substitution, bare value, window partition/order, column substitution in partition |
 | Table-function diagnostic | 1 | `SqlEventWalkerTableFunctionTests` | `simpleTfCallFlattenSplitV5Test` |
 | PIVOT / UNPIVOT smoke | 3 | `SqlEventWalkerPivotUnpivotTests` | `unpivotV1Test`, `pivotV1Tab1Test`, `pivotInIdentifierResolvedFromSubqueryWarningV1Test` |
 | Nested WITH clause / set-op matrix | 4 | `SqlEventWalkerSubqueriesAndClauseSemanticsTests` | scalar HAVING, scalar SELECT-list, UNION, INTERSECT exemplars |
