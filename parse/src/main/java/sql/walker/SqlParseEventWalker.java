@@ -4446,6 +4446,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 		symbolTreeHelper.normalizeFromClauseCteAliasMappings(subMap);
 
+		// Clauses after exitSelect_list (QUALIFY, HAVING, ORDER BY, …) may harvest
+		// in-OVER PARTITION BY / ORDER BY into pending window-interface latch state.
+		// Discard anything not merged into a SELECT-list window output before publish.
+		symbolTreeHelper.clearPendingWindowSelectInterfaceClauseDeps();
+
 		symbolTreeHelper.finalizeQueryScopeSymbolTable(
 				ctx,
 				subMap,
