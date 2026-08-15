@@ -11064,4 +11064,83 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		 "{def_intersect6={def_union2={def_query1={query_dictionary={third=[[@8,40:44='third',<392>,1:40]], extra=[[@10,47:51='extra',<392>,1:47]]}, table_dictionary={fifth={third=[[@8,40:44='third',<392>,1:40]], extra=[[@10,47:51='extra',<392>,1:47]]}}, setop=EXCEPT, interface={third=[{name=third, table_ref=fifth}], extra=[{name=extra, table_ref=fifth}]}}, def_query0={query_dictionary={first=[[@3,9:13='first',<88>,1:9]]}, table_dictionary={third={first=[[@3,9:13='first',<88>,1:9]]}}, interface={first=[{name=first, table_ref=third}]}}, interface={first=query_column}}, interface={first=query_column}, def_union5={setop=INTERSECTION, interface={extra=query_column, fourth=query_column}, def_query4={query_dictionary={seventh=[[@24,121:127='seventh',<392>,1:121]]}, table_dictionary={eighth={seventh=[[@24,121:127='seventh',<392>,1:121]]}}, setop=UNION, interface={seventh=[{name=seventh, table_ref=eighth}]}}, def_query3={query_dictionary={extra=[[@19,91:95='extra',<392>,1:91]], fourth=[[@17,83:88='fourth',<392>,1:83]]}, table_dictionary={sixth={extra=[[@19,91:95='extra',<392>,1:91]], fourth=[[@17,83:88='fourth',<392>,1:83]]}}, interface={extra=[{name=extra, table_ref=sixth}], fourth=[{name=fourth, table_ref=sixth}]}}}}}",
 				extractor.getSymbolTable().toString());
 	}
+
+	private static String dncEmailRollupExemplarQuery() {
+		return "WITH email_common_format AS ("
+				+ " SELECT con.email AS email_address, TRUE AS suppress_email_ind,"
+				+ " dnc.comments AS suppress_email_reason, dnc.dnc_date_added AS dnc_added_dt,"
+				+ " rit.intake_type_label, con.acs_replication_date AS intake_dt"
+				+ " FROM acs__contacts AS con"
+				+ " INNER JOIN prc__contact_acquia_xwalk AS xwalk ON con.acs_contact_id = xwalk.acs_contact_id"
+				+ " INNER JOIN prc__acs_contacts_dnc AS dnc ON dnc.acs_contact_id = con.acs_contact_id"
+				+ " AND lower(dnc.channel) = 'email' AND email_address IS NOT NULL"
+				+ " INNER JOIN ref__intake_types_alr AS rit ON LOWER(rit.intake_type_label) = 'acs'"
+				+ " UNION ALL"
+				+ " SELECT email_address, suppress_email_ind,"
+				+ " IFF(pcf.suppress_email_ind = 'TRUE', COALESCE(pcf.suppress_email_reason, CONCAT('PDP-Sourced-', COALESCE(pcf.intake_type_label, ''))), pcf.suppress_email_reason) AS suppress_email_reason,"
+				+ " NULL AS dnc_added_dt, intake_type_label, intake_dt"
+				+ " FROM prc__srccon_contact_common_format AS pcf WHERE email_address IS NOT NULL"
+				+ " ), aggregation_check AS ("
+				+ " SELECT COUNT(CASE WHEN lower(ecf.intake_type_label) = 'acs' AND ecf.suppress_email_ind = 'TRUE'"
+				+ " AND (ecf.suppress_email_reason ILIKE 'PDP-Sourced%' OR ecf.suppress_email_reason IN ('PDP', 'None')) THEN 1 END) AS acquia_dnc_pdp_sourced,"
+				+ " COUNT(CASE WHEN lower(ecf.intake_type_label) = 'acs' AND ecf.suppress_email_ind = 'TRUE'"
+				+ " AND (ecf.suppress_email_reason ILIKE 'Matched to Down-Funnel Applicant%') THEN 1 END) AS acquia_dnc_ddm_sourced,"
+				+ " COUNT(CASE WHEN suppress_email_ind = 'TRUE' THEN 1 END) AS all_dncs,"
+				+ " all_dncs = acquia_dnc_ddm_sourced AS acquia_dnc_ddm_only,"
+				+ " all_dncs = acquia_dnc_pdp_sourced AS acquia_dnc_pdp_only,"
+				+ " lower(email_address) AS email_address"
+				+ " FROM email_common_format ecf GROUP BY lower(email_address)"
+				+ " ), dnc_prioritization AS ("
+				+ " SELECT ecf.email_address,"
+				+ " CASE WHEN suppress_email_ind = 'TRUE' AND acquia_dnc_pdp_only THEN NULL ELSE suppress_email_ind END AS suppress_email_ind_calc,"
+				+ " CASE WHEN suppress_email_ind = 'TRUE' AND acquia_dnc_pdp_only THEN NULL ELSE suppress_email_reason END AS dnc_comment,"
+				+ " CASE WHEN suppress_email_ind = 'TRUE' AND acquia_dnc_pdp_only THEN NULL ELSE dnc_added_dt END AS dnc_added_dt,"
+				+ " intake_dt,"
+				+ " CASE WHEN suppress_email_ind_calc = 'TRUE' THEN 1 WHEN suppress_email_ind_calc = 'FALSE' THEN 2"
+				+ " WHEN suppress_email_ind_calc IS NULL THEN 3 END AS suppression_priority,"
+				+ " CASE WHEN dnc_comment ILIKE 'PDP-Sourced%' OR dnc_comment IN ('PDP', 'None') THEN 2"
+				+ " WHEN dnc_comment ILIKE 'Matched to Down-Funnel Applicant%' THEN 3"
+				+ " WHEN dnc_comment IS NULL THEN 4 ELSE 1 END AS comment_priority"
+				+ " FROM email_common_format AS ecf"
+				+ " INNER JOIN aggregation_check AS ag ON lower(ecf.email_address) = lower(ag.email_address)"
+				+ " QUALIFY ROW_NUMBER() OVER (PARTITION BY lower(ecf.email_address)"
+				+ " ORDER BY suppression_priority ASC NULLS LAST, comment_priority ASC NULLS LAST,"
+				+ " dnc_added_dt ASC NULLS LAST, ecf.intake_dt ASC NULLS LAST) = 1"
+				+ " )"
+				+ " SELECT pr.email_address, suppress_email_ind_calc AS suppress_email_ind,"
+				+ " CASE WHEN suppress_email_ind_calc = 'TRUE' THEN COALESCE(dnc_comment, 'PDP-Sourced') END AS dnc_email_comment,"
+				+ " CASE WHEN suppress_email_ind_calc IS NOT NULL THEN COALESCE(dnc_added_dt, intake_dt, CURRENT_TIMESTAMP) END AS dnc_email_dt,"
+				+ " CASE WHEN pr.suppress_email_ind_calc = 'TRUE' THEN ("
+				+ " CASE WHEN pr.dnc_comment ILIKE 'PDP-Sourced-partner' THEN 'Partner'"
+				+ " WHEN (COALESCE(pr.dnc_comment, 'PDP-Sourced') ILIKE 'PDP-Sourced%'"
+				+ " OR LOWER(pr.dnc_comment) IN ('pdp-sourced: default opt-out', 'pdp-default', 'pdp', 'none')) THEN 'EAB Other'"
+				+ " WHEN pr.dnc_comment ILIKE 'Matched to Down-Funnel Applicant%' THEN 'EAB Matching'"
+				+ " WHEN (pr.dnc_comment ILIKE 'user%' OR LOWER(pr.dnc_comment) = 'unsubscribed') THEN 'Student'"
+				+ " ELSE 'Other' END) ELSE NULL END AS suppress_email_category"
+				+ " FROM dnc_prioritization AS pr";
+	}
+
+	/** Phase 2.5 — multi-CTE email DNC rollup exemplar (parse-termination guardrail). */
+	@Test
+	public void dncEmailRollupMultiCteExemplarV0Test() {
+		final String query = dncEmailRollupExemplarQuery();
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong",
+				"[suppress_email_ind, suppress_email_category, email_address, dnc_email_comment, dnc_email_dt]",
+				extractor.getInterface().toString());
+		Assert.assertTrue(
+				"expected CTE chain and QUALIFY in AST",
+				extractor.getAsTree().toString().contains("with={")
+						&& extractor.getAsTree().toString().contains("qualify={")
+						&& extractor.getAsTree().toString().contains("email_common_format"));
+		Assert.assertTrue(
+				"expected nested categorization CASE in outer SELECT",
+				extractor.getAsTree().toString().contains("suppress_email_category")
+						&& extractor.getAsTree().toString().contains("then={parentheses={case={"));
+	}
 }

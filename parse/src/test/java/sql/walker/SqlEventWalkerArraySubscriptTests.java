@@ -7,6 +7,7 @@ import sql.SQLSelectParserParser;
 
 /**
  * Phase 2.6 — postfix array subscript {@code expr[index]} (shared with Phase 5.4).
+ * Phase 2.4 nested searched {@code CASE} exemplars (blocked on subscript until 2.6).
  */
 public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalkerTest {
 
@@ -305,6 +306,97 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={query_dictionary={product=[[@95,295:301='product',<392>,1:295]]}, table_dictionary={acs__categories={title=[[@7,33:35='ctg',<392>,1:33], [@32,135:137='ctg',<392>,1:135], [@66,210:212='ctg',<392>,1:210], [@79,253:255='ctg',<392>,1:253], [@118,450:452='ctg',<392>,1:450]]}, ref__standard_value_mapping_alr={eab_std_value=[[@20,74:82='prod_abbr',<392>,1:74]], client_value=[[@106,389:397='prod_abbr',<392>,1:389]], field_name=[[@143,503:511='prod_abbr',<392>,1:503]]}}, filters=[{name=client_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}, {name=field_name, table_ref=prod_abbr}], interface={product=[{name=eab_std_value, table_ref=prod_abbr}, {name=title, table_ref=ctg}]}, table_alias={ctg=acs__categories, prod_abbr=ref__standard_value_mapping_alr}}}",
 				extractor.getSymbolTable().toString());
+	}
+
+	private static String nestedSourceTypeCaseExpression() {
+		final String innerPipeToken =
+				"LOWER(REPLACE(SPLIT(SPLIT_PART(SPLIT_PART(ACA.title, 'f={',2), '}', 1), '|')[0], '\"', ''))";
+		return "CASE"
+				+ " WHEN POSITION('p={', ACA.title) > 0 THEN"
+				+ " CASE"
+				+ " WHEN " + innerPipeToken + " = LOWER('Email') THEN 'EAB Web form'"
+				+ " WHEN " + innerPipeToken + " = LOWER('Facebook') THEN 'Facebook'"
+				+ " WHEN " + innerPipeToken + " = LOWER('LinkedIn') THEN 'LinkedIn'"
+				+ " WHEN " + innerPipeToken + " = LOWER('Paid Search') THEN 'Paid Search'"
+				+ " WHEN " + innerPipeToken + " = LOWER('.EDU Web Form') THEN '.EDU Web form'"
+				+ " ELSE 'EAB Web form'"
+				+ " END"
+				+ " ELSE"
+				+ " CASE"
+				+ " WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('Email') THEN 'EAB Web form'"
+				+ " WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('Facebook') THEN 'Facebook'"
+				+ " WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('LinkedIn') THEN 'LinkedIn'"
+				+ " WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('Paid Search') THEN 'Paid Search'"
+				+ " WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('.EDU Web Form') THEN '.EDU Web form'"
+				+ " ELSE 'EAB Web form'"
+				+ " END"
+				+ " END";
+	}
+
+	@Test
+	public void nestedSearchedCaseWorkplanStarterV0Test() {
+		final String query =
+				"SELECT " + nestedSourceTypeCaseExpression() + " AS source_type"
+				+ " FROM acs__categories ACA";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong", "[source_type]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertTrue(
+				"expected nested searched CASE in AST: " + extractor.getAsTree(),
+				extractor.getAsTree().toString().contains("alias=source_type, case={clauses=")
+						&& extractor.getAsTree().toString().contains("then={case={"));
+		Assert.assertTrue(
+				"expected ACA.title refs in table dictionary",
+				extractor.getTableColumnDictionaryMap().toString().contains("acs__categories={title=")
+						&& extractor.getTableColumnDictionaryMap().toString().contains("ACA"));
+		Assert.assertTrue(
+				"expected source_type in query dictionary",
+				extractor.getQueryColumnDictionaryMap().toString().contains("source_type="));
+	}
+
+	@Test
+	public void nestedSearchedCaseIsolationV1Test() {
+		final String query =
+				"SELECT CASE WHEN 1 = 1 THEN CASE WHEN 1 = 1 THEN 'a' ELSE 'b' END ELSE 'c' END AS nested_flag"
+				+ " FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong", "[nested_flag]",
+				extractor.getInterface().toString());
+		Assert.assertTrue(
+				"expected nested CASE branches in AST",
+				extractor.getAsTree().toString().contains("then={case={clauses="));
+	}
+
+	@Test
+	public void splitPartNegativeIndexInNestedCaseV2Test() {
+		final String query =
+				"SELECT CASE WHEN LOWER(TRIM(SPLIT_PART(ACA.title, ';', -1))) = LOWER('Email')"
+				+ " THEN 'EAB Web form' ELSE 'Other' END AS source_type"
+				+ " FROM acs__categories ACA";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("Interface is wrong", "[source_type]",
+				extractor.getInterface().toString());
+		Assert.assertTrue(
+				"expected SPLIT_PART negative index in AST",
+				extractor.getAsTree().toString().contains("function_name=SPLIT_PART")
+						&& extractor.getAsTree().toString().contains("literal=-1"));
 	}
 
 }

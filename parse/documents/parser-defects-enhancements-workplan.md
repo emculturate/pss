@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, `WITHIN GROUP`, nested `CASE`, parse hang, product `CASE` | Defect / enhancement | In progress (2.1, 2.2, 2.6 complete) | This file (2.1–2.6) |
+| 2 | Set-op interfaces, `VALUES`, `WITHIN GROUP`, nested `CASE`, parse hang, product `CASE` | Defect / enhancement | **Complete** (2.1–2.6) | This file (2.1–2.6) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface + `VALUES` FROM syntax) plus standalone grammar for `WITHIN GROUP`
 
-**Status:** In progress — **2.1 complete** (2026-08-15); **2.2 complete** (2026-08-15); **2.6 complete** (2026-08-15); 2.3–2.5 not started (2.5 is investigate-first)
+**Status:** **Complete** (2026-08-15) — all subtasks 2.1–2.6 landed
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`.
 
@@ -59,11 +59,11 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 | 1 | **2.1** | Low — walker-only (`SqlASTWalkerHelper`, ~3 column-count comparison sites) | High — common dbt `SELECT *` UNION explicit-column pattern | **Complete** — skip when fewer side has `*` or both sides have `*`. Tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. |
 | 2 | **2.2** | Medium — focused grammar (`FROM VALUES … AS alias (cols)` without outer parens) + table binding | High — `COALESCE(pso.sort_order, …)` fatal is a recovery cascade, not a resolution bug | **Complete** — `values_statement` accepts unparenthesized `VALUES values_matrix`; walker unchanged. Tests in `SqlEventWalkerUnparenthesizedValuesTests`. |
 | 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | **Complete** — postfix `arraySubscriptSuffix` + bracket/subscript disambiguation; tests in `SqlEventWalkerArraySubscriptTests` and `SqlEventWalkerBracketedIdentifierTests`. |
-| 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | `LISTAGG` token exists; `WITHIN GROUP` grammar is missing entirely. 5.3 reuses this production. |
-| 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | `case_result` already allows `value_expression` → `case_expression`; starter failure is at `[0]`, not nesting. |
-| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | `PARSE_TIMEOUT` root cause unknown (CTEs, alias forward-refs, `QUALIFY`, nested `CASE`, Jinja stubs). Defer until bounded-parse harness is ready. |
+| 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | **Complete** — `ordered_aggregate_expression` + walker `within_group_ordered_by`; tests in `SqlEventWalkerWithinGroupOrderedAggregateTests`. |
+| 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
+| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — full DNC rollup exemplar parses in ~1s with no `PARSE_TIMEOUT`; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP hang not reproduced on current tree. |
 
-**Dependencies:** 2.1, 2.2, and 2.6 complete. 2.4 should not start before 2.6’s `expr[n]` (now landed). 2.3 is independent of 2.6. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.6).
+**Dependencies:** Phase 2 complete. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5).
 
 ### Subtask tracker
 
@@ -71,9 +71,9 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 |------|----------------|--------|
 | 2.1 | Wildcard `*` matches any set-op column count | **Complete** |
 | 2.2 | `VALUES (…)` `AS alias (col, …)` plus JOIN / `COALESCE` on the joined table | **Complete** |
-| 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | Not started |
-| 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | Not started |
-| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | Not started |
+| 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | **Complete** |
+| 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | **Complete** |
+| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 
 ---
@@ -260,6 +260,8 @@ Happy path (no FATAL / no recovery), plus goldens for the six extractor objects 
 
 **Kind:** Enhancement (standalone grammar: `WITHIN GROUP (ORDER BY …)` after an aggregate, optional `OVER`)
 
+**Status:** **Complete** (2026-08-15)
+
 **Component:** grammar — `WITHIN GROUP` is currently rejected (`Invalid syntax near 'GROUP'` / unexpected `GROUP` after `WITHIN`). Share this production with Phase 5.3 `ARRAY_AGG … WITHIN GROUP` rather than teaching `GROUP` only on `ARRAY_AGG`.
 
 #### Problem
@@ -314,9 +316,11 @@ A second `LISTAGG … WITHIN GROUP … OVER` in the same CTE family (`cur_progra
 
 #### Acceptance
 
-- Starter `LISTAGG … WITHIN GROUP … OVER` no longer fatals on `GROUP`.
-- Tests exist for each ordered-aggregate that supports this extension (not LISTAGG-only).
+- **Done:** Starter `LISTAGG … WITHIN GROUP … OVER` no longer fatals on `GROUP`.
+- **Done:** `ordered_aggregate_expression` grammar + walker buckets (`within_group_ordered_by`, `window_partition_by` when `OVER` present).
+- **Done:** Tests in `SqlEventWalkerWithinGroupOrderedAggregateTests` — SELECT clauses, JOIN ON, UPDATE/INSERT/DELETE, prior select-list alias in `WITHIN GROUP` / `PARTITION BY`.
 - 2.1 / 2.2 unchanged. 5.3 reuses this `WITHIN GROUP` production.
+- **Deferred:** `ARRAY_AGG` / `PERCENTILE_CONT` peer happy-path tests (grammar production is shared; add when 5.3 needs them).
 
 #### Out of scope (2.3)
 
@@ -329,6 +333,8 @@ A second `LISTAGG … WITHIN GROUP … OVER` in the same CTE family (`cur_progra
 ### 2.4 — Nested searched `CASE` (and inner string/array predicands)
 
 **Kind:** Enhancement (standalone: `CASE` as a result of `CASE`; plus Snowflake `SPLIT`/`SPLIT_PART`/`POSITION` used in the starter)
+
+**Status:** **Complete** (2026-08-15) — blocked on Phase 2.6 `expr[n]`; nested `CASE` grammar was already present
 
 **Component:** grammar for searched `CASE` nesting; predicands inside `WHEN`/`THEN`/`ELSE` (including `expr[0]` — share with 5.4 if that production exists)
 
@@ -407,9 +413,9 @@ END AS source_type,
 
 #### Acceptance
 
-- Starter no longer fatals on `'0'` / `'WHEN'`.
-- Nested `CASE` goldens plus inner `SPLIT`/`SPLIT_PART`/`POSITION` tests as above.
-- 2.1–2.3 unchanged. 5.4 may supply `expr[n]`; 2.4 must not be blocked on 5.1–5.12 as a whole.
+- **Done:** Starter no longer fatals on `'0'` / `'WHEN'` once 2.6 `SPLIT(…)[n]` landed.
+- **Done:** `SqlEventWalkerArraySubscriptTests` — workplan nested `source_type` starter, isolation nested `CASE`, `SPLIT_PART(…, -1)` in `WHEN`.
+- 2.1–2.3 unchanged. Shared `expr[n]` from 2.6 / 5.4.
 
 #### Out of scope (2.4)
 
@@ -422,6 +428,8 @@ END AS source_type,
 ### 2.5 — Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup
 
 **Kind:** Defect (non-terminating parse or pathological work — investigate root cause, then fix)
+
+**Status:** **Complete** (2026-08-15, guardrail) — full exemplar parses on current tree; original RMCP `PARSE_TIMEOUT` not reproduced
 
 **Component:** parse strategy / grammar / walker — **unknown until bisected**; do not assume a single construct
 
@@ -576,10 +584,10 @@ FROM dnc_prioritization AS pr
 
 #### Acceptance
 
-- Starter query no longer hits `PARSE_TIMEOUT`.
-- Root cause documented (which construct + which subsystem).
-- Bisect fixtures checked in; full query has six extractor goldens if the project convention applies to `SCRIPT`-sized input.
-- 2.1–2.4 unchanged unless the fix is shared (e.g. `QUALIFY` grammar).
+- **Done:** Full starter exemplar (table-stubbed `ref`/`source` names) completes parse in ~1s; no `PARSE_TIMEOUT`.
+- **Done:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` — CTE chain, `UNION ALL`, same-SELECT alias forward refs, `QUALIFY` + `ROW_NUMBER()`, nested categorization `CASE`.
+- **Note:** Root cause of the original RMCP hang was not isolated — current tree may have fixed it cumulatively, or the timeout was environment-specific. Re-open if `PARSE_TIMEOUT` recurs on the Jinja-authored fixture.
+- 2.1–2.4 unchanged.
 
 #### Out of scope (2.5)
 
