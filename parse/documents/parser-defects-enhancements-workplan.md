@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface + `VALUES` FROM syntax) plus standalone grammar for `WITHIN GROUP`
 
-**Status:** **Complete** (2026-08-15) — all subtasks 2.1–2.6 landed
+**Status:** **Complete** (2026-08-15) — all subtasks 2.1–2.6 landed. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`.
 
@@ -61,9 +61,9 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 | 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | **Complete** — postfix `arraySubscriptSuffix` + bracket/subscript disambiguation; tests in `SqlEventWalkerArraySubscriptTests` and `SqlEventWalkerBracketedIdentifierTests`. |
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | **Complete** — `ordered_aggregate_expression` + walker `within_group_ordered_by`; tests in `SqlEventWalkerWithinGroupOrderedAggregateTests`. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
-| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — full DNC rollup exemplar parses in ~1s with no `PARSE_TIMEOUT`; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP hang not reproduced on current tree. |
+| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
 
-**Dependencies:** Phase 2 complete. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5).
+**Dependencies:** Phase 2 complete. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail).
 
 ### Subtask tracker
 
@@ -73,7 +73,7 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 | 2.2 | `VALUES (…)` `AS alias (col, …)` plus JOIN / `COALESCE` on the joined table | **Complete** |
 | 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | **Complete** |
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | **Complete** |
-| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced) |
+| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 
 ---
@@ -414,7 +414,8 @@ END AS source_type,
 #### Acceptance
 
 - **Done:** Starter no longer fatals on `'0'` / `'WHEN'` once 2.6 `SPLIT(…)[n]` landed.
-- **Done:** `SqlEventWalkerArraySubscriptTests` — workplan nested `source_type` starter, isolation nested `CASE`, `SPLIT_PART(…, -1)` in `WHEN`.
+- **Done:** `SqlEventWalkerArraySubscriptTests` — workplan nested `source_type` starter, isolation nested `CASE`, `SPLIT_PART(…, -1)` in `WHEN`; each with six extractor goldens (AST, interface, substitutions, table dictionary, query dictionary, symbol table).
+- **Done:** Placement coverage — nested searched `CASE` in `WHERE`, `JOIN ON` (qualified `t.col` in inner branch), `HAVING`, and `UPDATE SET` (`nestedSearchedCaseIn*PlacementTest`); same six-extractor assertions.
 - 2.1–2.3 unchanged. Shared `expr[n]` from 2.6 / 5.4.
 
 #### Out of scope (2.4)
@@ -706,6 +707,7 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done:** Postfix `arraySubscriptSuffix` on `value_expression_primary_core` with `subscript_index` (`column_reference | value_expression`); AST `{subscript={array, index}}` via `exitArraySubscriptSuffix` / `exitSubscript_index`.
 - **Done:** Bracketed logical identifiers disambiguated from subscript brackets — lexer `Bracket_Identifier` requires space or hyphen inside brackets; dotted single-token names (`[Entity]`, `[schema.table]`) use `logical_identifier` grammar path (`bracket_identifier_body` with `Identifier | DOT`); `exitLogical_identifier` promotes full bracketed text.
 - **Done:** `SqlEventWalkerArraySubscriptTests` — literal indices (`[0]`, `[1]`), column arg + literal index, bare column index (`[idx]`), qualified column index (`[tab1.b]`), parenthesized index, and product `CASE` fixtures v3–v6 (flat branches, full cat/ctg fixtures with JOIN).
+- **Done:** Placement coverage — compact product `CASE` (`POSITION` + `SPLIT_PART`) in `WHERE`, `HAVING`, and `UPDATE SET` (`productCaseIn*PlacementTest`); six extractor goldens each.
 - **Done:** `SqlEventWalkerBracketedIdentifierTests` — `[Entity]` / `[Result]` / `t.[Metric]` case-preserved in `table_dictionary`.
 - **Done:** Full parse module suite clean (2037 tests, 0 failures).
 - Both fixtures no longer fatal on `'0'` at `SPLIT(…)[0]` or recovery-cascade `'WHEN'`.
