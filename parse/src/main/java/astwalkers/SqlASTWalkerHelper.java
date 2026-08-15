@@ -1620,6 +1620,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (actualCount == expectedCount) {
 				continue;
 			}
+			if (shouldSkipSetOperationColumnCountMismatch(
+					(Map<String, Object>) baselineInterface,
+					(Map<String, Object>) siblingInterface)) {
+				continue;
+			}
 
 			Map<String, Object> siblingQueryDictionary = extractQueryDictionary(siblingSetOperationMap);
 			ColumnListSummary actualSummary = withSetOperationAnchorFallback(
@@ -1775,6 +1780,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 			Integer actualCount = getSetOperationSummaryInteger(actualSummary, SET_OPERATION_SUMMARY_COLUMN_COUNT_KEY);
 			if (actualCount == null || actualCount.equals(expectedCount)) {
+				continue;
+			}
+			if (shouldSkipSetOperationColumnCountMismatch(
+					expectedCount,
+					getSetOperationSummaryString(expectedSummary, SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY),
+					actualCount,
+					getSetOperationSummaryString(actualSummary, SET_OPERATION_SUMMARY_COLUMN_NAMES_KEY))) {
 				continue;
 			}
 
@@ -2321,6 +2333,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			if (actualCount == expectedCount) {
 				continue;
 			}
+			if (shouldSkipSetOperationColumnCountMismatch(baselineInterface, queryInterfaceMap)) {
+				continue;
+			}
 
 			Map<String, Object> queryDictionary = extractQueryDictionary(queryMap);
 			ColumnListSummary actualSummary = withSetOperationAnchorFallback(
@@ -2492,6 +2507,68 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		return buildColumnListSummary(interfaceMap, new HashMap<String, Object>());
+	}
+
+	private boolean shouldSkipSetOperationColumnCountMismatch(
+			Map<String, Object> leftInterface,
+			Map<String, Object> rightInterface) {
+		if (leftInterface == null || rightInterface == null) {
+			return false;
+		}
+
+		return shouldSkipSetOperationColumnCountMismatch(
+				leftInterface.size(),
+				resolveSetOperationInterfaceColumnNamesCsv(leftInterface),
+				rightInterface.size(),
+				resolveSetOperationInterfaceColumnNamesCsv(rightInterface));
+	}
+
+	private boolean shouldSkipSetOperationColumnCountMismatch(
+			int leftCount,
+			String leftColumnsCsv,
+			int rightCount,
+			String rightColumnsCsv) {
+		if (leftCount == rightCount) {
+			return true;
+		}
+
+		boolean leftWildcard = setOperationColumnNamesCsvHasWildcard(leftColumnsCsv);
+		boolean rightWildcard = setOperationColumnNamesCsvHasWildcard(rightColumnsCsv);
+		if (leftWildcard && rightWildcard) {
+			return true;
+		}
+
+		return leftCount < rightCount ? leftWildcard : rightWildcard;
+	}
+
+	private String resolveSetOperationInterfaceColumnNamesCsv(Map<String, Object> interfaceMap) {
+		if (interfaceMap == null || interfaceMap.isEmpty()) {
+			return "";
+		}
+		if (setOperationInterfaceHasWildcard(interfaceMap)) {
+			return "*";
+		}
+
+		ArrayList<String> names = new ArrayList<String>(interfaceMap.keySet());
+		names.sort(String::compareTo);
+		return String.join(", ", names);
+	}
+
+	private boolean setOperationInterfaceHasWildcard(Map<String, Object> interfaceMap) {
+		return interfaceMap != null && interfaceMap.containsKey("*");
+	}
+
+	private boolean setOperationColumnNamesCsvHasWildcard(String columnNamesCsv) {
+		if (columnNamesCsv == null || columnNamesCsv.isBlank()) {
+			return false;
+		}
+
+		for (String columnName : columnNamesCsv.split(",")) {
+			if ("*".equals(columnName.trim())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private ColumnListSummary buildColumnListSummary(Map<String, Object> columnsMap, Map<String, Object> queryDictionary) {

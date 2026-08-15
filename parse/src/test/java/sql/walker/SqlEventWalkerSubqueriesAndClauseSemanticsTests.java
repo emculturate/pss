@@ -1303,10 +1303,167 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query4={def_union3={context_list={cte_applicants=query0}, def_query1={context_list={cte_applicants=query0}, query_dictionary={*=[[@20,158:158='*',<291>,5:9]]}, interface={*=[{name=*, table_ref=*}]}, table_alias={cte_applicants=query0}}, interface={*=query_column}, table_alias={cte_applicants=query0}, def_query2={context_list={cte_applicants=query0}, query_dictionary={eab_entry_term=[[@29,242:255='eab_entry_term',<392>,7:54]], primary_student_id=[[@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@36,297:297='*',<291>,10:7]], program=[[@31,258:264='program',<392>,7:70]]}, setop=UNION, interface={eab_entry_term=[{name=eab_entry_term, table_ref=query0}], primary_student_id=[{name=primary_student_id, table_ref=query0}], eab_entry_year_academic=[{name=eab_entry_year_academic, table_ref=query0}], program=[{name=program, table_ref=query0}]}, table_alias={cte_applicants=query0}}}, context_list={cte_applicants=query0, status_logic_p1=union3}, query_dictionary={*=[[@36,297:297='*',<291>,10:7]]}, def_query0={query_dictionary={eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54], [@29,242:255='eab_entry_term',<392>,7:54]], primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9], [@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29], [@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@20,158:158='*',<291>,5:9]], program=[[@11,95:101='program',<392>,2:70], [@31,258:264='program',<392>,7:70]]}, table_dictionary={applicants_src={eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54]], primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29]], program=[[@11,95:101='program',<392>,2:70]]}}, interface={eab_entry_term=[{name=eab_entry_term, table_ref=applicants_src}], primary_student_id=[{name=primary_student_id, table_ref=applicants_src}], eab_entry_year_academic=[{name=eab_entry_year_academic, table_ref=applicants_src}], program=[{name=program, table_ref=applicants_src}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={cte_applicants=query0, status_logic_p1=union3}}}",
 				extractor.getSymbolTable().toString());
-		Assert.assertEquals("Messages is wrong",
-				"[ParseDiagnostic[severity=FATAL, code=SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH, message=UNION has different column counts. Expected 1 columns (*) at (l:5 c:9) but there were 4 (primary_student_id, eab_entry_year_academic, eab_entry_term, program) at (l:7 c:9)., line=7, charPositionInLine=9, source=SqlASTWalkerHelper, ruleName=null, tokenText=def_query2, recoverable=false, phase=ast-walk, exceptionType=null, details=null]]",
+		Assert.assertEquals("Messages is wrong", "[]",
 				snippet.getParserDiagnosticList().toString());
 
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionExplicitColumnsAgainstWildcardBranchTest() {
+		final String query = "SELECT primary_student_id, eab_entry_year_academic, eab_entry_term, program"
+				+ "\nFROM cte_applicants"
+				+ "\nUNION"
+				+ "\nSELECT * FROM cte_applicants";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionBothWildcardBranchesAgainstExplicitColumnsTest() {
+		final String query = "SELECT * FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT a, b, c FROM tab2"
+				+ "\nUNION"
+				+ "\nSELECT * FROM tab3";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void nestedUnionIntersectCompositeWildcardLowSideNoColumnCountFatalTest() {
+		final String query = "(SELECT * FROM third "
+				+ " UNION SELECT first, desc FROM fifth) "
+				+ " INTERSECT (SELECT * FROM sixth "
+				+ " UNION SELECT seventh FROM eighth)";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void intersectWildcardBranchAgainstExplicitColumnListTest() {
+		final String query = "SELECT * FROM tab1"
+				+ "\nINTERSECT"
+				+ "\nSELECT a, b, c FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void exceptWildcardBranchAgainstExplicitColumnListTest() {
+		final String query = "SELECT * FROM tab1"
+				+ "\nEXCEPT"
+				+ "\nSELECT a, b, c FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionConcreteColumnCountMismatchWithoutWildcardTest() {
+		final String query = "SELECT a, b FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT c, d, e FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				"UNION has different column counts",
+				null,
+				1);
+	}
+
+	@Test
+	public void unionMixedColumnsWithWildcardOnLeftBranchOnlyTest() {
+		final String query = "SELECT a, b, tab1.* FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT c, d, e FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionMixedColumnsWithWildcardOnlyOnHigherCountBranchStillFatalsTest() {
+		final String query = "SELECT a, b FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT c, d, e, tab2.* FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+		assertFatalDiagnosticCount(
+				snippet,
+				"SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+				"UNION has different column counts",
+				null,
+				1);
+	}
+
+	@Test
+	public void unionMixedColumnsWithWildcardOnRightBranchOnlyTest() {
+		final String query = "SELECT a, b, c, v FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT d, e, tab2.* FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionMixedColumnsWithWildcardOnBothBranchesTest() {
+		final String query = "SELECT a,  tab1.* FROM tab1"
+				+ "\nUNION"
+				+ "\nSELECT c, d, e, tab2.* FROM tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionJoinQualifiedWildcardBranchAgainstExplicitFiveColumnListTest() {
+		final String query = "SELECT tab1.a, tab1.b, tab2.* FROM tab1 CROSS JOIN tab2"
+				+ "\nUNION"
+				+ "\nSELECT c1, c2, c3, c4, c5 FROM tab3";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
+	public void unionExplicitFiveColumnListAgainstJoinQualifiedWildcardBranchTest() {
+		final String query = "SELECT c1, c2, c3, c4, c5 FROM tab3"
+				+ "\nUNION"
+				+ "\nSELECT tab1.a, tab1.b, tab2.* FROM tab1 CROSS JOIN tab2";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
 		assertNoFatalErrors(extractor);
 		assertNoWalkerDiagnostics(extractor);
 	}
