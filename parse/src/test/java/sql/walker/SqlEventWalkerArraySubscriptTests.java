@@ -90,8 +90,62 @@ public class SqlEventWalkerArraySubscriptTests extends AbstractSqlParseEventWalk
 	}
 
 	@Test
+	public void splitColumnSubscriptBareIndexColumnRefV2cTest() {
+		final String query = "SELECT SPLIT(col, '|')[idx] AS x FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={subscript={array={function={parameters={1={column={name=col, table_ref=null}}, 2={literal='|'}}, function_name=SPLIT}}, index={column={name=idx, table_ref=null}}}, alias=x}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={col=[[@3,13:15='col',<392>,1:13]], idx=[[@8,23:25='idx',<392>,1:23]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={x=[[@11,31:31='x',<392>,1:31]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={x=[[@11,31:31='x',<392>,1:31]]}, table_dictionary={tab1={col=[[@3,13:15='col',<392>,1:13]], idx=[[@8,23:25='idx',<392>,1:23]]}}, interface={x=[{name=col, table_ref=tab1}, {name=idx, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
+	public void splitColumnSubscriptQualifiedIndexColumnRefV2dTest() {
+		final String query = "SELECT SPLIT(a, '|')[tab1.b] AS x FROM tab1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		assertNoWalkerDiagnostics(extractor);
+		assertNoFatalErrors(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={select={1={subscript={array={function={parameters={1={column={name=a, table_ref=null}}, 2={literal='|'}}, function_name=SPLIT}}, index={column={name=b, table_ref=tab1}}}, alias=x}}, from={table={alias=null, table=tab1}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[x]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{tab1={a=[[@3,13:13='a',<392>,1:13]], b=[[@8,21:24='tab1',<392>,1:21]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={x=[[@13,32:32='x',<392>,1:32]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query0={query_dictionary={x=[[@13,32:32='x',<392>,1:32]]}, table_dictionary={tab1={a=[[@3,13:13='a',<392>,1:13]], b=[[@8,21:24='tab1',<392>,1:21]]}}, interface={x=[{name=a, table_ref=tab1}, {name=b, table_ref=tab1}]}}}",
+				extractor.getSymbolTable().toString());
+	}
+
+	@Test
 	public void splitColumnSubscriptParenthesizedIndexColumnRefV2bTest() {
-		// Bare [idx] is lexed as Bracket_Identifier; parenthesized [(idx)] reaches subscript grammar.
+		// Parenthesized [(idx)] still valid; bare [idx] covered by splitColumnSubscriptBareIndexColumnRefV2cTest.
 		final String query = "SELECT SPLIT(col, '|')[(idx)] AS x FROM tab1";
 
 		final SQLSelectParserParser parser = parse(query);

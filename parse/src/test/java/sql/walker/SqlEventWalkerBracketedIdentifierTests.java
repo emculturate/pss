@@ -31,13 +31,13 @@ public class SqlEventWalkerBracketedIdentifierTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{[Entity]={score=[[@1,7:7='t',<392>,1:7], [@19,69:69='t',<392>,1:69]], *=[[@11,40:40='t',<392>,1:40]], [Metric]=[[@7,28:28='t',<392>,1:28]]}}",
+				"{[Entity]={score=[[@1,7:7='t',<392>,1:7], [@25,69:69='t',<392>,1:69]], *=[[@15,40:40='t',<392>,1:40]], [Metric]=[[@9,28:28='t',<392>,1:28]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={*=[[@13,42:42='*',<291>,1:42]], [Result]=[[@5,18:25='[Result]',<410>,1:18]], [Metric]=[[@9,30:37='[Metric]',<410>,1:30]]}}",
+				"{query0={*=[[@17,42:42='*',<291>,1:42]], [Result]=[[@7,25:25=']',<411>,1:25]], [Metric]=[[@13,37:37=']',<411>,1:37]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={*=[[@13,42:42='*',<291>,1:42]], [Result]=[[@5,18:25='[Result]',<410>,1:18]], [Metric]=[[@9,30:37='[Metric]',<410>,1:30]]}, table_dictionary={[Entity]={score=[[@1,7:7='t',<392>,1:7], [@19,69:69='t',<392>,1:69]], *=[[@11,40:40='t',<392>,1:40]], [Metric]=[[@7,28:28='t',<392>,1:28]]}}, filters=[{name=score, table_ref=t}], interface={*=[{name=*, table_ref=t}], [Result]=[{name=score, table_ref=t}], [Metric]=[{name=[Metric], table_ref=t}]}, table_alias={t=[Entity]}}}",
+				"{def_query0={query_dictionary={*=[[@17,42:42='*',<291>,1:42]], [Result]=[[@7,25:25=']',<411>,1:25]], [Metric]=[[@13,37:37=']',<411>,1:37]]}, table_dictionary={[Entity]={score=[[@1,7:7='t',<392>,1:7], [@25,69:69='t',<392>,1:69]], *=[[@15,40:40='t',<392>,1:40]], [Metric]=[[@9,28:28='t',<392>,1:28]]}}, filters=[{name=score, table_ref=t}], interface={*=[{name=*, table_ref=t}], [Result]=[{name=score, table_ref=t}], [Metric]=[{name=[Metric], table_ref=t}]}, table_alias={t=[Entity]}}}",
 				extractor.getSymbolTable().toString());
 	}
 

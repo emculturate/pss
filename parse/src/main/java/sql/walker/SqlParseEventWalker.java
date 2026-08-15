@@ -8934,6 +8934,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitSubscript_index(SQLSelectParserParser.Subscript_indexContext ctx) {
+		walker.handleOneChild(ctx.getRuleIndex());
+	}
+
+	@Override
 	public void exitArraySubscriptSuffix(SQLSelectParserParser.ArraySubscriptSuffixContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -11712,6 +11717,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String literalText = ctx.interval_string == null ? null : ctx.interval_string.getText();
 		populateTypedDatetimeLiteralSourceMap(subMap, MUMBLE_EXTRACT_SOURCE_TYPE_INTERVAL, literalText);
+	}
+
+	@Override
+	public void exitLogical_identifier(SQLSelectParserParser.Logical_identifierContext ctx) {
+		// Grammar path LEFT_BRACKET simple_identifier RIGHT_BRACKET: promote full bracketed text.
+		walker.useAsLeaf = true;
 	}
 
 	@Override

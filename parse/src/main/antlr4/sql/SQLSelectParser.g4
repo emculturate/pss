@@ -1238,7 +1238,12 @@ value_expression_primary_core
 
 value_expression_primary_suffix
   : CAST_OPERATOR data_type                              # castSuffix
-  | LEFT_BRACKET value_expression RIGHT_BRACKET            # arraySubscriptSuffix
+  | LEFT_BRACKET subscript_index RIGHT_BRACKET            # arraySubscriptSuffix
+  ;
+
+subscript_index
+  : column_reference
+  | value_expression
   ;
 
 parenthesized_value_expression
@@ -2162,8 +2167,18 @@ simple_identifier
    ;
 
 logical_identifier
-   :    Bracket_Identifier
-   ;
+  : Bracket_Identifier
+  | LEFT_BRACKET bracket_identifier_body RIGHT_BRACKET
+  ;
+
+bracket_identifier_body
+  : bracket_name_piece+
+  ;
+
+bracket_name_piece
+  : Identifier
+  | DOT
+  ;
    
 simple_variable_identifier
 	:	Variable_Identifier
@@ -3489,12 +3504,13 @@ JINJA_CLOSE
 /*
 ===============================================================================
   Bracketed logical names + array subscript close (Phase 2.6 / 5.4)
-  Bracket_Identifier keeps legacy id 410 (former LEFT_BRACKET slot) until demoted
-  to parser rules; RIGHT_BRACKET stays before BAD for stable late token ids.
+  Bracket_Identifier (id 410) matches interiors with space or hyphen only — not dot,
+  so [tab1.col] lexes as LEFT_BRACKET + qualified column + RIGHT_BRACKET for subscript
+  indices. Dotted bracketed names ([schema.table]) use bracket_identifier_body grammar.
 ===============================================================================
 */
 Bracket_Identifier
-	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')*']'
+	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_')*(' '|'-')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'-')*']'
 	;
 
 RIGHT_BRACKET : ']';
