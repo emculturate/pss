@@ -2944,7 +2944,6 @@ USING : U S I N G;
 WHEN : W H E N;
 WHERE : W H E R E;
 WITH : W I T H;
-WITHIN : W I T H I N;
 WITHOUT : W I T H O U T;
 
 /*
@@ -3392,6 +3391,7 @@ EPOCH_SECOND : E P O C H UNDERLINE S E C O N D;
 */
 DATE_PART : [Dd] [Aa] [Tt] [Ee] '_' [Pp] [Aa] [Rr] [Tt] ;
 SETS : S E T S;
+WITHIN : W I T H I N;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*
