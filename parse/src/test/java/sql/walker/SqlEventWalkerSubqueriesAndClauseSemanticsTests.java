@@ -1271,6 +1271,47 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 
 
 	@Test
+	public void unionWildcardBranchAgainstExplicitColumnListTest() {
+		final String query = "WITH cte_applicants AS ("
+				+ "\n  SELECT primary_student_id, eab_entry_year_academic, eab_entry_term, program"
+				+ "\n  FROM applicants_src"
+				+ "\n), status_logic_p1 AS ("
+				+ "\n  SELECT * FROM cte_applicants"
+				+ "\n  UNION"
+				+ "\n  SELECT primary_student_id, eab_entry_year_academic, eab_entry_term, program"
+				+ "\n  FROM cte_applicants"
+				+ "\n)"
+				+ "\nSELECT * FROM status_logic_p1";
+
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		Snippet snippet = extractor.getSnippet();
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={select={1={column={name=primary_student_id, table_ref=null}}, 2={column={name=eab_entry_year_academic, table_ref=null}}, 3={column={name=eab_entry_term, table_ref=null}}, 4={column={name=program, table_ref=null}}}, from={table={alias=null, table=applicants_src}}}, alias=cte_applicants}, 2={cte={union={1={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=cte_applicants}}}, 2={union={qualifier=null, operator=UNION}}, 3={select={1={column={name=primary_student_id, table_ref=null}}, 2={column={name=eab_entry_year_academic, table_ref=null}}, 3={column={name=eab_entry_term, table_ref=null}}, 4={column={name=program, table_ref=null}}}, from={table={alias=null, table=cte_applicants}}}}}, alias=status_logic_p1}}, query={select={1={column={name=*, table_ref=*}}}, from={table={alias=null, table=status_logic_p1}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[*]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", "{}",
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{applicants_src={eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54]], primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29]], program=[[@11,95:101='program',<392>,2:70]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query4={*=[[@36,297:297='*',<291>,10:7]]}, query0={primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9], [@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29], [@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@20,158:158='*',<291>,5:9]], eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54], [@29,242:255='eab_entry_term',<392>,7:54]], program=[[@11,95:101='program',<392>,2:70], [@31,258:264='program',<392>,7:70]]}, query1={*=[[@20,158:158='*',<291>,5:9]]}, query2={primary_student_id=[[@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@36,297:297='*',<291>,10:7]], eab_entry_term=[[@29,242:255='eab_entry_term',<392>,7:54]], program=[[@31,258:264='program',<392>,7:70]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_query4={def_union3={context_list={cte_applicants=query0}, def_query1={context_list={cte_applicants=query0}, query_dictionary={*=[[@20,158:158='*',<291>,5:9]]}, interface={*=[{name=*, table_ref=*}]}, table_alias={cte_applicants=query0}}, interface={*=query_column}, table_alias={cte_applicants=query0}, def_query2={context_list={cte_applicants=query0}, query_dictionary={eab_entry_term=[[@29,242:255='eab_entry_term',<392>,7:54]], primary_student_id=[[@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@36,297:297='*',<291>,10:7]], program=[[@31,258:264='program',<392>,7:70]]}, setop=UNION, interface={eab_entry_term=[{name=eab_entry_term, table_ref=query0}], primary_student_id=[{name=primary_student_id, table_ref=query0}], eab_entry_year_academic=[{name=eab_entry_year_academic, table_ref=query0}], program=[{name=program, table_ref=query0}]}, table_alias={cte_applicants=query0}}}, context_list={cte_applicants=query0, status_logic_p1=union3}, query_dictionary={*=[[@36,297:297='*',<291>,10:7]]}, def_query0={query_dictionary={eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54], [@29,242:255='eab_entry_term',<392>,7:54]], primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9], [@25,197:214='primary_student_id',<392>,7:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29], [@27,217:239='eab_entry_year_academic',<392>,7:29]], *=[[@20,158:158='*',<291>,5:9]], program=[[@11,95:101='program',<392>,2:70], [@31,258:264='program',<392>,7:70]]}, table_dictionary={applicants_src={eab_entry_term=[[@9,79:92='eab_entry_term',<392>,2:54]], primary_student_id=[[@5,34:51='primary_student_id',<392>,2:9]], eab_entry_year_academic=[[@7,54:76='eab_entry_year_academic',<392>,2:29]], program=[[@11,95:101='program',<392>,2:70]]}}, interface={eab_entry_term=[{name=eab_entry_term, table_ref=applicants_src}], primary_student_id=[{name=primary_student_id, table_ref=applicants_src}], eab_entry_year_academic=[{name=eab_entry_year_academic, table_ref=applicants_src}], program=[{name=program, table_ref=applicants_src}]}}, interface={*=[{name=*, table_ref=*}]}, table_alias={cte_applicants=query0, status_logic_p1=union3}}}",
+				extractor.getSymbolTable().toString());
+		Assert.assertEquals("Messages is wrong",
+				"[ParseDiagnostic[severity=FATAL, code=SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH, message=UNION has different column counts. Expected 1 columns (*) at (l:5 c:9) but there were 4 (primary_student_id, eab_entry_year_academic, eab_entry_term, program) at (l:7 c:9)., line=7, charPositionInLine=9, source=SqlASTWalkerHelper, ruleName=null, tokenText=def_query2, recoverable=false, phase=ast-walk, exceptionType=null, details=null]]",
+				snippet.getParserDiagnosticList().toString());
+
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+	}
+
+	@Test
 	public void unionWithMismatchColumnCountsAndNamesTest() {
 		final String query = "SELECT rank, desc, student " + 
 				"FROM  <Guide> AS Guide_Student_Conditions " + 
