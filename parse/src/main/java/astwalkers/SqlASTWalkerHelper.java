@@ -495,6 +495,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		if (tableRef.startsWith("<")) {
 			return tableRef;
 		}
+		if (tableRef.startsWith("[")) {
+			return tableRef;
+		}
 		if (!tableRef.contains("\"")) {
 			return tableRef.toLowerCase();
 		}

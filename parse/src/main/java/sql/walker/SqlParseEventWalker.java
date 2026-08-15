@@ -8869,6 +8869,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	}
 
 	@Override
+	public void exitValue_expression_primary_core(
+			SQLSelectParserParser.Value_expression_primary_coreContext ctx) {
+		walker.handleOneChild(ctx.getRuleIndex());
+	}
+
+	@Override
 	public void exitValue_expression_primary( SQLSelectParserParser.Value_expression_primaryContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -8882,28 +8888,67 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		if (subMap.size() >= 2) {
 			Object currentValue = normalizeCharacterLiteralOperand(subMap.remove("1"));
-			// Apply successive casts left to right (supports chained casts like col::text::varchar)
 			int keyIdx = 2;
-			Object nextType = subMap.remove(String.valueOf(keyIdx));
-			Map<String, Object> outerCastItem = null;
-			while (nextType != null) {
-				Map<String, Object> castItem = new HashMap<String, Object>();
-				castItem.put(MUMBLE_FUNCTION_NAME_KEY, MUMBLE_CAST_FUNCTION_NAME);
-				castItem.put(MUMBLE_TYPE_KEY, MUMBLE_CAST_FUNCTION_TYPE);
-				castItem.put(MUMBLE_VALUE_KEY, currentValue);
-				castItem.put(MUMBLE_DATATYPE_KEY, nextType);
-				outerCastItem = castItem;
-				Map<String, Object> wrapped = new HashMap<String, Object>();
-				wrapped.put(MUMBLE_FUNCTION_KEY, castItem);
-				currentValue = wrapped;
+			Object nextSuffix = subMap.remove(String.valueOf(keyIdx));
+			while (nextSuffix != null) {
+				if (nextSuffix instanceof Map<?, ?> suffixMap
+						&& MUMBLE_PRIMARY_SUFFIX_SUBSCRIPT.equals(
+								suffixMap.get(MUMBLE_PRIMARY_SUFFIX_KIND_KEY))) {
+					Map<String, Object> subscript = new HashMap<String, Object>();
+					subscript.put(MUMBLE_SUBSCRIPT_ARRAY_KEY, currentValue);
+					subscript.put(MUMBLE_SUBSCRIPT_INDEX_KEY, suffixMap.get(MUMBLE_SUBSCRIPT_INDEX_KEY));
+					Map<String, Object> wrapped = new HashMap<String, Object>();
+					wrapped.put(MUMBLE_SUBSCRIPT_KEY, subscript);
+					currentValue = wrapped;
+				} else {
+					Map<String, Object> castItem = new HashMap<String, Object>();
+					castItem.put(MUMBLE_FUNCTION_NAME_KEY, MUMBLE_CAST_FUNCTION_NAME);
+					castItem.put(MUMBLE_TYPE_KEY, MUMBLE_CAST_FUNCTION_TYPE);
+					castItem.put(MUMBLE_VALUE_KEY, currentValue);
+					castItem.put(MUMBLE_DATATYPE_KEY, nextSuffix);
+					Map<String, Object> wrapped = new HashMap<String, Object>();
+					wrapped.put(MUMBLE_FUNCTION_KEY, castItem);
+					currentValue = wrapped;
+				}
 				keyIdx++;
-				nextType = subMap.remove(String.valueOf(keyIdx));
+				nextSuffix = subMap.remove(String.valueOf(keyIdx));
 			}
-			if (outerCastItem != null) {
-				subMap.clear();
-				subMap.put(MUMBLE_FUNCTION_KEY, outerCastItem);
+			subMap.clear();
+			if (currentValue instanceof Map<?, ?> map) {
+				if (map.containsKey(MUMBLE_FUNCTION_KEY)) {
+					subMap.put(MUMBLE_FUNCTION_KEY, map.get(MUMBLE_FUNCTION_KEY));
+				} else if (map.containsKey(MUMBLE_SUBSCRIPT_KEY)) {
+					subMap.put(MUMBLE_SUBSCRIPT_KEY, map.get(MUMBLE_SUBSCRIPT_KEY));
+				} else {
+					subMap.put("1", currentValue);
+				}
+			} else {
+				subMap.put("1", currentValue);
 			}
 		}
+	}
+
+	@Override
+	public void exitCastSuffix(SQLSelectParserParser.CastSuffixContext ctx) {
+		walker.handleOneChild(ctx.getRuleIndex());
+	}
+
+	@Override
+	public void exitArraySubscriptSuffix(SQLSelectParserParser.ArraySubscriptSuffixContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		Object index = subMap.remove("1");
+
+		Map<String, Object> marker = new HashMap<String, Object>();
+		marker.put(MUMBLE_PRIMARY_SUFFIX_KIND_KEY, MUMBLE_PRIMARY_SUFFIX_SUBSCRIPT);
+		marker.put(MUMBLE_SUBSCRIPT_INDEX_KEY, index);
+
+		int parentRuleIndex = ctx.getParent().getRuleIndex();
+		Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+		Map<String, Object> parentMap = walker.getNodeMap(parentRuleIndex, parentStackLevel);
+		parentMap.put(String.valueOf(parentMap.size()), marker);
 	}
 
 	@Override

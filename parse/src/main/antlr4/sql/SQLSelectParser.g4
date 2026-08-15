@@ -1227,9 +1227,18 @@ predicand_primary
   ;
 
 value_expression_primary
-  : parenthesized_value_expression (CAST_OPERATOR data_type)*
-  | nonparenthesized_value_expression_primary (CAST_OPERATOR data_type)*
-  | null_literal CAST_OPERATOR data_type
+  : value_expression_primary_core value_expression_primary_suffix*
+  ;
+
+value_expression_primary_core
+  : parenthesized_value_expression
+  | nonparenthesized_value_expression_primary
+  | null_literal
+  ;
+
+value_expression_primary_suffix
+  : CAST_OPERATOR data_type                              # castSuffix
+  | LEFT_BRACKET value_expression RIGHT_BRACKET            # arraySubscriptSuffix
   ;
 
 parenthesized_value_expression
@@ -3237,9 +3246,9 @@ PUML_CONSTANT_PIT_END_TIME : '#' P I T '_' E N D '_' T I M E;
  Identifiers
 ===============================================================================
 */
-Bracket_Identifier	
-	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')*']'
-	;
+// LEFT_BRACKET occupies legacy Bracket_Identifier token id (326) so later lexer
+// rules keep stable ids when Bracket_Identifier is eventually demoted to grammar.
+LEFT_BRACKET : '[';
 
 Variable_Identifier	
 	:	LTH ('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')* GTH
@@ -3477,7 +3486,20 @@ JINJA_CLOSE
   : '}}'
   ;
 
+/*
+===============================================================================
+  Bracketed logical names + array subscript close (Phase 2.6 / 5.4)
+  Bracket_Identifier keeps legacy id 410 (former LEFT_BRACKET slot) until demoted
+  to parser rules; RIGHT_BRACKET stays before BAD for stable late token ids.
+===============================================================================
+*/
+Bracket_Identifier
+	:	'['('A'..'Z'|'a'..'z'|'_')('A'..'Z'|'a'..'z'|Digit|'_'|' '|'.'|'-')*']'
+	;
+
+RIGHT_BRACKET : ']';
 
 BAD
-  : . -> skip
-  ; 
+	: . -> skip
+	;
+ 
