@@ -10,6 +10,7 @@ import static mumble.MumbleConstants.MUMBLE_INTERFACE_KEY;
 import static mumble.MumbleConstants.MUMBLE_ORDERED_BY_KEY;
 import static mumble.MumbleConstants.MUMBLE_WINDOW_ORDERED_BY_KEY;
 import static mumble.MumbleConstants.MUMBLE_WINDOW_PARTITION_BY_KEY;
+import static mumble.MumbleConstants.MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY;
 
 import sql.SQLSelectParserParser;
 
@@ -67,6 +68,9 @@ public final class SqlGrammarContextClassifier {
 			if (ruleIndex == SQLSelectParserParser.RULE_orderby_clause) {
 				if (hasAncestorRule(ctx, SQLSelectParserParser.RULE_over_clause)) {
 					return MUMBLE_WINDOW_ORDERED_BY_KEY;
+				}
+				if (hasAncestorRule(ctx, SQLSelectParserParser.RULE_within_group_clause)) {
+					return MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY;
 				}
 				if (hasAncestorRule(ctx, SQLSelectParserParser.RULE_pivot_clause)
 						|| hasAncestorRule(ctx, SQLSelectParserParser.RULE_unpivot_clause)) {

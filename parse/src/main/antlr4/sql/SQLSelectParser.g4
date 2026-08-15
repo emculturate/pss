@@ -1255,6 +1255,7 @@ nonparenthesized_value_expression_primary
   | column_reference
   | variable_identifier
   | aggregate_function
+  | ordered_aggregate_expression
   | case_expression
   | cast_function_expression
   | routine_invocation
@@ -1505,8 +1506,31 @@ select_direction
 null_handling
    :  (IGNORE | RESPECT) NULLS
    ;
-   
-   
+
+
+/*
+===============================================================================
+  Ordered aggregates (WITHIN GROUP)
+===============================================================================
+*/
+ordered_aggregate_expression
+  : ordered_aggregate_call over_clause?
+  ;
+
+ordered_aggregate_call
+  : ordered_aggregate_function LEFT_PAREN sql_argument_list? RIGHT_PAREN within_group_clause
+  ;
+
+ordered_aggregate_function
+  : LISTAGG
+  | ARRAY_AGG
+  | PERCENTILE_CONT
+  | PERCENTILE_DISC
+  ;
+
+within_group_clause
+  : WITHIN GROUP LEFT_PAREN orderby_clause RIGHT_PAREN
+  ;
 
 
 /*
@@ -2920,6 +2944,7 @@ USING : U S I N G;
 WHEN : W H E N;
 WHERE : W H E R E;
 WITH : W I T H;
+WITHIN : W I T H I N;
 WITHOUT : W I T H O U T;
 
 /*

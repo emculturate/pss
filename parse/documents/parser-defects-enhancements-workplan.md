@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, `WITHIN GROUP`, nested `CASE`, parse hang, product `CASE` | Defect / enhancement | In progress (2.1 complete) | This file (2.1–2.6) |
+| 2 | Set-op interfaces, `VALUES`, `WITHIN GROUP`, nested `CASE`, parse hang, product `CASE` | Defect / enhancement | In progress (2.1, 2.2, 2.6 complete) | This file (2.1–2.6) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface + `VALUES` FROM syntax) plus standalone grammar for `WITHIN GROUP`
 
-**Status:** In progress — **2.1 complete** (2026-08-15); **2.2 complete** (2026-08-15); 2.3–2.6 not started (2.5 is investigate-first)
+**Status:** In progress — **2.1 complete** (2026-08-15); **2.2 complete** (2026-08-15); **2.6 complete** (2026-08-15); 2.3–2.5 not started (2.5 is investigate-first)
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`.
 
@@ -58,12 +58,12 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 |------|------|--------|--------|-----|
 | 1 | **2.1** | Low — walker-only (`SqlASTWalkerHelper`, ~3 column-count comparison sites) | High — common dbt `SELECT *` UNION explicit-column pattern | **Complete** — skip when fewer side has `*` or both sides have `*`. Tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. |
 | 2 | **2.2** | Medium — focused grammar (`FROM VALUES … AS alias (cols)` without outer parens) + table binding | High — `COALESCE(pso.sort_order, …)` fatal is a recovery cascade, not a resolution bug | **Complete** — `values_statement` accepts unparenthesized `VALUES values_matrix`; walker unchanged. Tests in `SqlEventWalkerUnparenthesizedValuesTests`. |
-| 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | Simpler than 2.4; implement subscript once before nested-`CASE` work. |
+| 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | **Complete** — postfix `arraySubscriptSuffix` + bracket/subscript disambiguation; tests in `SqlEventWalkerArraySubscriptTests` and `SqlEventWalkerBracketedIdentifierTests`. |
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | `LISTAGG` token exists; `WITHIN GROUP` grammar is missing entirely. 5.3 reuses this production. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | `case_result` already allows `value_expression` → `case_expression`; starter failure is at `[0]`, not nesting. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | `PARSE_TIMEOUT` root cause unknown (CTEs, alias forward-refs, `QUALIFY`, nested `CASE`, Jinja stubs). Defer until bounded-parse harness is ready. |
 
-**Dependencies:** 2.1 and 2.2 complete. 2.4 should not start before 2.6’s `expr[n]`. 2.3 is independent of 2.6. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2).
+**Dependencies:** 2.1, 2.2, and 2.6 complete. 2.4 should not start before 2.6’s `expr[n]` (now landed). 2.3 is independent of 2.6. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.6).
 
 ### Subtask tracker
 
@@ -74,7 +74,7 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 | 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | Not started |
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | Not started |
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | Not started |
-| 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | Not started |
+| 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 
 ---
 
@@ -593,7 +593,9 @@ FROM dnc_prioritization AS pr
 
 **Kind:** Enhancement (standalone: searched `CASE` with string-parse predicands in `WHEN`/`THEN`; shares `SPLIT(…)[n]` with 2.4 / 5.4)
 
-**Component:** grammar for `SPLIT` result subscript `expr[n]`; predicands `POSITION`, `SPLIT_PART`, `REPLACE`, `NULLIF`, `TRIM`, `COALESCE` inside `CASE` branches
+**Status:** **Complete** (2026-08-15)
+
+**Component:** grammar for `SPLIT` result subscript `expr[n]`; predicands `POSITION`, `SPLIT_PART`, `REPLACE`, `NULLIF`, `TRIM`, `COALESCE` inside `CASE` branches; bracketed-identifier vs subscript disambiguation
 
 **Start here — confirm SQL is valid before changing grammar.** Snowflake accepts this shape. The parser currently dies on the **array subscript** in the first `THEN` branch, not on `CASE` nesting (contrast **2.4**).
 
@@ -693,9 +695,14 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 #### Acceptance
 
+- **Done:** Postfix `arraySubscriptSuffix` on `value_expression_primary_core` with `subscript_index` (`column_reference | value_expression`); AST `{subscript={array, index}}` via `exitArraySubscriptSuffix` / `exitSubscript_index`.
+- **Done:** Bracketed logical identifiers disambiguated from subscript brackets — lexer `Bracket_Identifier` requires space or hyphen inside brackets; dotted single-token names (`[Entity]`, `[schema.table]`) use `logical_identifier` grammar path (`bracket_identifier_body` with `Identifier | DOT`); `exitLogical_identifier` promotes full bracketed text.
+- **Done:** `SqlEventWalkerArraySubscriptTests` — literal indices (`[0]`, `[1]`), column arg + literal index, bare column index (`[idx]`), qualified column index (`[tab1.b]`), parenthesized index, and product `CASE` fixtures v3–v6 (flat branches, full cat/ctg fixtures with JOIN).
+- **Done:** `SqlEventWalkerBracketedIdentifierTests` — `[Entity]` / `[Result]` / `t.[Metric]` case-preserved in `table_dictionary`.
+- **Done:** Full parse module suite clean (2037 tests, 0 failures).
 - Both fixtures no longer fatal on `'0'` at `SPLIT(…)[0]` or recovery-cascade `'WHEN'`.
 - Minimal `SELECT` wrapper parses with join alias `prod_abbr` in scope for each title alias (`cat` / `ctg`).
-- 2.4 nested-`CASE` goldens unchanged. Shared `expr[n]` fix documented if landed under 5.4.
+- Shared `expr[n]` production reusable by 2.4 and 5.4.
 
 #### Out of scope (2.6)
 

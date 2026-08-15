@@ -60,6 +60,8 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	private final ArrayDeque<ArrayList<Object>> pendingWindowSelectInterfacePartitionDeps =
 			new ArrayDeque<>();
+	private final ArrayDeque<ArrayList<Object>> pendingWithinGroupOrderByDeps =
+			new ArrayDeque<>();
 	/** One partition+order pair per completed {@code OVER}; consumed on {@code exitSelect_item}. */
 	private final ArrayDeque<WindowSelectInterfaceClauseDeps> pendingWindowSelectInterfaceOverDeps =
 			new ArrayDeque<>();
@@ -78,12 +80,16 @@ public class SqlParseSymbolTreeHelper {
 	private static final class WindowSelectInterfaceClauseDeps {
 		private final ArrayList<Object> partitionByRefs;
 		private final ArrayList<Object> orderByRefs;
+		private final ArrayList<Object> withinGroupOrderByRefs;
 
 		private WindowSelectInterfaceClauseDeps(
 				ArrayList<Object> partitionByRefs,
-				ArrayList<Object> orderByRefs) {
+				ArrayList<Object> orderByRefs,
+				ArrayList<Object> withinGroupOrderByRefs) {
 			this.partitionByRefs = partitionByRefs != null ? partitionByRefs : new ArrayList<Object>();
 			this.orderByRefs = orderByRefs != null ? orderByRefs : new ArrayList<Object>();
+			this.withinGroupOrderByRefs =
+					withinGroupOrderByRefs != null ? withinGroupOrderByRefs : new ArrayList<Object>();
 		}
 	}
 
@@ -164,6 +170,7 @@ public class SqlParseSymbolTreeHelper {
 			MUMBLE_ORDERED_BY_KEY,
 			MUMBLE_WINDOW_PARTITION_BY_KEY,
 			MUMBLE_WINDOW_ORDERED_BY_KEY,
+			MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY,
 	};
 
 	/**
@@ -4997,6 +5004,7 @@ public class SqlParseSymbolTreeHelper {
 		Object orderedByList = walker.symbolTable.remove(MUMBLE_ORDERED_BY_KEY);
 		Object windowPartitionByList = walker.symbolTable.remove(MUMBLE_WINDOW_PARTITION_BY_KEY);
 		Object windowOrderedByList = walker.symbolTable.remove(MUMBLE_WINDOW_ORDERED_BY_KEY);
+		Object withinGroupOrderedByList = walker.symbolTable.remove(MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY);
 		HashMap<String, Object> archivedScopeColumnReferenceContainers = new HashMap<String, Object>();
 		if (filtersList != null) {
 			archivedScopeColumnReferenceContainers.put(MUMBLE_FILTERS_KEY, filtersList);
@@ -5012,6 +5020,10 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (windowOrderedByList != null) {
 			archivedScopeColumnReferenceContainers.put(MUMBLE_WINDOW_ORDERED_BY_KEY, windowOrderedByList);
+		}
+		if (withinGroupOrderedByList != null) {
+			archivedScopeColumnReferenceContainers.put(
+					MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY, withinGroupOrderedByList);
 		}
 		walker.mergeNonTableAliasMappingsIntoAliasCollection(localCurrentQueryDictionary, localTableAliasMap);
 
@@ -5952,6 +5964,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (windowOrderedByList != null) {
 			walker.symbolTable.put(MUMBLE_WINDOW_ORDERED_BY_KEY, windowOrderedByList);
+		}
+		if (withinGroupOrderedByList != null) {
+			walker.symbolTable.put(MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY, withinGroupOrderedByList);
 		}
 		if (preservedInsertSourceSelectSequence != null) {
 			walker.symbolTable.put(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY, preservedInsertSourceSelectSequence);
@@ -14763,7 +14778,8 @@ public class SqlParseSymbolTreeHelper {
 		return MUMBLE_GROUPED_BY_KEY.equals(clauseKey)
 				|| MUMBLE_ORDERED_BY_KEY.equals(clauseKey)
 				|| MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
-				|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey);
+				|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)
+				|| MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY.equals(clauseKey);
 	}
 
 	private static boolean isUnqualifiedColumnRef(String tableRef) {
@@ -15082,7 +15098,8 @@ public class SqlParseSymbolTreeHelper {
 			return null;
 		}
 		if ((MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
-						|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey))
+						|| MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)
+						|| MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY.equals(clauseKey))
 				&& isForwardWindowSelectListOutputAliasRef(
 						columnName, clauseKey, probeContext)) {
 			return null;
@@ -15111,7 +15128,8 @@ public class SqlParseSymbolTreeHelper {
 			return false;
 		}
 		if (!MUMBLE_WINDOW_PARTITION_BY_KEY.equals(clauseKey)
-				&& !MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)) {
+				&& !MUMBLE_WINDOW_ORDERED_BY_KEY.equals(clauseKey)
+				&& !MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY.equals(clauseKey)) {
 			return false;
 		}
 		if (!isInterfaceOutputAliasOnly(probeContext.localInterface, columnName)
@@ -15143,7 +15161,8 @@ public class SqlParseSymbolTreeHelper {
 			WindowSelectInterfaceClauseDeps overDeps,
 			String columnName) {
 		return clauseRefListContainsColumnName(overDeps.partitionByRefs, columnName)
-				|| clauseRefListContainsColumnName(overDeps.orderByRefs, columnName);
+				|| clauseRefListContainsColumnName(overDeps.orderByRefs, columnName)
+				|| clauseRefListContainsColumnName(overDeps.withinGroupOrderByRefs, columnName);
 	}
 
 	private boolean clauseRefListContainsColumnName(ArrayList<Object> refs, String columnName) {
@@ -17679,6 +17698,30 @@ public class SqlParseSymbolTreeHelper {
 		pendingWindowSelectInterfacePartitionDeps.addLast(partitionDeps);
 	}
 
+	private void pushPendingWithinGroupOrderByDeps(ArrayList<Object> withinGroupOrderByDeps) {
+		if (withinGroupOrderByDeps == null || withinGroupOrderByDeps.isEmpty()) {
+			pendingWithinGroupOrderByDeps.addLast(new ArrayList<Object>());
+			return;
+		}
+		pendingWithinGroupOrderByDeps.addLast(withinGroupOrderByDeps);
+	}
+
+	private ArrayList<Object> pollPendingWithinGroupOrderByDeps() {
+		if (pendingWithinGroupOrderByDeps.isEmpty()) {
+			return new ArrayList<Object>();
+		}
+		return pendingWithinGroupOrderByDeps.pollLast();
+	}
+
+	private WindowSelectInterfaceClauseDeps newWindowSelectInterfaceClauseDeps(
+			ArrayList<Object> partitionByRefs,
+			ArrayList<Object> orderByRefs) {
+		return new WindowSelectInterfaceClauseDeps(
+				partitionByRefs,
+				orderByRefs,
+				pollPendingWithinGroupOrderByDeps());
+	}
+
 	public boolean hasLatchedWindowOverClauseDepsForNextSelectItem() {
 		return latchedWindowOverClauseDepsForNextSelectItem != null;
 	}
@@ -17715,7 +17758,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (overDeps == null && !pendingWindowSelectInterfacePartitionDeps.isEmpty()) {
 			ArrayList<Object> partitionByRefs = pendingWindowSelectInterfacePartitionDeps.pollLast();
-			overDeps = new WindowSelectInterfaceClauseDeps(partitionByRefs, new ArrayList<Object>());
+			overDeps = newWindowSelectInterfaceClauseDeps(partitionByRefs, new ArrayList<Object>());
 		}
 		if (overDeps == null) {
 			return;
@@ -17738,7 +17781,8 @@ public class SqlParseSymbolTreeHelper {
 		}
 		return new WindowSelectInterfaceClauseDeps(
 				copyClauseColumnReferenceSublist(source.partitionByRefs, 0),
-				copyClauseColumnReferenceSublist(source.orderByRefs, 0));
+				copyClauseColumnReferenceSublist(source.orderByRefs, 0),
+				copyClauseColumnReferenceSublist(source.withinGroupOrderByRefs, 0));
 	}
 
 	private ArrayList<Object> copyClauseColumnReferenceSublist(
@@ -17761,6 +17805,7 @@ public class SqlParseSymbolTreeHelper {
 	/** Windows in query {@code ORDER BY} do not consume pending deps; drop after the SELECT list. */
 	public void clearPendingWindowSelectInterfaceClauseDeps() {
 		pendingWindowSelectInterfacePartitionDeps.clear();
+		pendingWithinGroupOrderByDeps.clear();
 		pendingWindowSelectInterfaceOverDeps.clear();
 		latchedWindowOverClauseDepsForNextSelectItem = null;
 		lastWindowSelectListOutputInterfaceAlias = null;
@@ -17892,7 +17937,10 @@ public class SqlParseSymbolTreeHelper {
 			flattenSubTreeForClauseColumns((HashMap<String, Object>) clauseSubMap, flatList);
 		}
 
-		if (MUMBLE_WINDOW_PARTITION_BY_KEY.equals(symbolTableKey)) {
+		if (MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY.equals(symbolTableKey)) {
+			pushPendingWithinGroupOrderByDeps(
+					copyClauseColumnReferenceSublistFromFlatList(flatList, flatListSizeBeforeClauseHarvest));
+		} else if (MUMBLE_WINDOW_PARTITION_BY_KEY.equals(symbolTableKey)) {
 			pushPendingWindowSelectInterfacePartitionDeps(
 					copyClauseColumnReferenceSublistFromFlatList(flatList, flatListSizeBeforeClauseHarvest));
 		} else if (MUMBLE_WINDOW_ORDERED_BY_KEY.equals(symbolTableKey)) {
@@ -17900,7 +17948,7 @@ public class SqlParseSymbolTreeHelper {
 					copyClauseColumnReferenceSublistFromFlatList(flatList, flatListSizeBeforeClauseHarvest);
 			ArrayList<Object> partitionByRefs = pendingWindowSelectInterfacePartitionDeps.pollLast();
 			WindowSelectInterfaceClauseDeps overDeps =
-					new WindowSelectInterfaceClauseDeps(partitionByRefs, orderByRefs);
+					newWindowSelectInterfaceClauseDeps(partitionByRefs, orderByRefs);
 			pendingWindowSelectInterfaceOverDeps.addLast(overDeps);
 			latchedWindowOverClauseDepsForNextSelectItem = overDeps;
 		}

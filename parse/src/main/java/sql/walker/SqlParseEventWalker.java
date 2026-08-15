@@ -9456,6 +9456,84 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			}
 		}
 
+		@Override
+		public void exitOrdered_aggregate_expression(
+				SQLSelectParserParser.Ordered_aggregate_expressionContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+
+			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+			if (subMap.size() == 1 || subMap.size() == 2) {
+				Map<String, Object> item = new HashMap<String, Object>();
+				item.putAll((Map<String, Object>) subMap.remove("1"));
+				if (subMap.size() == 1) {
+					item.putAll((Map<String, Object>) subMap.remove("2"));
+					symbolTreeHelper.latchCompletedWindowOverClauseDepsForNextSelectItem();
+				}
+				subMap.put(MUMBLE_ORDERED_AGGREGATE_KEY, item);
+			} else {
+				// Wrong number of entries
+			}
+		}
+
+		@Override
+		public void exitOrdered_aggregate_call(
+				SQLSelectParserParser.Ordered_aggregate_callContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			String functType = (String) subMap.remove("1");
+
+			Map<String, Object> functionItem = new HashMap<String, Object>();
+			if (subMap.containsKey("2") && subMap.get("2") instanceof Map<?, ?> holdMap
+					&& ((Map<?, ?>) holdMap).containsKey(MUMBLE_WITHIN_GROUP_KEY)) {
+				functionItem.put(MUMBLE_FUNCTION_NAME_KEY, functType);
+				functionItem.put(MUMBLE_PARAMETERS_KEY, null);
+			} else if (subMap.containsKey("2")) {
+				Map<String, Object> hold = (Map<String, Object>) subMap.remove("2");
+				Object type = hold.remove(ASTWALKER_RULE_TYPE_KEY);
+				functionItem.put(MUMBLE_FUNCTION_NAME_KEY, functType);
+				functionItem.put(MUMBLE_PARAMETERS_KEY, hold.remove(type.toString()));
+			} else {
+				functionItem.put(MUMBLE_FUNCTION_NAME_KEY, functType);
+				functionItem.put(MUMBLE_PARAMETERS_KEY, null);
+			}
+
+			Map<String, Object> result = new HashMap<String, Object>();
+			result.put(MUMBLE_FUNCTION_KEY, functionItem);
+			for (Object key : new HashMap<String, Object>(subMap).keySet()) {
+				Object value = subMap.remove(key);
+				if (value instanceof Map<?, ?>) {
+					result.putAll((Map<String, Object>) value);
+				}
+			}
+			walker.addToParent(parentRuleIndex, parentStackLevel, result);
+		}
+
+		@Override
+		public void exitWithin_group_clause(
+				SQLSelectParserParser.Within_group_clauseContext ctx) {
+			int ruleIndex = ctx.getRuleIndex();
+			int parentRuleIndex = ctx.getParent().getRuleIndex();
+
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+
+			Map<String, Object> item = new HashMap<String, Object>();
+			item.put(MUMBLE_WITHIN_GROUP_KEY, subMap.remove("1"));
+			walker.addToParent(parentRuleIndex, parentStackLevel, item);
+		}
+
 		
 		@Override
 		public void exitWindow_function( SQLSelectParserParser.Window_functionContext ctx) {
@@ -10057,6 +10135,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 			symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_WINDOW_ORDERED_BY_KEY);
 			// Part of a window function
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			Map<String, Object> item = new HashMap<String, Object>();
+			item.put(MUMBLE_ORDERBY_KEY, subMap);
+
+			walker.addToParent(parentRuleIndex, parentStackLevel, item);
+		} else if (parentRuleIndex.equals((Integer) SQLSelectParserParser.RULE_within_group_clause)) {
+
+			Integer stackLevel = walker.currentStackLevel(ruleIndex);
+			Integer parentStackLevel = walker.currentStackLevel(parentRuleIndex);
+
+			Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
+			symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_WITHIN_GROUP_ORDERED_BY_KEY);
 			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 			Map<String, Object> item = new HashMap<String, Object>();
 			item.put(MUMBLE_ORDERBY_KEY, subMap);
