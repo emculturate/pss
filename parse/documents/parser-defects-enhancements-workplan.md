@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface + `VALUES` FROM syntax) plus standalone grammar for `WITHIN GROUP`
 
-**Status:** In progress — **2.1 complete** (2026-08-15); 2.2–2.6 not started (2.5 is investigate-first)
+**Status:** In progress — **2.1 complete** (2026-08-15); **2.2 complete** (2026-08-15); 2.3–2.6 not started (2.5 is investigate-first)
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`.
 
@@ -57,20 +57,20 @@ Work **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Rationale:
 | Order | Step | Effort | Impact | Why |
 |------|------|--------|--------|-----|
 | 1 | **2.1** | Low — walker-only (`SqlASTWalkerHelper`, ~3 column-count comparison sites) | High — common dbt `SELECT *` UNION explicit-column pattern | **Complete** — skip when fewer side has `*` or both sides have `*`. Tests in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. |
-| 2 | **2.2** | Medium — focused grammar (`FROM VALUES … AS alias (cols)` without outer parens) + table binding | High — `COALESCE(pso.sort_order, …)` fatal is a recovery cascade, not a resolution bug | Confirm Snowflake legality first; existing tests cover parenthesized `(VALUES …)`. |
+| 2 | **2.2** | Medium — focused grammar (`FROM VALUES … AS alias (cols)` without outer parens) + table binding | High — `COALESCE(pso.sort_order, …)` fatal is a recovery cascade, not a resolution bug | **Complete** — `values_statement` accepts unparenthesized `VALUES values_matrix`; walker unchanged. Tests in `SqlEventWalkerUnparenthesizedValuesTests`. |
 | 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | Simpler than 2.4; implement subscript once before nested-`CASE` work. |
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | `LISTAGG` token exists; `WITHIN GROUP` grammar is missing entirely. 5.3 reuses this production. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | `case_result` already allows `value_expression` → `case_expression`; starter failure is at `[0]`, not nesting. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | `PARSE_TIMEOUT` root cause unknown (CTEs, alias forward-refs, `QUALIFY`, nested `CASE`, Jinja stubs). Defer until bounded-parse harness is ready. |
 
-**Dependencies:** 2.1 complete. 2.2 benefits from 2.1 when both UNION branches parse. 2.4 should not start before 2.6’s `expr[n]`. 2.3 is independent of 2.6. **Fixture:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1 starter).
+**Dependencies:** 2.1 and 2.2 complete. 2.4 should not start before 2.6’s `expr[n]`. 2.3 is independent of 2.6. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2).
 
 ### Subtask tracker
 
 | Step | Construction | Status |
 |------|----------------|--------|
 | 2.1 | Wildcard `*` matches any set-op column count | **Complete** |
-| 2.2 | `VALUES (…)` `AS alias (col, …)` plus JOIN / `COALESCE` on the joined table | Not started |
+| 2.2 | `VALUES (…)` `AS alias (col, …)` plus JOIN / `COALESCE` on the joined table | **Complete** |
 | 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | Not started |
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | Not started |
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | Not started |
@@ -161,9 +161,9 @@ status_logic_p1 AS
 
 **Kind:** Defect (parse strategy + qualified column resolution)
 
-**Component:** grammar / `VALUES` table constructor; then ordinary JOIN alias binding
+**Status:** **Complete** (2026-08-15)
 
-**Start here — do not change grammar or resolution yet.** The `VALUES` text looks like valid Snowflake (`VALUES (…)` `AS alias (col, col, …)`). The parser error sits on the `(` of that **column-alias list**, so this currently looks like the grammar not recognizing that optional list — but that is an assumption. First **confirm whether the statement is actually illegal** in the PSS/Snowflake grammar this parser claims to implement (docs, existing productions, a reduced fixture). Only if the statement is well-formed and the parser is wrong should grammar and downstream JOIN/`COALESCE` logic be changed. The `pso.sort_order` fatal is a recovery cascade; do not “fix COALESCE” first.
+**Component:** grammar (`SQLSelectParser.g4` `values_statement`); existing walker `exitValues_*` handlers unchanged
 
 #### Diagnosis (why `COALESCE(pso.sort_order, 999)` fatals)
 
@@ -242,9 +242,10 @@ Happy path (no FATAL / no recovery), plus goldens for the six extractor objects 
 
 #### Acceptance
 
-- The reproducing query no longer reports invalid syntax near `(` on the VALUES column list.
-- `COALESCE(pso.sort_order, 999)` in that UNION ALL branch no longer fatals with “no alias `pso`”.
-- `default_stream.*` columns in that branch resolve.
+- **Done:** `values_statement` production accepts unparenthesized `VALUES values_matrix` in addition to `(VALUES values_matrix)` at every `values_statement_primary` site (FROM/JOIN, CTE body, script DML, VALUES endpoint). No new rule targets; event walker unchanged.
+- **Done:** `SqlEventWalkerUnparenthesizedValuesTests` — one golden test per site (FROM, CTE, script DML, VALUES endpoint).
+- **Done:** VALUES regression suite clean (parenthesized `(VALUES …)` unchanged). User corrected unrelated `table_alias` golden ordering in `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`.
+- The reproducing query no longer reports invalid syntax near `(` on the VALUES column list; JOIN/`COALESCE` resolve once the FROM clause parses (recovery cascade eliminated).
 - 2.1 wildcard behavior unchanged. Phase 1 / 3–5 unchanged.
 
 #### Out of scope (2.2)

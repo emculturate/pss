@@ -1969,7 +1969,8 @@ aliased_values_statement
   ;
 
 values_statement
-  :  LEFT_PAREN VALUES values_matrix RIGHT_PAREN
+  : LEFT_PAREN VALUES values_matrix RIGHT_PAREN
+  | VALUES values_matrix
   ;
   
 // Rows of values in a matrix for use in a Values statement  
