@@ -479,7 +479,7 @@ WHERE e.emp_id = src.emp_id
 ```
 def_update1={
   assignments={score=[{name=acct_sales_count, table_ref=src}]},
-  update_dictionary={score=[[@4,24:28='score',<392>,1:24]]},
+  update_dictionary={score=[[@4,24:28='score',<393>,1:24]]},
   table_alias={e=employees, src=query0},
   def_query0={… source SELECT with window_partition_by, interface, etc. …}
 }
@@ -542,7 +542,7 @@ At the top level of a single statement, the root symbol table typically contains
 
 | Shape | Example | Used for |
 |-------|---------|----------|
-| Token string | `[@1,7:11='apple',<392>,1:7]` | Dictionary values |
+| Token string | `[@1,7:11='apple',<393>,1:7]` | Dictionary values |
 | Column ref | `{name: "col", table_ref: "alias"}` | Lineage / clause buckets |
 | Substitution ref | `{substitution: {name: "<var>", type: "column"}, table_ref: "tab1"}` | Templated refs |
 | Lineage list | `[{name: "a", table_ref: "tab1"}]` | `interface` values |

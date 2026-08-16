@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Lexer token-type ID golden policy (Phase 2.6+)
 
-When adding lexer tokens (e.g. `LEFT_BRACKET` / `RIGHT_BRACKET` for array subscript), ANTLR renumbers token type IDs. Golden tests embed those IDs in position strings like `<392>`.
+When adding lexer tokens (e.g. `LEFT_BRACKET` / `RIGHT_BRACKET` for array subscript), ANTLR renumbers token type IDs. Golden tests embed those IDs in position strings like `<393>`.
 
 ## Do
 
