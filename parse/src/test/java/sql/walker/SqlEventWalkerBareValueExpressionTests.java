@@ -42,13 +42,13 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={*=[[@52,259:259='*',<291>,1:259]], col2=[[@24,119:119='t',<392>,1:119], [@65,323:323='t',<392>,1:323]], col1=[[@1,7:7='t',<392>,1:7], [@31,144:144='t',<392>,1:144], [@42,209:209='t',<392>,1:209]]}}",
+				"{tab1={*=[[@52,259:259='*',<291>,1:259]], col2=[[@24,119:119='t',<393>,1:119], [@65,323:323='t',<393>,1:323]], col1=[[@1,7:7='t',<393>,1:7], [@31,144:144='t',<393>,1:144], [@42,209:209='t',<393>,1:209]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={ts_ref=[[@22,111:116='ts_ref',<392>,1:111]], rn=[[@18,86:87='rn',<392>,1:86]], col2=[[@26,121:124='col2',<392>,1:121]], col1=[[@3,9:12='col1',<392>,1:9]]}}",
+				"{query0={ts_ref=[[@22,111:116='ts_ref',<393>,1:111]], rn=[[@18,86:87='rn',<393>,1:86]], col2=[[@26,121:124='col2',<393>,1:121]], col1=[[@3,9:12='col1',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={ts_ref=[[@22,111:116='ts_ref',<392>,1:111]], rn=[[@18,86:87='rn',<392>,1:86]], col2=[[@26,121:124='col2',<392>,1:121]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={*=[[@52,259:259='*',<291>,1:259]], col2=[[@24,119:119='t',<392>,1:119], [@65,323:323='t',<392>,1:323]], col1=[[@1,7:7='t',<392>,1:7], [@31,144:144='t',<392>,1:144], [@42,209:209='t',<392>,1:209]]}}, grouped_by=[{name=col1, table_ref=t}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_USER, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], ordered_by=[{name=CURRENT_TIMESTAMP, table_ref=null}, {name=col2, table_ref=t}], filters=[{name=col1, table_ref=t}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={ts_ref=[{name=CURRENT_TIMESTAMP, table_ref=null}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col2=[{name=col2, table_ref=t}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
+				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={ts_ref=[[@22,111:116='ts_ref',<393>,1:111]], rn=[[@18,86:87='rn',<393>,1:86]], col2=[[@26,121:124='col2',<393>,1:121]], col1=[[@3,9:12='col1',<393>,1:9]]}, table_dictionary={tab1={*=[[@52,259:259='*',<291>,1:259]], col2=[[@24,119:119='t',<393>,1:119], [@65,323:323='t',<393>,1:323]], col1=[[@1,7:7='t',<393>,1:7], [@31,144:144='t',<393>,1:144], [@42,209:209='t',<393>,1:209]]}}, grouped_by=[{name=col1, table_ref=t}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_USER, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], ordered_by=[{name=CURRENT_TIMESTAMP, table_ref=null}, {name=col2, table_ref=t}], filters=[{name=col1, table_ref=t}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={ts_ref=[{name=CURRENT_TIMESTAMP, table_ref=null}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col2=[{name=col2, table_ref=t}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -78,13 +78,13 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={*=[[@59,282:282='*',<291>,1:282]], col1=[[@13,57:57='t',<392>,1:57], [@39,189:189='t',<392>,1:189], [@51,246:246='t',<392>,1:246]]}}",
+				"{tab1={*=[[@59,282:282='*',<291>,1:282]], col1=[[@13,57:57='t',<393>,1:57], [@39,189:189='t',<393>,1:189], [@51,246:246='t',<393>,1:246]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={outer_col=[[@17,67:75='outer_col',<392>,1:67], [@1,7:9='sub',<392>,1:7], [@74,357:359='sub',<392>,1:357]], CURRENT_TIMESTAMP=[[@34,153:169='CURRENT_TIMESTAMP',<392>,1:153]], rn=[[@32,149:150='rn',<392>,1:149], [@7,36:38='sub',<392>,1:36]]}, query1={outer_col=[[@3,11:19='outer_col',<392>,1:11]], CURRENT_DATE=[[@5,22:33='CURRENT_DATE',<392>,1:22]], rn=[[@9,40:41='rn',<392>,1:40]]}}",
+				"{query0={outer_col=[[@17,67:75='outer_col',<393>,1:67], [@1,7:9='sub',<393>,1:7], [@74,357:359='sub',<393>,1:357]], CURRENT_TIMESTAMP=[[@34,153:169='CURRENT_TIMESTAMP',<393>,1:153]], rn=[[@32,149:150='rn',<393>,1:149], [@7,36:38='sub',<393>,1:36]]}, query1={outer_col=[[@3,11:19='outer_col',<393>,1:11]], CURRENT_DATE=[[@5,22:33='CURRENT_DATE',<393>,1:22]], rn=[[@9,40:41='rn',<393>,1:40]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query1={query_dictionary={outer_col=[[@3,11:19='outer_col',<392>,1:11]], CURRENT_DATE=[[@5,22:33='CURRENT_DATE',<392>,1:22]], rn=[[@9,40:41='rn',<392>,1:40]]}, def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={CURRENT_TIMESTAMP=[[@34,153:169='CURRENT_TIMESTAMP',<392>,1:153]], outer_col=[[@17,67:75='outer_col',<392>,1:67], [@1,7:9='sub',<392>,1:7], [@74,357:359='sub',<392>,1:357]], rn=[[@32,149:150='rn',<392>,1:149], [@7,36:38='sub',<392>,1:36]]}, table_dictionary={tab1={*=[[@59,282:282='*',<291>,1:282]], col1=[[@13,57:57='t',<392>,1:57], [@39,189:189='t',<392>,1:189], [@51,246:246='t',<392>,1:246]]}}, grouped_by=[{name=col1, table_ref=t}, {name=LOCALTIMESTAMP, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], ordered_by=[{name=CURRENT_TIMESTAMP, table_ref=null}], filters=[{name=col1, table_ref=t}, {name=CURRENT_USER, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], outer_col=[{name=col1, table_ref=t}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}]}, table_alias={t=tab1}}, ordered_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=outer_col, table_ref=sub}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={outer_col=[{name=outer_col, table_ref=sub}], CURRENT_DATE=[{name=CURRENT_DATE, table_ref=null}], rn=[{name=rn, table_ref=sub}]}, table_alias={sub=query0}}}",
+				"{def_query1={query_dictionary={outer_col=[[@3,11:19='outer_col',<393>,1:11]], CURRENT_DATE=[[@5,22:33='CURRENT_DATE',<393>,1:22]], rn=[[@9,40:41='rn',<393>,1:40]]}, def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={CURRENT_TIMESTAMP=[[@34,153:169='CURRENT_TIMESTAMP',<393>,1:153]], outer_col=[[@17,67:75='outer_col',<393>,1:67], [@1,7:9='sub',<393>,1:7], [@74,357:359='sub',<393>,1:357]], rn=[[@32,149:150='rn',<393>,1:149], [@7,36:38='sub',<393>,1:36]]}, table_dictionary={tab1={*=[[@59,282:282='*',<291>,1:282]], col1=[[@13,57:57='t',<393>,1:57], [@39,189:189='t',<393>,1:189], [@51,246:246='t',<393>,1:246]]}}, grouped_by=[{name=col1, table_ref=t}, {name=LOCALTIMESTAMP, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], ordered_by=[{name=CURRENT_TIMESTAMP, table_ref=null}], filters=[{name=col1, table_ref=t}, {name=CURRENT_USER, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], outer_col=[{name=col1, table_ref=t}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}]}, table_alias={t=tab1}}, ordered_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=outer_col, table_ref=sub}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={outer_col=[{name=outer_col, table_ref=sub}], CURRENT_DATE=[{name=CURRENT_DATE, table_ref=null}], rn=[{name=rn, table_ref=sub}]}, table_alias={sub=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -107,13 +107,13 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@5,27:30='col1',<392>,1:27], [@13,82:85='col1',<392>,1:82]]}}",
+				"{tab1={col1=[[@5,27:30='col1',<393>,1:27], [@13,82:85='col1',<393>,1:82]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={CURRENT_TIMESTAMP=[[@7,33:49='CURRENT_TIMESTAMP',<392>,1:33]], col1=[[@5,27:30='col1',<392>,1:27], [@16,96:96='c',<392>,1:96]]}, query1={CURRENT_USER=[[@20,104:115='CURRENT_USER',<392>,1:104]], col1=[[@18,98:101='col1',<392>,1:98]]}}",
+				"{query0={CURRENT_TIMESTAMP=[[@7,33:49='CURRENT_TIMESTAMP',<393>,1:33]], col1=[[@5,27:30='col1',<393>,1:27], [@16,96:96='c',<393>,1:96]]}, query1={CURRENT_USER=[[@20,104:115='CURRENT_USER',<393>,1:104]], col1=[[@18,98:101='col1',<393>,1:98]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query1={context_list={inner_cte=query0, c=query0}, query_dictionary={CURRENT_USER=[[@20,104:115='CURRENT_USER',<392>,1:104]], col1=[[@18,98:101='col1',<392>,1:98]]}, def_query0={query_dictionary={CURRENT_TIMESTAMP=[[@7,33:49='CURRENT_TIMESTAMP',<392>,1:33]], col1=[[@5,27:30='col1',<392>,1:27], [@16,96:96='c',<392>,1:96]]}, table_dictionary={tab1={col1=[[@5,27:30='col1',<392>,1:27], [@13,82:85='col1',<392>,1:82]]}}, filters=[{name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=tab1}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=LOCALTIME, table_ref=null}], filters=[{name=CURRENT_TIMESTAMP, table_ref=null}], interface={CURRENT_USER=[{name=CURRENT_USER, table_ref=null}], col1=[{name=col1, table_ref=c}]}, table_alias={c=query0, inner_cte=query0}}}",
+				"{def_query1={context_list={inner_cte=query0, c=query0}, query_dictionary={CURRENT_USER=[[@20,104:115='CURRENT_USER',<393>,1:104]], col1=[[@18,98:101='col1',<393>,1:98]]}, def_query0={query_dictionary={CURRENT_TIMESTAMP=[[@7,33:49='CURRENT_TIMESTAMP',<393>,1:33]], col1=[[@5,27:30='col1',<393>,1:27], [@16,96:96='c',<393>,1:96]]}, table_dictionary={tab1={col1=[[@5,27:30='col1',<393>,1:27], [@13,82:85='col1',<393>,1:82]]}}, filters=[{name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=tab1}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=LOCALTIME, table_ref=null}], filters=[{name=CURRENT_TIMESTAMP, table_ref=null}], interface={CURRENT_USER=[{name=CURRENT_USER, table_ref=null}], col1=[{name=col1, table_ref=c}]}, table_alias={c=query0, inner_cte=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -137,13 +137,13 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@5,24:27='col1',<392>,1:24]]}}",
+				"{tab1={col1=[[@5,24:27='col1',<393>,1:24]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={rn=[[@20,101:102='rn',<392>,1:101], [@34,162:162='r',<392>,1:162]], col1=[[@5,24:27='col1',<392>,1:24], [@30,154:154='r',<392>,1:154]]}, query1={CURRENT_TIMESTAMP=[[@38,168:184='CURRENT_TIMESTAMP',<392>,1:168]], rn=[[@36,164:165='rn',<392>,1:164]], col1=[[@32,156:159='col1',<392>,1:156]]}}",
+				"{query0={rn=[[@20,101:102='rn',<393>,1:101], [@34,162:162='r',<393>,1:162]], col1=[[@5,24:27='col1',<393>,1:24], [@30,154:154='r',<393>,1:154]]}, query1={CURRENT_TIMESTAMP=[[@38,168:184='CURRENT_TIMESTAMP',<393>,1:168]], rn=[[@36,164:165='rn',<393>,1:164]], col1=[[@32,156:159='col1',<393>,1:156]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query1={context_list={ranked=query0, r=query0}, query_dictionary={CURRENT_TIMESTAMP=[[@38,168:184='CURRENT_TIMESTAMP',<392>,1:168]], rn=[[@36,164:165='rn',<392>,1:164]], col1=[[@32,156:159='col1',<392>,1:156]]}, def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@20,101:102='rn',<392>,1:101], [@34,162:162='r',<392>,1:162]], col1=[[@5,24:27='col1',<392>,1:24], [@30,154:154='r',<392>,1:154]]}, table_dictionary={tab1={col1=[[@5,24:27='col1',<392>,1:24]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=CURRENT_USER, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIMESTAMP, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], rn=[{name=rn, table_ref=r}], col1=[{name=col1, table_ref=r}]}, table_alias={r=query0, ranked=query0}}}",
+				"{def_query1={context_list={ranked=query0, r=query0}, query_dictionary={CURRENT_TIMESTAMP=[[@38,168:184='CURRENT_TIMESTAMP',<393>,1:168]], rn=[[@36,164:165='rn',<393>,1:164]], col1=[[@32,156:159='col1',<393>,1:156]]}, def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@20,101:102='rn',<393>,1:101], [@34,162:162='r',<393>,1:162]], col1=[[@5,24:27='col1',<393>,1:24], [@30,154:154='r',<393>,1:154]]}, table_dictionary={tab1={col1=[[@5,24:27='col1',<393>,1:24]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=CURRENT_USER, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=tab1}]}}, ordered_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIMESTAMP, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], rn=[{name=rn, table_ref=r}], col1=[{name=col1, table_ref=r}]}, table_alias={r=query0, ranked=query0}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -182,13 +182,13 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 		Assert.assertEquals("Substitution List is wrong", "{}",
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@1,7:10='col1',<392>,1:7], [@12,85:88='col1',<392>,1:85]]}}",
+				"{tab1={col1=[[@1,7:10='col1',<393>,1:7], [@12,85:88='col1',<393>,1:85]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col1=[[@1,7:10='col1',<392>,1:7]]}}",
+				"{query0={col1=[[@1,7:10='col1',<393>,1:7]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col1=[[@1,7:10='col1',<392>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<392>,1:7], [@12,85:88='col1',<392>,1:85]]}}, filters=[{name=CURRENT_ORGANIZATION_USER, table_ref=null}, {name=SESSION_USER, table_ref=null}, {name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}",
+				"{def_query0={query_dictionary={col1=[[@1,7:10='col1',<393>,1:7]]}, table_dictionary={tab1={col1=[[@1,7:10='col1',<393>,1:7], [@12,85:88='col1',<393>,1:85]]}}, filters=[{name=CURRENT_ORGANIZATION_USER, table_ref=null}, {name=SESSION_USER, table_ref=null}, {name=col1, table_ref=tab1}], interface={col1=[{name=col1, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
 	}
 
@@ -215,15 +215,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col2=[[@29,118:118='a',<392>,1:118]], col1=[[@1,7:7='a',<392>,1:7], [@15,49:49='a',<392>,1:49]]}, tab2={col2=[[@5,15:15='b',<392>,1:15]], col1=[[@19,58:58='b',<392>,1:58]]}}",
+				"{tab1={col2=[[@29,118:118='a',<393>,1:118]], col1=[[@1,7:7='a',<393>,1:7], [@15,49:49='a',<393>,1:49]]}, tab2={col2=[[@5,15:15='b',<393>,1:15]], col1=[[@19,58:58='b',<393>,1:58]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col2=[[@7,17:20='col2',<392>,1:17]], col1=[[@3,9:12='col1',<392>,1:9]]}}",
+				"{query0={col2=[[@7,17:20='col2',<393>,1:17]], col1=[[@3,9:12='col1',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col2=[[@7,17:20='col2',<392>,1:17]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={col2=[[@29,118:118='a',<392>,1:118]], col1=[[@1,7:7='a',<392>,1:7], [@15,49:49='a',<392>,1:49]]}, tab2={col2=[[@5,15:15='b',<392>,1:15]], col1=[[@19,58:58='b',<392>,1:58]]}}, filters=[{name=col1, table_ref=a}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=col2, table_ref=a}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1, b=tab2}}}",
+				"{def_query0={query_dictionary={col2=[[@7,17:20='col2',<393>,1:17]], col1=[[@3,9:12='col1',<393>,1:9]]}, table_dictionary={tab1={col2=[[@29,118:118='a',<393>,1:118]], col1=[[@1,7:7='a',<393>,1:7], [@15,49:49='a',<393>,1:49]]}, tab2={col2=[[@5,15:15='b',<393>,1:15]], col1=[[@19,58:58='b',<393>,1:58]]}}, filters=[{name=col1, table_ref=a}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=col2, table_ref=a}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1, b=tab2}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -250,15 +250,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@1,7:7='a',<392>,1:7], [@16,53:56='col1',<392>,1:53]]}, tab2={col2=[[@5,15:15='b',<392>,1:15]], col1=[[@16,53:56='col1',<392>,1:53]]}}",
+				"{tab1={col1=[[@1,7:7='a',<393>,1:7], [@16,53:56='col1',<393>,1:53]]}, tab2={col2=[[@5,15:15='b',<393>,1:15]], col1=[[@16,53:56='col1',<393>,1:53]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col2=[[@7,17:20='col2',<392>,1:17]], col1=[[@3,9:12='col1',<392>,1:9]]}}",
+				"{query0={col2=[[@7,17:20='col2',<393>,1:17]], col1=[[@3,9:12='col1',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={query_dictionary={col2=[[@7,17:20='col2',<392>,1:17]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='a',<392>,1:7], [@16,53:56='col1',<392>,1:53]]}, tab2={col2=[[@5,15:15='b',<392>,1:15]], col1=[[@16,53:56='col1',<392>,1:53]]}}, filters=[{name=col1, table_ref=a}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1, b=tab2}}}",
+				"{def_query0={query_dictionary={col2=[[@7,17:20='col2',<393>,1:17]], col1=[[@3,9:12='col1',<393>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='a',<393>,1:7], [@16,53:56='col1',<393>,1:53]]}, tab2={col2=[[@5,15:15='b',<393>,1:15]], col1=[[@16,53:56='col1',<393>,1:53]]}}, filters=[{name=col1, table_ref=a}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1, b=tab2}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -407,15 +407,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@1,7:7='t',<392>,1:7]]}}",
+				"{tab1={col1=[[@1,7:7='t',<393>,1:7]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={rn=[[@18,86:87='rn',<392>,1:86], [@28,137:138='rn',<392>,1:137]], col1=[[@3,9:12='col1',<392>,1:9]]}}",
+				"{query0={rn=[[@18,86:87='rn',<393>,1:86], [@28,137:138='rn',<393>,1:137]], col1=[[@3,9:12='col1',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@18,86:87='rn',<392>,1:86], [@28,137:138='rn',<392>,1:137]], col1=[[@3,9:12='col1',<392>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='t',<392>,1:7]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIME, table_ref=null}, {name=rn, table_ref=query0}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
+				"{def_query0={window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], query_dictionary={rn=[[@18,86:87='rn',<393>,1:86], [@28,137:138='rn',<393>,1:137]], col1=[[@3,9:12='col1',<393>,1:9]]}, table_dictionary={tab1={col1=[[@1,7:7='t',<393>,1:7]]}}, window_partition_by=[{name=CURRENT_DATE, table_ref=null}], filters=[{name=LOCALTIME, table_ref=null}, {name=rn, table_ref=query0}, {name=CURRENT_TIMESTAMP, table_ref=null}], interface={rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -442,15 +442,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col2=[[@25,137:139='src',<392>,1:137]], CURRENT_DATE=[[@6,31:42='CURRENT_DATE',<392>,1:31]], col1=[[@15,75:77='src',<392>,1:75]]}, employees={score=[[@4,23:27='score',<392>,1:23]], emp_id=[[@11,64:64='e',<392>,1:64]]}}",
+				"{tab1={col2=[[@25,137:139='src',<393>,1:137]], CURRENT_DATE=[[@6,31:42='CURRENT_DATE',<393>,1:31]], col1=[[@15,75:77='src',<393>,1:75]]}, employees={score=[[@4,23:27='score',<393>,1:23]], emp_id=[[@11,64:64='e',<393>,1:64]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{update0={score=[[@4,23:27='score',<392>,1:23]]}}",
+				"{update0={score=[[@4,23:27='score',<393>,1:23]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_update0={assignments={score=[{name=CURRENT_DATE, table_ref=tab1}]}, table_dictionary={tab1={CURRENT_DATE=[[@6,31:42='CURRENT_DATE',<392>,1:31]], col2=[[@25,137:139='src',<392>,1:137]], col1=[[@15,75:77='src',<392>,1:75]]}, employees={score=[[@4,23:27='score',<392>,1:23]], emp_id=[[@11,64:64='e',<392>,1:64]]}}, update_dictionary={score=[[@4,23:27='score',<392>,1:23]]}, filters=[{name=emp_id, table_ref=e}, {name=col1, table_ref=src}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=col2, table_ref=src}], table_alias={e=employees, src=tab1}}}",
+				"{def_update0={assignments={score=[{name=CURRENT_DATE, table_ref=tab1}]}, table_dictionary={tab1={CURRENT_DATE=[[@6,31:42='CURRENT_DATE',<393>,1:31]], col2=[[@25,137:139='src',<393>,1:137]], col1=[[@15,75:77='src',<393>,1:75]]}, employees={score=[[@4,23:27='score',<393>,1:23]], emp_id=[[@11,64:64='e',<393>,1:64]]}}, update_dictionary={score=[[@4,23:27='score',<393>,1:23]]}, filters=[{name=emp_id, table_ref=e}, {name=col1, table_ref=src}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=col2, table_ref=src}], table_alias={e=employees, src=tab1}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -477,15 +477,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab1={col1=[[@9,43:43='t',<392>,1:43], [@29,160:160='t',<392>,1:160]]}, employees={score=[[@6,29:33='score',<392>,1:29]], col1=[[@4,23:26='col1',<392>,1:23]]}}",
+				"{tab1={col1=[[@9,43:43='t',<393>,1:43], [@29,160:160='t',<393>,1:160]]}, employees={score=[[@6,29:33='score',<393>,1:29]], col1=[[@4,23:26='col1',<393>,1:23]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={CURRENT_TIMESTAMP=[[@13,51:67='CURRENT_TIMESTAMP',<392>,1:51]], col1=[[@11,45:48='col1',<392>,1:45]]}, insert1={score=[[@6,29:33='score',<392>,1:29]], col1=[[@4,23:26='col1',<392>,1:23]]}}",
+				"{query0={CURRENT_TIMESTAMP=[[@13,51:67='CURRENT_TIMESTAMP',<393>,1:51]], col1=[[@11,45:48='col1',<393>,1:45]]}, insert1={score=[[@6,29:33='score',<393>,1:29]], col1=[[@4,23:26='col1',<393>,1:23]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_insert1={query_dictionary={score=[[@6,29:33='score',<392>,1:29]], col1=[[@4,23:26='col1',<392>,1:23]]}, table_dictionary={employees={score=[[@6,29:33='score',<392>,1:29]], col1=[[@4,23:26='col1',<392>,1:23]]}}, def_query0={query_dictionary={CURRENT_TIMESTAMP=[[@13,51:67='CURRENT_TIMESTAMP',<392>,1:51]], col1=[[@11,45:48='col1',<392>,1:45]]}, table_dictionary={tab1={col1=[[@9,43:43='t',<392>,1:43], [@29,160:160='t',<392>,1:160]]}}, filters=[{name=CURRENT_USER, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_TIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=t}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}, interface={col1=[{name=col1, table_ref=query0}], score=[{name=CURRENT_TIMESTAMP, table_ref=query0}]}}}",
+				"{def_insert1={query_dictionary={score=[[@6,29:33='score',<393>,1:29]], col1=[[@4,23:26='col1',<393>,1:23]]}, table_dictionary={employees={score=[[@6,29:33='score',<393>,1:29]], col1=[[@4,23:26='col1',<393>,1:23]]}}, def_query0={query_dictionary={CURRENT_TIMESTAMP=[[@13,51:67='CURRENT_TIMESTAMP',<393>,1:51]], col1=[[@11,45:48='col1',<393>,1:45]]}, table_dictionary={tab1={col1=[[@9,43:43='t',<393>,1:43], [@29,160:160='t',<393>,1:160]]}}, filters=[{name=CURRENT_USER, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_TIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=t}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], col1=[{name=col1, table_ref=t}]}, table_alias={t=tab1}}, interface={col1=[{name=col1, table_ref=query0}], score=[{name=CURRENT_TIMESTAMP, table_ref=query0}]}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -512,7 +512,7 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{employees={score=[[@22,130:130='e',<392>,1:130]], emp_id=[[@5,30:30='e',<392>,1:30]]}}",
+				"{employees={score=[[@22,130:130='e',<393>,1:130]], emp_id=[[@5,30:30='e',<393>,1:30]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
@@ -520,7 +520,7 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_delete0={query_dictionary={}, table_dictionary={employees={score=[[@22,130:130='e',<392>,1:130]], emp_id=[[@5,30:30='e',<392>,1:30]]}}, filters=[{name=emp_id, table_ref=e}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_DATE, table_ref=null}, {name=score, table_ref=e}], interface=null, table_alias={e=employees}}}",
+				"{def_delete0={query_dictionary={}, table_dictionary={employees={score=[[@22,130:130='e',<393>,1:130]], emp_id=[[@5,30:30='e',<393>,1:30]]}}, filters=[{name=emp_id, table_ref=e}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIMESTAMP, table_ref=null}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_DATE, table_ref=null}, {name=score, table_ref=e}], interface=null, table_alias={e=employees}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -547,15 +547,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{employees={emp_id=[[@17,108:108='e',<392>,1:108]]}}",
+				"{employees={emp_id=[[@17,108:108='e',<393>,1:108]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{update0={CURRENT_USER=[[@21,118:129='CURRENT_USER',<392>,1:118]], score=[[@4,23:27='score',<392>,1:23]], CURRENT_TIMESTAMP=[[@23,132:148='CURRENT_TIMESTAMP',<392>,1:132]], emp_id=[[@19,110:115='emp_id',<392>,1:110]]}}",
+				"{update0={CURRENT_USER=[[@21,118:129='CURRENT_USER',<393>,1:118]], score=[[@4,23:27='score',<393>,1:23]], CURRENT_TIMESTAMP=[[@23,132:148='CURRENT_TIMESTAMP',<393>,1:132]], emp_id=[[@19,110:115='emp_id',<393>,1:110]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_update0={assignments={score=[]}, query_dictionary={CURRENT_USER=[[@21,118:129='CURRENT_USER',<392>,1:118]], CURRENT_TIMESTAMP=[[@23,132:148='CURRENT_TIMESTAMP',<392>,1:132]], emp_id=[[@19,110:115='emp_id',<392>,1:110]]}, table_dictionary={employees={emp_id=[[@17,108:108='e',<392>,1:108]]}}, update_dictionary={score=[[@4,23:27='score',<392>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<392>,1:23]]}}, filters=[{name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={score=[], CURRENT_USER=[{name=CURRENT_USER, table_ref=null}], CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<392>,1:23]]}}}}",
+				"{def_update0={assignments={score=[]}, query_dictionary={CURRENT_USER=[[@21,118:129='CURRENT_USER',<393>,1:118]], CURRENT_TIMESTAMP=[[@23,132:148='CURRENT_TIMESTAMP',<393>,1:132]], emp_id=[[@19,110:115='emp_id',<393>,1:110]]}, table_dictionary={employees={emp_id=[[@17,108:108='e',<393>,1:108]]}}, update_dictionary={score=[[@4,23:27='score',<393>,1:23]]}, target_table={employees={score=[[@4,23:27='score',<393>,1:23]]}}, filters=[{name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={score=[], CURRENT_USER=[{name=CURRENT_USER, table_ref=null}], CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}, lhs_unresolved_columns={score={column={name=score, table_ref=null}, locations=[[@4,23:27='score',<393>,1:23]]}}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -582,15 +582,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{employees={score=[[@4,23:27='score',<392>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<392>,1:89], [@17,89:100='CURRENT_USER',<392>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<392>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<392>,1:59]], LOCALTIME=[[@15,78:86='LOCALTIME',<392>,1:78], [@15,78:86='LOCALTIME',<392>,1:78]], emp_id=[[@11,51:56='emp_id',<392>,1:51], [@11,51:56='emp_id',<392>,1:51]]}}",
+				"{employees={score=[[@4,23:27='score',<393>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<393>,1:89], [@17,89:100='CURRENT_USER',<393>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<393>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<393>,1:59]], LOCALTIME=[[@15,78:86='LOCALTIME',<393>,1:78], [@15,78:86='LOCALTIME',<393>,1:78]], emp_id=[[@11,51:56='emp_id',<393>,1:51], [@11,51:56='emp_id',<393>,1:51]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{values0={$1=[[@7,37:37='(',<287>,1:37]]}, insert1={LOCALTIME=[[@15,78:86='LOCALTIME',<392>,1:78], [@15,78:86='LOCALTIME',<392>,1:78]], score=[[@4,23:27='score',<392>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<392>,1:89], [@17,89:100='CURRENT_USER',<392>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<392>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<392>,1:59]], emp_id=[[@11,51:56='emp_id',<392>,1:51], [@11,51:56='emp_id',<392>,1:51]]}}",
+				"{values0={$1=[[@7,37:37='(',<287>,1:37]]}, insert1={LOCALTIME=[[@15,78:86='LOCALTIME',<393>,1:78], [@15,78:86='LOCALTIME',<393>,1:78]], score=[[@4,23:27='score',<393>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<393>,1:89], [@17,89:100='CURRENT_USER',<393>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<393>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<393>,1:59]], emp_id=[[@11,51:56='emp_id',<393>,1:51], [@11,51:56='emp_id',<393>,1:51]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_insert1={query_dictionary={LOCALTIME=[[@15,78:86='LOCALTIME',<392>,1:78], [@15,78:86='LOCALTIME',<392>,1:78]], score=[[@4,23:27='score',<392>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<392>,1:89], [@17,89:100='CURRENT_USER',<392>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<392>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<392>,1:59]], emp_id=[[@11,51:56='emp_id',<392>,1:51], [@11,51:56='emp_id',<392>,1:51]]}, table_dictionary={employees={score=[[@4,23:27='score',<392>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<392>,1:89], [@17,89:100='CURRENT_USER',<392>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<392>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<392>,1:59]], LOCALTIME=[[@15,78:86='LOCALTIME',<392>,1:78], [@15,78:86='LOCALTIME',<392>,1:78]], emp_id=[[@11,51:56='emp_id',<392>,1:51], [@11,51:56='emp_id',<392>,1:51]]}}, def_values0={query_dictionary={$1=[[@7,37:37='(',<287>,1:37]]}, interface={$1=[]}}, _tmp_insert_source_select_sequence=[emp_id, CURRENT_TIMESTAMP, LOCALTIME, CURRENT_USER], interface={score=[{name=$1, table_ref=values0}], CURRENT_USER=[{name=CURRENT_USER, table_ref=employees}], CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=employees}], LOCALTIME=[{name=LOCALTIME, table_ref=employees}], emp_id=[{name=emp_id, table_ref=employees}]}}}",
+				"{def_insert1={query_dictionary={LOCALTIME=[[@15,78:86='LOCALTIME',<393>,1:78], [@15,78:86='LOCALTIME',<393>,1:78]], score=[[@4,23:27='score',<393>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<393>,1:89], [@17,89:100='CURRENT_USER',<393>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<393>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<393>,1:59]], emp_id=[[@11,51:56='emp_id',<393>,1:51], [@11,51:56='emp_id',<393>,1:51]]}, table_dictionary={employees={score=[[@4,23:27='score',<393>,1:23]], CURRENT_USER=[[@17,89:100='CURRENT_USER',<393>,1:89], [@17,89:100='CURRENT_USER',<393>,1:89]], CURRENT_TIMESTAMP=[[@13,59:75='CURRENT_TIMESTAMP',<393>,1:59], [@13,59:75='CURRENT_TIMESTAMP',<393>,1:59]], LOCALTIME=[[@15,78:86='LOCALTIME',<393>,1:78], [@15,78:86='LOCALTIME',<393>,1:78]], emp_id=[[@11,51:56='emp_id',<393>,1:51], [@11,51:56='emp_id',<393>,1:51]]}}, def_values0={query_dictionary={$1=[[@7,37:37='(',<287>,1:37]]}, interface={$1=[]}}, _tmp_insert_source_select_sequence=[emp_id, CURRENT_TIMESTAMP, LOCALTIME, CURRENT_USER], interface={score=[{name=$1, table_ref=values0}], CURRENT_USER=[{name=CURRENT_USER, table_ref=employees}], CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=employees}], LOCALTIME=[{name=LOCALTIME, table_ref=employees}], emp_id=[{name=emp_id, table_ref=employees}]}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -617,15 +617,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{employees={emp_id=[[@16,91:91='e',<392>,1:91]], col1=[[@7,45:45='e',<392>,1:45]]}}",
+				"{employees={emp_id=[[@16,91:91='e',<393>,1:91]], col1=[[@7,45:45='e',<393>,1:45]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{delete0={CURRENT_TIMESTAMP=[[@22,117:133='CURRENT_TIMESTAMP',<392>,1:117]], LOCALTIMESTAMP=[[@20,101:114='LOCALTIMESTAMP',<392>,1:101]], emp_id=[[@18,93:98='emp_id',<392>,1:93]]}}",
+				"{delete0={CURRENT_TIMESTAMP=[[@22,117:133='CURRENT_TIMESTAMP',<393>,1:117]], LOCALTIMESTAMP=[[@20,101:114='LOCALTIMESTAMP',<393>,1:101]], emp_id=[[@18,93:98='emp_id',<393>,1:93]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_delete0={query_dictionary={CURRENT_TIMESTAMP=[[@22,117:133='CURRENT_TIMESTAMP',<392>,1:117]], LOCALTIMESTAMP=[[@20,101:114='LOCALTIMESTAMP',<392>,1:101]], emp_id=[[@18,93:98='emp_id',<392>,1:93]]}, table_dictionary={employees={emp_id=[[@16,91:91='e',<392>,1:91]], col1=[[@7,45:45='e',<392>,1:45]]}}, filters=[{name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=e}, {name=CURRENT_USER, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], LOCALTIMESTAMP=[{name=LOCALTIMESTAMP, table_ref=null}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}}}",
+				"{def_delete0={query_dictionary={CURRENT_TIMESTAMP=[[@22,117:133='CURRENT_TIMESTAMP',<393>,1:117]], LOCALTIMESTAMP=[[@20,101:114='LOCALTIMESTAMP',<393>,1:101]], emp_id=[[@18,93:98='emp_id',<393>,1:93]]}, table_dictionary={employees={emp_id=[[@16,91:91='e',<393>,1:91]], col1=[[@7,45:45='e',<393>,1:45]]}}, filters=[{name=CURRENT_DATE, table_ref=null}, {name=col1, table_ref=e}, {name=CURRENT_USER, table_ref=null}], interface={CURRENT_TIMESTAMP=[{name=CURRENT_TIMESTAMP, table_ref=null}], LOCALTIMESTAMP=[{name=LOCALTIMESTAMP, table_ref=null}], emp_id=[{name=emp_id, table_ref=e}]}, table_alias={e=employees}}}",
 				extractor.getSymbolTable().toString());
 
 	}
@@ -655,15 +655,15 @@ public class SqlEventWalkerBareValueExpressionTests extends AbstractSqlParseEven
 				extractor.getSubstitutionsMap().toString());
 
 		Assert.assertEquals("Table Dictionary is wrong",
-				"{tab3={col1=[[@62,242:245='col1',<392>,1:242]]}, tab1={col2=[[@9,29:29='a',<392>,1:29]], col1=[[@5,21:21='a',<392>,1:21]]}, tab2={col2=[[@21,65:65='b',<392>,1:65], [@79,325:325='b',<392>,1:325]], col1=[[@50,182:182='b',<392>,1:182], [@62,242:245='col1',<392>,1:242]]}}",
+				"{tab3={col1=[[@62,242:245='col1',<393>,1:242]]}, tab1={col2=[[@9,29:29='a',<393>,1:29]], col1=[[@5,21:21='a',<393>,1:21]]}, tab2={col2=[[@21,65:65='b',<393>,1:65], [@79,325:325='b',<393>,1:325]], col1=[[@50,182:182='b',<393>,1:182], [@62,242:245='col1',<393>,1:242]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Query Column Dictionary is wrong",
-				"{query0={col2=[[@11,31:34='col2',<392>,1:31]], col1=[[@7,23:26='col1',<392>,1:23], [@17,57:57='s',<392>,1:57], [@46,173:173='s',<392>,1:173], [@75,317:317='s',<392>,1:317]]}, query1={col2=[[@23,67:70='col2',<392>,1:67]], rn=[[@38,144:145='rn',<392>,1:144]], col1=[[@19,59:62='col1',<392>,1:59]]}}",
+				"{query0={col2=[[@11,31:34='col2',<393>,1:31]], col1=[[@7,23:26='col1',<393>,1:23], [@17,57:57='s',<393>,1:57], [@46,173:173='s',<393>,1:173], [@75,317:317='s',<393>,1:317]]}, query1={col2=[[@23,67:70='col2',<393>,1:67]], rn=[[@38,144:145='rn',<393>,1:144]], col1=[[@19,59:62='col1',<393>,1:59]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 
 		Assert.assertEquals("Symbol Table is wrong",
-				"{def_query1={context_list={src=query0, s=query0}, window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], table_dictionary={tab3={col1=[[@62,242:245='col1',<392>,1:242]]}, tab2={col2=[[@21,65:65='b',<392>,1:65], [@79,325:325='b',<392>,1:325]], col1=[[@50,182:182='b',<392>,1:182], [@62,242:245='col1',<392>,1:242]]}}, grouped_by=[{name=col1, table_ref=s}, {name=col2, table_ref=b}, {name=LOCALTIMESTAMP, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], def_query0={query_dictionary={col2=[[@11,31:34='col2',<392>,1:31]], col1=[[@7,23:26='col1',<392>,1:23], [@17,57:57='s',<392>,1:57], [@46,173:173='s',<392>,1:173], [@75,317:317='s',<392>,1:317]]}, table_dictionary={tab1={col2=[[@9,29:29='a',<392>,1:29]], col1=[[@5,21:21='a',<392>,1:21]]}}, interface={col2=[{name=col2, table_ref=a}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1}}, ordered_by=[{name=LOCALTIME, table_ref=null}], filters=[{name=col1, table_ref=s}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=col1, table_ref=c}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=s}]}, query_dictionary={col2=[[@23,67:70='col2',<392>,1:67]], rn=[[@38,144:145='rn',<392>,1:144]], col1=[[@19,59:62='col1',<392>,1:59]]}, table_alias={b=tab2, s=query0, c=tab3, src=query0}}}",
+				"{def_query1={context_list={src=query0, s=query0}, window_ordered_by=[{name=CURRENT_TIME, table_ref=null}], table_dictionary={tab3={col1=[[@62,242:245='col1',<393>,1:242]]}, tab2={col2=[[@21,65:65='b',<393>,1:65], [@79,325:325='b',<393>,1:325]], col1=[[@50,182:182='b',<393>,1:182], [@62,242:245='col1',<393>,1:242]]}}, grouped_by=[{name=col1, table_ref=s}, {name=col2, table_ref=b}, {name=LOCALTIMESTAMP, table_ref=null}], window_partition_by=[{name=CURRENT_DATE, table_ref=null}], def_query0={query_dictionary={col2=[[@11,31:34='col2',<393>,1:31]], col1=[[@7,23:26='col1',<393>,1:23], [@17,57:57='s',<393>,1:57], [@46,173:173='s',<393>,1:173], [@75,317:317='s',<393>,1:317]]}, table_dictionary={tab1={col2=[[@9,29:29='a',<393>,1:29]], col1=[[@5,21:21='a',<393>,1:21]]}}, interface={col2=[{name=col2, table_ref=a}], col1=[{name=col1, table_ref=a}]}, table_alias={a=tab1}}, ordered_by=[{name=LOCALTIME, table_ref=null}], filters=[{name=col1, table_ref=s}, {name=col1, table_ref=b}, {name=CURRENT_TIMESTAMP, table_ref=null}, {name=LOCALTIME, table_ref=null}, {name=col1, table_ref=c}, {name=CURRENT_USER, table_ref=null}, {name=CURRENT_DATE, table_ref=null}], interface={col2=[{name=col2, table_ref=b}], rn=[{name=CURRENT_DATE, table_ref=null}, {name=CURRENT_TIME, table_ref=null}], col1=[{name=col1, table_ref=s}]}, query_dictionary={col2=[[@23,67:70='col2',<393>,1:67]], rn=[[@38,144:145='rn',<393>,1:144]], col1=[[@19,59:62='col1',<393>,1:59]]}, table_alias={b=tab2, s=query0, c=tab3, src=query0}}}",
 				extractor.getSymbolTable().toString());
 
 	}
