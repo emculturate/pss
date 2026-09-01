@@ -33,6 +33,27 @@ public class SqlParseSymbolTreeHelper {
 	private final SqlASTWalkerHelper walker;
 
 	/**
+	 * Incremental cache of {@code def_*} entries visible to branches being built within a
+	 * set-operation (UNION/INTERSECT) frame.  Avoids O(n²) re-scan of the growing parent
+	 * symbol table in {@link #buildConvertEgressScopeBundle} for each successive branch.
+	 * <p>
+	 * Lifecycle: pushed at {@code enterUnionized_query} / {@code enterIntersected_query},
+	 * updated after each {@link #publishQueryLikeScope} call (incrementally adds one entry),
+	 * popped at {@code exitUnionized_query} / {@code exitIntersected_query} before finalization.
+	 */
+	private final ArrayDeque<HashMap<String, Object>> setOpDefinitionPayloadCacheStack =
+			new ArrayDeque<>();
+
+	/**
+	 * Parallel to {@link #setOpDefinitionPayloadCacheStack}: tracks only the live query-source
+	 * keys (those where {@link #isQuerySourceReference} is true) from each cached def_* entry.
+	 * Eliminates the O(n) scan of {@code visibleDefinitionPayloads.keySet()} in
+	 * {@link #buildConvertEgressScopeBundle}, making it O(1) per branch instead.
+	 */
+	private final ArrayDeque<LinkedHashSet<String>> setOpLiveQueryRefCacheStack =
+			new ArrayDeque<>();
+
+	/**
 	 * Convert-egress contract for bare ANSI/dialect value expressions ({@code CURRENT_TIMESTAMP},
 	 * {@code SESSION_USER}, …) captured as unqualified column refs during the walk.
 	 * <p>
@@ -6047,9 +6068,14 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> localCurrentQueryDictionary) {
 		HashMap<String, Object> visibleDefinitionPayloads = new HashMap<String, Object>();
-		List<Map<String, Object>> ancestors = getAncestorSymbolTables();
-		for (int ancestorIndex = ancestors.size() - 1; ancestorIndex >= 0; ancestorIndex--) {
-			mergeDefinitionPayloadsFromSymbolTable(ancestors.get(ancestorIndex), visibleDefinitionPayloads);
+		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
+			// O(1): use the incrementally-maintained cache instead of the O(n) ancestor scan.
+			visibleDefinitionPayloads.putAll(setOpDefinitionPayloadCacheStack.peek());
+		} else {
+			List<Map<String, Object>> ancestors = getAncestorSymbolTables();
+			for (int ancestorIndex = ancestors.size() - 1; ancestorIndex >= 0; ancestorIndex--) {
+				mergeDefinitionPayloadsFromSymbolTable(ancestors.get(ancestorIndex), visibleDefinitionPayloads);
+			}
 		}
 		mergeDefinitionPayloadsFromSymbolTable(walker.symbolTable, visibleDefinitionPayloads);
 
@@ -6066,10 +6092,27 @@ public class SqlParseSymbolTreeHelper {
 				}
 			}
 		}
-		for (String definitionKey : visibleDefinitionPayloads.keySet()) {
-			String liveRef = toLiveScopeKey(definitionKey);
-			if (liveRef != null && isQuerySourceReference(liveRef)) {
-				liveQueryRefs.add(liveRef);
+		// O(1): if the live-query-ref cache is active, use it directly instead of scanning
+		// all visibleDefinitionPayloads entries (which was O(n) per branch = O(n²) total).
+		if (!setOpLiveQueryRefCacheStack.isEmpty()) {
+			liveQueryRefs.addAll(setOpLiveQueryRefCacheStack.peek());
+			// Check only the entries added by the current branch's symbolTable (already merged above).
+			if (walker.symbolTable != null) {
+				for (Map.Entry<String, Object> entry : walker.symbolTable.entrySet()) {
+					if (entry.getKey() != null && isDefinitionScopeKey(entry.getKey())) {
+						String liveRef = toLiveScopeKey(entry.getKey());
+						if (liveRef != null && isQuerySourceReference(liveRef)) {
+							liveQueryRefs.add(liveRef);
+						}
+					}
+				}
+			}
+		} else {
+			for (String definitionKey : visibleDefinitionPayloads.keySet()) {
+				String liveRef = toLiveScopeKey(definitionKey);
+				if (liveRef != null && isQuerySourceReference(liveRef)) {
+					liveQueryRefs.add(liveRef);
+				}
 			}
 		}
 
@@ -8849,6 +8892,20 @@ public class SqlParseSymbolTreeHelper {
 			return;
 		}
 
+		// Incrementally update the set-op definition cache so that branches processed
+		// after this one can see the just-published def_* entry in O(1) — without
+		// re-scanning the entire parent symbol table on each call.
+		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
+			setOpDefinitionPayloadCacheStack.peek().put(definitionKey, scopePayload);
+			// Also update the parallel live-query-ref cache to avoid O(n) scan in buildConvertEgressScopeBundle.
+			if (!setOpLiveQueryRefCacheStack.isEmpty()) {
+				String liveRef = toLiveScopeKey(definitionKey);
+				if (liveRef != null && isQuerySourceReference(liveRef)) {
+					setOpLiveQueryRefCacheStack.peek().add(liveRef);
+				}
+			}
+		}
+
 		HashMap<String, Object> scopeSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
 		HashMap<String, Object> scopedQuerySummaryKeysMap = removeScopedQuerySummaryKeysMap(scopePayload);
 
@@ -10336,6 +10393,44 @@ public class SqlParseSymbolTreeHelper {
 	 * Used for WITH bodies, correlated subqueries (predicand/IN/EXISTS), and nested FROM scopes.
 	 */
 	@SuppressWarnings("unchecked")
+	/**
+	 * Called at {@code enterUnionized_query} after the new child scope is pushed.
+	 * Snapshots all {@code def_*} entries currently visible from ancestor scopes so that
+	 * subsequent branches can use {@link #buildConvertEgressScopeBundle} in O(1) instead of
+	 * rescanning the growing parent symbol table on every branch (O(n²) → O(n)).
+	 */
+	public void startSetOpDefinitionCache() {
+		HashMap<String, Object> snapshot = new HashMap<>();
+		for (Map<String, Object> ancestor : getAncestorSymbolTables()) {
+			mergeDefinitionPayloadsFromSymbolTable(ancestor, snapshot);
+		}
+		setOpDefinitionPayloadCacheStack.push(snapshot);
+
+		// Build the parallel live-query-ref set from the initial snapshot.
+		LinkedHashSet<String> liveRefs = new LinkedHashSet<>();
+		for (String defKey : snapshot.keySet()) {
+			String liveRef = toLiveScopeKey(defKey);
+			if (liveRef != null && isQuerySourceReference(liveRef)) {
+				liveRefs.add(liveRef);
+			}
+		}
+		setOpLiveQueryRefCacheStack.push(liveRefs);
+	}
+
+	/**
+	 * Called at {@code exitUnionized_query} / {@code exitIntersected_query} BEFORE
+	 * {@link #finalizeSetOperationScopeSymbolTable} so the union scope's own publish is not
+	 * added to the cache of its parent.
+	 */
+	public void stopSetOpDefinitionCache() {
+		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
+			setOpDefinitionPayloadCacheStack.pop();
+		}
+		if (!setOpLiveQueryRefCacheStack.isEmpty()) {
+			setOpLiveQueryRefCacheStack.pop();
+		}
+	}
+
 	public void pushSymbolTableWithParentVisibleScope() {
 		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true);
 

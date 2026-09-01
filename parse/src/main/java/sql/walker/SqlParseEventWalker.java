@@ -4239,6 +4239,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void enterUnionized_query( SQLSelectParserParser.Unionized_queryContext ctx) {
 		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		symbolTreeHelper.startSetOpDefinitionCache();
 	}
 
 	@Override
@@ -4249,6 +4250,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols =  walker.symbolTable;
+
+		// Stop the incremental cache before finalization so the union scope's own def_* entry
+		// is not added into the cache of its enclosing (parent) set-op frame.
+		symbolTreeHelper.stopSetOpDefinitionCache();
 
 		if (walker.unionClauseFound) {
 			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;
