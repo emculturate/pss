@@ -1,61 +1,49 @@
-# Copy this pack to the PSS parser repo
+# Panto 5.1.3 outstanding issues — RMCP handoff pack
 
-Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs **5.1.3**). This is the set of **outstanding 5.1.3 problems**, not the full 6,680-row corpus.
+Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs **5.1.3**). This is the set of **outstanding 5.1.3 problems** (82 rows), not the full ~6,680-row corpus.
 
-## Copy these paths
+**Canonical location in this repo:** `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`  
+**Workplan tracker:** `parse/documents/parser-defects-enhancements-workplan.md` §2.7–2.9
 
-All paths are relative to the RMCP workspace root.
+## Where to look
 
-### Required
+| Phase | Topic | Document |
+|-------|--------|----------|
+| **2.7** | WITH final query omits joined CTE sources from global `tableDictionary` | [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) |
+| **2.8** | 74 queries timeout at 90s on 5.1.3 | [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md), [outstanding-issues-index.md](./outstanding-issues-index.md), [panto_513_outstanding_issues.csv](./panto_513_outstanding_issues.csv) |
+| **2.9** | 8 table-dictionary / FATAL degradations | [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md), SQL fixtures in [sql/](./sql/) |
 
-| Copy | Into parser repo | Why |
-|------|------------------|-----|
-| `parser-briefs/pss-handoff-5.1.3-2026-08-19/` (this folder) | e.g. `docs/rmcp-handoff/` or `workplans/rmcp-panto-513/` | CSV extract, compact index, this README |
-| `parser-briefs/panto-tabledict-degradations-2026-08-19.md` | same docs tree | Investigation brief for the **8 degradations** (clusters, acceptance, hypotheses) |
-| `parser-briefs/panto-tabledict-degradations-2026-08-19/sql/` | next to that brief | Full SQL fixtures `csv-row-<N>.sql` for rows 583, 2139, 3150, 3870, 4648, 4726, 5410, 5455 |
-| `parser-briefs/panto-513-parse-timeouts-2026-08-19.md` | same docs tree | **74 timeouts**: row, domain/entity/query name, timings, **full SQL** |
-
-Suggested workplan entries (already sketched in RMCP `parser-defects-enhancements-workplan.md` as Phase 8 and 9):
-
-- **Phase: table-dictionary / FATAL regressions** → point at `panto-tabledict-degradations-2026-08-19.md`
-- **Phase: 5.1.3 90s parse hang** → point at `panto-513-parse-timeouts-2026-08-19.md` and the CSV extract
-
-### Optional
-
-| Copy | Why you might skip it |
-|------|------------------------|
-| `parser-defects-enhancements-workplan.md` | RMCP living list; only Phase 8–9 matter for this handoff. Prefer a parser-native workplan that **links** the two briefs above. |
-| Timeout markdown (~1.5 MB) | Redundant with `query_sql` in the CSV extract. Keep it if agents prefer one markdown file over CSV. |
-
-### Do not copy
-
-- `project_simulation/src/panto_extracted_queries/panto_query_extract_AUG172026.csv` (full extract, ~6,680 data rows)
-- `reports/panto_extracted_queries_compare/*.json` (multi-hundred-MB compare dumps)
-- Mixed / improvement rows (1,316 mixed, 563 improvements) — not this pack
-
-## What is in this folder
+## Files in this folder
 
 | File | Contents |
 |------|----------|
-| `panto_513_outstanding_issues.csv` | **82** data rows: original `domain_name`, `entity_type`, `query_name`, `query_sql`, plus `csv_row`, `issue_kinds`, `issue_detail`, parse timings. RFC 4180; `query_sql` is quoted and may contain newlines. |
+| `phase-2.7-with-conditionless-join-finalizer.md` | Full investigation spec for conditionless-JOIN / WITH finalizer defect |
+| `panto_513_outstanding_issues.csv` | **82** data rows: domain, entity, query name, full `query_sql`, timings, `issue_kinds` |
 | `outstanding-issues-index.md` | Compact tables (no SQL) for workplan / PR description |
 | `row-index.json` | Machine-readable row lists |
+| `panto-tabledict-degradations-2026-08-19.md` | 8 degradation clusters (A–F), acceptance, hypotheses |
+| `panto-513-parse-timeouts-2026-08-19.md` | 74 timeouts with full SQL (~large; CSV is often enough) |
+| `sql/csv-row-<N>.sql` | Full SQL for degradation rows 583, 2139, 3150, 3870, 4648, 4726, 5410, 5455 |
 
-`issue_kinds` values:
+`issue_kinds` values in the CSV:
 
-- `timeout_513` — 5.1.3 killed at **90s**; 5.0.0-3 finished (`parse_ms_5_0_0_3` / `parse_ms_5_1_3` filled)
+- `timeout_513` — 5.1.3 killed at **90s**; 5.0.0-3 finished
 - `degradation_tabledict` — 5.1.3 `tableDictionary` missing keys 5.0.0-3 still has
 - `degradation_fatal` — 5.1.3 FATALs that 5.0.0-3 did not issue (rows **3150**, **5410**)
 
 No overlap between the 74 timeouts and the 8 degradations.
 
-## Intentionally omitted: 5.0.0-3 crashes
-
-**29** rows where **5.0.0-3** returned non-JSON / walk crash and **5.1.3** usually still returned JSON. Those are baseline defects, not 5.1.3 outstanding work. Row numbers (if you add a follow-on): 1136, 1228, 2058, 2089, 2536, 2627, 2723, 2815, 2817, 2903, 3149, 3187, 3739, 3793, 3869, 4016, 5240, 5251, 5334–5337, 5339, 5409, 5990, 6482, 6483, 6485, 6578.
-
-## Scoring notes for the parser agent
+## Scoring notes
 
 - Table-dictionary compare uses the **last identifier after `.`**. Qualification-only differences are not degradations.
 - Extra nested 5.1.3 query-dictionary layers vs 5.0.0-3 are improvements, not this pack.
 - Timeouts are parse **non-termination**, not missing dictionary keys.
-- Related older brief: WITH + outer `CROSS JOIN` CTE miss (`last_delivered_cte`) is Phase 2.7 in the RMCP workplan; the eight degradations are overlapping-but-not-identical JOIN/CTE/substitution shapes.
+- Phase 2.7 (conditionless JOIN / `last_delivered_cte`) and the eight degradations are overlapping-but-not-identical JOIN/CTE/substitution shapes.
+
+## Intentionally omitted: 5.0.0-3 crashes
+
+**29** rows where **5.0.0-3** returned non-JSON / walk crash and **5.1.3** usually still returned JSON. Those are baseline defects, not 5.1.3 outstanding work.
+
+## Origin
+
+Copied from RMCP `parser-briefs/` (2026-08-19). Older copies under `parse/documents/` were removed to keep this folder the single source of truth.

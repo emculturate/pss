@@ -119,7 +119,7 @@ chore(parse): target Java 21 and bump gson to 2.13.1
 
 - Migrating JUnit 4 → JUnit 5 (JUnit 4 runs on Java 21 as-is)
 - Changing ANTLR (4.13.1 is current and Java-21-compatible)
-- Fixing Phase 2.8 parse timeouts (separate work — see `parser-defects-enhancements-workplan.md` §2.8 and `panto-513-parse-timeouts-2026-08-19.md`)
+- Fixing Phase 2.8 parse timeouts (separate work — see `parser-defects-enhancements-workplan.md` §2.8 and `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md`)
 - Adding CI pipeline files (none in repo today)
 
 ---

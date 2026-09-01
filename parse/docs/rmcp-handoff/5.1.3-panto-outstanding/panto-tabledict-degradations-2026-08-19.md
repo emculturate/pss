@@ -5,7 +5,7 @@ Kind: Defect (regression vs **5.0.0-3**)
 Audience: PSS parser agent — investigate why **5.1.3** omits sources that **5.0.0-3** still records, and restore them without dropping other dictionary entries.  
 Corpus: Panto extracted-queries CSV dual-parse (`SQL` endpoint), RMCP compare after table-dict last-identifier scoring and outermost-only queryDictionary vs 5.0.0-3.
 
-**Related (do not assume it is the same bug):** Phase **2.7** in `parser-defects-enhancements-workplan.md` — CTE reached only via outer `CROSS JOIN` missing from `tableDictionary`. Several cases below are **LEFT / FULL OUTER JOIN of a CTE**, a **CTE whose body is a query substitution**, or **tuple aliases inside a CTE**. Treat 2.7 as a related finalizer hypothesis, not as already explaining all eight rows.
+**Related (do not assume it is the same bug):** Phase **2.7** — [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) (CTE reached only via outer `CROSS JOIN` missing from `tableDictionary`). Several cases below are **LEFT / FULL OUTER JOIN of a CTE**, a **CTE whose body is a query substitution**, or **tuple aliases inside a CTE**. Treat 2.7 as a related finalizer hypothesis, not as already explaining all eight rows.
 
 ## Goal
 
@@ -30,7 +30,7 @@ Compare: `5.0.0-3` vs `5.1.3`. Verdict **degradation** only when **5.1.3** lost 
 | 5410 | `Partner_Data_Platform/Cappex Contacts/src_intake_cappex_contacts_PDPv0.2` | 3 **FATAL** in 5.1.3 (0 in 5.0.0-3); **no** table-dict miss | _(diagnostics only)_ |
 | 5455 | `Partner_Data_Platform/Contact/con_contact_assigned_chosen_contacts` | missing CTE + tuple alias | `comb_common`, `chosencontact_combined` |
 
-Full SQL fixtures (copy into parser tests): `parser-briefs/panto-tabledict-degradations-2026-08-19/sql/csv-row-<N>.sql`.
+Full SQL fixtures (copy into parser tests): `sql/csv-row-<N>.sql` in this folder.
 
 Re-parse each fixture with both fat JARs (`SQL` endpoint). RMCP corpus JSON does **not** include the 5.1.3 FATAL **message text** for 3150/5410 — capture `messages` on a fresh parse.
 

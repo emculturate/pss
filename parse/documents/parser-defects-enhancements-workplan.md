@@ -62,11 +62,11 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Characteriz
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | **Complete** — `ordered_aggregate_expression` + walker `within_group_ordered_by`; tests in `SqlEventWalkerWithinGroupOrderedAggregateTests`. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
-| 7 | **2.7** | Medium — WITH finalizer / FROM-JOIN source merge; investigate no-condition join exit paths | High — global `tableDictionary` silently omits a referenced CTE | **Not started** — regression observed while consuming 5.1.3 output in another repository. |
-| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **Not started** — see `panto-513-parse-timeouts-2026-08-19.md`. |
-| 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Not started** — detailed corpus in `panto-tabledict-degradations-2026-08-19.md`. |
+| 7 | **2.7** | Medium — WITH finalizer / global CTE dictionary merge | High — global `tableDictionary` silently omits joined CTE sources | **In progress** — goldens in `SqlEventWalkerWithConditionlessJoinFinalizerTests`; broader than conditionless joins. |
+| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — stage-timing harness landed; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
+| 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Not started** — detailed corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md`. |
 
-**Dependencies:** 2.1–2.6 complete. Characterize 2.7 and 2.9 together because some live rows combine CTE omissions with diagnostics, but do not assume one root cause. 2.8 instrumentation and corpus characterization can proceed independently; optimization work waits for measured stage and profile evidence. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); add focused WITH final-query tests and Panto rows 583, 2139, 3150, 3870, 4648, 4726, and 5455 for 2.7; use all 74 fixtures indexed by `panto-513-parse-timeouts-2026-08-19.md` for 2.8; use Panto rows 3150, 5410, and 5455 for the residual 2.9 clusters.
+**Dependencies:** 2.1–2.6 complete. Characterize 2.7 and 2.9 together because some live rows combine CTE omissions with diagnostics, but do not assume one root cause. 2.8 instrumentation and corpus characterization can proceed independently; optimization work waits for measured stage and profile evidence. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); add focused WITH final-query tests and Panto rows 583, 2139, 3150, 3870, 4648, 4726, and 5455 for 2.7 (see `phase-2.7-with-conditionless-join-finalizer.md`); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8; use Panto rows 3150, 5410, and 5455 for the residual 2.9 clusters.
 
 ### Subtask tracker
 
@@ -78,8 +78,8 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Characteriz
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | **Complete** |
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
-| 2.7 | WITH final query drops a CTE used through a conditionless JOIN from `tableDictionary` | **Not started** |
-| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **Not started** — 74-query corpus linked below |
+| 2.7 | WITH final query omits joined CTE sources from global `tableDictionary` | **In progress** — characterization goldens landed |
+| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; corpus characterization next |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Not started** |
 
 ---
@@ -729,173 +729,24 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 ---
 
-### 2.7 — WITH finalizing drops the last source introduced by a conditionless JOIN
+### 2.7 — WITH final-query finalizer omits CTE sources from global `tableDictionary`
 
 **Kind:** Defect (`tableDictionary` incomplete compared with 5.0.0-3)
 
-**Status:** **Not started** (Phase 2 reopened 2026-08-19)
+**Status:** **In progress** — characterization goldens in `SqlEventWalkerWithConditionlessJoinFinalizerTests`; fix not started
 
-**Component:** WITH / query-finalizer walk; FROM/JOIN source collection and dictionary merge after the last JOIN in the final primary query
+**Component:** WITH / query-finalizer walk; global dictionary merge for CTE row sources in the final primary query
 
-#### Problem
+**Canonical spec:** [phase-2.7-with-conditionless-join-finalizer.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/phase-2.7-with-conditionless-join-finalizer.md) — starter query, characterization matrix, nested-WITH template, acceptance criteria, and live Panto cluster routing (rows 583, 2139, 3150, 3870, 4648, 4726, 5455).
 
-**Observed defect:** the final primary query of a `WITH` loses a CTE from the emitted global `tableDictionary` when that CTE is the new source introduced by its last `CROSS JOIN`. The CTE remains syntactically present and its columns are referenced in `WHERE`, but the emitted dictionary does not retain the CTE source entry or those reference locations.
+**Problem (summary):** The final primary query of a `WITH` omits joined CTE keys from global `tableDictionary` (observed live as trailing `CROSS JOIN last_delivered_cte`). Characterization shows the omission is **broader than conditionless joins** — it also affects comma-style FROM lists and `INNER JOIN cte ON 1=1`, while AST and symbol-table `filters` still retain CTE references. 5.0.0-3 records the CTE source entry; 5.1.3 does not.
 
-This was observed while validating the Phase 2 changes in a separate consumer repository. PSS **5.0.0-3** records all three logical sources for the starter below; **5.1.3** records only the CTE's physical base table and the outer tuple source, dropping `last_delivered_cte`. The schema-qualified spelling of the physical log table is a separate key-layout issue.
+**Next steps:**
 
-**Scope hypothesis to test:** source collection or query finalization is cut off when the last JOIN production in the last query of a `WITH` has no `ON` or `USING` clause. If that is the controlling path, the defect can apply to any newly introduced table or CTE source and any accepted conditionless join variant, not only `CROSS JOIN` or `last_delivered_cte`. The non-`CROSS JOIN` cases below are predictions, not yet observed failures; add them first as characterization tests and use their results to confirm or narrow the implementation scope.
-
-Expected source inventory:
-
-| Source | Role |
-|--------|------|
-| `PDP_UG.log__acs_contact_deletions` | Physical table inside the CTE |
-| `<[Acquia].[exp__acquia_deletions].{fulfillment}>` | Tuple source in the final query, alias `ead` |
-| `last_delivered_cte` | CTE source introduced only through the final query's `CROSS JOIN` |
-
-Suspected path: a join condition normally causes the newly introduced source to be visited or materialized before final-query cleanup. The conditionless last JOIN may exit through a different path or allow finalization to begin early, leaving that source and its references unmerged. This diagnosis must be verified rather than assumed: a failing `CROSS JOIN` characterization test is the first discriminating check, followed by the predicted join variants.
-
-#### Starter query
-
-```sql
-WITH
-last_delivered_cte AS
-(
-    SELECT MAX(log_del.contact_deleted_dt) AS last_del
-    FROM PDP_UG.log__acs_contact_deletions AS log_del
-)
-SELECT
-        CAST(ead.<ES Partner ID> AS varchar(64)) AS es_partner_id,
-        CAST(ead.<ACS Contact ID> AS varchar(50)) AS acs_contact_id
-FROM <[Acquia].[exp__acquia_deletions].{fulfillment}> AS ead
-CROSS JOIN last_delivered_cte
-WHERE CASE
-                WHEN last_delivered_cte.last_del IS NULL THEN 1=1
-                ELSE ead.<Contact Deleted Dt> > last_delivered_cte.last_del
-            END
-```
-
-Minimal wrapper when tuple substitutions are outside the fixture's scope:
-
-```sql
-WITH last_delivered_cte AS (
-    SELECT MAX(log_del.contact_deleted_dt) AS last_del
-    FROM PDP_UG.log__acs_contact_deletions AS log_del
-)
-SELECT ead.es_partner_id, ead.acs_contact_id
-FROM exp__acquia_deletions AS ead
-CROSS JOIN last_delivered_cte
-WHERE CASE
-                WHEN last_delivered_cte.last_del IS NULL THEN 1=1
-                ELSE ead.contact_deleted_dt > last_delivered_cte.last_del
-            END
-```
-
-#### Expected behavior
-
-1. Every accepted FROM/JOIN row source in the final primary query is registered before trailing clauses or the enclosing `WITH` are finalized, whether or not the join has `ON` or `USING` and whether the source is a CTE or physical table.
-2. `CROSS JOIN last_delivered_cte` retains `last_delivered_cte` in `tableDictionary`, including references attributed to that source, alongside the CTE's physical base table and the outer tuple or stub table.
-3. `last_delivered_cte.last_del` resolves through the CTE's published `interface`. `last_delivered_cte.not_a_col` produces a query-source column-not-found diagnostic, not a missing-table diagnostic; the CTE dictionary entry remains present.
-4. Tuple columns under `ead` continue to bind to the tuple source. The CTE's internal `PDP_UG.log__acs_contact_deletions` entry remains present.
-5. The result is independent of which valid clause follows the conditionless join. `WHERE`, `GROUP BY`, `HAVING`, `QUALIFY`, and `ORDER BY` must not be responsible for making the joined source visible or for preserving it.
-6. Existing controls continue to work: `INNER JOIN last_delivered_cte ON 1=1`, `JOIN ... USING (...)`, comma-style `FROM ead, last_delivered_cte`, and `FROM last_delivered_cte` all retain the CTE.
-
-#### Characterization and regression matrix
-
-Start with compact one-CTE fixtures and inline assertions. The first row reproduces the observed defect. The other conditionless join and trailing-clause rows probe the predicted scope; record which tests fail before changing implementation. Cover each accepted conditionless join grammar form and each trailing-clause boundary at least once, but do not build a full Cartesian product.
-
-| Evidence | Join/source form in final query | Following clause | Required assertion |
-|----------|---------------------------------|------------------|--------------------|
-| **Observed reproduction** | `CROSS JOIN cte_name` as the last JOIN | `WHERE` with a CTE-only reference | Outer source, CTE key, CTE base table, and CTE reference locations are present |
-| Predicted boundary | `CROSS JOIN cte_name` as the last JOIN | `GROUP BY` | Same source inventory; grouped CTE column resolves |
-| Predicted join variant | `NATURAL JOIN cte_name` | `HAVING` | Same source inventory; finalizer does not depend on `ON` / `USING` |
-| Predicted join variant | `NATURAL LEFT JOIN cte_name` | `QUALIFY` with a window expression | Same source inventory after qualify finalization |
-| Predicted join variant | `NATURAL RIGHT JOIN cte_name` | `ORDER BY` | Same source inventory after ordering finalization |
-| Predicted query-exit boundary | `NATURAL FULL OUTER JOIN cte_name` | no trailing predicate | Same source inventory at query-specification exit |
-| Predicted grammar variant | Bare `JOIN cte_name` without a condition, where already accepted | one valid trailing clause | Same source inventory; preserve current dialect behavior |
-| Predicted source-kind variant | A conditionless last JOIN introducing a physical table | `WHERE` or query exit | Both physical sources and references are retained inside the final WITH query |
-| Control | Comma-style `FROM outer_source, cte_name` | `WHERE` | CTE remains present |
-| Control | `INNER JOIN cte_name ON 1=1` | `WHERE` | Conditioned join remains present |
-| Control | `JOIN cte_name USING (shared_col)` | `ORDER BY` | USING path remains present |
-
-Also run a base-table-only control (`FROM t1 CROSS JOIN t2`) to prove both physical sources remain in `tableDictionary` without a `WITH` finalizer.
-
-#### Nested-WITH duplication
-
-Duplicate the observed reproduction and each accepted conditionless-join characterization case with the complete original `WITH` query embedded as the body of a CTE in a second, outer `WITH`. The outer final query must select only from the wrapper CTE and must **not** refer to, join, or otherwise reuse the table or CTE source introduced by the embedded query's final JOIN. This isolates dictionary propagation: the inner source and its column references must survive because the embedded query recorded and propagated them, not because the outer query encountered that source again.
-
-Use this structural template, substituting each join and trailing-clause variant from the matrix:
-
-```sql
-WITH wrapped_result AS (
-    WITH joined_cte AS (
-        SELECT source_id, MAX(source_value) AS joined_value
-        FROM joined_base
-        GROUP BY source_id
-    )
-    SELECT outer_source.source_id, joined_cte.joined_value
-    FROM outer_source
-    CROSS JOIN joined_cte
-    WHERE joined_cte.joined_value IS NOT NULL
-)
-SELECT wrapped_result.source_id, wrapped_result.joined_value
-FROM wrapped_result
-```
-
-For every nested duplicate:
-
-1. Assert that global `tableDictionary` still contains `outer_source`, `joined_base`, and the source introduced by the embedded final JOIN (`joined_cte` in the template).
-2. Assert that the embedded source entry retains the locations for columns referenced in the embedded `SELECT`, trailing clause, or both.
-3. Assert that the outer query references only `wrapped_result` output columns. Do not mention `joined_cte`, `joined_base`, or their aliases outside `wrapped_result`'s body.
-4. Assert that the nested symbol tree retains both WITH/query scope levels and that no merge replaces the embedded source with only the wrapper CTE.
-5. Lock all six extractor goldens for at least the nested observed `CROSS JOIN` reproduction; focused dictionary/path assertions are sufficient for the remaining nested matrix duplicates.
-
-#### Additional live-query investigations
-
-Use [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md) as the detailed source of truth for full SQL fixture paths, observed version differences, and cluster notes. Add its CTE-centered rows to 2.7 as live characterization tests; do not duplicate the full SQL in this workplan.
-
-| Cluster / CSV rows | CTE-centered construction | Observed 5.1.3 difference | Required investigation |
-|--------------------|---------------------------|----------------------------|------------------------|
-| A — 583, 2139 | Multi-CTE WITH; outer tuple `FROM` plus conditioned `LEFT JOIN` CTEs; one CTE used only by another CTE | Missing `latest_applications`, `activity_prospect_map`, `campus_visit_activity` | Determine whether finalization loses joined CTE names, tuple-backed outer scope, or transitive CTE source inventory; compare `LEFT` and `INNER` controls |
-| B — 3870 | Tuple/bound-query source `FULL OUTER JOIN student_term_crm`, then derived-table wrapper | Missing `student_term_crm` | Determine whether the loss is join-kind-specific, wrapper-specific, or tuple/CTE merge-specific |
-| C — 4648, 4726 | Long WITH chain; final CTE body is query substitution `<student_term_sweep>`; outer query reads the CTE | Missing `st_student_term_sweep` | Determine whether query-typed substitution CTE definitions publish a usable interface/source identity and survive outer query finalization |
-| D — 3150 | `race_data` CTE is a large UNION; outer derived query has many `UNION ALL` branches reading it | Missing `race_data` plus 20 new FATALs | First determine whether grammar/diagnostic failure aborts CTE publication or whether set-op CTE finalization independently loses the source; send any independent diagnostic root cause to 2.9 |
-| E — 5455 | CTE over tuple sources; nested correlated `NOT IN`; outer query reads the CTE through another derived SELECT | Missing `chosencontact_combined` and tuple alias/source evidence for `comb_common` | Keep CTE publication/finalization in 2.7; send any independent tuple-source collection defect to 2.9 |
-
-For each live query, dual-parse the exact SQL on both fat JARs and capture `tableDictionary`, `symbolTable`, `interface`, `sqlTree`, and `messages`. Before declaring a 5.1.3 defect, explain where each 5.0.0-3-only key is represented in 5.1.3, if anywhere: global physical `tableDictionary`, a `def_*` scope, `table_alias` / CTE context, source query dictionary, or published `interface`. The documented 5.1.3 dictionary model allows richer nested query-backed evidence and primarily treats the global table dictionary as a cross-scope physical-source collection; do not delete that richer evidence or invent physical lineage merely to reproduce a legacy key layout. If the source or its references are functionally absent, fix the loss. If 5.1.3 intentionally represents the same evidence more accurately elsewhere, document that conclusion and update comparison expectations only with approval.
-
-#### Suggested tests
-
-1. Exact starter with the tuple source and `CASE` predicate: assert the three-source set and all six extractor goldens (`substitutions`, `symbolTable`, `interface`, `tableDictionary`, `sqlTree`, `messages`).
-2. Minimal table-stub wrapper: assert the same three logical sources (stub, CTE base table, CTE key) and six goldens.
-3. CTE referenced only in a trailing clause, not the select list: the CTE remains a registered row source.
-4. CTE referenced in the select list with no trailing clause: the CTE remains present at query exit.
-5. `last_delivered_cte.not_a_col`: assert the query-alias/interface column diagnostic and the retained CTE key.
-6. Join-form and trailing-clause matrix above, preserving the observed/predicted/control labels in test names or comments so characterization results document the actual defect boundary.
-7. Nested-WITH duplicates described above: the outer query uses only the wrapper CTE interface, while the global dictionary still retains the embedded final-JOIN source and its column references.
-8. Live Panto clusters A–E: add full-query tests plus one minimized characterization per distinct root cause; retain the detailed brief as the fixture index.
-
-#### Acceptance
-
-- The exact starter's `tableDictionary` contains the same set of three logical sources as 5.0.0-3: fulfillment tuple, `last_delivered_cte`, and the CTE's physical log table. Folded or schema-qualified spelling of the physical table may differ; `last_delivered_cte` must not be absent.
-- The retained CTE entry includes its observed reference locations, and `last_delivered_cte.last_del` resolves through the CTE interface.
-- Conditionless join source registration is complete before `WHERE`, `GROUP BY`, `HAVING`, `QUALIFY`, `ORDER BY`, or final query exit.
-- The observed `CROSS JOIN` case is fixed. Every predicted case that reproduces the omission is fixed through the same source-registration path; predicted cases that already pass remain locked as regressions and are not evidence for unrelated rewrites.
-- Conditioned JOIN, comma-style, direct-CTE-FROM, physical-table, and non-WITH controls remain correct.
-- Nested-WITH duplicates retain the embedded query's complete source inventory and reference locations even though the outer query never reuses the source introduced by the embedded final JOIN.
-- Every live Panto CTE case has a written 5.0.0-3 versus 5.1.3 explanation identifying the owning scope/bucket and root cause before a fix or comparison-rule change is accepted.
-- Rows 583, 2139, 3870, 4648, 4726, and the CTE portion of 5455 retain all functionally required CTE source/interface evidence. Row 3150 retains `race_data` once any blocking diagnostic path is resolved or separately adjudicated under 2.9.
-- Six extractor goldens are locked for the starter or minimal wrapper.
-- Six extractor goldens are also locked for the nested observed reproduction; focused assertions cover the remaining nested duplicates.
-- Phase 2.1–2.6 tests remain unchanged and pass.
-
-#### Out of scope (2.7)
-
-- Normalizing `log__acs_contact_deletions` versus `pdp_ug.log__acs_contact_deletions` key spelling or folded case.
-- Evaluating the business semantics of the starter's `CASE` filter.
-- Changing WITH AST numbering or treating an AST-only comparison as proof that dictionary finalization is correct.
-- Making currently invalid conditionless join syntax valid; test only forms already accepted by the grammar, with ordinary `ON` / `USING` joins as controls.
-- Blindly forcing every legacy CTE key into the physical table dictionary when 5.1.3 already preserves equivalent query-backed evidence through the documented `def_*` / `interface` / alias contract.
+1. ~~Add characterization tests with six extractor goldens.~~ Done — `SqlEventWalkerWithConditionlessJoinFinalizerTests`.
+2. Bisect walker finalizer / global CTE dictionary promotion; restore `amount_cte`-style keys for all join shapes in the test class.
+3. Update goldens when fixed; expand to nested-WITH template and live Panto clusters A–E.
+4. Dual-parse live Panto clusters using fixtures in [sql/](../docs/rmcp-handoff/5.1.3-panto-outstanding/sql/) per [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md).
 
 ---
 
@@ -903,15 +754,21 @@ For each live query, dual-parse the exact SQL on both fat JARs and capture `tabl
 
 **Kind:** Performance defect / investigation (many queries exceed 90 seconds and regress materially from 5.0.0-3)
 
-**Status:** **Not started** — 74-query live corpus available
+**Status:** **In progress** — stage-timing harness landed; 74-query corpus indexed under `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`
 
 **Component:** end-to-end parser pipeline; ownership remains unknown until stage timing and profiling identify the dominant work
+
+#### Progress (2026-09)
+
+- **Done:** Opt-in stage-timing instrumentation — `ParseLatencyDiagnosticService`, `ParseLatencyReport`, and `ParseLatencyDiagnosticTest` (`parse/src/main/java/sql/latency/`, `parse/src/test/java/sql/latency/`).
+- **Done (candidate fix, needs corpus validation):** Incremental set-op `def_*` payload cache in `SqlParseSymbolTreeHelper` / `SqlParseEventWalker` to avoid repeated O(n²) scans on UNION/INTERSECT branches.
+- **Next:** Run the diagnostic harness against the full 74-row timeout corpus; cluster by dominant stage; profile before optimizing.
 
 #### Problem
 
 A substantial set of queries takes longer than 90 seconds through the 5.1.3 parser and is significantly slower than the production 5.0.0-3 parser. The current end-to-end duration does not show whether time is spent building the parse tree, walking it and producing semantic diagnostics, or materializing and returning the access-object results. Do not optimize based only on total elapsed time or assume that every slow query has the same cause.
 
-The identifying information, 5.0.0-3 timings, 5.1.3 timeout observations, and full SQL text for every known case are maintained in [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md). That brief is the authoritative fixture index; do not duplicate its 74 full queries here.
+The identifying information, 5.0.0-3 timings, 5.1.3 timeout observations, and full SQL text for every known case are maintained in [panto-513-parse-timeouts-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) and the machine-readable [panto_513_outstanding_issues.csv](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv) / [outstanding-issues-index.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/outstanding-issues-index.md). That brief is the authoritative fixture index; do not duplicate its 74 full queries here.
 
 #### Required stage breakdown
 
@@ -940,14 +797,14 @@ Use the CSV row number from the detailed brief as the stable case ID. All 74 lis
 
 | Corpus | Query / fixture source | 5.0.0-3 total | 5.1.3 total | Dominant 5.1.3 stage | Status / notes |
 |--------|------------------------|---------------|-------------|----------------------|----------------|
-| 74 Panto rows | [Detailed timeout brief](./panto-513-parse-timeouts-2026-08-19.md) | Every row completes; typically hundreds of ms to a few seconds, with row 130 near 20s | Every row aborted at approximately 90s | Unknown until staged instrumentation | Characterize and cluster before optimizing |
+| 74 Panto rows | [Detailed timeout brief](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) | Every row completes; typically hundreds of ms to a few seconds, with row 130 near 20s | Every row aborted at approximately 90s | Unknown until staged instrumentation | Characterize and cluster before optimizing |
 
 Retain both the original full query and any minimized reproduction. Redact or parameterize sensitive literals without changing the structural feature responsible for the timing.
 
 #### Suggested deliverables and tests
 
-1. Opt-in stage-timing instrumentation with a structured result containing parse, walker/semantic, return, overhead, and total durations.
-2. A repeatable benchmark or integration-test harness that runs one query or the full corpus and emits machine-readable results for version comparison.
+1. Opt-in stage-timing instrumentation with a structured result containing parse, walker/semantic, return, overhead, and total durations. **Done** — see `ParseLatencyDiagnosticService`.
+2. A repeatable benchmark or integration-test harness that runs one query or the full corpus and emits machine-readable results for version comparison. **Partial** — `ParseLatencyDiagnosticTest` covers trimmed fixtures; extend to full CSV corpus.
 3. Characterization results for every supplied query, including timeout stage, warm/cold distinction, query-shape metadata, and 5.0.0-3 versus 5.1.3 ratio.
 4. A minimized fixture and focused performance regression check for each distinct root-cause cluster. Keep hard timing assertions out of ordinary noisy unit tests unless the threshold has ample headroom; use operation counts or dedicated benchmark thresholds where more stable.
 5. Existing six extractor outputs and diagnostics must remain semantically unchanged for successful optimizations, except for separately approved defect fixes.
@@ -982,9 +839,9 @@ Retain both the original full query and any minimized reproduction. Redact or pa
 
 **Component:** grammar, recovery, semantic diagnostics, substitution/table-source collection, or comparison policy — assign ownership per case after dual-parse evidence
 
-The detailed corpus is [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md). This subtask owns differences from that brief that are not explained by CTE publication/finalization under 2.7, plus future non-CTE 5.0.0-3 versus 5.1.3 differences discovered by the same comparison workflow.
+The detailed corpus is [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). This subtask owns differences from that brief that are not explained by CTE publication/finalization under 2.7, plus future non-CTE 5.0.0-3 versus 5.1.3 differences discovered by the same comparison workflow.
 
-**Timeout routing:** the 74 cases where 5.1.3 exceeds 90 seconds while 5.0.0-3 completes are owned by **2.8**, with identifying information and full SQL in [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md). If a completed parse later exposes a source or diagnostic difference, route that completed-output difference back to 2.9 without moving the timeout investigation itself.
+**Timeout routing:** the 74 cases where 5.1.3 exceeds 90 seconds while 5.0.0-3 completes are owned by **2.8**, with identifying information and full SQL in [panto-513-parse-timeouts-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md). If a completed parse later exposes a source or diagnostic difference, route that completed-output difference back to 2.9 without moving the timeout investigation itself.
 
 #### Investigation-first rule
 

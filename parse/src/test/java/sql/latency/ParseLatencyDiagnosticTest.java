@@ -123,7 +123,7 @@ public class ParseLatencyDiagnosticTest {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // Query fixtures — trimmed from panto-513-parse-timeouts-2026-08-19.md
+    // Query fixtures — trimmed from parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md
     // Only row 28, 475, and 130 are embedded here; add more as needed.
     // ═════════════════════════════════════════════════════════════════════════
 
