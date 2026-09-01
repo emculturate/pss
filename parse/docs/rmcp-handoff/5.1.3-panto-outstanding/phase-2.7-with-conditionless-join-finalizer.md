@@ -30,7 +30,7 @@ The original investigation opened because a live Panto query appeared to lose tu
 
 **Policy (2026-09-01):** CTE names or aliases must **not** appear in global `tableDictionary`. The queries they represent are documented in `query_dictionary` and symbol-table substructures. 5.0.0-3 behavior that promoted CTE aliases into the physical table dictionary is **obsolete** and must not be restored.
 
-Dual-parse reports that list “missing” CTE keys in global `tableDictionary` are **not** 2.7 defects when equivalent CTE evidence exists in the symbol tree. Re-score those rows under **2.9** only when source or column evidence is functionally absent everywhere.
+Dual-parse reports that list “missing” CTE keys in global `tableDictionary` are **not** 2.7 defects when equivalent CTE evidence exists in the symbol tree — especially when the CTE is registered on **`table_alias` as `{cte_name=queryN}`** (an intentional 5.1.3 enhancement over 5.0.0-3’s practice of promoting CTE names into the physical dictionary). Re-score those rows under **2.9** only when source or column evidence is functionally absent everywhere.
 
 ---
 
@@ -97,7 +97,7 @@ WHERE CASE
 
 | Item | Owner | Notes |
 |------|-------|-------|
-| Live Panto clusters A–E (rows 583, 2139, 3150, 3870, 4648, 4726, 5455) | **2.9** | Adjudicate functional source loss; ignore CTE-name-only `tableDictionary` deltas |
+| Live Panto clusters A–E (rows 583, 2139, 3150, 3870, 4648, 4726, 5455) | **2.9 closed** | All adjudicated 2026-09-01 — see [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md) and set-op policy |
 | Nested-WITH wrapper template (optional extra characterization) | — | Not required for 2.7 closure |
 
 ---

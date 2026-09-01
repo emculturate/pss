@@ -8,6 +8,7 @@
   "counts": {
     "timeouts": 74,
     "degradations": 8,
+    "degradationsClosed": 8,
     "extractRows": 82
   },
   "degradations": [
@@ -17,14 +18,11 @@
       "domain": "ALR",
       "entity": "Student",
       "queryName": "ECRM.student",
+      "status": "closed_2.9_cluster_a",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias policy; see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:latest_applications",
-        "tableDictionary:activity_prospect_map",
-        "tableDictionary:campus_visit_activity"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 2139,
@@ -32,14 +30,11 @@
       "domain": "Enroll360",
       "entity": "Student",
       "queryName": "ECRM.student",
+      "status": "closed_2.9_cluster_a",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias policy; see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:latest_applications",
-        "tableDictionary:activity_prospect_map",
-        "tableDictionary:campus_visit_activity"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 3150,
@@ -47,13 +42,11 @@
       "domain": "Enroll360",
       "entity": "Student Race",
       "queryName": "INACTIVE_Enroll360.Student Race.final_v2",
+      "status": "closed_2.9_cluster_d",
       "reasons": [
-        "5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (20 vs 0)",
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "5.1.3 FATAL diagnostics canonical (outer UNION ALL duplicate output names); see set-operation-interface-duplicate-output-names-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:race_data"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 3870,
@@ -61,12 +54,11 @@
       "domain": "Enroll360",
       "entity": "Student Term PDP Delivery",
       "queryName": "Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020",
+      "status": "closed_2.9_cluster_b",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias policy (student_term_crm=query7); see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:student_term_crm"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 4648,
@@ -74,12 +66,11 @@
       "domain": "Foundation",
       "entity": "Student Academic Summary Intermediate",
       "queryName": "old Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill_ Query",
+      "status": "closed_2.9_cluster_c",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias policy (ST_student_term_sweep=query0); see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:st_student_term_sweep"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 4726,
@@ -87,12 +78,11 @@
       "domain": "Foundation",
       "entity": "Student Academic Summary Intermediate",
       "queryName": "Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query",
+      "status": "closed_2.9_cluster_c",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias policy (ST_student_term_sweep=query0); see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:st_student_term_sweep"
-      ]
+      "missingVs5003": []
     },
     {
       "csvRow": 5410,
@@ -100,8 +90,9 @@
       "domain": "Partner_Data_Platform",
       "entity": "Cappex Contacts",
       "queryName": "src_intake_cappex_contacts_PDPv0.2",
+      "status": "closed_2.9_cluster_f",
       "reasons": [
-        "5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (3 vs 0)"
+        "5.1.3 FATAL diagnostics canonical (UNION ALL duplicate output names in branch 2); see set-operation-interface-duplicate-output-names-policy.md"
       ],
       "missingVs5003": []
     },
@@ -111,13 +102,11 @@
       "domain": "Partner_Data_Platform",
       "entity": "Contact",
       "queryName": "con_contact_assigned_chosen_contacts",
+      "status": "closed_2.9_cluster_e",
       "reasons": [
-        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+        "CTE table_alias + tuple substitution key; see global-table-dictionary-cte-alias-policy.md"
       ],
-      "missingVs5003": [
-        "tableDictionary:comb_common",
-        "tableDictionary:chosencontact_combined"
-      ]
+      "missingVs5003": []
     }
   ],
   "timeouts": [

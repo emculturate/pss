@@ -31,6 +31,8 @@ The **`pss-parse-docs`** Maven artifact (`pss-parse-docs-5.1.3-1.jar`) is the co
 | `sql-grammar-extensions-since-2026-01-01` | New grammar / endpoint coverage in 5.1.3+ |
 | `window-query-dictionary-policy` | `window_partition_by` / `window_ordered_by` vs `query_dictionary` |
 | `ordered-select-list-output-alias-policy` | Ordered intra-select-list output alias refs, `interface` `queryN` lineage |
+| `global-table-dictionary-cte-alias-policy` | 5.1.3 global `tableDictionary`: physical/tuple only; CTE via `table_alias` |
+| `set-operation-interface-duplicate-output-names-policy` | UNION / INTERSECT / EXCEPT duplicate output names; author remediation |
 
 ### Version alignment
 

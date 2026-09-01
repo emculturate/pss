@@ -35,6 +35,18 @@
       "parserVersionMin": "${pss.parse.api.version}"
     },
     {
+      "id": "global-table-dictionary-cte-alias-policy",
+      "role": "5.1.3 global tableDictionary contract: physical and tuple sources only; CTE and query aliases via symbol table table_alias",
+      "path": "META-INF/pss-parse/${pss.parse.api.version}/global-table-dictionary-cte-alias-policy.md",
+      "parserVersionMin": "${pss.parse.api.version}"
+    },
+    {
+      "id": "set-operation-interface-duplicate-output-names-policy",
+      "role": "Author guidance for UNION INTERSECT EXCEPT branches with duplicate select-list output names; DUPLICATE_INTERFACE_COLUMNS and SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+      "path": "META-INF/pss-parse/${pss.parse.api.version}/set-operation-interface-duplicate-output-names-policy.md",
+      "parserVersionMin": "${pss.parse.api.version}"
+    },
+    {
       "id": "ordered-select-list-output-alias-policy",
       "role": "Ordered intra-select-list output alias resolution, interface queryN lineage, and contract tests",
       "path": "META-INF/pss-parse/${pss.parse.api.version}/ordered-select-list-output-alias-policy.md",

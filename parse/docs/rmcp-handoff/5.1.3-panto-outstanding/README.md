@@ -11,7 +11,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 |-------|--------|----------|
 | **2.7** | WITH CTE physical-source / tuple-substitution finalization (**complete**) | [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) |
 | **2.8** | 74 queries timeout at 90s on 5.1.3 | [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md), [outstanding-issues-index.md](./outstanding-issues-index.md), [panto_513_outstanding_issues.csv](./panto_513_outstanding_issues.csv) |
-| **2.9** | 8 table-dictionary / FATAL degradations | [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md), SQL fixtures in [sql/](./sql/) |
+| **2.9** | 8 table-dictionary / FATAL degradations (**closed** 2026-09-01) | [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md), [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md), SQL fixtures in [sql/](./sql/) |
 
 ## Files in this folder
 
@@ -28,8 +28,8 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 `issue_kinds` values in the CSV:
 
 - `timeout_513` — 5.1.3 killed at **90s**; 5.0.0-3 finished
-- `degradation_tabledict` — 5.1.3 `tableDictionary` missing keys 5.0.0-3 still has
-- `degradation_fatal` — 5.1.3 FATALs that 5.0.0-3 did not issue (rows **3150**, **5410**)
+- `degradation_tabledict` — legacy RMCP label; all eight rows **closed** under Phase 2.9 (CTE `table_alias` policy or set-op FATAL policy)
+- `degradation_fatal` — legacy RMCP label; rows **3150**, **5410** **closed** — canonical set-op interface validation
 
 No overlap between the 74 timeouts and the 8 degradations.
 
@@ -38,7 +38,9 @@ No overlap between the 74 timeouts and the 8 degradations.
 - Table-dictionary compare uses the **last identifier after `.`**. Qualification-only differences are not degradations.
 - Extra nested 5.1.3 query-dictionary layers vs 5.0.0-3 are improvements, not this pack.
 - Timeouts are parse **non-termination**, not missing dictionary keys.
-- Phase 2.7 (complete) locked trailing-clause physical/tuple collection and confirmed CTE aliases belong in `query_dictionary` / symbol tree, not global `tableDictionary`. The eight degradations may still show functional source loss — adjudicate under **2.9**; a missing CTE **name** in global `tableDictionary` alone is not a regression.
+- Phase 2.7 (complete) locked trailing-clause physical/tuple collection and confirmed **CTE aliases belong in `query_dictionary` / symbol tree, not global `tableDictionary`**. A missing CTE **name** in global `tableDictionary` alone is **not** a regression.
+- **5.1.3 CTE registration enhancement:** When a CTE name appears in 5.0.0-3 `tableDictionary` but not in 5.1.3 `tableDictionary`, check the **symbol table** first. In 5.1.3, WITH members are intentionally recorded on the enclosing scope’s **`table_alias`** map as **`{cte_name=queryN}`** bindings (published under `def_queryN`), pointing at the nested `def_queryN` body. Example (row 583): `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3` under `def_query4.table_alias`. That is **on purpose** — richer, documented row-source wiring that 5.0.0-3 did not emit. Treat it as a **5.1.3 improvement**, not an acceptable “silent” omission. Do **not** restore 5.0.0-3-style CTE keys into global `tableDictionary` to make raw output look similar.
+- Re-score under **2.9** only when physical/tuple source evidence or CTE symbol-tree registration (`table_alias`, `interface`, `filters`, `query_dictionary`) is functionally absent — not when the CTE moved from `tableDictionary` to `table_alias` → `queryN`.
 
 ## Intentionally omitted: 5.0.0-3 crashes
 

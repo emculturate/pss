@@ -1,0 +1,3962 @@
+{
+  "sql_file": "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-3150.sql",
+  "parse_ms": {
+    "5.0.0-3": 1742,
+    "5.1.3": 1761
+  },
+  "parse_outputs": {
+    "5.0.0-3": {
+      "tableDictionary": {
+        "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>": {
+          "calculated_field_4": "[@964,7763:7771='stud_race',<328>,193:13]",
+          "calculated_field_5": "[@995,7996:8004='stud_race',<328>,197:13]",
+          "calculated_field_2": "[@902,7287:7295='stud_race',<328>,185:13]",
+          "calculated_field_3": "[@933,7510:7518='stud_race',<328>,189:13]",
+          "race": "[@840,6833:6841='stud_race',<328>,177:13]",
+          "calculated_field_1": "[@871,7056:7064='stud_race',<328>,181:13]",
+          "intake_date": "[@816,6589:6597='stud_race',<328>,171:0]",
+          "calculated_field_10": "[@1150,9229:9237='stud_race',<328>,217:13]",
+          "primary_student_id": "[@1171,9367:9375='stud_race',<328>,220:13]",
+          "calculated_field_8": "[@1088,8725:8733='stud_race',<328>,209:13]",
+          "calculated_field_9": "[@1119,8987:8995='stud_race',<328>,213:13]",
+          "calculated_field_6": "[@1026,8246:8254='stud_race',<328>,201:13]",
+          "calculated_field_7": "[@1057,8496:8504='stud_race',<328>,205:13]"
+        },
+        "<[Enroll360].[Partner Code Mapping].{convert}>": {
+          "eab_standard_value": "[@809,6526:6541='pcm_race_unknown',<328>,169:5]",
+          "partner_value": "[@1159,9274:9289='pcm_race_unknown',<328>,217:58]",
+          "field_name": "[@1142,9166:9181='pcm_race_unknown',<328>,216:4]"
+        },
+        "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>": {
+          "calculated_field_4": "[@376,3046:3054='stud_race',<328>,82:13]",
+          "calculated_field_5": "[@407,3279:3287='stud_race',<328>,86:13]",
+          "calculated_field_2": "[@314,2570:2578='stud_race',<328>,74:13]",
+          "calculated_field_3": "[@345,2793:2801='stud_race',<328>,78:13]",
+          "race": "[@252,2116:2124='stud_race',<328>,66:13]",
+          "calculated_field_1": "[@283,2339:2347='stud_race',<328>,70:13]",
+          "intake_date": "[@228,1874:1882='stud_race',<328>,60:0]",
+          "calculated_field_10": "[@562,4512:4520='stud_race',<328>,106:13]",
+          "primary_student_id": "[@583,4653:4661='stud_race',<328>,109:13]",
+          "calculated_field_8": "[@500,4008:4016='stud_race',<328>,98:13]",
+          "calculated_field_9": "[@531,4270:4278='stud_race',<328>,102:13]",
+          "calculated_field_6": "[@438,3529:3537='stud_race',<328>,90:13]",
+          "calculated_field_7": "[@469,3779:3787='stud_race',<328>,94:13]"
+        },
+        "race_data": {
+          "EAB_RACE_UNKNOWN": "[@1406,11391:11406='EAB_RACE_UNKNOWN',<328>,331:6]",
+          "EAB_RACE_MULTIRACIAL": "[@1355,10916:10935='EAB_RACE_MULTIRACIAL',<328>,304:6]",
+          "race": "[@1222,9730:9733='race',<328>,237:31]",
+          "EAB_RACE_MIDDLE_EASTERN": "[@1338,10753:10775='EAB_RACE_MIDDLE_EASTERN',<328>,295:6]",
+          "EAB_RACE_OTHER": "[@1372,11064:11077='EAB_RACE_OTHER',<328>,313:6]",
+          "EAB_RACE_AMER_INDIAN": "[@1238,9869:9888='EAB_RACE_AMER_INDIAN',<328>,246:6]",
+          "eab_race": "[@1217,9705:9712='eab_race',<328>,237:6]",
+          "EAB_RACE_BLACK": "[@1287,10279:10292='EAB_RACE_BLACK',<328>,268:6]",
+          "EAB_RACE_WHITE": "[@1321,10593:10606='EAB_RACE_WHITE',<328>,286:6]",
+          "primary_student_id": "[@1396,11295:11312='primary_student_id',<328>,326:7]",
+          "EAB_RACE_PREFER_NOT_RESPOND": "[@1389,11232:11258='EAB_RACE_PREFER_NOT_RESPOND',<328>,322:6]",
+          "intake_dt": "[@1402,11356:11364='intake_dt',<328>,329:1]",
+          "EAB_RACE_ASIAN": "[@1270,10136:10149='EAB_RACE_ASIAN',<328>,259:6]",
+          "EAB_RACE_NATIVE_HAWAIIAN": "[@1304,10441:10464='EAB_RACE_NATIVE_HAWAIIAN',<328>,277:6]"
+        }
+      },
+      "symbolTable": {
+        "query15": {
+          "agg": "union14",
+          "def_union14": {
+            "query8": {
+              "interface": {
+                "EAB_RACE_WHITE": {
+                  "column": {
+                    "name": "EAB_RACE_WHITE",
+                    "table_ref": null
+                  }
+                },
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1311,10501:10518='primary_student_id',<328>,281:7]",
+                "intake_dt": "[@1317,10558:10566='intake_dt',<328>,284:1]",
+                "EAB_RACE_WHITE": "[@1321,10593:10606='EAB_RACE_WHITE',<328>,286:6]"
+              }
+            },
+            "query11": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_OTHER": {
+                  "column": {
+                    "name": "EAB_RACE_OTHER",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1362,10972:10989='primary_student_id',<328>,308:7]",
+                "EAB_RACE_OTHER": "[@1372,11064:11077='EAB_RACE_OTHER',<328>,313:6]",
+                "intake_dt": "[@1368,11029:11037='intake_dt',<328>,311:1]"
+              }
+            },
+            "query9": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_MIDDLE_EASTERN": {
+                  "column": {
+                    "name": "EAB_RACE_MIDDLE_EASTERN",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1328,10643:10660='primary_student_id',<328>,290:7]",
+                "EAB_RACE_MIDDLE_EASTERN": "[@1338,10753:10775='EAB_RACE_MIDDLE_EASTERN',<328>,295:6]",
+                "intake_dt": "[@1334,10718:10726='intake_dt',<328>,293:1]"
+              }
+            },
+            "query12": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_PREFER_NOT_RESPOND": {
+                  "column": {
+                    "name": "EAB_RACE_PREFER_NOT_RESPOND",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1379,11114:11131='primary_student_id',<328>,317:7]",
+                "EAB_RACE_PREFER_NOT_RESPOND": "[@1389,11232:11258='EAB_RACE_PREFER_NOT_RESPOND',<328>,322:6]",
+                "intake_dt": "[@1385,11197:11205='intake_dt',<328>,320:1]"
+              }
+            },
+            "query13": {
+              "interface": {
+                "EAB_RACE_UNKNOWN": {
+                  "column": {
+                    "name": "EAB_RACE_UNKNOWN",
+                    "table_ref": null
+                  }
+                },
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "EAB_RACE_UNKNOWN": "[@1406,11391:11406='EAB_RACE_UNKNOWN',<328>,331:6]",
+                "primary_student_id": "[@1396,11295:11312='primary_student_id',<328>,326:7]",
+                "intake_dt": "[@1402,11356:11364='intake_dt',<328>,329:1]"
+              }
+            },
+            "query4": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_AMER_INDIAN": {
+                  "column": {
+                    "name": "EAB_RACE_AMER_INDIAN",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1228,9765:9782='primary_student_id',<328>,241:7]",
+                "intake_dt": "[@1234,9834:9842='intake_dt',<328>,244:1]",
+                "EAB_RACE_AMER_INDIAN": "[@1238,9869:9888='EAB_RACE_AMER_INDIAN',<328>,246:6]"
+              }
+            },
+            "query5": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_ASIAN": {
+                  "case": {
+                    "clauses": {
+                      "1": {
+                        "then": {
+                          "literal": "'Asian'"
+                        },
+                        "when": {
+                          "in": {
+                            "item": {
+                              "column": {
+                                "name": "EAB_RACE_ASIAN",
+                                "table_ref": null
+                              }
+                            },
+                            "in_list": {
+                              "list": {
+                                "1": {
+                                  "literal": "'Asian/Asian American'"
+                                },
+                                "2": {
+                                  "literal": "'Asian'"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "else": {
+                      "null_literal": "null"
+                    }
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1245,9926:9943='primary_student_id',<328>,250:7]",
+                "intake_dt": "[@1266,10103:10111='intake_dt',<328>,257:1]",
+                "EAB_RACE_ASIAN": "[@1270,10136:10149='EAB_RACE_ASIAN',<328>,259:6]"
+              }
+            },
+            "query6": {
+              "interface": {
+                "EAB_RACE_BLACK": {
+                  "column": {
+                    "name": "EAB_RACE_BLACK",
+                    "table_ref": null
+                  }
+                },
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1277,10187:10204='primary_student_id',<328>,263:7]",
+                "intake_dt": "[@1283,10244:10252='intake_dt',<328>,266:1]",
+                "EAB_RACE_BLACK": "[@1287,10279:10292='EAB_RACE_BLACK',<328>,268:6]"
+              }
+            },
+            "query7": {
+              "interface": {
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                },
+                "EAB_RACE_NATIVE_HAWAIIAN": {
+                  "column": {
+                    "name": "EAB_RACE_NATIVE_HAWAIIAN",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1294,10329:10346='primary_student_id',<328>,272:7]",
+                "intake_dt": "[@1300,10406:10414='intake_dt',<328>,275:1]",
+                "EAB_RACE_NATIVE_HAWAIIAN": "[@1304,10441:10464='EAB_RACE_NATIVE_HAWAIIAN',<328>,277:6]"
+              }
+            },
+            "query10": {
+              "interface": {
+                "EAB_RACE_MULTIRACIAL": {
+                  "column": {
+                    "name": "EAB_RACE_MULTIRACIAL",
+                    "table_ref": null
+                  }
+                },
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1345,10812:10829='primary_student_id',<328>,299:7]",
+                "EAB_RACE_MULTIRACIAL": "[@1355,10916:10935='EAB_RACE_MULTIRACIAL',<328>,304:6]",
+                "intake_dt": "[@1351,10881:10889='intake_dt',<328>,302:1]"
+              }
+            },
+            "interface": {
+              "race": "query_column",
+              "eab_race": "query_column",
+              "primary_student_id": "query_column",
+              "intake_dt": "query_column"
+            },
+            "query3": {
+              "interface": {
+                "race": {
+                  "column": {
+                    "name": "race",
+                    "table_ref": null
+                  }
+                },
+                "eab_race": {
+                  "case": {
+                    "clauses": {
+                      "1": {
+                        "then": {
+                          "literal": "'Asian'"
+                        },
+                        "when": {
+                          "in": {
+                            "item": {
+                              "column": {
+                                "name": "eab_race",
+                                "table_ref": null
+                              }
+                            },
+                            "in_list": {
+                              "list": {
+                                "1": {
+                                  "literal": "'Asian/Asian American'"
+                                },
+                                "2": {
+                                  "literal": "'Asian'"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "else": {
+                      "column": {
+                        "name": "eab_race",
+                        "table_ref": null
+                      }
+                    }
+                  }
+                },
+                "primary_student_id": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": null
+                  }
+                },
+                "intake_dt": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": null
+                  }
+                }
+              },
+              "race_data": {
+                "primary_student_id": "[@1192,9510:9527='primary_student_id',<328>,228:7]",
+                "race": "[@1222,9730:9733='race',<328>,237:31]",
+                "eab_race": "[@1217,9705:9712='eab_race',<328>,237:6]",
+                "intake_dt": "[@1213,9672:9680='intake_dt',<328>,235:1]"
+              }
+            }
+          },
+          "union14": {
+            "race": "[@1184,9463:9466='race',<328>,223:0]",
+            "eab_race": "[@1186,9470:9477='eab_race',<328>,224:0]",
+            "primary_student_id": "[@1182,9442:9459='primary_student_id',<328>,222:16]",
+            "intake_dt": "[@1188,9481:9489='intake_dt',<328>,225:0]"
+          },
+          "interface": {
+            "race": {
+              "column": {
+                "name": "race",
+                "table_ref": null
+              }
+            },
+            "eab_race": {
+              "column": {
+                "name": "eab_race",
+                "table_ref": null
+              }
+            },
+            "primary_student_id": {
+              "column": {
+                "name": "primary_student_id",
+                "table_ref": null
+              }
+            },
+            "intake_dt": {
+              "column": {
+                "name": "intake_dt",
+                "table_ref": null
+              }
+            }
+          }
+        },
+        "with": {
+          "race_data": {
+            "union2": {
+              "query0": {
+                "pcm_race_middle_eastern": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_black": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "<[Enroll360].[Partner Code Mapping].{convert}>": {
+                  "partner_value": "[@571,4557:4572='pcm_race_unknown',<328>,106:58]",
+                  "eab_standard_value": "[@221,1811:1826='pcm_race_unknown',<328>,58:5]",
+                  "field_name": "[@554,4449:4464='pcm_race_unknown',<328>,105:4]"
+                },
+                "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>": {
+                  "calculated_field_4": "[@376,3046:3054='stud_race',<328>,82:13]",
+                  "calculated_field_5": "[@407,3279:3287='stud_race',<328>,86:13]",
+                  "calculated_field_2": "[@314,2570:2578='stud_race',<328>,74:13]",
+                  "calculated_field_3": "[@345,2793:2801='stud_race',<328>,78:13]",
+                  "race": "[@252,2116:2124='stud_race',<328>,66:13]",
+                  "calculated_field_1": "[@283,2339:2347='stud_race',<328>,70:13]",
+                  "intake_date": "[@228,1874:1882='stud_race',<328>,60:0]",
+                  "calculated_field_10": "[@562,4512:4520='stud_race',<328>,106:13]",
+                  "primary_student_id": "[@583,4653:4661='stud_race',<328>,109:13]",
+                  "calculated_field_8": "[@500,4008:4016='stud_race',<328>,98:13]",
+                  "calculated_field_9": "[@531,4270:4278='stud_race',<328>,102:13]",
+                  "calculated_field_6": "[@438,3529:3537='stud_race',<328>,90:13]",
+                  "calculated_field_7": "[@469,3779:3787='stud_race',<328>,94:13]"
+                },
+                "pcm_race_native_hawaiian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_amer_indian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "interface": {
+                  "eab_race_unknown": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_unknown"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_unknown"
+                        }
+                      }
+                    }
+                  },
+                  "race": {
+                    "function": {
+                      "parameters": {
+                        "1": {
+                          "function": {
+                            "parameters": {
+                              "1": {
+                                "column": {
+                                  "name": "race",
+                                  "table_ref": "stud_race"
+                                }
+                              }
+                            },
+                            "function_name": "trim"
+                          }
+                        },
+                        "2": {
+                          "literal": "''"
+                        }
+                      },
+                      "function_name": "nullif"
+                    }
+                  },
+                  "eab_race_middle_eastern": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_middle_eastern"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_middle_eastern"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_black": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_black"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_black"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_native_hawaiian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_native_hawaiian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_native_hawaiian"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "literal": "'Unknown'"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_asian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_asian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_asian"
+                        }
+                      }
+                    }
+                  },
+                  "primary_student_id": {
+                    "function": {
+                      "parameters": {
+                        "1": {
+                          "function": {
+                            "parameters": {
+                              "1": {
+                                "function": {
+                                  "parameters": {
+                                    "1": {
+                                      "column": {
+                                        "name": "primary_student_id",
+                                        "table_ref": "stud_race"
+                                      }
+                                    },
+                                    "2": {
+                                      "literal": "'\"|[\\\\000-\\\\037\\\\177]'"
+                                    },
+                                    "3": {
+                                      "literal": "''"
+                                    }
+                                  },
+                                  "function_name": "regexp_replace"
+                                }
+                              }
+                            },
+                            "function_name": "trim"
+                          }
+                        },
+                        "2": {
+                          "literal": "''"
+                        }
+                      },
+                      "function_name": "nullif"
+                    }
+                  },
+                  "eab_race_amer_indian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_amer_indian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_amer_indian"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_other": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_other"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_other"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_multiracial": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_multiracial"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_multiracial"
+                        }
+                      }
+                    }
+                  },
+                  "intake_dt": {
+                    "column": {
+                      "name": "intake_date",
+                      "table_ref": "stud_race"
+                    }
+                  },
+                  "eab_race_white": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_white"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_white"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_prefer_not_respond": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_prefer_not_respond"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_prefer_not_respond"
+                        }
+                      }
+                    }
+                  }
+                },
+                "pcm_race_asian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_prefer_not_respond": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "stud_race": "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>",
+                "pcm_race_multiracial": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_other": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_unknown": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_white": "<[Enroll360].[Partner Code Mapping].{convert}>"
+              },
+              "interface": {
+                "eab_race_unknown": "query_column",
+                "race": "query_column",
+                "eab_race_middle_eastern": "query_column",
+                "eab_race_black": "query_column",
+                "eab_race_native_hawaiian": "query_column",
+                "eab_race": "query_column",
+                "eab_race_asian": "query_column",
+                "primary_student_id": "query_column",
+                "eab_race_amer_indian": "query_column",
+                "eab_race_other": "query_column",
+                "eab_race_multiracial": "query_column",
+                "intake_dt": "query_column",
+                "eab_race_white": "query_column",
+                "eab_race_prefer_not_respond": "query_column"
+              },
+              "query1": {
+                "pcm_race_middle_eastern": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_black": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "<[Enroll360].[Partner Code Mapping].{convert}>": {
+                  "partner_value": "[@1159,9274:9289='pcm_race_unknown',<328>,217:58]",
+                  "eab_standard_value": "[@809,6526:6541='pcm_race_unknown',<328>,169:5]",
+                  "field_name": "[@1142,9166:9181='pcm_race_unknown',<328>,216:4]"
+                },
+                "pcm_race_native_hawaiian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_amer_indian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "interface": {
+                  "eab_race_unknown": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_unknown"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_unknown"
+                        }
+                      }
+                    }
+                  },
+                  "race": {
+                    "function": {
+                      "parameters": {
+                        "1": {
+                          "function": {
+                            "parameters": {
+                              "1": {
+                                "column": {
+                                  "name": "race",
+                                  "table_ref": "stud_race"
+                                }
+                              }
+                            },
+                            "function_name": "trim"
+                          }
+                        },
+                        "2": {
+                          "literal": "''"
+                        }
+                      },
+                      "function_name": "nullif"
+                    }
+                  },
+                  "eab_race_middle_eastern": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_middle_eastern"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_middle_eastern"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_black": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_black"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_black"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_native_hawaiian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_native_hawaiian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_native_hawaiian"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "literal": "'Unknown'"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_asian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_asian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_asian"
+                        }
+                      }
+                    }
+                  },
+                  "primary_student_id": {
+                    "function": {
+                      "parameters": {
+                        "1": {
+                          "function": {
+                            "parameters": {
+                              "1": {
+                                "function": {
+                                  "parameters": {
+                                    "1": {
+                                      "column": {
+                                        "name": "primary_student_id",
+                                        "table_ref": "stud_race"
+                                      }
+                                    },
+                                    "2": {
+                                      "literal": "'\"|[\\\\000-\\\\037\\\\177]'"
+                                    },
+                                    "3": {
+                                      "literal": "''"
+                                    }
+                                  },
+                                  "function_name": "regexp_replace"
+                                }
+                              }
+                            },
+                            "function_name": "trim"
+                          }
+                        },
+                        "2": {
+                          "literal": "''"
+                        }
+                      },
+                      "function_name": "nullif"
+                    }
+                  },
+                  "eab_race_amer_indian": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_amer_indian"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_amer_indian"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_other": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_other"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_other"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_multiracial": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_multiracial"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_multiracial"
+                        }
+                      }
+                    }
+                  },
+                  "intake_dt": {
+                    "column": {
+                      "name": "intake_date",
+                      "table_ref": "stud_race"
+                    }
+                  },
+                  "eab_race_white": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_white"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_white"
+                        }
+                      }
+                    }
+                  },
+                  "eab_race_prefer_not_respond": {
+                    "case": {
+                      "clauses": {
+                        "1": {
+                          "then": {
+                            "null_literal": "null"
+                          },
+                          "when": {
+                            "condition": {
+                              "left": {
+                                "column": {
+                                  "name": "eab_standard_value",
+                                  "table_ref": "pcm_race_prefer_not_respond"
+                                }
+                              },
+                              "right": {
+                                "literal": "'Unmapped Value'"
+                              },
+                              "operator": "="
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "column": {
+                          "name": "eab_standard_value",
+                          "table_ref": "pcm_race_prefer_not_respond"
+                        }
+                      }
+                    }
+                  }
+                },
+                "pcm_race_asian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_prefer_not_respond": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>": {
+                  "calculated_field_4": "[@964,7763:7771='stud_race',<328>,193:13]",
+                  "calculated_field_5": "[@995,7996:8004='stud_race',<328>,197:13]",
+                  "calculated_field_2": "[@902,7287:7295='stud_race',<328>,185:13]",
+                  "calculated_field_3": "[@933,7510:7518='stud_race',<328>,189:13]",
+                  "race": "[@840,6833:6841='stud_race',<328>,177:13]",
+                  "calculated_field_1": "[@871,7056:7064='stud_race',<328>,181:13]",
+                  "intake_date": "[@816,6589:6597='stud_race',<328>,171:0]",
+                  "calculated_field_10": "[@1150,9229:9237='stud_race',<328>,217:13]",
+                  "primary_student_id": "[@1171,9367:9375='stud_race',<328>,220:13]",
+                  "calculated_field_8": "[@1088,8725:8733='stud_race',<328>,209:13]",
+                  "calculated_field_9": "[@1119,8987:8995='stud_race',<328>,213:13]",
+                  "calculated_field_6": "[@1026,8246:8254='stud_race',<328>,201:13]",
+                  "calculated_field_7": "[@1057,8496:8504='stud_race',<328>,205:13]"
+                },
+                "stud_race": "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>",
+                "pcm_race_multiracial": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_other": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_unknown": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_white": "<[Enroll360].[Partner Code Mapping].{convert}>"
+              }
+            }
+          }
+        }
+      },
+      "queryDictionary": null,
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": null,
+      "parserMessageStringList": []
+    },
+    "5.1.3": {
+      "tableDictionary": {
+        "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>": {
+          "calculated_field_4": [
+            "[@964,7763:7771='stud_race',<393>,193:13]"
+          ],
+          "calculated_field_5": [
+            "[@995,7996:8004='stud_race',<393>,197:13]"
+          ],
+          "calculated_field_2": [
+            "[@902,7287:7295='stud_race',<393>,185:13]"
+          ],
+          "calculated_field_3": [
+            "[@933,7510:7518='stud_race',<393>,189:13]"
+          ],
+          "race": [
+            "[@619,4877:4885='stud_race',<393>,115:12]",
+            "[@840,6833:6841='stud_race',<393>,177:13]"
+          ],
+          "calculated_field_1": [
+            "[@871,7056:7064='stud_race',<393>,181:13]"
+          ],
+          "intake_date": [
+            "[@816,6589:6597='stud_race',<393>,171:0]"
+          ],
+          "calculated_field_10": [
+            "[@1150,9229:9237='stud_race',<393>,217:13]"
+          ],
+          "primary_student_id": [
+            "[@600,4780:4788='stud_race',<393>,114:27]",
+            "[@1171,9367:9375='stud_race',<393>,220:13]"
+          ],
+          "calculated_field_8": [
+            "[@1088,8725:8733='stud_race',<393>,209:13]"
+          ],
+          "calculated_field_9": [
+            "[@1119,8987:8995='stud_race',<393>,213:13]"
+          ],
+          "calculated_field_6": [
+            "[@1026,8246:8254='stud_race',<393>,201:13]"
+          ],
+          "calculated_field_7": [
+            "[@1057,8496:8504='stud_race',<393>,205:13]"
+          ]
+        },
+        "<[Enroll360].[Partner Code Mapping].{convert}>": {
+          "partner_value": [
+            "[@447,3573:3595='pcm_race_middle_eastern',<393>,90:57]",
+            "[@571,4557:4572='pcm_race_unknown',<393>,106:58]",
+            "[@385,3090:3113='pcm_race_native_hawaiian',<393>,82:57]",
+            "[@292,2383:2402='pcm_race_amer_indian',<393>,70:57]",
+            "[@323,2614:2627='pcm_race_asian',<393>,74:57]",
+            "[@540,4314:4340='pcm_race_prefer_not_respond',<393>,102:57]",
+            "[@416,3323:3336='pcm_race_white',<393>,86:57]",
+            "[@261,2146:2153='pcm_race',<393>,66:43]",
+            "[@354,2837:2850='pcm_race_black',<393>,78:57]",
+            "[@509,4052:4065='pcm_race_other',<393>,98:57]",
+            "[@478,3823:3842='pcm_race_multiracial',<393>,94:57]",
+            "[@1035,8290:8312='pcm_race_middle_eastern',<393>,201:57]",
+            "[@1159,9274:9289='pcm_race_unknown',<393>,217:58]",
+            "[@973,7807:7830='pcm_race_native_hawaiian',<393>,193:57]",
+            "[@880,7100:7119='pcm_race_amer_indian',<393>,181:57]",
+            "[@911,7331:7344='pcm_race_asian',<393>,185:57]",
+            "[@1128,9031:9057='pcm_race_prefer_not_respond',<393>,213:57]",
+            "[@1004,8040:8053='pcm_race_white',<393>,197:57]",
+            "[@849,6863:6870='pcm_race',<393>,177:43]",
+            "[@942,7554:7567='pcm_race_black',<393>,189:57]",
+            "[@1097,8769:8782='pcm_race_other',<393>,209:57]",
+            "[@1066,8540:8559='pcm_race_multiracial',<393>,205:57]"
+          ],
+          "eab_standard_value": [
+            "[@162,1257:1276='pcm_race_multiracial',<393>,41:10]",
+            "[@170,1333:1352='pcm_race_multiracial',<393>,43:5]",
+            "[@179,1418:1431='pcm_race_other',<393>,46:10]",
+            "[@187,1488:1501='pcm_race_other',<393>,48:5]",
+            "[@43,206:213='pcm_race',<393>,6:10]",
+            "[@51,275:282='pcm_race',<393>,8:5]",
+            "[@128,948:961='pcm_race_white',<393>,31:10]",
+            "[@136,1018:1031='pcm_race_white',<393>,33:5]",
+            "[@196,1559:1585='pcm_race_prefer_not_respond',<393>,51:10]",
+            "[@204,1642:1668='pcm_race_prefer_not_respond',<393>,53:5]",
+            "[@94,636:649='pcm_race_black',<393>,21:10]",
+            "[@102,706:719='pcm_race_black',<393>,23:5]",
+            "[@213,1739:1754='pcm_race_unknown',<393>,56:10]",
+            "[@221,1811:1826='pcm_race_unknown',<393>,58:5]",
+            "[@77,495:508='pcm_race_asian',<393>,16:10]",
+            "[@85,565:578='pcm_race_asian',<393>,18:5]",
+            "[@145,1089:1111='pcm_race_middle_eastern',<393>,36:10]",
+            "[@153,1168:1190='pcm_race_middle_eastern',<393>,38:5]",
+            "[@60,336:355='pcm_race_amer_indian',<393>,11:10]",
+            "[@68,412:431='pcm_race_amer_indian',<393>,13:5]",
+            "[@111,777:800='pcm_race_native_hawaiian',<393>,26:10]",
+            "[@119,857:880='pcm_race_native_hawaiian',<393>,28:5]",
+            "[@750,5972:5991='pcm_race_multiracial',<393>,152:10]",
+            "[@758,6048:6067='pcm_race_multiracial',<393>,154:5]",
+            "[@767,6133:6146='pcm_race_other',<393>,157:10]",
+            "[@775,6203:6216='pcm_race_other',<393>,159:5]",
+            "[@631,4921:4928='pcm_race',<393>,117:10]",
+            "[@639,4990:4997='pcm_race',<393>,119:5]",
+            "[@716,5663:5676='pcm_race_white',<393>,142:10]",
+            "[@724,5733:5746='pcm_race_white',<393>,144:5]",
+            "[@784,6274:6300='pcm_race_prefer_not_respond',<393>,162:10]",
+            "[@792,6357:6383='pcm_race_prefer_not_respond',<393>,164:5]",
+            "[@682,5351:5364='pcm_race_black',<393>,132:10]",
+            "[@690,5421:5434='pcm_race_black',<393>,134:5]",
+            "[@801,6454:6469='pcm_race_unknown',<393>,167:10]",
+            "[@809,6526:6541='pcm_race_unknown',<393>,169:5]",
+            "[@665,5210:5223='pcm_race_asian',<393>,127:10]",
+            "[@673,5280:5293='pcm_race_asian',<393>,129:5]",
+            "[@733,5804:5826='pcm_race_middle_eastern',<393>,147:10]",
+            "[@741,5883:5905='pcm_race_middle_eastern',<393>,149:5]",
+            "[@648,5051:5070='pcm_race_amer_indian',<393>,122:10]",
+            "[@656,5127:5146='pcm_race_amer_indian',<393>,124:5]",
+            "[@699,5492:5515='pcm_race_native_hawaiian',<393>,137:10]",
+            "[@707,5572:5595='pcm_race_native_hawaiian',<393>,139:5]"
+          ],
+          "field_name": [
+            "[@461,3708:3727='pcm_race_multiracial',<393>,93:4]",
+            "[@430,3452:3474='pcm_race_middle_eastern',<393>,89:4]",
+            "[@399,3220:3233='pcm_race_white',<393>,85:4]",
+            "[@306,2511:2524='pcm_race_asian',<393>,73:4]",
+            "[@244,2069:2076='pcm_race',<393>,65:4]",
+            "[@523,4185:4211='pcm_race_prefer_not_respond',<393>,101:4]",
+            "[@337,2734:2747='pcm_race_black',<393>,77:4]",
+            "[@275,2268:2287='pcm_race_amer_indian',<393>,69:4]",
+            "[@554,4449:4464='pcm_race_unknown',<393>,105:4]",
+            "[@492,3949:3962='pcm_race_other',<393>,97:4]",
+            "[@368,2967:2990='pcm_race_native_hawaiian',<393>,81:4]",
+            "[@1049,8425:8444='pcm_race_multiracial',<393>,204:4]",
+            "[@1018,8169:8191='pcm_race_middle_eastern',<393>,200:4]",
+            "[@987,7937:7950='pcm_race_white',<393>,196:4]",
+            "[@894,7228:7241='pcm_race_asian',<393>,184:4]",
+            "[@832,6786:6793='pcm_race',<393>,176:4]",
+            "[@1111,8902:8928='pcm_race_prefer_not_respond',<393>,212:4]",
+            "[@925,7451:7464='pcm_race_black',<393>,188:4]",
+            "[@863,6985:7004='pcm_race_amer_indian',<393>,180:4]",
+            "[@1142,9166:9181='pcm_race_unknown',<393>,216:4]",
+            "[@1080,8666:8679='pcm_race_other',<393>,208:4]",
+            "[@956,7684:7707='pcm_race_native_hawaiian',<393>,192:4]"
+          ]
+        },
+        "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>": {
+          "calculated_field_4": [
+            "[@376,3046:3054='stud_race',<393>,82:13]"
+          ],
+          "calculated_field_5": [
+            "[@407,3279:3287='stud_race',<393>,86:13]"
+          ],
+          "calculated_field_2": [
+            "[@314,2570:2578='stud_race',<393>,74:13]"
+          ],
+          "calculated_field_3": [
+            "[@345,2793:2801='stud_race',<393>,78:13]"
+          ],
+          "race": [
+            "[@31,162:170='stud_race',<393>,4:12]",
+            "[@252,2116:2124='stud_race',<393>,66:13]"
+          ],
+          "calculated_field_1": [
+            "[@283,2339:2347='stud_race',<393>,70:13]"
+          ],
+          "intake_date": [
+            "[@228,1874:1882='stud_race',<393>,60:0]"
+          ],
+          "calculated_field_10": [
+            "[@562,4512:4520='stud_race',<393>,106:13]"
+          ],
+          "primary_student_id": [
+            "[@12,65:73='stud_race',<393>,3:27]",
+            "[@583,4653:4661='stud_race',<393>,109:13]"
+          ],
+          "calculated_field_8": [
+            "[@500,4008:4016='stud_race',<393>,98:13]"
+          ],
+          "calculated_field_9": [
+            "[@531,4270:4278='stud_race',<393>,102:13]"
+          ],
+          "calculated_field_6": [
+            "[@438,3529:3537='stud_race',<393>,90:13]"
+          ],
+          "calculated_field_7": [
+            "[@469,3779:3787='stud_race',<393>,94:13]"
+          ]
+        }
+      },
+      "symbolTable": {
+        "def_query15": {
+          "context_list": {
+            "race_data": "union2"
+          },
+          "query_dictionary": {
+            "race": [
+              "[@1184,9463:9466='race',<393>,223:0]"
+            ],
+            "eab_race": [
+              "[@1186,9470:9477='eab_race',<393>,224:0]"
+            ],
+            "primary_student_id": [
+              "[@1182,9442:9459='primary_student_id',<393>,222:16]"
+            ],
+            "intake_dt": [
+              "[@1188,9481:9489='intake_dt',<393>,225:0]"
+            ]
+          },
+          "def_union2": {
+            "query_dictionary": {
+              "EAB_RACE_UNKNOWN": [
+                "[@1398,11317:11332='EAB_RACE_UNKNOWN',<393>,327:2]",
+                "[@1400,11337:11352='EAB_RACE_UNKNOWN',<393>,328:2]",
+                "[@1406,11391:11406='EAB_RACE_UNKNOWN',<393>,331:6]"
+              ],
+              "EAB_RACE_MULTIRACIAL": [
+                "[@1347,10834:10853='EAB_RACE_MULTIRACIAL',<393>,300:2]",
+                "[@1349,10858:10877='EAB_RACE_MULTIRACIAL',<393>,301:2]",
+                "[@1355,10916:10935='EAB_RACE_MULTIRACIAL',<393>,304:6]"
+              ],
+              "race": [
+                "[@1194,9533:9536='race',<393>,229:3]",
+                "[@1222,9730:9733='race',<393>,237:31]"
+              ],
+              "EAB_RACE_MIDDLE_EASTERN": [
+                "[@1330,10665:10687='EAB_RACE_MIDDLE_EASTERN',<393>,291:2]",
+                "[@1332,10692:10714='EAB_RACE_MIDDLE_EASTERN',<393>,292:2]",
+                "[@1338,10753:10775='EAB_RACE_MIDDLE_EASTERN',<393>,295:6]"
+              ],
+              "EAB_RACE_OTHER": [
+                "[@1364,10994:11007='EAB_RACE_OTHER',<393>,309:2]",
+                "[@1366,11012:11025='EAB_RACE_OTHER',<393>,310:2]",
+                "[@1372,11064:11077='EAB_RACE_OTHER',<393>,313:6]"
+              ],
+              "EAB_RACE_AMER_INDIAN": [
+                "[@1230,9787:9806='EAB_RACE_AMER_INDIAN',<393>,242:2]",
+                "[@1232,9811:9830='EAB_RACE_AMER_INDIAN',<393>,243:2]",
+                "[@1238,9869:9888='EAB_RACE_AMER_INDIAN',<393>,246:6]"
+              ],
+              "eab_race": [
+                "[@1198,9571:9578='eab_race',<393>,232:9]",
+                "[@1208,9639:9646='eab_race',<393>,233:9]",
+                "[@1217,9705:9712='eab_race',<393>,237:6]"
+              ],
+              "EAB_RACE_BLACK": [
+                "[@1279,10209:10222='EAB_RACE_BLACK',<393>,264:2]",
+                "[@1281,10227:10240='EAB_RACE_BLACK',<393>,265:2]",
+                "[@1287,10279:10292='EAB_RACE_BLACK',<393>,268:6]"
+              ],
+              "EAB_RACE_WHITE": [
+                "[@1313,10523:10536='EAB_RACE_WHITE',<393>,282:2]",
+                "[@1315,10541:10554='EAB_RACE_WHITE',<393>,283:2]",
+                "[@1321,10593:10606='EAB_RACE_WHITE',<393>,286:6]"
+              ],
+              "primary_student_id": [
+                "[@1192,9510:9527='primary_student_id',<393>,228:7]",
+                "[@1228,9765:9782='primary_student_id',<393>,241:7]",
+                "[@1245,9926:9943='primary_student_id',<393>,250:7]",
+                "[@1277,10187:10204='primary_student_id',<393>,263:7]",
+                "[@1294,10329:10346='primary_student_id',<393>,272:7]",
+                "[@1311,10501:10518='primary_student_id',<393>,281:7]",
+                "[@1328,10643:10660='primary_student_id',<393>,290:7]",
+                "[@1345,10812:10829='primary_student_id',<393>,299:7]",
+                "[@1362,10972:10989='primary_student_id',<393>,308:7]",
+                "[@1379,11114:11131='primary_student_id',<393>,317:7]",
+                "[@1396,11295:11312='primary_student_id',<393>,326:7]"
+              ],
+              "EAB_RACE_PREFER_NOT_RESPOND": [
+                "[@1381,11136:11162='EAB_RACE_PREFER_NOT_RESPOND',<393>,318:2]",
+                "[@1383,11167:11193='EAB_RACE_PREFER_NOT_RESPOND',<393>,319:2]",
+                "[@1389,11232:11258='EAB_RACE_PREFER_NOT_RESPOND',<393>,322:6]"
+              ],
+              "intake_dt": [
+                "[@1213,9672:9680='intake_dt',<393>,235:1]",
+                "[@1234,9834:9842='intake_dt',<393>,244:1]",
+                "[@1266,10103:10111='intake_dt',<393>,257:1]",
+                "[@1283,10244:10252='intake_dt',<393>,266:1]",
+                "[@1300,10406:10414='intake_dt',<393>,275:1]",
+                "[@1317,10558:10566='intake_dt',<393>,284:1]",
+                "[@1334,10718:10726='intake_dt',<393>,293:1]",
+                "[@1351,10881:10889='intake_dt',<393>,302:1]",
+                "[@1368,11029:11037='intake_dt',<393>,311:1]",
+                "[@1385,11197:11205='intake_dt',<393>,320:1]",
+                "[@1402,11356:11364='intake_dt',<393>,329:1]"
+              ],
+              "EAB_RACE_ASIAN": [
+                "[@1247,9948:9961='EAB_RACE_ASIAN',<393>,251:2]",
+                "[@1251,9995:10008='EAB_RACE_ASIAN',<393>,254:9]",
+                "[@1270,10136:10149='EAB_RACE_ASIAN',<393>,259:6]"
+              ],
+              "EAB_RACE_NATIVE_HAWAIIAN": [
+                "[@1296,10351:10374='EAB_RACE_NATIVE_HAWAIIAN',<393>,273:2]",
+                "[@1298,10379:10402='EAB_RACE_NATIVE_HAWAIIAN',<393>,274:2]",
+                "[@1304,10441:10464='EAB_RACE_NATIVE_HAWAIIAN',<393>,277:6]"
+              ]
+            },
+            "def_query1": {
+              "query_dictionary": {
+                "eab_race_unknown": [
+                  "[@814,6570:6585='eab_race_unknown',<393>,170:7]"
+                ],
+                "race": [
+                  "[@627,4900:4903='race',<393>,115:35]"
+                ],
+                "eab_race_middle_eastern": [
+                  "[@746,5934:5956='eab_race_middle_eastern',<393>,150:7]"
+                ],
+                "eab_race_black": [
+                  "[@695,5463:5476='eab_race_black',<393>,135:7]"
+                ],
+                "eab_race_native_hawaiian": [
+                  "[@712,5624:5647='eab_race_native_hawaiian',<393>,140:7]"
+                ],
+                "eab_race": [
+                  "[@644,5026:5033='eab_race',<393>,120:7]"
+                ],
+                "eab_race_asian": [
+                  "[@678,5322:5335='eab_race_asian',<393>,130:7]"
+                ],
+                "primary_student_id": [
+                  "[@613,4844:4861='primary_student_id',<393>,114:91]"
+                ],
+                "eab_race_amer_indian": [
+                  "[@661,5175:5194='eab_race_amer_indian',<393>,125:7]"
+                ],
+                "eab_race_other": [
+                  "[@780,6245:6258='eab_race_other',<393>,160:7]"
+                ],
+                "eab_race_multiracial": [
+                  "[@763,6096:6115='eab_race_multiracial',<393>,155:7]"
+                ],
+                "intake_dt": [
+                  "[@820,6614:6622='intake_dt',<393>,171:25]"
+                ],
+                "eab_race_white": [
+                  "[@729,5775:5788='eab_race_white',<393>,145:7]"
+                ],
+                "eab_race_prefer_not_respond": [
+                  "[@797,6412:6438='eab_race_prefer_not_respond',<393>,165:7]"
+                ]
+              },
+              "table_dictionary": {
+                "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>": {
+                  "calculated_field_4": [
+                    "[@964,7763:7771='stud_race',<393>,193:13]"
+                  ],
+                  "calculated_field_5": [
+                    "[@995,7996:8004='stud_race',<393>,197:13]"
+                  ],
+                  "calculated_field_2": [
+                    "[@902,7287:7295='stud_race',<393>,185:13]"
+                  ],
+                  "calculated_field_3": [
+                    "[@933,7510:7518='stud_race',<393>,189:13]"
+                  ],
+                  "race": [
+                    "[@619,4877:4885='stud_race',<393>,115:12]",
+                    "[@840,6833:6841='stud_race',<393>,177:13]"
+                  ],
+                  "calculated_field_1": [
+                    "[@871,7056:7064='stud_race',<393>,181:13]"
+                  ],
+                  "intake_date": [
+                    "[@816,6589:6597='stud_race',<393>,171:0]"
+                  ],
+                  "calculated_field_10": [
+                    "[@1150,9229:9237='stud_race',<393>,217:13]"
+                  ],
+                  "primary_student_id": [
+                    "[@600,4780:4788='stud_race',<393>,114:27]",
+                    "[@1171,9367:9375='stud_race',<393>,220:13]"
+                  ],
+                  "calculated_field_8": [
+                    "[@1088,8725:8733='stud_race',<393>,209:13]"
+                  ],
+                  "calculated_field_9": [
+                    "[@1119,8987:8995='stud_race',<393>,213:13]"
+                  ],
+                  "calculated_field_6": [
+                    "[@1026,8246:8254='stud_race',<393>,201:13]"
+                  ],
+                  "calculated_field_7": [
+                    "[@1057,8496:8504='stud_race',<393>,205:13]"
+                  ]
+                },
+                "<[Enroll360].[Partner Code Mapping].{convert}>": {
+                  "partner_value": [
+                    "[@1035,8290:8312='pcm_race_middle_eastern',<393>,201:57]",
+                    "[@1159,9274:9289='pcm_race_unknown',<393>,217:58]",
+                    "[@973,7807:7830='pcm_race_native_hawaiian',<393>,193:57]",
+                    "[@880,7100:7119='pcm_race_amer_indian',<393>,181:57]",
+                    "[@911,7331:7344='pcm_race_asian',<393>,185:57]",
+                    "[@1128,9031:9057='pcm_race_prefer_not_respond',<393>,213:57]",
+                    "[@1004,8040:8053='pcm_race_white',<393>,197:57]",
+                    "[@849,6863:6870='pcm_race',<393>,177:43]",
+                    "[@942,7554:7567='pcm_race_black',<393>,189:57]",
+                    "[@1097,8769:8782='pcm_race_other',<393>,209:57]",
+                    "[@1066,8540:8559='pcm_race_multiracial',<393>,205:57]"
+                  ],
+                  "eab_standard_value": [
+                    "[@750,5972:5991='pcm_race_multiracial',<393>,152:10]",
+                    "[@758,6048:6067='pcm_race_multiracial',<393>,154:5]",
+                    "[@767,6133:6146='pcm_race_other',<393>,157:10]",
+                    "[@775,6203:6216='pcm_race_other',<393>,159:5]",
+                    "[@631,4921:4928='pcm_race',<393>,117:10]",
+                    "[@639,4990:4997='pcm_race',<393>,119:5]",
+                    "[@716,5663:5676='pcm_race_white',<393>,142:10]",
+                    "[@724,5733:5746='pcm_race_white',<393>,144:5]",
+                    "[@784,6274:6300='pcm_race_prefer_not_respond',<393>,162:10]",
+                    "[@792,6357:6383='pcm_race_prefer_not_respond',<393>,164:5]",
+                    "[@682,5351:5364='pcm_race_black',<393>,132:10]",
+                    "[@690,5421:5434='pcm_race_black',<393>,134:5]",
+                    "[@801,6454:6469='pcm_race_unknown',<393>,167:10]",
+                    "[@809,6526:6541='pcm_race_unknown',<393>,169:5]",
+                    "[@665,5210:5223='pcm_race_asian',<393>,127:10]",
+                    "[@673,5280:5293='pcm_race_asian',<393>,129:5]",
+                    "[@733,5804:5826='pcm_race_middle_eastern',<393>,147:10]",
+                    "[@741,5883:5905='pcm_race_middle_eastern',<393>,149:5]",
+                    "[@648,5051:5070='pcm_race_amer_indian',<393>,122:10]",
+                    "[@656,5127:5146='pcm_race_amer_indian',<393>,124:5]",
+                    "[@699,5492:5515='pcm_race_native_hawaiian',<393>,137:10]",
+                    "[@707,5572:5595='pcm_race_native_hawaiian',<393>,139:5]"
+                  ],
+                  "field_name": [
+                    "[@1049,8425:8444='pcm_race_multiracial',<393>,204:4]",
+                    "[@1018,8169:8191='pcm_race_middle_eastern',<393>,200:4]",
+                    "[@987,7937:7950='pcm_race_white',<393>,196:4]",
+                    "[@894,7228:7241='pcm_race_asian',<393>,184:4]",
+                    "[@832,6786:6793='pcm_race',<393>,176:4]",
+                    "[@1111,8902:8928='pcm_race_prefer_not_respond',<393>,212:4]",
+                    "[@925,7451:7464='pcm_race_black',<393>,188:4]",
+                    "[@863,6985:7004='pcm_race_amer_indian',<393>,180:4]",
+                    "[@1142,9166:9181='pcm_race_unknown',<393>,216:4]",
+                    "[@1080,8666:8679='pcm_race_other',<393>,208:4]",
+                    "[@956,7684:7707='pcm_race_native_hawaiian',<393>,192:4]"
+                  ]
+                }
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race"
+                },
+                {
+                  "name": "race",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_amer_indian"
+                },
+                {
+                  "name": "calculated_field_1",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_amer_indian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_asian"
+                },
+                {
+                  "name": "calculated_field_2",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_asian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_black"
+                },
+                {
+                  "name": "calculated_field_3",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_black"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_native_hawaiian"
+                },
+                {
+                  "name": "calculated_field_4",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_native_hawaiian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_white"
+                },
+                {
+                  "name": "calculated_field_5",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_white"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_middle_eastern"
+                },
+                {
+                  "name": "calculated_field_6",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_middle_eastern"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_multiracial"
+                },
+                {
+                  "name": "calculated_field_7",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_multiracial"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_other"
+                },
+                {
+                  "name": "calculated_field_8",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_other"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_prefer_not_respond"
+                },
+                {
+                  "name": "calculated_field_9",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_prefer_not_respond"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_unknown"
+                },
+                {
+                  "name": "calculated_field_10",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_unknown"
+                },
+                {
+                  "name": "primary_student_id",
+                  "table_ref": "stud_race"
+                }
+              ],
+              "interface": {
+                "eab_race_unknown": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_unknown"
+                  }
+                ],
+                "race": [
+                  {
+                    "name": "race",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_middle_eastern": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_middle_eastern"
+                  }
+                ],
+                "eab_race_black": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_black"
+                  }
+                ],
+                "eab_race_native_hawaiian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_native_hawaiian"
+                  }
+                ],
+                "eab_race": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race"
+                  }
+                ],
+                "eab_race_asian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_asian"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_amer_indian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_amer_indian"
+                  }
+                ],
+                "eab_race_other": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_other"
+                  }
+                ],
+                "eab_race_multiracial": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_multiracial"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_date",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_white": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_white"
+                  }
+                ],
+                "eab_race_prefer_not_respond": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_prefer_not_respond"
+                  }
+                ]
+              },
+              "table_alias": {
+                "pcm_race_asian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_prefer_not_respond": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_middle_eastern": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "stud_race": "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>",
+                "pcm_race_black": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_multiracial": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_other": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_native_hawaiian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_unknown": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_amer_indian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_white": "<[Enroll360].[Partner Code Mapping].{convert}>"
+              }
+            },
+            "def_query0": {
+              "query_dictionary": {
+                "eab_race_unknown": [
+                  "[@226,1855:1870='eab_race_unknown',<393>,59:7]"
+                ],
+                "race": [
+                  "[@39,185:188='race',<393>,4:35]"
+                ],
+                "eab_race_middle_eastern": [
+                  "[@158,1219:1241='eab_race_middle_eastern',<393>,39:7]"
+                ],
+                "eab_race_black": [
+                  "[@107,748:761='eab_race_black',<393>,24:7]"
+                ],
+                "eab_race_native_hawaiian": [
+                  "[@124,909:932='eab_race_native_hawaiian',<393>,29:7]"
+                ],
+                "eab_race": [
+                  "[@56,311:318='eab_race',<393>,9:7]"
+                ],
+                "eab_race_asian": [
+                  "[@90,607:620='eab_race_asian',<393>,19:7]"
+                ],
+                "primary_student_id": [
+                  "[@25,129:146='primary_student_id',<393>,3:91]"
+                ],
+                "eab_race_amer_indian": [
+                  "[@73,460:479='eab_race_amer_indian',<393>,14:7]"
+                ],
+                "eab_race_other": [
+                  "[@192,1530:1543='eab_race_other',<393>,49:7]"
+                ],
+                "eab_race_multiracial": [
+                  "[@175,1381:1400='eab_race_multiracial',<393>,44:7]"
+                ],
+                "intake_dt": [
+                  "[@232,1899:1907='intake_dt',<393>,60:25]"
+                ],
+                "eab_race_white": [
+                  "[@141,1060:1073='eab_race_white',<393>,34:7]"
+                ],
+                "eab_race_prefer_not_respond": [
+                  "[@209,1697:1723='eab_race_prefer_not_respond',<393>,54:7]"
+                ]
+              },
+              "table_dictionary": {
+                "<[Enroll360].[Partner Code Mapping].{convert}>": {
+                  "partner_value": [
+                    "[@447,3573:3595='pcm_race_middle_eastern',<393>,90:57]",
+                    "[@571,4557:4572='pcm_race_unknown',<393>,106:58]",
+                    "[@385,3090:3113='pcm_race_native_hawaiian',<393>,82:57]",
+                    "[@292,2383:2402='pcm_race_amer_indian',<393>,70:57]",
+                    "[@323,2614:2627='pcm_race_asian',<393>,74:57]",
+                    "[@540,4314:4340='pcm_race_prefer_not_respond',<393>,102:57]",
+                    "[@416,3323:3336='pcm_race_white',<393>,86:57]",
+                    "[@261,2146:2153='pcm_race',<393>,66:43]",
+                    "[@354,2837:2850='pcm_race_black',<393>,78:57]",
+                    "[@509,4052:4065='pcm_race_other',<393>,98:57]",
+                    "[@478,3823:3842='pcm_race_multiracial',<393>,94:57]",
+                    "[@1035,8290:8312='pcm_race_middle_eastern',<393>,201:57]",
+                    "[@1159,9274:9289='pcm_race_unknown',<393>,217:58]",
+                    "[@973,7807:7830='pcm_race_native_hawaiian',<393>,193:57]",
+                    "[@880,7100:7119='pcm_race_amer_indian',<393>,181:57]",
+                    "[@911,7331:7344='pcm_race_asian',<393>,185:57]",
+                    "[@1128,9031:9057='pcm_race_prefer_not_respond',<393>,213:57]",
+                    "[@1004,8040:8053='pcm_race_white',<393>,197:57]",
+                    "[@849,6863:6870='pcm_race',<393>,177:43]",
+                    "[@942,7554:7567='pcm_race_black',<393>,189:57]",
+                    "[@1097,8769:8782='pcm_race_other',<393>,209:57]",
+                    "[@1066,8540:8559='pcm_race_multiracial',<393>,205:57]"
+                  ],
+                  "eab_standard_value": [
+                    "[@162,1257:1276='pcm_race_multiracial',<393>,41:10]",
+                    "[@170,1333:1352='pcm_race_multiracial',<393>,43:5]",
+                    "[@179,1418:1431='pcm_race_other',<393>,46:10]",
+                    "[@187,1488:1501='pcm_race_other',<393>,48:5]",
+                    "[@43,206:213='pcm_race',<393>,6:10]",
+                    "[@51,275:282='pcm_race',<393>,8:5]",
+                    "[@128,948:961='pcm_race_white',<393>,31:10]",
+                    "[@136,1018:1031='pcm_race_white',<393>,33:5]",
+                    "[@196,1559:1585='pcm_race_prefer_not_respond',<393>,51:10]",
+                    "[@204,1642:1668='pcm_race_prefer_not_respond',<393>,53:5]",
+                    "[@94,636:649='pcm_race_black',<393>,21:10]",
+                    "[@102,706:719='pcm_race_black',<393>,23:5]",
+                    "[@213,1739:1754='pcm_race_unknown',<393>,56:10]",
+                    "[@221,1811:1826='pcm_race_unknown',<393>,58:5]",
+                    "[@77,495:508='pcm_race_asian',<393>,16:10]",
+                    "[@85,565:578='pcm_race_asian',<393>,18:5]",
+                    "[@145,1089:1111='pcm_race_middle_eastern',<393>,36:10]",
+                    "[@153,1168:1190='pcm_race_middle_eastern',<393>,38:5]",
+                    "[@60,336:355='pcm_race_amer_indian',<393>,11:10]",
+                    "[@68,412:431='pcm_race_amer_indian',<393>,13:5]",
+                    "[@111,777:800='pcm_race_native_hawaiian',<393>,26:10]",
+                    "[@119,857:880='pcm_race_native_hawaiian',<393>,28:5]",
+                    "[@750,5972:5991='pcm_race_multiracial',<393>,152:10]",
+                    "[@758,6048:6067='pcm_race_multiracial',<393>,154:5]",
+                    "[@767,6133:6146='pcm_race_other',<393>,157:10]",
+                    "[@775,6203:6216='pcm_race_other',<393>,159:5]",
+                    "[@631,4921:4928='pcm_race',<393>,117:10]",
+                    "[@639,4990:4997='pcm_race',<393>,119:5]",
+                    "[@716,5663:5676='pcm_race_white',<393>,142:10]",
+                    "[@724,5733:5746='pcm_race_white',<393>,144:5]",
+                    "[@784,6274:6300='pcm_race_prefer_not_respond',<393>,162:10]",
+                    "[@792,6357:6383='pcm_race_prefer_not_respond',<393>,164:5]",
+                    "[@682,5351:5364='pcm_race_black',<393>,132:10]",
+                    "[@690,5421:5434='pcm_race_black',<393>,134:5]",
+                    "[@801,6454:6469='pcm_race_unknown',<393>,167:10]",
+                    "[@809,6526:6541='pcm_race_unknown',<393>,169:5]",
+                    "[@665,5210:5223='pcm_race_asian',<393>,127:10]",
+                    "[@673,5280:5293='pcm_race_asian',<393>,129:5]",
+                    "[@733,5804:5826='pcm_race_middle_eastern',<393>,147:10]",
+                    "[@741,5883:5905='pcm_race_middle_eastern',<393>,149:5]",
+                    "[@648,5051:5070='pcm_race_amer_indian',<393>,122:10]",
+                    "[@656,5127:5146='pcm_race_amer_indian',<393>,124:5]",
+                    "[@699,5492:5515='pcm_race_native_hawaiian',<393>,137:10]",
+                    "[@707,5572:5595='pcm_race_native_hawaiian',<393>,139:5]"
+                  ],
+                  "field_name": [
+                    "[@461,3708:3727='pcm_race_multiracial',<393>,93:4]",
+                    "[@430,3452:3474='pcm_race_middle_eastern',<393>,89:4]",
+                    "[@399,3220:3233='pcm_race_white',<393>,85:4]",
+                    "[@306,2511:2524='pcm_race_asian',<393>,73:4]",
+                    "[@244,2069:2076='pcm_race',<393>,65:4]",
+                    "[@523,4185:4211='pcm_race_prefer_not_respond',<393>,101:4]",
+                    "[@337,2734:2747='pcm_race_black',<393>,77:4]",
+                    "[@275,2268:2287='pcm_race_amer_indian',<393>,69:4]",
+                    "[@554,4449:4464='pcm_race_unknown',<393>,105:4]",
+                    "[@492,3949:3962='pcm_race_other',<393>,97:4]",
+                    "[@368,2967:2990='pcm_race_native_hawaiian',<393>,81:4]",
+                    "[@1049,8425:8444='pcm_race_multiracial',<393>,204:4]",
+                    "[@1018,8169:8191='pcm_race_middle_eastern',<393>,200:4]",
+                    "[@987,7937:7950='pcm_race_white',<393>,196:4]",
+                    "[@894,7228:7241='pcm_race_asian',<393>,184:4]",
+                    "[@832,6786:6793='pcm_race',<393>,176:4]",
+                    "[@1111,8902:8928='pcm_race_prefer_not_respond',<393>,212:4]",
+                    "[@925,7451:7464='pcm_race_black',<393>,188:4]",
+                    "[@863,6985:7004='pcm_race_amer_indian',<393>,180:4]",
+                    "[@1142,9166:9181='pcm_race_unknown',<393>,216:4]",
+                    "[@1080,8666:8679='pcm_race_other',<393>,208:4]",
+                    "[@956,7684:7707='pcm_race_native_hawaiian',<393>,192:4]"
+                  ]
+                },
+                "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>": {
+                  "calculated_field_4": [
+                    "[@376,3046:3054='stud_race',<393>,82:13]"
+                  ],
+                  "calculated_field_5": [
+                    "[@407,3279:3287='stud_race',<393>,86:13]"
+                  ],
+                  "calculated_field_2": [
+                    "[@314,2570:2578='stud_race',<393>,74:13]"
+                  ],
+                  "calculated_field_3": [
+                    "[@345,2793:2801='stud_race',<393>,78:13]"
+                  ],
+                  "race": [
+                    "[@31,162:170='stud_race',<393>,4:12]",
+                    "[@252,2116:2124='stud_race',<393>,66:13]"
+                  ],
+                  "calculated_field_1": [
+                    "[@283,2339:2347='stud_race',<393>,70:13]"
+                  ],
+                  "intake_date": [
+                    "[@228,1874:1882='stud_race',<393>,60:0]"
+                  ],
+                  "calculated_field_10": [
+                    "[@562,4512:4520='stud_race',<393>,106:13]"
+                  ],
+                  "primary_student_id": [
+                    "[@12,65:73='stud_race',<393>,3:27]",
+                    "[@583,4653:4661='stud_race',<393>,109:13]"
+                  ],
+                  "calculated_field_8": [
+                    "[@500,4008:4016='stud_race',<393>,98:13]"
+                  ],
+                  "calculated_field_9": [
+                    "[@531,4270:4278='stud_race',<393>,102:13]"
+                  ],
+                  "calculated_field_6": [
+                    "[@438,3529:3537='stud_race',<393>,90:13]"
+                  ],
+                  "calculated_field_7": [
+                    "[@469,3779:3787='stud_race',<393>,94:13]"
+                  ]
+                }
+              },
+              "filters": [
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race"
+                },
+                {
+                  "name": "race",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_amer_indian"
+                },
+                {
+                  "name": "calculated_field_1",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_amer_indian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_asian"
+                },
+                {
+                  "name": "calculated_field_2",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_asian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_black"
+                },
+                {
+                  "name": "calculated_field_3",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_black"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_native_hawaiian"
+                },
+                {
+                  "name": "calculated_field_4",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_native_hawaiian"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_white"
+                },
+                {
+                  "name": "calculated_field_5",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_white"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_middle_eastern"
+                },
+                {
+                  "name": "calculated_field_6",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_middle_eastern"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_multiracial"
+                },
+                {
+                  "name": "calculated_field_7",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_multiracial"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_other"
+                },
+                {
+                  "name": "calculated_field_8",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_other"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_prefer_not_respond"
+                },
+                {
+                  "name": "calculated_field_9",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_prefer_not_respond"
+                },
+                {
+                  "name": "field_name",
+                  "table_ref": "pcm_race_unknown"
+                },
+                {
+                  "name": "calculated_field_10",
+                  "table_ref": "stud_race"
+                },
+                {
+                  "name": "partner_value",
+                  "table_ref": "pcm_race_unknown"
+                },
+                {
+                  "name": "primary_student_id",
+                  "table_ref": "stud_race"
+                }
+              ],
+              "interface": {
+                "eab_race_unknown": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_unknown"
+                  }
+                ],
+                "race": [
+                  {
+                    "name": "race",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_middle_eastern": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_middle_eastern"
+                  }
+                ],
+                "eab_race_black": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_black"
+                  }
+                ],
+                "eab_race_native_hawaiian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_native_hawaiian"
+                  }
+                ],
+                "eab_race": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race"
+                  }
+                ],
+                "eab_race_asian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_asian"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_amer_indian": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_amer_indian"
+                  }
+                ],
+                "eab_race_other": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_other"
+                  }
+                ],
+                "eab_race_multiracial": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_multiracial"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_date",
+                    "table_ref": "stud_race"
+                  }
+                ],
+                "eab_race_white": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_white"
+                  }
+                ],
+                "eab_race_prefer_not_respond": [
+                  {
+                    "name": "eab_standard_value",
+                    "table_ref": "pcm_race_prefer_not_respond"
+                  }
+                ]
+              },
+              "table_alias": {
+                "pcm_race_asian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_prefer_not_respond": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_middle_eastern": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "stud_race": "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>",
+                "pcm_race_black": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_multiracial": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_other": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_native_hawaiian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_unknown": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_amer_indian": "<[Enroll360].[Partner Code Mapping].{convert}>",
+                "pcm_race_white": "<[Enroll360].[Partner Code Mapping].{convert}>"
+              }
+            },
+            "interface": {
+              "eab_race_unknown": "query_column",
+              "race": "query_column",
+              "eab_race_middle_eastern": "query_column",
+              "eab_race_black": "query_column",
+              "eab_race_native_hawaiian": "query_column",
+              "eab_race": "query_column",
+              "eab_race_asian": "query_column",
+              "primary_student_id": "query_column",
+              "eab_race_amer_indian": "query_column",
+              "eab_race_other": "query_column",
+              "eab_race_multiracial": "query_column",
+              "intake_dt": "query_column",
+              "eab_race_white": "query_column",
+              "eab_race_prefer_not_respond": "query_column"
+            }
+          },
+          "def_union14": {
+            "def_query9": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1328,10643:10660='primary_student_id',<393>,290:7]"
+                ],
+                "EAB_RACE_MIDDLE_EASTERN": [
+                  "[@1330,10665:10687='EAB_RACE_MIDDLE_EASTERN',<393>,291:2]",
+                  "[@1332,10692:10714='EAB_RACE_MIDDLE_EASTERN',<393>,292:2]"
+                ],
+                "intake_dt": [
+                  "[@1334,10718:10726='intake_dt',<393>,293:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_MIDDLE_EASTERN",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_MIDDLE_EASTERN": [
+                  {
+                    "name": "EAB_RACE_MIDDLE_EASTERN",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query12": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1379,11114:11131='primary_student_id',<393>,317:7]"
+                ],
+                "EAB_RACE_PREFER_NOT_RESPOND": [
+                  "[@1381,11136:11162='EAB_RACE_PREFER_NOT_RESPOND',<393>,318:2]",
+                  "[@1383,11167:11193='EAB_RACE_PREFER_NOT_RESPOND',<393>,319:2]"
+                ],
+                "intake_dt": [
+                  "[@1385,11197:11205='intake_dt',<393>,320:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_PREFER_NOT_RESPOND",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_PREFER_NOT_RESPOND": [
+                  {
+                    "name": "EAB_RACE_PREFER_NOT_RESPOND",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "context_list": {
+              "race_data": "union2"
+            },
+            "def_query8": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "EAB_RACE_WHITE": [
+                  "[@1313,10523:10536='EAB_RACE_WHITE',<393>,282:2]",
+                  "[@1315,10541:10554='EAB_RACE_WHITE',<393>,283:2]"
+                ],
+                "primary_student_id": [
+                  "[@1311,10501:10518='primary_student_id',<393>,281:7]"
+                ],
+                "intake_dt": [
+                  "[@1317,10558:10566='intake_dt',<393>,284:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_WHITE",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "EAB_RACE_WHITE": [
+                  {
+                    "name": "EAB_RACE_WHITE",
+                    "table_ref": "union2"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query11": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1362,10972:10989='primary_student_id',<393>,308:7]"
+                ],
+                "EAB_RACE_OTHER": [
+                  "[@1364,10994:11007='EAB_RACE_OTHER',<393>,309:2]",
+                  "[@1366,11012:11025='EAB_RACE_OTHER',<393>,310:2]"
+                ],
+                "intake_dt": [
+                  "[@1368,11029:11037='intake_dt',<393>,311:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_OTHER",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_OTHER": [
+                  {
+                    "name": "EAB_RACE_OTHER",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query7": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1294,10329:10346='primary_student_id',<393>,272:7]"
+                ],
+                "intake_dt": [
+                  "[@1300,10406:10414='intake_dt',<393>,275:1]"
+                ],
+                "EAB_RACE_NATIVE_HAWAIIAN": [
+                  "[@1296,10351:10374='EAB_RACE_NATIVE_HAWAIIAN',<393>,273:2]",
+                  "[@1298,10379:10402='EAB_RACE_NATIVE_HAWAIIAN',<393>,274:2]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_NATIVE_HAWAIIAN",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_NATIVE_HAWAIIAN": [
+                  {
+                    "name": "EAB_RACE_NATIVE_HAWAIIAN",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query10": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "EAB_RACE_MULTIRACIAL": [
+                  "[@1347,10834:10853='EAB_RACE_MULTIRACIAL',<393>,300:2]",
+                  "[@1349,10858:10877='EAB_RACE_MULTIRACIAL',<393>,301:2]"
+                ],
+                "primary_student_id": [
+                  "[@1345,10812:10829='primary_student_id',<393>,299:7]"
+                ],
+                "intake_dt": [
+                  "[@1351,10881:10889='intake_dt',<393>,302:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_MULTIRACIAL",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "EAB_RACE_MULTIRACIAL": [
+                  {
+                    "name": "EAB_RACE_MULTIRACIAL",
+                    "table_ref": "union2"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query6": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "EAB_RACE_BLACK": [
+                  "[@1279,10209:10222='EAB_RACE_BLACK',<393>,264:2]",
+                  "[@1281,10227:10240='EAB_RACE_BLACK',<393>,265:2]"
+                ],
+                "primary_student_id": [
+                  "[@1277,10187:10204='primary_student_id',<393>,263:7]"
+                ],
+                "intake_dt": [
+                  "[@1283,10244:10252='intake_dt',<393>,266:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_BLACK",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "EAB_RACE_BLACK": [
+                  {
+                    "name": "EAB_RACE_BLACK",
+                    "table_ref": "union2"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query5": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1245,9926:9943='primary_student_id',<393>,250:7]"
+                ],
+                "intake_dt": [
+                  "[@1266,10103:10111='intake_dt',<393>,257:1]"
+                ],
+                "EAB_RACE_ASIAN": [
+                  "[@1247,9948:9961='EAB_RACE_ASIAN',<393>,251:2]",
+                  "[@1264,10086:10099='EAB_RACE_ASIAN',<393>,256:11]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_ASIAN",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_ASIAN": [
+                  {
+                    "name": "EAB_RACE_ASIAN",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "interface": {
+              "race": "query_column",
+              "eab_race": "query_column",
+              "primary_student_id": "query_column",
+              "intake_dt": "query_column"
+            },
+            "def_query4": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "primary_student_id": [
+                  "[@1228,9765:9782='primary_student_id',<393>,241:7]"
+                ],
+                "intake_dt": [
+                  "[@1234,9834:9842='intake_dt',<393>,244:1]"
+                ],
+                "EAB_RACE_AMER_INDIAN": [
+                  "[@1230,9787:9806='EAB_RACE_AMER_INDIAN',<393>,242:2]",
+                  "[@1232,9811:9830='EAB_RACE_AMER_INDIAN',<393>,243:2]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_AMER_INDIAN",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ],
+                "EAB_RACE_AMER_INDIAN": [
+                  {
+                    "name": "EAB_RACE_AMER_INDIAN",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "def_query3": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "race": [
+                  "[@1194,9533:9536='race',<393>,229:3]"
+                ],
+                "eab_race": [
+                  "[@1211,9661:9668='eab_race',<393>,234:11]"
+                ],
+                "primary_student_id": [
+                  "[@1192,9510:9527='primary_student_id',<393>,228:7]"
+                ],
+                "intake_dt": [
+                  "[@1213,9672:9680='intake_dt',<393>,235:1]"
+                ]
+              },
+              "filters": [
+                {
+                  "name": "eab_race",
+                  "table_ref": "union2"
+                },
+                {
+                  "name": "race",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "race": [
+                  {
+                    "name": "race",
+                    "table_ref": "union2"
+                  }
+                ],
+                "eab_race": [
+                  {
+                    "name": "eab_race",
+                    "table_ref": "union2"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            },
+            "query_dictionary": {
+              "race": [
+                "[@1184,9463:9466='race',<393>,223:0]"
+              ],
+              "eab_race": [
+                "[@1186,9470:9477='eab_race',<393>,224:0]"
+              ],
+              "primary_student_id": [
+                "[@1182,9442:9459='primary_student_id',<393>,222:16]"
+              ],
+              "intake_dt": [
+                "[@1188,9481:9489='intake_dt',<393>,225:0]"
+              ]
+            },
+            "table_alias": {
+              "race_data": "union2"
+            },
+            "def_query13": {
+              "context_list": {
+                "race_data": "union2"
+              },
+              "query_dictionary": {
+                "EAB_RACE_UNKNOWN": [
+                  "[@1398,11317:11332='EAB_RACE_UNKNOWN',<393>,327:2]",
+                  "[@1400,11337:11352='EAB_RACE_UNKNOWN',<393>,328:2]"
+                ],
+                "primary_student_id": [
+                  "[@1396,11295:11312='primary_student_id',<393>,326:7]"
+                ],
+                "intake_dt": [
+                  "[@1402,11356:11364='intake_dt',<393>,329:1]"
+                ]
+              },
+              "setop": "UNION",
+              "filters": [
+                {
+                  "name": "EAB_RACE_UNKNOWN",
+                  "table_ref": "union2"
+                }
+              ],
+              "interface": {
+                "EAB_RACE_UNKNOWN": [
+                  {
+                    "name": "EAB_RACE_UNKNOWN",
+                    "table_ref": "union2"
+                  }
+                ],
+                "primary_student_id": [
+                  {
+                    "name": "primary_student_id",
+                    "table_ref": "union2"
+                  }
+                ],
+                "intake_dt": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union2"
+                  }
+                ]
+              },
+              "table_alias": {
+                "race_data": "union2"
+              }
+            }
+          },
+          "interface": {
+            "race": [
+              {
+                "name": "race",
+                "table_ref": "union14"
+              }
+            ],
+            "eab_race": [
+              {
+                "name": "eab_race",
+                "table_ref": "union14"
+              }
+            ],
+            "primary_student_id": [
+              {
+                "name": "primary_student_id",
+                "table_ref": "union14"
+              }
+            ],
+            "intake_dt": [
+              {
+                "name": "intake_dt",
+                "table_ref": "union14"
+              }
+            ]
+          },
+          "table_alias": {
+            "agg": "union14",
+            "race_data": "union2"
+          }
+        }
+      },
+      "queryDictionary": {
+        "query15": {
+          "primary_student_id": [
+            "[@1182,9442:9459='primary_student_id',<393>,222:16]"
+          ],
+          "race": [
+            "[@1184,9463:9466='race',<393>,223:0]"
+          ],
+          "eab_race": [
+            "[@1186,9470:9477='eab_race',<393>,224:0]"
+          ],
+          "intake_dt": [
+            "[@1188,9481:9489='intake_dt',<393>,225:0]"
+          ]
+        },
+        "query8": {
+          "primary_student_id": [
+            "[@1311,10501:10518='primary_student_id',<393>,281:7]"
+          ],
+          "intake_dt": [
+            "[@1317,10558:10566='intake_dt',<393>,284:1]"
+          ],
+          "EAB_RACE_WHITE": [
+            "[@1313,10523:10536='EAB_RACE_WHITE',<393>,282:2]",
+            "[@1315,10541:10554='EAB_RACE_WHITE',<393>,283:2]"
+          ]
+        },
+        "query11": {
+          "primary_student_id": [
+            "[@1362,10972:10989='primary_student_id',<393>,308:7]"
+          ],
+          "EAB_RACE_OTHER": [
+            "[@1364,10994:11007='EAB_RACE_OTHER',<393>,309:2]",
+            "[@1366,11012:11025='EAB_RACE_OTHER',<393>,310:2]"
+          ],
+          "intake_dt": [
+            "[@1368,11029:11037='intake_dt',<393>,311:1]"
+          ]
+        },
+        "union2": {
+          "EAB_RACE_UNKNOWN": [
+            "[@1398,11317:11332='EAB_RACE_UNKNOWN',<393>,327:2]",
+            "[@1400,11337:11352='EAB_RACE_UNKNOWN',<393>,328:2]",
+            "[@1406,11391:11406='EAB_RACE_UNKNOWN',<393>,331:6]"
+          ],
+          "EAB_RACE_MULTIRACIAL": [
+            "[@1347,10834:10853='EAB_RACE_MULTIRACIAL',<393>,300:2]",
+            "[@1349,10858:10877='EAB_RACE_MULTIRACIAL',<393>,301:2]",
+            "[@1355,10916:10935='EAB_RACE_MULTIRACIAL',<393>,304:6]"
+          ],
+          "race": [
+            "[@1194,9533:9536='race',<393>,229:3]",
+            "[@1222,9730:9733='race',<393>,237:31]"
+          ],
+          "EAB_RACE_MIDDLE_EASTERN": [
+            "[@1330,10665:10687='EAB_RACE_MIDDLE_EASTERN',<393>,291:2]",
+            "[@1332,10692:10714='EAB_RACE_MIDDLE_EASTERN',<393>,292:2]",
+            "[@1338,10753:10775='EAB_RACE_MIDDLE_EASTERN',<393>,295:6]"
+          ],
+          "EAB_RACE_OTHER": [
+            "[@1364,10994:11007='EAB_RACE_OTHER',<393>,309:2]",
+            "[@1366,11012:11025='EAB_RACE_OTHER',<393>,310:2]",
+            "[@1372,11064:11077='EAB_RACE_OTHER',<393>,313:6]"
+          ],
+          "EAB_RACE_AMER_INDIAN": [
+            "[@1230,9787:9806='EAB_RACE_AMER_INDIAN',<393>,242:2]",
+            "[@1232,9811:9830='EAB_RACE_AMER_INDIAN',<393>,243:2]",
+            "[@1238,9869:9888='EAB_RACE_AMER_INDIAN',<393>,246:6]"
+          ],
+          "eab_race": [
+            "[@1198,9571:9578='eab_race',<393>,232:9]",
+            "[@1208,9639:9646='eab_race',<393>,233:9]",
+            "[@1217,9705:9712='eab_race',<393>,237:6]"
+          ],
+          "EAB_RACE_BLACK": [
+            "[@1279,10209:10222='EAB_RACE_BLACK',<393>,264:2]",
+            "[@1281,10227:10240='EAB_RACE_BLACK',<393>,265:2]",
+            "[@1287,10279:10292='EAB_RACE_BLACK',<393>,268:6]"
+          ],
+          "EAB_RACE_WHITE": [
+            "[@1313,10523:10536='EAB_RACE_WHITE',<393>,282:2]",
+            "[@1315,10541:10554='EAB_RACE_WHITE',<393>,283:2]",
+            "[@1321,10593:10606='EAB_RACE_WHITE',<393>,286:6]"
+          ],
+          "primary_student_id": [
+            "[@1192,9510:9527='primary_student_id',<393>,228:7]",
+            "[@1228,9765:9782='primary_student_id',<393>,241:7]",
+            "[@1245,9926:9943='primary_student_id',<393>,250:7]",
+            "[@1277,10187:10204='primary_student_id',<393>,263:7]",
+            "[@1294,10329:10346='primary_student_id',<393>,272:7]",
+            "[@1311,10501:10518='primary_student_id',<393>,281:7]",
+            "[@1328,10643:10660='primary_student_id',<393>,290:7]",
+            "[@1345,10812:10829='primary_student_id',<393>,299:7]",
+            "[@1362,10972:10989='primary_student_id',<393>,308:7]",
+            "[@1379,11114:11131='primary_student_id',<393>,317:7]",
+            "[@1396,11295:11312='primary_student_id',<393>,326:7]"
+          ],
+          "EAB_RACE_PREFER_NOT_RESPOND": [
+            "[@1381,11136:11162='EAB_RACE_PREFER_NOT_RESPOND',<393>,318:2]",
+            "[@1383,11167:11193='EAB_RACE_PREFER_NOT_RESPOND',<393>,319:2]",
+            "[@1389,11232:11258='EAB_RACE_PREFER_NOT_RESPOND',<393>,322:6]"
+          ],
+          "intake_dt": [
+            "[@1213,9672:9680='intake_dt',<393>,235:1]",
+            "[@1234,9834:9842='intake_dt',<393>,244:1]",
+            "[@1266,10103:10111='intake_dt',<393>,257:1]",
+            "[@1283,10244:10252='intake_dt',<393>,266:1]",
+            "[@1300,10406:10414='intake_dt',<393>,275:1]",
+            "[@1317,10558:10566='intake_dt',<393>,284:1]",
+            "[@1334,10718:10726='intake_dt',<393>,293:1]",
+            "[@1351,10881:10889='intake_dt',<393>,302:1]",
+            "[@1368,11029:11037='intake_dt',<393>,311:1]",
+            "[@1385,11197:11205='intake_dt',<393>,320:1]",
+            "[@1402,11356:11364='intake_dt',<393>,329:1]"
+          ],
+          "EAB_RACE_ASIAN": [
+            "[@1247,9948:9961='EAB_RACE_ASIAN',<393>,251:2]",
+            "[@1251,9995:10008='EAB_RACE_ASIAN',<393>,254:9]",
+            "[@1270,10136:10149='EAB_RACE_ASIAN',<393>,259:6]"
+          ],
+          "EAB_RACE_NATIVE_HAWAIIAN": [
+            "[@1296,10351:10374='EAB_RACE_NATIVE_HAWAIIAN',<393>,273:2]",
+            "[@1298,10379:10402='EAB_RACE_NATIVE_HAWAIIAN',<393>,274:2]",
+            "[@1304,10441:10464='EAB_RACE_NATIVE_HAWAIIAN',<393>,277:6]"
+          ]
+        },
+        "query9": {
+          "primary_student_id": [
+            "[@1328,10643:10660='primary_student_id',<393>,290:7]"
+          ],
+          "EAB_RACE_MIDDLE_EASTERN": [
+            "[@1330,10665:10687='EAB_RACE_MIDDLE_EASTERN',<393>,291:2]",
+            "[@1332,10692:10714='EAB_RACE_MIDDLE_EASTERN',<393>,292:2]"
+          ],
+          "intake_dt": [
+            "[@1334,10718:10726='intake_dt',<393>,293:1]"
+          ]
+        },
+        "query12": {
+          "primary_student_id": [
+            "[@1379,11114:11131='primary_student_id',<393>,317:7]"
+          ],
+          "EAB_RACE_PREFER_NOT_RESPOND": [
+            "[@1381,11136:11162='EAB_RACE_PREFER_NOT_RESPOND',<393>,318:2]",
+            "[@1383,11167:11193='EAB_RACE_PREFER_NOT_RESPOND',<393>,319:2]"
+          ],
+          "intake_dt": [
+            "[@1385,11197:11205='intake_dt',<393>,320:1]"
+          ]
+        },
+        "query13": {
+          "EAB_RACE_UNKNOWN": [
+            "[@1398,11317:11332='EAB_RACE_UNKNOWN',<393>,327:2]",
+            "[@1400,11337:11352='EAB_RACE_UNKNOWN',<393>,328:2]"
+          ],
+          "primary_student_id": [
+            "[@1396,11295:11312='primary_student_id',<393>,326:7]"
+          ],
+          "intake_dt": [
+            "[@1402,11356:11364='intake_dt',<393>,329:1]"
+          ]
+        },
+        "query10": {
+          "primary_student_id": [
+            "[@1345,10812:10829='primary_student_id',<393>,299:7]"
+          ],
+          "EAB_RACE_MULTIRACIAL": [
+            "[@1347,10834:10853='EAB_RACE_MULTIRACIAL',<393>,300:2]",
+            "[@1349,10858:10877='EAB_RACE_MULTIRACIAL',<393>,301:2]"
+          ],
+          "intake_dt": [
+            "[@1351,10881:10889='intake_dt',<393>,302:1]"
+          ]
+        },
+        "query4": {
+          "primary_student_id": [
+            "[@1228,9765:9782='primary_student_id',<393>,241:7]"
+          ],
+          "intake_dt": [
+            "[@1234,9834:9842='intake_dt',<393>,244:1]"
+          ],
+          "EAB_RACE_AMER_INDIAN": [
+            "[@1230,9787:9806='EAB_RACE_AMER_INDIAN',<393>,242:2]",
+            "[@1232,9811:9830='EAB_RACE_AMER_INDIAN',<393>,243:2]"
+          ]
+        },
+        "query5": {
+          "primary_student_id": [
+            "[@1245,9926:9943='primary_student_id',<393>,250:7]"
+          ],
+          "intake_dt": [
+            "[@1266,10103:10111='intake_dt',<393>,257:1]"
+          ],
+          "EAB_RACE_ASIAN": [
+            "[@1247,9948:9961='EAB_RACE_ASIAN',<393>,251:2]",
+            "[@1264,10086:10099='EAB_RACE_ASIAN',<393>,256:11]"
+          ]
+        },
+        "query6": {
+          "primary_student_id": [
+            "[@1277,10187:10204='primary_student_id',<393>,263:7]"
+          ],
+          "intake_dt": [
+            "[@1283,10244:10252='intake_dt',<393>,266:1]"
+          ],
+          "EAB_RACE_BLACK": [
+            "[@1279,10209:10222='EAB_RACE_BLACK',<393>,264:2]",
+            "[@1281,10227:10240='EAB_RACE_BLACK',<393>,265:2]"
+          ]
+        },
+        "query7": {
+          "primary_student_id": [
+            "[@1294,10329:10346='primary_student_id',<393>,272:7]"
+          ],
+          "intake_dt": [
+            "[@1300,10406:10414='intake_dt',<393>,275:1]"
+          ],
+          "EAB_RACE_NATIVE_HAWAIIAN": [
+            "[@1296,10351:10374='EAB_RACE_NATIVE_HAWAIIAN',<393>,273:2]",
+            "[@1298,10379:10402='EAB_RACE_NATIVE_HAWAIIAN',<393>,274:2]"
+          ]
+        },
+        "union14": {
+          "race": [
+            "[@1184,9463:9466='race',<393>,223:0]"
+          ],
+          "eab_race": [
+            "[@1186,9470:9477='eab_race',<393>,224:0]"
+          ],
+          "primary_student_id": [
+            "[@1182,9442:9459='primary_student_id',<393>,222:16]"
+          ],
+          "intake_dt": [
+            "[@1188,9481:9489='intake_dt',<393>,225:0]"
+          ]
+        },
+        "query0": {
+          "eab_race_unknown": [
+            "[@226,1855:1870='eab_race_unknown',<393>,59:7]"
+          ],
+          "race": [
+            "[@39,185:188='race',<393>,4:35]"
+          ],
+          "eab_race_middle_eastern": [
+            "[@158,1219:1241='eab_race_middle_eastern',<393>,39:7]"
+          ],
+          "eab_race_black": [
+            "[@107,748:761='eab_race_black',<393>,24:7]"
+          ],
+          "eab_race_native_hawaiian": [
+            "[@124,909:932='eab_race_native_hawaiian',<393>,29:7]"
+          ],
+          "eab_race": [
+            "[@56,311:318='eab_race',<393>,9:7]"
+          ],
+          "eab_race_asian": [
+            "[@90,607:620='eab_race_asian',<393>,19:7]"
+          ],
+          "primary_student_id": [
+            "[@25,129:146='primary_student_id',<393>,3:91]"
+          ],
+          "eab_race_amer_indian": [
+            "[@73,460:479='eab_race_amer_indian',<393>,14:7]"
+          ],
+          "eab_race_other": [
+            "[@192,1530:1543='eab_race_other',<393>,49:7]"
+          ],
+          "eab_race_multiracial": [
+            "[@175,1381:1400='eab_race_multiracial',<393>,44:7]"
+          ],
+          "intake_dt": [
+            "[@232,1899:1907='intake_dt',<393>,60:25]"
+          ],
+          "eab_race_white": [
+            "[@141,1060:1073='eab_race_white',<393>,34:7]"
+          ],
+          "eab_race_prefer_not_respond": [
+            "[@209,1697:1723='eab_race_prefer_not_respond',<393>,54:7]"
+          ]
+        },
+        "query1": {
+          "eab_race_unknown": [
+            "[@814,6570:6585='eab_race_unknown',<393>,170:7]"
+          ],
+          "race": [
+            "[@627,4900:4903='race',<393>,115:35]"
+          ],
+          "eab_race_middle_eastern": [
+            "[@746,5934:5956='eab_race_middle_eastern',<393>,150:7]"
+          ],
+          "eab_race_black": [
+            "[@695,5463:5476='eab_race_black',<393>,135:7]"
+          ],
+          "eab_race_native_hawaiian": [
+            "[@712,5624:5647='eab_race_native_hawaiian',<393>,140:7]"
+          ],
+          "eab_race": [
+            "[@644,5026:5033='eab_race',<393>,120:7]"
+          ],
+          "eab_race_asian": [
+            "[@678,5322:5335='eab_race_asian',<393>,130:7]"
+          ],
+          "primary_student_id": [
+            "[@613,4844:4861='primary_student_id',<393>,114:91]"
+          ],
+          "eab_race_amer_indian": [
+            "[@661,5175:5194='eab_race_amer_indian',<393>,125:7]"
+          ],
+          "eab_race_other": [
+            "[@780,6245:6258='eab_race_other',<393>,160:7]"
+          ],
+          "eab_race_multiracial": [
+            "[@763,6096:6115='eab_race_multiracial',<393>,155:7]"
+          ],
+          "intake_dt": [
+            "[@820,6614:6622='intake_dt',<393>,171:25]"
+          ],
+          "eab_race_white": [
+            "[@729,5775:5788='eab_race_white',<393>,145:7]"
+          ],
+          "eab_race_prefer_not_respond": [
+            "[@797,6412:6438='eab_race_prefer_not_respond',<393>,165:7]"
+          ]
+        },
+        "query3": {
+          "primary_student_id": [
+            "[@1192,9510:9527='primary_student_id',<393>,228:7]"
+          ],
+          "race": [
+            "[@1194,9533:9536='race',<393>,229:3]"
+          ],
+          "eab_race": [
+            "[@1211,9661:9668='eab_race',<393>,234:11]"
+          ],
+          "intake_dt": [
+            "[@1213,9672:9680='intake_dt',<393>,235:1]"
+          ]
+        }
+      },
+      "fatalErrorCount": 20,
+      "fatalErrorStringList": [
+        "Duplicate interface columns defined: EAB_RACE_AMER_INDIAN at (l:242 c:2) and EAB_RACE_AMER_INDIAN at (l:243 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_ASIAN at (l:251 c:2) and EAB_RACE_ASIAN at (l:256 c:11).",
+        "Duplicate interface columns defined: EAB_RACE_BLACK at (l:264 c:2) and EAB_RACE_BLACK at (l:265 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_NATIVE_HAWAIIAN at (l:273 c:2) and EAB_RACE_NATIVE_HAWAIIAN at (l:274 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_WHITE at (l:282 c:2) and EAB_RACE_WHITE at (l:283 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_MIDDLE_EASTERN at (l:291 c:2) and EAB_RACE_MIDDLE_EASTERN at (l:292 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_MULTIRACIAL at (l:300 c:2) and EAB_RACE_MULTIRACIAL at (l:301 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_OTHER at (l:309 c:2) and EAB_RACE_OTHER at (l:310 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_PREFER_NOT_RESPOND at (l:318 c:2) and EAB_RACE_PREFER_NOT_RESPOND at (l:319 c:2).",
+        "Duplicate interface columns defined: EAB_RACE_UNKNOWN at (l:327 c:2) and EAB_RACE_UNKNOWN at (l:328 c:2).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_AMER_INDIAN, intake_dt) at (l:241 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_ASIAN, intake_dt) at (l:250 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_BLACK, intake_dt) at (l:263 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_NATIVE_HAWAIIAN, intake_dt) at (l:272 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_WHITE, intake_dt) at (l:281 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MIDDLE_EASTERN, intake_dt) at (l:290 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MULTIRACIAL, intake_dt) at (l:299 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_OTHER, intake_dt) at (l:308 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_PREFER_NOT_RESPOND, intake_dt) at (l:317 c:7).",
+        "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_UNKNOWN, intake_dt) at (l:326 c:7)."
+      ],
+      "diagnostics": [
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_AMER_INDIAN at (l:242 c:2) and EAB_RACE_AMER_INDIAN at (l:243 c:2).",
+          "line": 242,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_AMER_INDIAN,EAB_RACE_AMER_INDIAN",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_ASIAN at (l:251 c:2) and EAB_RACE_ASIAN at (l:256 c:11).",
+          "line": 251,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_ASIAN,EAB_RACE_ASIAN",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_BLACK at (l:264 c:2) and EAB_RACE_BLACK at (l:265 c:2).",
+          "line": 264,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_BLACK,EAB_RACE_BLACK",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_NATIVE_HAWAIIAN at (l:273 c:2) and EAB_RACE_NATIVE_HAWAIIAN at (l:274 c:2).",
+          "line": 273,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_NATIVE_HAWAIIAN,EAB_RACE_NATIVE_HAWAIIAN",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_WHITE at (l:282 c:2) and EAB_RACE_WHITE at (l:283 c:2).",
+          "line": 282,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_WHITE,EAB_RACE_WHITE",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_MIDDLE_EASTERN at (l:291 c:2) and EAB_RACE_MIDDLE_EASTERN at (l:292 c:2).",
+          "line": 291,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_MIDDLE_EASTERN,EAB_RACE_MIDDLE_EASTERN",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_MULTIRACIAL at (l:300 c:2) and EAB_RACE_MULTIRACIAL at (l:301 c:2).",
+          "line": 300,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_MULTIRACIAL,EAB_RACE_MULTIRACIAL",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_OTHER at (l:309 c:2) and EAB_RACE_OTHER at (l:310 c:2).",
+          "line": 309,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_OTHER,EAB_RACE_OTHER",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_PREFER_NOT_RESPOND at (l:318 c:2) and EAB_RACE_PREFER_NOT_RESPOND at (l:319 c:2).",
+          "line": 318,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_PREFER_NOT_RESPOND,EAB_RACE_PREFER_NOT_RESPOND",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "DUPLICATE_INTERFACE_COLUMNS",
+          "message": "Duplicate interface columns defined: EAB_RACE_UNKNOWN at (l:327 c:2) and EAB_RACE_UNKNOWN at (l:328 c:2).",
+          "line": 327,
+          "charPositionInLine": 2,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "EAB_RACE_UNKNOWN,EAB_RACE_UNKNOWN",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_AMER_INDIAN, intake_dt) at (l:241 c:7).",
+          "line": 241,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query4",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_ASIAN, intake_dt) at (l:250 c:7).",
+          "line": 250,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query5",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_BLACK, intake_dt) at (l:263 c:7).",
+          "line": 263,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query6",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_NATIVE_HAWAIIAN, intake_dt) at (l:272 c:7).",
+          "line": 272,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query7",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_WHITE, intake_dt) at (l:281 c:7).",
+          "line": 281,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query8",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MIDDLE_EASTERN, intake_dt) at (l:290 c:7).",
+          "line": 290,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query9",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MULTIRACIAL, intake_dt) at (l:299 c:7).",
+          "line": 299,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query10",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_OTHER, intake_dt) at (l:308 c:7).",
+          "line": 308,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query11",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_PREFER_NOT_RESPOND, intake_dt) at (l:317 c:7).",
+          "line": 317,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query12",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        },
+        {
+          "severity": "FATAL",
+          "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+          "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_UNKNOWN, intake_dt) at (l:326 c:7).",
+          "line": 326,
+          "charPositionInLine": 7,
+          "source": "SqlASTWalkerHelper",
+          "ruleName": null,
+          "tokenText": "def_query13",
+          "recoverable": false,
+          "phase": "ast-walk",
+          "exceptionType": null,
+          "details": null
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "legacy_missing_keys": [
+      "race_data"
+    ],
+    "fatal_count": {
+      "5.0.0-3": 0,
+      "5.1.3": 20
+    },
+    "fatal_messages_513": [
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_AMER_INDIAN at (l:242 c:2) and EAB_RACE_AMER_INDIAN at (l:243 c:2).",
+        "line": 242,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_ASIAN at (l:251 c:2) and EAB_RACE_ASIAN at (l:256 c:11).",
+        "line": 251,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_BLACK at (l:264 c:2) and EAB_RACE_BLACK at (l:265 c:2).",
+        "line": 264,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_NATIVE_HAWAIIAN at (l:273 c:2) and EAB_RACE_NATIVE_HAWAIIAN at (l:274 c:2).",
+        "line": 273,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_WHITE at (l:282 c:2) and EAB_RACE_WHITE at (l:283 c:2).",
+        "line": 282,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_MIDDLE_EASTERN at (l:291 c:2) and EAB_RACE_MIDDLE_EASTERN at (l:292 c:2).",
+        "line": 291,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_MULTIRACIAL at (l:300 c:2) and EAB_RACE_MULTIRACIAL at (l:301 c:2).",
+        "line": 300,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_OTHER at (l:309 c:2) and EAB_RACE_OTHER at (l:310 c:2).",
+        "line": 309,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_PREFER_NOT_RESPOND at (l:318 c:2) and EAB_RACE_PREFER_NOT_RESPOND at (l:319 c:2).",
+        "line": 318,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "DUPLICATE_INTERFACE_COLUMNS",
+        "message": "Duplicate interface columns defined: EAB_RACE_UNKNOWN at (l:327 c:2) and EAB_RACE_UNKNOWN at (l:328 c:2).",
+        "line": 327,
+        "charPositionInLine": 2,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_AMER_INDIAN, intake_dt) at (l:241 c:7).",
+        "line": 241,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_ASIAN, intake_dt) at (l:250 c:7).",
+        "line": 250,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_BLACK, intake_dt) at (l:263 c:7).",
+        "line": 263,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_NATIVE_HAWAIIAN, intake_dt) at (l:272 c:7).",
+        "line": 272,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_WHITE, intake_dt) at (l:281 c:7).",
+        "line": 281,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MIDDLE_EASTERN, intake_dt) at (l:290 c:7).",
+        "line": 290,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_MULTIRACIAL, intake_dt) at (l:299 c:7).",
+        "line": 299,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_OTHER, intake_dt) at (l:308 c:7).",
+        "line": 308,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_PREFER_NOT_RESPOND, intake_dt) at (l:317 c:7).",
+        "line": 317,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      },
+      {
+        "severity": "FATAL",
+        "code": "SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+        "message": "UNION has different column counts. Expected 4 columns (primary_student_id, race, eab_race, intake_dt) at (l:228 c:7) but there were 3 (primary_student_id, EAB_RACE_UNKNOWN, intake_dt) at (l:326 c:7).",
+        "line": 326,
+        "charPositionInLine": 7,
+        "source": "SqlASTWalkerHelper",
+        "phase": "ast-walk"
+      }
+    ],
+    "fatal_messages_5003": [],
+    "tableDictionary_keys": {
+      "5.0.0-3": [
+        "<[Enroll360].[Partner Code Mapping].{convert}>",
+        "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>",
+        "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>",
+        "race_data"
+      ],
+      "5.1.3": [
+        "<[Enroll360].[Partner Code Mapping].{convert}>",
+        "<[Enroll360].[Student Race].{fulfillment_ug_applicant}>",
+        "<[Enroll360].[Student Race].{fulfillment_ug_inquiry}>"
+      ]
+    },
+    "tableDictionary_only_in_5003_norm": [
+      "race_data"
+    ],
+    "tableDictionary_only_in_513_norm": [],
+    "cte_rescoring": [
+      {
+        "name": "race_data",
+        "in_513_tableDictionary": false,
+        "table_alias_binding_513": "race_data=union2",
+        "symbol_tree_evidence_513": {
+          "name_in_symbol_tree": true,
+          "table_alias_binding": true,
+          "context_list_entry": false,
+          "def_scope_key": false
+        }
+      }
+    ],
+    "enhancements_513": [
+      "5.1.3 enhancement: CTE 'race_data' registered in symbol table table_alias as race_data=union2 (not in global tableDictionary by design; richer than 5.0.0-3 CTE promotion)"
+    ],
+    "significant_issues": [
+      "5.1.3 has 20 FATAL diagnostics vs 0 in 5.0.0-3"
+    ],
+    "not_significant_under_latest_policy": [],
+    "verdict": "significant_regression"
+  }
+}

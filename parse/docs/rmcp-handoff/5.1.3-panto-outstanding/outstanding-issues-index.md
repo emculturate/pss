@@ -4,18 +4,20 @@ Companion to `panto_513_outstanding_issues.csv` (82 rows: 74 timeouts + 8 degrad
 
 Compare baseline **5.0.0-3** vs **5.1.3**, `SQL` endpoint, 90s per-parser abort.
 
-## Degradations (8)
+## Degradations (8) — **all closed** (2026-09-01, Phase 2.9)
 
-| CSV row | Domain | Entity | Query name | Why 5.1.3 is worse | Missing tableDictionary keys |
-| --- | --- | --- | --- | --- | --- |
-| 583 | ALR | Student | ECRM.student | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:latest_applications, tableDictionary:activity_prospect_map, tableDictionary:campus_visit_activity |
-| 2139 | Enroll360 | Student | ECRM.student | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:latest_applications, tableDictionary:activity_prospect_map, tableDictionary:campus_visit_activity |
-| 3150 | Enroll360 | Student Race | INACTIVE_Enroll360.Student Race.final_v2 | 5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (20 vs 0); 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:race_data |
-| 3870 | Enroll360 | Student Term PDP Delivery | Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020 | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:student_term_crm |
-| 4648 | Foundation | Student Academic Summary Intermediate | old Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill_ Query | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:st_student_term_sweep |
-| 4726 | Foundation | Student Academic Summary Intermediate | Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:st_student_term_sweep |
-| 5410 | Partner_Data_Platform | Cappex Contacts | src_intake_cappex_contacts_PDPv0.2 | 5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (3 vs 0) | — |
-| 5455 | Partner_Data_Platform | Contact | con_contact_assigned_chosen_contacts | 5.1.3 tableDictionary: missing keys that 5.0.0-3 still has | tableDictionary:comb_common, tableDictionary:chosencontact_combined |
+| CSV row | Domain | Entity | Query name | Status |
+| --- | --- | --- | --- | --- |
+| 583 | ALR | Student | ECRM.student | **Closed (2.9-A)** — CTE `table_alias` policy |
+| 2139 | Enroll360 | Student | ECRM.student | **Closed (2.9-A)** — same |
+| 3150 | Enroll360 | Student Race | INACTIVE_Enroll360.Student Race.final_v2 | **Closed (2.9-D)** — set-op FATALs canonical |
+| 3870 | Enroll360 | Student Term PDP Delivery | Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020 | **Closed (2.9-B)** — CTE `table_alias` policy |
+| 4648 | Foundation | Student Academic Summary Intermediate | old Updated INFA … Query | **Closed (2.9-C)** — CTE `table_alias` policy |
+| 4726 | Foundation | Student Academic Summary Intermediate | Updated INFA … Query | **Closed (2.9-C)** — same |
+| 5410 | Partner_Data_Platform | Cappex Contacts | src_intake_cappex_contacts_PDPv0.2 | **Closed (2.9-F)** — set-op FATALs canonical |
+| 5455 | Partner_Data_Platform | Contact | con_contact_assigned_chosen_contacts | **Closed (2.9-E)** — CTE + tuple policy |
+
+Policy: [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md), [set-operation-interface-duplicate-output-names-policy.md](../../../documents/set-operation-interface-duplicate-output-names-policy.md).
 
 ## 5.1.3 timeouts (74)
 

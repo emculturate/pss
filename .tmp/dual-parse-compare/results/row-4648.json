@@ -1,0 +1,2124 @@
+{
+  "sql_file": "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-4648.sql",
+  "parse_ms": {
+    "5.0.0-3": 382,
+    "5.1.3": 460
+  },
+  "parse_outputs": {
+    "5.0.0-3": {
+      "tableDictionary": {
+        "st_student_term_sweep": {},
+        "<sorter_srt_student_term_asc>": {}
+      },
+      "symbolTable": {
+        "with": {
+          "AA10_downfill_major_cd1": {},
+          "AA19_new_cd_2_downfill_cd_3": {},
+          "AA16_new_cd_1_downfill_cd_2": {},
+          "AA27_final_code_4_values": {},
+          "AA0_student_term": {
+            "query0": {
+              "df_asc": "<sorter_srt_student_term_asc>",
+              "interface": {
+                "passed_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.passed_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "registered_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_registered_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "cumulative_gpa": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_cumulative_gpa>",
+                    "type": "predicand"
+                  }
+                },
+                "concentration_cd_1": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_concentration_cd_1>",
+                    "type": "predicand"
+                  }
+                },
+                "lifetime_earned_credit": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_lifetime_earned_credit>",
+                    "type": "predicand"
+                  }
+                },
+                "concentration_cd_2": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_concentration_cd_2>",
+                    "type": "predicand"
+                  }
+                },
+                "withdrawal_reason": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_withdrawal_reason>",
+                    "type": "predicand"
+                  }
+                },
+                "concentration_cd_3": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_concentration_cd_3>",
+                    "type": "predicand"
+                  }
+                },
+                "graduated_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_graduated_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "concentration_cd_4": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_concentration_cd_4>",
+                    "type": "predicand"
+                  }
+                },
+                "inst_aid_recipient_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_inst_aid_recipient_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "transfer_student_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_transfer_student_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "college_cd_4": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_college_cd_4>",
+                    "type": "predicand"
+                  }
+                },
+                "college_cd_2": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_college_cd_2>",
+                    "type": "predicand"
+                  }
+                },
+                "student_time_status_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.student_time_status_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "college_cd_3": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_college_cd_3>",
+                    "type": "predicand"
+                  }
+                },
+                "academic_period": {
+                  "substitution": {
+                    "name": "<downfillcolmap.academic_period>",
+                    "type": "predicand"
+                  }
+                },
+                "attempted_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.attempted_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "department_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_department_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "transfer_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.transfer_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "major_cd_4": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_major_cd_4>",
+                    "type": "predicand"
+                  }
+                },
+                "official_gpa_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.official_gpa_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "major_cd_1": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_major_cd_1>",
+                    "type": "predicand"
+                  }
+                },
+                "major_cd_3": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_major_cd_3>",
+                    "type": "predicand"
+                  }
+                },
+                "major_cd_2": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_major_cd_2>",
+                    "type": "predicand"
+                  }
+                },
+                "academic_standing": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_academic_standing>",
+                    "type": "predicand"
+                  }
+                },
+                "major_gpa": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_major_gpa>",
+                    "type": "predicand"
+                  }
+                },
+                "withdrawal_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_withdrawal_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "residency_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_residency_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "lifetime_transfer_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_lifetime_transfer_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "intended_year_of_graduation": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_intended_year_of_graduation>",
+                    "type": "predicand"
+                  }
+                },
+                "fin_aid_applicant_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_fin_aid_applicant_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "earned_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.earned_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "total_registered_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.total_registered_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "gpa_type": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_gpa_type>",
+                    "type": "predicand"
+                  }
+                },
+                "student_classification_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_student_classification_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "exploratory_major_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_exploratory_major_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "degree_cd_1": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_degree_cd_1>",
+                    "type": "predicand"
+                  }
+                },
+                "degree_cd_2": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_degree_cd_2>",
+                    "type": "predicand"
+                  }
+                },
+                "admit_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_admit_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "campus_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_campus_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "housing_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_housing_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "rownumber": {
+                  "substitution": {
+                    "name": "<downfillcolmap.rownumber>",
+                    "type": "predicand"
+                  }
+                },
+                "degree_cd_3": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_degree_cd_3>",
+                    "type": "predicand"
+                  }
+                },
+                "registration_start_date": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_registration_start_date>",
+                    "type": "predicand"
+                  }
+                },
+                "degree_cd_4": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_degree_cd_4>",
+                    "type": "predicand"
+                  }
+                },
+                "student_id": {
+                  "substitution": {
+                    "name": "<downfillcolmap.student_id>",
+                    "type": "predicand"
+                  }
+                },
+                "college_cd": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_college_cd>",
+                    "type": "predicand"
+                  }
+                },
+                "lifetime_attempted_credits": {
+                  "substitution": {
+                    "name": "<downfillcolmap.lifetime_attempted_credits>",
+                    "type": "predicand"
+                  }
+                },
+                "applied_for_graduation_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_applied_for_graduation_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "registration_end_date": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_registration_end_date>",
+                    "type": "predicand"
+                  }
+                },
+                "transferred_out_of_inst_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_transferred_out_of_inst_ind>",
+                    "type": "predicand"
+                  }
+                },
+                "lifetime_credits_at_inst": {
+                  "substitution": {
+                    "name": "<downfillcolmap.lifetime_credits_at_inst>",
+                    "type": "predicand"
+                  }
+                },
+                "deans_list_ind": {
+                  "substitution": {
+                    "name": "<downfillcolmap.out_deans_list_ind>",
+                    "type": "predicand"
+                  }
+                }
+              },
+              "<sorter_srt_student_term_asc>": {}
+            }
+          },
+          "AA13_final_major_cd_1_downfill_cd_1": {},
+          "AA12_major_cd_2_partition_cd_1": {},
+          "AA18_backfill_cd_2_partition_downfill_cd_3_partition": {},
+          "AA15_backfill_cd_1_downfill_cd_2_partitions": {},
+          "AA21_backfill_cd_3": {},
+          "AA24_downfill_code_4_partition": {},
+          "ST_student_term_sweep": {},
+          "AA23_prev_major_cd_4": {},
+          "AA11_prev_downfill_major_cd1": {},
+          "AA22_final_3_values": {},
+          "AA26_backfill_code_4_partition": {},
+          "AA20_prev_major_cd_3": {},
+          "AA14_prev_major_cd_1": {},
+          "AA25_downfill_code_4_values": {},
+          "AA17_prev_major_cd_2": {}
+        },
+        "query1": {
+          "sweep": "ST_student_term_sweep",
+          "interface": {
+            "passed_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.passed_credits>",
+                "type": "predicand"
+              }
+            },
+            "registered_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registered_ind>",
+                "type": "predicand"
+              }
+            },
+            "cumulative_gpa": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.cumulative_gpa>",
+                "type": "predicand"
+              }
+            },
+            "concentration_cd_1": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_1>",
+                "type": "predicand"
+              }
+            },
+            "concentration_cd_2": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_2>",
+                "type": "predicand"
+              }
+            },
+            "withdrawal_reason": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.withdrawal_reason>",
+                "type": "predicand"
+              }
+            },
+            "concentration_cd_3": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_3>",
+                "type": "predicand"
+              }
+            },
+            "graduated_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.graduated_ind>",
+                "type": "predicand"
+              }
+            },
+            "concentration_cd_4": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_4>",
+                "type": "predicand"
+              }
+            },
+            "lifetime_earned_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_earned_credits>",
+                "type": "predicand"
+              }
+            },
+            "inst_aid_recipient_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.inst_aid_recipient_ind>",
+                "type": "predicand"
+              }
+            },
+            "college_cd_4": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_4>",
+                "type": "predicand"
+              }
+            },
+            "transfer_student_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transfer_student_ind>",
+                "type": "predicand"
+              }
+            },
+            "college_cd_2": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_2>",
+                "type": "predicand"
+              }
+            },
+            "college_cd_3": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_3>",
+                "type": "predicand"
+              }
+            },
+            "student_time_status_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_time_status_cd>",
+                "type": "predicand"
+              }
+            },
+            "academic_period": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.academic_period>",
+                "type": "predicand"
+              }
+            },
+            "attempted_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.attempted_credits>",
+                "type": "predicand"
+              }
+            },
+            "department_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.department_cd>",
+                "type": "predicand"
+              }
+            },
+            "transfer_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transfer_credits>",
+                "type": "predicand"
+              }
+            },
+            "major_cd_4": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_4>",
+                "type": "predicand"
+              }
+            },
+            "official_gpa_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.official_gpa_ind>",
+                "type": "predicand"
+              }
+            },
+            "major_cd_1": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_1>",
+                "type": "predicand"
+              }
+            },
+            "major_cd_3": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_3>",
+                "type": "predicand"
+              }
+            },
+            "major_cd_2": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_2>",
+                "type": "predicand"
+              }
+            },
+            "academic_standing": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.academic_standing>",
+                "type": "predicand"
+              }
+            },
+            "major_gpa": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_gpa>",
+                "type": "predicand"
+              }
+            },
+            "withdrawal_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.withdrawal_ind>",
+                "type": "predicand"
+              }
+            },
+            "residency_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.residency_cd>",
+                "type": "predicand"
+              }
+            },
+            "lifetime_transfer_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_transfer_credits>",
+                "type": "predicand"
+              }
+            },
+            "intended_year_of_graduation": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.intended_year_of_graduation>",
+                "type": "predicand"
+              }
+            },
+            "fin_aid_applicant_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.fin_aid_applicant_ind>",
+                "type": "predicand"
+              }
+            },
+            "earned_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.earned_credits>",
+                "type": "predicand"
+              }
+            },
+            "total_registered_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.total_registered_credits>",
+                "type": "predicand"
+              }
+            },
+            "gpa_type": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.gpa_type>",
+                "type": "predicand"
+              }
+            },
+            "student_classification_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_classification_cd>",
+                "type": "predicand"
+              }
+            },
+            "exploratory_major_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.exploratory_major_cd>",
+                "type": "predicand"
+              }
+            },
+            "degree_cd_1": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_1>",
+                "type": "predicand"
+              }
+            },
+            "degree_cd_2": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_2>",
+                "type": "predicand"
+              }
+            },
+            "admit_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.admit_ind>",
+                "type": "predicand"
+              }
+            },
+            "campus_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.campus_cd>",
+                "type": "predicand"
+              }
+            },
+            "housing_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.housing_ind>",
+                "type": "predicand"
+              }
+            },
+            "rownumber": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.rownumber>",
+                "type": "predicand"
+              }
+            },
+            "degree_cd_3": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_3>",
+                "type": "predicand"
+              }
+            },
+            "registration_start_date": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registration_start_date>",
+                "type": "predicand"
+              }
+            },
+            "degree_cd_4": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_4>",
+                "type": "predicand"
+              }
+            },
+            "student_id": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_id>",
+                "type": "predicand"
+              }
+            },
+            "college_cd": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd>",
+                "type": "predicand"
+              }
+            },
+            "lifetime_attempted_credits": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_attempted_credits>",
+                "type": "predicand"
+              }
+            },
+            "applied_for_graduation_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.applied_for_graduation_ind>",
+                "type": "predicand"
+              }
+            },
+            "registration_end_date": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registration_end_date>",
+                "type": "predicand"
+              }
+            },
+            "transferred_out_of_inst_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transferred_out_of_inst_ind>",
+                "type": "predicand"
+              }
+            },
+            "lifetime_credits_at_inst": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_credits_at_inst>",
+                "type": "predicand"
+              }
+            },
+            "deans_list_ind": {
+              "substitution": {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.deans_list_ind>",
+                "type": "predicand"
+              }
+            }
+          },
+          "ST_student_term_sweep": {}
+        }
+      },
+      "queryDictionary": null,
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": null,
+      "parserMessageStringList": []
+    },
+    "5.1.3": {
+      "tableDictionary": {
+        "<sorter_srt_student_term_asc>": {}
+      },
+      "symbolTable": {
+        "def_query1": {
+          "context_list": {
+            "AA0_student_term": "query0",
+            "AA10_downfill_major_cd1": "query0",
+            "AA11_prev_downfill_major_cd1": "query0",
+            "AA12_major_cd_2_partition_cd_1": "query0",
+            "AA13_final_major_cd_1_downfill_cd_1": "query0",
+            "AA14_prev_major_cd_1": "query0",
+            "AA15_backfill_cd_1_downfill_cd_2_partitions": "query0",
+            "AA16_new_cd_1_downfill_cd_2": "query0",
+            "AA17_prev_major_cd_2": "query0",
+            "AA18_backfill_cd_2_partition_downfill_cd_3_partition": "query0",
+            "AA19_new_cd_2_downfill_cd_3": "query0",
+            "AA20_prev_major_cd_3": "query0",
+            "AA21_backfill_cd_3": "query0",
+            "AA22_final_3_values": "query0",
+            "AA23_prev_major_cd_4": "query0",
+            "AA24_downfill_code_4_partition": "query0",
+            "AA25_downfill_code_4_values": "query0",
+            "AA26_backfill_code_4_partition": "query0",
+            "AA27_final_code_4_values": "query0",
+            "ST_student_term_sweep": "query0",
+            "sweep": "query0"
+          },
+          "query_dictionary": {
+            "passed_credits": [
+              "[@522,11309:11322='passed_credits',<393>,101:87]"
+            ],
+            "registered_ind": [
+              "[@482,10215:10228='registered_ind',<393>,91:87]"
+            ],
+            "cumulative_gpa": [
+              "[@526,11413:11426='cumulative_gpa',<393>,102:87]"
+            ],
+            "concentration_cd_1": [
+              "[@342,6369:6386='concentration_cd_1',<393>,56:91]"
+            ],
+            "concentration_cd_2": [
+              "[@346,6481:6498='concentration_cd_2',<393>,57:91]"
+            ],
+            "withdrawal_reason": [
+              "[@374,7302:7318='withdrawal_reason',<393>,64:90]"
+            ],
+            "concentration_cd_3": [
+              "[@350,6593:6610='concentration_cd_3',<393>,58:91]"
+            ],
+            "graduated_ind": [
+              "[@502,10760:10772='graduated_ind',<393>,96:86]"
+            ],
+            "concentration_cd_4": [
+              "[@354,6705:6722='concentration_cd_4',<393>,59:91]"
+            ],
+            "lifetime_earned_credits": [
+              "[@410,8264:8286='lifetime_earned_credits',<393>,73:96]"
+            ],
+            "inst_aid_recipient_ind": [
+              "[@478,10103:10124='inst_aid_recipient_ind',<393>,90:95]"
+            ],
+            "college_cd_4": [
+              "[@434,8937:8948='college_cd_4',<393>,79:85]"
+            ],
+            "transfer_student_ind": [
+              "[@490,10419:10438='transfer_student_ind',<393>,93:93]"
+            ],
+            "college_cd_2": [
+              "[@426,8737:8748='college_cd_2',<393>,77:85]"
+            ],
+            "college_cd_3": [
+              "[@430,8837:8848='college_cd_3',<393>,78:85]"
+            ],
+            "student_time_status_cd": [
+              "[@458,9541:9562='student_time_status_cd',<393>,85:95]"
+            ],
+            "academic_period": [
+              "[@442,9136:9150='academic_period',<393>,81:88]"
+            ],
+            "attempted_credits": [
+              "[@514,11098:11114='attempted_credits',<393>,99:90]"
+            ],
+            "department_cd": [
+              "[@454,9430:9442='department_cd',<393>,84:86]"
+            ],
+            "transfer_credits": [
+              "[@510,10989:11004='transfer_credits',<393>,98:89]"
+            ],
+            "major_cd_4": [
+              "[@550,12001:12010='major_cd_4',<393>,108:83]"
+            ],
+            "official_gpa_ind": [
+              "[@534,11611:11626='official_gpa_ind',<393>,104:89]"
+            ],
+            "major_cd_1": [
+              "[@538,11713:11722='major_cd_1',<393>,105:83]"
+            ],
+            "major_cd_3": [
+              "[@546,11905:11914='major_cd_3',<393>,107:83]"
+            ],
+            "major_cd_2": [
+              "[@542,11809:11818='major_cd_2',<393>,106:83]"
+            ],
+            "academic_standing": [
+              "[@422,8632:8648='academic_standing',<393>,76:90]"
+            ],
+            "major_gpa": [
+              "[@402,8030:8038='major_gpa',<393>,71:82]"
+            ],
+            "withdrawal_ind": [
+              "[@370,7195:7208='withdrawal_ind',<393>,63:87]"
+            ],
+            "residency_cd": [
+              "[@462,9651:9662='residency_cd',<393>,86:85]"
+            ],
+            "lifetime_transfer_credits": [
+              "[@406,8140:8164='lifetime_transfer_credits',<393>,72:98]"
+            ],
+            "intended_year_of_graduation": [
+              "[@358,6826:6852='intended_year_of_graduation',<393>,60:100]"
+            ],
+            "fin_aid_applicant_ind": [
+              "[@470,9886:9906='fin_aid_applicant_ind',<393>,88:94]"
+            ],
+            "earned_credits": [
+              "[@518,11205:11218='earned_credits',<393>,100:87]"
+            ],
+            "total_registered_credits": [
+              "[@506,10873:10896='total_registered_credits',<393>,97:97]"
+            ],
+            "gpa_type": [
+              "[@530,11511:11518='gpa_type',<393>,103:81]"
+            ],
+            "student_classification_cd": [
+              "[@466,9764:9788='student_classification_cd',<393>,87:98]"
+            ],
+            "exploratory_major_cd": [
+              "[@382,7533:7552='exploratory_major_cd',<393>,66:93]"
+            ],
+            "degree_cd_1": [
+              "[@386,7640:7650='degree_cd_1',<393>,67:84]"
+            ],
+            "degree_cd_2": [
+              "[@390,7738:7748='degree_cd_2',<393>,68:84]"
+            ],
+            "admit_ind": [
+              "[@486,10314:10322='admit_ind',<393>,92:82]"
+            ],
+            "campus_cd": [
+              "[@450,9332:9340='campus_cd',<393>,83:82]"
+            ],
+            "housing_ind": [
+              "[@474,9994:10004='housing_ind',<393>,89:84]"
+            ],
+            "rownumber": [
+              "[@554,12096:12104='rownumber',<393>,109:82]"
+            ],
+            "degree_cd_3": [
+              "[@394,7836:7846='degree_cd_3',<393>,69:84]"
+            ],
+            "registration_start_date": [
+              "[@362,6952:6974='registration_start_date',<393>,61:96]"
+            ],
+            "degree_cd_4": [
+              "[@398,7934:7944='degree_cd_4',<393>,70:84]"
+            ],
+            "student_id": [
+              "[@438,9035:9044='student_id',<393>,80:83]"
+            ],
+            "college_cd": [
+              "[@446,9237:9246='college_cd',<393>,82:83]"
+            ],
+            "lifetime_attempted_credits": [
+              "[@418,8513:8538='lifetime_attempted_credits',<393>,75:99]"
+            ],
+            "applied_for_graduation_ind": [
+              "[@498,10645:10670='applied_for_graduation_ind',<393>,95:99]"
+            ],
+            "registration_end_date": [
+              "[@378,7416:7436='registration_end_date',<393>,65:94]"
+            ],
+            "transferred_out_of_inst_ind": [
+              "[@366,7078:7104='transferred_out_of_inst_ind',<393>,62:100]"
+            ],
+            "lifetime_credits_at_inst": [
+              "[@414,8387:8410='lifetime_credits_at_inst',<393>,74:97]"
+            ],
+            "deans_list_ind": [
+              "[@494,10529:10542='deans_list_ind',<393>,94:87]"
+            ]
+          },
+          "def_query0": {
+            "query_dictionary": {
+              "passed_credits": [
+                "[@55,1140:1153='passed_credits',<393>,13:68]"
+              ],
+              "registered_ind": [
+                "[@119,2674:2687='registered_ind',<393>,29:72]"
+              ],
+              "cumulative_gpa": [
+                "[@59,1229:1242='cumulative_gpa',<393>,14:72]"
+              ],
+              "concentration_cd_1": [
+                "[@111,2500:2517='concentration_cd_1',<393>,27:76]"
+              ],
+              "lifetime_earned_credit": [
+                "[@187,4255:4276='lifetime_earned_credit',<393>,46:80]"
+              ],
+              "concentration_cd_2": [
+                "[@131,2943:2960='concentration_cd_2',<393>,32:76]"
+              ],
+              "withdrawal_reason": [
+                "[@151,3427:3443='withdrawal_reason',<393>,37:75]"
+              ],
+              "concentration_cd_3": [
+                "[@171,3887:3904='concentration_cd_3',<393>,42:76]"
+              ],
+              "graduated_ind": [
+                "[@191,4351:4363='graduated_ind',<393>,47:71]"
+              ],
+              "concentration_cd_4": [
+                "[@43,869:886='concentration_cd_4',<393>,10:76]"
+              ],
+              "inst_aid_recipient_ind": [
+                "[@135,3044:3065='inst_aid_recipient_ind',<393>,33:80]"
+              ],
+              "transfer_student_ind": [
+                "[@47,968:987='transfer_student_ind',<393>,11:78]"
+              ],
+              "college_cd_4": [
+                "[@63,1316:1327='college_cd_4',<393>,15:70]"
+              ],
+              "college_cd_2": [
+                "[@175,3978:3989='college_cd_2',<393>,43:70]"
+              ],
+              "student_time_status_cd": [
+                "[@107,2399:2420='student_time_status_cd',<393>,26:76]"
+              ],
+              "college_cd_3": [
+                "[@127,2852:2863='college_cd_3',<393>,31:70]"
+              ],
+              "academic_period": [
+                "[@147,3334:3348='academic_period',<393>,36:69]"
+              ],
+              "attempted_credits": [
+                "[@123,2762:2778='attempted_credits',<393>,30:71]"
+              ],
+              "department_cd": [
+                "[@207,4681:4693='department_cd',<393>,51:71]"
+              ],
+              "transfer_credits": [
+                "[@215,4872:4887='transfer_credits',<393>,53:70]"
+              ],
+              "major_cd_4": [
+                "[@115,2589:2598='major_cd_4',<393>,28:68]"
+              ],
+              "official_gpa_ind": [
+                "[@15,262:277='official_gpa_ind',<393>,3:70]"
+              ],
+              "major_cd_1": [
+                "[@35,699:708='major_cd_1',<393>,8:68]"
+              ],
+              "major_cd_3": [
+                "[@39,780:789='major_cd_3',<393>,9:68]"
+              ],
+              "major_cd_2": [
+                "[@99,2209:2218='major_cd_2',<393>,24:68]"
+              ],
+              "academic_standing": [
+                "[@159,3607:3623='academic_standing',<393>,39:75]"
+              ],
+              "major_gpa": [
+                "[@219,4958:4966='major_gpa',<393>,54:67]"
+              ],
+              "withdrawal_ind": [
+                "[@91,2041:2054='withdrawal_ind',<393>,22:72]"
+              ],
+              "residency_cd": [
+                "[@139,3139:3150='residency_cd',<393>,34:70]"
+              ],
+              "lifetime_transfer_credits": [
+                "[@143,3237:3261='lifetime_transfer_credits',<393>,35:83]"
+              ],
+              "intended_year_of_graduation": [
+                "[@11,162:188='intended_year_of_graduation',<393>,2:85]"
+              ],
+              "fin_aid_applicant_ind": [
+                "[@79,1725:1745='fin_aid_applicant_ind',<393>,19:79]"
+              ],
+              "earned_credits": [
+                "[@155,3515:3528='earned_credits',<393>,38:68]"
+              ],
+              "total_registered_credits": [
+                "[@163,3705:3728='total_registered_credits',<393>,40:78]"
+              ],
+              "gpa_type": [
+                "[@7,66:73='gpa_type',<393>,1:66]"
+              ],
+              "student_classification_cd": [
+                "[@67,1414:1438='student_classification_cd',<393>,16:83]"
+              ],
+              "exploratory_major_cd": [
+                "[@103,2300:2319='exploratory_major_cd',<393>,25:78]"
+              ],
+              "degree_cd_1": [
+                "[@95,2127:2137='degree_cd_1',<393>,23:69]"
+              ],
+              "degree_cd_2": [
+                "[@23,425:435='degree_cd_2',<393>,5:69]"
+              ],
+              "admit_ind": [
+                "[@183,4163:4171='admit_ind',<393>,45:67]"
+              ],
+              "campus_cd": [
+                "[@167,3799:3807='campus_cd',<393>,41:67]"
+              ],
+              "housing_ind": [
+                "[@199,4513:4523='housing_ind',<393>,49:69]"
+              ],
+              "rownumber": [
+                "[@19,344:352='rownumber',<393>,4:63]"
+              ],
+              "degree_cd_3": [
+                "[@31,617:627='degree_cd_3',<393>,7:69]"
+              ],
+              "registration_start_date": [
+                "[@83,1830:1852='registration_start_date',<393>,20:81]"
+              ],
+              "degree_cd_4": [
+                "[@203,4596:4606='degree_cd_4',<393>,50:69]"
+              ],
+              "student_id": [
+                "[@195,4431:4440='student_id',<393>,48:64]"
+              ],
+              "college_cd": [
+                "[@51,1059:1068='college_cd',<393>,12:68]"
+              ],
+              "lifetime_attempted_credits": [
+                "[@27,519:544='lifetime_attempted_credits',<393>,6:80]"
+              ],
+              "applied_for_graduation_ind": [
+                "[@87,1940:1965='applied_for_graduation_ind',<393>,21:84]"
+              ],
+              "registration_end_date": [
+                "[@179,4072:4092='registration_end_date',<393>,44:79]"
+              ],
+              "transferred_out_of_inst_ind": [
+                "[@71,1527:1553='transferred_out_of_inst_ind',<393>,17:85]"
+              ],
+              "lifetime_credits_at_inst": [
+                "[@211,4775:4798='lifetime_credits_at_inst',<393>,52:78]"
+              ],
+              "deans_list_ind": [
+                "[@75,1629:1642='deans_list_ind',<393>,18:72]"
+              ]
+            },
+            "table_dictionary": {
+              "<sorter_srt_student_term_asc>": {}
+            },
+            "interface": {
+              "passed_credits": [
+                {
+                  "name": "<downfillcolmap.passed_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "registered_ind": [
+                {
+                  "name": "<downfillcolmap.out_registered_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "cumulative_gpa": [
+                {
+                  "name": "<downfillcolmap.out_cumulative_gpa>",
+                  "type": "predicand"
+                }
+              ],
+              "concentration_cd_1": [
+                {
+                  "name": "<downfillcolmap.out_concentration_cd_1>",
+                  "type": "predicand"
+                }
+              ],
+              "lifetime_earned_credit": [
+                {
+                  "name": "<downfillcolmap.out_lifetime_earned_credit>",
+                  "type": "predicand"
+                }
+              ],
+              "concentration_cd_2": [
+                {
+                  "name": "<downfillcolmap.out_concentration_cd_2>",
+                  "type": "predicand"
+                }
+              ],
+              "withdrawal_reason": [
+                {
+                  "name": "<downfillcolmap.out_withdrawal_reason>",
+                  "type": "predicand"
+                }
+              ],
+              "concentration_cd_3": [
+                {
+                  "name": "<downfillcolmap.out_concentration_cd_3>",
+                  "type": "predicand"
+                }
+              ],
+              "graduated_ind": [
+                {
+                  "name": "<downfillcolmap.out_graduated_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "concentration_cd_4": [
+                {
+                  "name": "<downfillcolmap.out_concentration_cd_4>",
+                  "type": "predicand"
+                }
+              ],
+              "inst_aid_recipient_ind": [
+                {
+                  "name": "<downfillcolmap.out_inst_aid_recipient_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "transfer_student_ind": [
+                {
+                  "name": "<downfillcolmap.out_transfer_student_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "college_cd_4": [
+                {
+                  "name": "<downfillcolmap.out_college_cd_4>",
+                  "type": "predicand"
+                }
+              ],
+              "college_cd_2": [
+                {
+                  "name": "<downfillcolmap.out_college_cd_2>",
+                  "type": "predicand"
+                }
+              ],
+              "student_time_status_cd": [
+                {
+                  "name": "<downfillcolmap.student_time_status_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "college_cd_3": [
+                {
+                  "name": "<downfillcolmap.out_college_cd_3>",
+                  "type": "predicand"
+                }
+              ],
+              "academic_period": [
+                {
+                  "name": "<downfillcolmap.academic_period>",
+                  "type": "predicand"
+                }
+              ],
+              "attempted_credits": [
+                {
+                  "name": "<downfillcolmap.attempted_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "department_cd": [
+                {
+                  "name": "<downfillcolmap.out_department_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "transfer_credits": [
+                {
+                  "name": "<downfillcolmap.transfer_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "major_cd_4": [
+                {
+                  "name": "<downfillcolmap.out_major_cd_4>",
+                  "type": "predicand"
+                }
+              ],
+              "official_gpa_ind": [
+                {
+                  "name": "<downfillcolmap.official_gpa_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "major_cd_1": [
+                {
+                  "name": "<downfillcolmap.out_major_cd_1>",
+                  "type": "predicand"
+                }
+              ],
+              "major_cd_3": [
+                {
+                  "name": "<downfillcolmap.out_major_cd_3>",
+                  "type": "predicand"
+                }
+              ],
+              "major_cd_2": [
+                {
+                  "name": "<downfillcolmap.out_major_cd_2>",
+                  "type": "predicand"
+                }
+              ],
+              "academic_standing": [
+                {
+                  "name": "<downfillcolmap.out_academic_standing>",
+                  "type": "predicand"
+                }
+              ],
+              "major_gpa": [
+                {
+                  "name": "<downfillcolmap.out_major_gpa>",
+                  "type": "predicand"
+                }
+              ],
+              "withdrawal_ind": [
+                {
+                  "name": "<downfillcolmap.out_withdrawal_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "residency_cd": [
+                {
+                  "name": "<downfillcolmap.out_residency_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "lifetime_transfer_credits": [
+                {
+                  "name": "<downfillcolmap.out_lifetime_transfer_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "intended_year_of_graduation": [
+                {
+                  "name": "<downfillcolmap.out_intended_year_of_graduation>",
+                  "type": "predicand"
+                }
+              ],
+              "fin_aid_applicant_ind": [
+                {
+                  "name": "<downfillcolmap.out_fin_aid_applicant_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "earned_credits": [
+                {
+                  "name": "<downfillcolmap.earned_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "total_registered_credits": [
+                {
+                  "name": "<downfillcolmap.total_registered_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "gpa_type": [
+                {
+                  "name": "<downfillcolmap.out_gpa_type>",
+                  "type": "predicand"
+                }
+              ],
+              "student_classification_cd": [
+                {
+                  "name": "<downfillcolmap.out_student_classification_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "exploratory_major_cd": [
+                {
+                  "name": "<downfillcolmap.out_exploratory_major_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "degree_cd_1": [
+                {
+                  "name": "<downfillcolmap.out_degree_cd_1>",
+                  "type": "predicand"
+                }
+              ],
+              "degree_cd_2": [
+                {
+                  "name": "<downfillcolmap.out_degree_cd_2>",
+                  "type": "predicand"
+                }
+              ],
+              "admit_ind": [
+                {
+                  "name": "<downfillcolmap.out_admit_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "campus_cd": [
+                {
+                  "name": "<downfillcolmap.out_campus_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "housing_ind": [
+                {
+                  "name": "<downfillcolmap.out_housing_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "rownumber": [
+                {
+                  "name": "<downfillcolmap.rownumber>",
+                  "type": "predicand"
+                }
+              ],
+              "degree_cd_3": [
+                {
+                  "name": "<downfillcolmap.out_degree_cd_3>",
+                  "type": "predicand"
+                }
+              ],
+              "registration_start_date": [
+                {
+                  "name": "<downfillcolmap.out_registration_start_date>",
+                  "type": "predicand"
+                }
+              ],
+              "degree_cd_4": [
+                {
+                  "name": "<downfillcolmap.out_degree_cd_4>",
+                  "type": "predicand"
+                }
+              ],
+              "student_id": [
+                {
+                  "name": "<downfillcolmap.student_id>",
+                  "type": "predicand"
+                }
+              ],
+              "college_cd": [
+                {
+                  "name": "<downfillcolmap.out_college_cd>",
+                  "type": "predicand"
+                }
+              ],
+              "lifetime_attempted_credits": [
+                {
+                  "name": "<downfillcolmap.lifetime_attempted_credits>",
+                  "type": "predicand"
+                }
+              ],
+              "applied_for_graduation_ind": [
+                {
+                  "name": "<downfillcolmap.out_applied_for_graduation_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "registration_end_date": [
+                {
+                  "name": "<downfillcolmap.out_registration_end_date>",
+                  "type": "predicand"
+                }
+              ],
+              "transferred_out_of_inst_ind": [
+                {
+                  "name": "<downfillcolmap.out_transferred_out_of_inst_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "lifetime_credits_at_inst": [
+                {
+                  "name": "<downfillcolmap.lifetime_credits_at_inst>",
+                  "type": "predicand"
+                }
+              ],
+              "deans_list_ind": [
+                {
+                  "name": "<downfillcolmap.out_deans_list_ind>",
+                  "type": "predicand"
+                }
+              ]
+            },
+            "table_alias": {
+              "df_asc": "<sorter_srt_student_term_asc>"
+            }
+          },
+          "interface": {
+            "passed_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.passed_credits>",
+                "type": "predicand"
+              }
+            ],
+            "registered_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registered_ind>",
+                "type": "predicand"
+              }
+            ],
+            "cumulative_gpa": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.cumulative_gpa>",
+                "type": "predicand"
+              }
+            ],
+            "concentration_cd_1": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_1>",
+                "type": "predicand"
+              }
+            ],
+            "concentration_cd_2": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_2>",
+                "type": "predicand"
+              }
+            ],
+            "withdrawal_reason": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.withdrawal_reason>",
+                "type": "predicand"
+              }
+            ],
+            "concentration_cd_3": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_3>",
+                "type": "predicand"
+              }
+            ],
+            "graduated_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.graduated_ind>",
+                "type": "predicand"
+              }
+            ],
+            "concentration_cd_4": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.concentration_cd_4>",
+                "type": "predicand"
+              }
+            ],
+            "lifetime_earned_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_earned_credits>",
+                "type": "predicand"
+              }
+            ],
+            "inst_aid_recipient_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.inst_aid_recipient_ind>",
+                "type": "predicand"
+              }
+            ],
+            "college_cd_4": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_4>",
+                "type": "predicand"
+              }
+            ],
+            "transfer_student_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transfer_student_ind>",
+                "type": "predicand"
+              }
+            ],
+            "college_cd_2": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_2>",
+                "type": "predicand"
+              }
+            ],
+            "college_cd_3": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd_3>",
+                "type": "predicand"
+              }
+            ],
+            "student_time_status_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_time_status_cd>",
+                "type": "predicand"
+              }
+            ],
+            "academic_period": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.academic_period>",
+                "type": "predicand"
+              }
+            ],
+            "attempted_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.attempted_credits>",
+                "type": "predicand"
+              }
+            ],
+            "department_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.department_cd>",
+                "type": "predicand"
+              }
+            ],
+            "transfer_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transfer_credits>",
+                "type": "predicand"
+              }
+            ],
+            "major_cd_4": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_4>",
+                "type": "predicand"
+              }
+            ],
+            "official_gpa_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.official_gpa_ind>",
+                "type": "predicand"
+              }
+            ],
+            "major_cd_1": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_1>",
+                "type": "predicand"
+              }
+            ],
+            "major_cd_3": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_3>",
+                "type": "predicand"
+              }
+            ],
+            "major_cd_2": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_cd_2>",
+                "type": "predicand"
+              }
+            ],
+            "academic_standing": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.academic_standing>",
+                "type": "predicand"
+              }
+            ],
+            "major_gpa": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.major_gpa>",
+                "type": "predicand"
+              }
+            ],
+            "withdrawal_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.withdrawal_ind>",
+                "type": "predicand"
+              }
+            ],
+            "residency_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.residency_cd>",
+                "type": "predicand"
+              }
+            ],
+            "lifetime_transfer_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_transfer_credits>",
+                "type": "predicand"
+              }
+            ],
+            "intended_year_of_graduation": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.intended_year_of_graduation>",
+                "type": "predicand"
+              }
+            ],
+            "fin_aid_applicant_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.fin_aid_applicant_ind>",
+                "type": "predicand"
+              }
+            ],
+            "earned_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.earned_credits>",
+                "type": "predicand"
+              }
+            ],
+            "total_registered_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.total_registered_credits>",
+                "type": "predicand"
+              }
+            ],
+            "gpa_type": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.gpa_type>",
+                "type": "predicand"
+              }
+            ],
+            "student_classification_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_classification_cd>",
+                "type": "predicand"
+              }
+            ],
+            "exploratory_major_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.exploratory_major_cd>",
+                "type": "predicand"
+              }
+            ],
+            "degree_cd_1": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_1>",
+                "type": "predicand"
+              }
+            ],
+            "degree_cd_2": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_2>",
+                "type": "predicand"
+              }
+            ],
+            "admit_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.admit_ind>",
+                "type": "predicand"
+              }
+            ],
+            "campus_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.campus_cd>",
+                "type": "predicand"
+              }
+            ],
+            "housing_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.housing_ind>",
+                "type": "predicand"
+              }
+            ],
+            "rownumber": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.rownumber>",
+                "type": "predicand"
+              }
+            ],
+            "degree_cd_3": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_3>",
+                "type": "predicand"
+              }
+            ],
+            "registration_start_date": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registration_start_date>",
+                "type": "predicand"
+              }
+            ],
+            "degree_cd_4": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.degree_cd_4>",
+                "type": "predicand"
+              }
+            ],
+            "student_id": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.student_id>",
+                "type": "predicand"
+              }
+            ],
+            "college_cd": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.college_cd>",
+                "type": "predicand"
+              }
+            ],
+            "lifetime_attempted_credits": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_attempted_credits>",
+                "type": "predicand"
+              }
+            ],
+            "applied_for_graduation_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.applied_for_graduation_ind>",
+                "type": "predicand"
+              }
+            ],
+            "registration_end_date": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.registration_end_date>",
+                "type": "predicand"
+              }
+            ],
+            "transferred_out_of_inst_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.transferred_out_of_inst_ind>",
+                "type": "predicand"
+              }
+            ],
+            "lifetime_credits_at_inst": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.lifetime_credits_at_inst>",
+                "type": "predicand"
+              }
+            ],
+            "deans_list_ind": [
+              {
+                "name": "<target definition_ssf_downbackfill_student_academic_summary.deans_list_ind>",
+                "type": "predicand"
+              }
+            ]
+          },
+          "table_alias": {
+            "AA10_downfill_major_cd1": "query0",
+            "sweep": "query0",
+            "AA19_new_cd_2_downfill_cd_3": "query0",
+            "AA16_new_cd_1_downfill_cd_2": "query0",
+            "AA27_final_code_4_values": "query0",
+            "AA0_student_term": "query0",
+            "AA13_final_major_cd_1_downfill_cd_1": "query0",
+            "AA12_major_cd_2_partition_cd_1": "query0",
+            "AA18_backfill_cd_2_partition_downfill_cd_3_partition": "query0",
+            "AA15_backfill_cd_1_downfill_cd_2_partitions": "query0",
+            "AA21_backfill_cd_3": "query0",
+            "AA24_downfill_code_4_partition": "query0",
+            "ST_student_term_sweep": "query0",
+            "AA23_prev_major_cd_4": "query0",
+            "AA11_prev_downfill_major_cd1": "query0",
+            "AA22_final_3_values": "query0",
+            "AA26_backfill_code_4_partition": "query0",
+            "AA20_prev_major_cd_3": "query0",
+            "AA14_prev_major_cd_1": "query0",
+            "AA25_downfill_code_4_values": "query0",
+            "AA17_prev_major_cd_2": "query0"
+          }
+        }
+      },
+      "queryDictionary": {
+        "query0": {
+          "passed_credits": [
+            "[@55,1140:1153='passed_credits',<393>,13:68]"
+          ],
+          "registered_ind": [
+            "[@119,2674:2687='registered_ind',<393>,29:72]"
+          ],
+          "cumulative_gpa": [
+            "[@59,1229:1242='cumulative_gpa',<393>,14:72]"
+          ],
+          "concentration_cd_1": [
+            "[@111,2500:2517='concentration_cd_1',<393>,27:76]"
+          ],
+          "lifetime_earned_credit": [
+            "[@187,4255:4276='lifetime_earned_credit',<393>,46:80]"
+          ],
+          "concentration_cd_2": [
+            "[@131,2943:2960='concentration_cd_2',<393>,32:76]"
+          ],
+          "withdrawal_reason": [
+            "[@151,3427:3443='withdrawal_reason',<393>,37:75]"
+          ],
+          "concentration_cd_3": [
+            "[@171,3887:3904='concentration_cd_3',<393>,42:76]"
+          ],
+          "graduated_ind": [
+            "[@191,4351:4363='graduated_ind',<393>,47:71]"
+          ],
+          "concentration_cd_4": [
+            "[@43,869:886='concentration_cd_4',<393>,10:76]"
+          ],
+          "inst_aid_recipient_ind": [
+            "[@135,3044:3065='inst_aid_recipient_ind',<393>,33:80]"
+          ],
+          "transfer_student_ind": [
+            "[@47,968:987='transfer_student_ind',<393>,11:78]"
+          ],
+          "college_cd_4": [
+            "[@63,1316:1327='college_cd_4',<393>,15:70]"
+          ],
+          "college_cd_2": [
+            "[@175,3978:3989='college_cd_2',<393>,43:70]"
+          ],
+          "student_time_status_cd": [
+            "[@107,2399:2420='student_time_status_cd',<393>,26:76]"
+          ],
+          "college_cd_3": [
+            "[@127,2852:2863='college_cd_3',<393>,31:70]"
+          ],
+          "academic_period": [
+            "[@147,3334:3348='academic_period',<393>,36:69]"
+          ],
+          "attempted_credits": [
+            "[@123,2762:2778='attempted_credits',<393>,30:71]"
+          ],
+          "department_cd": [
+            "[@207,4681:4693='department_cd',<393>,51:71]"
+          ],
+          "transfer_credits": [
+            "[@215,4872:4887='transfer_credits',<393>,53:70]"
+          ],
+          "major_cd_4": [
+            "[@115,2589:2598='major_cd_4',<393>,28:68]"
+          ],
+          "official_gpa_ind": [
+            "[@15,262:277='official_gpa_ind',<393>,3:70]"
+          ],
+          "major_cd_1": [
+            "[@35,699:708='major_cd_1',<393>,8:68]"
+          ],
+          "major_cd_3": [
+            "[@39,780:789='major_cd_3',<393>,9:68]"
+          ],
+          "major_cd_2": [
+            "[@99,2209:2218='major_cd_2',<393>,24:68]"
+          ],
+          "academic_standing": [
+            "[@159,3607:3623='academic_standing',<393>,39:75]"
+          ],
+          "major_gpa": [
+            "[@219,4958:4966='major_gpa',<393>,54:67]"
+          ],
+          "withdrawal_ind": [
+            "[@91,2041:2054='withdrawal_ind',<393>,22:72]"
+          ],
+          "residency_cd": [
+            "[@139,3139:3150='residency_cd',<393>,34:70]"
+          ],
+          "lifetime_transfer_credits": [
+            "[@143,3237:3261='lifetime_transfer_credits',<393>,35:83]"
+          ],
+          "intended_year_of_graduation": [
+            "[@11,162:188='intended_year_of_graduation',<393>,2:85]"
+          ],
+          "fin_aid_applicant_ind": [
+            "[@79,1725:1745='fin_aid_applicant_ind',<393>,19:79]"
+          ],
+          "earned_credits": [
+            "[@155,3515:3528='earned_credits',<393>,38:68]"
+          ],
+          "total_registered_credits": [
+            "[@163,3705:3728='total_registered_credits',<393>,40:78]"
+          ],
+          "gpa_type": [
+            "[@7,66:73='gpa_type',<393>,1:66]"
+          ],
+          "student_classification_cd": [
+            "[@67,1414:1438='student_classification_cd',<393>,16:83]"
+          ],
+          "exploratory_major_cd": [
+            "[@103,2300:2319='exploratory_major_cd',<393>,25:78]"
+          ],
+          "degree_cd_1": [
+            "[@95,2127:2137='degree_cd_1',<393>,23:69]"
+          ],
+          "degree_cd_2": [
+            "[@23,425:435='degree_cd_2',<393>,5:69]"
+          ],
+          "admit_ind": [
+            "[@183,4163:4171='admit_ind',<393>,45:67]"
+          ],
+          "campus_cd": [
+            "[@167,3799:3807='campus_cd',<393>,41:67]"
+          ],
+          "housing_ind": [
+            "[@199,4513:4523='housing_ind',<393>,49:69]"
+          ],
+          "rownumber": [
+            "[@19,344:352='rownumber',<393>,4:63]"
+          ],
+          "degree_cd_3": [
+            "[@31,617:627='degree_cd_3',<393>,7:69]"
+          ],
+          "registration_start_date": [
+            "[@83,1830:1852='registration_start_date',<393>,20:81]"
+          ],
+          "degree_cd_4": [
+            "[@203,4596:4606='degree_cd_4',<393>,50:69]"
+          ],
+          "student_id": [
+            "[@195,4431:4440='student_id',<393>,48:64]"
+          ],
+          "college_cd": [
+            "[@51,1059:1068='college_cd',<393>,12:68]"
+          ],
+          "lifetime_attempted_credits": [
+            "[@27,519:544='lifetime_attempted_credits',<393>,6:80]"
+          ],
+          "applied_for_graduation_ind": [
+            "[@87,1940:1965='applied_for_graduation_ind',<393>,21:84]"
+          ],
+          "registration_end_date": [
+            "[@179,4072:4092='registration_end_date',<393>,44:79]"
+          ],
+          "transferred_out_of_inst_ind": [
+            "[@71,1527:1553='transferred_out_of_inst_ind',<393>,17:85]"
+          ],
+          "lifetime_credits_at_inst": [
+            "[@211,4775:4798='lifetime_credits_at_inst',<393>,52:78]"
+          ],
+          "deans_list_ind": [
+            "[@75,1629:1642='deans_list_ind',<393>,18:72]"
+          ]
+        },
+        "query1": {
+          "passed_credits": [
+            "[@522,11309:11322='passed_credits',<393>,101:87]"
+          ],
+          "registered_ind": [
+            "[@482,10215:10228='registered_ind',<393>,91:87]"
+          ],
+          "cumulative_gpa": [
+            "[@526,11413:11426='cumulative_gpa',<393>,102:87]"
+          ],
+          "concentration_cd_1": [
+            "[@342,6369:6386='concentration_cd_1',<393>,56:91]"
+          ],
+          "concentration_cd_2": [
+            "[@346,6481:6498='concentration_cd_2',<393>,57:91]"
+          ],
+          "withdrawal_reason": [
+            "[@374,7302:7318='withdrawal_reason',<393>,64:90]"
+          ],
+          "concentration_cd_3": [
+            "[@350,6593:6610='concentration_cd_3',<393>,58:91]"
+          ],
+          "graduated_ind": [
+            "[@502,10760:10772='graduated_ind',<393>,96:86]"
+          ],
+          "concentration_cd_4": [
+            "[@354,6705:6722='concentration_cd_4',<393>,59:91]"
+          ],
+          "lifetime_earned_credits": [
+            "[@410,8264:8286='lifetime_earned_credits',<393>,73:96]"
+          ],
+          "inst_aid_recipient_ind": [
+            "[@478,10103:10124='inst_aid_recipient_ind',<393>,90:95]"
+          ],
+          "college_cd_4": [
+            "[@434,8937:8948='college_cd_4',<393>,79:85]"
+          ],
+          "transfer_student_ind": [
+            "[@490,10419:10438='transfer_student_ind',<393>,93:93]"
+          ],
+          "college_cd_2": [
+            "[@426,8737:8748='college_cd_2',<393>,77:85]"
+          ],
+          "college_cd_3": [
+            "[@430,8837:8848='college_cd_3',<393>,78:85]"
+          ],
+          "student_time_status_cd": [
+            "[@458,9541:9562='student_time_status_cd',<393>,85:95]"
+          ],
+          "academic_period": [
+            "[@442,9136:9150='academic_period',<393>,81:88]"
+          ],
+          "attempted_credits": [
+            "[@514,11098:11114='attempted_credits',<393>,99:90]"
+          ],
+          "department_cd": [
+            "[@454,9430:9442='department_cd',<393>,84:86]"
+          ],
+          "transfer_credits": [
+            "[@510,10989:11004='transfer_credits',<393>,98:89]"
+          ],
+          "major_cd_4": [
+            "[@550,12001:12010='major_cd_4',<393>,108:83]"
+          ],
+          "official_gpa_ind": [
+            "[@534,11611:11626='official_gpa_ind',<393>,104:89]"
+          ],
+          "major_cd_1": [
+            "[@538,11713:11722='major_cd_1',<393>,105:83]"
+          ],
+          "major_cd_3": [
+            "[@546,11905:11914='major_cd_3',<393>,107:83]"
+          ],
+          "major_cd_2": [
+            "[@542,11809:11818='major_cd_2',<393>,106:83]"
+          ],
+          "academic_standing": [
+            "[@422,8632:8648='academic_standing',<393>,76:90]"
+          ],
+          "major_gpa": [
+            "[@402,8030:8038='major_gpa',<393>,71:82]"
+          ],
+          "withdrawal_ind": [
+            "[@370,7195:7208='withdrawal_ind',<393>,63:87]"
+          ],
+          "residency_cd": [
+            "[@462,9651:9662='residency_cd',<393>,86:85]"
+          ],
+          "lifetime_transfer_credits": [
+            "[@406,8140:8164='lifetime_transfer_credits',<393>,72:98]"
+          ],
+          "intended_year_of_graduation": [
+            "[@358,6826:6852='intended_year_of_graduation',<393>,60:100]"
+          ],
+          "fin_aid_applicant_ind": [
+            "[@470,9886:9906='fin_aid_applicant_ind',<393>,88:94]"
+          ],
+          "earned_credits": [
+            "[@518,11205:11218='earned_credits',<393>,100:87]"
+          ],
+          "total_registered_credits": [
+            "[@506,10873:10896='total_registered_credits',<393>,97:97]"
+          ],
+          "gpa_type": [
+            "[@530,11511:11518='gpa_type',<393>,103:81]"
+          ],
+          "student_classification_cd": [
+            "[@466,9764:9788='student_classification_cd',<393>,87:98]"
+          ],
+          "exploratory_major_cd": [
+            "[@382,7533:7552='exploratory_major_cd',<393>,66:93]"
+          ],
+          "degree_cd_1": [
+            "[@386,7640:7650='degree_cd_1',<393>,67:84]"
+          ],
+          "degree_cd_2": [
+            "[@390,7738:7748='degree_cd_2',<393>,68:84]"
+          ],
+          "admit_ind": [
+            "[@486,10314:10322='admit_ind',<393>,92:82]"
+          ],
+          "campus_cd": [
+            "[@450,9332:9340='campus_cd',<393>,83:82]"
+          ],
+          "housing_ind": [
+            "[@474,9994:10004='housing_ind',<393>,89:84]"
+          ],
+          "rownumber": [
+            "[@554,12096:12104='rownumber',<393>,109:82]"
+          ],
+          "degree_cd_3": [
+            "[@394,7836:7846='degree_cd_3',<393>,69:84]"
+          ],
+          "registration_start_date": [
+            "[@362,6952:6974='registration_start_date',<393>,61:96]"
+          ],
+          "degree_cd_4": [
+            "[@398,7934:7944='degree_cd_4',<393>,70:84]"
+          ],
+          "student_id": [
+            "[@438,9035:9044='student_id',<393>,80:83]"
+          ],
+          "college_cd": [
+            "[@446,9237:9246='college_cd',<393>,82:83]"
+          ],
+          "lifetime_attempted_credits": [
+            "[@418,8513:8538='lifetime_attempted_credits',<393>,75:99]"
+          ],
+          "applied_for_graduation_ind": [
+            "[@498,10645:10670='applied_for_graduation_ind',<393>,95:99]"
+          ],
+          "registration_end_date": [
+            "[@378,7416:7436='registration_end_date',<393>,65:94]"
+          ],
+          "transferred_out_of_inst_ind": [
+            "[@366,7078:7104='transferred_out_of_inst_ind',<393>,62:100]"
+          ],
+          "lifetime_credits_at_inst": [
+            "[@414,8387:8410='lifetime_credits_at_inst',<393>,74:97]"
+          ],
+          "deans_list_ind": [
+            "[@494,10529:10542='deans_list_ind',<393>,94:87]"
+          ]
+        }
+      },
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": []
+    }
+  },
+  "scoring": {
+    "legacy_missing_keys": [
+      "st_student_term_sweep"
+    ],
+    "fatal_count": {
+      "5.0.0-3": 0,
+      "5.1.3": 0
+    },
+    "fatal_messages_513": [],
+    "fatal_messages_5003": [],
+    "tableDictionary_keys": {
+      "5.0.0-3": [
+        "<sorter_srt_student_term_asc>",
+        "st_student_term_sweep"
+      ],
+      "5.1.3": [
+        "<sorter_srt_student_term_asc>"
+      ]
+    },
+    "tableDictionary_only_in_5003_norm": [
+      "st_student_term_sweep"
+    ],
+    "tableDictionary_only_in_513_norm": [],
+    "cte_rescoring": [
+      {
+        "name": "st_student_term_sweep",
+        "in_513_tableDictionary": false,
+        "table_alias_binding_513": "ST_student_term_sweep=query0",
+        "symbol_tree_evidence_513": {
+          "name_in_symbol_tree": true,
+          "table_alias_binding": true,
+          "context_list_entry": false,
+          "def_scope_key": false
+        }
+      }
+    ],
+    "enhancements_513": [
+      "5.1.3 enhancement: CTE 'st_student_term_sweep' registered in symbol table table_alias as ST_student_term_sweep=query0 (not in global tableDictionary by design; richer than 5.0.0-3 CTE promotion)"
+    ],
+    "significant_issues": [],
+    "not_significant_under_latest_policy": [],
+    "verdict": "no_significant_issue"
+  }
+}

@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.7 complete; 2.8–2.9 in progress / not started | This file (2.1–2.9) |
+| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.7, **2.9 complete**; **2.8** in progress | This file (2.1–2.9) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface, `VALUES` FROM syntax, WITH final-query source finalization) plus standalone grammar enhancements
 
-**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.7 complete; **2.8–2.9** remain open. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
+**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.7 and **2.9** complete; **2.8** remains open. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** (complete) locked WITH CTE physical/tuple trailing-clause collection in global `tableDictionary` and confirmed CTE aliases belong in query/symbol structures only. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
 
@@ -64,7 +64,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
 | 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
 | 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — stage-timing harness landed; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
-| 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Not started** — detailed corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md`. |
+| 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Complete** (2026-09-01) — all eight Panto degradations adjudicated; see [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). |
 
 **Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
 
@@ -80,7 +80,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 | 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
 | 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; corpus characterization next |
-| 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Not started** |
+| 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
 
 ---
 
@@ -840,13 +840,26 @@ Retain both the original full query and any minimized reproduction. Redact or pa
 
 **Kind:** Investigation first; defect only after semantic adjudication
 
-**Status:** **Not started**
+**Status:** **Complete** (2026-09-01)
 
 **Component:** grammar, recovery, semantic diagnostics, substitution/table-source collection, or comparison policy — assign ownership per case after dual-parse evidence
 
-The detailed corpus is [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). This subtask owns differences from that brief that are not explained by CTE publication/finalization under 2.7, plus future non-CTE 5.0.0-3 versus 5.1.3 differences discovered by the same comparison workflow.
+The detailed corpus is [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). All eight Panto degradation fixtures are **closed**. No parser changes required beyond documentation and comparison-policy updates.
 
-**Timeout routing:** the 74 cases where 5.1.3 exceeds 90 seconds while 5.0.0-3 completes are owned by **2.8**, with identifying information and full SQL in [panto-513-parse-timeouts-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md). If a completed parse later exposes a source or diagnostic difference, route that completed-output difference back to 2.9 without moving the timeout investigation itself.
+#### Closure summary (2026-09-01)
+
+| Cluster | Rows | Outcome | Policy doc |
+|---------|------|---------|------------|
+| A | 583, 2139 | CTE `table_alias` → `queryN`; physical tuples retained | [global-table-dictionary-cte-alias-policy.md](global-table-dictionary-cte-alias-policy.md) |
+| B | 3870 | Same | same |
+| C | 4648, 4726 | Same (query-substitution CTE body) | same |
+| D | 3150 | Set-op FATALs canonical | [set-operation-interface-duplicate-output-names-policy.md](set-operation-interface-duplicate-output-names-policy.md) |
+| E | 5455 | CTE + tuple on substitution key; local alias not in global `tableDictionary` | [global-table-dictionary-cte-alias-policy.md](global-table-dictionary-cte-alias-policy.md) |
+| F | 5410 | Set-op FATALs canonical | [set-operation-interface-duplicate-output-names-policy.md](set-operation-interface-duplicate-output-names-policy.md) |
+
+**Consumer rule:** Global `tableDictionary` is physical/tuple sources only under 5.1.3. Trace CTE and query-backed aliases via **`symbolTable` → `table_alias` → `def_queryN`**. Do not restore 5.0.0-3 CTE keys in the physical dictionary.
+
+**Timeout routing:** the 74 cases where 5.1.3 exceeds 90 seconds while 5.0.0-3 completes remain owned by **2.8**.
 
 #### Investigation-first rule
 
@@ -859,13 +872,18 @@ For every difference, first explain:
 
 Do not implement parity changes until this explanation is recorded for the case.
 
+**Comparison-policy note (post–2.7 dual-parse):** A CTE name that 5.0.0-3 listed in global `tableDictionary` but 5.1.3 omits is **not** automatically a regression. In 5.1.3, WITH members are intentionally registered on the enclosing scope’s **`table_alias`** as **`{cte_name=queryN}`** bindings under `def_queryN` (e.g. row 583: `latest_applications=query1`, `activity_prospect_map=query2`, `campus_visit_activity=query3`). That symbol-table wiring is a **5.1.3 enhancement** — richer documented row-source registration than 5.0.0-3’s CTE promotion into the physical dictionary. Score as improvement when `table_alias` → `queryN` evidence is present; score as defect only when physical/tuple sources or CTE symbol-tree registration is functionally absent.
+
 #### Initial residual clusters
 
 | Cluster | Live case | Difference to adjudicate |
 |---------|-----------|---------------------------|
-| 2.9-A | CSV 3150 | Twenty 5.1.3 FATALs versus zero in 5.0.0-3 around regex character classes, repeated tuple joins, set-op interfaces, or recovery. Determine whether these diagnostics cause the `race_data` CTE loss (2.7-D) or are independent. |
-| 2.9-B | CSV 5455 | `comb_common` tuple alias/source evidence missing in addition to the CTE loss. Determine whether this is a substitution-source collection defect independent of CTE publication. |
-| 2.9-C | CSV 5410 | Three 5.1.3 FATALs versus zero in 5.0.0-3 with no table-dictionary miss. Capture messages and isolate `REGEXP`, escaped pattern text, `UUID_STRING()` / `CONCAT`, derived UNION scopes, and reused alias `cc_pdp`. |
+| A | 583, 2139 | **Complete (2026-09-01)** — CTE names absent from global `tableDictionary`; `table_alias` → `queryN` on enclosing scope. |
+| B | 3870 | **Complete (2026-09-01)** — `student_term_crm=query7`. |
+| C | 4648, 4726 | **Complete (2026-09-01)** — `ST_student_term_sweep=query0`. |
+| D | 3150 | **Complete (2026-09-01)** — Set-op FATALs canonical. |
+| E | 5455 | **Complete (2026-09-01)** — CTE + tuple substitution key; not a collection defect. |
+| F | 5410 | **Complete (2026-09-01)** — Set-op FATALs canonical. |
 
 #### Tests and deliverables
 
@@ -876,14 +894,13 @@ Do not implement parity changes until this explanation is recorded for the case.
 5. At minimum, lock `messages` and `tableDictionary`; also lock `sqlTree`, `symbolTable`, and `interface` when the divergence occurs during parse recovery or walking.
 6. If 5.1.3 is more correct, preserve it and document why the legacy output should not be restored. If 5.1.3 is a regression, fix the owning grammar/walker path without deleting newer nested evidence.
 
-#### Acceptance
+#### Acceptance — **met** (2026-09-01)
 
-- Every initial residual cluster has an explicit root-cause and canonical-behavior decision reviewed before implementation.
-- Rows 3150 and 5410 have zero unjustified 5.1.3 FATALs. Any retained FATAL is documented as a true syntax/semantic error that 5.0.0-3 accepted incorrectly.
-- Row 5455 retains the physical/substitution source evidence required by the documented dictionary contract, independently of the CTE-key decision in 2.7.
-- Fixes include minimized and full-query regressions and leave all unrelated extractor outputs unchanged.
-- The final report tells the user what differs, why it differs, which version is correct, and what was changed or intentionally retained.
-- Phase 2.1–2.8 behavior remains unchanged unless a shared root cause is explicitly demonstrated.
+- Every initial residual cluster has an explicit root-cause and canonical-behavior decision.
+- Rows **3150** and **5410**: FATALs justified and retained — [set-operation-interface-duplicate-output-names-policy.md](set-operation-interface-duplicate-output-names-policy.md).
+- Rows **583, 2139, 3870, 4648, 4726, 5455**: no functional source loss; CTE/tuple policy — [global-table-dictionary-cte-alias-policy.md](global-table-dictionary-cte-alias-policy.md).
+- Dual-parse evidence captured 2026-09-01; comparison tools should adopt post–2.7 scoring.
+- Phase 2.8 (timeouts) remains independent.
 
 #### Out of scope (2.9)
 

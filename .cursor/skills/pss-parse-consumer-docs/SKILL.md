@@ -62,6 +62,8 @@ Map tasks to docs:
 | New SQL grammar / endpoints | `sql-grammar-extensions-since-2026-01-01` |
 | Window PARTITION BY / ORDER BY buckets | `window-query-dictionary-policy` |
 | Ordered select-list output alias refs (`queryN` in `interface` / `window_*`) | `ordered-select-list-output-alias-policy` |
+| Set-op branches with duplicate select-list output names | `set-operation-interface-duplicate-output-names-policy` |
+| Global `tableDictionary` vs CTE / query aliases (5.1.3) | `global-table-dictionary-cte-alias-policy` |
 
 ## Extract from the JAR (no vendor tree)
 

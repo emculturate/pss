@@ -21,6 +21,8 @@ See `META-INF/pss-parse/pss-parse-docs.manifest.json` for the machine-readable l
 | `relational-modifier-resolution-policy.md` | PIVOT/UNPIVOT semantics, `derivation` buckets, and modifier column lineage |
 | `sql-grammar-extensions-since-2026-01-01.md` | Parse coverage and grammar extensions for pss-parse 5.1.3+ |
 | `phase-17.6.9-window-query-dictionary-policy.md` | Window clause policy: `window_partition_by` / `window_ordered_by` vs `query_dictionary` |
+| `set-operation-interface-duplicate-output-names-policy.md` | Set-op branches with duplicate select-list output names; author remediation |
+| `global-table-dictionary-cte-alias-policy.md` | 5.1.3 global `tableDictionary`: CTE/query aliases via `table_alias` |
 
 ## Build
 

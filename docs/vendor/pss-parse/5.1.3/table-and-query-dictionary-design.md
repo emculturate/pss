@@ -45,6 +45,7 @@ The global table dictionary is intentionally **cross-scope**: `tab_a.pd1` tokens
 
 - Not keyed by query output column names.
 - Not used for query-alias / subquery interface columns (those are query-backed).
+- **Not keyed by WITH CTE names, subquery aliases, or local FROM aliases** in the **global** dictionary under 5.1.3 — those row sources are registered on the enclosing scope’s **`table_alias`** map and in nested **`def_queryN`** scopes. See [global-table-dictionary-cte-alias-policy.md](global-table-dictionary-cte-alias-policy.md).
 - PIVOT/UNPIVOT **derived** columns that are not physical table columns belong in relational-modifier derived-column metadata, not invented as physical table keys without a real backing table column. See [relational-modifier-resolution-policy.md](relational-modifier-resolution-policy.md) for walk vs convert ownership and two-tier binding.
 
 ---

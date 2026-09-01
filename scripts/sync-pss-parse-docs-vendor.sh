@@ -25,6 +25,8 @@ DOCS=(
   "sql-grammar-extensions-since-2026-01-01|sql-grammar-extensions-since-2026-01-01.md|Parse coverage and grammar extensions available in pss-parse 5.1.3 and later|"
   "window-query-dictionary-policy|phase-17.6.9-window-query-dictionary-policy.md|Window clause policy for window_partition_by and window_ordered_by versus query_dictionary|"
   "ordered-select-list-output-alias-policy|ordered-select-list-output-alias-policy.md|Ordered intra-select-list output alias resolution, interface queryN lineage, and contract tests|"
+  "global-table-dictionary-cte-alias-policy|global-table-dictionary-cte-alias-policy.md|5.1.3 global tableDictionary contract CTE and query aliases via symbol table table_alias|"
+  "set-operation-interface-duplicate-output-names-policy|set-operation-interface-duplicate-output-names-policy.md|Author guidance for UNION INTERSECT EXCEPT branches with duplicate select-list output names; DUPLICATE_INTERFACE_COLUMNS and SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH|"
 )
 
 mkdir -p "${DEST_DIR}"
