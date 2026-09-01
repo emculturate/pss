@@ -1,0 +1,791 @@
+{
+  "generatedAt": "2026-09-01T13:17:39.817Z",
+  "parsers": [
+    "5.0.0-3",
+    "5.1.3"
+  ],
+  "timeoutAbortMs": 90000,
+  "counts": {
+    "timeouts": 74,
+    "degradations": 8,
+    "extractRows": 82
+  },
+  "degradations": [
+    {
+      "csvRow": 583,
+      "queryKey": "ALR/Student/ECRM.student",
+      "domain": "ALR",
+      "entity": "Student",
+      "queryName": "ECRM.student",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:latest_applications",
+        "tableDictionary:activity_prospect_map",
+        "tableDictionary:campus_visit_activity"
+      ]
+    },
+    {
+      "csvRow": 2139,
+      "queryKey": "Enroll360/Student/ECRM.student",
+      "domain": "Enroll360",
+      "entity": "Student",
+      "queryName": "ECRM.student",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:latest_applications",
+        "tableDictionary:activity_prospect_map",
+        "tableDictionary:campus_visit_activity"
+      ]
+    },
+    {
+      "csvRow": 3150,
+      "queryKey": "Enroll360/Student Race/INACTIVE_Enroll360.Student Race.final_v2",
+      "domain": "Enroll360",
+      "entity": "Student Race",
+      "queryName": "INACTIVE_Enroll360.Student Race.final_v2",
+      "reasons": [
+        "5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (20 vs 0)",
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:race_data"
+      ]
+    },
+    {
+      "csvRow": 3870,
+      "queryKey": "Enroll360/Student Term PDP Delivery/Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020",
+      "domain": "Enroll360",
+      "entity": "Student Term PDP Delivery",
+      "queryName": "Enroll360.Student_Term_PDP_Delivery_IDXwalkTesting_20251020",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:student_term_crm"
+      ]
+    },
+    {
+      "csvRow": 4648,
+      "queryKey": "Foundation/Student Academic Summary Intermediate/old Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill_ Query",
+      "domain": "Foundation",
+      "entity": "Student Academic Summary Intermediate",
+      "queryName": "old Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill_ Query",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:st_student_term_sweep"
+      ]
+    },
+    {
+      "csvRow": 4726,
+      "queryKey": "Foundation/Student Academic Summary Intermediate/Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query",
+      "domain": "Foundation",
+      "entity": "Student Academic Summary Intermediate",
+      "queryName": "Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:st_student_term_sweep"
+      ]
+    },
+    {
+      "csvRow": 5410,
+      "queryKey": "Partner_Data_Platform/Cappex Contacts/src_intake_cappex_contacts_PDPv0.2",
+      "domain": "Partner_Data_Platform",
+      "entity": "Cappex Contacts",
+      "queryName": "src_intake_cappex_contacts_PDPv0.2",
+      "reasons": [
+        "5.1.3 issued FATAL diagnostics not present in 5.0.0-3 (3 vs 0)"
+      ],
+      "missingVs5003": []
+    },
+    {
+      "csvRow": 5455,
+      "queryKey": "Partner_Data_Platform/Contact/con_contact_assigned_chosen_contacts",
+      "domain": "Partner_Data_Platform",
+      "entity": "Contact",
+      "queryName": "con_contact_assigned_chosen_contacts",
+      "reasons": [
+        "5.1.3 tableDictionary: missing keys that 5.0.0-3 still has"
+      ],
+      "missingVs5003": [
+        "tableDictionary:comb_common",
+        "tableDictionary:chosencontact_combined"
+      ]
+    }
+  ],
+  "timeouts": [
+    {
+      "csvRow": 28,
+      "queryKey": "Acquia/PDP_Acquia_Contact/PDP_Acquia_Export",
+      "domain": "Acquia",
+      "entity": "PDP_Acquia_Contact",
+      "queryName": "PDP_Acquia_Export",
+      "parseMs5003": 1750,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 30,
+      "queryKey": "Acquia/PDP_Acquia_Contact/PDP_Acquia_Export",
+      "domain": "Acquia",
+      "entity": "PDP_Acquia_Contact",
+      "queryName": "PDP_Acquia_Export",
+      "parseMs5003": 1448,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 31,
+      "queryKey": "Acquia/PDP_Acquia_Contact/PDP_Acquia_Export",
+      "domain": "Acquia",
+      "entity": "PDP_Acquia_Contact",
+      "queryName": "PDP_Acquia_Export",
+      "parseMs5003": 1733,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 32,
+      "queryKey": "Acquia/PDP_Acquia_Contact/PDP_Acquia_Export",
+      "domain": "Acquia",
+      "entity": "PDP_Acquia_Contact",
+      "queryName": "PDP_Acquia_Export",
+      "parseMs5003": 1738,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 41,
+      "queryKey": "Acquia/PDP_Acquia_Contact/PDP_Acquia_Export_v2",
+      "domain": "Acquia",
+      "entity": "PDP_Acquia_Contact",
+      "queryName": "PDP_Acquia_Export_v2",
+      "parseMs5003": 1844,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 130,
+      "queryKey": "ALR/Applicant/transformation_query_applicants",
+      "domain": "ALR",
+      "entity": "Applicant",
+      "queryName": "transformation_query_applicants",
+      "parseMs5003": 20107,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 314,
+      "queryKey": "ALR/Inquiry/transformation_query_inquiry",
+      "domain": "ALR",
+      "entity": "Inquiry",
+      "queryName": "transformation_query_inquiry",
+      "parseMs5003": 1914,
+      "parseMs513": 90003
+    },
+    {
+      "csvRow": 315,
+      "queryKey": "ALR/Inquiry/transformation_query_inquiry",
+      "domain": "ALR",
+      "entity": "Inquiry",
+      "queryName": "transformation_query_inquiry",
+      "parseMs5003": 1825,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 475,
+      "queryKey": "ALR/Partner Code Mapping/EAB.Country",
+      "domain": "ALR",
+      "entity": "Partner Code Mapping",
+      "queryName": "EAB.Country",
+      "parseMs5003": 7416,
+      "parseMs513": 89997
+    },
+    {
+      "csvRow": 476,
+      "queryKey": "ALR/Partner Code Mapping/EAB.Country",
+      "domain": "ALR",
+      "entity": "Partner Code Mapping",
+      "queryName": "EAB.Country",
+      "parseMs5003": 7120,
+      "parseMs513": 89992
+    },
+    {
+      "csvRow": 605,
+      "queryKey": "ALR/Student Address/ALR.Student Address.final",
+      "domain": "ALR",
+      "entity": "Student Address",
+      "queryName": "ALR.Student Address.final",
+      "parseMs5003": 948,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 606,
+      "queryKey": "ALR/Student Address/ALR.Student Address.final",
+      "domain": "ALR",
+      "entity": "Student Address",
+      "queryName": "ALR.Student Address.final",
+      "parseMs5003": 878,
+      "parseMs513": 89999
+    },
+    {
+      "csvRow": 623,
+      "queryKey": "ALR/Student Address/ALR.Student Address.final.BryanCollege.ExcludeAdultHistorical",
+      "domain": "ALR",
+      "entity": "Student Address",
+      "queryName": "ALR.Student Address.final.BryanCollege.ExcludeAdultHistorical",
+      "parseMs5003": 878,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 635,
+      "queryKey": "ALR/Student Address/EHC.ALR.Student Address.final",
+      "domain": "ALR",
+      "entity": "Student Address",
+      "queryName": "EHC.ALR.Student Address.final",
+      "parseMs5003": 882,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 636,
+      "queryKey": "ALR/Student Address/Goshen_ALR.Student Address.final",
+      "domain": "ALR",
+      "entity": "Student Address",
+      "queryName": "Goshen_ALR.Student Address.final",
+      "parseMs5003": 1168,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 652,
+      "queryKey": "ALR/student_attributes/ALR.Student Attributes.Final",
+      "domain": "ALR",
+      "entity": "student_attributes",
+      "queryName": "ALR.Student Attributes.Final",
+      "parseMs5003": 420,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 1436,
+      "queryKey": "AMS/donor_attributes/par_intake_donor_attributes_AMS_V2.0",
+      "domain": "AMS",
+      "entity": "donor_attributes",
+      "queryName": "par_intake_donor_attributes_AMS_V2.0",
+      "parseMs5003": 781,
+      "parseMs513": 90004
+    },
+    {
+      "csvRow": 1439,
+      "queryKey": "AMS/donor_attributes/par_intake_donor_attributes_AMS_V2.0",
+      "domain": "AMS",
+      "entity": "donor_attributes",
+      "queryName": "par_intake_donor_attributes_AMS_V2.0",
+      "parseMs5003": 231,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1467,
+      "queryKey": "AMS/donor_attributes/par_intake_donor_attributes_AMS_V2.0",
+      "domain": "AMS",
+      "entity": "donor_attributes",
+      "queryName": "par_intake_donor_attributes_AMS_V2.0",
+      "parseMs5003": 548,
+      "parseMs513": 90006
+    },
+    {
+      "csvRow": 1814,
+      "queryKey": "Enroll360/Census Student Term Attributes/Enroll360.Partner Processed Census Student Term Attributes.final",
+      "domain": "Enroll360",
+      "entity": "Census Student Term Attributes",
+      "queryName": "Enroll360.Partner Processed Census Student Term Attributes.final",
+      "parseMs5003": 2700,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1819,
+      "queryKey": "Enroll360/Partner Code Mapping/DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis",
+      "parseMs5003": 2417,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1820,
+      "queryKey": "Enroll360/Partner Code Mapping/DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.tenant_v2",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.tenant_v2",
+      "parseMs5003": 2296,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 1821,
+      "queryKey": "Enroll360/Partner Code Mapping/DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v2",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v2",
+      "parseMs5003": 2328,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 1827,
+      "queryKey": "Enroll360/Partner Code Mapping/EAB.Country",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "EAB.Country",
+      "parseMs5003": 7111,
+      "parseMs513": 90003
+    },
+    {
+      "csvRow": 1828,
+      "queryKey": "Enroll360/Partner Code Mapping/EAB.Country",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "EAB.Country",
+      "parseMs5003": 7106,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1837,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1684,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1838,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1604,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1839,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1635,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 1851,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1691,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 1860,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_CRM_pilot_v1",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_CRM_pilot_v1",
+      "parseMs5003": 1890,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1890,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_sis",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_sis",
+      "parseMs5003": 2450,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1891,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_sis",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_sis",
+      "parseMs5003": 2672,
+      "parseMs513": 89981
+    },
+    {
+      "csvRow": 1897,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_tenant",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_tenant",
+      "parseMs5003": 1656,
+      "parseMs513": 89982
+    },
+    {
+      "csvRow": 1927,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_ug_applicants",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_ug_applicants",
+      "parseMs5003": 1912,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1933,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_ug_applicants_v2",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_ug_applicants_v2",
+      "parseMs5003": 1864,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 1957,
+      "queryKey": "Enroll360/Partner Code Mapping/Enroll360.Partner Code Mapping.convert_ug_inquiries",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "Enroll360.Partner Code Mapping.convert_ug_inquiries",
+      "parseMs5003": 1814,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 1986,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v1",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.Tenant.v1",
+      "parseMs5003": 2336,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 1987,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.wStudentType",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis.wStudentType",
+      "parseMs5003": 2448,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 1998,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1681,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 2001,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_Enroll360.Partner Code Mapping.convert",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_Enroll360.Partner Code Mapping.convert",
+      "parseMs5003": 1705,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 2031,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_Enroll360.Partner Code Mapping.convert_sis_pilot_v1",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_Enroll360.Partner Code Mapping.convert_sis_pilot_v1",
+      "parseMs5003": 2352,
+      "parseMs513": 89999
+    },
+    {
+      "csvRow": 2054,
+      "queryKey": "Enroll360/Partner Code Mapping/INACTIVE_Enroll360.Partner Code Mapping.convert_ug_applicants",
+      "domain": "Enroll360",
+      "entity": "Partner Code Mapping",
+      "queryName": "INACTIVE_Enroll360.Partner Code Mapping.convert_ug_applicants",
+      "parseMs5003": 1697,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 2110,
+      "queryKey": "Enroll360/Partner Configurations/Enroll360.Project Atlas Migration Checks.prelim_stud_data_sliced",
+      "domain": "Enroll360",
+      "entity": "Partner Configurations",
+      "queryName": "Enroll360.Project Atlas Migration Checks.prelim_stud_data_sliced",
+      "parseMs5003": 296,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 2116,
+      "queryKey": "Enroll360/Partner Configurations/Enroll360.Project Atlas Migration Checks.st_sta_data",
+      "domain": "Enroll360",
+      "entity": "Partner Configurations",
+      "queryName": "Enroll360.Project Atlas Migration Checks.st_sta_data",
+      "parseMs5003": 585,
+      "parseMs513": 90000
+    },
+    {
+      "csvRow": 2117,
+      "queryKey": "Enroll360/Partner Configurations/Enroll360.Project Atlas Migration Checks.st_sta_data_undeduped_apps",
+      "domain": "Enroll360",
+      "entity": "Partner Configurations",
+      "queryName": "Enroll360.Project Atlas Migration Checks.st_sta_data_undeduped_apps",
+      "parseMs5003": 563,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 2120,
+      "queryKey": "Enroll360/Partner Configurations/Enroll360.Project Atlas Migration Checks.stud_race_eth",
+      "domain": "Enroll360",
+      "entity": "Partner Configurations",
+      "queryName": "Enroll360.Project Atlas Migration Checks.stud_race_eth",
+      "parseMs5003": 503,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 2201,
+      "queryKey": "Enroll360/Student/Enroll360.Student.final.multifile Bill test",
+      "domain": "Enroll360",
+      "entity": "Student",
+      "queryName": "Enroll360.Student.final.multifile Bill test",
+      "parseMs5003": 3097,
+      "parseMs513": 90024
+    },
+    {
+      "csvRow": 2325,
+      "queryKey": "Enroll360/Student/INACTIVE_Enroll360.Student.final",
+      "domain": "Enroll360",
+      "entity": "Student",
+      "queryName": "INACTIVE_Enroll360.Student.final",
+      "parseMs5003": 2276,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 2352,
+      "queryKey": "Enroll360/Student/INACTIVE_Enroll360.Student.final.multifile_v4",
+      "domain": "Enroll360",
+      "entity": "Student",
+      "queryName": "INACTIVE_Enroll360.Student.final.multifile_v4",
+      "parseMs5003": 2899,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 2444,
+      "queryKey": "Enroll360/Student/XWALK_TEST_Enroll360.Student.final.multifile.tenant",
+      "domain": "Enroll360",
+      "entity": "Student",
+      "queryName": "XWALK_TEST_Enroll360.Student.final.multifile.tenant",
+      "parseMs5003": 2899,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4157,
+      "queryKey": "Enroll360/Student Year Funds/DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "parseMs5003": 958,
+      "parseMs513": 90003
+    },
+    {
+      "csvRow": 4158,
+      "queryKey": "Enroll360/Student Year Funds/DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "parseMs5003": 1149,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4163,
+      "queryKey": "Enroll360/Student Year Funds/FundAmountLogicTesting_Enroll360.Student Year Funds.final",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "FundAmountLogicTesting_Enroll360.Student Year Funds.final",
+      "parseMs5003": 1456,
+      "parseMs513": 90003
+    },
+    {
+      "csvRow": 4164,
+      "queryKey": "Enroll360/Student Year Funds/funds logic testing",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "funds logic testing",
+      "parseMs5003": 915,
+      "parseMs513": 89999
+    },
+    {
+      "csvRow": 4170,
+      "queryKey": "Enroll360/Student Year Funds/TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTesting",
+      "parseMs5003": 891,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4171,
+      "queryKey": "Enroll360/Student Year Funds/TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTestingDT",
+      "domain": "Enroll360",
+      "entity": "Student Year Funds",
+      "queryName": "TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTestingDT",
+      "parseMs5003": 883,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4176,
+      "queryKey": "Enroll360/Test/MSUBozeman.ApplyResponder",
+      "domain": "Enroll360",
+      "entity": "Test",
+      "queryName": "MSUBozeman.ApplyResponder",
+      "parseMs5003": 3722,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4177,
+      "queryKey": "Enroll360/Test/MSUBozeman.CultivateResponder",
+      "domain": "Enroll360",
+      "entity": "Test",
+      "queryName": "MSUBozeman.CultivateResponder",
+      "parseMs5003": 3326,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 4197,
+      "queryKey": "enrollment_services/Entering Class/Migration checks fulfillment counts",
+      "domain": "enrollment_services",
+      "entity": "Entering Class",
+      "queryName": "Migration checks fulfillment counts",
+      "parseMs5003": 719,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4647,
+      "queryKey": "Foundation/Student Academic Summary Intermediate/Old STD",
+      "domain": "Foundation",
+      "entity": "Student Academic Summary Intermediate",
+      "queryName": "Old STD",
+      "parseMs5003": 323,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 4725,
+      "queryKey": "Foundation/Student Academic Summary Intermediate/Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query",
+      "domain": "Foundation",
+      "entity": "Student Academic Summary Intermediate",
+      "queryName": "Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query",
+      "parseMs5003": 303,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5216,
+      "queryKey": "Pagoda/COURSE/colleague_cat_course",
+      "domain": "Pagoda",
+      "entity": "COURSE",
+      "queryName": "colleague_cat_course",
+      "parseMs5003": 537,
+      "parseMs513": 90003
+    },
+    {
+      "csvRow": 5261,
+      "queryKey": "Pagoda/SECTION/colleague_cat_section",
+      "domain": "Pagoda",
+      "entity": "SECTION",
+      "queryName": "colleague_cat_section",
+      "parseMs5003": 428,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5453,
+      "queryKey": "Partner_Data_Platform/Contact/con_contact_assigned_cappex_common_format",
+      "domain": "Partner_Data_Platform",
+      "entity": "Contact",
+      "queryName": "con_contact_assigned_cappex_common_format",
+      "parseMs5003": 805,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 5454,
+      "queryKey": "Partner_Data_Platform/Contact/con_contact_assigned_cappex_common_format",
+      "domain": "Partner_Data_Platform",
+      "entity": "Contact",
+      "queryName": "con_contact_assigned_cappex_common_format",
+      "parseMs5003": 560,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5592,
+      "queryKey": "Partner_Data_Platform/custom contacts/src_intake_custom_contacts_PDPv0.2",
+      "domain": "Partner_Data_Platform",
+      "entity": "custom contacts",
+      "queryName": "src_intake_custom_contacts_PDPv0.2",
+      "parseMs5003": 502,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5593,
+      "queryKey": "Partner_Data_Platform/custom contacts/src_intake_custom_contacts_PDPv0.2",
+      "domain": "Partner_Data_Platform",
+      "entity": "custom contacts",
+      "queryName": "src_intake_custom_contacts_PDPv0.2",
+      "parseMs5003": 502,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5594,
+      "queryKey": "Partner_Data_Platform/custom contacts/src_intake_custom_contacts_PDPv0.2_test",
+      "domain": "Partner_Data_Platform",
+      "entity": "custom contacts",
+      "queryName": "src_intake_custom_contacts_PDPv0.2_test",
+      "parseMs5003": 507,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 5860,
+      "queryKey": "PDP_ALR_V2/par__student/par_intake_student_last_validated_PDP_ALR_V2_v2.0",
+      "domain": "PDP_ALR_V2",
+      "entity": "par__student",
+      "queryName": "par_intake_student_last_validated_PDP_ALR_V2_v2.0",
+      "parseMs5003": 767,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 5861,
+      "queryKey": "PDP_ALR_V2/par__student/par_intake_student_PDP_ALR_V2_v2.0",
+      "domain": "PDP_ALR_V2",
+      "entity": "par__student",
+      "queryName": "par_intake_student_PDP_ALR_V2_v2.0",
+      "parseMs5003": 505,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 5862,
+      "queryKey": "PDP_ALR_V2/par__student/par_intake_student_PDP_ALR_V2_v2.0",
+      "domain": "PDP_ALR_V2",
+      "entity": "par__student",
+      "queryName": "par_intake_student_PDP_ALR_V2_v2.0",
+      "parseMs5003": 507,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 5863,
+      "queryKey": "PDP_ALR_V2/par__student/par_intake_student_PDP_ALR_V2_v2.0",
+      "domain": "PDP_ALR_V2",
+      "entity": "par__student",
+      "queryName": "par_intake_student_PDP_ALR_V2_v2.0",
+      "parseMs5003": 750,
+      "parseMs513": 90001
+    },
+    {
+      "csvRow": 6025,
+      "queryKey": "PDP_AMS/rsc_partner_donors/pdp_ams_rsc_donor_intake",
+      "domain": "PDP_AMS",
+      "entity": "rsc_partner_donors",
+      "queryName": "pdp_ams_rsc_donor_intake",
+      "parseMs5003": 1354,
+      "parseMs513": 90002
+    },
+    {
+      "csvRow": 6542,
+      "queryKey": "Program Assistant/Inquiry Pool Lead/Hofstra  YouVisit INQ International",
+      "domain": "Program Assistant",
+      "entity": "Inquiry Pool Lead",
+      "queryName": "Hofstra  YouVisit INQ International",
+      "parseMs5003": 420,
+      "parseMs513": 90003
+    }
+  ]
+}
