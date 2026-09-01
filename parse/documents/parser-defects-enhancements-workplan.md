@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.6 complete; 2.7–2.9 not started | This file (2.1–2.9) |
+| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.7 complete; 2.8–2.9 in progress / not started | This file (2.1–2.9) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,13 +46,13 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface, `VALUES` FROM syntax, WITH final-query source finalization) plus standalone grammar enhancements
 
-**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.6 remain complete; **2.7–2.9 are not started**. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
+**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.7 complete; **2.8–2.9** remain open. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
 
-**Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** investigates WITH/CTE source-inventory losses across conditionless and conditioned joins, nested CTE use, substitutions, and set operations. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
+**Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** (complete) locked WITH CTE physical/tuple trailing-clause collection in global `tableDictionary` and confirmed CTE aliases belong in query/symbol structures only. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
 
 ### Recommended implementation order (updated 2026-08-19)
 
-Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Characterize **2.7** and **2.9** before editing shared finalization/resolution code; 2.8 instrumentation can proceed independently. Choose implementation order from confirmed root causes and measured impact. Rationale:
+Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Characterize **2.9** before editing shared finalization/resolution code for live Panto rows; 2.8 instrumentation can proceed independently. Choose implementation order from confirmed root causes and measured impact. Rationale:
 
 | Order | Step | Effort | Impact | Why |
 |------|------|--------|--------|-----|
@@ -62,11 +62,11 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Characteriz
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | **Complete** — `ordered_aggregate_expression` + walker `within_group_ordered_by`; tests in `SqlEventWalkerWithinGroupOrderedAggregateTests`. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
-| 7 | **2.7** | Medium — WITH finalizer / global CTE dictionary merge | High — global `tableDictionary` silently omits joined CTE sources | **In progress** — goldens in `SqlEventWalkerWithConditionlessJoinFinalizerTests`; broader than conditionless joins. |
+| 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
 | 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — stage-timing harness landed; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
 | 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Not started** — detailed corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md`. |
 
-**Dependencies:** 2.1–2.6 complete. Characterize 2.7 and 2.9 together because some live rows combine CTE omissions with diagnostics, but do not assume one root cause. 2.8 instrumentation and corpus characterization can proceed independently; optimization work waits for measured stage and profile evidence. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); add focused WITH final-query tests and Panto rows 583, 2139, 3150, 3870, 4648, 4726, and 5455 for 2.7 (see `phase-2.7-with-conditionless-join-finalizer.md`); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8; use Panto rows 3150, 5410, and 5455 for the residual 2.9 clusters.
+**Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
 
 ### Subtask tracker
 
@@ -78,7 +78,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5**. Characteriz
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | **Complete** |
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
-| 2.7 | WITH final query omits joined CTE sources from global `tableDictionary` | **In progress** — characterization goldens landed |
+| 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
 | 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; corpus characterization next |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Not started** |
 
@@ -729,24 +729,29 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 ---
 
-### 2.7 — WITH final-query finalizer omits CTE sources from global `tableDictionary`
+### 2.7 — WITH CTE physical-source and tuple-substitution finalization
 
-**Kind:** Defect (`tableDictionary` incomplete compared with 5.0.0-3)
+**Kind:** Defect (trailing-clause physical / tuple-substitution collection in global `tableDictionary`) — **closed**
 
-**Status:** **In progress** — characterization goldens in `SqlEventWalkerWithConditionlessJoinFinalizerTests`; fix not started
+**Status:** **Complete** (2026-09-01)
 
-**Component:** WITH / query-finalizer walk; global dictionary merge for CTE row sources in the final primary query
+**Component:** WITH / query-finalizer walk; global `tableDictionary` for **physical and tuple substitution sources** only
 
-**Canonical spec:** [phase-2.7-with-conditionless-join-finalizer.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/phase-2.7-with-conditionless-join-finalizer.md) — starter query, characterization matrix, nested-WITH template, acceptance criteria, and live Panto cluster routing (rows 583, 2139, 3150, 3870, 4648, 4726, 5455).
+**Canonical spec:** [phase-2.7-with-conditionless-join-finalizer.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/phase-2.7-with-conditionless-join-finalizer.md)
 
-**Problem (summary):** The final primary query of a `WITH` omits joined CTE keys from global `tableDictionary` (observed live as trailing `CROSS JOIN last_delivered_cte`). Characterization shows the omission is **broader than conditionless joins** — it also affects comma-style FROM lists and `INNER JOIN cte ON 1=1`, while AST and symbol-table `filters` still retain CTE references. 5.0.0-3 records the CTE source entry; 5.1.3 does not.
+**Problem (summary):** Live Panto query with `CROSS JOIN last_delivered_cte` appeared to lose tuple-substitution evidence when `<Contact Deleted Dt>` appeared only in a trailing `WHERE CASE`. Characterization in `SqlEventWalkerWithCteTupleSubstitutionTests` shows physical/tuple columns are collected correctly across join shapes and final clauses.
 
-**Next steps:**
+**5.1.3 policy (closure decision):** **CTE aliases must never appear in global `tableDictionary`.** CTE row sources are documented in `query_dictionary` and `def_*` symbol-table structures (`context_list`, `table_alias`, `interface`, `filters`). Restoring 5.0.0-3-style CTE keys in the physical dictionary is obsolete and was **not** pursued.
 
-1. ~~Add characterization tests with six extractor goldens.~~ Done — `SqlEventWalkerWithConditionlessJoinFinalizerTests`.
-2. Bisect walker finalizer / global CTE dictionary promotion; restore `amount_cte`-style keys for all join shapes in the test class.
-3. Update goldens when fixed; expand to nested-WITH template and live Panto clusters A–E.
-4. Dual-parse live Panto clusters using fixtures in [sql/](../docs/rmcp-handoff/5.1.3-panto-outstanding/sql/) per [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md).
+**Delivered:**
+
+1. ~~Add characterization tests with six extractor goldens.~~ Done — `SqlEventWalkerWithCteTupleSubstitutionTests` (50 tests).
+2. ~~Confirm trailing-clause tuple / physical columns on global physical/tuple keys.~~ Met across join and clause variants.
+3. ~~Adjudicate CTE keys missing from global `tableDictionary` vs 5.0.0-3.~~ Intentional under 5.1.3; not a defect.
+
+**Re-routed:** Live Panto clusters A–E and any residual functional source loss → **2.9**. Nested-WITH wrapper template → optional future characterization, not a 2.7 blocker.
+
+**Intentionally unsupported (2026-09-01):** `NATURAL FULL OUTER JOIN` (and `NATURAL FULL JOIN`). Valid in ANSI SQL, Snowflake, and PostgreSQL, but **out of PSS scope** — walker emits fatal `NATURAL_FULL_OUTER_JOIN_UNSUPPORTED`. Characterization tests assert that diagnostic. Supported natural joins: `NATURAL JOIN`, `NATURAL LEFT [OUTER] JOIN`, `NATURAL RIGHT [OUTER] JOIN`. Supported full outer: explicit `FULL [OUTER] JOIN … ON` / `USING`.
 
 ---
 

@@ -5,15 +5,16 @@ Kind: Defect (regression vs **5.0.0-3**)
 Audience: PSS parser agent — investigate why **5.1.3** omits sources that **5.0.0-3** still records, and restore them without dropping other dictionary entries.  
 Corpus: Panto extracted-queries CSV dual-parse (`SQL` endpoint), RMCP compare after table-dict last-identifier scoring and outermost-only queryDictionary vs 5.0.0-3.
 
-**Related (do not assume it is the same bug):** Phase **2.7** — [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) (CTE reached only via outer `CROSS JOIN` missing from `tableDictionary`). Several cases below are **LEFT / FULL OUTER JOIN of a CTE**, a **CTE whose body is a query substitution**, or **tuple aliases inside a CTE**. Treat 2.7 as a related finalizer hypothesis, not as already explaining all eight rows.
+**Related:** Phase **2.7** — [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) (**complete**, 2026-09-01). Global `tableDictionary` is for physical and tuple substitution sources only; **CTE aliases must not appear there**. Several cases below were originally scored as “missing CTE keys” in `tableDictionary` vs 5.0.0-3 — re-adjudicate under **2.9** for functional source loss in `query_dictionary` / symbol-tree structures.
 
 ## Goal
 
 For each listed query, **5.1.3** `tableDictionary` (and, where noted, diagnostics) must not be a functional regression vs **5.0.0-3**:
 
-1. Every dictionary key that **5.0.0-3** has for a **defined CTE or FROM/JOIN source** must appear in **5.1.3** (compare the last identifier after `.`; schema-only qualification is **not** this defect).
-2. Do not “fix” a missing CTE by deleting the base tables / tuples that **5.1.3** already records.
-3. Nested **5.1.3** dictionary layers that **5.0.0-3** never emitted are improvements, not something to strip.
+1. Every **physical table or tuple substitution source** that **5.0.0-3** recorded in `tableDictionary` must still appear in **5.1.3** with equivalent token-site evidence (compare the last identifier after `.`; schema-only qualification is **not** this defect).
+2. **CTE aliases** must **not** be required in global `tableDictionary` (5.1.3 policy; Phase 2.7 closed). For CTE-centered rows, require equivalent evidence in `query_dictionary` and `def_*` symbol-tree structures (`context_list`, `table_alias`, `interface`, `filters`).
+3. Do not “fix” a missing CTE name in `tableDictionary` by deleting the base tables / tuples that **5.1.3** already records.
+4. Nested **5.1.3** dictionary layers that **5.0.0-3** never emitted are improvements, not something to strip.
 
 ## How RMCP scored these eight
 
@@ -52,7 +53,7 @@ Work **clusters**, not row order. Confirm one root cause per cluster before edit
 - Fresh dual-parse of each `csv-row-*.sql`: **5.1.3** `tableDictionary` contains every missing key listed above (case-insensitive last segment is enough).
 - Rows **3150** and **5410**: **5.1.3** FATAL count is **0**, or each remaining FATAL is justified as a true syntax error that **5.0.0-3** incorrectly accepted (document that decision; do not silently keep 20/3 FATALs).
 - Goldens: `tableDictionary` + `messages` at minimum; add `sqlTree` / `symbolTable` if the miss is a walk skip.
-- Regression: Phase 2.7 starter still keeps `last_delivered_cte`.
+- Regression: Phase 2.7 starter keeps trailing-clause tuple columns on the fulfillment tuple key; CTE alias `last_delivered_cte` is **not** a global `tableDictionary` key.
 
 ## Out of scope
 

@@ -9,7 +9,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 
 | Phase | Topic | Document |
 |-------|--------|----------|
-| **2.7** | WITH final query omits joined CTE sources from global `tableDictionary` | [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) |
+| **2.7** | WITH CTE physical-source / tuple-substitution finalization (**complete**) | [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) |
 | **2.8** | 74 queries timeout at 90s on 5.1.3 | [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md), [outstanding-issues-index.md](./outstanding-issues-index.md), [panto_513_outstanding_issues.csv](./panto_513_outstanding_issues.csv) |
 | **2.9** | 8 table-dictionary / FATAL degradations | [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md), SQL fixtures in [sql/](./sql/) |
 
@@ -17,7 +17,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 
 | File | Contents |
 |------|----------|
-| `phase-2.7-with-conditionless-join-finalizer.md` | Full investigation spec for conditionless-JOIN / WITH finalizer defect |
+| `phase-2.7-with-conditionless-join-finalizer.md` | Phase 2.7 spec — **complete**; CTE aliases not in global `tableDictionary` by design |
 | `panto_513_outstanding_issues.csv` | **82** data rows: domain, entity, query name, full `query_sql`, timings, `issue_kinds` |
 | `outstanding-issues-index.md` | Compact tables (no SQL) for workplan / PR description |
 | `row-index.json` | Machine-readable row lists |
@@ -38,7 +38,7 @@ No overlap between the 74 timeouts and the 8 degradations.
 - Table-dictionary compare uses the **last identifier after `.`**. Qualification-only differences are not degradations.
 - Extra nested 5.1.3 query-dictionary layers vs 5.0.0-3 are improvements, not this pack.
 - Timeouts are parse **non-termination**, not missing dictionary keys.
-- Phase 2.7 (conditionless JOIN / `last_delivered_cte`) and the eight degradations are overlapping-but-not-identical JOIN/CTE/substitution shapes.
+- Phase 2.7 (complete) locked trailing-clause physical/tuple collection and confirmed CTE aliases belong in `query_dictionary` / symbol tree, not global `tableDictionary`. The eight degradations may still show functional source loss — adjudicate under **2.9**; a missing CTE **name** in global `tableDictionary` alone is not a regression.
 
 ## Intentionally omitted: 5.0.0-3 crashes
 

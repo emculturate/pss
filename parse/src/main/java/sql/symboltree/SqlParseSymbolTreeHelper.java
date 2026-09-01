@@ -18198,6 +18198,23 @@ public class SqlParseSymbolTreeHelper {
 				joinKeyword + "/" + conditionKeyword);
 	}
 
+	public void emitNaturalFullOuterJoinUnsupportedFatal(Integer joinLine, Integer joinCharPos) {
+		String diagCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_NATURAL_FULL_OUTER_JOIN_UNSUPPORTED);
+		String diagTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_NATURAL_FULL_OUTER_JOIN_UNSUPPORTED);
+		String diagMessage = (diagTemplate == null)
+				? String.format(
+						"NATURAL FULL OUTER JOIN at (l:%s c:%s) is not supported.",
+						String.valueOf(joinLine),
+						String.valueOf(joinCharPos))
+				: String.format(diagTemplate, String.valueOf(joinLine), String.valueOf(joinCharPos));
+		walker.addWalkerFatal(
+				diagCode,
+				diagMessage,
+				joinLine,
+				joinCharPos,
+				"NATURAL FULL OUTER JOIN");
+	}
+
 	@SuppressWarnings("unchecked")
 	private void markJoinUsingColumnDisqualified(String columnName) {
 		if (columnName == null || columnName.isBlank()) {

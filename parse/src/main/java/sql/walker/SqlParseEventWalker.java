@@ -7326,12 +7326,19 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		if (ctx.getChildCount() == 2)
+		if (ctx.getChildCount() == 2) {
 			subMap.put(MUMBLE_JOIN_KEY, ctx.getText());
-		else if (ctx.getChildCount() == 3) {
-			String type = (String) subMap.remove("1");
-			subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
-//			subMap.put(MUMBLE_JOIN_TYPE_KEY, type);
+		} else if (ctx.getChildCount() == 3) {
+			if (ctx.NATURAL() != null && ctx.join_type() != null && ctx.join_type().FULL() != null) {
+				subMap.remove("1");
+				subMap.put(MUMBLE_JOIN_KEY, ctx.getText().replaceAll("\\s+", ""));
+				symbolTreeHelper.emitNaturalFullOuterJoinUnsupportedFatal(
+						ctx.NATURAL().getSymbol().getLine(),
+						ctx.NATURAL().getSymbol().getCharPositionInLine());
+			} else {
+				String type = (String) subMap.remove("1");
+				subMap.put(MUMBLE_JOIN_KEY, ctx.getChild(0).getText() + ctx.getChild(2).getText());
+			}
 		}
 		String crossNaturalJoinKeyword = crossOrNaturalJoinKeyword(ctx);
 		if (crossNaturalJoinKeyword != null) {
