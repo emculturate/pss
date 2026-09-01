@@ -2,6 +2,7 @@
 
 **Workplan tracker:** `parse/documents/parser-defects-enhancements-workplan.md` §2.7  
 **Characterization tests:** `parse/src/test/java/sql/walker/SqlEventWalkerWithConditionlessJoinFinalizerTests.java`  
+**Live `last_delivered_cte` + tuple reproduction:** `parse/src/test/java/sql/walker/SqlEventWalkerLastDeliveredCteTupleSubstitutionTests.java`  
 **Subquery joined-source variant:** `parse/src/test/java/sql/walker/SqlEventWalkerWithConditionlessJoinFinalizerSubqueryTests.java` — `(SELECT … FROM orders_tbl) AS orders_tbl` instead of physical `orders_tbl`  
 **Related live degradations:** [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md) (clusters A–E)  
 **Handoff index:** [outstanding-issues-index.md](./outstanding-issues-index.md) · [README.md](./README.md)
@@ -18,34 +19,13 @@
 
 #### Problem
 
-**Originally observed:** the final primary query of a `WITH` loses a CTE from the emitted global `tableDictionary` when that CTE is introduced by a trailing conditionless `CROSS JOIN` (`last_delivered_cte` in the live starter). The CTE remains in the AST and its columns appear in symbol-table `filters`, but the global dictionary retains only the CTE's physical base table and the outer tuple source.
+**Primary defect (live Panto reproduction):** after a conditionless `CROSS JOIN` of a CTE into the final `WITH` query, a **tuple substitution column** referenced only in a trailing clause (e.g. `ead.<Contact Deleted Dt>` in the `ELSE` branch of a `WHERE CASE`) must be recorded on the tuple source in global `tableDictionary`. The live starter below uses `CAST(ead.<ES Partner ID> …)` / `CAST(ead.<ACS Contact ID> …)` in the select list and `ead.<Contact Deleted Dt>` only in the `WHERE CASE` after `CROSS JOIN last_delivered_cte`.
 
-**Broader than first diagnosed (2026-09 characterization):** compact fixtures in `SqlEventWalkerWithConditionlessJoinFinalizerTests` show the same missing global `amount_cte` key across **all** of the following, not only conditionless joins:
+Observed consumer impact vs **5.0.0-3:** the tuple key `<[Acquia].[exp__acquia_deletions].{fulfillment}>` retains select-list substitution columns but **drops** `<Contact Deleted Dt>` from `tableDictionary` even though `filters` still reference it. That is a functional regression for tools that build source-impact sets from `tableDictionary` token sites, not merely a missing CTE name.
 
-| Final-query shape | Global `amount_cte` key | Notes |
-|-------------------|-------------------------|-------|
-| `FROM orders_tbl CROSS JOIN amount_cte` | **Absent** | Original live reproduction |
-| `FROM amount_cte CROSS JOIN orders_tbl` | **Absent** | Join-introduced physical table *is* present |
-| `NATURAL` / `NATURAL LEFT` / `NATURAL RIGHT` join variants | **Absent** | Not limited to `CROSS JOIN` |
-| Bare `JOIN` without `ON` / `USING` | **Absent** | |
-| Comma-style `FROM amount_cte, orders_tbl` | **Absent** | Control that should retain CTE |
-| `INNER JOIN amount_cte ON 1 = 1` | **Absent** | Disproves “conditionless join exit path only” |
+**Secondary comparison delta (may be intentional under 5.1.3 docs):** joined **CTE row sources** such as `last_delivered_cte` appear in `context_list`, `table_alias`, and `filters`, but often not as top-level global `tableDictionary` keys. Treat as regression only when equivalent evidence is absent everywhere in the symbol tree.
 
-In every case above, AST and `filters` retain both `amount_cte.max_amount` and `orders_tbl.order_dt`; only the **global** `tableDictionary` omits the CTE key. PSS **5.0.0-3** records the CTE source entry; **5.1.3** does not. The schema-qualified spelling of physical tables is a separate key-layout issue.
-
-**Revised scope hypothesis:** the finalizer or global dictionary merge for a `WITH`'s outer query fails to promote joined **CTE row sources** into the global physical `tableDictionary`, regardless of whether the join has `ON` / `USING`. The original conditionless-join theory may describe one triggering shape but is not the full boundary. `NATURAL FULL OUTER JOIN` with a CTE currently throws a walker `ClassCastException` — treat as a separate blocker (test ignored until fixed).
-
-Expected source inventory (all characterization fixtures):
-
-| Source | Role |
-|--------|------|
-| `base_table` | Physical table inside the CTE |
-| `orders_tbl` | Physical table joined in the final query |
-| `amount_cte` | CTE row source referenced from the final query |
-
-Suspected path: CTE aliases are wired into `context_list`, `table_alias`, and scope `filters`, but the global dictionary merge step never records the CTE name as a top-level source with its reference locations. This must be verified in the walker/finalizer, not assumed from join kind alone.
-
-**Subquery joined-source variant (2026-09):** replacing physical `orders_tbl` with `(SELECT partner_id, contact_id, order_dt FROM orders_tbl) AS orders_tbl` does **not** change the CTE omission — `amount_cte` is still absent from global `tableDictionary` across the same join matrix (including `INNER JOIN … ON 1 = 1`). Additional structural differences: an extra query scope (`def_query2` outer / `def_query1` subquery), `table_alias={orders_tbl=query1, amount_cte=query0}`, and global `orders_tbl` column sites anchored on subquery select-list identifiers rather than a short alias token. `NATURAL FULL OUTER JOIN` still throws `ClassCastException`.
+**Compact physical-table fixtures** (`SqlEventWalkerWithConditionlessJoinFinalizerTests`) isolate join-finalizer shapes with stub tables; they do not use tuple substitutions.
 
 #### Starter query
 
@@ -85,12 +65,11 @@ WHERE CASE
 
 #### Expected behavior
 
-1. Every accepted FROM/JOIN row source in the final primary query is registered before trailing clauses or the enclosing `WITH` are finalized, whether or not the join has `ON` or `USING` and whether the source is a CTE or physical table.
-2. `CROSS JOIN last_delivered_cte` retains `last_delivered_cte` in `tableDictionary`, including references attributed to that source, alongside the CTE's physical base table and the outer tuple or stub table.
-3. `last_delivered_cte.last_del` resolves through the CTE's published `interface`. `last_delivered_cte.not_a_col` produces a query-source column-not-found diagnostic, not a missing-table diagnostic; the CTE dictionary entry remains present.
-4. Tuple columns under `ead` continue to bind to the tuple source. The CTE's internal `PDP_UG.log__acs_contact_deletions` entry remains present.
-5. The result is independent of which valid clause follows the conditionless join. `WHERE`, `GROUP BY`, `HAVING`, `QUALIFY`, and `ORDER BY` must not be responsible for making the joined source visible or for preserving it.
-6. Existing controls must retain the CTE in global `tableDictionary`: `INNER JOIN cte ON 1=1`, `JOIN ... USING (...)`, comma-style `FROM outer, cte`, and direct `FROM cte`. Characterization shows `INNER JOIN … ON 1=1` currently fails this requirement along with conditionless variants — fix the shared CTE promotion path, not only conditionless joins.
+1. Tuple substitution columns on the outer source (`ead.<…>`) referenced **only after** the conditionless join (e.g. inside `WHERE CASE`) must appear on the tuple key in global `tableDictionary` with correct token sites, alongside select-list substitution columns already present.
+2. `filters` must retain the same substitution ref (`{substitution={name=<Contact Deleted Dt>, type=column}, table_ref=ead}`) — necessary but not sufficient.
+3. Physical-table control (`ead.contact_deleted_dt` stub) must behave the same way for post-join `WHERE CASE` references.
+4. Variants (`CAST(…)`, `COALESCE(…)`) must not drop the tuple column from `tableDictionary`.
+5. CTE keys in global `tableDictionary` remain a separate 5.0.0-3 parity question; adjudicate via symbol-tree evidence before forcing CTE names into the physical dictionary.
 
 #### Characterization and regression matrix
 
