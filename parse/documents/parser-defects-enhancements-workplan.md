@@ -63,7 +63,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
 | 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
-| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — stage-timing harness landed; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
+| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — harness landed; 18 construction buckets tracked below; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
 | 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Complete** (2026-09-01) — all eight Panto degradations adjudicated; see [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). |
 
 **Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
@@ -79,7 +79,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 | 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
-| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; corpus characterization next |
+| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; 74 timeouts clustered into 18 construction buckets (see §2.8 tracker) |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
 
 ---
@@ -759,15 +759,95 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 **Kind:** Performance defect / investigation (many queries exceed 90 seconds and regress materially from 5.0.0-3)
 
-**Status:** **In progress** — stage-timing harness landed; 74-query corpus indexed under `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`
+**Status:** **In progress** — stage-timing harness landed; 74-query corpus indexed under `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`; construction clustering complete (2026-09-01)
 
-**Component:** end-to-end parser pipeline; ownership remains unknown until stage timing and profiling identify the dominant work
+**Component:** end-to-end parser pipeline; likely more than one algorithm (set-op interface matching is not the only timeout shape)
 
 #### Progress (2026-09)
 
 - **Done:** Opt-in stage-timing instrumentation — `ParseLatencyDiagnosticService`, `ParseLatencyReport`, and `ParseLatencyDiagnosticTest` (`parse/src/main/java/sql/latency/`, `parse/src/test/java/sql/latency/`).
 - **Done (candidate fix, needs corpus validation):** Incremental set-op `def_*` payload cache in `SqlParseSymbolTreeHelper` / `SqlParseEventWalker` to avoid repeated O(n²) scans on UNION/INTERSECT branches.
-- **Next:** Run the diagnostic harness against the full 74-row timeout corpus; cluster by dominant stage; profile before optimizing.
+- **Done (2026-09-01):** Construction clustering of all **74** timeout rows (SQL shape only; parser not run). Eighteen buckets below. Set-op header walking is the dominant *family* (Buckets 1–2 plus smaller UNION shapes) but **not** the only likely hotspot — several buckets have **zero** set-ops.
+- **Next:** Profile/fix Bucket 1–2 first; use **5261, 4647, 130, 4197** as non-UNION canaries so a set-op cache is not mistaken for a full corpus fix. Then walk remaining buckets; mark tracker rows as each cluster completes under 90s on 5.1.3.
+
+#### Construction-bucket tracker (74 timeouts)
+
+Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL lives in [panto_513_outstanding_issues.csv](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv); do not paste full queries here.
+
+| Bucket | Rows | Construction | Likely hotspot (unprofiled) | Canary CSV row | Status |
+|--------|-----:|--------------|-----------------------------|----------------|--------|
+| 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Set-op interface / column-header walk **O(N²) on branches** | 475 | Open |
+| 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Same as 2.8-1 plus substitution work | 1837 | Open |
+| 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | Open |
+| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | Open |
+| 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | Open |
+| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | Open |
+| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | Open |
+| 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | Open |
+| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | Open |
+| 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | Open |
+| 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | Open |
+| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | Open |
+| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | Open |
+| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | Open |
+| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | Open |
+| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | Open |
+| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | Open |
+| 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | Open |
+
+**Suggested order:** 2.8-1 → 2.8-2 (largest N, matches UNION-header hypothesis) → non-UNION canaries **2.8-10 (5261), 2.8-11 (4647), 2.8-12 (130), 2.8-15 (4197)** → remaining UNION-mix and join/substitution buckets.
+
+**Algorithm families (for grouping code fixes):**
+
+| Family | Buckets | Row count |
+|--------|---------|----------:|
+| Set-op interface / column-header walk **O(N²) on branches** | 2.8-1, 2.8-2, and smaller UNION families 2.8-3, 2.8-4, 2.8-5 (multifile), 2.8-7, 2.8-8 | 4 + 20 plus smaller UNION families |
+| Giant searched-`CASE` walk | 2.8-12 | 3 |
+| Deep CTE + substitution finalization | 2.8-11 | 2 |
+| Many-join / nested derived table / `SELECT *` / windows (0–1 UNION) | 2.8-5 (2325), 2.8-6, 2.8-10, 2.8-14, 2.8-15, 2.8-16 | many |
+| Wide select-list + substitutions (few branches) | 2.8-9, 2.8-17 | 10 |
+
+A bucket is **Complete** when every listed CSV row parses on 5.1.3 without the 90s abort (or has a documented blocker + active-stage capture), with extractor semantics unchanged except for separately approved defect fixes.
+
+#### Bucket membership (CSV row + query name)
+
+**2.8-1 — Giant constant-row `UNION` lookup (~248 branches).** `SELECT 'Afghanistan' AS country, … UNION SELECT 'Albania' …` with no JOIN, CTE, or substitutions. 5.0.0-3 already ~7s. Rows **475, 476** `EAB.Country` (ALR); **1827, 1828** `EAB.Country` (Enroll360).
+
+**2.8-2 — Long `UNION ALL` of PCM convert slices (~66–94 branches + substitutions).** Repeated `SELECT 'field_name', <substitution>, partner_value, COUNT(*) FROM <[Enroll360]….> GROUP BY … UNION ALL`. Rows **1819** `DataOrgPilot.Enroll360.Partner Code Mapping.convert_sis`; **1820** `…convert_sis.tenant_v2`; **1821** `…convert_sis.Tenant.v2`; **1837, 1838, 1839, 1851** `Enroll360.Partner Code Mapping.convert`; **1860** `…convert_CRM_pilot_v1`; **1890, 1891** `…convert_sis`; **1897** `…convert_tenant`; **1927** `…convert_ug_applicants`; **1933** `…convert_ug_applicants_v2`; **1957** `…convert_ug_inquiries`; **1986** `INACTIVE_DataOrgPilot.…convert_sis.Tenant.v1`; **1987** `INACTIVE_DataOrgPilot.…convert_sis.wStudentType`; **1998, 2001** `INACTIVE_Enroll360.Partner Code Mapping.convert`; **2031** `INACTIVE_Enroll360.…convert_sis_pilot_v1`; **2054** `INACTIVE_Enroll360.…convert_ug_applicants`.
+
+**2.8-3 — Medium `UNION ALL` of typed attribute slices.** Outer SELECT over `(SELECT … UNION ALL SELECT …)` with the same donor-attribute schema and a different literal `attribute_type`. Rows **1436** (18 `UNION ALL`), **1467** (6), **1439** (2) — all `par_intake_donor_attributes_AMS_V2.0`.
+
+**2.8-4 — Many CTEs, then `UNION ALL` of attribute categories + windows.** `WITH` several `cte_*` (row_number / latest-record), then 10 `UNION ALL` of INNER JOIN slices. Row **1814** `Enroll360.Partner Processed Census Student Term Attributes.final`.
+
+**2.8-5 — Wide Student.final.** Large distinct student projection, ~26–29 JOINs, nested `FROM (SELECT …)`, many `CASE`/`regexp_replace`. Multifile adds 5–9 `UNION ALL`. Rows **2201** `Enroll360.Student.final.multifile Bill test` (9 set-ops); **2444** `XWALK_TEST_Enroll360.Student.final.multifile.tenant` (9); **2352** `INACTIVE_Enroll360.Student.final.multifile_v4` (5); **2325** `INACTIVE_Enroll360.Student.final` (1 set-op, 29 joins — join-heavy probe after set-op cache).
+
+**2.8-6 — Wide Acquia export.** `SELECT DISTINCT`, ~18–24 JOINs, many `<Field>` substitutions, nested derived tables (`CTS_PIVOT` is an alias, not SQL `PIVOT`), one `UNION`. Rows **28, 30, 31, 32** `PDP_Acquia_Export`; **41** `PDP_Acquia_Export_v2`.
+
+**2.8-7 — Student Address.** `SELECT DISTINCT` of regexp/CASE-cleaned columns from `agg2`, one `UNION ALL`, 4–5 JOINs. Rows **605, 606** `ALR.Student Address.final`; **623** `ALR.Student Address.final.BryanCollege.ExcludeAdultHistorical`; **635** `EHC.ALR.Student Address.final`; **636** `Goshen_ALR.Student Address.final`.
+
+**2.8-8 — Small slice `UNION ALL`.** Same `prelim.*` plus a different slice column, 4 branches, 3 JOINs. Row **2110** `Enroll360.Project Atlas Migration Checks.prelim_stud_data_sliced`.
+
+**2.8-9 — Two-branch `UNION` of wide CAST/substitution lists.** Two similar wide SELECT lists (`UNION`, often not `ALL`), modest joins. Rows **5592, 5593** `src_intake_custom_contacts_PDPv0.2`; **5594** `src_intake_custom_contacts_PDPv0.2_test`; **5860** `par_intake_student_last_validated_PDP_ALR_V2_v2.0` (CTE + UNION); **5861, 5862, 5863** `par_intake_student_PDP_ALR_V2_v2.0`.
+
+**2.8-10 — Nested `SELECT *` + windows (Colleague PIT).** Deep derived tables, `SELECT *`, 5–8 windows, passthrough substitutions. Rows **5216** `colleague_cat_course` (1 `UNION ALL`); **5261** `colleague_cat_section` (**0** set-ops — non-UNION canary).
+
+**2.8-11 — Long WITH chain + downfill substitutions.** `WITH AA0_… AS (SELECT <downfillcolmap.out_…> …), …, ST_student_term_sweep` (~20 CTEs, ~80k chars). **No UNION.** Related to 2.5/2.7 Foundation downfill shape, but these timed out. Rows **4647** `Old STD`; **4725** `Updated INFA Student Academic Summary Intermediate_m__st_student_term_downfill_backfill__ Query`.
+
+**2.8-12 — Giant searched `CASE`.** Almost no JOIN/UNION. Row **130** `transformation_query_applicants` (~998 `WHEN` in one `CASE` for `school_program`; 5.0.0-3 ~20s). Rows **4176** `MSUBozeman.ApplyResponder` and **4177** `MSUBozeman.CultivateResponder` (fixed-width `||` concatenation; two ~50-`WHEN` major maps duplicated for length calc).
+
+**2.8-13 — Modest `CASE` + large `IN` / regexp.** Flat SELECT from one bound table (or one JOIN). Rows **314, 315** `transformation_query_inquiry`; **652** `ALR.Student Attributes.Final` (duplicated `CASE`/`IN` in SELECT and WHERE).
+
+**2.8-14 — Student Year Funds CTE + PCM joins (no UNION).** CTE wrapping `SELECT DISTINCT` with 6–12 JOINs to partner-code-mapping tables and several amount `CASE`s. Rows **4157, 4158** `DataOrgPilot.Enroll360.StudentYearFundsLogicTesting`; **4163** `FundAmountLogicTesting_Enroll360.Student Year Funds.final`; **4164** `funds logic testing`; **4170** `TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTesting`; **4171** `TESTING_DataOrgPilot.Enroll360.StudentYearFundsLogicTestingDT`.
+
+**2.8-15 — Star-join of bound fulfillment tables (no UNION).** Many `COUNT(DISTINCT …)` with 19 LEFT JOINs of `<[enrollment_services].[…]>` and repeated 4-key `COALESCE` predicates. Row **4197** `Migration checks fulfillment counts`.
+
+**2.8-16 — Nested derived-table JOINs (Project Atlas, no UNION).** Parenthesized inner SELECT with window/`CASE`, then JOINs to bound PDP tables. Rows **2116** `Enroll360.Project Atlas Migration Checks.st_sta_data`; **2117** `…st_sta_data_undeduped_apps`; **2120** `…stud_race_eth`.
+
+**2.8-17 — Wide contact projection + substitutions (no UNION).** One SELECT, 3–4 JOINs, many `<First Name>`-style tokens. Rows **5453, 5454** `con_contact_assigned_cappex_common_format`; **6542** `Hofstra  YouVisit INQ International` (~39 substitutions, some `IN` lists).
+
+**2.8-18 — Donor intake mix.** Two CTEs (`count_intake_dt_cte`, `donor_email_CTE`), several JOINs, one `UNION` (test-email retain). Row **6025** `pdp_ams_rsc_donor_intake`.
+
+The eight closed 2.9 degradations are **not** in this tracker.
 
 #### Problem
 
@@ -802,7 +882,7 @@ Use the CSV row number from the detailed brief as the stable case ID. All 74 lis
 
 | Corpus | Query / fixture source | 5.0.0-3 total | 5.1.3 total | Dominant 5.1.3 stage | Status / notes |
 |--------|------------------------|---------------|-------------|----------------------|----------------|
-| 74 Panto rows | [Detailed timeout brief](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) | Every row completes; typically hundreds of ms to a few seconds, with row 130 near 20s | Every row aborted at approximately 90s | Unknown until staged instrumentation | Characterize and cluster before optimizing |
+| 74 Panto rows | [Detailed timeout brief](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) | Every row completes; typically hundreds of ms to a few seconds, with row 130 near 20s | Every row aborted at approximately 90s | Unknown until staged instrumentation | Construction clustered into **2.8-1 … 2.8-18** (see tracker above); profile per bucket |
 
 Retain both the original full query and any minimized reproduction. Redact or parameterize sensitive literals without changing the structural feature responsible for the timing.
 

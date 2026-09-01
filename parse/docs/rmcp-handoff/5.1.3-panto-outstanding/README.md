@@ -10,7 +10,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 | Phase | Topic | Document |
 |-------|--------|----------|
 | **2.7** | WITH CTE physical-source / tuple-substitution finalization (**complete**) | [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) |
-| **2.8** | 74 queries timeout at 90s on 5.1.3 | [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md), [outstanding-issues-index.md](./outstanding-issues-index.md), [panto_513_outstanding_issues.csv](./panto_513_outstanding_issues.csv) |
+| **2.8** | 74 queries timeout at 90s on 5.1.3 — **18 construction buckets** in workplan | [parser-defects-enhancements-workplan.md](../../../documents/parser-defects-enhancements-workplan.md) §2.8 tracker; [panto-513-parse-timeouts-2026-08-19.md](./panto-513-parse-timeouts-2026-08-19.md), [outstanding-issues-index.md](./outstanding-issues-index.md), [panto_513_outstanding_issues.csv](./panto_513_outstanding_issues.csv) |
 | **2.9** | 8 table-dictionary / FATAL degradations (**closed** 2026-09-01) | [panto-tabledict-degradations-2026-08-19.md](./panto-tabledict-degradations-2026-08-19.md), [global-table-dictionary-cte-alias-policy.md](../../../documents/global-table-dictionary-cte-alias-policy.md), SQL fixtures in [sql/](./sql/) |
 
 ## Files in this folder

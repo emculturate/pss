@@ -23,6 +23,8 @@ Policy: [global-table-dictionary-cte-alias-policy.md](../../../documents/global-
 
 5.0.0-3 finished; 5.1.3 was killed at ~90s with no payload.
 
+Construction clustering and per-bucket progress: [parser-defects-enhancements-workplan.md](../../../documents/parser-defects-enhancements-workplan.md) §2.8 (buckets **2.8-1 … 2.8-18**).
+
 | CSV row | Domain | Entity | Query name | 5.0.0-3 ms | 5.1.3 ms (aborted) |
 | --- | --- | --- | --- | --- | --- |
 | 28 | Acquia | PDP_Acquia_Contact | PDP_Acquia_Export | 1750 | 90002 |
