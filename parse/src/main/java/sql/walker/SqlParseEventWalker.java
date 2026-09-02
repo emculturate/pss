@@ -4156,6 +4156,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	@Override
 	public void enterIntersected_query( SQLSelectParserParser.Intersected_queryContext ctx) {
 		symbolTreeHelper.pushSymbolTableWithParentVisibleScope();
+		symbolTreeHelper.startSetOpDefinitionCache();
 	}
 
 	@Override
@@ -4166,6 +4167,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Handle symbol tables
 		HashMap<String, Object> symbols =  walker.symbolTable;
+
+		// Pop outer-only def_* snapshot before finalization so this frame's publish does not
+		// leak into the parent set-op frame's snapshot.
+		symbolTreeHelper.stopSetOpDefinitionCache();
 
 		if (walker.intersectClauseFound) {
 			boolean insertSource = walker.currentStackLevel(SQLSelectParserParser.RULE_insert_source_primary) != null;

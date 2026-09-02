@@ -37,7 +37,7 @@ public class SqlParseSymbolTreeHelper {
 	 * opens (UNION / INTERSECT). Used by {@link #buildConvertEgressScopeBundle} so each branch
 	 * convert does not re-scan the growing parent symbol table (O(n) per branch).
 	 * <p>
-	 * Lifecycle: pushed at {@code enterUnionized_query} (and {@code enterIntersected_query} per S2),
+	 * Lifecycle: pushed at {@code enterUnionized_query} and {@code enterIntersected_query},
 	 * <b>not</b> updated when siblings {@link #publishQueryLikeScope} — sibling payloads stay on the
 	 * parent frame for exit-time merge/validation only. Popped at set-op frame exit before
 	 * finalization.
@@ -10384,7 +10384,7 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	/**
-	 * Called at {@code enterUnionized_query} after the new child scope is pushed.
+	 * Called at {@code enterUnionized_query} / {@code enterIntersected_query} after the new child scope is pushed.
 	 * Snapshots {@code def_*} entries visible from <b>ancestor</b> scopes only (outer-only);
 	 * sibling publishes during the frame must not be added (see {@link #publishQueryLikeScope}).
 	 */
@@ -10408,7 +10408,7 @@ public class SqlParseSymbolTreeHelper {
 
 	/**
 	 * Called at {@code exitUnionized_query} / {@code exitIntersected_query} BEFORE
-	 * {@link #finalizeSetOperationScopeSymbolTable} so the union scope's own publish is not
+	 * {@link #finalizeSetOperationScopeSymbolTable} so the set-op scope's own publish is not
 	 * added to the cache of its parent.
 	 */
 	public void stopSetOpDefinitionCache() {
