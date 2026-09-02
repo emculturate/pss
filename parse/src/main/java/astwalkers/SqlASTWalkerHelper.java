@@ -16,6 +16,7 @@ import static mumble.ASTWalkerHelperConstants.*;
 import sql.SQLSelectParserParser;
 import sql.grammar.SqlGrammarContextClassifier;
 import sql.grammar.SqlGrammarDialect;
+import sql.latency.WalkerHotspotProfiler;
 
 public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
@@ -1433,6 +1434,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 * convert egress.
 	 */
 	public void validateSetOperationInterface(HashMap<String, Object> interfaceMap, String locationTokenString) {
+		WalkerHotspotProfiler.hit("validateSetOperationInterface");
 		if (symbolTable == null || symbolTable.isEmpty()) {
 			return;
 		}
@@ -3682,6 +3684,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	@SuppressWarnings("unchecked")
 	public HashMap<String, Object> getTableDictionaryForReference(String tableRef,
 			HashMap<String, Object> tableCollection) {
+		WalkerHotspotProfiler.hit("getTableDictionaryForReference");
 		if (tableRef == null || tableCollection == null) {
 			return null;
 		}
@@ -4203,6 +4206,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			return;
 		}
 
+		WalkerHotspotProfiler.hit("mergeColumnEntry");
+
 		Object normalizedColumnRefs = normalizeColumnRefsForDictionary(columnRefs);
 		if (normalizedColumnRefs == null) {
 			return;
@@ -4218,6 +4223,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		} else if (existingRefs instanceof ArrayList<?> existingList && normalizedColumnRefs instanceof ArrayList<?> incomingList) {
 			ArrayList<Object> mutableExisting = (ArrayList<Object>) existingList;
 			for (Object incomingToken : incomingList) {
+				WalkerHotspotProfiler.hit("mergeColumnEntry_dedupContainsCheck");
 				if (incomingToken != null && !mutableExisting.contains(incomingToken)) {
 					mutableExisting.add(incomingToken);
 				}
@@ -4228,6 +4234,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	public void mergeResolvedColumnIntoDictionary(HashMap<String, Object> dictionary, String columnName, Object columnRefs) {
+		WalkerHotspotProfiler.hit("mergeResolvedColumnIntoDictionary");
 		mergeColumnEntry(dictionary, columnName, columnRefs);
 	}
 
@@ -4247,11 +4254,13 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 	@SuppressWarnings("unchecked")
 	public boolean tableCollectionContainsColumn(String columnName, HashMap<String, Object> tableCollection) {
+		WalkerHotspotProfiler.hit("tableCollectionContainsColumn");
 		if (columnName == null || tableCollection == null || tableCollection.isEmpty()) {
 			return false;
 		}
 
 		for (Object tableColumnsObj : tableCollection.values()) {
+			WalkerHotspotProfiler.add("tableCollectionContainsColumn_tablesScanned", 1L);
 			if (tableColumnsObj instanceof Map<?, ?>) {
 				Map<String, Object> tableColumns = (Map<String, Object>) tableColumnsObj;
 				if (tableColumns.containsKey(columnName)) {
@@ -4448,6 +4457,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public ArrayList<String> collectSourceReferencesForColumn(String columnName,
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection) {
+		WalkerHotspotProfiler.hit("collectSourceReferencesForColumn");
 		ArrayList<String> matches = new ArrayList<String>();
 		if (columnName == null || "*".equals(columnName)) {
 			return matches;

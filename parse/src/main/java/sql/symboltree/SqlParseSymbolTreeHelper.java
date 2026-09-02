@@ -26,6 +26,7 @@ import sql.grammar.SqlBareValueExpressionRegistry;
 import sql.grammar.SqlBareValueExpressionRegistry.Affinity;
 import sql.grammar.SqlGrammarContextClassifier;
 import sql.grammar.SqlGrammarDialect;
+import sql.latency.WalkerHotspotProfiler;
 
 @SuppressWarnings("Convert2Diamond")
 public class SqlParseSymbolTreeHelper {
@@ -1372,6 +1373,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> effectiveTableCollection,
 			String deleteTargetTableRef,
 			RelationalModifierConvertEgressContext relationalModifierContext) {
+		WalkerHotspotProfiler.hit("runConvertEgressRelationalModifierDerivedLineagePhaseB");
 		finalizeRelationalModifierDerivedColumnLineageInClauseLists(
 				localInterface,
 				archivedScopeColumnReferenceContainers,
@@ -3226,6 +3228,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localTableAliasMap,
 			boolean allowQuerySourceFallback,
 			HashMap<String, Object> localDerivedColumns) {
+		WalkerHotspotProfiler.hit("tryResolveDerivedVersusRegularColumnNamespaceAmbiguity");
 		if (!isDerivedVersusRegularColumnNamespaceDiagnosticScope()) {
 			return null;
 		}
@@ -4969,6 +4972,10 @@ public class SqlParseSymbolTreeHelper {
 			boolean retainRelationalModifierHintsForContinuedFrom,
 			String currentQueryScopeKey) {
 	
+		WalkerHotspotProfiler.hit("convertSymbolTableToTableDictionary");
+		long convertProfileStartNanos = WalkerHotspotProfiler.convertBegin();
+		int convertProfileLocalTableDictSize = 0;
+		int convertProfileVisibleQuerySourceCount = 0;
 		clearClauseColumnSiteTokens();
 
 		// deconstruct current symbol table into components for analysis
@@ -4992,6 +4999,7 @@ public class SqlParseSymbolTreeHelper {
 		HashMap<String, Object> localTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TABLE_DICTIONARY_KEY);
 		if (localTableCollection == null)
 			localTableCollection = new HashMap<String, Object>();
+		convertProfileLocalTableDictSize = localTableCollection.size();
 		HashMap<String, Object> localTargetTableCollection = (HashMap<String, Object>) walker.symbolTable.remove(MUMBLE_TARGET_TABLE_KEY);
 		if (localTargetTableCollection == null)
 			localTargetTableCollection = new HashMap<String, Object>();
@@ -5115,6 +5123,9 @@ public class SqlParseSymbolTreeHelper {
 		try {
 		HashMap<String, Object> visibleQuerySourceCollection =
 				activeConvertEgressScopeBundle.visibleQuerySourceRefs;
+		convertProfileVisibleQuerySourceCount = visibleQuerySourceCollection == null
+				? 0
+				: visibleQuerySourceCollection.size();
 		if (isUpdateScope && updateHasFromClause) {
 			HashMap<String, Object> fromInputTableCollection = new HashMap<String, Object>(localTableCollection);
 			pruneUpdateTargetFromInputTableCollection(
@@ -6012,6 +6023,13 @@ public class SqlParseSymbolTreeHelper {
 
 		return walker.symbolTable;
 		} finally {
+			HashMap<String, Object> globalTableDictionaryAtExit = walker.getWalkerTableDictionary();
+			int globalTableDictSize = globalTableDictionaryAtExit == null ? 0 : globalTableDictionaryAtExit.size();
+			WalkerHotspotProfiler.convertEnd(
+					convertProfileStartNanos,
+					globalTableDictSize,
+					convertProfileLocalTableDictSize,
+					convertProfileVisibleQuerySourceCount);
 			activeConvertEgressScopeBundle = null;
 			activeConvertEgressStructuredDerivedColumnCandidates = null;
 			activeConvertEgressDerivedColumns = null;
@@ -6049,6 +6067,7 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public List<Map<String, Object>> getAncestorSymbolTables() {
+		WalkerHotspotProfiler.hit("getAncestorSymbolTables");
 		ArrayList<Map<String, Object>> ancestors = new ArrayList<Map<String, Object>>();
 		Integer parentLevel = walker.currentStackLevel("symbolTable");
 		if (parentLevel == null || walker.asTree == null) {
@@ -6056,6 +6075,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		for (int level = parentLevel; level >= 1; level--) {
+			WalkerHotspotProfiler.add("getAncestorSymbolTables_levelsScanned", 1L);
 			Object ancestorObj = walker.asTree.get("symbolTable_" + level);
 			if (ancestorObj instanceof Map<?, ?> ancestorMapObj) {
 				ancestors.add((Map<String, Object>) ancestorMapObj);
@@ -6079,6 +6099,7 @@ public class SqlParseSymbolTreeHelper {
 	private ConvertEgressScopeBundle buildConvertEgressScopeBundle(
 			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> localCurrentQueryDictionary) {
+		WalkerHotspotProfiler.hit("buildConvertEgressScopeBundle");
 		HashMap<String, Object> visibleDefinitionPayloads =
 				buildReferenceDirectedVisibleDefinitionPayloads(localTableAliasMap);
 
@@ -6135,6 +6156,7 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	private HashMap<String, Object> buildReferenceDirectedVisibleDefinitionPayloads(
 			HashMap<String, Object> localTableAliasMap) {
+		WalkerHotspotProfiler.hit("buildReferenceDirectedVisibleDefinitionPayloads");
 		HashMap<String, Object> visibleDefinitionPayloads = new HashMap<String, Object>();
 		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
 			visibleDefinitionPayloads.putAll(setOpDefinitionPayloadCacheStack.peek());
@@ -6238,6 +6260,7 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	private Object lookupDefinitionPayloadOnScopeChain(String definitionKey) {
+		WalkerHotspotProfiler.hit("lookupDefinitionPayloadOnScopeChain");
 		if (definitionKey == null || definitionKey.isBlank()) {
 			return null;
 		}
@@ -7303,6 +7326,7 @@ public class SqlParseSymbolTreeHelper {
 			String setOperationKey,
 			Map<String, Object> setOperationDefinition,
 			boolean insertSource) {
+		WalkerHotspotProfiler.hit("finalizeSetOperationAtExit");
 		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
 			return;
 		}
@@ -10588,6 +10612,7 @@ public class SqlParseSymbolTreeHelper {
 	private OuterVisibleScope collectOuterVisibleScope(
 			Map<String, Object> ancestorStopFrame,
 			boolean includeActiveFrame) {
+		WalkerHotspotProfiler.hit("collectOuterVisibleScope");
 		OuterVisibleScope result = new OuterVisibleScope();
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
 			mergeOuterVisibleScopeFromFrame(result, ancestorSymbols);
@@ -11152,6 +11177,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> subTree,
 			ArrayList<Object> columnList,
 			boolean skipQueryBackedSubtrees) {
+		WalkerHotspotProfiler.hit("flattenSubTreeForDependencyColumns");
 		if (subTree == null) {
 			return;
 		}
@@ -12314,6 +12340,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> tableAliasCollection,
 			HashMap<String, Object> visibleQuerySourceCollection) {
+		WalkerHotspotProfiler.hit("materializeInterfaceOutputSourceLineage");
 		if (sourceColumnName == null || sourceColumnName.isBlank()) {
 			return;
 		}
@@ -12366,6 +12393,7 @@ public class SqlParseSymbolTreeHelper {
 			String canonicalSourceRef,
 			String columnName,
 			Object tokenPayload) {
+		WalkerHotspotProfiler.hit("mergeSourceLineageIntoPhysicalTableDictionary");
 		if (tableCollection == null || tokenPayload == null) {
 			return;
 		}
@@ -13551,6 +13579,7 @@ public class SqlParseSymbolTreeHelper {
 			boolean deferUnresolvedPhysicalSources,
 			HashMap<String, Object> localDerivedColumns,
 			RelationalModifierConvertEgressContext relationalModifierContext) {
+		WalkerHotspotProfiler.hit("resolveQualifiedColumnAgainstVisibleScope");
 		if (tableRef == null || tableRef.isBlank()
 				|| columnName == null || columnName.isBlank()) {
 			return QualifiedScopeResolutionResult.unresolvedPhysicalSource(null, tableRef);
@@ -13653,6 +13682,7 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	private boolean querySourceExportsColumn(String querySourceRef, String columnName) {
+		WalkerHotspotProfiler.hit("querySourceExportsColumn");
 		if (querySourceRef == null || querySourceRef.isBlank()
 				|| columnName == null || columnName.isBlank()) {
 			return false;
@@ -13955,6 +13985,7 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
+		WalkerHotspotProfiler.hit("classifyColumnRefAtConvertEgress");
 		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
 		if (!qualifiedShape
 				&& ctx.localDerivedColumns != null
@@ -14010,6 +14041,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		if (qualifiedShape && ctx.resolveQualifiedWhenTableRefPresent) {
+			WalkerHotspotProfiler.hit("classifyColumnRef_qualifiedPath");
 			HashMap<String, Object> aliasMap = ctx.effectiveAliasMap != null
 					? ctx.effectiveAliasMap
 					: ctx.localTableAliasMap;
@@ -14028,6 +14060,7 @@ public class SqlParseSymbolTreeHelper {
 							ctx.relationalModifierContext));
 		}
 
+		WalkerHotspotProfiler.hit("classifyColumnRef_unqualifiedPath");
 		return ConvertEgressColumnResolutionResult.fromUnqualified(
 				resolveUnqualifiedColumnAgainstVisibleScope(
 						columnName,
@@ -14069,6 +14102,7 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> localDerivedColumns,
 			HashMap<String, Object> localSourceColumnsByBucket,
 			boolean treatDerivedRegistryKeysAsDerivedColumn) {
+		WalkerHotspotProfiler.hit("resolveUnqualifiedColumnAgainstVisibleScope");
 		UnqualifiedScopeResolutionResult crossNamespace = tryResolveDerivedVersusRegularColumnNamespaceAmbiguity(
 				columnName,
 				null,
@@ -14202,6 +14236,7 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			HashMap<String, Object> visibleQuerySourceCollection,
 			HashMap<String, Object> localTableAliasMap) {
+		WalkerHotspotProfiler.hit("collectQuerySourcesWithColumn");
 		LinkedHashSet<String> querySourcesWithColumn = new LinkedHashSet<String>();
 		LinkedHashSet<String> checkedQuerySources = new LinkedHashSet<String>();
 
@@ -15500,6 +15535,7 @@ public class SqlParseSymbolTreeHelper {
 			RelationalModifierConvertEgressContext relationalModifierContext,
 			String deleteTargetTableRef,
 			boolean deferCorrelatedValueSubqueryQualifiedUnknowns) {
+		WalkerHotspotProfiler.hit("validateArchivedClauseColumnRef");
 		String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
 		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
 		String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(refObj);
@@ -15867,6 +15903,7 @@ public class SqlParseSymbolTreeHelper {
 			Object columnListObj,
 			String clauseKey,
 			ArchivedClauseProbeContext probeContext) {
+		WalkerHotspotProfiler.hit("probeArchivedScopeClauseColumnList");
 		if (!(columnListObj instanceof ArrayList<?>) || probeContext == null) {
 			return;
 		}
@@ -16138,9 +16175,11 @@ public class SqlParseSymbolTreeHelper {
 			HashMap<String, Object> tableCollection,
 			HashMap<String, Object> queryCollection,
 			HashMap<String, Object> tableAliasCollection) {
+		WalkerHotspotProfiler.hit("collectUnqualifiedSourceReferences");
 		LinkedHashSet<String> candidates = new LinkedHashSet<String>();
 
 		HashMap<String, Object> localPhysicalTables = buildLocalPhysicalFromTableCollection(tableCollection);
+		WalkerHotspotProfiler.add("collectUnqualifiedSourceReferences_tablesScanned", localPhysicalTables.size());
 		for (String tableRef : localPhysicalTables.keySet()) {
 			addIgnoringCase(candidates, tableRef);
 		}
@@ -16772,6 +16811,7 @@ public class SqlParseSymbolTreeHelper {
 	 * table; use {@link #getQueryDefinitionSymbol} for those.
 	 */
 	public Object getQuerySourceDictionaryPreferDefinition(String queryRef) {
+		WalkerHotspotProfiler.hit("getQuerySourceDictionaryPreferDefinition");
 		String liveQueryRef = normalizeQuerySourceReference(queryRef);
 		if (liveQueryRef == null || !isQuerySourceReference(liveQueryRef)) {
 			return null;

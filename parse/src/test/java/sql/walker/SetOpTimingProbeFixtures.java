@@ -27,14 +27,35 @@ public final class SetOpTimingProbeFixtures {
 		return "probe_branch_" + String.format("%03d", branchIndex);
 	}
 
-	public static String buildQuery(String setOpKeyword, int joinerCount, int selectColumnCount, int orderByColumnCount) {
+	/** Single physical table reused by every branch (S9 shared-table timing probe). */
+	public static final String SHARED_BRANCH_TABLE_NAME = "probe_shared_table";
+
+	public enum BranchTableMode {
+		/** Each branch reads from {@code probe_branch_NNN} (default convert-egress probe). */
+		DISTINCT_PER_BRANCH,
+		/** Every branch reads from {@code probe_shared_table} (2.8-2 repeated-table hypothesis). */
+		SHARED_SINGLE_TABLE
+	}
+
+	public static String resolveBranchTableName(int branchIndex, BranchTableMode tableMode) {
+		return tableMode == BranchTableMode.SHARED_SINGLE_TABLE
+				? SHARED_BRANCH_TABLE_NAME
+				: branchTableName(branchIndex);
+	}
+
+	public static String buildQuery(
+			String setOpKeyword,
+			int joinerCount,
+			int selectColumnCount,
+			int orderByColumnCount,
+			BranchTableMode tableMode) {
 		int branchCount = joinerCount + 1;
 		StringBuilder sql = new StringBuilder();
 		for (int branchIndex = 0; branchIndex < branchCount; branchIndex++) {
 			if (branchIndex > 0) {
 				sql.append('\n').append(setOpKeyword).append(' ');
 			}
-			String tableName = branchTableName(branchIndex);
+			String tableName = resolveBranchTableName(branchIndex, tableMode);
 			sql.append("SELECT ");
 			for (int columnIndex = 0; columnIndex < selectColumnCount; columnIndex++) {
 				if (columnIndex > 0) {
@@ -54,6 +75,15 @@ public final class SetOpTimingProbeFixtures {
 			}
 		}
 		return sql.toString();
+	}
+
+	public static String buildQuery(String setOpKeyword, int joinerCount, int selectColumnCount, int orderByColumnCount) {
+		return buildQuery(
+				setOpKeyword,
+				joinerCount,
+				selectColumnCount,
+				orderByColumnCount,
+				BranchTableMode.DISTINCT_PER_BRANCH);
 	}
 
 	public static String buildQuery(String setOpKeyword, int joinerCount, int selectColumnCount) {

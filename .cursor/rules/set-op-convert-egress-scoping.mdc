@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Set-operation convert-egress scoping (Phase 2.8 + 15.6)
 
-**Workplan:** `parse/documents/parser-defects-enhancements-workplan.md` § Phase 2.8  
+**Workplan:** `parse/documents/parser-defects-enhancements-workplan.md` § Phase 2.8 (profiling conclusions + **B/C/D/E** tracks post-S5)  
 **Canonical SQL regression:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests#setOpSiblingIsolationInvariantV0Test`  
 **Fast gate:** `SqlEventWalkerSetOpScopingGateTests` (delegates + timing probes)
 
@@ -38,7 +38,7 @@ return lookupDefinitionPayloadOnScopeChain(key);
 
 ## What S4 protects (why it exists)
 
-Without S4, each branch convert re-opens every sibling `def_query*` already published on the set-op parent while building its bundle → **O(N²)** re-merge (workplan buckets **2.8-1** / timing probes). Semantically, branch *K* must not treat branch *K−1*’s published participant payload as visible input during convert.
+Without S4, each branch convert re-opens every sibling `def_query*` already published on the set-op parent while building its bundle → **O(N²)** re-merge (workplan buckets **2.8-1** / timing probes). S1–S4 fix this (~15–20% probe win); **remaining superlinear wall time** is mostly outside convert egress — see workplan **Profiling conclusions (post-S5)** and tracks **B/C**. Semantically, branch *K* must not treat branch *K−1*’s published participant payload as visible input during convert.
 
 ## How to test (agents)
 

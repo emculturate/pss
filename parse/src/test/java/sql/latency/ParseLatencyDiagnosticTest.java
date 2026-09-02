@@ -2,6 +2,8 @@ package sql.latency;
 
 import org.junit.Test;
 
+import sql.walker.SetOpTimingProbeFixtures;
+
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 
 /**
@@ -111,6 +113,48 @@ public class ParseLatencyDiagnosticTest {
     @Test
     public void probe_union250() {
         run("probe — 250-term UNION (same size as EAB.Country)", buildUnion(250), SQLPARSER_SQL_TREE_KEY);
+    }
+
+    // ── Phase 2.8 convert-egress probes (qualified FROM + ORDER BY; parse vs walk split) ──
+
+    @Test
+    public void probe_setOpConvertEgress_distinctTables_N50_M20_unionAll() {
+        run("probe — convert egress DISTINCT tables N=50 M=20 UNION ALL",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "UNION ALL", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.DISTINCT_PER_BRANCH),
+                SQLPARSER_SQL_TREE_KEY);
+    }
+
+    @Test
+    public void probe_setOpConvertEgress_sharedTable_N50_M20_unionAll() {
+        run("probe — convert egress SHARED table N=50 M=20 UNION ALL",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "UNION ALL", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.SHARED_SINGLE_TABLE),
+                SQLPARSER_SQL_TREE_KEY);
+    }
+
+    @Test
+    public void probe_setOpConvertEgress_distinctTables_N50_M20_intersect() {
+        run("probe — convert egress DISTINCT tables N=50 M=20 INTERSECT",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "INTERSECT", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.DISTINCT_PER_BRANCH),
+                SQLPARSER_SQL_TREE_KEY);
+    }
+
+    @Test
+    public void probe_setOpConvertEgress_sharedTable_N50_M20_intersect() {
+        run("probe — convert egress SHARED table N=50 M=20 INTERSECT",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "INTERSECT", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.SHARED_SINGLE_TABLE),
+                SQLPARSER_SQL_TREE_KEY);
     }
 
     private static String buildUnion(int n) {
