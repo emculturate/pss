@@ -6070,6 +6070,10 @@ public class SqlParseSymbolTreeHelper {
 	 * snapshot when inside a set-op frame, then opens {@code def_*} payloads lazily for live
 	 * refs collected from {@code context_list}, {@code table_alias}, and {@code dependent_queries}
 	 * (current frame and inherited outer scope).
+	 * <p>
+	 * Phase 2.8-S5: must <b>not</b> iterate set-op participants or merge sibling interfaces —
+	 * that work belongs at {@link #finalizeSetOperationScopeSymbolTable} /
+	 * {@link SqlASTWalkerHelper#validateSetOperationInterface} on frame / query exit only.
 	 */
 	@SuppressWarnings("unchecked")
 	private ConvertEgressScopeBundle buildConvertEgressScopeBundle(
@@ -7254,8 +7258,10 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Set-op exit: recursively publish multi-ref interfaces on nested set-ops, then merge
-	 * each participant's positional column refs onto the output interface (first-branch names).
+	 * Set-op exit finalization (Phase 2.8-S5): one-shot participant iteration to publish the
+	 * composite multi-ref {@code interface} on the set-op scope. Called only from
+	 * {@link #finalizeSetOperationScopeSymbolTable} and insert-source exit — never from per-branch
+	 * {@link #convertSymbolTableToTableDictionary}.
 	 */
 	@SuppressWarnings("unchecked")
 	public void publishSetOperationInterfaceAtExit(String setOperationKey, Map<String, Object> setOperationDefinition) {
@@ -8370,8 +8376,11 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Finalizes a UNION / INTERSECT scope: publish merged set-op interface, then pop the
-	 * scope payload the same way VALUES and leaf SELECT scopes do.
+	 * Finalizes a UNION / INTERSECT scope at <b>frame exit only</b> (Phase 2.8-S5): merges the
+	 * composite set-op interface from all participants via {@link #finalizeSetOperationAtExit},
+	 * builds interface-summary handoff metadata, then publishes once through
+	 * {@link #publishQueryLikeScope}. Per-branch convert egress must not iterate participants —
+	 * only this path and {@code exitQuery_expression} validation may walk sibling payloads.
 	 */
 	@SuppressWarnings("unchecked")
 	public void finalizeSetOperationScopeSymbolTable(

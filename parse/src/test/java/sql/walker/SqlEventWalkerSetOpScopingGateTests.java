@@ -4,7 +4,7 @@ import org.junit.Test;
 
 /**
  * Phase 2.8 set-op scoping functional gate — fast regression suite for UNION / INTERSECT
- * convert-egress snapshot behavior (S1–S4).
+ * convert-egress snapshot behavior (S1–S5).
  *
  * <p>Run:
  * {@code mvn -pl parse -Dtest=SqlEventWalkerSetOpScopingGateTests test}
@@ -17,6 +17,8 @@ public class SqlEventWalkerSetOpScopingGateTests {
 			new SqlEventWalkerSubqueriesAndClauseSemanticsTests();
 	private final SqlEventWalkerJoinsAndTableResolutionTests joinTests =
 			new SqlEventWalkerJoinsAndTableResolutionTests();
+	private final SqlParseEventWalkerWithAccessObjectTest accessObjectTests =
+			new SqlParseEventWalkerWithAccessObjectTest();
 
 	// ── UNION (5) ─────────────────────────────────────────────────────────────
 
@@ -89,5 +91,31 @@ public class SqlEventWalkerSetOpScopingGateTests {
 	@Test
 	public void gateSetOpSiblingIsolationInvariantV0Test() {
 		subqueryTests.setOpSiblingIsolationInvariantV0Test();
+	}
+
+	// ── S5 exit-time participant merge / validation (4) ───────────────────────
+
+	/** Exit {@code query_expression} — UNION branch interface count mismatch FATAL. */
+	@Test
+	public void gateSetOpUnionInterfaceMismatchFatalV0Test() {
+		subqueryTests.unionWithMismatchColumnCountsAndNamesTest();
+	}
+
+	/** Exit {@code query_expression} — INTERSECT branch interface count mismatch FATAL. */
+	@Test
+	public void gateSetOpIntersectInterfaceMismatchFatalV0Test() {
+		subqueryTests.intersectionWithMismatchColumnCountsAndNamesTest();
+	}
+
+	/** Exit {@code query_expression} — EXCEPT branch interface count mismatch FATAL. */
+	@Test
+	public void gateSetOpExceptInterfaceMismatchFatalV0Test() {
+		subqueryTests.exceptColumnCountMismatchEmitsFatalTest();
+	}
+
+	/** Nested INTERSECT subqueries — multi-participant interface validation at statement exit. */
+	@Test
+	public void gateSetOpMultipleIntersectInterfaceValidationV0Test() {
+		accessObjectTests.multipleIntersectSubqueryInterfaceValidationV1Test();
 	}
 }

@@ -60,6 +60,19 @@ Without S4, each branch convert re-opens every sibling `def_query*` already publ
 | S4 sibling skip | `lookupDefinitionPayloadOnScopeChain` + `setOpParentFrameStack` |
 | 15.6 frozen egress | `buildConvertEgressScopeBundle` → `activeConvertEgressScopeBundle` |
 
+## S5 — exit-time-only participant merge / validation
+
+Per-branch convert (`convertSymbolTableToTableDictionary` / `buildConvertEgressScopeBundle`) must **not** walk all set-op participants or merge composite interfaces. That is **one-shot at frame exit**:
+
+| When | What runs | Iterates participants? |
+|------|-----------|------------------------|
+| Each branch `exitQuery_specification` | `finalizeQueryScopeSymbolTable` → `publishQueryLikeScope` for **one** `def_queryN` | No — single participant publish |
+| `exitUnionized_query` / `exitIntersected_query` | `stopSetOpDefinitionCache` → `finalizeSetOperationScopeSymbolTable` → `publishSetOperationInterfaceAtExit` | **Yes** — composite interface merge |
+| `exitQuery_expression` | `validateSetOperationInterface` → `validateSingleSetOperationInterface` | **Yes** — interface FATAL diagnostics |
+| Insert source with set-op RHS | `finalizeInsertSourceAtPrimaryExit` → `finalizeSetOperationAtExit` | Yes — insert-source exit only |
+
+**S5 gate tests:** `SqlEventWalkerSetOpScopingGateTests` delegates `gateSetOpUnionInterfaceMismatchFatalV0Test`, `gateSetOpIntersectInterfaceMismatchFatalV0Test`, `gateSetOpExceptInterfaceMismatchFatalV0Test`, `gateSetOpMultipleIntersectInterfaceValidationV0Test`.
+
 ## Related docs
 
 - `parse/documents/symbol-table-resolution-consolidation-worklist.md` — Phase 15.6 bundle design

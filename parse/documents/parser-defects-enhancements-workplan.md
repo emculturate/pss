@@ -768,7 +768,9 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done:** Opt-in stage-timing instrumentation — `ParseLatencyDiagnosticService`, `ParseLatencyReport`, and `ParseLatencyDiagnosticTest` (`parse/src/main/java/sql/latency/`, `parse/src/test/java/sql/latency/`).
 - **Done (candidate fix, needs corpus validation):** Incremental set-op `def_*` payload cache in `SqlParseSymbolTreeHelper` / `SqlParseEventWalker` to avoid repeated O(n²) scans on UNION/INTERSECT branches.
 - **Done (2026-09-01):** Construction clustering of all **74** timeout rows (SQL shape only; parser not run). Eighteen buckets below. Set-op header walking is the dominant *family* (Buckets 1–2 plus smaller UNION shapes) but **not** the only likely hotspot — several buckets have **zero** set-ops.
-- **Next:** Profile/fix Bucket 1–2 first; use **5261, 4647, 130, 4197** as non-UNION canaries so a set-op cache is not mistaken for a full corpus fix. Then walk remaining buckets; mark tracker rows as each cluster completes under 90s on 5.1.3.
+- **Done (2026-09-02):** Set-op scoping **S1–S4** (outer-only snapshot, INTERSECT parity, reference-directed bundle, sibling exclusion) + S4 sibling-isolation SQL test + agent rule `.cursor/rules/set-op-convert-egress-scoping.mdc`.
+- **Done (2026-09-02):** Set-op scoping **S5** — audited exit-time-only participant merge/validation; gate delegates for UNION/INTERSECT/EXCEPT interface FATALs + nested INTERSECT validation.
+- **Next:** **S6** — re-run timing probes / calibration matrix; **S7** — Panto buckets **2.8-1** under 90s. Use **5261, 4647, 130, 4197** as non-UNION canaries so a set-op cache is not mistaken for a full corpus fix.
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
 #### Set-op scoping — safe implementation steps (2.8)

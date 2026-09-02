@@ -1426,6 +1426,12 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 
 	@SuppressWarnings("unchecked")
+	/**
+	 * Phase 2.8-S5 exit-time validation: walks set-op participants in the final symbol table to
+	 * emit {@code SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH} and related FATAL diagnostics.
+	 * Invoked from {@code SqlParseEventWalker#exitQuery_expression} only — not during per-branch
+	 * convert egress.
+	 */
 	public void validateSetOperationInterface(HashMap<String, Object> interfaceMap, String locationTokenString) {
 		if (symbolTable == null || symbolTable.isEmpty()) {
 			return;
