@@ -8,6 +8,8 @@ import org.junit.Test;
  *
  * <p>Run:
  * {@code mvn -pl parse -Dtest=SqlEventWalkerSetOpScopingGateTests test}
+ *
+ * <p>Phase 2.8 S3 additions: wildcard UNION+CTE, correlated INTERSECT predicand.
  */
 public class SqlEventWalkerSetOpScopingGateTests {
 
@@ -41,6 +43,19 @@ public class SqlEventWalkerSetOpScopingGateTests {
 	@Test
 	public void gateUnionLeftJoinSubqueryAliasV0Test() {
 		joinTests.withCteLeftJoinUnionThenTrailingJoinSubqueryKeepsUnionAliasV0Test();
+	}
+
+	/** Workplan S3 — CTE + wildcard UNION branch interface (Phase 2.1). */
+	@Test
+	public void gateUnionWildcardBranchAgainstExplicitColumnListV0Test() {
+		subqueryTests.unionWildcardBranchAgainstExplicitColumnListTest();
+	}
+
+	/** Workplan S3 — correlated scalar subquery in INTERSECT context. */
+	@Test
+	public void gateIntersectCorrelatedScalarPredicandContextV0Test() {
+		new SqlEventWalkerCoreSelectFromAliasingTests()
+				.correlatedScalarPredicandIntersectContextSubqueryTest();
 	}
 
 	// ── INTERSECT (5) ─────────────────────────────────────────────────────────

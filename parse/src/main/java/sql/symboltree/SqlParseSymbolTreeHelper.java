@@ -6060,62 +6060,23 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
-	 * Phase 15.6: one-shot scope visibility for convert egress. Closest {@code def_*} payload wins
-	 * (current symbol table, then ancestors nearest-to-farthest).
+	 * Phase 15.6 / 2.8-S3: one-shot scope visibility for convert egress. Seeds outer-only
+	 * snapshot when inside a set-op frame, then opens {@code def_*} payloads lazily for live
+	 * refs collected from {@code context_list}, {@code table_alias}, and {@code dependent_queries}
+	 * (current frame and inherited outer scope).
 	 */
 	@SuppressWarnings("unchecked")
 	private ConvertEgressScopeBundle buildConvertEgressScopeBundle(
 			HashMap<String, Object> localTableAliasMap,
 			HashMap<String, Object> localCurrentQueryDictionary) {
-		HashMap<String, Object> visibleDefinitionPayloads = new HashMap<String, Object>();
-		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
-			// Outer-only snapshot taken at set-op frame entry; excludes sibling def_* publishes.
-			visibleDefinitionPayloads.putAll(setOpDefinitionPayloadCacheStack.peek());
-		} else {
-			List<Map<String, Object>> ancestors = getAncestorSymbolTables();
-			for (int ancestorIndex = ancestors.size() - 1; ancestorIndex >= 0; ancestorIndex--) {
-				mergeDefinitionPayloadsFromSymbolTable(ancestors.get(ancestorIndex), visibleDefinitionPayloads);
-			}
-		}
-		mergeDefinitionPayloadsFromSymbolTable(walker.symbolTable, visibleDefinitionPayloads);
+		HashMap<String, Object> visibleDefinitionPayloads =
+				buildReferenceDirectedVisibleDefinitionPayloads(localTableAliasMap);
 
 		HashMap<String, Object> localQueryDictionary = localCurrentQueryDictionary != null
 				? new HashMap<String, Object>(localCurrentQueryDictionary)
 				: new HashMap<String, Object>();
 
-		LinkedHashSet<String> liveQueryRefs = new LinkedHashSet<String>();
-		if (localTableAliasMap != null && !localTableAliasMap.isEmpty()) {
-			for (Object mappedSourceObj : localTableAliasMap.values()) {
-				if (mappedSourceObj instanceof String mappedSource
-						&& isQuerySourceReference(mappedSource)) {
-					liveQueryRefs.add(mappedSource);
-				}
-			}
-		}
-		// O(1): if the live-query-ref cache is active, use it directly instead of scanning
-		// all visibleDefinitionPayloads entries (which was O(n) per branch = O(n²) total).
-		if (!setOpLiveQueryRefCacheStack.isEmpty()) {
-			// Outer-only live-query refs from frame-entry snapshot (not sibling publishes).
-			liveQueryRefs.addAll(setOpLiveQueryRefCacheStack.peek());
-			// Check only the entries added by the current branch's symbolTable (already merged above).
-			if (walker.symbolTable != null) {
-				for (Map.Entry<String, Object> entry : walker.symbolTable.entrySet()) {
-					if (entry.getKey() != null && isDefinitionScopeKey(entry.getKey())) {
-						String liveRef = toLiveScopeKey(entry.getKey());
-						if (liveRef != null && isQuerySourceReference(liveRef)) {
-							liveQueryRefs.add(liveRef);
-						}
-					}
-				}
-			}
-		} else {
-			for (String definitionKey : visibleDefinitionPayloads.keySet()) {
-				String liveRef = toLiveScopeKey(definitionKey);
-				if (liveRef != null && isQuerySourceReference(liveRef)) {
-					liveQueryRefs.add(liveRef);
-				}
-			}
-		}
+		LinkedHashSet<String> liveQueryRefs = collectConvertEgressReferencedLiveQueryRefs(localTableAliasMap);
 
 		HashMap<String, Object> globalQueryDictionaryRefs = new HashMap<String, Object>();
 		for (String liveQueryRef : liveQueryRefs) {
@@ -6153,6 +6114,136 @@ public class SqlParseSymbolTreeHelper {
 				visibleQuerySourceRefs,
 				localQueryDictionary,
 				globalQueryDictionaryRefs);
+	}
+
+	/**
+	 * Phase 2.8-S3: reference-directed {@code def_*} visibility for convert egress. When a set-op
+	 * outer-only snapshot is active, seed from it; otherwise start empty. Then walk live refs from
+	 * inherited {@code context_list} / aliases, local {@code table_alias}, {@code dependent_queries},
+	 * and branch-local {@code def_*} keys, opening each payload lazily from the scope chain.
+	 */
+	@SuppressWarnings("unchecked")
+	private HashMap<String, Object> buildReferenceDirectedVisibleDefinitionPayloads(
+			HashMap<String, Object> localTableAliasMap) {
+		HashMap<String, Object> visibleDefinitionPayloads = new HashMap<String, Object>();
+		if (!setOpDefinitionPayloadCacheStack.isEmpty()) {
+			visibleDefinitionPayloads.putAll(setOpDefinitionPayloadCacheStack.peek());
+		}
+
+		LinkedHashSet<String> pendingLiveRefs = collectConvertEgressReferencedLiveQueryRefs(localTableAliasMap);
+		LinkedHashSet<String> openedLiveRefs = new LinkedHashSet<>();
+		while (!pendingLiveRefs.isEmpty()) {
+			String liveRef = pendingLiveRefs.iterator().next();
+			pendingLiveRefs.remove(liveRef);
+			if (!isQuerySourceReference(liveRef) || !openedLiveRefs.add(liveRef)) {
+				continue;
+			}
+
+			String definitionKey = toDefinitionScopeKey(liveRef);
+			if (definitionKey == null || visibleDefinitionPayloads.containsKey(definitionKey)) {
+				continue;
+			}
+
+			Object definitionPayload = lookupDefinitionPayloadOnScopeChain(definitionKey);
+			if (!(definitionPayload instanceof Map<?, ?> definitionPayloadMap)) {
+				continue;
+			}
+
+			visibleDefinitionPayloads.put(definitionKey, definitionPayload);
+			Map<String, Object> definitionScope = (Map<String, Object>) definitionPayloadMap;
+			collectLiveQueryRefsFromAliasOrContextMap(getContextListSymbolMap(definitionScope), pendingLiveRefs);
+			collectLiveQueryRefsFromAliasOrContextMap(getTableAliasMap(definitionScope), pendingLiveRefs);
+			collectLiveQueryRefsFromDependentQueries(definitionScope, pendingLiveRefs);
+		}
+
+		return visibleDefinitionPayloads;
+	}
+
+	private LinkedHashSet<String> collectConvertEgressReferencedLiveQueryRefs(
+			HashMap<String, Object> localTableAliasMap) {
+		LinkedHashSet<String> liveQueryRefs = new LinkedHashSet<>();
+		collectLiveQueryRefsFromAliasOrContextMap(localTableAliasMap, liveQueryRefs);
+
+		OuterVisibleScope outerVisibleScope = collectOuterVisibleScope(null, true);
+		collectLiveQueryRefsFromAliasOrContextMap(outerVisibleScope.contextList, liveQueryRefs);
+		collectLiveQueryRefsFromAliasOrContextMap(outerVisibleScope.aliases, liveQueryRefs);
+
+		if (walker.symbolTable != null) {
+			collectLiveQueryRefsFromDependentQueries(walker.symbolTable, liveQueryRefs);
+			for (Map.Entry<String, Object> entry : walker.symbolTable.entrySet()) {
+				String key = entry.getKey();
+				if (key != null && isDefinitionScopeKey(key)) {
+					String liveRef = toLiveScopeKey(key);
+					if (liveRef != null && isQuerySourceReference(liveRef)) {
+						liveQueryRefs.add(liveRef);
+					}
+				}
+			}
+		}
+
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			collectLiveQueryRefsFromDependentQueries(ancestorSymbols, liveQueryRefs);
+		}
+
+		if (!setOpLiveQueryRefCacheStack.isEmpty()) {
+			liveQueryRefs.addAll(setOpLiveQueryRefCacheStack.peek());
+		}
+
+		return liveQueryRefs;
+	}
+
+	private void collectLiveQueryRefsFromAliasOrContextMap(
+			Map<String, Object> aliasOrContextMap,
+			LinkedHashSet<String> liveQueryRefs) {
+		if (aliasOrContextMap == null || aliasOrContextMap.isEmpty()) {
+			return;
+		}
+		for (Object mappedSourceObj : aliasOrContextMap.values()) {
+			if (mappedSourceObj instanceof String mappedSource && isQuerySourceReference(mappedSource)) {
+				liveQueryRefs.add(mappedSource);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void collectLiveQueryRefsFromDependentQueries(
+			Map<String, Object> scopeSymbols,
+			LinkedHashSet<String> liveQueryRefs) {
+		if (scopeSymbols == null || scopeSymbols.isEmpty()) {
+			return;
+		}
+		Object dependentQueriesObj = scopeSymbols.get(MUMBLE_DEPENDENT_QUERIES_KEY);
+		if (!(dependentQueriesObj instanceof Map<?, ?> dependentQueriesMap)) {
+			return;
+		}
+		for (Object dependentEntryObj : dependentQueriesMap.values()) {
+			if (!(dependentEntryObj instanceof Map<?, ?> dependentEntry)) {
+				continue;
+			}
+			Object queryRefObj = dependentEntry.get(MUMBLE_QUERY_KEY);
+			if (queryRefObj instanceof String queryRef && isQuerySourceReference(queryRef)) {
+				liveQueryRefs.add(queryRef);
+			}
+		}
+	}
+
+	private Object lookupDefinitionPayloadOnScopeChain(String definitionKey) {
+		if (definitionKey == null || definitionKey.isBlank()) {
+			return null;
+		}
+		if (walker.symbolTable != null) {
+			Object found = walker.symbolTable.get(definitionKey);
+			if (found != null) {
+				return found;
+			}
+		}
+		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			Object found = ancestorSymbols.get(definitionKey);
+			if (found != null) {
+				return found;
+			}
+		}
+		return null;
 	}
 
 	private void mergeDefinitionPayloadsFromSymbolTable(
