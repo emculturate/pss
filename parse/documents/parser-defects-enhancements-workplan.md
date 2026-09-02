@@ -79,7 +79,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 | 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
-| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — harness landed; 74 timeouts clustered into 18 construction buckets (see §2.8 tracker) |
+| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — set-op scoping plan (S0–S7) + timing probes landed; implement S1–S4 next |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
 
 ---
@@ -769,7 +769,80 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (candidate fix, needs corpus validation):** Incremental set-op `def_*` payload cache in `SqlParseSymbolTreeHelper` / `SqlParseEventWalker` to avoid repeated O(n²) scans on UNION/INTERSECT branches.
 - **Done (2026-09-01):** Construction clustering of all **74** timeout rows (SQL shape only; parser not run). Eighteen buckets below. Set-op header walking is the dominant *family* (Buckets 1–2 plus smaller UNION shapes) but **not** the only likely hotspot — several buckets have **zero** set-ops.
 - **Next:** Profile/fix Bucket 1–2 first; use **5261, 4647, 130, 4197** as non-UNION canaries so a set-op cache is not mistaken for a full corpus fix. Then walk remaining buckets; mark tracker rows as each cluster completes under 90s on 5.1.3.
+- **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
+#### Set-op scoping — safe implementation steps (2.8)
+
+**Problem (confirmed):** `buildConvertEgressScopeBundle` merges every `def_*` payload from ancestor symbol-table frames. Set-op siblings (`UNION` / `INTERSECT` / `EXCEPT` participants) publish onto the same parent frame, so each later branch convert re-materializes all prior sibling trees even though SQL gives no cross-branch visibility. The incremental `setOpDefinitionPayloadCacheStack` reduces ancestor *scan* cost but still grows the visible payload set with every sibling publish.
+
+**Invariant (matches `symbol-table-bucket-reference` JOIN/WITH rules):** A set-op participant may see only (a) its own `FROM` / `table_alias`, (b) inherited outer `context_list` / correlated aliases, and (c) explicitly referenced `queryN` / `unionN` / `intersectN` keys — **not** sibling participant payloads on the same set-op frame.
+
+| Step | Change | Safety / test gate |
+|------|--------|-------------------|
+| **S0** | Land timing probes (11 branches, 3 columns, distinct literals per branch) | `setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` — smoke semantics only; record baseline ms below |
+| **S1** | Rename intent: `setOpDefinitionPayloadCacheStack` → **outer-only** snapshot at frame entry; **do not** append sibling `publishQueryLikeScope` payloads to the cache | S0 probes + full `SqlEventWalkerSubqueriesAndClauseSemanticsTests` suite (functional goldens unchanged) |
+| **S2** | Call outer-only snapshot at **`enterIntersected_query`** as well as `enterUnionized_query` | `SqlEventWalkerJoinsAndTableResolutionTests.withCteLeftJoinUnionThenTrailingJoinSubqueryKeepsUnionAliasV0Test`; nested `UNION` inside `INTERSECT` fixtures |
+| **S3** | Replace wholesale `mergeDefinitionPayloadsFromSymbolTable(ancestor, …)` in `buildConvertEgressScopeBundle` with **reference-directed** collection: seed from frozen outer snapshot + walk `context_list`, local `table_alias`, `dependent_queries`; open `def_*` **lazily** by live ref only | Existing CTE / correlated subquery matrix; `SqlEventWalkerBareValueExpressionTests` WITH cases |
+| **S4** | When converting inside an active set-op frame, **exclude** sibling participant keys (`def_query*`, `def_union*`, … per `isSetOperationParticipantKey`) from the immediate set-op parent frame | S0 timing probes should drop sharply; `unionWildcardBranchAgainstExplicitColumnListTest` (2.1) |
+| **S5** | Keep one-shot participant iteration only at `exitUnionized_query` / `exitIntersected_query` (`finalizeSetOperationScopeSymbolTable`, `validateSingleSetOperationInterface`) | Set-op FATAL / interface goldens in `SqlEventWalkerLiveSampleQueriesTests` / `SqlParseEventWalkerWithAccessObjectTest` |
+| **S6** | Re-run S0 probes; target **O(N)** wall-clock (linear in branch count), not O(N²) | Update baseline table below; compare with `ParseLatencyDiagnosticTest` on Panto row 475 when ready |
+| **S7** | Panto timeout buckets **2.8-1**, **2.8-2** under 90s | Mark buckets **2.8-1** / **2.8-2** complete in tracker |
+
+**Out of scope for S1–S4:** Changing set-op interface validation rules, relaxing `DUPLICATE_INTERFACE_COLUMNS` / `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`, or deferring per-branch convert to statement end (each branch still publishes its own `def_queryN` artifacts).
+
+#### Set-op timing probe baselines (S0)
+
+Probe shape (shared builder `SetOpTimingProbeFixtures`): **N** joiners (**N+1** branches), **M** select-list columns (`col_00`…), **M/2** fully qualified `ORDER BY` keys on non-output columns (`sort_col_*`), distinct `probe_branch_NNN` table per branch. Smoke probes in `SqlEventWalkerSubqueriesAndClauseSemanticsTests` print full extractor output; calibration uses timing-only (`SqlEventWalkerSetOpTimingProbePreSolutionTests`). Re-record after set-op scoping lands (S6).
+
+##### Pre-solution estimation matrix (2026-09-02, local JVM)
+
+**Convention:** N = joiner count; M = select-list column count; ORDER BY column count = M/2. Times in **ms** (parse + walk only).
+
+| Fixed dimension | Sweep | UNION ALL | INTERSECT |
+|-----------------|-------|-----------|-----------|
+| N = 50 | M = 6 | 1,766 | 1,370 |
+| N = 50 | M = 10 | 2,955 | 2,946 |
+| N = 50 | M = 20 | 10,502 | 10,403 |
+| N = 50 | M = 30 | 23,055 | 22,130 |
+| N = 50 | M = 40 | 40,764 | 40,812 |
+| N = 50 | M = 50 | **66,477** | **66,778** |
+| M = 20 | N = 10 | 644 | 628 |
+| M = 20 | N = 25 | 2,850 | 2,843 |
+| M = 20 | N = 50 | 10,380 | 10,467 |
+| M = 20 | N = 75 | 23,659 | 23,402 |
+| M = 20 | N = 100 | 43,868 | 43,223 |
+| M = 20 | N = 114 | **56,908** | **58,331** |
+| M = 20 | N = 150 | 112,201 | 112,190 |
+
+**~60s one-minute extreme settings (pre-solution manual regression):**
+
+| Bound | Set op | N (joiners) | M (select cols) | Measured ms | Test |
+|-------|--------|-------------|-----------------|------------:|------|
+| N-bound | UNION ALL | 114 | 20 | 56,908 | `setOpTimingProbePreSolutionUnionOneMinuteNBoundTest` |
+| N-bound | INTERSECT | 114 | 20 | 58,331 | `setOpTimingProbePreSolutionIntersectOneMinuteNBoundTest` |
+| M-bound | UNION ALL | 50 | 50 | 66,477 | `setOpTimingProbePreSolutionUnionOneMinuteMBoundTest` |
+| M-bound | INTERSECT | 50 | 50 | 66,778 | `setOpTimingProbePreSolutionIntersectOneMinuteMBoundTest` |
+
+All four one-minute tests live in `SqlEventWalkerSetOpTimingProbePreSolutionTests` (`@Ignore` — enable for manual regression during S1–S6).
+
+**Fitted complexity (pre-solution, UNION ALL calibration points):**
+
+\[
+T(N,M) \approx c \cdot N^{\alpha} \cdot M^{\beta}, \quad \alpha \approx 2.0,\; \beta \approx 1.7
+\]
+
+Consistent with **O(N²)** sibling re-merge in `buildConvertEgressScopeBundle` multiplied by per-branch dictionary payload width growing superlinearly in **M** (select + ORDER BY table refs).
+
+**Day-to-day smoke probes** (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`, N=50, M=20, full extractor dump):
+
+| Test | Set op | Baseline (ms) | Post-fix (ms) |
+|------|--------|---------------|---------------|
+| `setOpTimingProbeTenUnionAllJoinersV0Test` | UNION ALL | **~10,500** | — |
+| `setOpTimingProbeTenIntersectJoinersV0Test` | INTERSECT | **~10,400** | — |
+
+Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreSolutionTests#setOpTimingProbePreSolutionCalibrationMatrixTest test` (test is `@Ignore`; remove or use IDE run).
+
+After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.
 #### Construction-bucket tracker (74 timeouts)
 
 Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL lives in [panto_513_outstanding_issues.csv](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv); do not paste full queries here.

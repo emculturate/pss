@@ -1,4 +1,5 @@
 package sql.walker;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -11142,5 +11143,146 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 				"expected nested categorization CASE in outer SELECT",
 				extractor.getAsTree().toString().contains("suppress_email_category")
 						&& extractor.getAsTree().toString().contains("then={parentheses={case={"));
+	}
+
+	// ── Phase 2.8 set-op timing probes (baseline in workplan §2.8 set-op scoping) ──
+	//
+	// pre-solution estimation matrix (2026-09-02, local JVM, timing-only — no extractor dump).
+	// Probe shape: N joiners (N+1 branches), M select cols (col_00…), M/2 ORDER BY qualified
+	// sort_col_* not in SELECT, distinct probe_branch_NNN table per branch.
+	//
+	//   fixed N=50, sweep M (ms):
+	//     UNION ALL:     M=6 → 1,766;  M=10 → 2,955;  M=20 → 10,502
+	//     INTERSECT:     M=6 → 1,370;  M=10 → 2,946;  M=20 → 10,403
+	//   fixed M=20, sweep N (ms):
+	//     UNION ALL:     N=10 → 644;   N=25 → 2,850;  N=50 → 10,380;  N=114 → 56,908
+	//     INTERSECT:     N=10 → 628;   N=25 → 2,843;  N=50 → 10,467;  N=114 → 58,331
+	//   ~60s N-bound (M=20, interpolated then spot-checked):
+	//     UNION ALL:     N=114 joiners → 56,908 ms
+	//     INTERSECT:     N=114 joiners → 58,331 ms
+	//   ~60s M-bound (N=50):
+	//     UNION ALL:     M=50 select cols (25 ORDER BY) → 66,477 ms
+	//     INTERSECT:     M=50 select cols (25 ORDER BY) → 66,778 ms
+	//   fitted model (UNION ALL points): T ≈ c · N^2.0 · M^1.7  (α≈2.0 branch merge; β≈1.7 column/dict width)
+	//
+	// One-minute manual regression tests: SqlEventWalkerSetOpTimingProbePreSolutionTests
+	//   setOpTimingProbePreSolutionUnionOneMinuteNBoundTest      (N=114, M=20)
+	//   setOpTimingProbePreSolutionIntersectOneMinuteNBoundTest  (N=114, M=20)
+	//   setOpTimingProbePreSolutionUnionOneMinuteMBoundTest      (N=50, M=50)
+	//   setOpTimingProbePreSolutionIntersectOneMinuteMBoundTest  (N=50, M=50)
+
+	private static final int SET_OP_TIMING_PROBE_COLUMN_COUNT = 20;
+	private static final int SET_OP_TIMING_PROBE_ORDER_BY_COLUMN_COUNT =
+			SetOpTimingProbeFixtures.orderByCountForSelectCount(SET_OP_TIMING_PROBE_COLUMN_COUNT);
+
+	private void assertSetOpTimingProbeSemantics(
+			SqlParseEventWalker extractor, int branchCount, int columnCount, int orderByColumnCount) {
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+		java.util.Set<String> interfaceColumns = extractor.getInterface();
+		Assert.assertEquals("Interface width is wrong", columnCount, interfaceColumns.size());
+		for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+			String columnName = SetOpTimingProbeFixtures.selectColumnName(columnIndex);
+			Assert.assertTrue("Interface missing " + columnName, interfaceColumns.contains(columnName));
+		}
+		for (int orderIndex = 0; orderIndex < orderByColumnCount; orderIndex++) {
+			Assert.assertFalse(
+					"ORDER BY-only column must not appear in interface",
+					interfaceColumns.contains(SetOpTimingProbeFixtures.orderByColumnName(orderIndex)));
+		}
+		String symbolTableText = extractor.getSymbolTable().toString();
+		Assert.assertTrue(
+				"expected composite set-op scope in symbol table",
+				symbolTableText.contains("def_union") || symbolTableText.contains("def_intersect"));
+		Map<String, Object> tableDict = extractor.getTableColumnDictionaryMap();
+		Map<String, Object> queryDict = extractor.getQueryColumnDictionaryMap();
+		for (int branchIndex = 0; branchIndex < branchCount; branchIndex++) {
+			String tableName = SetOpTimingProbeFixtures.branchTableName(branchIndex);
+			Assert.assertTrue(
+					"expected " + tableName + " in table dictionary",
+					tableDict.containsKey(tableName));
+			String tableEntry = tableDict.get(tableName).toString();
+			for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+				String columnName = SetOpTimingProbeFixtures.selectColumnName(columnIndex);
+				Assert.assertTrue(tableName + " missing " + columnName, tableEntry.contains(columnName + "="));
+			}
+			for (int orderIndex = 0; orderIndex < orderByColumnCount; orderIndex++) {
+				String orderByColumnName = SetOpTimingProbeFixtures.orderByColumnName(orderIndex);
+				Assert.assertTrue(
+						tableName + " missing ORDER BY column " + orderByColumnName,
+						tableEntry.contains(orderByColumnName + "="));
+			}
+			String queryKey = "query" + branchIndex;
+			Assert.assertTrue("expected " + queryKey + " in query dictionary", queryDict.containsKey(queryKey));
+			String branchDict = queryDict.get(queryKey).toString();
+			for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+				String columnName = SetOpTimingProbeFixtures.selectColumnName(columnIndex);
+				Assert.assertTrue(queryKey + " missing " + columnName, branchDict.contains(columnName + "="));
+			}
+		}
+		Assert.assertNotEquals(
+				"first and last branches should have distinct query_dictionary provenance",
+				queryDict.get("query0").toString(),
+				queryDict.get("query" + (branchCount - 1)).toString());
+		Assert.assertNotEquals(
+				"first and last branches should have distinct table_dictionary provenance",
+				tableDict.get(SetOpTimingProbeFixtures.branchTableName(0)).toString(),
+				tableDict.get(SetOpTimingProbeFixtures.branchTableName(branchCount - 1)).toString());
+	}
+
+	private void printSetOpTimingProbeExtractorStrings(String testLabel, SqlParseEventWalker extractor) {
+		System.out.println("=== " + testLabel + " extractor AST ===");
+		System.out.println(extractor.getAsTree().toString());
+		System.out.println("=== " + testLabel + " extractor Interface ===");
+		System.out.println(extractor.getInterface().toString());
+		System.out.println("=== " + testLabel + " extractor Substitution List ===");
+		System.out.println(extractor.getSubstitutionsMap().toString());
+		System.out.println("=== " + testLabel + " extractor Table Dictionary ===");
+		System.out.println(extractor.getTableColumnDictionaryMap().toString());
+		System.out.println("=== " + testLabel + " extractor Query Column Dictionary ===");
+		System.out.println(extractor.getQueryColumnDictionaryMap().toString());
+		System.out.println("=== " + testLabel + " extractor Symbol Table ===");
+		System.out.println(extractor.getSymbolTable().toString());
+	}
+
+	private void runSetOpTimingProbe(String testLabel, String setOpKeyword, int joinerCount) {
+		final int branchCount = joinerCount + 1;
+		final String query = SetOpTimingProbeFixtures.buildQuery(
+				setOpKeyword, joinerCount, SET_OP_TIMING_PROBE_COLUMN_COUNT, SET_OP_TIMING_PROBE_ORDER_BY_COLUMN_COUNT);
+		System.out.println("=== " + testLabel + " submitted query ===");
+		System.out.println(query);
+		final long startNanos = System.nanoTime();
+		final SQLSelectParserParser parser = parse(query);
+		SqlParseEventWalker extractor = runParsertest(query, parser);
+		final long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+		printSetOpTimingProbeExtractorStrings(testLabel, extractor);
+		System.out.println(testLabel + " elapsedMs=" + elapsedMs + " joinerCount=" + joinerCount
+				+ " branchCount=" + branchCount + " columnCount=" + SET_OP_TIMING_PROBE_COLUMN_COUNT
+				+ " orderByColumnCount=" + SET_OP_TIMING_PROBE_ORDER_BY_COLUMN_COUNT);
+		assertSetOpTimingProbeSemantics(
+				extractor,
+				branchCount,
+				SET_OP_TIMING_PROBE_COLUMN_COUNT,
+				SET_OP_TIMING_PROBE_ORDER_BY_COLUMN_COUNT);
+	}
+
+	/**
+	 * Phase 2.8 timing probe — {@code UNION ALL} chain (50 joiners, 20 select columns, 10-key
+	 * qualified {@code ORDER BY} on non-output columns, distinct {@code probe_branch_NNN} table per
+	 * branch). Smoke semantics only; compare wall-clock against workplan baseline after set-op scoping fix.
+	 */
+	@Test
+	public void setOpTimingProbeTenUnionAllJoinersV0Test() {
+		runSetOpTimingProbe("setOpTimingProbeTenUnionAllJoinersV0Test", "UNION ALL", 50);
+	}
+
+	/**
+	 * Phase 2.8 timing probe — {@code INTERSECT} chain (50 joiners, 20 select columns, 10-key
+	 * qualified {@code ORDER BY} on non-output columns, distinct {@code probe_branch_NNN} table per
+	 * branch). Smoke semantics only; compare wall-clock against workplan baseline after set-op scoping fix.
+	 */
+	@Test
+	public void setOpTimingProbeTenIntersectJoinersV0Test() {
+		runSetOpTimingProbe("setOpTimingProbeTenIntersectJoinersV0Test", "INTERSECT", 50);
 	}
 }
