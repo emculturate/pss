@@ -54,6 +54,12 @@ public class SqlParseSymbolTreeHelper {
 			new ArrayDeque<>();
 
 	/**
+	 * Set-op frame whose {@code def_query*}/{@code def_union*}/… sibling participant payloads must
+	 * not be visible during branch convert (S4). Pushed with {@link #startSetOpDefinitionCache}.
+	 */
+	private final ArrayDeque<Map<String, Object>> setOpParentFrameStack = new ArrayDeque<>();
+
+	/**
 	 * Convert-egress contract for bare ANSI/dialect value expressions ({@code CURRENT_TIMESTAMP},
 	 * {@code SESSION_USER}, …) captured as unqualified column refs during the walk.
 	 * <p>
@@ -6237,13 +6243,30 @@ public class SqlParseSymbolTreeHelper {
 				return found;
 			}
 		}
+		Map<String, Object> setOpParentFrame = setOpParentFrameStack.isEmpty()
+				? null
+				: setOpParentFrameStack.peek();
+		boolean excludeSetOpSiblingParticipants = isSetOperationParticipantDefinitionKey(definitionKey);
 		for (Map<String, Object> ancestorSymbols : getAncestorSymbolTables()) {
+			if (excludeSetOpSiblingParticipants
+					&& setOpParentFrame != null
+					&& ancestorSymbols == setOpParentFrame) {
+				continue;
+			}
 			Object found = ancestorSymbols.get(definitionKey);
 			if (found != null) {
 				return found;
 			}
 		}
 		return null;
+	}
+
+	private boolean isSetOperationParticipantDefinitionKey(String definitionKey) {
+		if (!isDefinitionScopeKey(definitionKey)) {
+			return false;
+		}
+		String liveKey = toLiveScopeKey(definitionKey);
+		return liveKey != null && isSetOperationParticipantKey(liveKey);
 	}
 
 	private void mergeDefinitionPayloadsFromSymbolTable(
@@ -10485,6 +10508,7 @@ public class SqlParseSymbolTreeHelper {
 			mergeDefinitionPayloadsFromSymbolTable(ancestor, snapshot);
 		}
 		setOpDefinitionPayloadCacheStack.push(snapshot);
+		setOpParentFrameStack.push(walker.symbolTable);
 
 		// Build the parallel live-query-ref set from the initial snapshot.
 		LinkedHashSet<String> liveRefs = new LinkedHashSet<>();
@@ -10508,6 +10532,9 @@ public class SqlParseSymbolTreeHelper {
 		}
 		if (!setOpLiveQueryRefCacheStack.isEmpty()) {
 			setOpLiveQueryRefCacheStack.pop();
+		}
+		if (!setOpParentFrameStack.isEmpty()) {
+			setOpParentFrameStack.pop();
 		}
 	}
 
@@ -17342,8 +17369,10 @@ public class SqlParseSymbolTreeHelper {
 	 * ancestor symbol tables (closest to farthest) for a published {@code def_*} payload.
 	 * Returns the first non-null value found, or null if not visible on the scope chain.
 	 * <p>
-	 * Convert-egress readers should migrate to {@code ConvertEgressScopeBundle} (Phase 15.6)
-	 * so this walk is not repeated per lookup during scope exit.
+	 * Convert-egress readers use {@code ConvertEgressScopeBundle} (Phase 15.6): when the bundle is
+	 * active, only bundled {@code def_*} payloads are visible — no scope-chain fallback. Mid-walk /
+	 * pre-bundle readers use {@link #lookupDefinitionPayloadOnScopeChain} (Phase 2.8-S4 sibling
+	 * exclusion on the set-op parent frame).
 	 */
 	@SuppressWarnings("unchecked")
 	private Object resolveDefinitionSymbolInScopeChain(String key) {
@@ -17353,17 +17382,7 @@ public class SqlParseSymbolTreeHelper {
 		if (activeConvertEgressScopeBundle != null) {
 			return activeConvertEgressScopeBundle.getDefinitionPayload(key);
 		}
-		Object found = walker.symbolTable.get(key);
-		if (found != null) {
-			return found;
-		}
-		for (Map<String, Object> ancestor : getAncestorSymbolTables()) {
-			found = ancestor.get(key);
-			if (found != null) {
-				return found;
-			}
-		}
-		return null;
+		return lookupDefinitionPayloadOnScopeChain(key);
 	}
 
 	@SuppressWarnings("unchecked")

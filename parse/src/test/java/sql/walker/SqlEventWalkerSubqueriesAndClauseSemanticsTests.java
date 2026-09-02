@@ -11267,6 +11267,68 @@ public class SqlEventWalkerSubqueriesAndClauseSemanticsTests extends AbstractSql
 	}
 
 	/**
+	 * Phase 2.8-S4 sibling-isolation invariant — explicit SQL regression (not a private-method harness).
+	 *
+	 * <p><b>Invariant:</b> While converting branch <i>N</i> of a set operation, {@code
+	 * buildReferenceDirectedVisibleDefinitionPayloads} may open outer {@code def_*} payloads from
+	 * ancestor scopes (via the S1 outer-only snapshot and reference-directed live refs), but must
+	 * <b>not</b> re-open sibling participant {@code def_query*} / {@code def_union*} payloads that
+	 * earlier branches already published on the set-op parent frame. That skip is implemented in
+	 * {@code lookupDefinitionPayloadOnScopeChain} (S4) during <b>bundle construction</b> — not via a
+	 * post-bundle scope-chain fallback (Phase 15.6: egress reads use the frozen bundle only).
+	 *
+	 * <p>This query uses three {@code UNION ALL} branches: branches 1 and 3 read {@code outer_cte};
+	 * branch 2 reads {@code branch_a}. When branch 3 converts, sibling {@code def_query2} (branch_a)
+	 * is already on the set-op parent. Correct behavior: branch 3 resolves {@code id} through
+	 * {@code query0} / {@code outer_cte}, with no {@code branch_a} table_dictionary on {@code
+	 * def_query3}.
+	 */
+	@Test
+	public void setOpSiblingIsolationInvariantV0Test() {
+		final String sql = "WITH outer_cte AS ("
+				+ "\n  SELECT id FROM outer_src"
+				+ "\n)"
+				+ "\nSELECT id FROM outer_cte"
+				+ "\nUNION ALL"
+				+ "\nSELECT id FROM branch_a"
+				+ "\nUNION ALL"
+				+ "\nSELECT id FROM outer_cte";
+
+		final SQLSelectParserParser parser = parse(sql);
+		SqlParseEventWalker extractor = runParsertest(sql, parser);
+		assertNoFatalErrors(extractor);
+		assertNoWalkerDiagnostics(extractor);
+
+		Assert.assertEquals("AST is wrong",
+				"{SQL={with={1={cte={select={1={column={name=id, table_ref=null}}}, from={table={alias=null, table=outer_src}}}, alias=outer_cte}}, query={union={1={select={1={column={name=id, table_ref=null}}}, from={table={alias=null, table=outer_cte}}}, 2={union={qualifier=ALL, operator=UNION}}, 3={select={1={column={name=id, table_ref=null}}}, from={table={alias=null, table=branch_a}}}, 4={union={qualifier=ALL, operator=UNION}}, 5={select={1={column={name=id, table_ref=null}}}, from={table={alias=null, table=outer_cte}}}}}}}",
+				extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", "[id]",
+				extractor.getInterface().toString());
+		Assert.assertEquals("Table Dictionary is wrong",
+				"{outer_src={id=[[@5,29:30='id',<393>,2:9]]}, branch_a={id=[[@16,91:92='id',<393>,6:7]]}}",
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong",
+				"{query0={id=[[@5,29:30='id',<393>,2:9], [@10,56:57='id',<393>,4:7], [@22,125:126='id',<393>,8:7]]}, query1={id=[[@10,56:57='id',<393>,4:7]]}, query2={id=[[@16,91:92='id',<393>,6:7]]}, query3={id=[[@22,125:126='id',<393>,8:7]]}}",
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong",
+				"{def_union4={context_list={outer_cte=query0}, def_query1={context_list={outer_cte=query0}, query_dictionary={id=[[@10,56:57='id',<393>,4:7]]}, interface={id=[{name=id, table_ref=query0}]}, table_alias={outer_cte=query0}}, def_query0={query_dictionary={id=[[@5,29:30='id',<393>,2:9], [@10,56:57='id',<393>,4:7], [@22,125:126='id',<393>,8:7]]}, table_dictionary={outer_src={id=[[@5,29:30='id',<393>,2:9]]}}, interface={id=[{name=id, table_ref=outer_src}]}}, interface={id=query_column}, table_alias={outer_cte=query0}, def_query3={context_list={outer_cte=query0}, query_dictionary={id=[[@22,125:126='id',<393>,8:7]]}, setop=UNION, interface={id=[{name=id, table_ref=query0}]}, table_alias={outer_cte=query0}}, def_query2={context_list={outer_cte=query0}, query_dictionary={id=[[@16,91:92='id',<393>,6:7]]}, table_dictionary={branch_a={id=[[@16,91:92='id',<393>,6:7]]}}, setop=UNION, interface={id=[{name=id, table_ref=branch_a}]}, table_alias={outer_cte=query0}}}}",
+				extractor.getSymbolTable().toString());
+
+		String symbolTable = extractor.getSymbolTable().toString();
+		Assert.assertTrue(
+				"branch 3 (def_query3) must resolve outer_cte via query0, not sibling branch_a",
+				symbolTable.contains(
+						"def_query3={context_list={outer_cte=query0}, query_dictionary={id=[[@22,125:126='id',<393>,8:7]]}, setop=UNION, interface={id=[{name=id, table_ref=query0}]}, table_alias={outer_cte=query0}}"));
+		Assert.assertFalse(
+				"def_query3 must not inherit sibling branch_a table_dictionary (S4 sibling isolation)",
+				symbolTable.matches("(?s).*def_query3=\\{[^}]*table_dictionary=\\{branch_a=.*"));
+		Assert.assertTrue(
+				"sibling middle branch keeps branch_a provenance on def_query2 only",
+				symbolTable.contains(
+						"def_query2={context_list={outer_cte=query0}, query_dictionary={id=[[@16,91:92='id',<393>,6:7]]}, table_dictionary={branch_a={id=[[@16,91:92='id',<393>,6:7]]}}, setop=UNION, interface={id=[{name=id, table_ref=branch_a}]}, table_alias={outer_cte=query0}}"));
+	}
+
+	/**
 	 * Phase 2.8 timing probe — {@code UNION ALL} chain (50 joiners, 20 select columns, 10-key
 	 * qualified {@code ORDER BY} on non-output columns, distinct {@code probe_branch_NNN} table per
 	 * branch). Smoke semantics only; compare wall-clock against workplan baseline after set-op scoping fix.

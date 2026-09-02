@@ -1,0 +1,66 @@
+---
+description: Phase 2.8 set-op scoping + Phase 15.6 convert-egress bundle — how definition visibility works
+globs: parse/src/main/java/sql/**/*.java,parse/src/test/java/sql/walker/**/*.java,parse/documents/**/*.md
+alwaysApply: false
+---
+
+# Set-operation convert-egress scoping (Phase 2.8 + 15.6)
+
+**Workplan:** `parse/documents/parser-defects-enhancements-workplan.md` § Phase 2.8  
+**Canonical SQL regression:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests#setOpSiblingIsolationInvariantV0Test`  
+**Fast gate:** `SqlEventWalkerSetOpScopingGateTests` (delegates + timing probes)
+
+## Two phases — do not conflate them
+
+### Phase A — bundle construction (where S1–S4 matter)
+
+At **convert exit** inside a `UNION` / `INTERSECT` branch, `convertSymbolTableToTableDictionary` calls `buildConvertEgressScopeBundle`, which:
+
+1. **S1 outer-only seed** — if a set-op frame is active, seed `visibleDefinitionPayloads` from `setOpDefinitionPayloadCacheStack` (frozen at `enterUnionized_query` / `enterIntersected_query`). Sibling publishes during the frame are **not** appended to this cache (`publishQueryLikeScope` on the set-op parent is exit-time only).
+2. **S3 reference-directed open** — collect live query refs from `table_alias`, inherited `context_list`, `dependent_queries`, branch-local `def_*`, and the S2 live-ref snapshot; for each pending ref, open `def_*` via **`lookupDefinitionPayloadOnScopeChain`** (lazy, transitive).
+3. **S4 sibling exclusion** — in `lookupDefinitionPayloadOnScopeChain`, when resolving participant keys (`def_query*`, `def_union*`, `def_intersect*`, `def_values*`), **skip** the immediate set-op parent frame (`setOpParentFrameStack.peek()`). Outer ancestors remain visible; sibling branch payloads on the parent do not.
+
+**S4 is enforced during bundle build**, not as a runtime fallback after the bundle exists.
+
+### Phase B — convert egress reads (Phase 15.6)
+
+After the bundle is built, `activeConvertEgressScopeBundle` is frozen. Egress readers (`getQuerySourcePayloadPreferDefinition`, `getQueryDefinitionSymbol` → `resolveDefinitionSymbolInScopeChain`, wildcard promotion, interface checks) must read **only** from the bundle while it is active.
+
+```java
+// resolveDefinitionSymbolInScopeChain — strict, no scope-chain fallback when bundle active
+if (activeConvertEgressScopeBundle != null) {
+    return activeConvertEgressScopeBundle.getDefinitionPayload(key);
+}
+return lookupDefinitionPayloadOnScopeChain(key);
+```
+
+**Do not add** a “bundle miss → walk scope chain again” fallback. If egress needs a `def_*` key, S3 must have opened it into the bundle. A miss while the bundle is active is either intentional invisibility (e.g. sibling participant) or an S3 gap to fix — not something to paper over with fallback.
+
+## What S4 protects (why it exists)
+
+Without S4, each branch convert re-opens every sibling `def_query*` already published on the set-op parent while building its bundle → **O(N²)** re-merge (workplan buckets **2.8-1** / timing probes). Semantically, branch *K* must not treat branch *K−1*’s published participant payload as visible input during convert.
+
+## How to test (agents)
+
+| Do | Don't |
+|----|-------|
+| SQL integration tests through `SqlParseEventWalker` with symbol-table / dictionary goldens | Private-method harnesses on `SqlParseSymbolTreeHelper` that call `resolveDefinitionSymbolInScopeChain` directly |
+| Assert observable buckets: branch *N* `interface` / `table_dictionary` / `query_dictionary` provenance | Tests that only pass when post-bundle fallback is enabled |
+| Use `setOpSiblingIsolationInvariantV0Test` as the minimal S4 documentation test | Assume harness tests prove production behavior |
+
+**Sibling-isolation invariant (minimal SQL):** three-branch `UNION ALL` — branches 1 and 3 from outer CTE, branch 2 from a distinct table. After parse, `def_query3` must show `table_ref=query0` and must **not** carry sibling `branch_a` `table_dictionary`; `def_query2` keeps `branch_a` only.
+
+## Implementation map (`SqlParseSymbolTreeHelper`)
+
+| Mechanism | Entry / exit |
+|-----------|----------------|
+| S1 outer-only snapshot | `startSetOpDefinitionCache` → `setOpDefinitionPayloadCacheStack` |
+| S2 INTERSECT parity | `enterIntersected_query` / `exitIntersected_query` call same cache lifecycle as UNION |
+| S3 reference-directed bundle | `buildReferenceDirectedVisibleDefinitionPayloads` |
+| S4 sibling skip | `lookupDefinitionPayloadOnScopeChain` + `setOpParentFrameStack` |
+| 15.6 frozen egress | `buildConvertEgressScopeBundle` → `activeConvertEgressScopeBundle` |
+
+## Related docs
+
+- `parse/documents/symbol-table-resolution-consolidation-worklist.md` — Phase 15.6 bundle design
+- `parse/documents/set-operation-interface-duplicate-output-names-policy.md` — branch interface rules at exit

@@ -53,6 +53,7 @@ Or list entries: `jar tf "$JAR" 'META-INF/pss-parse/**'`
 
 ## Parser implementation rules (this repository)
 
+- **Set-op convert egress (Phase 2.8 + 15.6):** `.cursor/rules/set-op-convert-egress-scoping.mdc` — bundle build vs egress reads, S4 sibling isolation, no post-bundle fallback; canonical test `setOpSiblingIsolationInvariantV0Test`
 - **Relational modifiers:** `.cursor/rules/relational-modifier-resolution.mdc` → `parse/documents/relational-modifier-resolution-policy.md`
 - **Do not auto-refresh pivot/unpivot goldens** without user confirmation (see rule file).
 - Regenerate vendor docs after editing `parse/documents/*.md`: `./scripts/sync-pss-parse-docs-vendor.sh 5.1.3 5.1.3-1` or `mvn -pl pss-parse-docs package`.

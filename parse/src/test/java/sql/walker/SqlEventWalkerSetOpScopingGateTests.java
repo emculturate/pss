@@ -9,7 +9,7 @@ import org.junit.Test;
  * <p>Run:
  * {@code mvn -pl parse -Dtest=SqlEventWalkerSetOpScopingGateTests test}
  *
- * <p>Phase 2.8 S3 additions: wildcard UNION+CTE, correlated INTERSECT predicand.
+ * <p>Also delegated from {@link SmoketestQualityGateTestSuite} (Phase 2.8 hardening).
  */
 public class SqlEventWalkerSetOpScopingGateTests {
 
@@ -83,5 +83,11 @@ public class SqlEventWalkerSetOpScopingGateTests {
 	@Test
 	public void gateIntersectNestedUnionInsideIntersectV0Test() {
 		subqueryTests.threeLevelSetOpNestUnionIntersectExceptHappyPathTest();
+	}
+
+	/** Phase 2.8-S4 — minimal SQL proof of sibling-isolation invariant (see test javadoc). */
+	@Test
+	public void gateSetOpSiblingIsolationInvariantV0Test() {
+		subqueryTests.setOpSiblingIsolationInvariantV0Test();
 	}
 }

@@ -12,7 +12,7 @@ import org.junit.Test;
  * Or:
  * {@code mvn -Dtest=sql.walker.SmoketestQualityGateTestSuite test}
  *
- * Gate composition (245 tests):
+ * Gate composition (258 tests):
  * <ul>
  *   <li>Nested demo queries (2): {@code nestedQueryDemoTest}, {@code nestedQueryDemoWithCteTest}</li>
  *   <li>Query dictionary source routing canaries (3): {@code explicitAliasWhereOutputRefTest}, {@code explicitAliasWherePhysicalRefTest}, {@code implicitOutputWherePhysicalRefTest}</li>
@@ -50,6 +50,7 @@ import org.junit.Test;
  *   <li>Subquery semantics gate tests (6): {@code queryOverQueriesSingleWildcardResolvesUnqualifiedColumn}, {@code selectSameSubqueriesTest}, {@code havingExistsCorrelatedSubqueryTest}, {@code havingScalarSubqueryComparisonTest}, {@code selectWithUnionTest}, {@code multipleScalarAndOtherSubqueriesSymbolTableTest}</li>
  *   <li>Diagnostic exemplars (9): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code intersectionWithMismatchColumnCountsAndNamesTest}, {@code exceptColumnCountMismatchEmitsFatalTest}, {@code threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
  *   <li>Three-level set-op nesting smoke (2): {@code threeLevelSetOpNestUnionIntersectExceptHappyPathTest}, {@code threeLevelSetOpNestExceptUnionIntersectHappyPathTest}</li>
+ *   <li>Phase 2.8 set-op scoping gate (13): {@code SqlEventWalkerSetOpScopingGateTests} — UNION/INTERSECT convert-egress snapshot regressions + S4 sibling-isolation invariant SQL</li>
  *   <li>Parser diagnostic exemplars (11): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
  * </ul>
  *
@@ -82,6 +83,8 @@ public class SmoketestQualityGateTestSuite {
 			new SqlParserDiagnosticTests();
 	private final SqlEventWalkerSelectListOrderedAliasRefTests orderedSelectListAliasRefTests =
 			new SqlEventWalkerSelectListOrderedAliasRefTests();
+	private final SqlEventWalkerSetOpScopingGateTests setOpScopingGateTests =
+			new SqlEventWalkerSetOpScopingGateTests();
 
 	// --- Nested demo canaries (2) ---
 
@@ -1254,6 +1257,73 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void threeLevelSetOpNestExceptUnionIntersectHappyPathTest() {
 		unaliasedTests.threeLevelSetOpNestExceptUnionIntersectHappyPathTest();
+	}
+
+	// --- Phase 2.8 set-op scoping gate (13) ---
+
+	@Test
+	public void gateUnionTimingProbeConvertEgressV0Test() {
+		setOpScopingGateTests.gateUnionTimingProbeConvertEgressV0Test();
+	}
+
+	@Test
+	public void gateUnionCteWithJoinV0Test() {
+		setOpScopingGateTests.gateUnionCteWithJoinV0Test();
+	}
+
+	@Test
+	public void gateUnionCteUnqualifiedRefV0Test() {
+		setOpScopingGateTests.gateUnionCteUnqualifiedRefV0Test();
+	}
+
+	@Test
+	public void gateUnionNestedWithCteChainV0Test() {
+		setOpScopingGateTests.gateUnionNestedWithCteChainV0Test();
+	}
+
+	@Test
+	public void gateUnionLeftJoinSubqueryAliasV0Test() {
+		setOpScopingGateTests.gateUnionLeftJoinSubqueryAliasV0Test();
+	}
+
+	@Test
+	public void gateUnionWildcardBranchAgainstExplicitColumnListV0Test() {
+		setOpScopingGateTests.gateUnionWildcardBranchAgainstExplicitColumnListV0Test();
+	}
+
+	@Test
+	public void gateIntersectCorrelatedScalarPredicandContextV0Test() {
+		setOpScopingGateTests.gateIntersectCorrelatedScalarPredicandContextV0Test();
+	}
+
+	@Test
+	public void gateIntersectTimingProbeConvertEgressV0Test() {
+		setOpScopingGateTests.gateIntersectTimingProbeConvertEgressV0Test();
+	}
+
+	@Test
+	public void gateIntersectCteUnqualifiedRefV0Test() {
+		setOpScopingGateTests.gateIntersectCteUnqualifiedRefV0Test();
+	}
+
+	@Test
+	public void gateIntersectWithUnionSiblingCteV0Test() {
+		setOpScopingGateTests.gateIntersectWithUnionSiblingCteV0Test();
+	}
+
+	@Test
+	public void gateIntersectNestedWithCteChainV0Test() {
+		setOpScopingGateTests.gateIntersectNestedWithCteChainV0Test();
+	}
+
+	@Test
+	public void gateIntersectNestedUnionInsideIntersectV0Test() {
+		setOpScopingGateTests.gateIntersectNestedUnionInsideIntersectV0Test();
+	}
+
+	@Test
+	public void gateSetOpSiblingIsolationInvariantV0Test() {
+		setOpScopingGateTests.gateSetOpSiblingIsolationInvariantV0Test();
 	}
 
 	@Test
