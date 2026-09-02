@@ -27,6 +27,21 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 
 	private StatementDialectGrammarHitCallback statementDialectGrammarHitCallback;
 
+	/**
+	 * Phase 2.8-B1: generation counter bumped on every symbol-table stack push/pop so
+	 * {@link sql.symboltree.SqlParseSymbolTreeHelper#getAncestorSymbolTables()} can cache
+	 * ancestor lists per stack depth without stale reads across frame transitions.
+	 */
+	private int symbolTableStackGeneration;
+
+	public int getSymbolTableStackGeneration() {
+		return symbolTableStackGeneration;
+	}
+
+	private void bumpSymbolTableStackGeneration() {
+		symbolTableStackGeneration++;
+	}
+
 	public void setStatementDialectGrammarHitCallback(StatementDialectGrammarHitCallback callback) {
 		this.statementDialectGrammarHitCallback = callback;
 	}
@@ -644,6 +659,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		
 		// Push current flags onto stack
 		pushFlagMap();
+		bumpSymbolTableStackGeneration();
 		
 	}
 
@@ -683,6 +699,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		symbolTable.put(key, symbols);
 		
 		popFlagMap();
+		bumpSymbolTableStackGeneration();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -698,6 +715,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		}
 
 		popFlagMap();
+		bumpSymbolTableStackGeneration();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -722,6 +740,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	public void popSymbolTableDiscardFrame() {
 		symbolTable = (HashMap<String, Object>) popStack("symbolTable");
 		popFlagMap();
+		bumpSymbolTableStackGeneration();
 	}
 
 	@SuppressWarnings("unchecked")

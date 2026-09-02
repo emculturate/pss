@@ -2,6 +2,7 @@ package sql.symboltree;
 
 import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -134,6 +135,11 @@ public class SqlParseSymbolTreeHelper {
 	/** Select-list output aliases backed by scalar / query-backed subtrees (grounded without physical egress). */
 	private HashSet<String> activeConvertEgressScalarSubqueryAliases;
 	private ArrayList<String> activeConvertEgressSelectListOutputAliasSourceOrder;
+
+	/** Phase 2.8-B1: per symbol-table stack generation + parent depth (see {@link SqlASTWalkerHelper#getSymbolTableStackGeneration()}). */
+	private int ancestorSymbolTablesCacheGeneration = -1;
+	private Integer ancestorSymbolTablesCacheParentLevel;
+	private List<Map<String, Object>> ancestorSymbolTablesCache;
 
 	public SqlParseSymbolTreeHelper(SqlASTWalkerHelper walkerHelper) {
 		this.walker = walkerHelper;
@@ -6068,10 +6074,21 @@ public class SqlParseSymbolTreeHelper {
 	@SuppressWarnings("unchecked")
 	public List<Map<String, Object>> getAncestorSymbolTables() {
 		WalkerHotspotProfiler.hit("getAncestorSymbolTables");
-		ArrayList<Map<String, Object>> ancestors = new ArrayList<Map<String, Object>>();
 		Integer parentLevel = walker.currentStackLevel("symbolTable");
+		int stackGeneration = walker.getSymbolTableStackGeneration();
+		if (ancestorSymbolTablesCache != null
+				&& ancestorSymbolTablesCacheGeneration == stackGeneration
+				&& Objects.equals(ancestorSymbolTablesCacheParentLevel, parentLevel)) {
+			WalkerHotspotProfiler.hit("getAncestorSymbolTables_cacheHit");
+			return ancestorSymbolTablesCache;
+		}
+
+		ArrayList<Map<String, Object>> ancestors = new ArrayList<Map<String, Object>>();
 		if (parentLevel == null || walker.asTree == null) {
-			return ancestors;
+			ancestorSymbolTablesCacheGeneration = stackGeneration;
+			ancestorSymbolTablesCacheParentLevel = parentLevel;
+			ancestorSymbolTablesCache = Collections.emptyList();
+			return ancestorSymbolTablesCache;
 		}
 
 		for (int level = parentLevel; level >= 1; level--) {
@@ -6082,7 +6099,10 @@ public class SqlParseSymbolTreeHelper {
 			}
 		}
 
-		return ancestors;
+		ancestorSymbolTablesCacheGeneration = stackGeneration;
+		ancestorSymbolTablesCacheParentLevel = parentLevel;
+		ancestorSymbolTablesCache = Collections.unmodifiableList(ancestors);
+		return ancestorSymbolTablesCache;
 	}
 
 	/**
