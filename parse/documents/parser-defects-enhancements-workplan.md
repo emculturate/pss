@@ -771,7 +771,9 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Set-op scoping **S1–S4** (outer-only snapshot, INTERSECT parity, reference-directed bundle, sibling exclusion) + S4 sibling-isolation SQL test + agent rule `.cursor/rules/set-op-convert-egress-scoping.mdc`.
 - **Done (2026-09-02):** Set-op scoping **S5** — audited exit-time-only participant merge/validation; gate delegates for UNION/INTERSECT/EXCEPT interface FATALs + nested INTERSECT validation.
 - **Done (2026-09-02):** Post-S5 profiling — `ParseLatencyDiagnosticTest` convert-egress probes, `WalkerHotspotProfiler`, shared-table comparison (`SqlEventWalkerSetOpTimingProbeSharedTableComparisonTests`), N10 vs N50 scaling. **Revised performance plan (B/C/D/E)** documented below; do not re-diagnose from scratch.
-- **Next:** **B1–B3** (ancestor / visible-scope caching) → **C1–C2** (walker exit profiling + hot-path reduction) → **E2** (full row 475 fixture) → **E3** (Panto buckets). Non-UNION canaries **5261, 4647, 130, 4197** after each major step.
+- **Done (2026-09-02):** Phase **B1** — cache `getAncestorSymbolTables()` per symbol-table stack generation (`e525ddc`). Profiler: `getAncestorSymbolTables_levelsScanned` 19,384 → **256** at N=50 M=20; walk time flat (~9.1 s). Gates green.
+- **Skipped (2026-09-02):** Phase **B2** / **B3** — implemented locally, measured, **reverted** (no dependency from other landed work). Per-convert outer-visible-scope cache (B2) and frozen ancestor list (B3) cut redundant profiler call counts but **did not improve wall time**; B2 trended ~0.5–0.7 s slower vs B1 (JVM noise band). Convert egress + scope reconstruction remain **&lt;1%** of walk — further B-track work abandoned; see **Phase B outcomes** below.
+- **Next:** **C1–C2** (walker exit profiling + hot-path reduction) → **E1** (re-baseline after C) → **E2** (full row 475 fixture) → **E3** (Panto buckets). Non-UNION canaries **5261, 4647, 130, 4197** after each major step.
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
 #### Set-op scoping — safe implementation steps (2.8)
@@ -850,22 +852,24 @@ This measures **accumulation of distinct physical table names** in the global di
 | Sibling `def_*` re-merge in `buildConvertEgressScopeBundle` | **Partially true** — S1–S4 fixed; ~15–20% win; not dominant remainder |
 | Global `table_dictionary` / token-list dedup on distinct tables | **Not primary** on synthetic probe; shared-table slower; convert sub-ms |
 | Recursive derived lineage phase B (`runConvertEgressRelationalModifierDerivedLineagePhaseB`) | **Linear** call count (11→51); not N² multiplier |
-| Repeated **`getAncestorSymbolTables()`** reconstruction | **Confirmed waste** — ~6.5k calls at N=50, ~3 ancestor levels per call; linear total scans but redundant across convert sub-paths |
+| Repeated **`getAncestorSymbolTables()`** reconstruction | **Confirmed waste** — ~6.5k calls at N=50 pre-B1; **B1** cuts level scans ~98% (19,384 → 256) but walk ms unchanged — not the dominant cost |
 | **`SqlParseEventWalker` AST enter/exit** (symbol capture before convert) | **Likely dominant** — ~99% of walk time unaccounted for by convert; next profile target (C1) |
 
 ##### Revised implementation tracks (execute in order)
 
 **Phase A — Done (frozen):** S1–S5 scoping + diagnostics (S0, `ParseLatencyDiagnosticTest`, `WalkerHotspotProfiler`, shared-table probes).
 
-**Phase B — Scope reconstruction cache (P0, next code changes)**
+**Phase B — Scope reconstruction cache (B1 done; B2–B3 skipped)**
 
-| Step | Change | Gate |
-|------|--------|------|
-| **B1** | Cache `getAncestorSymbolTables()` per `symbolTable` stack depth; invalidate on push/pop only | `getAncestorSymbolTables` call count drops sharply; N=50 probe wall time ↓; `setOpSiblingIsolationInvariantV0Test` + walker goldens green |
-| **B2** | Cache `collectOuterVisibleScope` / effective alias+table maps **once per convert**; thread through clause probe + resolution contexts | `collectOuterVisibleScope` → ~1 per convert |
-| **B3** | Pass precomputed ancestor list into `lookupDefinitionPayloadOnScopeChain` / bundle build for duration of one convert (avoid nested rebuilds) | Lookup + ancestor metrics fall; S4 gates unchanged |
+| Step | Status | Change | Outcome |
+|------|--------|--------|---------|
+| **B1** | **Done** (`e525ddc`) | Cache `getAncestorSymbolTables()` per `symbolTable` stack generation; invalidate on push/pop only (`SqlASTWalkerHelper.symbolTableStackGeneration`) | `getAncestorSymbolTables_levelsScanned` **19,384 → 256** at N=50 M=20; `getAncestorSymbolTables_cacheHit` ~98%; walk ~**9.1 s** (flat vs post-S5 ~8.8–9.0 s); gates green |
+| **B2** | **Skipped** (reverted) | Cache `collectOuterVisibleScope` once per convert; copy outer maps before merge in `buildEffectiveVisible*` | `collectOuterVisibleScope_cacheHit` ~94% (1,683/1,787); `getAncestorSymbolTables` calls 6,481 → 4,798; walk ~**9.9 s** avg — **no win** |
+| **B3** | **Skipped** (reverted) | Freeze ancestor list for duration of one convert (`activeConvertEgressAncestorSymbolTables`) | `getAncestorSymbolTables_convertEgressReuse` ~3,213; walk ~**9.8 s** avg — **no win**; explicit per-convert materialize raised `levelsScanned` (256 → 409) vs B1-only cache hits |
 
-**Target after B:** Meaningful wall-time cut on N=50 probe (measure; do not assume α→1). Re-run calibration matrix (**E1**).
+**Phase B outcomes (2026-09-02):** B2 and B3 optimized paths that profiling already showed are **sub-millisecond** in aggregate (`convertTiming_totalMs` ≈ 2 at N=50). Reducing call counts there cannot move a ~10 s walk. **No subsequent step depends on B2/B3** — only `SqlParseSymbolTreeHelper` was touched; S1–S5 scoping, B1, `WalkerHotspotProfiler`, and gate tests are unaffected. **Do not revisit B2/B3** unless C1 shows convert-egress or `collectOuterVisibleScope` unexpectedly hot on corpus shapes (e.g. 2.8-2).
+
+**Target after B (revised):** B1 retained for correctness-neutral profiler hygiene only. **Wall-time gains require Phase C.** Optional **E1** after C (not after B alone).
 
 **Phase C — Walker hot path (P0–P1, where α→1 likely lives)**
 
@@ -885,11 +889,11 @@ This measures **accumulation of distinct physical table names** in the global di
 
 | Step | Change | Gate |
 |------|--------|------|
-| **E1** | Re-run calibration matrix after B (and after C); update **Post-S5 baselines** table | Wall ms + α, β; not α→1 alone |
+| **E1** | Re-run calibration matrix after **C** (optional spot-check after B1); update baselines table | Wall ms + α, β; not α→1 alone |
 | **E2** | Embed **full** row **475** SQL in `ParseLatencyDiagnosticTest`; record parse/walk/total | Walk &lt; 90 s (goal: approach 5.0.0-3 ~7 s) |
 | **E3** | All **2.8-1** rows under 90 s; then **2.8-2** canary **1837**; non-UNION **5261, 4647, 130, 4197** | Bucket tracker **Complete** |
 
-**Suggested execution order:** `A` (done) → `B1`→`B2`→`B3` → `E1` → `C1`→`C2` → `E2` → `D1` (if 2.8-2 hot) → `E3` → `D2` only if profiled.
+**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2` → `E1` → `E2` → `D1` (if 2.8-2 hot) → `E3` → `D2` only if profiled. ~~`B2`→`B3`~~ skipped (ineffective on wall time).
 
 ##### Legacy step mapping (for grep / old notes)
 
@@ -948,7 +952,7 @@ Consistent with **superlinear walk time** on long UNION chains. Pre-S5 model att
 
 Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreSolutionTests#setOpTimingProbePreSolutionCalibrationMatrixTest test` (test is `@Ignore`; remove or use IDE run).
 
-~~After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.~~ **Superseded (2026-09-02):** Post-S5 re-run shows **α still ≈ 2**. S1–S4 gave ~15–20% improvement only. Linear N scaling requires **Phase B + C** (see profiling section); do not block on α→1 after scoping alone.
+~~After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.~~ **Superseded (2026-09-02):** Post-S5 re-run shows **α still ≈ 2**. S1–S4 gave ~15–20% improvement only. **B1** did not change walk ms; **B2/B3** skipped. Linear N scaling requires **Phase C** (walker hot path); do not block on α→1 after scoping or B-track alone.
 
 ##### Post-S5 baselines (2026-09-02, local JVM, after S1–S5)
 
@@ -982,8 +986,8 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 
 **Takeaways (updated post-S5 profiling — do not revert to pre-profile assumptions):**
 
-1. **2.8-1 (EAB.Country)** — S1–S5 were **necessary** (correctness + ~15–20% win) but **insufficient** for α→1 or row 475 under 90 s. High **N**, low **M**; remaining cost is likely **walker AST hot path + redundant scope reconstruction**, not convert egress alone. After **B + C**, re-check row **475** (**E2**).
-2. **2.8-2 (PCM convert)** — Shared-table synthetic probe did **not** reproduce a dict-merge win; **D1** (defer global merge) remains targeted at real PCM shape (same bound table, substitutions, GROUP BY). Profile row **1837** after **B/C**.
+1. **2.8-1 (EAB.Country)** — S1–S5 were **necessary** (correctness + ~15–20% win) but **insufficient** for α→1 or row 475 under 90 s. High **N**, low **M**; remaining cost is **walker AST hot path** (convert egress + scope reconstruction confirmed &lt;1% on probe). After **C**, re-check row **475** (**E2**).
+2. **2.8-2 (PCM convert)** — Shared-table synthetic probe did **not** reproduce a dict-merge win; **D1** (defer global merge) remains targeted at real PCM shape (same bound table, substitutions, GROUP BY). Profile row **1837** after **C**.
 3. **Non-UNION guardrails** (unchanged): **5261, 4647, 130, 4197** — run after each major phase so a set-op-only fix is not confused with a full corpus fix.
 
 **When to run what (progress checklist):**
@@ -991,8 +995,9 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 | After step | Synthetic gate | Corpus / diagnostic (manual) |
 |------------|----------------|------------------------------|
 | **S1–S5** | Day-to-day probes + `setOpSiblingIsolationInvariantV0Test` + set-op gate tests | — |
-| **B1–B3** | `WalkerHotspotProfiler` N10 vs N50; calibration matrix | — |
-| **E1** | Update post-B baselines in this doc | — |
+| **B1** | `WalkerHotspotProfiler` N10 vs N50; `levelsScanned` drop | Done — walk flat |
+| ~~**B2–B3**~~ | — | Skipped (reverted) |
+| **E1** | Update post-C baselines in this doc | After C1–C2 |
 | **C1–C2** | Calibration matrix; α should move toward 1 | — |
 | **E2** | — | Full row **475** in `ParseLatencyDiagnosticTest` |
 | **E3** | — | All **2.8-1** rows; then **1837**; non-UNION canaries |
