@@ -843,6 +843,67 @@ Consistent with **O(N²)** sibling re-merge in `buildConvertEgressScopeBundle` m
 Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreSolutionTests#setOpTimingProbePreSolutionCalibrationMatrixTest test` (test is `@Ignore`; remove or use IDE run).
 
 After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.
+
+#### Corpus validation reminders — buckets 2.8-1 / 2.8-2 (check as S1–S7 land)
+
+**Purpose:** The synthetic N/M probes (`SetOpTimingProbeFixtures`) model **table-qualified convert egress**. Panto buckets **2.8-1** and **2.8-2** are the first corpus targets; re-check them after each major step so a probe-only win is not mistaken for a full fix.
+
+**N/M model fit (pre-solution, 2026-09-02):** \(T \approx c \cdot N^{2.0} \cdot M^{1.7}\) from calibration probes.
+
+| Bucket | Canary rows | Shape (approx.) | 5.0.0-3 | 5.1.3 | Model predict. | Predictable by N/M? |
+|--------|-------------|-----------------|---------|-------|----------------|---------------------|
+| **2.8-1** | **475**, 476, 1827, 1828 | `UNION` literal lookup; **N≈248**, **M=6**, no substitutions | ~7 s | **90 s** kill | **~33 s** | **Partially** — N dominates; ~2–3× underpredicts timeout; 5.1.3 regression ~12× vs 5.0.0-3 |
+| **2.8-2** | **1837** (canary), 1819–1821, 1986–1987 (worst **N≈105**) | `UNION ALL` PCM convert; **N≈71–106**, **M=4**, **~180–290** `<…>` subs, GROUP BY per branch | ~1.7–2.7 s | **90 s** kill | **~1.4–3 s** | **No** — N/M alone fails (~30–60×); need substitution / GROUP BY / parse-vs-walk split |
+
+**Takeaways to re-verify during implementation:**
+
+1. **2.8-1 (EAB.Country)** — Fix **S1–S4** (outer-only snapshot, reference-directed convert, sibling exclusion) should move this bucket first. High **N** with low **M**; synthetic probes and N²·M^1.7 land in the right order of magnitude. After S4, expect probe **α → ~1** and row **475** to finish well under 90 s.
+2. **2.8-2 (PCM convert)** — Do **not** declare victory from probe green alone. Moderate **N**, tiny **M**, but heavy **substitution + GROUP BY + bound FROM** per branch, and **repeated merges into the same global `table_dictionary` key** (see **Repeated-table dictionary merge — post-S4 follow-on** below). Profile **parse vs walk** after S4 before assuming one fix clears all 20 rows.
+3. **Non-UNION guardrails** (unchanged): **5261, 4647, 130, 4197** — run after set-op work so a cache/scoping fix is not confused with a full corpus fix.
+
+**When to run what (progress checklist):**
+
+| After step | Synthetic gate | Corpus / diagnostic (manual) |
+|------------|----------------|------------------------------|
+| **S1–S4** (each) | Day-to-day probes + fast set-op functional gate (see §2.8 gates) | — |
+| **S5** | Full `SqlEventWalkerSubqueriesAndClauseSemanticsTests` + set-op FATAL goldens | — |
+| **S6** | Re-run pre-solution matrix; one-minute `@Ignore` probes; confirm **α → ~1** | **`ParseLatencyDiagnosticTest#pantoRow475_eabCountry`** — extend fixture to **full** 248-branch text if trimmed; record parse / walk / total (target: walk no longer dominates at 90 s) |
+| **S7** | — | All **2.8-1** rows (**475, 476, 1827, 1828**) under 90 s on 5.1.3 |
+| **Post-S7 (2.8-2)** | Consider substitution-weighted synthetic probe (future) | **`ParseLatencyDiagnosticTest` row 1837** — *fixture not embedded yet*; add when starting 2.8-2; split parse vs walk; canary before sweeping remaining **2.8-2** rows |
+
+**Parse latency probes (`ParseLatencyDiagnosticTest`):**
+
+- **Now (S6 / 2.8-1):** `pantoRow475_eabCountry` exists but uses a **20-branch trim**; `probe_union250` is bare literals (~1 s walk on current JVM — poor analog for convert egress). Before S7, embed **full row 475** SQL from [panto-513-parse-timeouts brief](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) § row 475.
+- **Later (2.8-2):** Add `pantoRow1837_pcmConvert` (and optionally **1819** for max-N in bucket) — same harness, parse/walk/finalize breakdown. Defer until **S7** clears 2.8-1 or walk on 1837 is profiled once.
+
+#### Repeated-table dictionary merge — post-S4 follow-on (2.8-2 hypothesis)
+
+**Realization (2026-09-02):** Set-op cost is **not only** sibling `def_*` re-merge (S1–S4). When many `UNION` / `UNION ALL` branches reference the **same physical or bound table**, each branch convert calls `mergeTableDictionaryIntoWalkerTableDictionary` (and related materialization paths) into **one global `table_dictionary` entry**. Ref tokens are deduped with **`ArrayList.contains()` before each `add()`** in `SqlASTWalkerHelper.mergeTableDictionaryIntoWalkerTableDictionary` and `SqlParseSymbolTreeHelper.appendMaterializationRefTokens` — **O(k)** per insert as list length **k** grows, so **N branches × many column refs → O(N²) per shared column**. This is **additive** to the sibling `def_*` problem, not a substitute for it.
+
+| Bucket | Repeated same table? | S1–S4 expected impact | Likely residual after S4 |
+|--------|----------------------|----------------------|---------------------------|
+| **2.8-1** | No (literal rows, no `FROM`) | **High** — N≈248 sibling merge dominates | Low table-dict merge cost |
+| **2.8-2** | **Yes** — same `<[Enroll360].[Student]…>` per slice | **Partial** — sibling merge helps, but global table dict still grows every branch | **High** — ref accumulation + substitutions / `GROUP BY` |
+
+Current synthetic probes use **distinct `probe_branch_NNN` per branch** and therefore **do not exercise** repeated-table merge; add a **shared-table probe variant** when profiling S8.
+
+**Post-S4 hypothesis (profile before coding):** After S4 lands, run `ParseLatencyDiagnosticTest` on row **1837** and confirm whether walk time is still dominated by:
+
+1. `mergeTableDictionaryIntoWalkerTableDictionary` (global merge at end of each branch convert), and/or
+2. `appendMaterializationRefTokens` / `mergeUnknownEntries` (same `contains`-then-`add` pattern on ref / `locations` lists).
+
+If yes, treat **2.8-2** as a **second fix track** (S8+), not a failure of S1–S4.
+
+| Step | Recommendation | Rationale |
+|------|----------------|-----------|
+| **S8** | **Profile** row **1837** (and **1819** if N-bound) with stage timing after S4; compare walk ms to **2.8-1** row **475** | Separates sibling-merge win from repeated-table / token-dedup cost |
+| **S9** | Add synthetic probe: **N branches, shared one table name**, qualified column refs + optional `GROUP BY` (PCM-shaped, no full substitution corpus) | Reproduces 2.8-2 merge path in CI without 90 s Panto runs |
+| **S10** | **Defer global `table_dictionary` merge** for set-op participants: keep per-branch table dict on `def_queryN`; merge into walker global **once** at `exitUnionized_query` / `exitIntersected_query` (or only export union-scope aggregate) | Cuts N repeated merges into the same key |
+| **S11** | Replace **linear dedup on append** with **O(1) membership**: e.g. `LinkedHashSet` for ref identity during walk, **append-only lists** when order must be preserved and duplicates are impossible, or batch merge with a single dedup pass | Targets `contains()` hot path in merge + materialization |
+| **S12** | Re-run **2.8-2** canary (**1837**) then full bucket; update tracker | Acceptance for second track |
+
+**Open question (defer — revisit after S8 profile):** Would switching ref storage from **`ArrayList` + `contains()` dedup** back to **`HashMap` / `LinkedHashSet`-keyed structures** (as used elsewhere in the walker) materially improve performance for high-ref columns on a shared table, without breaking golden token ordering or consumer expectations? **Do not decide until** post-S4 profiling shows merge/materialization as the hotspot; then benchmark one column's ref bucket both ways on the shared-table probe.
+
 #### Construction-bucket tracker (74 timeouts)
 
 Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL lives in [panto_513_outstanding_issues.csv](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv); do not paste full queries here.
@@ -850,7 +911,7 @@ Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL
 | Bucket | Rows | Construction | Likely hotspot (unprofiled) | Canary CSV row | Status |
 |--------|-----:|--------------|-----------------------------|----------------|--------|
 | 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Set-op interface / column-header walk **O(N²) on branches** | 475 | Open |
-| 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Same as 2.8-1 plus substitution work | 1837 | Open |
+| 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Sibling `def_*` merge **plus** repeated global `table_dictionary` merge on same bound table | 1837 | Open |
 | 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | Open |
 | 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | Open |
 | 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | Open |
