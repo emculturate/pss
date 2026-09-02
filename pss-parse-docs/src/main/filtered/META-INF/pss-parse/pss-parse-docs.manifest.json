@@ -42,7 +42,7 @@
     },
     {
       "id": "set-operation-interface-duplicate-output-names-policy",
-      "role": "Author guidance for UNION INTERSECT EXCEPT branches with duplicate select-list output names; DUPLICATE_INTERFACE_COLUMNS and SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH",
+      "role": "Set-op branch interface distinctness: duplicate select-list output names, diagnostic cascade, and author remediation for UNION INTERSECT EXCEPT",
       "path": "META-INF/pss-parse/${pss.parse.api.version}/set-operation-interface-duplicate-output-names-policy.md",
       "parserVersionMin": "${pss.parse.api.version}"
     },
