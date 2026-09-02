@@ -4251,8 +4251,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// Handle symbol tables
 		HashMap<String, Object> symbols =  walker.symbolTable;
 
-		// Stop the incremental cache before finalization so the union scope's own def_* entry
-		// is not added into the cache of its enclosing (parent) set-op frame.
+		// Pop outer-only def_* snapshot before finalization so this frame's publish does not
+		// leak into the parent set-op frame's snapshot.
 		symbolTreeHelper.stopSetOpDefinitionCache();
 
 		if (walker.unionClauseFound) {
