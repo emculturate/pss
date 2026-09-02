@@ -773,7 +773,8 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Post-S5 profiling — `ParseLatencyDiagnosticTest` convert-egress probes, `WalkerHotspotProfiler`, shared-table comparison (`SqlEventWalkerSetOpTimingProbeSharedTableComparisonTests`), N10 vs N50 scaling. **Revised performance plan (B/C/D/E)** documented below; do not re-diagnose from scratch.
 - **Done (2026-09-02):** Phase **B1** — cache `getAncestorSymbolTables()` per symbol-table stack generation (`e525ddc`). Profiler: `getAncestorSymbolTables_levelsScanned` 19,384 → **256** at N=50 M=20; walk time flat (~9.1 s). Gates green.
 - **Skipped (2026-09-02):** Phase **B2** / **B3** — implemented locally, measured, **reverted** (no dependency from other landed work). Per-convert outer-visible-scope cache (B2) and frozen ancestor list (B3) cut redundant profiler call counts but **did not improve wall time**; B2 trended ~0.5–0.7 s slower vs B1 (JVM noise band). Convert egress + scope reconstruction remain **&lt;1%** of walk — further B-track work abandoned; see **Phase B outcomes** below.
-- **Next:** **C1–C2** (walker exit profiling + hot-path reduction) → **E1** (re-baseline after C) → **E2** (full row 475 fixture) → **E3** (Panto buckets). Non-UNION canaries **5261, 4647, 130, 4197** after each major step.
+- **Next:** **C2** (walker hot-path reduction per C1 scaling report) → **E1** (re-baseline after C) → **E2** (full row 475 fixture) → **E3** (Panto buckets). Non-UNION canaries **5261, 4647, 130, 4197** after each major step.
+- **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
 #### Set-op scoping — safe implementation steps (2.8)
@@ -805,7 +806,8 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 |------|------|--------|
 | Parse vs walk split | `ParseLatencyDiagnosticService`, `ParseLatencyDiagnosticTest` | `mvn -pl parse -Dtest=ParseLatencyDiagnosticTest#…` |
 | Method-call counters + convert breakdown | `WalkerHotspotProfiler` | `-Dpss.walker.hotspot.profile=true` |
-| N10 vs N50 scaling report | `SqlEventWalkerSetOpHotspotProfileTest` | `@Ignore` — remove for manual run |
+| N10 vs N50 scaling + distinct vs shared table mode | `SqlEventWalkerSetOpHotspotProfileTest#setOpHotspotProfileDistinctAndSharedN10vsN50` | `@Ignore` — **always run both** `DISTINCT_PER_BRANCH` and `SHARED_SINGLE_TABLE`; uses `reportTableModeComparison`, `reportDisproportionateTableModeScaling`, `reportWalkerExitTimingScaling` |
+| Distinct vs shared wall time (parse/walk split) | `ParseLatencyDiagnosticTest#probe_setOpConvertEgress_distinctVsShared_N50_M20_unionAll` | CI-safe paired walk comparison |
 | Distinct vs shared FROM table | `SetOpTimingProbeFixtures.BranchTableMode`, `SqlEventWalkerSetOpTimingProbeSharedTableComparisonTests` | `@Ignore` manual |
 
 Hooks instrument: `convertSymbolTableToTableDictionary`, `classifyColumnRefAtConvertEgress`, inner resolution (`resolveQualified…`, `collectUnqualifiedSourceReferences`, …), `getAncestorSymbolTables`, per-convert timing in `convertEnd`.
@@ -826,7 +828,25 @@ Hooks instrument: `convertSymbolTableToTableDictionary`, `classifyColumnRefAtCon
 
 **Shared-table control (same `probe_shared_table` every branch):** ~**5–8% slower** than distinct tables at N≥25 — **not** faster. `mergeColumnEntry_dedupContainsCheck` = **0** on distinct-table probe (first-write per column per table, no repeated `ArrayList.contains()` merges).
 
-##### Table dictionary — what “triangular” meant (do not misread)
+##### C1.1 / C1.2 timing findings (2026-09-02, re-run with dual-mode harness)
+
+**Wall time (parse + walk, M=20 UNION ALL):** distinct N10 **1.58 s** → N50 **10.3 s** (~**6.5×** for **4.64×** branches); shared N10 **0.68 s** → N50 **10.7 s** (~**15.7×**). At N=50, shared and distinct are within noise; shared is faster only at small N.
+
+**C1.1 — scoped walker exits (`walkerExitNanos_*`):** Instrumented exits sum to **~69 ms** (N10) / **~126 ms** (N50 distinct) vs **~10 s** wall — **~1–1.2%** of walk time is inside scoped listener exits. Dominant scoped exits at N50: `query_specification` ~31 ms, `finalizeQueryScopeSymbolTable` ~28 ms, `column_reference` ~31 ms, `select_item` ~29 ms (each ~25% of scoped total).
+
+**Superlinear per-exit time (nanos ratio &gt; hits ratio 4.64):**
+
+| Exit | Distinct nanos× | Shared nanos× | Notes |
+|------|-----------------|---------------|-------|
+| `column_reference` | 3.79 | **8.28** | Shared mode worst offender |
+| `select_item` | 3.48 | **7.64** | Interface flatten + dependency harvest |
+| `finalizeQueryScopeSymbolTable` | 1.21 | **5.06** | Convert publish; shared global dict merge |
+| `query_specification` | 1.27 | **5.04** | Sublinear on distinct; superlinear on shared |
+
+**C1.2 — grammar `exitEveryRule` (`ruleExitNanos_*`):** **~17 ms** (N10) / **~53 ms** (N50) — also **&lt;1%** of wall. Top rules: `simple_identifier`, `identifier`, `column_reference` (all scale ~linearly in hits). Dedicated exits (`exitQuery_specification`, `exitSelect_item`, …) hold most semantic work; generic rule exit is not the bottleneck.
+
+**Implication for C2:** Superlinear wall time lives **outside** both scoped exits and `exitEveryRule` — likely **enter** listeners, stack/map churn, set-op frame publish, or uncaptured helper paths. C2 should target `select_item` / `column_reference` per-call cost growth (especially shared table) and broaden timing to set-op frame + `flattenSubTreeForDependencyColumns` if needed.
+
 
 Profiler recorded **global walker `table_dictionary` top-level key count at each branch convert exit**, then **summed** those snapshots:
 
@@ -873,10 +893,17 @@ This measures **accumulation of distinct physical table names** in the global di
 
 **Phase C — Walker hot path (P0–P1, where α→1 likely lives)**
 
+**Performance gate policy (2026-09-02):** Every synthetic performance gate (**C1** substeps, **C2**, **E1** calibration) must run **both** `SetOpTimingProbeFixtures.BranchTableMode.DISTINCT_PER_BRANCH` and `SHARED_SINGLE_TABLE` in the same session. Do not ship a walker optimization that improves only one table mode without explaining the regression on the other.
+
 | Step | Change | Gate |
 |------|--------|------|
-| **C1** | Extend `WalkerHotspotProfiler` to top `SqlParseEventWalker` exit methods (`exitQuery_specification`, select-list / ORDER BY / column_reference, …) | Identify where ~99% of walk time sits |
-| **C2** | Reduce per-node symbol work per C1: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | N=50 probe α moves toward 1; full walker suite green |
+| **C1** | **Done** — call-count counters on top walker exits + column capture/archive/resolution | `walkerExit_*`, `columnCapture_*`, `columnResolution_*` in N10 vs N50 scaling report |
+| **C1.1** | **Done** — per-exit nanosecond timing (`walkerExitScope` on instrumented exits + `finalizeQueryScopeSymbolTable`) | `reportWalkerExitTiming` + `reportWalkerExitTimingScaling` (distinct **and** shared N10→N50) |
+| **C1.2** | **Done** — grammar-rule timing in `exitEveryRule` (`ruleExitBegin`/`ruleExitEnd`; lightweight JFR substitute) | `reportRuleExitTiming` per probe run; optional external JFR: `java -XX:StartFlightRecording=filename=walker.jfr,dumponexit=true -Dpss.walker.hotspot.profile=true …` |
+| **C1.3** | Gate every **C2** change with distinct **and** shared probes | `setOpHotspotProfileDistinctAndSharedN10vsN50` before/after each C2 patch |
+| **C1.4** | Defer SELECT/ORDER BY resolution memo on current probe | **Skip for now** — probe ORDER BY (`sort_col_*`) and SELECT (`col_*`) are disjoint; no duplicate qualified resolution |
+| **C1.5** | **D2** (`LinkedHashSet` dedup) only if `mergeColumnEntry_dedupContainsCheck` hot on shared probe or corpus | Shared N=50 showed 1500 `contains()` checks; revisit after C1.1/C1.2 attribute wall time |
+| **C2** | Reduce per-node symbol work per C1 timing report: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | N=50 probe α moves toward 1; full walker suite green; **both** table modes improve or flat |
 
 **Phase D — Dictionary policy (reprioritized; was S8–S11)**
 
@@ -998,7 +1025,9 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 | **B1** | `WalkerHotspotProfiler` N10 vs N50; `levelsScanned` drop | Done — walk flat |
 | ~~**B2–B3**~~ | — | Skipped (reverted) |
 | **E1** | Update post-C baselines in this doc | After C1–C2 |
-| **C1–C2** | Calibration matrix; α should move toward 1 | — |
+| **C1** | `setOpHotspotProfileDistinctAndSharedN10vsN50` — distinct **and** shared N10/N50 (counts + C1.1 exit timing + C1.2 rule timing) | Done |
+| **C1.1–C1.2** | Walker-exit + grammar-rule nanosecond reports in same harness run | Done — see C1 findings below after re-run |
+| **C2** | Calibration matrix; α should move toward 1 | — |
 | **E2** | — | Full row **475** in `ParseLatencyDiagnosticTest` |
 | **E3** | — | All **2.8-1** rows; then **1837**; non-UNION canaries |
 | **D1** (if needed) | Shared-table probe + 1837 | Remaining **2.8-2** rows |

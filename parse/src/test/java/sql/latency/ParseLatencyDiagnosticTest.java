@@ -118,6 +118,39 @@ public class ParseLatencyDiagnosticTest {
     // ── Phase 2.8 convert-egress probes (qualified FROM + ORDER BY; parse vs walk split) ──
 
     @Test
+    public void probe_setOpConvertEgress_distinctVsShared_N50_M20_unionAll() {
+        System.out.println("\n=== DISTINCT vs SHARED table mode (N=50 M=20 UNION ALL) ===");
+        long distinctWalkMs = runWalkOnlyMillis(
+                "distinct",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "UNION ALL", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.DISTINCT_PER_BRANCH));
+        long sharedWalkMs = runWalkOnlyMillis(
+                "shared",
+                SetOpTimingProbeFixtures.buildQuery(
+                        "UNION ALL", 50, 20,
+                        SetOpTimingProbeFixtures.orderByCountForSelectCount(20),
+                        SetOpTimingProbeFixtures.BranchTableMode.SHARED_SINGLE_TABLE));
+        double ratio = distinctWalkMs == 0L ? 0.0d : (sharedWalkMs * 1.0d) / distinctWalkMs;
+        System.out.println(
+                "TABLE_MODE_COMPARE N=50 M=20 UNION ALL"
+                        + " distinctWalkMs=" + distinctWalkMs
+                        + " sharedWalkMs=" + sharedWalkMs
+                        + " sharedOverDistinct=" + String.format("%.2f", ratio));
+    }
+
+    private static long runWalkOnlyMillis(String label, String query) {
+        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(query, SQLPARSER_SQL_TREE_KEY);
+        System.out.println(
+                "TABLE_MODE_PROBE label=" + label
+                        + " walkMs=" + report.walkMs
+                        + " parseMs=" + report.parseMs
+                        + " totalMs=" + report.totalMs);
+        return report.walkMs;
+    }
+
+    @Test
     public void probe_setOpConvertEgress_distinctTables_N50_M20_unionAll() {
         run("probe — convert egress DISTINCT tables N=50 M=20 UNION ALL",
                 SetOpTimingProbeFixtures.buildQuery(

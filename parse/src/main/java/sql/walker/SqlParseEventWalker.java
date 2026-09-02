@@ -52,6 +52,7 @@ import sql.diagnostics.ExtractDatetimeFieldAffinity;
 import sql.diagnostics.SqlParseDiagnosticService;
 import sql.grammar.SqlGrammarDialect;
 import sql.grammar.SqlGrammarDialectRuleRegistry;
+import sql.latency.WalkerHotspotProfiler;
 import sql.symboltree.SqlParseSymbolTreeHelper;
 /**
  * Primary Listener Class; The class accepts events from the parse project's 
@@ -1874,8 +1875,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@Override
 	public void exitEveryRule( ParserRuleContext ctx) {
-		recordDialectGrammarRuleIfApplicable(ctx);
+		long ruleExitStartNanos = WalkerHotspotProfiler.ruleExitBegin();
 		int ruleIndex = ctx.getRuleIndex();
+		try {
+		recordDialectGrammarRuleIfApplicable(ctx);
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Object item = null;
 
@@ -1914,6 +1917,9 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.popStack(ruleIndex);
+		} finally {
+			WalkerHotspotProfiler.ruleExitEnd(ruleIndex, ruleExitStartNanos, SQLSelectParserParser.ruleNames);
+		}
 	}
 
 	/******************************************************************************
@@ -4161,6 +4167,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitIntersected_query( SQLSelectParserParser.Intersected_queryContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("intersected_query")) {
 		int ruleIndex = ctx.getRuleIndex();
 
 		walker.handleOperandList(ruleIndex, MUMBLE_INTERSECT_KEY);
@@ -4180,6 +4187,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 					insertSource);
 		} else {
 			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
+		}
 		}
 	}
 
@@ -4249,6 +4257,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitUnionized_query( SQLSelectParserParser.Unionized_queryContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("unionized_query")) {
 		int ruleIndex = ctx.getRuleIndex();
 
 		walker.handleOperandList(ruleIndex, MUMBLE_UNION_KEY);
@@ -4271,6 +4280,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			symbolTreeHelper.popFrameAndMergeIntoParent(symbols);
 		}
 
+		}
 	}
 
 	@Override
@@ -4394,6 +4404,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	
 	@Override
 	public void exitQuery_specification( SQLSelectParserParser.Query_specificationContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("query_specification")) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -4466,6 +4477,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				ctx,
 				subMap,
 				shouldProjectSelectIntoForQuerySpecification(ctx));
+		}
 	}
 
 	
@@ -4504,6 +4516,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitSelect_list( SQLSelectParserParser.Select_listContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("select_list")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		@SuppressWarnings("unchecked")
@@ -4513,11 +4526,13 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTreeHelper.clearPendingWindowSelectInterfaceClauseDeps();
 		// then parent is normal query
 		walker.handlePushDown(ruleIndex);
+		}
 	}
 
 	
 	@Override
 	public void exitSelect_item( SQLSelectParserParser.Select_itemContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("select_item")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 
@@ -4624,6 +4639,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			symbolTreeHelper.addAliasTokensObject(interfaceAlias, aliasToken);
 		}
 		
+		}
 	}
 
 
@@ -4718,6 +4734,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitFrom_clause( SQLSelectParserParser.From_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("from_clause")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = walker.currentStackLevel(ruleIndex);
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
@@ -4732,6 +4749,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			walker.markCurrentQueryFromClauseComplete();
 		}
 		walker.handlePushDown(ruleIndex);
+		}
 	}
 
 	@Override
@@ -8640,6 +8658,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitColumn_reference( SQLSelectParserParser.Column_referenceContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("column_reference")) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -8716,6 +8735,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			if (tableRef != null && !tableRef.isBlank() && columnRef instanceof String columnName && !columnName.isBlank()) {
 				recordRelationalModifierOperandReference(tableRef, columnName, ctx.getStart());
 			}
+		}
 		}
 	}
 
@@ -10094,24 +10114,29 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitWhere_clause( SQLSelectParserParser.Where_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("where_clause")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
+		}
 	}
 
 	@Override
 	public void exitQualify_clause( SQLSelectParserParser.Qualify_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("qualify_clause")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
+		}
 	}
 
 	@Override
 	public void exitGroupby_clause( SQLSelectParserParser.Groupby_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("groupby_clause")) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> clauseMap = walker.removeNodeMap(ruleIndex, stackLevel);
@@ -10125,10 +10150,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		Map<String, Object> wrapper = walker.collectNewRuleMap(ruleIndex, stackLevel);
 		wrapper.put(String.valueOf(ruleIndex), clauseMap);
+		}
 	}
 
 	@Override
 	public void exitHaving_clause( SQLSelectParserParser.Having_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("having_clause")) {
 		int ruleIndex = ctx.getRuleIndex();
 		int stackLevel = walker.currentStackLevel(ruleIndex);
 
@@ -10136,10 +10163,12 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_FILTERS_KEY);
 		walker.handlePushDown(ruleIndex);
 //		walker.handleOneChild(ruleIndex);
+		}
 	}
 
 	@Override
 	public void exitOrderby_clause( SQLSelectParserParser.Orderby_clauseContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("orderby_clause")) {
 		// TODO: ITEM 36 - Add Substitution Variables to Order By: Subs Variable
 		// List, Table Dictionary, Symbol Table, AST Tree
 		int ruleIndex = ctx.getRuleIndex();
@@ -10175,6 +10204,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 			symbolTreeHelper.captureClauseDependencies(subMap, MUMBLE_ORDERED_BY_KEY);
 			walker.handlePushDown(ruleIndex);
+		}
 		}
 	}
 
@@ -11546,6 +11576,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 	@Override
 	public void exitSort_specifier( SQLSelectParserParser.Sort_specifierContext ctx) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored = WalkerHotspotProfiler.walkerExitScope("sort_specifier")) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
@@ -11596,6 +11627,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int parentRuleIndex = ctx.getParent().getRuleIndex();
 		walker.handleListItem(ruleIndex, parentRuleIndex);
 
+		}
 	}
 
 	@Override

@@ -1456,7 +1456,7 @@ public class SqlParseSymbolTreeHelper {
 				assignmentsObj,
 				(siteKey, refObj, columnName, tableRef) -> {
 					if (shouldConsumeStructuredDerivedUnknownAtConvertEgressPhaseB(
-							classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx))) {
+							classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx, "derivedLineagePhaseB"))) {
 						consumeDerivedColumnUnknownEntry(
 								localUnresolvedColumnMap,
 								tableRef,
@@ -1480,7 +1480,7 @@ public class SqlParseSymbolTreeHelper {
 				continue;
 			}
 			if (shouldConsumeStructuredDerivedUnknownAtConvertEgressPhaseB(
-					classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx))) {
+					classifyColumnRefAtConvertEgress(columnName, tableRef, phaseBCtx, "derivedLineagePhaseB"))) {
 				consumeDerivedColumnUnknownEntry(
 						localUnresolvedColumnMap,
 						tableRef,
@@ -5266,7 +5266,8 @@ public class SqlParseSymbolTreeHelper {
 									classifyColumnRefAtConvertEgress(
 											columnName,
 											tableRef,
-											substitutionCtx);
+											substitutionCtx,
+											"interfaceSubstitution");
 							if (substitutionEgressResult.isDerivedColumn()) {
 								continue;
 							}
@@ -5326,7 +5327,8 @@ public class SqlParseSymbolTreeHelper {
 								classifyColumnRefAtConvertEgress(
 										columnName,
 										tableRef,
-										interfaceQualifiedCtx);
+										interfaceQualifiedCtx,
+										"interfaceLoopQualified");
 						if (egressResult.hasExpandedDerivedSourceLineage()) {
 							materializeUnpivotValueOperandFromInterfaceIfNeeded(
 									activeConvertEgressRelationalModifierContext,
@@ -5561,7 +5563,8 @@ public class SqlParseSymbolTreeHelper {
 								classifyColumnRefAtConvertEgress(
 										columnName,
 										null,
-										interfaceUnqualifiedCtx);
+										interfaceUnqualifiedCtx,
+										"interfaceLoopUnqualified");
 						if (egressResult.hasExpandedDerivedSourceLineage()) {
 							materializeUnpivotValueOperandFromInterfaceIfNeeded(
 									activeConvertEgressRelationalModifierContext,
@@ -8238,6 +8241,8 @@ public class SqlParseSymbolTreeHelper {
 			boolean emitQualifiedUnresolvedFromThisSubquery,
 			boolean deferSubqueryUnresolvedDiagnosticsToStatementBoundary,
 			boolean isStatementTopLevelQueryScope) {
+		try (WalkerHotspotProfiler.WalkerExitScope ignored =
+				WalkerHotspotProfiler.walkerExitScope("finalizeQueryScopeSymbolTable")) {
 		boolean emitFinalUnresolvedUnknownFatal = !hasParentQueryScope;
 		boolean deferCorrelatedValueSubqueryQualifiedUnknowns = hasParentQueryScope
 				&& passUpQualifiedUnresolvedFromThisSubquery;
@@ -8416,6 +8421,7 @@ public class SqlParseSymbolTreeHelper {
 			} else {
 				walker.symbolTable.put(MUMBLE_UNRESOLVED_COLUMN_KEY, qualifiedUnresolvedForParent);
 			}
+		}
 		}
 	}
 
@@ -11465,7 +11471,7 @@ public class SqlParseSymbolTreeHelper {
 						false,
 						null);
 				ConvertEgressColumnResolutionResult updateRhsEgressResult =
-						resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx);
+						resolveColumnRefAtConvertEgress(columnName, tableRef, updateRhsCtx, "updateRhs");
 				if (updateRhsEgressResult.isDerivedColumn()) {
 					continue;
 				}
@@ -14005,8 +14011,17 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
-		WalkerHotspotProfiler.hit("classifyColumnRefAtConvertEgress");
+		return classifyColumnRefAtConvertEgress(columnName, tableRef, ctx, "unspecified");
+	}
+
+	private ConvertEgressColumnResolutionResult classifyColumnRefAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ConvertEgressResolutionContext ctx,
+			String resolutionRound) {
 		boolean qualifiedShape = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+		WalkerHotspotProfiler.hitColumnResolutionRound(resolutionRound, qualifiedShape);
+		WalkerHotspotProfiler.hit("classifyColumnRefAtConvertEgress");
 		if (!qualifiedShape
 				&& ctx.localDerivedColumns != null
 				&& !ctx.localDerivedColumns.isEmpty()) {
@@ -14102,7 +14117,16 @@ public class SqlParseSymbolTreeHelper {
 			String columnName,
 			String tableRef,
 			ConvertEgressResolutionContext ctx) {
-		return classifyColumnRefAtConvertEgress(columnName, tableRef, ctx);
+		return resolveColumnRefAtConvertEgress(columnName, tableRef, ctx, "unspecified");
+	}
+
+	private ConvertEgressColumnResolutionResult resolveColumnRefAtConvertEgress(
+			String columnName,
+			String tableRef,
+			ConvertEgressResolutionContext ctx,
+			String resolutionRound) {
+		WalkerHotspotProfiler.hit("resolveColumnRefAtConvertEgress");
+		return classifyColumnRefAtConvertEgress(columnName, tableRef, ctx, resolutionRound);
 	}
 
 	/**
@@ -14839,7 +14863,7 @@ public class SqlParseSymbolTreeHelper {
 					false,
 					null);
 			ConvertEgressColumnResolutionResult egressResult =
-					resolveColumnRefAtConvertEgress(columnName, null, remainingIngressCtx);
+					resolveColumnRefAtConvertEgress(columnName, null, remainingIngressCtx, "remainingIngress");
 			if (egressResult.isDerivedColumn()) {
 				continue;
 			}
@@ -15558,6 +15582,11 @@ public class SqlParseSymbolTreeHelper {
 		WalkerHotspotProfiler.hit("validateArchivedClauseColumnRef");
 		String columnName = walker.extractReferenceNameFromInterfaceEntry(refObj);
 		String tableRef = walker.extractReferenceTableRefFromInterfaceEntry(refObj);
+		boolean qualifiedArchivedRef = tableRef != null && !tableRef.isBlank() && !"*".equals(tableRef);
+		WalkerHotspotProfiler.hit(
+				qualifiedArchivedRef
+						? "validateArchivedClauseColumnRef_qualified"
+						: "validateArchivedClauseColumnRef_unqualified");
 		String substitutionType = walker.extractSubstitutionTypeFromInterfaceEntry(refObj);
 
 		if (substitutionType != null
@@ -15632,7 +15661,7 @@ public class SqlParseSymbolTreeHelper {
 				false,
 				null);
 		ConvertEgressColumnResolutionResult clauseEgressResult =
-				resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx);
+				resolveColumnRefAtConvertEgress(columnName, tableRef, clauseProbeCtx, "archivedClause");
 		if (clauseEgressResult.hasExpandedDerivedSourceLineage()) {
 			recordRelationalModifierDerivedColumnClauseRefOnQueryDictionary(
 					refObj,
@@ -15853,6 +15882,7 @@ public class SqlParseSymbolTreeHelper {
 			RelationalModifierConvertEgressContext relationalModifierContext,
 			String deleteTargetTableRef,
 			boolean deferCorrelatedValueSubqueryQualifiedUnknowns) {
+		WalkerHotspotProfiler.hit("probeArchivedScopeClauseColumns");
 		HashMap<String, Object> scopeSymbols = archivedScopeColumnReferenceContainers != null
 				? archivedScopeColumnReferenceContainers
 				: new HashMap<String, Object>();
@@ -15907,6 +15937,7 @@ public class SqlParseSymbolTreeHelper {
 		if (probeContext == null || probeContext.scopeSymbols == null) {
 			return;
 		}
+		WalkerHotspotProfiler.hit("probeArchivedScopeClauseColumns_pass");
 		for (String clauseKey : ARCHIVED_SCOPE_COLUMN_REFERENCE_CONTAINER_KEYS) {
 			if (defersRelationalModifierClauseHarvestColumnRefList(clauseKey)) {
 				continue;
@@ -18187,6 +18218,7 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public void captureClauseDependencies(Map<String, Object> clauseSubMap, String symbolTableKey) {
+		WalkerHotspotProfiler.hitColumnArchive(symbolTableKey);
 		Object existing = walker.symbolTable.remove(symbolTableKey);
 		ArrayList<Object> flatList;
 		if (existing instanceof ArrayList<?>) {

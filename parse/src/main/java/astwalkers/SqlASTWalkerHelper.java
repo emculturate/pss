@@ -861,6 +861,11 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void collectUnresolvedColumnReference(Object tableReference, Object item, Token token) {
+		boolean qualifiedCapture = tableReference instanceof String tableRefStr
+				&& tableRefStr != null
+				&& !tableRefStr.isBlank()
+				&& !MUMBLE_UNKNOWN_KEY.equals(tableRefStr);
+		WalkerHotspotProfiler.hitColumnCapture(qualifiedCapture);
 	
 		HashMap<String, Object> unresolvedColumnEntry = buildUnresolvedColumnEntry(tableReference, item, token);
 		if (unresolvedColumnEntry == null) {
