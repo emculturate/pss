@@ -36,6 +36,22 @@ public class SqlEventWalkerSetOpTimingProbePreSolutionTests extends AbstractSqlP
 	}
 
 	@Test
+	@Ignore("Manual E1 calibration — full N/M grid; run with -Dtest=…#setOpTimingProbeE1CalibrationMatrixTest")
+	public void setOpTimingProbeE1CalibrationMatrixTest() {
+		System.out.println("=== E1 MATRIX: fixed N=50, sweep M ===");
+		for (int selectColumns : new int[] {6, 10, 20, 30, 40, 50}) {
+			measureSetOpTimingProbeMillis(UNION_ALL, 50, selectColumns);
+			measureSetOpTimingProbeMillis(INTERSECT, 50, selectColumns);
+		}
+
+		System.out.println("=== E1 MATRIX: fixed M=20, sweep N ===");
+		for (int joiners : new int[] {10, 25, 50, 75, 100, 114, 150}) {
+			measureSetOpTimingProbeMillis(UNION_ALL, joiners, 20);
+			measureSetOpTimingProbeMillis(INTERSECT, joiners, 20);
+		}
+	}
+
+	@Test
 	@Ignore("Manual calibration — prints pre-solution matrix; run with -Dtest=…#setOpTimingProbePreSolutionCalibrationMatrixTest")
 	public void setOpTimingProbePreSolutionCalibrationMatrixTest() {
 		System.out.println("=== PRE-SOLUTION MATRIX: fixed N=50, sweep M ===");

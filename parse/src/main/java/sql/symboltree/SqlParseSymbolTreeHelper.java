@@ -8437,6 +8437,8 @@ public class SqlParseSymbolTreeHelper {
 			String scopeKey,
 			Map<String, Object> scopeSymbols,
 			boolean insertSource) {
+		try (WalkerHotspotProfiler.HotspotScope ignored =
+				WalkerHotspotProfiler.hotspotScope("finalizeSetOperationScopeSymbolTable")) {
 		finalizeSetOperationAtExit(scopeKey, scopeSymbols, insertSource);
 		HashMap<String, Object> scopePayload = (HashMap<String, Object>) scopeSymbols;
 		HashMap<String, Object> scopedSummaryMap = removeScopedSetOperationSummaryMap(scopePayload);
@@ -8472,6 +8474,7 @@ public class SqlParseSymbolTreeHelper {
 
 		finalizeScopeDeferredUnresolved(scopePayload, liveDeferred);
 		publishQueryLikeScope(scopeKey, scopePayload);
+		}
 	}
 
 	/**
@@ -11175,7 +11178,10 @@ public class SqlParseSymbolTreeHelper {
 	 * (e.g. scalar subquery {@code max(D)}) are recorded on the interface entry.
 	 */
 	public void flattenSubTreeForDependencyColumns(HashMap<String, Object> subTree, ArrayList<Object> columnList) {
-		flattenSubTreeForDependencyColumns(subTree, columnList, false);
+		try (WalkerHotspotProfiler.HotspotScope ignored =
+				WalkerHotspotProfiler.hotspotScope("flattenSubTreeForDependencyColumns")) {
+			flattenSubTreeForDependencyColumns(subTree, columnList, false);
+		}
 	}
 
 	/**
@@ -18218,6 +18224,8 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public void captureClauseDependencies(Map<String, Object> clauseSubMap, String symbolTableKey) {
+		try (WalkerHotspotProfiler.HotspotScope ignored =
+				WalkerHotspotProfiler.hotspotScope("captureClauseDependencies")) {
 		WalkerHotspotProfiler.hitColumnArchive(symbolTableKey);
 		Object existing = walker.symbolTable.remove(symbolTableKey);
 		ArrayList<Object> flatList;
@@ -18249,6 +18257,7 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		walker.symbolTable.put(symbolTableKey, flatList);
+		}
 	}
 
 	@SuppressWarnings("unchecked")

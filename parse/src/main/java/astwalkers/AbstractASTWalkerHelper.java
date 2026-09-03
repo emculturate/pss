@@ -7,6 +7,7 @@ import java.util.Map;
 import static mumble.ASTWalkerHelperConstants.*;
 
 import errorhandling.ParseDiagnostic;
+import sql.latency.WalkerHotspotProfiler;
 
 
 public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelper {
@@ -23,21 +24,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
      * ***********************************/
 
      /**
-      * Trace flags for debugging purposes.
-      * These flags control the output of various trace messages during parsing.
-      */
-	 Boolean showParse;
-	 Boolean showSymbols;
-	 Boolean showOther;
-	 Boolean showResults;
-
-     // Trace levels for different types of messages
-	public final static Integer parseTrace = 1;
-	public final static Integer symbolTrace = 2;
-	public final static Integer otherTrace = 3;
-	public final static Integer resultTrace = 4;
-
-    /**
 	 * SQL Abstract Syntax Tree: This collects and constructs a nested Map data
 	 * structure representing the entire SQL statement
 	 */
@@ -106,11 +92,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 
 
     public AbstractASTWalkerHelper() {
-        // Set Tracing Defaults
-        this.showParse = false;
-        this.showSymbols = false;
-        this.showOther = false;
-        this.showResults = true;
         // Initialize the remaining objects
         this.asTree = new HashMap<String, Object>();
         this.stackTree = new HashMap<Integer, Integer>();
@@ -299,40 +280,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 		return a.equals(b);
 	}
 
-    public  Boolean getShowparse() {
-		return showParse;
-	}
-
-	public  Boolean getShowsymbols() {
-		return showSymbols;
-	}
-
-	public  Boolean getShowother() {
-		return showOther;
-	}
-
-	public  Boolean getShowresults() {
-		return showResults;
-	}
-
-	/**
-	 * Method checks with the level of trace indicated by the calling method
-	 * and if the trace is enabled, it will print the trace to the console.
-	 * This is an in-class built logging capability used for debugging only.
-	 * 
-	 * @param trace
-	 */
-	public void showTrace(Integer traceType, Object trace) {
-		if (traceType.equals(parseTrace) && showParse)
-			System.out.println(trace);
-		if (traceType.equals(symbolTrace) && showSymbols)
-			System.out.println(trace);
-		if (traceType.equals(resultTrace) && showResults)
-			System.out.println(trace);
-		if (traceType.equals(otherTrace) && showOther)
-			System.out.println(trace);
-	}
-
     
 /**
  * Multiple Stack Operations Explained
@@ -376,7 +323,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 			newLevel = context + 1;
 		}
 		stackTree.put(ruleIndex, newLevel);
-		showTrace(otherTrace, "PUSH - " + makeMapIndex(ruleIndex, newLevel) + ": " + stackTree);
 		return newLevel;
 	}
 
@@ -386,7 +332,6 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 			stackTree.remove(ruleIndex);
 		}
 		stackTree.put(ruleIndex, level);
-		showTrace(otherTrace, "POP - " + makeMapIndex(ruleIndex, level) + ": " + stackTree);
 		return level;
 	}
 
@@ -408,7 +353,6 @@ public Integer pushStack(String key, Object symbols) {
 		stackSymbols.put(key, newLevel);
 		String symbolKey = key + "_" + newLevel;
 		collect(symbolKey, symbols);
-		showTrace(otherTrace, "PUSH - " + symbolKey + ": " + symbols);
 		return newLevel;
 	}
 
@@ -419,7 +363,6 @@ public Integer pushStack(String key, Object symbols) {
 			stackSymbols.remove(key);
 		else
 			stackSymbols.put(key, level - 1);
-		showTrace(otherTrace, "POP - " + symbolKey + ": " + stackSymbols);
 		return asTree.remove(symbolKey);
 	}
 
@@ -543,11 +486,8 @@ public Integer pushStack(String key, Object symbols) {
 		keys = subMap.keySet().toArray(keys);
 
 		if (keys.length == 1) {
-			showTrace(parseTrace, "Just One Entry: " + subMap);
 			Object item = subMap.remove(keys[0]);
 			collect(ruleIndex, stackLevel, item);
-		} else {
-			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
 	}
 
@@ -584,7 +524,6 @@ public Integer pushStack(String key, Object symbols) {
 		keys = subMap.keySet().toArray(keys);
 
 		if (keys.length == 1) {
-			showTrace(parseTrace, "Just One Entry: " + subMap);
 			Object item = subMap.remove(keys[0]);
 
 			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
@@ -594,10 +533,7 @@ public Integer pushStack(String key, Object symbols) {
 			subMap.put(indx.toString(), item);
 			asTree.put("SKIP", "TRUE");
 
-		} else {
-			showTrace(parseTrace, "Too many entries: " + subMap);
 		}
-		showTrace(parseTrace, "handleListItem: " + subMap);
 	}
 
 	/**
@@ -614,16 +550,12 @@ public Integer pushStack(String key, Object symbols) {
 		if (subMap.size() == 1) {
 			Map<String, Object> item = (Map<String, Object>) subMap.remove("1");
 			collect(ruleIndex, stackLevel, item);
-			showTrace(parseTrace, operand + "-less " + operand + " predicate: " + item);
 
 		} else if (subMap.size() >= 2) {
 			HashMap<String, Object> item = new HashMap<String, Object>();
 			item.put(operand, subMap);
 
 			collect(ruleIndex, stackLevel, item);
-			showTrace(parseTrace, operand + "-ed predicate: " + item);
-		} else {
-			showTrace(parseTrace, "Wrong number of entries: " + subMap);
 		}
 	}
 
@@ -637,13 +569,14 @@ public Integer pushStack(String key, Object symbols) {
 	 * @param ruleIndex
 	 */
 	public void handlePushDown(int ruleIndex) {
+		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("handlePushDown")) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> newMap = collectNewRuleMap(ruleIndex, stackLevel);
 		newMap.put(type.toString(), subMap);
-		showTrace(parseTrace, "handlePushDown: " + subMap);
+		}
 	}
 
 	/**

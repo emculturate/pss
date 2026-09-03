@@ -83,6 +83,11 @@ public class SqlEventWalkerSetOpHotspotProfileTest extends AbstractSqlParseEvent
 		WalkerHotspotProfiler.reportWalkerExitTimingScaling(
 				"shared N10", sharedN10.counts, "shared N50", sharedN50.counts, 15);
 
+		WalkerHotspotProfiler.reportHotspotTimingScaling(
+				"distinct N10", distinctN10.counts, "distinct N50", distinctN50.counts, 15);
+		WalkerHotspotProfiler.reportHotspotTimingScaling(
+				"shared N10", sharedN10.counts, "shared N50", sharedN50.counts, 15);
+
 		WalkerHotspotProfiler.reportTableModeComparison(
 				"N10", distinctN10.elapsedMs, distinctN10.counts, sharedN10.elapsedMs, sharedN10.counts);
 		WalkerHotspotProfiler.reportTableModeComparison(

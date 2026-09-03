@@ -1847,6 +1847,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	 */
 	@Override
 	public void enterEveryRule( ParserRuleContext ctx) {
+		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("astEnterEveryRule")) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLvl = walker.pushStack(ruleIndex);
 
@@ -1859,10 +1860,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		else {
 			walker.collectNewRuleMap(ruleIndex, stackLvl);
 		}
-
-		walker.showTrace(walker.parseTrace, "Enter " + walker.makeMapIndex(ruleIndex, stackLvl) + ": "
-				+ SQLSelectParserParser.ruleNames[ruleIndex] + ": " +  walker.asTree);
-		walker.showTrace(walker.parseTrace, "");
+		}
 	}
 
 	/**
@@ -1877,6 +1875,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitEveryRule( ParserRuleContext ctx) {
 		long ruleExitStartNanos = WalkerHotspotProfiler.ruleExitBegin();
 		int ruleIndex = ctx.getRuleIndex();
+		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("astExitEveryRule")) {
 		try {
 		recordDialectGrammarRuleIfApplicable(ctx);
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
@@ -1907,9 +1906,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				} else {
 					Map<String, Object> idMap = walker.getNodeMap(parentNodeIndex, parentStackIndex);
 					if (idMap == null) {
-						walker.showTrace(walker.parseTrace, "EXIT " + walker.makeMapIndex(ruleIndex, stackLevel) + ": "
-								+ SQLSelectParserParser.ruleNames[ruleIndex] + ": Missing pMap");
-						walker.showTrace(walker.parseTrace, "");
+						// oddity - missing parent map during exitEveryRule promotion
 					} else
 						idMap.put(((Integer) (idMap.size())).toString(), item);
 				}
@@ -1919,6 +1916,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.popStack(ruleIndex);
 		} finally {
 			WalkerHotspotProfiler.ruleExitEnd(ruleIndex, ruleExitStartNanos, SQLSelectParserParser.ruleNames);
+		}
 		}
 	}
 

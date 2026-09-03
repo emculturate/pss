@@ -839,8 +839,6 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					// Only add the alias if it's different from the table reference; otherwise, it doesn't need to be added as an alias
 					qryTableAlias.put(alias, tableRef);
 			}
-		} else if (tableReference instanceof HashMap<?, ?>) {
-			showTrace(symbolTrace, "Error collecting table reference: " + tableReference);
 		}
 	}
 
@@ -866,6 +864,8 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 				&& !tableRefStr.isBlank()
 				&& !MUMBLE_UNKNOWN_KEY.equals(tableRefStr);
 		WalkerHotspotProfiler.hitColumnCapture(qualifiedCapture);
+		try (WalkerHotspotProfiler.HotspotScope ignored =
+				WalkerHotspotProfiler.hotspotScope("collectUnresolvedColumnReference")) {
 	
 		HashMap<String, Object> unresolvedColumnEntry = buildUnresolvedColumnEntry(tableReference, item, token);
 		if (unresolvedColumnEntry == null) {
@@ -917,6 +917,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 			mergeUnresolvedIngressSite((Map<String, Object>) existingMap, unresolvedColumnEntry);
 		} else {
 			qryTableDict.put(unresolvedKey, unresolvedColumnEntry);
+		}
 		}
 	}
 
@@ -3734,6 +3735,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void mergeUnknownEntries(HashMap<String, Object> target, HashMap<String, Object> source) {
+		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("mergeUnknownEntries")) {
 		if (target == null || source == null || source.isEmpty()) {
 			return;
 		}
@@ -3770,6 +3772,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 					target.put(key, sourceValue);
 				}
 			}
+		}
 		}
 	}
 

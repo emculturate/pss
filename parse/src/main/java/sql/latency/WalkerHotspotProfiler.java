@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.LongAdder;
  *   <li>{@code columnCapture_*} — unresolved column registration during AST walk</li>
  *   <li>{@code columnArchive_*} — clause dependency harvest (WHERE / GROUP BY / ORDER BY, …)</li>
  *   <li>{@code columnResolution_<round>[_qualified|_unqualified]} — convert-egress resolution rounds</li>
+ *   <li>{@code hotspot_<name>} / {@code hotspotNanos_<name>} — Phase C2.1 helper-path timing</li>
  * </ul>
  */
 public final class WalkerHotspotProfiler {
@@ -90,6 +91,33 @@ public final class WalkerHotspotProfiler {
 				return;
 			}
 			add("walkerExitNanos_" + ruleName, System.nanoTime() - startNanos);
+		}
+	}
+
+	/**
+	 * C2.1: try-with-resources scope for helper / AST infrastructure paths ({@code hotspot_<name>},
+	 * {@code hotspotNanos_<name>}).
+	 */
+	public static HotspotScope hotspotScope(String name) {
+		return new HotspotScope(name);
+	}
+
+	public static final class HotspotScope implements AutoCloseable {
+		private final String name;
+		private final long startNanos;
+
+		private HotspotScope(String name) {
+			this.name = name;
+			this.startNanos = ENABLED ? System.nanoTime() : 0L;
+			hit("hotspot_" + name);
+		}
+
+		@Override
+		public void close() {
+			if (!ENABLED || name == null || startNanos == 0L) {
+				return;
+			}
+			add("hotspotNanos_" + name, System.nanoTime() - startNanos);
 		}
 	}
 
@@ -213,6 +241,7 @@ public final class WalkerHotspotProfiler {
 		}
 		reportConvertBreakdown(label);
 		reportWalkerExitTiming(label, 25);
+		reportHotspotTiming(label, 25);
 		if (RULE_EXIT_TIMING) {
 			reportRuleExitTiming(label, 40);
 		}
@@ -359,6 +388,103 @@ public final class WalkerHotspotProfiler {
 							+ " hits=" + hits
 							+ " avgMicros=" + String.format("%.1f", avgMicros)
 							+ " pct=" + String.format("%.1f", pct));
+		}
+	}
+
+	/**
+	 * C2.1: ranked helper / infrastructure paths ({@code hotspotNanos_*}).
+	 */
+	public static void reportHotspotTiming(String label, int topN) {
+		if (!ENABLED) {
+			return;
+		}
+		Map<String, Long> snap = snapshot();
+		List<Map.Entry<String, Long>> ranked = new ArrayList<>();
+		long totalNanos = 0L;
+		for (Map.Entry<String, Long> entry : snap.entrySet()) {
+			String key = entry.getKey();
+			if (!key.startsWith("hotspotNanos_")) {
+				continue;
+			}
+			long nanos = entry.getValue();
+			totalNanos += nanos;
+			ranked.add(Map.entry(key.substring("hotspotNanos_".length()), nanos));
+		}
+		ranked.sort(Comparator.comparingLong((Map.Entry<String, Long> e) -> e.getValue()).reversed());
+		System.out.println("=== WALKER_HOTSPOT helper hotspot timing " + label + " (top " + topN + ") ===");
+		System.out.println("  totalHotspotNanos=" + totalNanos
+				+ " totalHotspotMs=" + String.format("%.1f", totalNanos / 1_000_000.0d));
+		int limit = Math.min(topN, ranked.size());
+		for (int i = 0; i < limit; i++) {
+			Map.Entry<String, Long> entry = ranked.get(i);
+			String name = entry.getKey();
+			long nanos = entry.getValue();
+			long hits = snap.getOrDefault("hotspot_" + name, 0L);
+			double avgMicros = hits == 0L ? 0.0d : (nanos / 1_000.0d) / hits;
+			double pct = totalNanos == 0L ? 0.0d : (nanos * 100.0d) / totalNanos;
+			System.out.println(
+					"  " + name
+							+ " totalMs=" + String.format("%.2f", nanos / 1_000_000.0d)
+							+ " hits=" + hits
+							+ " avgMicros=" + String.format("%.1f", avgMicros)
+							+ " pct=" + String.format("%.1f", pct));
+		}
+	}
+
+	public static void reportHotspotTimingScaling(
+			String smallLabel,
+			Map<String, Long> smallCounts,
+			String largeLabel,
+			Map<String, Long> largeCounts,
+			int topN) {
+		if (!ENABLED) {
+			return;
+		}
+		System.out.println(
+				"=== WALKER_HOTSPOT helper hotspot timing scaling " + smallLabel + " -> " + largeLabel + " ===");
+		List<String> names = new ArrayList<>();
+		for (String key : largeCounts.keySet()) {
+			if (key.startsWith("hotspotNanos_")) {
+				names.add(key.substring("hotspotNanos_".length()));
+			}
+		}
+		for (String key : smallCounts.keySet()) {
+			if (key.startsWith("hotspotNanos_")) {
+				String name = key.substring("hotspotNanos_".length());
+				if (!names.contains(name)) {
+					names.add(name);
+				}
+			}
+		}
+		List<Map.Entry<String, Double>> ratios = new ArrayList<>();
+		for (String name : names) {
+			long smallNanos = smallCounts.getOrDefault("hotspotNanos_" + name, 0L);
+			long largeNanos = largeCounts.getOrDefault("hotspotNanos_" + name, 0L);
+			if (smallNanos == 0L && largeNanos == 0L) {
+				continue;
+			}
+			double ratio = smallNanos == 0L ? Double.POSITIVE_INFINITY : (largeNanos * 1.0d) / smallNanos;
+			ratios.add(Map.entry(name, ratio));
+		}
+		ratios.sort(Comparator.comparingDouble((Map.Entry<String, Double> e) -> e.getValue()).reversed());
+		int limit = Math.min(topN, ratios.size());
+		for (int i = 0; i < limit; i++) {
+			Map.Entry<String, Double> entry = ratios.get(i);
+			String name = entry.getKey();
+			long smallNanos = smallCounts.getOrDefault("hotspotNanos_" + name, 0L);
+			long largeNanos = largeCounts.getOrDefault("hotspotNanos_" + name, 0L);
+			long smallHits = smallCounts.getOrDefault("hotspot_" + name, 0L);
+			long largeHits = largeCounts.getOrDefault("hotspot_" + name, 0L);
+			String ratioText = Double.isInfinite(entry.getValue())
+					? "inf"
+					: String.format("%.2f", entry.getValue());
+			System.out.println(
+					"  " + name
+							+ "  nanosRatio=" + ratioText
+							+ "  hitsRatio="
+							+ (smallHits == 0L ? "inf" : String.format("%.2f", largeHits * 1.0d / smallHits))
+							+ "  " + smallLabel + "Ms=" + String.format("%.2f", smallNanos / 1_000_000.0d)
+							+ "  " + largeLabel + "Ms=" + String.format("%.2f", largeNanos / 1_000_000.0d));
 		}
 	}
 

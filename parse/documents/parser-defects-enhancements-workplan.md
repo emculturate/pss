@@ -773,7 +773,10 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Post-S5 profiling — `ParseLatencyDiagnosticTest` convert-egress probes, `WalkerHotspotProfiler`, shared-table comparison (`SqlEventWalkerSetOpTimingProbeSharedTableComparisonTests`), N10 vs N50 scaling. **Revised performance plan (B/C/D/E)** documented below; do not re-diagnose from scratch.
 - **Done (2026-09-02):** Phase **B1** — cache `getAncestorSymbolTables()` per symbol-table stack generation (`e525ddc`). Profiler: `getAncestorSymbolTables_levelsScanned` 19,384 → **256** at N=50 M=20; walk time flat (~9.1 s). Gates green.
 - **Skipped (2026-09-02):** Phase **B2** / **B3** — implemented locally, measured, **reverted** (no dependency from other landed work). Per-convert outer-visible-scope cache (B2) and frozen ancestor list (B3) cut redundant profiler call counts but **did not improve wall time**; B2 trended ~0.5–0.7 s slower vs B1 (JVM noise band). Convert egress + scope reconstruction remain **&lt;1%** of walk — further B-track work abandoned; see **Phase B outcomes** below.
-- **Next:** **C2** (walker hot-path reduction per C1 scaling report) → **E1** (re-baseline after C) → **E2** (full row 475 fixture) → **E3** (Panto buckets). Non-UNION canaries **5261, 4647, 130, 4197** after each major step.
+- **Done (2026-09-02):** Phase **C2.1** — `hotspotScope` nanosecond timing on walker helper paths (`WalkerHotspotProfiler`, dual-mode harness).
+- **Done (2026-09-02):** Phase **C2.2** — removed eager `showTrace` / `asTree.toString()` from `enterEveryRule` / `exitEveryRule` (root cause of α≈2). N=50 M=20 walk **~900 ms** (was **~10.5 s** pre-solution); E1 fitted **α ≈ 0.94**, **β ≈ 0.92**.
+- **Done (2026-09-02):** Phase **E1** — full calibration matrix re-run (`setOpTimingProbeE1CalibrationMatrixTest`); post-C baselines recorded below.
+- **Next:** **E2** (embed full row **475** SQL in `ParseLatencyDiagnosticTest`) → **E3** (Panto buckets **2.8-1** / **2.8-2** + non-UNION canaries **5261, 4647, 130, 4197**). Optional further **C2** micro-opts (clause flatten batching, local FROM fast path) only if corpus profiling shows need.
 - **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
@@ -847,6 +850,21 @@ Hooks instrument: `convertSymbolTableToTableDictionary`, `classifyColumnRefAtCon
 
 **Implication for C2:** Superlinear wall time lives **outside** both scoped exits and `exitEveryRule` — likely **enter** listeners, stack/map churn, set-op frame publish, or uncaptured helper paths. C2 should target `select_item` / `column_reference` per-call cost growth (especially shared table) and broaden timing to set-op frame + `flattenSubTreeForDependencyColumns` if needed.
 
+##### C2.1 helper-path timing findings (2026-09-02)
+
+**`astEnterEveryRule` is the dominant cost** — accounts for **~88–90%** of walk wall time at N=50:
+
+| Mode | N10 enter ms | N50 enter ms | Wall N50 | Nanos ratio (N10→N50) | Hits ratio |
+|------|-------------|-------------|----------|----------------------|------------|
+| Distinct | 611 | **9,457** | 10,784 | **15.5×** | 4.63× |
+| Shared | 483 | **11,304** | 12,550 | **23.4×** | 4.63× |
+
+Per-call `astEnterEveryRule` avg grows **122 µs → 408 µs** (distinct) and **97 µs → 487 µs** (shared) — superlinear cost inside `pushStack` / `collectNewRuleMap` / `asTree` growth, not hit count.
+
+**Secondary (small) superlinear paths:** `collectUnresolvedColumnReference` (~22 ms N50, 3–7× nanos), `flattenSubTreeForDependencyColumns` (~5 ms), `mergeUnknownEntries` (~3 ms). **Not** convert, dict dedup, or set-op finalize.
+
+**C2.2 target:** ~~`enterEveryRule` infrastructure~~ **Done (2026-09-02):** root cause was eager `showTrace(..., "... " + asTree)` in `enterEveryRule` — Java evaluates `asTree.toString()` even when `showParse` is false. Removed all `showTrace` machinery from AST walker helpers. Post-fix N50 wall **~2.3 s distinct / ~1.9 s shared** (was **~10.8 s / ~12.6 s**); `astEnterEveryRule` **~19 ms** total (was **~9.5 s**); scaling **linear** in branches. **E1** full matrix (below) confirms **α ≈ 0.94**, **β ≈ 0.92**.
+
 
 Profiler recorded **global walker `table_dictionary` top-level key count at each branch convert exit**, then **summed** those snapshots:
 
@@ -861,7 +879,7 @@ This measures **accumulation of distinct physical table names** in the global di
 |-----------|--------|
 | Same **column names** (`col_00`…), **different** table per branch | Default probe — each table is its own dict key; reusing column names does **not** collapse buckets |
 | Same **table** name every branch | One dict key; slight **slowdown** (merge/dedup overhead); does not fix superlinear walk |
-| Higher **M** (more unique columns per branch) | Superlinear in M (β ≈ 1.7 pre-S5); independent of triangular table-key count |
+| Higher **M** (more unique columns per branch) | Was superlinear in M (β ≈ 1.7 pre-S5); **post-C2.2 β ≈ 0.92** (near-linear); independent of triangular table-key count |
 
 **Implication:** Optimizing `ArrayList.contains()` dedup (old S11) is **de-prioritized** until 2.8-2 profiling shows `contains()` hot. **Defer global table merge** (D1 / old S10) remains relevant for **2.8-2** (same bound table, many branches), less so for **2.8-1** literal UNION.
 
@@ -873,7 +891,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | Global `table_dictionary` / token-list dedup on distinct tables | **Not primary** on synthetic probe; shared-table slower; convert sub-ms |
 | Recursive derived lineage phase B (`runConvertEgressRelationalModifierDerivedLineagePhaseB`) | **Linear** call count (11→51); not N² multiplier |
 | Repeated **`getAncestorSymbolTables()`** reconstruction | **Confirmed waste** — ~6.5k calls at N=50 pre-B1; **B1** cuts level scans ~98% (19,384 → 256) but walk ms unchanged — not the dominant cost |
-| **`SqlParseEventWalker` AST enter/exit** (symbol capture before convert) | **Likely dominant** — ~99% of walk time unaccounted for by convert; next profile target (C1) |
+| **`SqlParseEventWalker` AST enter/exit** (symbol capture before convert) | **Confirmed dominant** — eager `asTree.toString()` in `showTrace` caused α≈2; **fixed in C2.2** |
 
 ##### Revised implementation tracks (execute in order)
 
@@ -903,7 +921,9 @@ This measures **accumulation of distinct physical table names** in the global di
 | **C1.3** | Gate every **C2** change with distinct **and** shared probes | `setOpHotspotProfileDistinctAndSharedN10vsN50` before/after each C2 patch |
 | **C1.4** | Defer SELECT/ORDER BY resolution memo on current probe | **Skip for now** — probe ORDER BY (`sort_col_*`) and SELECT (`col_*`) are disjoint; no duplicate qualified resolution |
 | **C1.5** | **D2** (`LinkedHashSet` dedup) | **Deferred** — spike (2026-09-02) confirmed shared probe hits dedup 1,500× but **no wall-time win**; see D2 spike table |
-| **C2** | Reduce per-node symbol work per C1 timing report: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | N=50 probe α moves toward 1; full walker suite green; **both** table modes improve or flat |
+| **C2.1** | **Done** — helper-path nanosecond timing (`hotspotScope` on `astEnterEveryRule`, `astExitEveryRule`, `handlePushDown`, `collectUnresolvedColumnReference`, `flattenSubTreeForDependencyColumns`, `captureClauseDependencies`, `finalizeSetOperationScopeSymbolTable`, `mergeUnknownEntries`) | `reportHotspotTiming` + scaling in dual-mode harness |
+| **C2.2** | **Done** — remove eager `showTrace` / `asTree.toString()` from `enterEveryRule` / `exitEveryRule`; delete trace flags from `AbstractASTWalkerHelper` | E1 α → ~1; N=50 M=20 walk **~900 ms** (was ~10.5 s pre-solution) |
+| **C2** | Optional micro-opts per C1 timing report: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | Only if **E3** corpus profiling shows residual hot paths |
 
 **Phase D — Dictionary policy (reprioritized; was S8–S11)**
 
@@ -916,7 +936,7 @@ This measures **accumulation of distinct physical table names** in the global di
 
 | Step | Change | Gate |
 |------|--------|------|
-| **E1** | Re-run calibration matrix after **C** (optional spot-check after B1); update baselines table | Wall ms + α, β; not α→1 alone |
+| **E1** | **Done** — full calibration matrix after **C2.2**; post-C baselines below | **α ≈ 0.94**, **β ≈ 0.92** (OLS log-log) |
 | **E2** | Embed **full** row **475** SQL in `ParseLatencyDiagnosticTest`; record parse/walk/total | Walk &lt; 90 s (goal: approach 5.0.0-3 ~7 s) |
 | **E3** | All **2.8-1** rows under 90 s; then **2.8-2** canary **1837**; non-UNION **5261, 4647, 130, 4197** | Bucket tracker **Complete** |
 
@@ -977,9 +997,9 @@ T(N,M) \approx c \cdot N^{\alpha} \cdot M^{\beta}, \quad \alpha \approx 2.0,\; \
 
 Consistent with **superlinear walk time** on long UNION chains. Pre-S5 model attributed this primarily to sibling `def_*` re-merge; **post-S5 profiling** shows convert egress is sub-ms and call counts inside classify scale linearly — remaining α≈2 is attributed to **walker AST hot path + redundant scope reconstruction** (see workplan §2.8 profiling conclusions).
 
-Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreSolutionTests#setOpTimingProbePreSolutionCalibrationMatrixTest test` (test is `@Ignore`; remove or use IDE run).
+Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreSolutionTests#setOpTimingProbeE1CalibrationMatrixTest test` (full N/M grid, `@Ignore` — remove or use IDE run). Subset + boundary sweeps: `#setOpTimingProbePreSolutionCalibrationMatrixTest`.
 
-~~After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.~~ **Superseded (2026-09-02):** Post-S5 re-run shows **α still ≈ 2**. S1–S4 gave ~15–20% improvement only. **B1** did not change walk ms; **B2/B3** skipped. Linear N scaling requires **Phase C** (walker hot path); do not block on α→1 after scoping or B-track alone.
+~~After set-op scoping (S1–S4), re-run matrix and one-minute probes; expect **α → ~1.0** (linear in N) while **β** unchanged.~~ **Superseded (2026-09-02):** Post-S5 re-run shows **α still ≈ 2**. S1–S4 gave ~15–20% improvement only. **B1** did not change walk ms; **B2/B3** skipped. ~~Linear N scaling requires **Phase C** (walker hot path).~~ **Updated (2026-09-02):** **C2.2** (`showTrace` removal) linearized probes — see **Post-C baselines** below.
 
 ##### Post-S5 baselines (2026-09-02, local JVM, after S1–S5)
 
@@ -991,7 +1011,44 @@ Run calibration matrix: `mvn -pl parse -Dtest=SqlEventWalkerSetOpTimingProbePreS
 
 Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 
-**`ParseLatencyDiagnosticTest` (N=50 M=20 convert-egress):** walk ~8 s, parse ~3 ms. **`pantoRow475_eabCountry`:** 20-branch trim only ~40 ms walk (not comparable to full row 475 ~7.4 s on 5.0.0-3).
+##### Post-C baselines (2026-09-02, local JVM, after C2.2 showTrace removal)
+
+**Convention:** N = joiner count; M = select-list column count; ORDER BY column count = M/2. Times in **ms** (parse + walk only). Source: `setOpTimingProbeE1CalibrationMatrixTest`.
+
+| Fixed dimension | Sweep | UNION ALL | INTERSECT |
+|-----------------|-------|-----------|-----------|
+| N = 50 | M = 6 | 1,184 | 355 |
+| N = 50 | M = 10 | 484 | 507 |
+| N = 50 | M = 20 | 957 | 964 |
+| N = 50 | M = 30 | 1,516 | 1,426 |
+| N = 50 | M = 40 | 1,777 | 1,766 |
+| N = 50 | M = 50 | 2,185 | 2,136 |
+| M = 20 | N = 10 | 224 | 194 |
+| M = 20 | N = 25 | 481 | 427 |
+| M = 20 | N = 50 | 900 | 838 |
+| M = 20 | N = 75 | 1,304 | 1,316 |
+| M = 20 | N = 100 | 1,945 | 1,747 |
+| M = 20 | N = 114 | 2,042 | 1,943 |
+| M = 20 | N = 150 | 2,599 | 2,522 |
+
+**Fitted complexity (post-C2.2, OLS log-log on full E1 grid):**
+
+\[
+T(N,M) \approx c \cdot N^{\alpha} \cdot M^{\beta}, \quad \alpha \approx 0.94,\; \beta \approx 0.92
+\]
+
+**Key comparisons (N=50 M=20):** pre-S5 **10,502 ms** → post-S5 **~8,830 ms** → post-C2.2 **900 ms** (~**11.7×** vs pre-S5). **N=150 M=20:** pre-S5 **112,201 ms** → post-C2.2 **2,599 ms** (~**43×**).
+
+**Note:** First E1 point (N=50 M=6 UNION ALL) may include JVM cold-start noise (1,184 ms vs 484 ms at M=10).
+
+**`ParseLatencyDiagnosticTest` (row 475 / 2.8-1 canary, post-C2.2):**
+
+| Test | Shape | Walk | Total |
+|------|-------|-----:|------:|
+| `probe_union250` | 250-term UNION (EAB.Country equivalent) | **143 ms** | **287 ms** |
+| `pantoRow475_eabCountry` | 20-branch trim (smoke only) | 5 ms | 9 ms |
+
+Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is the size-equivalent diagnostic. Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 
 **Day-to-day smoke probes** (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`, N=50, M=20):
 
@@ -1008,12 +1065,12 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 
 | Bucket | Canary rows | Shape (approx.) | 5.0.0-3 | 5.1.3 | Model predict. | Predictable by N/M? |
 |--------|-------------|-----------------|---------|-------|----------------|---------------------|
-| **2.8-1** | **475**, 476, 1827, 1828 | `UNION` literal lookup; **N≈248**, **M=6**, no substitutions | ~7 s | **90 s** kill | **~33 s** | **Partially** — N dominates; ~2–3× underpredicts timeout; 5.1.3 regression ~12× vs 5.0.0-3 |
+| **2.8-1** | **475**, 476, 1827, 1828 | `UNION` literal lookup; **N≈248**, **M=6**, no substitutions | ~7 s | **~0.3 s** (`probe_union250` post-C2.2) | **~33 s** (pre-C model) | **Yes** for N — α→1 fix collapses timeout; validate full SQL in **E2** / **E3** |
 | **2.8-2** | **1837** (canary), 1819–1821, 1986–1987 (worst **N≈105**) | `UNION ALL` PCM convert; **N≈71–106**, **M=4**, **~180–290** `<…>` subs, GROUP BY per branch | ~1.7–2.7 s | **90 s** kill | **~1.4–3 s** | **No** — N/M alone fails (~30–60×); need substitution / GROUP BY / parse-vs-walk split |
 
 **Takeaways (updated post-S5 profiling — do not revert to pre-profile assumptions):**
 
-1. **2.8-1 (EAB.Country)** — S1–S5 were **necessary** (correctness + ~15–20% win) but **insufficient** for α→1 or row 475 under 90 s. High **N**, low **M**; remaining cost is **walker AST hot path** (convert egress + scope reconstruction confirmed &lt;1% on probe). After **C**, re-check row **475** (**E2**).
+1. **2.8-1 (EAB.Country)** — **C2.2** fixed dominant α≈2 cost (`showTrace` / `asTree`). `probe_union250` walk **~143 ms** (was **90 s** kill pre-fix). Embed full row **475** (**E2**) and run all **2.8-1** rows (**E3**) to confirm.
 2. **2.8-2 (PCM convert)** — Shared-table synthetic probe did **not** reproduce a dict-merge win; **D1** (defer global merge) remains targeted at real PCM shape (same bound table, substitutions, GROUP BY). Profile row **1837** after **C**.
 3. **Non-UNION guardrails** (unchanged): **5261, 4647, 130, 4197** — run after each major phase so a set-op-only fix is not confused with a full corpus fix.
 
@@ -1024,10 +1081,9 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 | **S1–S5** | Day-to-day probes + `setOpSiblingIsolationInvariantV0Test` + set-op gate tests | — |
 | **B1** | `WalkerHotspotProfiler` N10 vs N50; `levelsScanned` drop | Done — walk flat |
 | ~~**B2–B3**~~ | — | Skipped (reverted) |
-| **E1** | Update post-C baselines in this doc | After C1–C2 |
-| **C1** | `setOpHotspotProfileDistinctAndSharedN10vsN50` — distinct **and** shared N10/N50 (counts + C1.1 exit timing + C1.2 rule timing) | Done |
-| **C1.1–C1.2** | Walker-exit + grammar-rule nanosecond reports in same harness run | Done — see C1 findings below after re-run |
-| **C2** | Calibration matrix; α should move toward 1 | — |
+| **E1** | **Done** — post-C baselines in this doc | `setOpTimingProbeE1CalibrationMatrixTest` |
+| **C2.2** | **Done** — `showTrace` removal; E1 α≈1 | `probe_union250` ~143 ms walk |
+| **C2** | Optional micro-opts only if E3 shows need | — |
 | **E2** | — | Full row **475** in `ParseLatencyDiagnosticTest` |
 | **E3** | — | All **2.8-1** rows; then **1837**; non-UNION canaries |
 | **D1** (if needed) | Shared-table probe + 1837 | Remaining **2.8-2** rows |
