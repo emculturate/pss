@@ -59,6 +59,9 @@ public abstract class AbstractParserAccess {
     // This is the error listener used to collect syntax errors and other messages.
     protected ParseErrorListener errorListener;
 
+    /** Access-layer diagnostics (e.g. AST walk skipped due to parse errors). */
+    private final List<ParseDiagnostic> accessDiagnostics = new ArrayList<>();
+
 
     /**
      * Builds a parser instance for the given query.
@@ -154,7 +157,14 @@ public abstract class AbstractParserAccess {
         }
     }
 
-    public List<ParseDiagnostic> getAllDiagnostics() {
+    protected void addAccessDiagnostic(ParseDiagnostic diagnostic) {
+        if (diagnostic != null) {
+            accessDiagnostics.add(diagnostic);
+        }
+    }
+
+    /** Parser-phase diagnostics from {@link ParseErrorCollector} and {@link ParseErrorListener} only. */
+    protected List<ParseDiagnostic> collectParserPhaseDiagnostics() {
         List<ParseDiagnostic> diagnostics = new ArrayList<>();
         if (errorCollector != null) {
             diagnostics.addAll(errorCollector.getDiagnostics());
@@ -167,6 +177,38 @@ public abstract class AbstractParserAccess {
                 }
             }
         }
+        return diagnostics;
+    }
+
+    /**
+     * True when ANTLR reported syntax errors or the parse phase emitted FATAL/ERROR diagnostics.
+     * Used to skip AST walking on recovered partial trees that would mis-align walker state.
+     */
+    protected boolean hasParsePhaseErrors() {
+        if (getParser() != null && getParser().getNumberOfSyntaxErrors() > 0) {
+            return true;
+        }
+        return findFirstParsePhaseErrorDiagnostic() != null;
+    }
+
+    /** First FATAL/ERROR diagnostic from the parse phase, in collection order. */
+    protected ParseDiagnostic findFirstParsePhaseErrorDiagnostic() {
+        for (ParseDiagnostic diagnostic : collectParserPhaseDiagnostics()) {
+            if (diagnostic == null) {
+                continue;
+            }
+            ParseDiagnostic.Severity severity = diagnostic.severity();
+            if (severity == ParseDiagnostic.Severity.FATAL
+                    || severity == ParseDiagnostic.Severity.ERROR) {
+                return diagnostic;
+            }
+        }
+        return null;
+    }
+
+    public List<ParseDiagnostic> getAllDiagnostics() {
+        List<ParseDiagnostic> diagnostics = new ArrayList<>(collectParserPhaseDiagnostics());
+        diagnostics.addAll(accessDiagnostics);
         return diagnostics;
     }
     

@@ -335,35 +335,36 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicSelectSyntaxFailureTest1() {
 		final String query = "select from";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
-				
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
 		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
 			text.equals("Line 1:7 - null - unexpected input: 'from'"));
 
-		text = snippet.getFatalErrorStringList().get(1);
-		Assert.assertTrue("Expected a syntax error with " + query,
-					text.equals("Exception when walking the parse tree: Cannot "
-					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
-			);
+		assertDiagnosticByCode(
+				snippet,
+				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
+				ParseDiagnostic.Severity.WARNING,
+				"Semantic analysis skipped because the SQL did not parse successfully (first parse error at line 1, position 7).",
+				null);
 	}				
 
    
 	@Test
 	public void basicSelectSyntaxFailureTest2() {
 		final String query = "not a sql statement at all";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
-				
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+
 		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
 			text.equals("Line 1:0 - null - unexpected input: 'not'"));
 
-		text = snippet.getFatalErrorStringList().get(1);
-		Assert.assertTrue("Expected a syntax error with " + query,
-					text.equals("Exception when walking the parse tree: Cannot "
-					+ "invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null")
-			);
-			
+		assertDiagnosticByCode(
+				snippet,
+				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
+				ParseDiagnostic.Severity.WARNING,
+				"Semantic analysis skipped because the SQL did not parse successfully (first parse error at line 1, position 0).",
+				null);
 	}				
 
 /****************
@@ -2918,12 +2919,18 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final Snippet tupleInList = runFailedSyntaxSQLParserTest(
 				"SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
 				SQLPARSER_SQL_TREE_KEY,
-				2);
+				1);
 		assertFatalDiagnosticByCode(
 				tupleInList,
 				"REPORT_ERROR",
 				"unexpected input",
 				",");
+		assertDiagnosticByCode(
+				tupleInList,
+				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
+				ParseDiagnostic.Severity.WARNING,
+				"first parse error at line 1, position 25",
+				null);
 
 		final String invalidQualifiedQuery = "SELECT q.a FROM (SELECT a FROM t1) q WHERE q.missing IN (SELECT a FROM t2)";
 		final Snippet invalidQualified = runFailedSyntaxSQLParserTest(invalidQualifiedQuery, SQLPARSER_SQL_TREE_KEY, 1);
