@@ -9,6 +9,7 @@ import access.SqlParserAccess;
 import astwalkers.AbstractASTWalkerHelper;
 import astwalkers.SqlASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
+import errorhandling.ParseSyntaxErrorContext;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DELETE_TREE_KEY;
@@ -191,6 +192,55 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		}
 	}
 
+	private void assertFatalSyntaxErrorAtPosition(
+			Snippet snippet,
+			String code,
+			String expectedFullMessage,
+			String expectedToken,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedParserRule,
+			String expectedContextSnippet,
+			String expectedSyntaxClass,
+			String expectedParserRules) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		Assert.assertNotNull("Diagnostic list should not be null", snippet.getParserDiagnosticList());
+
+		ParseDiagnostic matched = null;
+		for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+			if (diagnostic == null
+					|| diagnostic.severity() != ParseDiagnostic.Severity.FATAL
+					|| !code.equals(diagnostic.code())) {
+				continue;
+			}
+			if (expectedToken != null
+					&& (diagnostic.tokenText() == null || !diagnostic.tokenText().contains(expectedToken))) {
+				continue;
+			}
+			if (!Integer.valueOf(expectedLine).equals(diagnostic.line())
+					|| !Integer.valueOf(expectedCharPositionInLine).equals(diagnostic.charPositionInLine())) {
+				continue;
+			}
+			matched = diagnostic;
+			break;
+		}
+
+		Assert.assertNotNull("Expected fatal diagnostic with code " + code + " token '" + expectedToken + "'", matched);
+		Assert.assertEquals("Unexpected token text", expectedToken, matched.tokenText());
+		Assert.assertEquals("Unexpected parser rule", expectedParserRule, matched.ruleName());
+		Assert.assertEquals("Fatal syntax diagnostic message is wrong", expectedFullMessage, matched.message());
+		Assert.assertNotNull("Expected syntax-error details", matched.details());
+		Assert.assertEquals("Unexpected context snippet",
+				expectedContextSnippet,
+				matched.details().get(ParseSyntaxErrorContext.DETAIL_CONTEXT_SNIPPET));
+		Assert.assertEquals("Unexpected syntax class",
+				expectedSyntaxClass,
+				matched.details().get(ParseSyntaxErrorContext.DETAIL_SYNTAX_CLASS));
+		Assert.assertEquals("Unexpected parser rule stack",
+				expectedParserRules,
+				matched.details().get(ParseSyntaxErrorContext.DETAIL_PARSER_RULES));
+	}
+
 	private int countFatalDiagnostics(
 			Snippet snippet,
 			String expectedCode,
@@ -338,9 +388,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "select from";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
-		String text = snippet.getFatalErrorStringList().get(0);
-		Assert.assertTrue("Expected a syntax error with " + query,
-			text.equals("Line 1:7 - null - unexpected input: 'from'"));
+		assertFatalSyntaxErrorAtPosition(
+				snippet,
+				"REPORT_ERROR",
+				"Line 1:7 - unexpected input: 'from' in rule select_item: select from",
+				"from",
+				1,
+				7,
+				"select_item",
+				query,
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"select_item,select_list,query_specification");
 
 		assertDiagnosticByCode(
 				snippet,
@@ -356,9 +414,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final String query = "not a sql statement at all";
 		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
-		Assert.assertTrue("Expected a syntax error with " + query,
-			snippet.getFatalErrorStringList().stream()
-				.anyMatch(text -> text.equals("Line 1:0 - null - unexpected input: 'not'")));
+		assertFatalSyntaxErrorAtPosition(
+				snippet,
+				"REPORT_ERROR",
+				"Line 1:0 - unexpected input: 'not' in rule sql: not a sql statement at all",
+				"not",
+				1,
+				0,
+				"sql",
+				query,
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"sql");
 
 		assertDiagnosticByCode(
 				snippet,
@@ -2891,19 +2957,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				"SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}",
 				SQLPARSER_SQL_TREE_KEY,
 				1);
-		assertFatalDiagnosticByCode(
+		assertFatalSyntaxErrorAtPosition(
 				nestedFunctionArgs,
 				"REPORT_ERROR",
-				"unexpected input",
-				"(");
-		assertDiagnosticAtPosition(
-				nestedFunctionArgs,
-				"REPORT_ERROR",
-				ParseDiagnostic.Severity.FATAL,
-				"unexpected input",
+				"Line 1:31 - unexpected input: '(' in rule jinja_arg: SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}",
 				"(",
 				1,
-				31);
+				31,
+				"jinja_arg",
+				"SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_TEMPLATE_LIKE,
+				"jinja_arg,jinja_arg_list,jinja_function_call");
 	}
 
 	@Test
@@ -2921,11 +2985,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				"SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
 				SQLPARSER_SQL_TREE_KEY,
 				2);
-		assertFatalDiagnosticByCode(
+		assertFatalSyntaxErrorAtPosition(
 				tupleInList,
 				"REPORT_ERROR",
-				"unexpected input",
-				",");
+				"Line 1:25 - unexpected input: ',' in rule value_expression: SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
+				",",
+				1,
+				25,
+				"value_expression",
+				"SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"value_expression,search_condition,where_clause");
 		assertDiagnosticByCode(
 				tupleInList,
 				AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,

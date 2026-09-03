@@ -51,7 +51,7 @@ import org.junit.Test;
  *   <li>Diagnostic exemplars (9): {@code nestedWithDepth2ShadowedParentCteEmitsWarningAndQualifiedAliasFatal}, {@code unionWithMismatchColumnCountsAndNamesTest}, {@code intersectionWithMismatchColumnCountsAndNamesTest}, {@code exceptColumnCountMismatchEmitsFatalTest}, {@code threeLevelSetOpNestUnionIntersectExceptColumnCountMismatchTest}, {@code insertValuesExtraTargetColumnV9}, {@code coverageDrivenSelectIntoUnionBothSidesSnapshotTest}, {@code pivotInIdentifierDirectTableFatalV1Test}</li>
  *   <li>Three-level set-op nesting smoke (2): {@code threeLevelSetOpNestUnionIntersectExceptHappyPathTest}, {@code threeLevelSetOpNestExceptUnionIntersectHappyPathTest}</li>
  *   <li>Phase 2.8 set-op scoping gate (17): {@code SqlEventWalkerSetOpScopingGateTests} — convert-egress scoping (S1–S4), sibling-isolation SQL, exit-time validation (S5)</li>
- *   <li>Parser diagnostic exemplars (11): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
+ *   <li>Parser diagnostic exemplars (12): {@code parserReportErrorUnexpectedInputDiagnosticTest}, {@code parserReportErrorIncludesSnippetAndRuleTest}, {@code parserRecoverInlineInvalidSyntaxNearDiagnosticTest}, {@code parserRecoverMalformedVariableStartDiagnosticTest}, {@code parserRecoverSyntaxErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueErrorDiagnosticTest}, {@code parseErrorCollectorApplicationIssueFatalDiagnosticTest}, {@code parseErrorCollectorApplicationIssueWarningDiagnosticTest}, {@code parserAmbiguityDiagnosticTest}, {@code parserFullContextDiagnosticTest}, {@code parserContextSensitivityDiagnosticTest}, {@code parserSyntaxErrorDiagnosticTest}</li>
  * </ul>
  *
  * See {@code parse/documents/symbol-table-resolution-consolidation-worklist.md} for policy and commands.
@@ -1420,6 +1420,11 @@ public class SmoketestQualityGateTestSuite {
 	@Test
 	public void parserReportErrorUnexpectedInputDiagnosticTest() {
 		parserDiagnosticTests.parserReportErrorUnexpectedInputDiagnosticTest();
+	}
+
+	@Test
+	public void parserReportErrorIncludesSnippetAndRuleTest() {
+		parserDiagnosticTests.parserReportErrorIncludesSnippetAndRuleTest();
 	}
 
 	@Test

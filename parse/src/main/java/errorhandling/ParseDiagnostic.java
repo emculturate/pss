@@ -7,6 +7,10 @@ import java.util.Map;
  * It contains information about the severity of the diagnostic, a code to identify the type of issue,
  * a human-readable message, the line and character position where the issue occurred, the source of the diagnostic,
  * and optional fields for the rule name and token text associated with the issue.
+ *
+ * <p>For parse-strategy {@code REPORT_ERROR} and listener {@code SYNTAX_ERROR} fatals,
+ * {@code ruleName} is the innermost ANTLR production and {@code details} may include
+ * {@code contextSnippet}, {@code syntaxClass}, and {@code parserRules}.
  */
 public record ParseDiagnostic(
         Severity severity,

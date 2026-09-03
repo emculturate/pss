@@ -2,6 +2,7 @@ package errorhandling;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.Parser;
@@ -56,10 +57,16 @@ public class ParseErrorListener extends BaseErrorListener
     private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message,
                        Integer line, Integer pos, String ruleName, String tokenText,
                        boolean recoverable, String exceptionType) {
+        addDiagnostic(severity, code, message, line, pos, ruleName, tokenText, recoverable, exceptionType, null);
+    }
+
+    private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message,
+                       Integer line, Integer pos, String ruleName, String tokenText,
+                       boolean recoverable, String exceptionType, Map<String, String> details) {
         diagnostics.add(new ParseDiagnostic(
                 severity, code, message, line, pos,
             "ParseErrorListener", ruleName, tokenText,
-            recoverable, "parse.listener", exceptionType, null
+            recoverable, "parse.listener", exceptionType, details
         ));
     }
 
@@ -178,9 +185,19 @@ public class ParseErrorListener extends BaseErrorListener
                             int line, int charPositionInLine,
                             String msg, RecognitionException e)
     {
-        addDiagnostic(ParseDiagnostic.Severity.FATAL, "SYNTAX_ERROR", msg,
-            line, charPositionInLine, null, offendingSymbol == null ? null : offendingSymbol.toString(), false,
-            e == null ? null : e.getClass().getSimpleName());
+        // ANTLR's raw `msg` is omitted: the diagnostic message is built from location,
+        // token, snippet, and parser rule so REPORT_ERROR / SYNTAX_ERROR stay short and stable.
+        Parser parser = recognizer instanceof Parser p ? p : null;
+        Token token = offendingSymbol instanceof Token t ? t : null;
+        ParseSyntaxErrorContext context = ParseSyntaxErrorContext.capture(parser, token);
+        String errorMessage = context.formatFatalMessage();
+        String tokenText = token == null
+                ? (offendingSymbol == null ? null : offendingSymbol.toString())
+                : token.getText();
+        addDiagnostic(ParseDiagnostic.Severity.FATAL, "SYNTAX_ERROR", errorMessage,
+            line, charPositionInLine, context.parserRule(), tokenText, false,
+            e == null ? null : e.getClass().getSimpleName(),
+            context.toDetails());
     }
 
     @Override

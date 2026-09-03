@@ -1,6 +1,7 @@
 package access;
 
 import errorhandling.ParseDiagnostic;
+import errorhandling.ParseSyntaxErrorContext;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -89,6 +90,25 @@ public class ParserAccessClassTest
         assertTrue(snippet.getParserDiagnosticList().stream()
             .anyMatch(d -> d.severity() == ParseDiagnostic.Severity.FATAL));
         assertEquals(snippet.getFatalErrorCount(), snippet.getFatalErrorStringList().size());
+
+        ParseDiagnostic reportError = snippet.getParserDiagnosticList().stream()
+                .filter(d -> d != null && "REPORT_ERROR".equals(d.code()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(reportError);
+        assertEquals(Integer.valueOf(1), reportError.line());
+        assertEquals(Integer.valueOf(7), reportError.charPositionInLine());
+        assertEquals("FROM", reportError.tokenText());
+        assertEquals("select_item", reportError.ruleName());
+        assertEquals(
+                "Line 1:7 - unexpected input: 'FROM' in rule select_item: SELECT FROM",
+                reportError.message());
+        assertNotNull(reportError.details());
+        assertEquals("SELECT FROM", reportError.details().get(ParseSyntaxErrorContext.DETAIL_CONTEXT_SNIPPET));
+        assertEquals(ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+                reportError.details().get(ParseSyntaxErrorContext.DETAIL_SYNTAX_CLASS));
+        assertEquals("select_item,select_list,query_specification",
+                reportError.details().get(ParseSyntaxErrorContext.DETAIL_PARSER_RULES));
     }
 
 }

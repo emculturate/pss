@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,6 +23,7 @@ import com.google.gson.stream.JsonReader;
 import access.Snippet;
 import access.SqlParserAccess;
 import errorhandling.ParseDiagnostic;
+import errorhandling.ParseSyntaxErrorContext;
 
 /**
  * Shared parse pipeline and MCP result envelope builder. Uses {@link SqlParserAccess} directly
@@ -294,6 +296,7 @@ final class SqlParseMcpSupport {
             diagnosticJson.addProperty("recoverable", diagnostic.recoverable());
             addNullableString(diagnosticJson, "phase", diagnostic.phase());
             addNullableString(diagnosticJson, "exceptionType", diagnostic.exceptionType());
+            addSyntaxErrorContextFields(diagnosticJson, diagnostic);
             diagnosticJson.add("details", diagnostic.details() == null ? JsonNull.INSTANCE : GSON.toJsonTree(diagnostic.details()));
             diagnosticsArray.add(diagnosticJson);
         }
@@ -302,6 +305,29 @@ final class SqlParseMcpSupport {
 
     private static void addNullableString(JsonObject object, String propertyName, String value) {
         object.add(propertyName, value == null ? JsonNull.INSTANCE : GSON.toJsonTree(value));
+    }
+
+    private static void addSyntaxErrorContextFields(JsonObject diagnosticJson, ParseDiagnostic diagnostic) {
+        Map<String, String> details = diagnostic.details();
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        boolean hasSyntaxContext = details.containsKey(ParseSyntaxErrorContext.DETAIL_CONTEXT_SNIPPET)
+                || details.containsKey(ParseSyntaxErrorContext.DETAIL_SYNTAX_CLASS);
+        if (!hasSyntaxContext) {
+            return;
+        }
+        String contextSnippet = details.get(ParseSyntaxErrorContext.DETAIL_CONTEXT_SNIPPET);
+        if (contextSnippet != null) {
+            diagnosticJson.addProperty("contextSnippet", contextSnippet);
+        }
+        String syntaxClass = details.get(ParseSyntaxErrorContext.DETAIL_SYNTAX_CLASS);
+        if (syntaxClass != null) {
+            diagnosticJson.addProperty("syntaxClass", syntaxClass);
+        }
+        if (diagnostic.ruleName() != null) {
+            diagnosticJson.addProperty("parserRule", diagnostic.ruleName());
+        }
     }
 
     private static boolean isParserSource(String source) {

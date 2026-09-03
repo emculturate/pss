@@ -12,6 +12,7 @@ import access.SqlParserAccess;
 import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
+import errorhandling.ParseSyntaxErrorContext;
 import sql.SQLSelectParserLexer;
 import sql.SQLSelectParserParser;
 
@@ -69,13 +70,17 @@ public class SqlParserDiagnosticTests extends AbstractSqlParseEventWalkerTest {
 		final String query = "SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}";
 		final Snippet snippet = runParserAccessSnippet(query);
 
-		assertFatalDiagnosticAtPosition(
+		assertFatalSyntaxErrorAtPosition(
 				snippet,
 				"REPORT_ERROR",
-				"unexpected input",
+				"Line 1:31 - unexpected input: '(' in rule jinja_arg: SELECT * FROM {{ source(env_var('DB', 'PDP_AMS'), var('TABLE_NAME')) }}",
 				"(",
 				1,
-				31);
+				31,
+				"jinja_arg",
+				query,
+				ParseSyntaxErrorContext.SYNTAX_CLASS_TEMPLATE_LIKE,
+				"jinja_arg,jinja_arg_list,jinja_function_call");
 	}
 
 	@Test
@@ -106,6 +111,17 @@ public class SqlParserDiagnosticTests extends AbstractSqlParseEventWalkerTest {
 				"<",
 				1,
 				15);
+		assertFatalSyntaxErrorAtPosition(
+				snippet,
+				"REPORT_ERROR",
+				"Line 1:15 - unexpected input: '<' in rule table_source_primary: select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts",
+				"<",
+				1,
+				15,
+				"table_source_primary",
+				"select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"table_source_primary,table_primary,table_reference_list");
 	}
 
 	@Test
@@ -120,6 +136,17 @@ public class SqlParserDiagnosticTests extends AbstractSqlParseEventWalkerTest {
 				"FROM",
 				1,
 				7);
+		assertFatalSyntaxErrorAtPosition(
+				snippet,
+				"REPORT_ERROR",
+				"Line 1:7 - unexpected input: 'FROM' in rule select_item: SELECT FROM",
+				"FROM",
+				1,
+				7,
+				"select_item",
+				"SELECT FROM",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"select_item,select_list,query_specification");
 	}
 
 	@Test
@@ -218,16 +245,38 @@ public class SqlParserDiagnosticTests extends AbstractSqlParseEventWalkerTest {
 		SQLSelectParserLexer lexer = new SQLSelectParserLexer(CharStreams.fromString(query));
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
+		parser.removeErrorListeners();
 		ParseErrorListener listener = new ParseErrorListener(false, false, false);
 		parser.addErrorListener(listener);
 		parser.sql();
 
-		assertFatalDiagnosticAtPosition(
+		assertFatalSyntaxErrorAtPosition(
 				snippetFromListenerDiagnostics(listener.getDiagnostics()),
 				"SYNTAX_ERROR",
-				"mismatched input",
+				"Line 1:7 - unexpected input: 'FROM' in rule query_specification: SELECT FROM",
 				"FROM",
 				1,
-				7);
+				7,
+				"query_specification",
+				query,
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"query_specification,set_operation_member,unionized_query");
+	}
+
+	@Test
+	public void parserReportErrorIncludesSnippetAndRuleTest() {
+		final String query = "select from";
+		final Snippet snippet = runParserAccessSnippet(query);
+		assertFatalSyntaxErrorAtPosition(
+				snippet,
+				"REPORT_ERROR",
+				"Line 1:7 - unexpected input: 'from' in rule select_item: select from",
+				"from",
+				1,
+				7,
+				"select_item",
+				query,
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"select_item,select_list,query_specification");
 	}
 }

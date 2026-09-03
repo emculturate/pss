@@ -2,6 +2,7 @@ package errorhandling;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRErrorStrategy;
 import org.antlr.v4.runtime.Parser;
@@ -50,6 +51,11 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 
 	private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message, Token token,
 			boolean recoverable, String exceptionType) {
+		addDiagnostic(severity, code, message, token, recoverable, exceptionType, null, null);
+	}
+
+	private void addDiagnostic(ParseDiagnostic.Severity severity, String code, String message, Token token,
+			boolean recoverable, String exceptionType, String ruleName, Map<String, String> details) {
 		Integer line = token == null ? null : token.getLine();
 		Integer pos = token == null ? null : token.getCharPositionInLine();
 		String tokenText = token == null ? null : token.getText();
@@ -60,12 +66,12 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 				line,
 				pos,
 				"ParseErrorCollector",
-				null,
+				ruleName,
 				tokenText,
 				recoverable,
 				"parse.strategy",
 				exceptionType,
-				null));
+				details));
 	}
 	
 	public void addError(String errorMessage) {
@@ -228,20 +234,18 @@ public class ParseErrorCollector implements ANTLRErrorStrategy {
 	@Override
 	public void reportError(Parser recognizer, RecognitionException e) {
 		Token offendingToken = e == null ? null : e.getOffendingToken();
-	    String errorMessage = String.format("Line %d:%d - %s", 
-		offendingToken == null ? -1 : offendingToken.getLine(),
-		offendingToken == null ? -1 : offendingToken.getCharPositionInLine(),
-		e == null ? "Unknown parser error" : e.getMessage());
-    
-    	// Add more context about the error
-		String unexpectedInput = offendingToken == null ? null : offendingToken.getText();
-    	if (unexpectedInput != null) {
-     	   errorMessage += " - unexpected input: '" + unexpectedInput + "'";
-    	}
-    
-    	errorList.add(errorMessage);
+		if (offendingToken == null && recognizer != null) {
+			offendingToken = recognizer.getCurrentToken();
+		}
+
+		ParseSyntaxErrorContext context = ParseSyntaxErrorContext.capture(recognizer, offendingToken);
+		String errorMessage = context.formatFatalMessage();
+
+		errorList.add(errorMessage);
 		addDiagnostic(ParseDiagnostic.Severity.FATAL, "REPORT_ERROR", errorMessage, offendingToken, false,
-				e == null ? null : e.getClass().getSimpleName());
+				e == null ? null : e.getClass().getSimpleName(),
+				context.parserRule(),
+				context.toDetails());
 	}
 
 }

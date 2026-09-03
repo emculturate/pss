@@ -259,6 +259,21 @@ public class SqlParseMCPTest {
         assertTrue(firstFatalDiagnostic.has("phase"));
         assertTrue(firstFatalDiagnostic.has("exceptionType"));
         assertTrue(firstFatalDiagnostic.has("details"));
+        assertEquals("REPORT_ERROR", firstFatalDiagnostic.get("code").getAsString());
+        assertEquals(1, firstFatalDiagnostic.get("line").getAsInt());
+        assertEquals(11, firstFatalDiagnostic.get("charPositionInLine").getAsInt());
+        assertEquals("join", firstFatalDiagnostic.get("tokenText").getAsString());
+        assertEquals("value_expression", firstFatalDiagnostic.get("ruleName").getAsString());
+        assertEquals("value_expression", firstFatalDiagnostic.get("parserRule").getAsString());
+        assertEquals("GRAMMAR_GAP", firstFatalDiagnostic.get("syntaxClass").getAsString());
+        assertEquals("select obj join from tab1", firstFatalDiagnostic.get("contextSnippet").getAsString());
+        assertEquals(
+                "Line 1:11 - unexpected input: 'join' in rule value_expression: select obj join from tab1",
+                firstFatalDiagnostic.get("message").getAsString());
+        JsonObject details = firstFatalDiagnostic.getAsJsonObject("details");
+        assertEquals("value_expression,select_item,select_list", details.get("parserRules").getAsString());
+        assertEquals("select obj join from tab1", details.get("contextSnippet").getAsString());
+        assertEquals("GRAMMAR_GAP", details.get("syntaxClass").getAsString());
 
         JsonObject firstMessageDiagnostic = result.getAsJsonArray("messages").get(0).getAsJsonObject();
         assertTrue(firstMessageDiagnostic.has("severity"));

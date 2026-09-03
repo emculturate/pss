@@ -19,6 +19,7 @@ import access.Snippet;
 import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
+import errorhandling.ParseSyntaxErrorContext;
 import sql.SQLSelectParserParser;
 import sql.SQLSelectParserParser.Column_valueContext;
 import sql.SQLSelectParserParser.Condition_valueContext;
@@ -143,7 +144,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		return null;
 	}
 
-	protected void assertFatalDiagnosticAtPosition(
+	protected ParseDiagnostic assertFatalDiagnosticAtPosition(
 			Snippet snippet,
 			String code,
 			String expectedMessageFragment,
@@ -164,6 +165,7 @@ public abstract class AbstractSqlParseEventWalkerTest {
 					"Diagnostic message should contain '" + expectedMessageFragment + "'",
 					diagnostic.message() != null && diagnostic.message().contains(expectedMessageFragment));
 		}
+		return diagnostic;
 	}
 
 	/**
@@ -187,6 +189,85 @@ public abstract class AbstractSqlParseEventWalkerTest {
 		Assert.assertEquals("Unexpected diagnostic character position",
 				Integer.valueOf(expectedCharPositionInLine), diagnostic.charPositionInLine());
 		Assert.assertEquals("Fatal diagnostic message is wrong", expectedFullMessage, diagnostic.message());
+	}
+
+	/**
+	 * Goldens a parse-strategy {@code REPORT_ERROR} or listener {@code SYNTAX_ERROR}
+	 * at a source position: full message, token, innermost rule, snippet, syntax class,
+	 * and last 1–3 rules on the stack.
+	 */
+	protected ParseDiagnostic assertFatalSyntaxErrorAtPosition(
+			Snippet snippet,
+			String code,
+			String expectedFullMessage,
+			String expectedToken,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedParserRule,
+			String expectedContextSnippet,
+			String expectedSyntaxClass,
+			String expectedParserRules) {
+		Assert.assertNotNull("Snippet should not be null", snippet);
+		return assertFatalSyntaxErrorAtPosition(
+				snippet.getParserDiagnosticList(),
+				code,
+				expectedFullMessage,
+				expectedToken,
+				expectedLine,
+				expectedCharPositionInLine,
+				expectedParserRule,
+				expectedContextSnippet,
+				expectedSyntaxClass,
+				expectedParserRules);
+	}
+
+	protected ParseDiagnostic assertFatalSyntaxErrorAtPosition(
+			List<ParseDiagnostic> diagnostics,
+			String code,
+			String expectedFullMessage,
+			String expectedToken,
+			int expectedLine,
+			int expectedCharPositionInLine,
+			String expectedParserRule,
+			String expectedContextSnippet,
+			String expectedSyntaxClass,
+			String expectedParserRules) {
+		Assert.assertNotNull("Diagnostic list should not be null", diagnostics);
+		ParseDiagnostic diagnostic = null;
+		for (ParseDiagnostic candidate : diagnostics) {
+			if (candidate == null || !ParseDiagnostic.Severity.FATAL.equals(candidate.severity())) {
+				continue;
+			}
+			if (!code.equals(candidate.code())) {
+				continue;
+			}
+			if (expectedToken != null
+					&& (candidate.tokenText() == null || !candidate.tokenText().contains(expectedToken))) {
+				continue;
+			}
+			diagnostic = candidate;
+			break;
+		}
+		Assert.assertNotNull(
+				"Expected fatal diagnostic with code " + code + " token '" + expectedToken + "'",
+				diagnostic);
+		Assert.assertEquals("Unexpected diagnostic line", Integer.valueOf(expectedLine), diagnostic.line());
+		Assert.assertEquals("Unexpected diagnostic character position",
+				Integer.valueOf(expectedCharPositionInLine), diagnostic.charPositionInLine());
+		Assert.assertEquals("Unexpected token text", expectedToken, diagnostic.tokenText());
+		Assert.assertEquals("Unexpected parser rule", expectedParserRule, diagnostic.ruleName());
+		Assert.assertEquals("Fatal syntax diagnostic message is wrong", expectedFullMessage, diagnostic.message());
+		Assert.assertNotNull("Expected syntax-error details", diagnostic.details());
+		Assert.assertEquals("Unexpected context snippet",
+				expectedContextSnippet,
+				diagnostic.details().get(ParseSyntaxErrorContext.DETAIL_CONTEXT_SNIPPET));
+		Assert.assertEquals("Unexpected syntax class",
+				expectedSyntaxClass,
+				diagnostic.details().get(ParseSyntaxErrorContext.DETAIL_SYNTAX_CLASS));
+		Assert.assertEquals("Unexpected parser rule stack",
+				expectedParserRules,
+				diagnostic.details().get(ParseSyntaxErrorContext.DETAIL_PARSER_RULES));
+		return diagnostic;
 	}
 
 	protected void assertDiagnosticAtPosition(

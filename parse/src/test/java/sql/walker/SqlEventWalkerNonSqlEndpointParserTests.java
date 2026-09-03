@@ -5,6 +5,7 @@ import org.junit.Test;
 import access.Snippet;
 import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorCollector;
+import errorhandling.ParseSyntaxErrorContext;
 import static mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DELETE_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
@@ -62,9 +63,20 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				parseErrorCollector.getErrorCount());
 		assertParserErrorsContainExactly(
 				parseErrorCollector,
-				"Line 1:15 - null - unexpected input: '<'",
+				"Line 1:15 - unexpected input: '<' in rule table_source_primary: select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts",
 				"Line 1:15 - Recovering malformed variable identifier start '<' by skipping one token",
 				"Line 1:28 - Invalid syntax near '.'");
+		assertFatalSyntaxErrorAtPosition(
+				parseErrorCollector.getDiagnostics(),
+				"REPORT_ERROR",
+				"Line 1:15 - unexpected input: '<' in rule table_source_primary: select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts",
+				"<",
+				1,
+				15,
+				"table_source_primary",
+				"select 1 from <[Acquia_ALR].[no__contacts].last_delivered> no_contacts",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"table_source_primary,table_primary,table_reference_list");
 
 		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
@@ -110,9 +122,20 @@ public class SqlEventWalkerNonSqlEndpointParserTests extends AbstractSqlParseEve
 				parseErrorCollector.getErrorCount());
 		assertParserErrorsContainExactly(
 				parseErrorCollector,
-				"Line 1:15 - null - unexpected input: '<'",
+				"Line 1:15 - unexpected input: '<' in rule table_source_primary: select 1 from <[Acquia_ALR].[no__contacts].hmmm> no_contacts join <[another].[malformed].tuple> t on 1=1",
 				"Line 1:15 - Recovering malformed variable identifier start '<' by skipping one token",
 				"Line 1:28 - Invalid syntax near '.'");
+		assertFatalSyntaxErrorAtPosition(
+				parseErrorCollector.getDiagnostics(),
+				"REPORT_ERROR",
+				"Line 1:15 - unexpected input: '<' in rule table_source_primary: select 1 from <[Acquia_ALR].[no__contacts].hmmm> no_contacts join <[another].[malformed].tuple> t on 1=1",
+				"<",
+				1,
+				15,
+				"table_source_primary",
+				"select 1 from <[Acquia_ALR].[no__contacts].hmmm> no_contacts join <[another].[malformed].tuple> t on 1=1",
+				ParseSyntaxErrorContext.SYNTAX_CLASS_GRAMMAR_GAP,
+				"table_source_primary,table_primary,table_reference_list");
 
 		SqlParseEventWalker extractor = runAnyParsertest(query, parser, tree, true);
 		Snippet snippet = extractor.getSnippet();
