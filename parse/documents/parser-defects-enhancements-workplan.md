@@ -902,7 +902,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | **C1.2** | **Done** — grammar-rule timing in `exitEveryRule` (`ruleExitBegin`/`ruleExitEnd`; lightweight JFR substitute) | `reportRuleExitTiming` per probe run; optional external JFR: `java -XX:StartFlightRecording=filename=walker.jfr,dumponexit=true -Dpss.walker.hotspot.profile=true …` |
 | **C1.3** | Gate every **C2** change with distinct **and** shared probes | `setOpHotspotProfileDistinctAndSharedN10vsN50` before/after each C2 patch |
 | **C1.4** | Defer SELECT/ORDER BY resolution memo on current probe | **Skip for now** — probe ORDER BY (`sort_col_*`) and SELECT (`col_*`) are disjoint; no duplicate qualified resolution |
-| **C1.5** | **D2** (`LinkedHashSet` dedup) only if `mergeColumnEntry_dedupContainsCheck` hot on shared probe or corpus | Shared N=50 showed 1500 `contains()` checks; revisit after C1.1/C1.2 attribute wall time |
+| **C1.5** | **D2** (`LinkedHashSet` dedup) | **Deferred** — spike (2026-09-02) confirmed shared probe hits dedup 1,500× but **no wall-time win**; see D2 spike table |
 | **C2** | Reduce per-node symbol work per C1 timing report: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | N=50 probe α moves toward 1; full walker suite green; **both** table modes improve or flat |
 
 **Phase D — Dictionary policy (reprioritized; was S8–S11)**
@@ -910,7 +910,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | Step | Change | When | Gate |
 |------|--------|------|------|
 | **D1** | Defer global `table_dictionary` merge for set-op participants until `exitUnionized_query` / `exitIntersected_query` (old **S10**) | After B/C if **2.8-2** still hot | Row **1837** + shared-table probe; CTE/join goldens |
-| **D2** | `LinkedHashSet` ref dedup instead of `ArrayList.contains()` (old **S11**) | **Defer** until profiled | Trigger: C1 or 1837 flame shows `contains()` |
+| **D2** | `LinkedHashSet` ref dedup instead of `ArrayList.contains()` (old **S11**) | **Defer** (spike 2026-09-02 — no probe win) | Row **1837** flame only |
 
 **Phase E — Corpus validation (revised S6 / S7)**
 
@@ -1053,7 +1053,7 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 
 **Still plausible for real 2.8-2 (PCM):** substitutions + GROUP BY + same bound table may exercise merge/dedup paths the synthetic probe does not. **D1** (defer global merge until set-op exit) remains the right **2.8-2** track; implement **after B/C**, gated on row **1837**.
 
-**D2 (`LinkedHashSet` dedup):** Defer until C1 or 1837 shows `contains()` in hot path.
+**D2 (`LinkedHashSet` dedup):** Spike run 2026-09-02 — **defer** (see D2 spike table under Phase D). Not a blocker for C2.
 
 ~~| Step | Recommendation | Rationale |~~
 ~~| **S8** | **Profile** row **1837** …~~
@@ -1062,9 +1062,20 @@ Fitted **α ≈ 2** unchanged; **β ≈ 1.7** unchanged.
 | Step | Recommendation | Rationale |
 |------|----------------|-----------|
 | **D1** | Defer global `table_dictionary` merge for set-op participants until set-op frame exit (old S10) | Cuts repeated global merge on same key; priority for **2.8-2** |
-| **D2** | `LinkedHashSet` ref dedup (old S11) | Only if profiled hot on 1837 or shared-table + substitutions |
+| **D2** | `LinkedHashSet` ref dedup (old **S11**) | **Defer** — spike showed no wall-time win on shared probe; revisit on row **1837** only | Trigger: corpus profile, not synthetic probe alone |
 
-**Open question (defer until D2 trigger):** Would switching ref storage from **`ArrayList` + `contains()`** to **`LinkedHashSet`** materially help on 2.8-2 without breaking token ordering? **Do not implement** until profiled.
+**D2 spike (2026-09-02):** Replaced `mergeColumnEntry` `ArrayList.contains()` loop with `LinkedHashSet` → `ArrayList` (then **reverted** — spike only).
+
+| Metric | Baseline (`ArrayList.contains`) | D2 spike (`LinkedHashSet`) |
+|--------|--------------------------------|----------------------------|
+| Shared N50 wall ms | 10,716 | 12,530 (**~1.8 s slower**) |
+| Distinct N50 wall ms | 10,305 | 11,150 (**~0.8 s slower**) |
+| Shared N50 `convertTiming_totalMicros` | 21,384 | 31,337 (**worse** — alloc overhead on small lists) |
+| Shared N50 dedup events | 1,500 `dedupContainsCheck` | 1,500 `linkedHashSetDedup` |
+
+**Verdict:** `contains()` dedup is **real on shared-table shapes** but **not material** at probe scale (convert ≪ 1% of walk). Lists stay small (≤ branch count per column); in-place `contains()` beats allocating a `LinkedHashSet` + new `ArrayList` per merge. **Total probe duration was nearly a full second slower (or more on shared)** with `LinkedHashSet` — not a smart change on current evidence. **Do not proceed with D2** unless we later encounter profiling evidence (e.g. row **1837**, very large token lists, or flame graphs) where the swap brings a **significant** benefit. **Reassess when we return to D2** in the Phase D track; until then, **do not land D2 before C2** — it adds complexity without moving the ~10 s superlinear walk.
+
+~~**Open question (defer until D2 trigger):** Would switching ref storage from **`ArrayList` + `contains()`** to **`LinkedHashSet`** materially help on 2.8-2 without breaking token ordering? **Do not implement** until profiled.~~ — **Answered by spike:** theoretically yes for huge lists; **not on current probe**; defer.
 
 #### Construction-bucket tracker (74 timeouts)
 
