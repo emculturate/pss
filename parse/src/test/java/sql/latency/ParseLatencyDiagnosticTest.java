@@ -312,7 +312,7 @@ public class ParseLatencyDiagnosticTest {
 
     // ═════════════════════════════════════════════════════════════════════════
     // Query fixtures — trimmed from parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md
-    // Row 28 and 130 embedded here; row 475 loads from sql/csv-row-475.sql via PantoOutstandingSqlFixtures.
+    // Frozen handoff fixtures: parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-<n>.sql
     // ═════════════════════════════════════════════════════════════════════════
 
     // Row 28 — PDP_Acquia_Export (full text)

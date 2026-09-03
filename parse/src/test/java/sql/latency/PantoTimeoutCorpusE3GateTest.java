@@ -1,22 +1,12 @@
 package sql.latency;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.StringJoiner;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.gson.Gson;
-import com.google.gson.annotations.SerializedName;
 
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertEquals;
@@ -26,7 +16,7 @@ import static org.junit.Assert.assertTrue;
  * Phase 2.8-E3 corpus gate — all {@code timeout_513} rows (74) plus named bucket canaries
  * must finish under the 90s RMCP kill.
  *
- * <p>Manifest: {@code python3 tools/benchmark_panto_timeout_rows.py --issue timeout_513}
+ * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
  */
 public class PantoTimeoutCorpusE3GateTest {
 
@@ -41,29 +31,9 @@ public class PantoTimeoutCorpusE3GateTest {
     /** Non-UNION guardrails (row 130 formerly on subMap skip list). */
     static final int[] E3_NON_UNION_CANARIES = {5261, 4647, 4197, 130};
 
-    @BeforeClass
-    public static void ensureManifest() throws IOException, InterruptedException {
-        if (Files.isRegularFile(resolveManifestPath())) {
-            return;
-        }
-        Path repoRoot = Path.of("..").toAbsolutePath().normalize();
-        ProcessBuilder builder = new ProcessBuilder(
-                "python3",
-                repoRoot.resolve("tools/benchmark_panto_timeout_rows.py").toString(),
-                "--issue",
-                "timeout_513");
-        builder.directory(repoRoot.toFile());
-        builder.inheritIO();
-        int exit = builder.start().waitFor();
-        if (exit != 0 || !Files.isRegularFile(resolveManifestPath())) {
-            throw new IllegalStateException(
-                    "Failed to generate panto-timeout-batch-manifest.json — run tools/benchmark_panto_timeout_rows.py");
-        }
-    }
-
     @Test
     public void e3RunnableCorpus_allRowsUnder90s() throws IOException {
-        List<ManifestRow> rows = loadManifest(resolveManifestPath());
+        List<Integer> csvRows = PantoOutstandingSqlFixtures.timeout513CorpusRows();
         long maxWalkMs = 0;
         long maxTotalMs = 0;
         int maxWalkRow = -1;
@@ -71,18 +41,18 @@ public class PantoTimeoutCorpusE3GateTest {
         int withFatals = 0;
         List<String> failures = new ArrayList<>();
 
-        for (ManifestRow row : rows) {
-            RowGateResult result = gateRow(row);
+        for (int csvRow : csvRows) {
+            RowGateResult result = gateRow(csvRow);
             if (result.walkerFatalCount() > 0) {
                 withFatals++;
             }
             if (result.walkMs() > maxWalkMs) {
                 maxWalkMs = result.walkMs();
-                maxWalkRow = row.csvRow;
+                maxWalkRow = csvRow;
             }
             if (result.totalMs() > maxTotalMs) {
                 maxTotalMs = result.totalMs();
-                maxTotalRow = row.csvRow;
+                maxTotalRow = csvRow;
             }
             if (!result.passed()) {
                 failures.add(result.failureMessage());
@@ -91,7 +61,7 @@ public class PantoTimeoutCorpusE3GateTest {
 
         System.out.printf(Locale.ROOT,
                 "E3_CORPUS_SUMMARY rows=%d skipList=%d maxWalkMs=%d (csv_row=%d) maxTotalMs=%d (csv_row=%d) rowsWithFatals=%d%n",
-                rows.size(),
+                csvRows.size(),
                 PantoCorpusSkipList.subMapWalkerCsvRows().size(),
                 maxWalkMs,
                 maxWalkRow,
@@ -117,9 +87,18 @@ public class PantoTimeoutCorpusE3GateTest {
         }
     }
 
+    @Test
+    public void timeout513CorpusIndex_matchesFrozenSqlFixtures() throws IOException {
+        List<Integer> csvRows = PantoOutstandingSqlFixtures.timeout513CorpusRows();
+        assertEquals("expected 74 timeout_513 rows", 74, csvRows.size());
+        for (int csvRow : csvRows) {
+            assertTrue("missing csv-row-" + csvRow + ".sql",
+                    PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow).length() > 0);
+        }
+    }
+
     private static void assertNamedCanary(String bucket, int csvRow) throws IOException {
-        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
-        RowGateResult result = gateRow(new ManifestRow(csvRow, sql));
+        RowGateResult result = gateRow(csvRow);
         System.out.printf(Locale.ROOT,
                 "E3_CANARY bucket=%s csv_row=%d walkMs=%d totalMs=%d walkerFatal=%d%n",
                 bucket,
@@ -130,47 +109,10 @@ public class PantoTimeoutCorpusE3GateTest {
         assertTrue(result.failureMessage(), result.passed());
     }
 
-    private static RowGateResult gateRow(ManifestRow row) {
-        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(row.sql, SQLPARSER_SQL_TREE_KEY);
-        return new RowGateResult(row.csvRow, report);
-    }
-
-    private static Path resolveManifestPath() {
-        String override = System.getProperty("panto.timeout.manifest");
-        if (override != null && !override.isBlank()) {
-            return Path.of(override);
-        }
-        Path fromModule = Path.of("parse").resolve("target/panto-timeout-batch-manifest.json");
-        if (Files.isRegularFile(fromModule)) {
-            return fromModule;
-        }
-        Path local = Path.of("target/panto-timeout-batch-manifest.json");
-        if (Files.isRegularFile(local)) {
-            return local;
-        }
-        throw new IllegalStateException(
-                "Cannot find panto-timeout-batch-manifest.json — run tools/benchmark_panto_timeout_rows.py first");
-    }
-
-    private static List<ManifestRow> loadManifest(Path manifest) throws IOException {
-        try (Reader reader = Files.newBufferedReader(manifest, StandardCharsets.UTF_8)) {
-            ManifestPayload payload = new Gson().fromJson(reader, ManifestPayload.class);
-            if (payload == null || payload.rows == null || payload.rows.isEmpty()) {
-                throw new IllegalStateException("Manifest is empty: " + manifest);
-            }
-            Set<Integer> skipRows = PantoCorpusSkipList.subMapWalkerCsvRows();
-            List<ManifestRow> rows = new ArrayList<>();
-            for (ManifestRow row : payload.rows) {
-                if (skipRows.contains(row.csvRow)) {
-                    throw new IllegalStateException(
-                            "Manifest includes subMap skip row " + row.csvRow + " — regenerate without skip rows");
-                }
-                rows.add(row);
-            }
-            rows.sort(Comparator.comparingInt(r -> r.csvRow));
-            assertEquals("expected 74 timeout_513 rows", 74, rows.size());
-            return rows;
-        }
+    private static RowGateResult gateRow(int csvRow) throws IOException {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
+        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
+        return new RowGateResult(csvRow, report);
     }
 
     private record RowGateResult(int csvRow, ParseLatencyReport report) {
@@ -202,27 +144,6 @@ public class PantoTimeoutCorpusE3GateTest {
                     report.walkerFatalCount,
                     report.parseErrorCount,
                     E3_TIMEOUT_MS);
-        }
-    }
-
-    static final class ManifestPayload {
-        @SerializedName("rows")
-        List<ManifestRow> rows;
-    }
-
-    static final class ManifestRow {
-        @SerializedName("csv_row")
-        int csvRow;
-
-        @SerializedName("query_sql")
-        String sql;
-
-        ManifestRow() {
-        }
-
-        ManifestRow(int csvRow, String sql) {
-            this.csvRow = csvRow;
-            this.sql = sql;
         }
     }
 }
