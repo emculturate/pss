@@ -17,11 +17,11 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.7, **2.9 complete**; **2.8** in progress | This file (2.1–2.9) |
+| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.8, **2.9 complete**; **2.10–2.11** open | This file (2.1–2.11) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
-| 6 | Simple JINJA substitutions support | Enhancement | Not started | This file (6.1–6.3) |
+| 6 | Simple JINJA substitutions support | Enhancement | Not started | This file (6.1–6.4); **6.4** closes Phase **2.5** Jinja fixture |
 | 7 | Deep JINJA language support | Enhancement (optional) | Not started | This file |
 
 ---
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface, `VALUES` FROM syntax, WITH final-query source finalization) plus standalone grammar enhancements
 
-**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.7 and **2.9** complete; **2.8** remains open. **Caveat (2.5):** original RMCP `PARSE_TIMEOUT` on the Jinja-authored fixture was not bisected or reproduced on the current tree; guardrail test only (table-stubbed exemplar parses in ~1s). Re-open 2.5 if the live fixture still times out.
+**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.8 and **2.9** complete; **2.10–2.11** open. **2.5** SQL guardrail complete; Jinja-authored fixture closure → **Phase 6.4**.
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** (complete) locked WITH CTE physical/tuple trailing-clause collection in global `tableDictionary` and confirmed CTE aliases belong in query/symbol structures only. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
 
@@ -61,10 +61,12 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 3 | **2.6** | Medium — `SPLIT` / `SPLIT_PART` / `expr[n]` subscript (shared with 5.4) | Medium — flat `CASE` attribution models | **Complete** — postfix `arraySubscriptSuffix` + bracket/subscript disambiguation; tests in `SqlEventWalkerArraySubscriptTests` and `SqlEventWalkerBracketedIdentifierTests`. |
 | 4 | **2.3** | Medium–high — new shared `WITHIN GROUP (ORDER BY …)` production | High — `LISTAGG` and ordered aggregates in analytics models | **Complete** — `ordered_aggregate_expression` + walker `within_group_ordered_by`; tests in `SqlEventWalkerWithinGroupOrderedAggregateTests`. |
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
-| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (guardrail) — table-stubbed DNC rollup exemplar parses in ~1s; regression test in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`. Original RMCP `PARSE_TIMEOUT` not reproduced — re-open if Jinja fixture still hangs. |
+| 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (SQL guardrail) — table-stubbed exemplar in `dncEmailRollupMultiCteExemplarV0Test`. Jinja-authored fixture (§2.5 starter query) → **Phase 6.4**. |
 | 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
-| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **In progress** — harness landed; 18 construction buckets tracked below; corpus in `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`. |
+| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **Complete (2026-09-02)** — E1–E3; **54/54** runnable rows &lt; 90 s; C2.2 fixed α≈2; D1/D2/C2 micro-opts **abandoned** |
 | 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Complete** (2026-09-01) — all eight Panto degradations adjudicated; see [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). |
+| 10 | **2.10** | SLL→LL two-stage prediction policy in `SqlParserAccess` | Medium — production parse latency on some rows (e.g. 4176) | **Not started** |
+| 11 | **2.11** | Panto timeout corpus residuals: subMap skip list (20) + fast-FATAL rows (11) | High — correctness / diagnostics on live RMCP SQL | **Not started** |
 
 **Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
 
@@ -76,11 +78,13 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.2 | `VALUES (…)` `AS alias (col, …)` plus JOIN / `COALESCE` on the joined table | **Complete** |
 | 2.3 | `WITHIN GROUP (ORDER BY …)` on `LISTAGG` and other ordered aggregates (`OVER` included) | **Complete** |
 | 2.4 | Nested searched `CASE` (`CASE` as `THEN`/`ELSE` of `CASE`) plus inner `SPLIT`/`SPLIT_PART` predicands | **Complete** |
-| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (guardrail — hang not reproduced; see caveat above) |
+| 2.5 | Parse hang / `PARSE_TIMEOUT` on multi-CTE email DNC rollup (investigate + fix) | **Complete** (SQL guardrail); Jinja fixture → **6.4** |
 | 2.6 | Flat searched `CASE` for `product` from `cat.title` (`POSITION`, nested `SPLIT`/`SPLIT_PART`, `NULLIF`/`TRIM`/`COALESCE`) | **Complete** |
 | 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
-| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **In progress** — S1–S5 scoping **done**; post-S5 profiling revised plan (**B** scope cache → **C** walker hot path → **E** corpus); see §2.8 profiling conclusions |
+| 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **Complete (2026-09-02)** — E1–E3; timeout problem closed; see §2.8 |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
+| 2.10 | SLL→LL two-stage prediction in `SqlParserAccess` | **Not started** |
+| 2.11 | Panto corpus residuals: subMap skip list + fast-FATAL clusters | **Not started** |
 
 ---
 
@@ -436,7 +440,7 @@ END AS source_type,
 
 **Kind:** Defect (non-terminating parse or pathological work — investigate root cause, then fix)
 
-**Status:** **Complete** (2026-08-15, guardrail) — full exemplar parses on current tree; original RMCP `PARSE_TIMEOUT` not reproduced
+**Status:** **Complete** (2026-08-15, SQL guardrail) — table-stubbed exemplar parses on current tree (`dncEmailRollupMultiCteExemplarV0Test`). **Jinja-authored fixture** (starter query below, with `{{ ref }}` / `{{ source }}`) is retained in this section; parse/timeout validation after Jinja tuple support lands → **Phase 6.4**. Phase **7** not required for this query (no `{% %}` control flow in the body).
 
 **Component:** parse strategy / grammar / walker — **unknown until bisected**; do not assume a single construct
 
@@ -593,7 +597,7 @@ FROM dnc_prioritization AS pr
 
 - **Done:** Full starter exemplar (table-stubbed `ref`/`source` names) completes parse in ~1s; no `PARSE_TIMEOUT`.
 - **Done:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` — CTE chain, `UNION ALL`, same-SELECT alias forward refs, `QUALIFY` + `ROW_NUMBER()`, nested categorization `CASE`.
-- **Note:** Root cause of the original RMCP hang was not isolated — current tree may have fixed it cumulatively, or the timeout was environment-specific. Re-open if `PARSE_TIMEOUT` recurs on the Jinja-authored fixture.
+- **Pending (Phase 6.4):** Parse the **Jinja-authored** starter query below (spaces inside `{{ ref (…) }}`, `{{ source('COMMON', …) }}`) without `PARSE_TIMEOUT`. Fixture text: this section only (not in Panto CSV).
 - 2.1–2.4 unchanged.
 
 #### Out of scope (2.5)
@@ -759,7 +763,7 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 **Kind:** Performance defect / investigation (many queries exceed 90 seconds and regress materially from 5.0.0-3)
 
-**Status:** **In progress** — stage-timing harness landed; 74-query corpus indexed under `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/`; construction clustering complete (2026-09-01)
+**Status:** **Complete (2026-09-02)** — timeout mission closed (E1–E3). Residual corpus semantics → **2.11**; production SLL policy → **2.10**.
 
 **Component:** end-to-end parser pipeline; likely more than one algorithm (set-op interface matching is not the only timeout shape)
 
@@ -778,8 +782,8 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Phase **E1** — full calibration matrix re-run (`setOpTimingProbeE1CalibrationMatrixTest`); post-C baselines recorded below.
 - **Done (2026-09-02):** Post-C2.2 batch re-run of all **74** `timeout_513` rows (`PantoTimeoutBatchBenchmarkTest`) — **0/74** still timeout (~4 s total). **20** rows log walker fatals (`subMap is null` or bare `null` in `exitSql`); excluded from automated full-parse via [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (**54** runnable rows for **E3**).
 - **Done (2026-09-02):** Phase **E2** — full row **475** (`EAB.Country`, 248 `UNION`, 41,829 chars) embedded in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry`; diagnostic **walk=89 ms**, **total=173 ms** (5.0.0-3 ~7.4 s walk; pre-C2.2 **90 s** kill).
-- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **54/54** runnable `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197** pass. **11** rows emit FATAL diagnostics but complete fast (separate from **20** subMap skip-list rows). **D1 abandoned** — E3 shows full **2.8-2** bucket sub-second; defer-global-merge policy will not be implemented.
-- **Next:** Optional **C2** micro-opts only if new corpus shapes regress; address subMap skip-list rows / semantic FATAL clusters separately from timeout work.
+- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **54/54** runnable `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197** pass. **11** rows emit FATAL diagnostics but complete fast → **2.11**. **20** subMap skip-list rows → **2.11**.
+- **Abandoned (2026-09-02):** **D1** (defer global merge), **D2** (`LinkedHashSet` dedup), **C2** optional micro-opts (clause-flatten batching, local FROM fast path) — no E3 regression; will not implement.
 - **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
@@ -884,7 +888,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | Same **table** name every branch | One dict key; slight **slowdown** (merge/dedup overhead); does not fix superlinear walk |
 | Higher **M** (more unique columns per branch) | Was superlinear in M (β ≈ 1.7 pre-S5); **post-C2.2 β ≈ 0.92** (near-linear); independent of triangular table-key count |
 
-**Implication:** Optimizing `ArrayList.contains()` dedup (old S11) is **de-prioritized** until profiling shows `contains()` hot. ~~**Defer global table merge** (D1 / old S10)~~ — **D1 abandoned** after E3 (see Phase D).
+**Implication:** ~~Optimizing `ArrayList.contains()` dedup (old S11 / **D2**)~~ and ~~defer global table merge (**D1**)~~ — both **abandoned** after E3. Timeout fix track was **B1 + C2.2** only.
 
 ##### Revised root-cause model (post-S5)
 
@@ -923,17 +927,17 @@ This measures **accumulation of distinct physical table names** in the global di
 | **C1.2** | **Done** — grammar-rule timing in `exitEveryRule` (`ruleExitBegin`/`ruleExitEnd`; lightweight JFR substitute) | `reportRuleExitTiming` per probe run; optional external JFR: `java -XX:StartFlightRecording=filename=walker.jfr,dumponexit=true -Dpss.walker.hotspot.profile=true …` |
 | **C1.3** | Gate every **C2** change with distinct **and** shared probes | `setOpHotspotProfileDistinctAndSharedN10vsN50` before/after each C2 patch |
 | **C1.4** | Defer SELECT/ORDER BY resolution memo on current probe | **Skip for now** — probe ORDER BY (`sort_col_*`) and SELECT (`col_*`) are disjoint; no duplicate qualified resolution |
-| **C1.5** | **D2** (`LinkedHashSet` dedup) | **Deferred** — spike (2026-09-02) confirmed shared probe hits dedup 1,500× but **no wall-time win**; see D2 spike table |
+| **C1.5** | ~~**D2** (`LinkedHashSet` dedup)~~ | **Abandoned** — spike (2026-09-02) showed slower wall time; will not implement |
 | **C2.1** | **Done** — helper-path nanosecond timing (`hotspotScope` on `astEnterEveryRule`, `astExitEveryRule`, `handlePushDown`, `collectUnresolvedColumnReference`, `flattenSubTreeForDependencyColumns`, `captureClauseDependencies`, `finalizeSetOperationScopeSymbolTable`, `mergeUnknownEntries`) | `reportHotspotTiming` + scaling in dual-mode harness |
 | **C2.2** | **Done** — remove eager `showTrace` / `asTree.toString()` from `enterEveryRule` / `exitEveryRule`; delete trace flags from `AbstractASTWalkerHelper` | E1 α → ~1; N=50 M=20 walk **~900 ms** (was ~10.5 s pre-solution) |
-| **C2** | Optional micro-opts per C1 timing report: batch/defer clause flattening; qualified **local FROM fast path** (`table.col` → sole FROM in frame); avoid duplicate capture+convert work | Only if **E3** corpus profiling shows residual hot paths |
+| **C2** | ~~Optional micro-opts: batch/defer clause flattening; qualified local FROM fast path; avoid duplicate capture+convert work~~ | **Abandoned (2026-09-02)** — E3 showed no need; will not implement unless a future regression is profiled |
 
 **Phase D — Dictionary policy (reprioritized; was S8–S11)**
 
 | Step | Change | When | Gate |
 |------|--------|------|------|
 | **D1** | ~~Defer global `table_dictionary` merge for set-op participants until `exitUnionized_query` / `exitIntersected_query` (old **S10**)~~ | **Abandoned (2026-09-02)** — E3: all **20** **2.8-2** rows &lt; 90 s; canary **1837** walk **9–71 ms**. **Will not implement.** | — |
-| **D2** | `LinkedHashSet` ref dedup instead of `ArrayList.contains()` (old **S11**) | **Defer** (spike 2026-09-02 — no probe win) | Row **1837** flame only |
+| **D2** | ~~`LinkedHashSet` ref dedup instead of `ArrayList.contains()` (old **S11**)~~ | **Abandoned (2026-09-02)** — spike slower on wall time; will not implement | — |
 
 **Phase E — Corpus validation (revised S6 / S7)**
 
@@ -943,7 +947,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | **E2** | **Done** — full row **475** in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry` | **walk=89 ms**, **total=173 ms** (chars=41,829; 248 `UNION`) |
 | **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **54/54** runnable rows &lt; 90 s; **2.8-1** + **2.8-2** canary **1837** + non-UNION **5261, 4647, 4197** | Bucket tracker **Complete** (timeout); **20** subMap skips + **11** fast-FATAL rows documented |
 
-**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2` → `E1` → `E2` → `E3` → `D2` only if profiled. ~~`B2`→`B3`~~ skipped (ineffective on wall time). ~~`D1`~~ **abandoned** (unnecessary after E3).
+**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2.2` → `E1` → `E2` → `E3`. ~~`B2`→`B3`~~ skipped. ~~`D1`~~, ~~`D2`~~, ~~`C2` micro-opts~~ **abandoned**. Next: **2.11** (corpus residuals) → **2.10** (SLL policy).
 
 ##### Legacy step mapping (for grep / old notes)
 
@@ -954,7 +958,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | S8 profile 1837 | **C1** + **E3** (partially done via shared-table + convert probes) |
 | S9 shared-table probe | **Done** — `BranchTableMode.SHARED_SINGLE_TABLE` |
 | S10 defer global merge | **D1** — **abandoned** (E3; will not implement) |
-| S11 LinkedHashSet dedup | **D2** (deferred) |
+| S11 LinkedHashSet dedup | **D2** — **abandoned** (will not implement) |
 | S12 2.8-2 acceptance | **E3** |
 
 #### Set-op timing probe baselines (S0)
@@ -1114,7 +1118,7 @@ Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 
 **E3 verdict (2026-09-02):** All **20** **2.8-2** PCM convert rows complete in **&lt; 1 s** on the diagnostic path (canary **1837** walk **9–71 ms**). Combined with post-S5 profiling (convert egress ≪ 1% of walk on probes), **D1** (defer global merge until set-op exit) is **abandoned** — unnecessary for the timeout problem and **will not be implemented**.
 
-**D2 (`LinkedHashSet` dedup):** Spike run 2026-09-02 — **defer** (see D2 spike table under Phase D). Not a blocker for C2.
+**D2 (`LinkedHashSet` dedup):** **Abandoned (2026-09-02)** — see D2 spike table below; will not implement.
 
 ~~| Step | Recommendation | Rationale |~~
 ~~| **S8** | **Profile** row **1837** …~~
@@ -1123,7 +1127,7 @@ Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 | Step | Recommendation | Rationale |
 |------|----------------|-----------|
 | ~~**D1**~~ | ~~Defer global `table_dictionary` merge for set-op participants until set-op frame exit (old S10)~~ | **Abandoned (2026-09-02)** — E3 corpus + row **1837** show no timeout benefit; policy change rejected permanently |
-| **D2** | `LinkedHashSet` ref dedup (old **S11**) | **Defer** — spike showed no wall-time win on shared probe; revisit on row **1837** only | Trigger: corpus profile, not synthetic probe alone |
+| ~~**D2**~~ | ~~`LinkedHashSet` ref dedup (old **S11**)~~ | **Abandoned (2026-09-02)** — spike slower on wall time; will not implement |
 
 **D2 spike (2026-09-02):** Replaced `mergeColumnEntry` `ArrayList.contains()` loop with `LinkedHashSet` → `ArrayList` (then **reverted** — spike only).
 
@@ -1134,9 +1138,7 @@ Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 | Shared N50 `convertTiming_totalMicros` | 21,384 | 31,337 (**worse** — alloc overhead on small lists) |
 | Shared N50 dedup events | 1,500 `dedupContainsCheck` | 1,500 `linkedHashSetDedup` |
 
-**Verdict:** `contains()` dedup is **real on shared-table shapes** but **not material** at probe scale (convert ≪ 1% of walk). Lists stay small (≤ branch count per column); in-place `contains()` beats allocating a `LinkedHashSet` + new `ArrayList` per merge. **Total probe duration was nearly a full second slower (or more on shared)** with `LinkedHashSet` — not a smart change on current evidence. **Do not proceed with D2** unless we later encounter profiling evidence (e.g. row **1837**, very large token lists, or flame graphs) where the swap brings a **significant** benefit. **Reassess when we return to D2** in the Phase D track; until then, **do not land D2 before C2** — it adds complexity without moving the ~10 s superlinear walk.
-
-~~**Open question (defer until D2 trigger):** Would switching ref storage from **`ArrayList` + `contains()`** to **`LinkedHashSet`** materially help on 2.8-2 without breaking token ordering? **Do not implement** until profiled.~~ — **Answered by spike:** theoretically yes for huge lists; **not on current probe**; defer.
+**Verdict:** `contains()` dedup is **real on shared-table shapes** but **not material** at probe scale (convert ≪ 1% of walk). **D2 abandoned** — spike was slower on wall time; **will not implement**.
 
 #### subMap walker skip list (20 `timeout_513` rows)
 
@@ -1192,20 +1194,20 @@ Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL
 | 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Walker AST hot path + scope reconstruction (**post-S5**); convert egress not dominant on probe | 475 | **Complete (E3)** |
 | 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Walker hot path (C2.2 fixed dominant cost); ~~D1 defer-global-merge~~ **abandoned** | 1837 | **Complete (E3)** |
 | 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | **Complete (E3)** |
-| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | Open (row **1814** on subMap skip list) |
+| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | **2.11** — row **1814** subMap skip |
 | 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | **Complete (E3)** |
-| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | Open (rows **28–32, 41** on subMap skip list) |
-| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **Complete (E3)** — emits FATALs, sub-second |
+| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | **2.11** — rows **28–32, 41** subMap skip |
+| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **2.11** — E3 pass; **7 FATALs**/row (fast) |
 | 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | **Complete (E3)** |
-| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | Partial — **5860–5863** skip; **5592–5594** fast with FATALs |
+| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | **2.11** — **5860–5863** skip; **5592–5594** fast FATALs |
 | 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | **Complete (E3)** |
 | 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | **Complete (E3)** |
-| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | Open (row **130** on subMap skip list) |
-| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | Open (rows **314–315** on subMap skip list) |
-| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | Open (dev-template rows on subMap skip list) |
-| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **Complete (E3)** — fast with FATALs |
-| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | Partial — row **2120** on skip list |
-| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | Partial — fast with FATALs (**5453–5454**) |
+| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | **2.11** — row **130** subMap skip |
+| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | **2.11** — rows **314–315** subMap skip (syntax-corrupt) |
+| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | **2.11** — dev-template rows on subMap skip |
+| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **2.11** — E3 pass; **32 FATALs** (fast) |
+| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | **2.11** — row **2120** subMap skip |
+| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | **2.11** — **5453–5454** fast FATALs |
 | 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | **Complete (E3)** |
 
 **Suggested order:** 2.8-1 → 2.8-2 (largest N, matches UNION-header hypothesis) → non-UNION canaries **2.8-10 (5261), 2.8-11 (4647), 2.8-12 (130), 2.8-15 (4197)** → remaining UNION-mix and join/substitution buckets.
@@ -1302,7 +1304,7 @@ Retain both the original full query and any minimized reproduction. Redact or pa
 #### Suggested deliverables and tests
 
 1. Opt-in stage-timing instrumentation with a structured result containing parse, walker/semantic, return, overhead, and total durations. **Done** — see `ParseLatencyDiagnosticService`.
-2. A repeatable benchmark or integration-test harness that runs one query or the full corpus and emits machine-readable results for version comparison. **Partial** — `ParseLatencyDiagnosticTest` covers trimmed fixtures; extend to full CSV corpus.
+2. A repeatable benchmark or integration-test harness that runs one query or the full corpus and emits machine-readable results for version comparison. **Done** — `PantoTimeoutCorpusE3GateTest` + `tools/benchmark_panto_timeout_rows.py`.
 3. Characterization results for every supplied query, including timeout stage, warm/cold distinction, query-shape metadata, and 5.0.0-3 versus 5.1.3 ratio.
 4. A minimized fixture and focused performance regression check for each distinct root-cause cluster. Keep hard timing assertions out of ordinary noisy unit tests unless the threshold has ample headroom; use operation counts or dedicated benchmark thresholds where more stable.
 5. Existing six extractor outputs and diagnostics must remain semantically unchanged for successful optimizations, except for separately approved defect fixes.
@@ -1311,7 +1313,7 @@ Retain both the original full query and any minimized reproduction. Redact or pa
 #### Acceptance
 
 - Every supplied slow query is assigned a dominant stage or an explicitly documented unresolved measurement result.
-- Every row in the 74-query timeout brief completes on 5.1.3 without the 90-second abort, or has a documented blocker and active-stage capture sufficient to continue root-cause work.
+- Every row in the 74-query timeout brief completes on 5.1.3 without the 90-second abort, **or** has a documented blocker routed to **2.11** (subMap skip list) with active-stage capture.
 - Stage boundaries reconcile with caller-observed total time closely enough to identify where the missing time is spent.
 - 5.0.0-3 and 5.1.3 comparisons use equivalent runtime settings and distinguish cold from warm execution.
 - Each implemented optimization is justified by profile evidence and has a focused performance regression check plus correctness coverage.
@@ -1352,7 +1354,7 @@ The detailed corpus is [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp
 
 **Consumer rule:** Global `tableDictionary` is physical/tuple sources only under 5.1.3. Trace CTE and query-backed aliases via **`symbolTable` → `table_alias` → `def_queryN`**. Do not restore 5.0.0-3 CTE keys in the physical dictionary.
 
-**Timeout routing:** the 74 cases where 5.1.3 exceeds 90 seconds while 5.0.0-3 completes remain owned by **2.8**.
+**Timeout routing:** the 74 cases where 5.1.3 exceeded 90 seconds while 5.0.0-3 completed are **closed under 2.8** (E3). Residual walker/diagnostic issues on those rows → **2.11**.
 
 #### Investigation-first rule
 
@@ -1393,14 +1395,67 @@ Do not implement parity changes until this explanation is recorded for the case.
 - Rows **3150** and **5410**: FATALs justified and retained — [set-operation-interface-duplicate-output-names-policy.md](set-operation-interface-duplicate-output-names-policy.md).
 - Rows **583, 2139, 3870, 4648, 4726, 5455**: no functional source loss; CTE/tuple policy — [global-table-dictionary-cte-alias-policy.md](global-table-dictionary-cte-alias-policy.md).
 - Dual-parse evidence captured 2026-09-01; comparison tools should adopt post–2.7 scoring.
-- Phase 2.8 (timeouts) remains independent.
+- Phase 2.8 (timeouts) **complete** (2026-09-02); residuals → **2.11**.
 
 #### Out of scope (2.9)
 
 - Schema qualification or folded-case spelling of the same physical source.
 - Removing richer 5.1.3 nested `def_*` or query-dictionary evidence to make raw output resemble 5.0.0-3.
-- Timeouts and performance regressions owned by 2.8.
+- Timeouts and performance regressions owned by **2.8** (**complete**); fast-FATAL / subMap residuals → **2.11**.
 - Assuming all comparison differences share the 2.7 finalizer root cause.
+
+---
+
+### 2.10 — SLL→LL two-stage prediction policy (`SqlParserAccess`)
+
+**Kind:** Performance / correctness (production parse path)
+
+**Status:** **Not started**
+
+**Component:** `SqlParserAccess` / ANTLR prediction mode
+
+**Problem:** `ParseLatencyDiagnosticService` forces **SLL first, then LL on cancellation**; production `SqlParserAccess` uses **LL only**. On some live rows (e.g. **4176** MSU Bozeman fixed-width export) diagnostic parse is **~54 ms** vs production **~5 s**. A prior attempt to enable SLL-only in `SqlParserAccess` produced **silent partial parses** (`tableDictKeys=0`) because `ParseErrorCollector` recovers instead of failing fast.
+
+**Goal:** Land a **safe** two-stage policy: try SLL, fall back to LL on ambiguity/cancellation, and **reject** partial trees when prediction fails (compatible bailout strategy for ANTLR 4.13 in this repo).
+
+**Tests / gates:**
+
+- `SqlParserAccessSllPredictionSafetyTest` — representative rows + optional full corpus sweep
+- Row **4176** / **4177** production-path regression (`ParseLatencyDiagnosticTest`)
+- No increase in `walkerFatal` or empty `tableDictionary` on corpus sample
+
+**Out of scope:** Changing grammar; altering diagnostic-only SLL behavior in `ParseLatencyDiagnosticService` unless needed for parity.
+
+---
+
+### 2.11 — Panto timeout corpus residuals (subMap skip list + fast-FATAL rows)
+
+**Kind:** Defect / investigation (walker correctness + semantic diagnostics on live RMCP SQL)
+
+**Status:** **Not started**
+
+**Component:** event walker (`AbstractASTWalkerHelper` / `exitSql` null `subMap`), parse-error recovery, semantic FATAL emission
+
+**Background:** Phase **2.8** closed the **90 s timeout** problem (E3: **54/54** runnable rows). **31** rows still need semantic follow-up:
+
+| Cluster | Count | Symptom | Canonical list |
+|---------|------:|---------|------------------|
+| **A — subMap walker skip** | **20** | `removeNodeMap()` returns null → NPE in `exitSql` after parse-error recovery mis-aligns walker stack | [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) |
+| **B — fast-FATAL** | **11** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics | §2.8 E3 fast-FATAL table (rows **605–636**, **4197**, **5453–5454**, **5592–5594**) |
+
+**Suggested approach:**
+
+1. **Cluster A** — For each skip-list row: classify `syntax_corrupt` vs `legitimate_complex` vs `dev_template`; fix walker null-guard where SQL is valid; document corpus-quality exclusions where SQL is author-error.
+2. **Cluster B** — Capture FATAL messages per row; group by root cause (set-op interface, substitution, join resolution, etc.); fix or adjudicate like **2.9**.
+3. Re-include rows in `PantoTimeoutCorpusE3GateTest` as fixes land (remove from skip list or add zero-FATAL gate).
+
+**Deliverables:**
+
+- Updated skip list (shrinking as rows are fixed or reclassified)
+- Focused regression test per confirmed fix
+- Bucket tracker rows currently marked **2.11** move to **Complete** when every listed CSV row in that bucket is clean
+
+**Out of scope:** Re-opening **2.8** timeout work; **D1** / **D2** / **C2** micro-opts (all abandoned).
 
 ---
 
@@ -1946,8 +2001,9 @@ Lambda parameters are **not** columns of the FROM clause; they must not go throu
 | 6.1 | Tuple / table-reference format expansion (`source` / `ref` quote and spacing variants) | Not started |
 | 6.2 | Simple predicand / operand (and qualified column) Jinja substitutions | Not started |
 | 6.3 | File-prefix Jinja: skip/collect as unexamined comments (bracket-matched) | Not started |
+| 6.4 | **Phase 2.5 closure** — parse Jinja-authored DNC rollup (§2.5 starter query) without `PARSE_TIMEOUT` | Not started (depends on **6.1** for inline `ref`/`source`) |
 
-Keep interpreting `{% %}` / macros / filters for Phase 7. 6.3 only **skips** prefix (and optional trailer) material.
+Keep interpreting `{% %}` / macros / filters for Phase 7. 6.3 only **skips** prefix (and optional trailer) material. **2.5** does not require Phase **7** (no in-body `{% %}`).
 
 ---
 
@@ -2194,11 +2250,29 @@ Examples:
 
 ---
 
+### 6.4 — Phase 2.5 closure (Jinja-authored DNC rollup)
+
+**Depends on:** **6.1** (tuple `ref`/`source` in `FROM` / `JOIN`, including spaced forms like `{{ ref ('acs__contacts')}}`).
+
+**Fixture:** Full Jinja-authored starter query in [§2.5](#25--parse-hang--parse_timeout-on-multi-cte-email-dnc-rollup) (`email_common_format` CTE chain, `UNION ALL`, `QUALIFY`, nested `CASE`). Not in Panto CSV; copy from workplan or add `parse/documents/fixtures/dnc-email-rollup-jinja.sql` when implementing.
+
+**Acceptance:**
+
+1. Parse completes without `PARSE_TIMEOUT` on the Jinja-authored text (not table-stubbed).
+2. CTEs `email_common_format`, `aggregation_check`, `dnc_prioritization` resolve; outer SELECT interface matches guardrail (`dncEmailRollupMultiCteExemplarV0Test`).
+3. Add regression test (e.g. `dncEmailRollupJinjaAuthoredV0Test`) beside the existing stubbed guardrail.
+
+**Out of scope:** Phase **7** (`{% if %}`, macros) — not present in this fixture.
+
+---
+
 ## Phase 7 — Deep JINJA language support *(optional)*
 
 **Kind:** Enhancement (optional; full-ish Jinja/dbt in SQL files)
 
 **Status:** Not started — **do not start until Phase 6 simple substitutions are accepted**, and only if product still needs compiled-template constructs.
+
+**2.5 note:** The Phase **2.5** email DNC rollup uses inline `{{ ref }}` / `{{ source }}` only — **not** a Phase **7** dependency. Closure is **6.4** after **6.1**.
 
 **Theme:** Phase 6 is literal in-query `{{ ref/source/var }}` plus **skipping** file-prefix Jinja as comments (6.3). This phase **interprets** language features that change SQL shape at compile time, including the prefix bucket 6.3 stored.
 
