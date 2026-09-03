@@ -1448,8 +1448,24 @@ Do not implement parity changes until this explanation is recorded for the case.
 **Tests / gates:**
 
 - `SqlParserAccessSllPredictionSafetyTest` — representative rows + optional full corpus sweep
+- `ClusterBSllRegressionTest` — **10** Cluster B rows adjudicated as SLL-only E3 false positives (`cluster-b-sll-regression-rows.json` → `pending_2_10_csv_rows`)
 - Row **4176** / **4177** production-path regression (`ParseLatencyDiagnosticTest`)
+- After 2.10 lands: E3 `walkerFatalCount == 0` (or parity with access path) on `pending_2_10_csv_rows`
 - No increase in `walkerFatal` or empty `tableDictionary` on corpus sample
+
+**Pending fixes (Cluster B → 2.10, adjudicated 2026-09-02):**
+
+Frozen SQL fixtures already in `sql/csv-row-<n>.sql`. Index: `cluster-b-sll-regression-rows.json`.
+
+| csv_row | Bucket | SLL fatals | Default (LL) fatals | Symptom |
+|--------:|--------|----------:|--------------------:|---------|
+| 605–636 | 2.8-7 Student Address | 7 each | 0 | SLL builds `def_query0` without `agg2=union6` alias |
+| 5453–5454 | 2.8-17 wide contact | 3 each | 0 | SLL drops `table_alias` map present under default |
+| 5592–5594 | 2.8-9 intake UNION | 16 each | 0 | SLL `def_query0` vs default `def_union2` |
+
+**Deferred (not 2.10-only):** row **4197** — `SqlParserAccess` parse failure at line 85; remains **2.11**.
+
+**Tooling:** `python3 tools/compare_cluster_b_sll_vs_default.py` — regenerate comparison; `SllVsDefaultClusterBProbe` — per-row probe.
 
 **Out of scope:** Changing grammar; altering diagnostic-only SLL behavior in `ParseLatencyDiagnosticService` unless needed for parity.
 
@@ -1468,19 +1484,19 @@ Do not implement parity changes until this explanation is recorded for the case.
 | Cluster | Count | Symptom | Tracker |
 |---------|------:|---------|---------|
 | **A — former subMap skip** | **20** | Pre-**W1**: `subMap` NPE after parse-error recovery; post-**W1**: syntax_corrupt rows clean; **legitimate_complex** may still need **W2** | §2.8 **W-track** + [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (cleared) |
-| **B — fast-FATAL** | **11** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics | §2.8 E3 fast-FATAL table (rows **605–636**, **4197**, **5453–5454**, **5592–5594**) |
+| **B — fast-FATAL** | **11** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics | §2.8 E3 fast-FATAL table — **10** adjudicated → **2.10**; **4197** deferred |
 
 **Suggested approach:**
 
 1. **Cluster A** — **W1** done for parse-phase failures; **W2** null-guard for rows that still walk; **W5** document `syntax_corrupt` as author-error.
-2. **Cluster B** — Capture FATAL messages per row; group by root cause (set-op interface, substitution, join resolution, etc.); fix or adjudicate like **2.9**.
+2. **Cluster B** — **Adjudicated (2026-09-02):** all 11 E3 fast-FATAL rows are SLL-vs-default divergences. **10** (`605–636`, `5453–5454`, `5592–5594`) are SLL-only false positives vs production `SqlParserAccess` → **`cluster-b-sll-regression-rows.json`** / **2.10**. Row **4197** has production parse failure at line 85 → remains **2.11**.
 3. E3 already includes all **74** rows post-**W1**; add zero-FATAL assertions when Cluster B is adjudicated (**W4**).
 4. **Cleanup** — Delete one-off triage CLIs after **W2** + Cluster B classification (**2.11.4**). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests.
 
 | Step | Task | Status |
 |------|------|--------|
 | 2.11.1 | **Cluster A** — **W2** null-guard + **W5** syntax_corrupt classification | **Partial** — **W1** + **W2** done |
-| 2.11.2 | **Cluster B** — fast-FATAL (11 rows) | Not started |
+| 2.11.2 | **Cluster B** — fast-FATAL (11 rows) | **Adjudicated** — **10** routed to **2.10** (SLL-only E3 false positives); **4197** deferred (production parse failure) |
 | 2.11.3 | E3 / skip-list hygiene | **Done** — **74/74** in E3; skip list cleared |
 | 2.11.4 | Remove one-off investigation CLIs after classification | **Partial** — some probes remain (`PantoSubMapRowProbe`) |
 

@@ -55,6 +55,33 @@ final class PantoOutstandingSqlFixtures {
         }
     }
 
+    /** Cluster B rows (E3 fast-FATAL) adjudicated as SLL-only false positives → **2.10**. */
+    static List<Integer> clusterB210PendingRows() throws IOException {
+        return readCsvRowIndex("pending_2_10_csv_rows");
+    }
+
+    /** All 11 Cluster B E3 fast-FATAL rows (includes row 4197 deferred). */
+    static List<Integer> clusterBE3FastFatalRows() throws IOException {
+        return readCsvRowIndex("csv_rows");
+    }
+
+    private static List<Integer> readCsvRowIndex(String field) throws IOException {
+        Path index = resolveHandoffRoot().resolve("cluster-b-sll-regression-rows.json");
+        if (!Files.isRegularFile(index)) {
+            throw new IllegalStateException("Missing cluster-b-sll-regression-rows.json under handoff pack");
+        }
+        try (Reader reader = Files.newBufferedReader(index, StandardCharsets.UTF_8)) {
+            ClusterBIndexPayload payload = new Gson().fromJson(reader, ClusterBIndexPayload.class);
+            List<Integer> rows = field.equals("pending_2_10_csv_rows")
+                    ? payload.pending210CsvRows
+                    : payload.csvRows;
+            if (rows == null || rows.isEmpty()) {
+                throw new IllegalStateException("Empty cluster-b index field: " + field);
+            }
+            return List.copyOf(rows);
+        }
+    }
+
     private static Path resolveSqlFile(int csvRow) {
         return resolveHandoffRoot().resolve("sql").resolve("csv-row-" + csvRow + ".sql");
     }
@@ -80,5 +107,13 @@ final class PantoOutstandingSqlFixtures {
 
         @SerializedName("query_sql")
         String sql;
+    }
+
+    static final class ClusterBIndexPayload {
+        @SerializedName("csv_rows")
+        List<Integer> csvRows;
+
+        @SerializedName("pending_2_10_csv_rows")
+        List<Integer> pending210CsvRows;
     }
 }

@@ -20,6 +20,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 | `phase-2.7-with-conditionless-join-finalizer.md` | Phase 2.7 spec — **complete**; CTE aliases not in global `tableDictionary` by design |
 | `panto_513_outstanding_issues.csv` | **82** data rows: domain, entity, query name, full `query_sql`, timings, `issue_kinds` |
 | `timeout-513-corpus-rows.json` | Sorted `csv_row` list for the **74** `timeout_513` E3 gate rows |
+| `cluster-b-sll-regression-rows.json` | **11** Cluster B E3 fast-FATAL rows; **10** pending **2.10** SLL→LL fixes |
 | `sql/csv-row-<N>.sql` | **Frozen** full SQL for tests (74 timeout rows + degradation exemplars). Tests read these files, not the CSV at runtime. Refresh a row by re-exporting from `panto_513_outstanding_issues.csv` when intentionally updating a fixture. |
 | `PantoTimeoutCorpusE3GateTest` | CI gate: **74** timeout rows must finish under **90 s** (`mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test`) |
 | `outstanding-issues-index.md` | Compact tables (no SQL) for workplan / PR description |

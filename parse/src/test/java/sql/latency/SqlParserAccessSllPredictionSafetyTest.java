@@ -29,6 +29,13 @@ public class SqlParserAccessSllPredictionSafetyTest {
     private static final Path MANIFEST = Path.of("target/panto-timeout-batch-manifest.json");
 
     @Test
+    public void clusterB210PendingRows_parseWithoutFatalsOnAccessPath() throws Exception {
+        for (int csvRow : PantoOutstandingSqlFixtures.clusterB210PendingRows()) {
+            assertAccessOk(PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow));
+        }
+    }
+
+    @Test
     public void representativeQueriesParseWithoutFatals() throws Exception {
         assertAccessOk("select 1 as x");
         assertAccessOk(PantoOutstandingSqlFixtures.sqlForCsvRow(4176));
