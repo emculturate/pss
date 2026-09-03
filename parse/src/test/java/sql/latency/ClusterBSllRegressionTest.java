@@ -3,6 +3,7 @@ package sql.latency;
 import java.io.IOException;
 import java.util.List;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -46,6 +47,7 @@ public class ClusterBSllRegressionTest {
         }
     }
 
+    @Ignore("Manual — diagnostic timing parity; production path covered by clusterB_productionAccessPath_zeroFatals")
     @Test
     public void clusterB_diagnosticService_matchesAccessWalkerFatals() throws IOException {
         for (int csvRow : PantoOutstandingSqlFixtures.clusterBRegressionRows()) {

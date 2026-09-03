@@ -50,4 +50,21 @@ public class WalkerWalkExceptionGateTest {
         Exception wrapped = new RuntimeException("outer", subMapNullNpe());
         Assert.assertTrue(WalkerWalkExceptionGate.isWalkerStackMisalignNpe(wrapped));
     }
+
+    @Test
+    public void isWalkerStackMisalignNpe_recognizesNullMessageWhenStackShowsRemoveNodeMap() {
+        NullPointerException bare = new NullPointerException() {
+            @Override
+            public StackTraceElement[] getStackTrace() {
+                return new StackTraceElement[] {
+                        new StackTraceElement(
+                                "astwalkers.AbstractASTWalkerHelper",
+                                "removeNodeMap",
+                                "AbstractASTWalkerHelper.java",
+                                476)
+                };
+            }
+        };
+        Assert.assertTrue(WalkerWalkExceptionGate.isWalkerStackMisalignNpe(bare));
+    }
 }

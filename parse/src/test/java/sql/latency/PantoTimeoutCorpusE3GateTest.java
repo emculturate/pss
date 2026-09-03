@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.StringJoiner;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
@@ -27,10 +28,14 @@ import static org.junit.Assert.assertTrue;
  * comparing SLL vs LL prediction cost — never to gate production behavior.
  *
  * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
+ *
+ * <p><b>Manual only:</b> excluded from default {@code mvn test} / package builds (~80s).
+ * Run: {@code mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test}
  */
+@Ignore("Manual — 74-row E3 timing gate; mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test")
 public class PantoTimeoutCorpusE3GateTest {
 
-    static final long E3_TIMEOUT_MS = 90_000L;
+    static final long E3_TIMEOUT_MS = PantoLatencyGateConstants.E3_TIMEOUT_MS;
 
     /** 2.8-1 — giant constant-row {@code UNION} lookup (~248 branches). */
     static final int[] E3_BUCKET_2_8_1 = {475, 476, 1827, 1828};

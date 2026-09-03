@@ -17,14 +17,36 @@ public final class WalkerWalkExceptionGate {
     }
 
     public static boolean isWalkerStackMisalignNpe(Throwable throwable) {
-        if (throwable == null) {
+        for (Throwable current = throwable; current != null; current = current.getCause()) {
+            if (!(current instanceof NullPointerException)) {
+                continue;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("\"subMap\" is null")) {
+                return true;
+            }
+            if (isWalkerStackFrame(current.getStackTrace())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isWalkerStackFrame(StackTraceElement[] stackTrace) {
+        if (stackTrace == null) {
             return false;
         }
-        String message = throwable.getMessage();
-        if (message != null && message.contains("\"subMap\" is null")) {
-            return true;
+        for (StackTraceElement frame : stackTrace) {
+            if (frame == null) {
+                continue;
+            }
+            if ("astwalkers.AbstractASTWalkerHelper".equals(frame.getClassName())
+                    && ("removeNodeMap".equals(frame.getMethodName())
+                            || "requireNodeMap".equals(frame.getMethodName()))) {
+                return true;
+            }
         }
-        return isWalkerStackMisalignNpe(throwable.getCause());
+        return false;
     }
 
     public static boolean containsStackMisalignDiagnostic(Iterable<ParseDiagnostic> diagnostics) {

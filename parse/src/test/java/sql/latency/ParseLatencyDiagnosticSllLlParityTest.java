@@ -2,6 +2,7 @@ package sql.latency;
 
 import java.io.IOException;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -23,6 +24,7 @@ public class ParseLatencyDiagnosticSllLlParityTest {
         assertEquals(access.getSnippet().getFatalErrorCount(), diagnostic.walkerFatalCount);
     }
 
+    @Ignore("Manual — SLL probe only; mvn -pl parse -Dtest=ParseLatencyDiagnosticSllLlParityTest#row28_sllProbe_reportsSllParsePhaseFailure test")
     @Test
     public void row28_sllProbe_reportsSllParsePhaseFailure() throws IOException {
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(28);

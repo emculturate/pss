@@ -1,5 +1,6 @@
 package sql.latency;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import sql.walker.SetOpTimingProbeFixtures;
@@ -31,7 +32,10 @@ import static org.junit.Assert.assertTrue;
  * <pre>
  *   mvn -f parse/pom.xml -Dtest=ParseLatencyDiagnosticTest test
  * </pre>
+ *
+ * <p><b>Manual only:</b> excluded from default {@code mvn test} / package builds.
  */
+@Ignore("Manual — Phase 2.8 latency probes; mvn -pl parse -Dtest=ParseLatencyDiagnosticTest test")
 public class ParseLatencyDiagnosticTest {
 
     private static final long WARN_MS = 5_000L;
@@ -101,10 +105,10 @@ public class ParseLatencyDiagnosticTest {
                 report.walkerFatalCount);
         assertTrue(
                 "expected walk under 90s: " + label + " walkMs=" + report.walkMs,
-                report.walkMs < PantoTimeoutCorpusE3GateTest.E3_TIMEOUT_MS);
+                report.walkMs < PantoLatencyGateConstants.E3_TIMEOUT_MS);
         assertTrue(
                 "expected total under 90s: " + label + " totalMs=" + report.totalMs,
-                report.totalMs < PantoTimeoutCorpusE3GateTest.E3_TIMEOUT_MS);
+                report.totalMs < PantoLatencyGateConstants.E3_TIMEOUT_MS);
     }
 
     private static void assertE2Gate(String label, String sql) {

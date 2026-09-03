@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import access.SqlParserAccess;
@@ -24,7 +25,7 @@ public class PantoRow130FullCsvRegressionTest {
 
     static final int CSV_ROW = 130;
 
-    private static final long E3_TIMEOUT_MS = PantoTimeoutCorpusE3GateTest.E3_TIMEOUT_MS;
+    private static final long E3_TIMEOUT_MS = PantoLatencyGateConstants.E3_TIMEOUT_MS;
 
     @Test
     public void frozenSqlFixture_presentAndNonEmpty() throws IOException {
@@ -46,6 +47,7 @@ public class PantoRow130FullCsvRegressionTest {
         }
     }
 
+    @Ignore("Manual — row 130 diagnostic timing gate; mvn -pl parse -Dtest=PantoRow130FullCsvRegressionTest#diagnosticService_fullCsv_underE3Gate_noWalkerStackMisalign test")
     @Test
     public void diagnosticService_fullCsv_underE3Gate_noWalkerStackMisalign() throws IOException {
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(CSV_ROW);

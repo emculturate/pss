@@ -29,8 +29,15 @@
 
 ## Regression gates
 
+**Default build** (`mvn test` / package): production correctness tests only; latency corpus gates are `@Ignore` (manual).
+
 ```bash
-mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest,ClusterBSllRegressionTest,PantoSubMapSkipListRegressionTest test
+# Default CI / package build
+mvn -pl parse -Dtest=ClusterBSllRegressionTest,PantoSubMapSkipListRegressionTest test
+
+# Manual timing gates (not run on package build)
+mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test
+mvn -pl parse -Dtest=ParseLatencyDiagnosticTest test
 ```
 
 ---

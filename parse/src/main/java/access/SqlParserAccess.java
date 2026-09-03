@@ -276,6 +276,10 @@ public class SqlParserAccess extends AbstractParserAccess {
                 "SqlParserAccess",
                 pending,
                 WalkerWalkExceptionGate.existingMisalignCandidates(getAllDiagnostics(), walkerDiagnostics));
+        if (!recognized && e instanceof NullPointerException) {
+            pending.add(WalkerWalkExceptionGate.stackMisalignDiagnostic("SqlParserAccess", e));
+            recognized = true;
+        }
         for (ParseDiagnostic diagnostic : pending) {
             addAccessDiagnostic(diagnostic);
         }

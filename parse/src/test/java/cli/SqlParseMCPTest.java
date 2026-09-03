@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,15 +30,18 @@ public class SqlParseMCPTest {
 
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-    private final PrintStream originalOut = System.out;
-    private final PrintStream originalErr = System.err;
-    private final InputStream originalIn = System.in;
+    private PrintStream originalOut;
+    private PrintStream originalErr;
+    private InputStream originalIn;
 
     private static final Gson gson = new Gson();
   
 
     @Before
     public void setUpStreams() {
+        originalOut = System.out;
+        originalErr = System.err;
+        originalIn = System.in;
         outContent.reset();
         errContent.reset();
         System.setOut(new PrintStream(outContent));
@@ -53,20 +55,48 @@ public class SqlParseMCPTest {
         System.setIn(originalIn);
     }
 
-    private void runServiceWithInput(String input) {
-        if (!input.endsWith("\n")) {
-            input += "\n";
-        }
-        System.setIn(new ByteArrayInputStream(input.getBytes()));
-        SqlParseMCP.main(null); // Run in the same thread
+    private void runServiceWithInput(byte[] input) {
+        System.setIn(new ByteArrayInputStream(input));
+        SqlParseMCP.main(null);
     }
 
-    private String createJsonRpcRequest(String id, String method, String paramsJson) {
+    private void runServiceWithInput(String input) {
+        runServiceWithInput(input.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private byte[] frameUtf8(String jsonPayload) {
+        byte[] payload = jsonPayload.getBytes(StandardCharsets.UTF_8);
+        String header = "Content-Length: " + payload.length + "\r\n\r\n";
+        byte[] headerBytes = header.getBytes(StandardCharsets.US_ASCII);
+        byte[] frame = new byte[headerBytes.length + payload.length];
+        System.arraycopy(headerBytes, 0, frame, 0, headerBytes.length);
+        System.arraycopy(payload, 0, frame, headerBytes.length, payload.length);
+        return frame;
+    }
+
+    private byte[] createJsonRpcRequest(String id, String method, String paramsJson) {
         String payload = String.format(
             "{\"jsonrpc\":\"2.0\",\"id\":\"%s\",\"method\":\"%s\",\"params\":%s}",
             id, method, paramsJson
         );
-        return "Content-Length: " + payload.length() + "\r\n\r\n" + payload;
+        return frameUtf8(payload);
+    }
+
+    private byte[] createParseSqlStreamRequest(String id, String endPoint, byte[] sqlBytes) {
+        String params = String.format(
+                "{\"endPoint\":\"%s\",\"sqlByteLength\":%d}",
+                endPoint, sqlBytes.length);
+        String frame1Payload = String.format(
+                "{\"jsonrpc\":\"2.0\",\"id\":\"%s\",\"method\":\"tool/parseSqlStream\",\"params\":%s}",
+                id, params);
+        byte[] frame1 = frameUtf8(frame1Payload);
+        String frame2Header = "Content-Length: " + sqlBytes.length + "\r\n\r\n";
+        byte[] headerBytes = frame2Header.getBytes(StandardCharsets.US_ASCII);
+        byte[] request = new byte[frame1.length + headerBytes.length + sqlBytes.length];
+        System.arraycopy(frame1, 0, request, 0, frame1.length);
+        System.arraycopy(headerBytes, 0, request, frame1.length, headerBytes.length);
+        System.arraycopy(sqlBytes, 0, request, frame1.length + headerBytes.length, sqlBytes.length);
+        return request;
     }
 
     private JsonObject findFirstResultObject(String output) {
@@ -100,7 +130,7 @@ public class SqlParseMCPTest {
     @Test
     public void testSuccessfulParseSql() throws InterruptedException {
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"SELECT * FROM mytable;\"}";
-        String request = createJsonRpcRequest("1", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("1", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -154,7 +184,7 @@ public class SqlParseMCPTest {
     public void testParseSqlWithInvalidParams() throws InterruptedException {
         // Missing 'endPoint' parameter
         String params = "{\"sqlText\":\"SELECT * FROM mytable\"}";
-        String request = createJsonRpcRequest("2", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("2", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -162,7 +192,7 @@ public class SqlParseMCPTest {
         String jsonResponse = output.substring(output.indexOf("{"));
         JsonObject responseObj = gson.fromJson(jsonResponse, JsonObject.class);
 
-        // Assert error response
+        assertEquals("2", responseObj.get("id").getAsString());
         assertNotNull(responseObj.get("error"));
         JsonObject error = responseObj.getAsJsonObject("error");
         assertEquals(-32602, error.get("code").getAsInt()); // Invalid params
@@ -173,7 +203,7 @@ public class SqlParseMCPTest {
     public void testParseSqlWithMissingSqlText() throws InterruptedException {
         // Missing 'sqlText' parameter
         String params = "{\"endPoint\":\"sql\"}";
-        String request = createJsonRpcRequest("3", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("3", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -181,7 +211,7 @@ public class SqlParseMCPTest {
         String jsonResponse = output.substring(output.indexOf("{"));
         JsonObject responseObj = gson.fromJson(jsonResponse, JsonObject.class);
 
-        // Assert error response
+        assertEquals("3", responseObj.get("id").getAsString());
         assertNotNull(responseObj.get("error"));
         JsonObject error = responseObj.getAsJsonObject("error");
         assertEquals(-32602, error.get("code").getAsInt()); // Invalid params
@@ -192,7 +222,7 @@ public class SqlParseMCPTest {
     public void testParseSqlWithSyntaxError() throws InterruptedException {
         // Syntactically incorrect SQL
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select obj join from tab1\"}";
-        String request = createJsonRpcRequest("4", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("4", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -239,7 +269,7 @@ public class SqlParseMCPTest {
     @Test
     public void testRoundTripParseSqlFatalQueryReportsMessagesAndErrors() throws Exception {
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select x.missing from cte where campaign_id is not null\"}";
-        String request = createJsonRpcRequest("5", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("5", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -289,7 +319,7 @@ public class SqlParseMCPTest {
     @Test
     public void testRoundTripParseSqlQualifiedMissingSourceReturnsFatal() throws Exception {
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select x.missing, cte.missed from cte\"}";
-        String request = createJsonRpcRequest("6", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("6", "tool/parseSql", params);
 
         runServiceWithInput(request);
 
@@ -324,7 +354,6 @@ public class SqlParseMCPTest {
 
     @Test
     public void testFormatParseResultCountsFatalDiagnosticsFromMessagesList() throws Exception {
-        SqlParseMCP mcp = new SqlParseMCP();
         Snippet snippet = new Snippet(
             new HashMap<>(),
             new HashMap<>(),
@@ -350,9 +379,7 @@ public class SqlParseMCPTest {
         snippet.setParserDiagnosticList(List.of());
         snippet.setParserMessageList(List.of(fatalMessageOnly));
 
-        Method formatMethod = SqlParseMCP.class.getDeclaredMethod("formatParseResult", Snippet.class);
-        formatMethod.setAccessible(true);
-        JsonObject result = (JsonObject) formatMethod.invoke(mcp, snippet);
+        JsonObject result = SqlParseMcpSupport.formatParseResult(snippet);
 
         assertFalse(result.get("ok").getAsBoolean());
         assertTrue(result.get("hasFatalErrors").getAsBoolean());
@@ -369,7 +396,6 @@ public class SqlParseMCPTest {
 
         @Test
         public void testFormatParseResultNormalizesSyntheticDiagnostics() throws Exception {
-        SqlParseMCP mcp = new SqlParseMCP();
         Snippet snippet = new Snippet(
             new HashMap<>(),
             new HashMap<>(),
@@ -437,9 +463,7 @@ public class SqlParseMCPTest {
         snippet.setParserDiagnosticList(List.of(parserError, walkerError, walkerSevereWarning, walkerFatal));
         snippet.setParserMessageList(List.of(parserError, walkerError, walkerSevereWarning, walkerFatal));
 
-        Method formatMethod = SqlParseMCP.class.getDeclaredMethod("formatParseResult", Snippet.class);
-        formatMethod.setAccessible(true);
-        JsonObject result = (JsonObject) formatMethod.invoke(mcp, snippet);
+        JsonObject result = SqlParseMcpSupport.formatParseResult(snippet);
 
         assertFalse(result.get("ok").getAsBoolean());
         assertTrue(result.get("hasFatalErrors").getAsBoolean());
@@ -465,6 +489,81 @@ public class SqlParseMCPTest {
     }
 
     @Test
+    public void normalizeSqlTextForMcp_replacesEnDashAndStripsVariationSelector() {
+        String normalized = SqlParseMCP.normalizeSqlTextForMcp("select '\u2013' as dash, 'test\uFE0F' as t");
+        assertFalse(normalized.contains("\u2013"));
+        assertFalse(normalized.contains("\uFE0F"));
+        assertTrue(normalized.contains("'-'"));
+        assertTrue(normalized.contains("'test'"));
+    }
+
+    @Test
+    public void parseSqlWithUnicodeEscapes_returnsCorrelatedJsonRpcId() {
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select 'caf\\u00e9' as cafe\"}";
+        runServiceWithInput(createJsonRpcRequest("cafe", "tool/parseSql", params));
+
+        JsonObject responseObj = findFirstResultObject(outContent.toString());
+        assertNotNull(responseObj);
+        assertEquals("cafe", responseObj.get("id").getAsString());
+        assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+    }
+
+    @Test
+    public void parseSqlStream_largeAsciiSql_returnsOk() {
+        StringBuilder sql = new StringBuilder("select ");
+        while (sql.length() < 75_000) {
+            sql.append('x');
+        }
+        sql.append(" as col;");
+        byte[] sqlBytes = sql.toString().getBytes(StandardCharsets.UTF_8);
+        runServiceWithInput(createParseSqlStreamRequest("129", "SQL", sqlBytes));
+
+        JsonObject responseObj = findFirstResultObject(outContent.toString());
+        assertNotNull(responseObj);
+        assertEquals("129", responseObj.get("id").getAsString());
+        assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+        assertEquals("sql-stream", responseObj.getAsJsonObject("result").get("transport").getAsString());
+    }
+
+    @Test
+    public void parseSqlStream_wrongByteLength_returnsErrorWithSameId() {
+        byte[] sqlBytes = "select 1;".getBytes(StandardCharsets.UTF_8);
+        String params = "{\"endPoint\":\"SQL\",\"sqlByteLength\":999}";
+        byte[] frame1 = frameUtf8(String.format(
+                "{\"jsonrpc\":\"2.0\",\"id\":\"badlen\",\"method\":\"tool/parseSqlStream\",\"params\":%s}",
+                params));
+        String frame2Header = "Content-Length: " + sqlBytes.length + "\r\n\r\n";
+        byte[] headerBytes = frame2Header.getBytes(StandardCharsets.US_ASCII);
+        byte[] request = new byte[frame1.length + headerBytes.length + sqlBytes.length];
+        System.arraycopy(frame1, 0, request, 0, frame1.length);
+        System.arraycopy(headerBytes, 0, request, frame1.length, headerBytes.length);
+        System.arraycopy(sqlBytes, 0, request, frame1.length + headerBytes.length, sqlBytes.length);
+        runServiceWithInput(request);
+
+        String jsonResponse = outContent.toString().substring(outContent.toString().indexOf('{'));
+        JsonObject responseObj = gson.fromJson(jsonResponse, JsonObject.class);
+        assertEquals("badlen", responseObj.get("id").getAsString());
+        assertNotNull(responseObj.get("error"));
+        assertTrue(responseObj.getAsJsonObject("error").get("message").getAsString().contains("sqlByteLength mismatch"));
+    }
+
+    @Test
+    public void largeJsonRpcFrame_75kbAsciiSql_returnsOk() {
+        StringBuilder sql = new StringBuilder("select ");
+        while (sql.length() < 74_100) {
+            sql.append('a');
+        }
+        sql.append(" as col;");
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":" + gson.toJson(sql.toString()) + "}";
+        runServiceWithInput(createJsonRpcRequest("big", "tool/parseSql", params));
+
+        JsonObject responseObj = findFirstResultObject(outContent.toString());
+        assertNotNull(responseObj);
+        assertEquals("big", responseObj.get("id").getAsString());
+        assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+    }
+
+    @Test
     public void peekRequestId_readsIdBeforeFullDispatch() {
         assertEquals("42", SqlParseMCP.peekRequestId(
                 "{\"jsonrpc\":\"2.0\",\"id\":\"42\",\"method\":\"tool/parseSql\",\"params\":{}}"));
@@ -482,7 +581,7 @@ public class SqlParseMCPTest {
         assertTrue(sql.indexOf('\u00a0') >= 0);
 
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":" + gson.toJson(sql) + "}";
-        String request = createJsonRpcRequest("28", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("28", "tool/parseSql", params);
         runServiceWithInput(request);
 
         JsonObject responseObj = findFirstResultObject(outContent.toString());
@@ -495,13 +594,25 @@ public class SqlParseMCPTest {
     @Test
     public void parseSqlWithNbspInSimpleSelect_returnsCorrelatedJsonRpcId() {
         String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select 1\u00a0as one_col\"}";
-        String request = createJsonRpcRequest("nb", "tool/parseSql", params);
+        byte[] request = createJsonRpcRequest("nb", "tool/parseSql", params);
         runServiceWithInput(request);
 
         JsonObject responseObj = findFirstResultObject(outContent.toString());
         assertNotNull(responseObj);
         assertEquals("nb", responseObj.get("id").getAsString());
         assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+    }
+
+    @Test
+    public void sqlParseBulk_readsStdinAndReturnsTransportTag() {
+        String sql = "select 1 as one_col;";
+        System.setIn(new ByteArrayInputStream(sql.getBytes(StandardCharsets.UTF_8)));
+        SqlParseBulk.main(new String[] {"SQL"});
+
+        JsonObject result = gson.fromJson(outContent.toString().trim(), JsonObject.class);
+        assertTrue(result.get("ok").getAsBoolean());
+        assertEquals("sql-bulk", result.get("transport").getAsString());
+        assertNotNull(result.get("rmcpParserMeta"));
     }
 
    
