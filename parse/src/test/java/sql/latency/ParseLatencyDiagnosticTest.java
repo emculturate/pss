@@ -5,6 +5,8 @@ import org.junit.Test;
 import sql.walker.SetOpTimingProbeFixtures;
 
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Phase 2.8 diagnostic driver — points the latency service at representative
@@ -63,11 +65,71 @@ public class ParseLatencyDiagnosticTest {
         run("Panto row 28 — Acquia PDP_Acquia_Export", PANTO_ROW_28, SQLPARSER_SQL_TREE_KEY);
     }
 
-    // ── Row 475: EAB.Country (250 UNION of literals — minimal query, big UNION chain) ─
+    // ── Row 475: EAB.Country (248 UNION of country literals — 2.8-1 canary) ───
+
+    /** E2 gate: full Panto row must finish well under the 90s RMCP kill (5.0.0-3 ~7.4s walk). */
+    private static final long PANTO_ROW_475_E2_TIMEOUT_MS = 90_000L;
 
     @Test
-    public void pantoRow475_eabCountry() {
-        run("Panto row 475 — EAB.Country (250 UNION terms)", PANTO_ROW_475, SQLPARSER_SQL_TREE_KEY);
+    public void pantoRow475_eabCountry() throws Exception {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(475);
+        assertE2Gate("Panto row 475 — EAB.Country (full 248 UNION)", sql);
+    }
+
+    @Test
+    public void pantoRow475_eabCountry_trimSmoke() {
+        run("Panto row 475 — EAB.Country (20-branch trim smoke)", buildUnion(20), SQLPARSER_SQL_TREE_KEY);
+    }
+
+    // ── Row 1837: PCM convert UNION ALL (2.8-2 canary) ───────────────────────
+
+    @Test
+    public void pantoRow1837_pcmConvert() throws Exception {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(1837);
+        System.out.println("\n=== Panto row 1837 — Enroll360.Partner Code Mapping.convert (2.8-2 canary) ===");
+        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
+        System.out.println(report.summary());
+        assertUnderE3Timeout("Panto row 1837", report);
+    }
+
+    private static void assertUnderE3Timeout(String label, ParseLatencyReport report) {
+        System.out.printf(
+                "E3_GATE %s walkMs=%d totalMs=%d walkerFatal=%d%n",
+                label,
+                report.walkMs,
+                report.totalMs,
+                report.walkerFatalCount);
+        assertTrue(
+                "expected walk under 90s: " + label + " walkMs=" + report.walkMs,
+                report.walkMs < PantoTimeoutCorpusE3GateTest.E3_TIMEOUT_MS);
+        assertTrue(
+                "expected total under 90s: " + label + " totalMs=" + report.totalMs,
+                report.totalMs < PantoTimeoutCorpusE3GateTest.E3_TIMEOUT_MS);
+    }
+
+    private static void assertE2Gate(String label, String sql) {
+        System.out.println("\n=== " + label + " ===");
+        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
+        System.out.println(report.summary());
+        if (report.walkMs > WARN_MS) {
+            System.out.println("  *** SLOW WALK — likely O(n²) in event walker");
+        }
+        System.out.printf(
+                "E2_GATE %s chars=%d lexMs=%d parseMs=%d walkMs=%d totalMs=%d walkerFatal=%d%n",
+                label,
+                report.querySizeChars,
+                report.lexMs,
+                report.parseMs,
+                report.walkMs,
+                report.totalMs,
+                report.walkerFatalCount);
+        assertEquals("expected no walker fatals: " + label, 0, report.walkerFatalCount);
+        assertTrue(
+                "expected walk under " + PANTO_ROW_475_E2_TIMEOUT_MS + "ms: " + label,
+                report.walkMs < PANTO_ROW_475_E2_TIMEOUT_MS);
+        assertTrue(
+                "expected total under " + PANTO_ROW_475_E2_TIMEOUT_MS + "ms: " + label,
+                report.totalMs < PANTO_ROW_475_E2_TIMEOUT_MS);
     }
 
     // ── Row 130: ALR Applicant transformation (large CASE expression) ─────────
@@ -250,7 +312,7 @@ public class ParseLatencyDiagnosticTest {
 
     // ═════════════════════════════════════════════════════════════════════════
     // Query fixtures — trimmed from parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md
-    // Only row 28, 475, and 130 are embedded here; add more as needed.
+    // Row 28 and 130 embedded here; row 475 loads from sql/csv-row-475.sql via PantoOutstandingSqlFixtures.
     // ═════════════════════════════════════════════════════════════════════════
 
     // Row 28 — PDP_Acquia_Export (full text)
@@ -459,30 +521,6 @@ public class ParseLatencyDiagnosticTest {
         "  OR\n" +
         "  (NULLIF(TRIM(Con.<Contact Type>), '') IN ('Deliverability Seed','Ride Along')\n" +
         "   AND TRIM(all_source.all_sources_blnd) is null)";
-
-    // Row 475 — EAB.Country (first 20 UNION rows; enough to demonstrate per-term cost)
-    // Use probe_union250 for the full-size equivalent.
-    private static final String PANTO_ROW_475 =
-        "select 'Afghanistan' as country, 'AF' as alpha_2_code, 'AFG' as alpha_3_code, '004' as numeric_code, 'AF' as fips_code, 'Afghanistan' as eab_common_country_name union\n" +
-        "select 'Albania' as country, 'AL' as alpha_2_code, 'ALB' as alpha_3_code, '008' as numeric_code, 'AL' as fips_code, 'Albania' as eab_common_country_name union\n" +
-        "select 'Algeria' as country, 'DZ' as alpha_2_code, 'DZA' as alpha_3_code, '012' as numeric_code, 'AG' as fips_code, 'Algeria' as eab_common_country_name union\n" +
-        "select 'Angola' as country, 'AO' as alpha_2_code, 'AGO' as alpha_3_code, '024' as numeric_code, 'AO' as fips_code, 'Angola' as eab_common_country_name union\n" +
-        "select 'Argentina' as country, 'AR' as alpha_2_code, 'ARG' as alpha_3_code, '032' as numeric_code, 'AR' as fips_code, 'Argentina' as eab_common_country_name union\n" +
-        "select 'Australia' as country, 'AU' as alpha_2_code, 'AUS' as alpha_3_code, '036' as numeric_code, 'AS' as fips_code, 'Australia' as eab_common_country_name union\n" +
-        "select 'Austria' as country, 'AT' as alpha_2_code, 'AUT' as alpha_3_code, '040' as numeric_code, 'AU' as fips_code, 'Austria' as eab_common_country_name union\n" +
-        "select 'Belgium' as country, 'BE' as alpha_2_code, 'BEL' as alpha_3_code, '056' as numeric_code, 'BE' as fips_code, 'Belgium' as eab_common_country_name union\n" +
-        "select 'Brazil' as country, 'BR' as alpha_2_code, 'BRA' as alpha_3_code, '076' as numeric_code, 'BR' as fips_code, 'Brazil' as eab_common_country_name union\n" +
-        "select 'Canada' as country, 'CA' as alpha_2_code, 'CAN' as alpha_3_code, '124' as numeric_code, 'CA' as fips_code, 'Canada' as eab_common_country_name union\n" +
-        "select 'Chile' as country, 'CL' as alpha_2_code, 'CHL' as alpha_3_code, '152' as numeric_code, 'CI' as fips_code, 'Chile' as eab_common_country_name union\n" +
-        "select 'China' as country, 'CN' as alpha_2_code, 'CHN' as alpha_3_code, '156' as numeric_code, 'CH' as fips_code, 'China' as eab_common_country_name union\n" +
-        "select 'Colombia' as country, 'CO' as alpha_2_code, 'COL' as alpha_3_code, '170' as numeric_code, 'CO' as fips_code, 'Colombia' as eab_common_country_name union\n" +
-        "select 'Denmark' as country, 'DK' as alpha_2_code, 'DNK' as alpha_3_code, '208' as numeric_code, 'DA' as fips_code, 'Denmark' as eab_common_country_name union\n" +
-        "select 'Egypt' as country, 'EG' as alpha_2_code, 'EGY' as alpha_3_code, '818' as numeric_code, 'EG' as fips_code, 'Egypt' as eab_common_country_name union\n" +
-        "select 'France' as country, 'FR' as alpha_2_code, 'FRA' as alpha_3_code, '250' as numeric_code, 'FR' as fips_code, 'France' as eab_common_country_name union\n" +
-        "select 'Germany' as country, 'DE' as alpha_2_code, 'DEU' as alpha_3_code, '276' as numeric_code, 'GM' as fips_code, 'Germany' as eab_common_country_name union\n" +
-        "select 'India' as country, 'IN' as alpha_2_code, 'IND' as alpha_3_code, '356' as numeric_code, 'IN' as fips_code, 'India' as eab_common_country_name union\n" +
-        "select 'Italy' as country, 'IT' as alpha_2_code, 'ITA' as alpha_3_code, '380' as numeric_code, 'IT' as fips_code, 'Italy' as eab_common_country_name union\n" +
-        "select 'Japan' as country, 'JP' as alpha_2_code, 'JPN' as alpha_3_code, '392' as numeric_code, 'JA' as fips_code, 'Japan' as eab_common_country_name";
 
     // Row 130 — ALR Applicant (large CASE with ~400 WHEN branches)
     private static final String PANTO_ROW_130 =

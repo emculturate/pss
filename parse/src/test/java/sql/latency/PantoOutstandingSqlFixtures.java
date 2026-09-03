@@ -2,11 +2,16 @@ package sql.latency;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 
 /**
  * Loads full SQL text for selected Panto outstanding-issue CSV rows from the RMCP handoff pack.
@@ -31,7 +36,35 @@ final class PantoOutstandingSqlFixtures {
         if (Files.isRegularFile(file)) {
             return Files.readString(file, StandardCharsets.UTF_8);
         }
+        String fromManifest = loadFromManifest(csvRow);
+        if (fromManifest != null) {
+            return fromManifest;
+        }
         return loadFromCsv(csvRow);
+    }
+
+    private static String loadFromManifest(int csvRow) throws IOException {
+        Path[] manifestCandidates = {
+                Path.of("parse/target/panto-timeout-batch-manifest.json"),
+                Path.of("target/panto-timeout-batch-manifest.json"),
+        };
+        for (Path manifestPath : manifestCandidates) {
+            if (!Files.isRegularFile(manifestPath)) {
+                continue;
+            }
+            try (Reader reader = Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8)) {
+                ManifestPayload payload = new Gson().fromJson(reader, ManifestPayload.class);
+                if (payload == null || payload.rows == null) {
+                    continue;
+                }
+                for (ManifestRow row : payload.rows) {
+                    if (row.csvRow == csvRow) {
+                        return row.sql;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private static String loadFromCsv(int csvRow) throws IOException {
@@ -145,5 +178,18 @@ final class PantoOutstandingSqlFixtures {
             }
         }
         throw new IllegalStateException("Panto outstanding CSV not found");
+    }
+
+    static final class ManifestPayload {
+        @SerializedName("rows")
+        List<ManifestRow> rows;
+    }
+
+    static final class ManifestRow {
+        @SerializedName("csv_row")
+        int csvRow;
+
+        @SerializedName("query_sql")
+        String sql;
     }
 }

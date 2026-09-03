@@ -20,11 +20,12 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 | `phase-2.7-with-conditionless-join-finalizer.md` | Phase 2.7 spec — **complete**; CTE aliases not in global `tableDictionary` by design |
 | `panto_513_outstanding_issues.csv` | **82** data rows: domain, entity, query name, full `query_sql`, timings, `issue_kinds` |
 | `panto-submap-walker-skip-list.json` | **20** `timeout_513` rows excluded from automated full-parse (subMap walker fatals); **54** runnable for E3 |
+| `PantoTimeoutCorpusE3GateTest` | CI gate: **54** runnable rows must finish under **90 s** (`mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test`) |
 | `outstanding-issues-index.md` | Compact tables (no SQL) for workplan / PR description |
 | `row-index.json` | Machine-readable row lists |
 | `panto-tabledict-degradations-2026-08-19.md` | 8 degradation clusters (A–F), acceptance, hypotheses |
 | `panto-513-parse-timeouts-2026-08-19.md` | 74 timeouts with full SQL (~large; CSV is often enough) |
-| `sql/csv-row-<N>.sql` | Full SQL for degradation rows 583, 2139, 3150, 3870, 4648, 4726, 5410, 5455 |
+| `sql/csv-row-<N>.sql` | Full SQL for degradation rows 583, 2139, 3150, 3870, 4648, 4726, 5410, 5455; timeout row **475** (EAB.Country); rows **4176**, **4177** |
 
 `issue_kinds` values in the CSV:
 

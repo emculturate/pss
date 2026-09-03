@@ -777,7 +777,9 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Phase **C2.2** — removed eager `showTrace` / `asTree.toString()` from `enterEveryRule` / `exitEveryRule` (root cause of α≈2). N=50 M=20 walk **~900 ms** (was **~10.5 s** pre-solution); E1 fitted **α ≈ 0.94**, **β ≈ 0.92**.
 - **Done (2026-09-02):** Phase **E1** — full calibration matrix re-run (`setOpTimingProbeE1CalibrationMatrixTest`); post-C baselines recorded below.
 - **Done (2026-09-02):** Post-C2.2 batch re-run of all **74** `timeout_513` rows (`PantoTimeoutBatchBenchmarkTest`) — **0/74** still timeout (~4 s total). **20** rows log walker fatals (`subMap is null` or bare `null` in `exitSql`); excluded from automated full-parse via [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (**54** runnable rows for **E3**).
-- **Next:** **E2** (embed full row **475** SQL in `ParseLatencyDiagnosticTest`) → **E3** (Panto buckets **2.8-1** / **2.8-2** + non-UNION canaries **5261, 4647, 4197**; row **130** on skip list until subMap guard or SQL fix). Optional further **C2** micro-opts (clause flatten batching, local FROM fast path) only if corpus profiling shows need.
+- **Done (2026-09-02):** Phase **E2** — full row **475** (`EAB.Country`, 248 `UNION`, 41,829 chars) embedded in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry`; diagnostic **walk=89 ms**, **total=173 ms** (5.0.0-3 ~7.4 s walk; pre-C2.2 **90 s** kill).
+- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **54/54** runnable `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197** pass. **11** rows emit FATAL diagnostics but complete fast (separate from **20** subMap skip-list rows). **D1 abandoned** — E3 shows full **2.8-2** bucket sub-second; defer-global-merge policy will not be implemented.
+- **Next:** Optional **C2** micro-opts only if new corpus shapes regress; address subMap skip-list rows / semantic FATAL clusters separately from timeout work.
 - **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
 
@@ -796,7 +798,7 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 | **S4** | When converting inside an active set-op frame, **exclude** sibling participant keys (`def_query*`, `def_union*`, … per `isSetOperationParticipantKey`) from the immediate set-op parent frame | S4 sibling-isolation SQL test; ~15–20% probe win post-S5 — **not** sufficient for α → 1 (see profiling section) |
 | **S5** | Keep one-shot participant iteration only at `exitUnionized_query` / `exitIntersected_query` (`finalizeSetOperationScopeSymbolTable`, `validateSingleSetOperationInterface`) | Set-op FATAL / interface goldens in `SqlEventWalkerLiveSampleQueriesTests` / `SqlParseEventWalkerWithAccessObjectTest` |
 | **S6** | **Revised:** Record post-S5 baselines + publish profiler tooling; **do not** gate on probe α → 1 alone | `WalkerHotspotProfiler`, calibration matrix, `ParseLatencyDiagnosticTest` probes — see **Post-S5 baselines** and **Profiling conclusions** |
-| **S7** | **Renamed intent → E3:** Panto timeout buckets **2.8-1**, **2.8-2** under 90s | Mark buckets **2.8-1** / **2.8-2** complete in tracker |
+| **S7** | **Renamed intent → E3:** Panto timeout buckets **2.8-1**, **2.8-2** under 90s | **Done (E3)** — 54-row corpus gate + bucket tracker updated |
 
 **Out of scope for S1–S4:** Changing set-op interface validation rules, relaxing `DUPLICATE_INTERFACE_COLUMNS` / `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`, or deferring per-branch convert to statement end (each branch still publishes its own `def_queryN` artifacts).
 
@@ -882,7 +884,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | Same **table** name every branch | One dict key; slight **slowdown** (merge/dedup overhead); does not fix superlinear walk |
 | Higher **M** (more unique columns per branch) | Was superlinear in M (β ≈ 1.7 pre-S5); **post-C2.2 β ≈ 0.92** (near-linear); independent of triangular table-key count |
 
-**Implication:** Optimizing `ArrayList.contains()` dedup (old S11) is **de-prioritized** until 2.8-2 profiling shows `contains()` hot. **Defer global table merge** (D1 / old S10) remains relevant for **2.8-2** (same bound table, many branches), less so for **2.8-1** literal UNION.
+**Implication:** Optimizing `ArrayList.contains()` dedup (old S11) is **de-prioritized** until profiling shows `contains()` hot. ~~**Defer global table merge** (D1 / old S10)~~ — **D1 abandoned** after E3 (see Phase D).
 
 ##### Revised root-cause model (post-S5)
 
@@ -930,7 +932,7 @@ This measures **accumulation of distinct physical table names** in the global di
 
 | Step | Change | When | Gate |
 |------|--------|------|------|
-| **D1** | Defer global `table_dictionary` merge for set-op participants until `exitUnionized_query` / `exitIntersected_query` (old **S10**) | After B/C if **2.8-2** still hot | Row **1837** + shared-table probe; CTE/join goldens |
+| **D1** | ~~Defer global `table_dictionary` merge for set-op participants until `exitUnionized_query` / `exitIntersected_query` (old **S10**)~~ | **Abandoned (2026-09-02)** — E3: all **20** **2.8-2** rows &lt; 90 s; canary **1837** walk **9–71 ms**. **Will not implement.** | — |
 | **D2** | `LinkedHashSet` ref dedup instead of `ArrayList.contains()` (old **S11**) | **Defer** (spike 2026-09-02 — no probe win) | Row **1837** flame only |
 
 **Phase E — Corpus validation (revised S6 / S7)**
@@ -938,10 +940,10 @@ This measures **accumulation of distinct physical table names** in the global di
 | Step | Change | Gate |
 |------|--------|------|
 | **E1** | **Done** — full calibration matrix after **C2.2**; post-C baselines below | **α ≈ 0.94**, **β ≈ 0.92** (OLS log-log) |
-| **E2** | Embed **full** row **475** SQL in `ParseLatencyDiagnosticTest`; record parse/walk/total | Walk &lt; 90 s (goal: approach 5.0.0-3 ~7 s) |
-| **E3** | All **2.8-1** rows under 90 s; then **2.8-2** canary **1837**; non-UNION **5261, 4647, 4197** (row **130** on subMap skip list) | Bucket tracker **Complete** |
+| **E2** | **Done** — full row **475** in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry` | **walk=89 ms**, **total=173 ms** (chars=41,829; 248 `UNION`) |
+| **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **54/54** runnable rows &lt; 90 s; **2.8-1** + **2.8-2** canary **1837** + non-UNION **5261, 4647, 4197** | Bucket tracker **Complete** (timeout); **20** subMap skips + **11** fast-FATAL rows documented |
 
-**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2` → `E1` → `E2` → `D1` (if 2.8-2 hot) → `E3` → `D2` only if profiled. ~~`B2`→`B3`~~ skipped (ineffective on wall time).
+**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2` → `E1` → `E2` → `E3` → `D2` only if profiled. ~~`B2`→`B3`~~ skipped (ineffective on wall time). ~~`D1`~~ **abandoned** (unnecessary after E3).
 
 ##### Legacy step mapping (for grep / old notes)
 
@@ -951,7 +953,7 @@ This measures **accumulation of distinct physical table names** in the global di
 | S7 corpus | **E3** |
 | S8 profile 1837 | **C1** + **E3** (partially done via shared-table + convert probes) |
 | S9 shared-table probe | **Done** — `BranchTableMode.SHARED_SINGLE_TABLE` |
-| S10 defer global merge | **D1** |
+| S10 defer global merge | **D1** — **abandoned** (E3; will not implement) |
 | S11 LinkedHashSet dedup | **D2** (deferred) |
 | S12 2.8-2 acceptance | **E3** |
 
@@ -1046,10 +1048,11 @@ T(N,M) \approx c \cdot N^{\alpha} \cdot M^{\beta}, \quad \alpha \approx 0.94,\; 
 
 | Test | Shape | Walk | Total |
 |------|-------|-----:|------:|
-| `probe_union250` | 250-term UNION (EAB.Country equivalent) | **143 ms** | **287 ms** |
-| `pantoRow475_eabCountry` | 20-branch trim (smoke only) | 5 ms | 9 ms |
+| `pantoRow475_eabCountry` | **Full** row 475 — 248 `UNION`, 41,829 chars | **89 ms** | **173 ms** |
+| `probe_union250` | 250-term UNION (synthetic equivalent) | **143 ms** | **287 ms** |
+| `pantoRow475_eabCountry_trimSmoke` | 20-branch trim (fast smoke) | ~5 ms | ~9 ms |
 
-Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is the size-equivalent diagnostic. Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
+Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 
 **Day-to-day smoke probes** (`SqlEventWalkerSubqueriesAndClauseSemanticsTests`, N=50, M=20):
 
@@ -1071,9 +1074,9 @@ Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is 
 
 **Takeaways (updated post-S5 profiling — do not revert to pre-profile assumptions):**
 
-1. **2.8-1 (EAB.Country)** — **C2.2** fixed dominant α≈2 cost (`showTrace` / `asTree`). `probe_union250` walk **~143 ms** (was **90 s** kill pre-fix). Embed full row **475** (**E2**) and run all **2.8-1** rows (**E3**) to confirm.
-2. **2.8-2 (PCM convert)** — Shared-table synthetic probe did **not** reproduce a dict-merge win; **D1** (defer global merge) remains targeted at real PCM shape (same bound table, substitutions, GROUP BY). Profile row **1837** after **C**.
-3. **Non-UNION guardrails** (unchanged): **5261, 4647, 4197** — run after each major phase so a set-op-only fix is not confused with a full corpus fix. Row **130** (giant `CASE`) is on the **subMap walker skip list** until corpus SQL or walker null-guard is fixed.
+1. **2.8-1 (EAB.Country)** — **E2/E3 complete.** Full row **475** walk **36–89 ms**; all four **2.8-1** rows sub-second.
+2. **2.8-2 (PCM convert)** — **E3 complete** for all **20** runnable rows; canary **1837** walk **11–71 ms**. **D1 abandoned** — no 90 s regression; defer-global-merge will not be pursued.
+3. **Non-UNION guardrails** — **5261, 4647, 4197** pass E3 timeout gate (**4197** emits 32 FATALs in **~2 ms**). Row **130** on subMap skip list.
 
 **When to run what (progress checklist):**
 
@@ -1085,14 +1088,15 @@ Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is 
 | **E1** | **Done** — post-C baselines in this doc | `setOpTimingProbeE1CalibrationMatrixTest` |
 | **C2.2** | **Done** — `showTrace` removal; E1 α≈1 | `probe_union250` ~143 ms walk |
 | **C2** | Optional micro-opts only if E3 shows need | — |
-| **E2** | — | Full row **475** in `ParseLatencyDiagnosticTest` |
-| **E3** | — | All **2.8-1** rows; then **1837**; non-UNION canaries |
-| **D1** (if needed) | Shared-table probe + 1837 | Remaining **2.8-2** rows |
+| **E2** | — | **Done** — full row **475** (`walk=89 ms`, `total=173 ms`) |
+| **E3** | — | **Done** — 54-row corpus gate + named canaries |
+| **D1** | — | **Abandoned** — E3 cleared **2.8-2** without global-merge deferral |
 
 **Parse latency probes (`ParseLatencyDiagnosticTest`):**
 
-- **E2:** `pantoRow475_eabCountry` uses a **20-branch trim** — embed **full** ~248-branch SQL from [panto-513-parse-timeouts brief](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md) § row 475 before corpus sign-off.
-- **E3 / 2.8-2:** Add `pantoRow1837_pcmConvert` when starting bucket 2.8-2 (fixture not embedded yet).
+- **E3:** `PantoTimeoutCorpusE3GateTest` — 54-row runnable corpus gate (`mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test`). Manifest from `tools/benchmark_panto_timeout_rows.py`.
+- **E2:** `pantoRow475_eabCountry` loads full row **475** from [sql/csv-row-475.sql](../docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-475.sql) (248 `UNION`, E2 gate **walk &lt; 90 s**).
+- **E3 / 2.8-2:** `pantoRow1837_pcmConvert` in `ParseLatencyDiagnosticTest` (canary diagnostic).
 - **Convert-egress probes:** `probe_setOpConvertEgress_*` methods (distinct/shared table, N=50 M=20) — parse vs walk split reference.
 
 #### Repeated-table dictionary merge — post-S5 conclusions (2.8-2)
@@ -1108,7 +1112,7 @@ Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is 
 | `convertSymbolTableToTableDictionary` total at N=50 | **~1 ms** for all 51 converts — not walk bottleneck |
 | Triangular `convertTiming_globalTableDictSizeSum` (1+2+…+N) | Measures **distinct table keys** accumulating globally; not proof of O(n²) **time** per operation |
 
-**Still plausible for real 2.8-2 (PCM):** substitutions + GROUP BY + same bound table may exercise merge/dedup paths the synthetic probe does not. **D1** (defer global merge until set-op exit) remains the right **2.8-2** track; implement **after B/C**, gated on row **1837**.
+**E3 verdict (2026-09-02):** All **20** **2.8-2** PCM convert rows complete in **&lt; 1 s** on the diagnostic path (canary **1837** walk **9–71 ms**). Combined with post-S5 profiling (convert egress ≪ 1% of walk on probes), **D1** (defer global merge until set-op exit) is **abandoned** — unnecessary for the timeout problem and **will not be implemented**.
 
 **D2 (`LinkedHashSet` dedup):** Spike run 2026-09-02 — **defer** (see D2 spike table under Phase D). Not a blocker for C2.
 
@@ -1118,7 +1122,7 @@ Full row **475** (~248 branches) not yet embedded (**E2**); `probe_union250` is 
 
 | Step | Recommendation | Rationale |
 |------|----------------|-----------|
-| **D1** | Defer global `table_dictionary` merge for set-op participants until set-op frame exit (old S10) | Cuts repeated global merge on same key; priority for **2.8-2** |
+| ~~**D1**~~ | ~~Defer global `table_dictionary` merge for set-op participants until set-op frame exit (old S10)~~ | **Abandoned (2026-09-02)** — E3 corpus + row **1837** show no timeout benefit; policy change rejected permanently |
 | **D2** | `LinkedHashSet` ref dedup (old **S11**) | **Defer** — spike showed no wall-time win on shared probe; revisit on row **1837** only | Trigger: corpus profile, not synthetic probe alone |
 
 **D2 spike (2026-09-02):** Replaced `mergeColumnEntry` `ArrayList.contains()` loop with `LinkedHashSet` → `ArrayList` (then **reverted** — spike only).
@@ -1166,30 +1170,43 @@ Post-C2.2 batch (`PantoTimeoutBatchBenchmarkTest`, 74 rows, ~4 s): **18** rows l
 
 **E3 runnable corpus:** **54** rows (74 − 20). Re-include skipped rows with `python3 tools/benchmark_panto_timeout_rows.py --include-skip-list` or `-Dpanto.skip.list.include=true` when debugging walker null-guard fixes.
 
+#### E3 fast-FATAL rows (11 — complete under 90s, emit FATAL diagnostics)
+
+`PantoTimeoutCorpusE3GateTest` (2026-09-02): **54/54** runnable rows pass the **90 s** timeout gate. **11** rows emit one or more FATAL diagnostics but finish in **&lt; 200 ms** total — distinct from the **20** subMap skip-list rows.
+
+| csv_row | Bucket | max symptom |
+|--------:|--------|-------------|
+| 605, 606, 623, 635, 636 | 2.8-7 Student Address | 7 FATALs each, walk ≤ 5 ms |
+| 4197 | 2.8-15 fulfillment star-join | 32 FATALs, ~2 ms total |
+| 5453, 5454 | 2.8-17 wide contact projection | 3 FATALs each |
+| 5592, 5593, 5594 | 2.8-9 intake `UNION` | 16 FATALs each |
+
+**Regression gate:** `mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest test` (auto-generates manifest if missing).
+
 #### Construction-bucket tracker (74 timeouts)
 
 Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL lives in [panto_513_outstanding_issues.csv](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto_513_outstanding_issues.csv); do not paste full queries here.
 
 | Bucket | Rows | Construction | Likely hotspot (unprofiled) | Canary CSV row | Status |
 |--------|-----:|--------------|-----------------------------|----------------|--------|
-| 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Walker AST hot path + scope reconstruction (**post-S5**); convert egress not dominant on probe | 475 | Open |
-| 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Walker hot path + possible deferred-global-merge win (**D1**); shared-table probe alone insufficient | 1837 | Open |
-| 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | Open |
-| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | Open |
-| 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | Open |
-| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | Open |
-| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | Open |
-| 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | Open |
-| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | Open |
-| 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | Open |
-| 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | Open |
-| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | Open |
-| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | Open |
-| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | Open |
-| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | Open |
-| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | Open |
-| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | Open |
-| 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | Open |
+| 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Walker AST hot path + scope reconstruction (**post-S5**); convert egress not dominant on probe | 475 | **Complete (E3)** |
+| 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Walker hot path (C2.2 fixed dominant cost); ~~D1 defer-global-merge~~ **abandoned** | 1837 | **Complete (E3)** |
+| 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | **Complete (E3)** |
+| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | Open (row **1814** on subMap skip list) |
+| 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | **Complete (E3)** |
+| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | Open (rows **28–32, 41** on subMap skip list) |
+| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **Complete (E3)** — emits FATALs, sub-second |
+| 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | **Complete (E3)** |
+| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | Partial — **5860–5863** skip; **5592–5594** fast with FATALs |
+| 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | **Complete (E3)** |
+| 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | **Complete (E3)** |
+| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | Open (row **130** on subMap skip list) |
+| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | Open (rows **314–315** on subMap skip list) |
+| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | Open (dev-template rows on subMap skip list) |
+| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **Complete (E3)** — fast with FATALs |
+| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | Partial — row **2120** on skip list |
+| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | Partial — fast with FATALs (**5453–5454**) |
+| 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | **Complete (E3)** |
 
 **Suggested order:** 2.8-1 → 2.8-2 (largest N, matches UNION-header hypothesis) → non-UNION canaries **2.8-10 (5261), 2.8-11 (4647), 2.8-12 (130), 2.8-15 (4197)** → remaining UNION-mix and join/substitution buckets.
 
@@ -1197,7 +1214,7 @@ Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL
 
 | Family | Buckets | Row count |
 |--------|---------|----------:|
-| Set-op interface / column-header walk **O(N²) on branches** | 2.8-1, 2.8-2, and smaller UNION families 2.8-3, 2.8-4, 2.8-5 (multifile), 2.8-7, 2.8-8 | 4 + 20 plus smaller UNION families — **fix track: B (scope cache) + C (walker hot path) + D1 (2.8-2 dict policy)** |
+| Set-op interface / column-header walk **O(N²) on branches** | 2.8-1, 2.8-2, and smaller UNION families 2.8-3, 2.8-4, 2.8-5 (multifile), 2.8-7, 2.8-8 | 4 + 20 plus smaller UNION families — **fix track: B1 + C2.2** (showTrace removal); ~~D1~~ abandoned |
 | Giant searched-`CASE` walk | 2.8-12 | 3 |
 | Deep CTE + substitution finalization | 2.8-11 | 2 |
 | Many-join / nested derived table / `SELECT *` / windows (0–1 UNION) | 2.8-5 (2325), 2.8-6, 2.8-10, 2.8-14, 2.8-15, 2.8-16 | many |
