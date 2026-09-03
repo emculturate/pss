@@ -53,8 +53,11 @@ final class PantoCorpusSkipList {
         Path path = resolveSkipListPath();
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             SkipListFile file = new Gson().fromJson(reader, SkipListFile.class);
-            if (file == null || file.rows == null || file.rows.isEmpty()) {
-                throw new IllegalStateException("Skip list is empty: " + path);
+            if (file == null || file.rows == null) {
+                return new SkipListPayload(Collections.emptySet(), List.of());
+            }
+            if (file.rows.isEmpty()) {
+                return new SkipListPayload(Collections.emptySet(), List.of());
             }
             Set<Integer> csvRows = new LinkedHashSet<>();
             List<SkipEntry> entries = file.rows.stream()

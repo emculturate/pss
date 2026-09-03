@@ -23,8 +23,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Phase 2.8-E3 corpus gate — all runnable {@code timeout_513} rows (54 after subMap skip
- * list) plus named bucket canaries must finish under the 90s RMCP kill.
+ * Phase 2.8-E3 corpus gate — all {@code timeout_513} rows (74) plus named bucket canaries
+ * must finish under the 90s RMCP kill.
  *
  * <p>Manifest: {@code python3 tools/benchmark_panto_timeout_rows.py --issue timeout_513}
  */
@@ -38,8 +38,8 @@ public class PantoTimeoutCorpusE3GateTest {
     /** 2.8-2 canary — PCM convert {@code UNION ALL} slices. */
     static final int E3_BUCKET_2_8_2_CANARY = 1837;
 
-    /** Non-UNION guardrails (row 130 on subMap skip list). */
-    static final int[] E3_NON_UNION_CANARIES = {5261, 4647, 4197};
+    /** Non-UNION guardrails (row 130 formerly on subMap skip list). */
+    static final int[] E3_NON_UNION_CANARIES = {5261, 4647, 4197, 130};
 
     @BeforeClass
     public static void ensureManifest() throws IOException, InterruptedException {
@@ -168,7 +168,7 @@ public class PantoTimeoutCorpusE3GateTest {
                 rows.add(row);
             }
             rows.sort(Comparator.comparingInt(r -> r.csvRow));
-            assertEquals("expected 54 runnable timeout_513 rows", 54, rows.size());
+            assertEquals("expected 74 timeout_513 rows", 74, rows.size());
             return rows;
         }
     }

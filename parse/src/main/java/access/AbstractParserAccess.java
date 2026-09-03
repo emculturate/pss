@@ -163,21 +163,8 @@ public abstract class AbstractParserAccess {
         }
     }
 
-    /** Parser-phase diagnostics from {@link ParseErrorCollector} and {@link ParseErrorListener} only. */
     protected List<ParseDiagnostic> collectParserPhaseDiagnostics() {
-        List<ParseDiagnostic> diagnostics = new ArrayList<>();
-        if (errorCollector != null) {
-            diagnostics.addAll(errorCollector.getDiagnostics());
-        }
-        if (getParser() != null) {
-            List<?> listeners = getParser().getErrorListeners();
-            for (Object listener : listeners) {
-                if (listener instanceof ParseErrorListener parseErrorListener) {
-                    diagnostics.addAll(parseErrorListener.getDiagnostics());
-                }
-            }
-        }
-        return diagnostics;
+        return ParsePhaseErrorGate.collectDiagnostics(errorCollector, errorListener);
     }
 
     /**
@@ -185,25 +172,12 @@ public abstract class AbstractParserAccess {
      * Used to skip AST walking on recovered partial trees that would mis-align walker state.
      */
     protected boolean hasParsePhaseErrors() {
-        if (getParser() != null && getParser().getNumberOfSyntaxErrors() > 0) {
-            return true;
-        }
-        return findFirstParsePhaseErrorDiagnostic() != null;
+        return ParsePhaseErrorGate.hasParsePhaseErrors(getParser(), errorCollector, errorListener);
     }
 
     /** First FATAL/ERROR diagnostic from the parse phase, in collection order. */
     protected ParseDiagnostic findFirstParsePhaseErrorDiagnostic() {
-        for (ParseDiagnostic diagnostic : collectParserPhaseDiagnostics()) {
-            if (diagnostic == null) {
-                continue;
-            }
-            ParseDiagnostic.Severity severity = diagnostic.severity();
-            if (severity == ParseDiagnostic.Severity.FATAL
-                    || severity == ParseDiagnostic.Severity.ERROR) {
-                return diagnostic;
-            }
-        }
-        return null;
+        return ParsePhaseErrorGate.findFirstFatalOrError(errorCollector, errorListener);
     }
 
     public List<ParseDiagnostic> getAllDiagnostics() {

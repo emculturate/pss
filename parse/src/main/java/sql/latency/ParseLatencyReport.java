@@ -1,5 +1,9 @@
 package sql.latency;
 
+import java.util.List;
+
+import errorhandling.ParseDiagnostic;
+
 /**
  * Timing and prediction-event summary produced by {@link ParseLatencyDiagnosticService}.
  * <p>
@@ -45,6 +49,9 @@ public final class ParseLatencyReport {
     /** FATAL diagnostics emitted by the event walker. */
     public final int walkerFatalCount;
 
+    /** Parse-, walker-, and access-policy diagnostics (includes {@code AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS} when walk is skipped). */
+    public final List<ParseDiagnostic> diagnostics;
+
     ParseLatencyReport(
             String endpoint,
             int querySizeChars,
@@ -56,7 +63,8 @@ public final class ParseLatencyReport {
             int ambiguityCount,
             int contextSensitivityCount,
             int parseErrorCount,
-            int walkerFatalCount) {
+            int walkerFatalCount,
+            List<ParseDiagnostic> diagnostics) {
         this.endpoint               = endpoint;
         this.querySizeChars         = querySizeChars;
         this.lexMs                  = lexMs;
@@ -69,6 +77,7 @@ public final class ParseLatencyReport {
         this.contextSensitivityCount = contextSensitivityCount;
         this.parseErrorCount        = parseErrorCount;
         this.walkerFatalCount       = walkerFatalCount;
+        this.diagnostics            = diagnostics == null ? List.of() : List.copyOf(diagnostics);
     }
 
     /**

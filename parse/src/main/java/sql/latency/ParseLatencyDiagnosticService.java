@@ -1,6 +1,8 @@
 package sql.latency;
 
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -15,7 +17,11 @@ import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import errorhandling.ParseDiagnostic;
 import errorhandling.ParseErrorCollector;
+import errorhandling.ParseErrorListener;
+import access.ParsePhaseErrorGate;
+import access.Snippet;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY;
@@ -92,9 +98,12 @@ public final class ParseLatencyDiagnosticService {
         CountingDiagnosticListener diagListener = new CountingDiagnosticListener();
         parser.addErrorListener(diagListener);
 
+        ParseErrorListener syntaxListener = new ParseErrorListener();
+
         // Standard error strategy (allows parse to continue on errors).
         ParseErrorCollector syntaxCollector = new ParseErrorCollector();
         parser.setErrorHandler(syntaxCollector);
+        parser.addErrorListener(syntaxListener);
 
         // Force SLL first; SqlParserAccess uses the same policy with LL retry on cancellation.
         parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
@@ -103,14 +112,18 @@ public final class ParseLatencyDiagnosticService {
         ParseTree parseTree = runEndpoint(parser, endpoint);
         long parseMs = msElapsed(t1);
 
+        boolean skipWalk = ParsePhaseErrorGate.hasParsePhaseErrors(parser, syntaxCollector, syntaxListener);
+
         // ── Phase 3: Walk ────────────────────────────────────────────────────
         SqlParseEventWalker walker = new SqlParseEventWalker();
         long t2 = System.nanoTime();
-        try {
-            ParseTreeWalker.DEFAULT.walk(walker, parseTree);
-        } catch (Exception e) {
-            // record but don't rethrow — we still want the timing data
-            System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
+        if (!skipWalk) {
+            try {
+                ParseTreeWalker.DEFAULT.walk(walker, parseTree);
+            } catch (Exception e) {
+                // record but don't rethrow — we still want the timing data
+                System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
+            }
         }
         long walkMs = msElapsed(t2);
 
@@ -126,6 +139,8 @@ public final class ParseLatencyDiagnosticService {
         // ── Collect counts ───────────────────────────────────────────────────
         int parseErrorCount = parser.getNumberOfSyntaxErrors();
         int walkerFatalCount = countWalkerFatals(walker);
+        List<ParseDiagnostic> diagnostics = collectReportDiagnostics(
+                syntaxCollector, syntaxListener, skipWalk, walker);
 
         return new ParseLatencyReport(
                 endpoint,
@@ -138,7 +153,8 @@ public final class ParseLatencyDiagnosticService {
                 diagListener.ambiguityCount,
                 diagListener.contextSensitivityCount,
                 parseErrorCount,
-                walkerFatalCount);
+                walkerFatalCount,
+                diagnostics);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -173,17 +189,13 @@ public final class ParseLatencyDiagnosticService {
 
     private static int countWalkerFatals(SqlParseEventWalker walker) {
         try {
-            Object snippet = walker.getClass().getMethod("getSnippet").invoke(walker);
-            if (snippet == null) return 0;
-            Object diagnostics = snippet.getClass().getMethod("getParserDiagnosticList").invoke(snippet);
-            if (!(diagnostics instanceof Iterable<?>)) return 0;
+            Snippet snippet = walker.getSnippet();
+            if (snippet == null || snippet.getParserDiagnosticList() == null) {
+                return 0;
+            }
             int n = 0;
-            for (Object diagnostic : (Iterable<?>) diagnostics) {
-                if (diagnostic == null) {
-                    continue;
-                }
-                Object severity = diagnostic.getClass().getMethod("severity").invoke(diagnostic);
-                if (severity != null && "FATAL".equals(String.valueOf(severity))) {
+            for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+                if (diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL) {
                     n++;
                 }
             }
@@ -191,6 +203,25 @@ public final class ParseLatencyDiagnosticService {
         } catch (Exception e) {
             return -1;
         }
+    }
+
+    private static List<ParseDiagnostic> collectReportDiagnostics(
+            ParseErrorCollector syntaxCollector,
+            ParseErrorListener syntaxListener,
+            boolean skipWalk,
+            SqlParseEventWalker walker) {
+        List<ParseDiagnostic> diagnostics = new ArrayList<>(
+                ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener));
+        if (skipWalk) {
+            diagnostics.add(ParsePhaseErrorGate.astWalkSkippedDueToParseErrors(
+                    syntaxCollector, syntaxListener, "ParseLatencyDiagnosticService"));
+        } else {
+            Snippet snippet = walker.getSnippet();
+            if (snippet != null && snippet.getParserDiagnosticList() != null) {
+                diagnostics.addAll(snippet.getParserDiagnosticList());
+            }
+        }
+        return diagnostics;
     }
 
     // ── Inner listener ────────────────────────────────────────────────────────
