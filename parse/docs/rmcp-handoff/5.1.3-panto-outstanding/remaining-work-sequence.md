@@ -1,55 +1,40 @@
-# Panto timeout corpus — remaining work (sequence note)
+# Panto timeout corpus — work complete (2026-09-03)
 
-**Context:** §2.8 is **done** (74/74 rows finish under 90s). `ParseLatencyDiagnosticService` is **opt-in timing only** — not used in production parsing.
-
-**Do in this order:**
-
-## 1. §2.10 — SLL→LL policy (10 rows, code)
-
-**No manual review.** Cluster B rows adjudicated as SLL-only false positives vs production `SqlParserAccess`.
-
-| csv_rows | Count |
-|----------|------:|
-| 605, 606, 623, 635, 636, 5453, 5454, 5592, 5593, 5594 | 10 |
-
-**Index:** `cluster-b-sll-regression-rows.json` → `pending_2_10_csv_rows`  
-**Gates:** `ClusterBSllRegressionTest`, `SqlParserAccessSllPredictionSafetyTest#clusterB210PendingRows_*`
+**§2.8**, **§2.11**, and related W-track items are **closed**. Production parsing is **`SqlParserAccess` (LL only)**. `ParseLatencyDiagnosticService` is opt-in timing only.
 
 ---
 
-## 2. 2.11.4 — Cleanup (optional)
+## Closed
 
-Remove one-off triage probes after §2.10 is closed.
-
----
-
-## Retracted / signed off (no further action)
-
-| Item | Reason |
-|------|--------|
-| **W5 syntax_corrupt (rows 28–32, 41, 314–315)** | **Retracted (2026-09-03).** False positives from E3 diagnostic SLL path and walk-skip policy — not production `SqlParserAccess` behavior. Row **28** parses with zero walker fatals on production path. |
-| **4197** | `utility_workbook` — multi-statement diagnostic worklist, not a bound query. See `panto-corpus-exclusion-list.json`. |
-
----
-
-## What's already done
-
-| Item | Status |
-|------|--------|
-| §2.8 E1–E3 (74/74 under 90s) | Complete |
-| W1–W3, W4 Part 1 | Complete |
-| 2.11.2 Cluster B adjudication (10 → 2.10) | Complete |
-| Row 4197 utility exclusion | Complete (2026-09-03) |
-| Production walk policy simplified (always walk; `WalkerWalkExceptionGate`) | Complete (2026-09-03) |
-| `ParseLatencyDiagnosticService` → opt-in LL-only `diagnose()`; SLL via `diagnoseWithSllProbe()` | Complete (2026-09-03) |
+| Item | Outcome |
+|------|---------|
+| **§2.8 E1–E3** | 74/74 rows under 90s (`PantoTimeoutCorpusE3GateTest` — timing only) |
+| **§2.11 W-track** | W1 superseded (always walk); W2–W4 done; W5 retracted |
+| **§2.11.2 Cluster B** | 10 rows clean on production LL path (`ClusterBSllRegressionTest`) |
+| **§2.11.4** | One-off triage CLIs removed |
+| **§2.10 SLL→LL** | **Abandoned** — LL accuracy/fidelity preferred over SLL performance |
+| **Row 4197** | Utility workbook exclusion (`panto-corpus-exclusion-list.json`) |
+| **W5 syntax_corrupt** | Retracted — diagnostic false positives (rows 28–32, 41, 314–315) |
 
 ---
 
-## Corpus numbers
+## Production policy (permanent)
 
-| Set | Count | Meaning |
-|-----|------:|---------|
-| E3 timeout corpus | **74** | Timing gate only (`PantoTimeoutCorpusE3GateTest`) |
-| Bound-query SLL false positives (Cluster B) | **10** | Pending **2.10** in `SqlParserAccess` |
-| Corpus exclusions (utility workbooks) | **1** | Row **4197** |
-| Production correctness | **SqlParserAccess** | Not the latency diagnostic service |
+- **`SqlParserAccess`**: LL prediction only — no SLL, no two-stage fallback.
+- **Correctness gates**: `SqlParserAccess` on frozen `sql/csv-row-*.sql` fixtures.
+- **E3 gate**: 90s wall-clock only — not validity.
+- **SLL**: `diagnoseWithSllProbe()` exists for future perf investigations only; never for validation.
+
+---
+
+## Regression gates
+
+```bash
+mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest,ClusterBSllRegressionTest,PantoSubMapSkipListRegressionTest test
+```
+
+---
+
+## What's next (outside this pack)
+
+See `parser-defects-enhancements-workplan.md` **Phase 3** (Snowflake `PARSE_URL` / `:` field access) and other open phases.

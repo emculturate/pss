@@ -21,8 +21,8 @@ public class PantoCorpusExclusionListTest {
     }
 
     @Test
-    public void clusterB_pending210_doesNotIncludeExcludedRows() throws IOException {
-        for (int csvRow : PantoOutstandingSqlFixtures.clusterB210PendingRows()) {
+    public void clusterB_doesNotIncludeExcludedRows() throws IOException {
+        for (int csvRow : PantoOutstandingSqlFixtures.clusterBRegressionRows()) {
             assertFalse("csv_row=" + csvRow, PantoCorpusExclusionList.isExcluded(csvRow));
         }
     }

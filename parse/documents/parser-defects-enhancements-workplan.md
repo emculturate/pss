@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.8, **2.9 complete**; **2.10** open; **2.11 in progress** (W1 done) | This file (2.1–2.11) |
+| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.8, **2.9** and **2.11 complete**; **2.10 abandoned** | This file (2.1–2.11) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface, `VALUES` FROM syntax, WITH final-query source finalization) plus standalone grammar enhancements
 
-**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.8 and **2.9** complete; **2.10** open; **2.11 in progress** (**W1** done). **2.5** SQL guardrail complete; Jinja-authored fixture closure → **Phase 6.4**.
+**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.8, **2.9**, and **2.11** complete; **2.10 abandoned** (LL-only policy). **2.5** SQL guardrail complete; Jinja-authored fixture closure → **Phase 6.4**.
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** (complete) locked WITH CTE physical/tuple trailing-clause collection in global `tableDictionary` and confirmed CTE aliases belong in query/symbol structures only. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
 
@@ -65,8 +65,8 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
 | 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **Complete (2026-09-02)** — E1–E3; **74/74** rows &lt; 90 s; C2.2 fixed α≈2; walker residuals tracked in §2.8 **W-track** → **2.11** |
 | 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Complete** (2026-09-01) — all eight Panto degradations adjudicated; see [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). |
-| 10 | **2.10** | SLL→LL two-stage prediction policy in `SqlParserAccess` | Medium — production parse latency on some rows (e.g. 4176) | **Not started** |
-| 11 | **2.11** | Panto timeout corpus residuals: walk-gate follow-up + fast-FATAL rows (11) | High — correctness / diagnostics on live RMCP SQL | **In progress** — §2.8 **W1–W3** done; **W4** Part 1 done; **W5** retracted; Cluster B open |
+| 10 | **2.10** | SLL→LL two-stage prediction policy in `SqlParserAccess` | — | **Abandoned (2026-09-03)** — permanent LL-only; accuracy over SLL speed |
+| 11 | **2.11** | Panto timeout corpus residuals (W-track) | — | **Complete (2026-09-03)** |
 
 **Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
 
@@ -83,8 +83,8 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.7 | WITH CTE physical-source and tuple-substitution finalization | **Complete** (2026-09-01) — CTE aliases not in global `tableDictionary` by design |
 | 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **Complete (2026-09-02)** — E1–E3; timeout problem closed; see §2.8 |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
-| 2.10 | SLL→LL two-stage prediction in `SqlParserAccess` | **Not started** |
-| 2.11 | Panto corpus residuals: walk-gate follow-up (W-track) + fast-FATAL clusters | **In progress** — W1 done; see §2.8 W-track |
+| 2.10 | SLL→LL two-stage prediction in `SqlParserAccess` | **Abandoned (2026-09-03)** — LL-only production policy |
+| 2.11 | Panto corpus residuals (W-track) | **Complete (2026-09-03)** — see §2.11 |
 
 ---
 
@@ -763,7 +763,7 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 **Kind:** Performance defect / investigation (many queries exceed 90 seconds and regress materially from 5.0.0-3)
 
-**Status:** **Complete (2026-09-02)** — timeout mission closed (E1–E3). Walker residuals tracked in **W-track** below → **2.11**; production SLL policy → **2.10**.
+**Status:** **Complete (2026-09-02)** — timeout mission closed (E1–E3). Walker residuals closed in **2.11** (2026-09-03). **2.10** abandoned — LL-only production policy.
 
 **Component:** end-to-end parser pipeline; likely more than one algorithm (set-op interface matching is not the only timeout shape)
 
@@ -782,8 +782,9 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Phase **E1** — full calibration matrix re-run (`setOpTimingProbeE1CalibrationMatrixTest`); post-C baselines recorded below.
 - **Done (2026-09-02):** Post-C2.2 batch re-run of all **74** `timeout_513` rows (`PantoTimeoutBatchBenchmarkTest`) — **0/74** still timeout (~4 s total). Former **20** subMap skip-list rows cleared after parse-phase walk gate (see **W-track** below).
 - **Done (2026-09-02):** Phase **E2** — full row **475** (`EAB.Country`, 248 `UNION`, 41,829 chars) embedded in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry`; diagnostic **walk=89 ms**, **total=173 ms** (5.0.0-3 ~7.4 s walk; pre-C2.2 **90 s** kill).
-- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **74/74** `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197, 130** pass. **11** rows emit FATAL diagnostics but complete fast → **2.11** Cluster B.
-- **Done (2026-09-02):** **W1** — parse-phase walk gate on `SqlParserAccess` + `ParseLatencyDiagnosticService` (`ParsePhaseErrorGate`); `AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS` WARNING with first parse error line/pos; `ParseLatencyReport.diagnostics`; `PantoSubMapSkipListRegressionTest`; skip list cleared (`e8abd91`).
+- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **74/74** `timeout_513` rows under **90 s** (timing only). Ten rows were diagnostic SLL false positives; production LL path clean (`ClusterBSllRegressionTest`).
+- **Done (2026-09-02):** **W1** — parse-phase walk gate (later **superseded 2026-09-03** — see policy note below).
+- **Done (2026-09-03):** **Policy correction** — `ParseLatencyDiagnosticService` is **opt-in timing only** (`diagnose()` = LL, same as production); `diagnoseWithSllProbe()` for explicit SLL comparison. **`SqlParserAccess` always walks**; `WalkerWalkExceptionGate` maps `subMap` mis-align. **W5 retracted** (rows 28–32, 41, 314–315 were diagnostic false positives). **Do not** use E3 or SLL probe results for corpus validity or production gating.
 - **Done (2026-09-02):** **W2** — `requireNodeMap` at `exitSql` + `abortWalk` empty-map fallback on `removeNodeMap`; `SqlParserAccess` maps `subMap` NPE → `AST_WALKER_STACK_MISALIGN`; `AbstractASTWalkerHelperTest#removeNodeMapOnMissingFrameRecordsStackMisalignFatal`.
 - **Abandoned (2026-09-02):** **D1** (defer global merge), **D2** (`LinkedHashSet` dedup), **C2** optional micro-opts (clause-flatten batching, local FROM fast path) — no E3 regression; will not implement.
 - **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
@@ -947,33 +948,33 @@ This measures **accumulation of distinct physical table names** in the global di
 |------|--------|------|
 | **E1** | **Done** — full calibration matrix after **C2.2**; post-C baselines below | **α ≈ 0.94**, **β ≈ 0.92** (OLS log-log) |
 | **E2** | **Done** — full row **475** in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry` | **walk=89 ms**, **total=173 ms** (chars=41,829; 248 `UNION`) |
-| **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **74/74** rows &lt; 90 s; **2.8-1** + **2.8-2** canary **1837** + non-UNION **5261, 4647, 4197, 130** | Bucket tracker **Complete** (timeout); **11** fast-FATAL rows + **W2–W5** walker residuals documented |
+| **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **74/74** rows &lt; 90 s (timing only) | Bucket tracker **Complete** (timeout) |
 
-**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2.2` → `E1` → `E2` → `E3` → **W1** (done) → **W2** (done) → **W3** (done) → **W4** (row **130** full CSV) → **2.11.2** (fast-FATAL cluster) → **2.10** (SLL policy). ~~`B2`→`B3`~~ skipped. ~~`D1`~~, ~~`D2`~~, ~~`C2` micro-opts~~ **abandoned**.
+**Suggested execution order:** `A`→`B1`→`C2.2`→`E1`→`E2`→`E3` → W-track **closed** → **2.11 complete** → ~~**2.10**~~ **abandoned**.
 
 #### Parse-phase walk gate + walker stack residuals (**W-track**, 2.8 → 2.11)
 
-**Problem:** After parse-error recovery, walking a partial AST mis-aligns walker stack state (`removeNodeMap()` → `subMap` null → NPE in `exitSql`). Syntax-corrupt corpus SQL should surface **only** the parse-phase FATAL; legitimate-complex SQL may parse without a parse-phase FATAL but still mis-align the walker.
+**Status:** **Winding down** (2026-09-03). Production correctness = **`SqlParserAccess` only**.
 
-**Goal:** Trap failures as structured diagnostics — not Java stack traces — and route `syntax_corrupt` rows to corpus-quality classification (no walker fix).
+**Policy (2026-09-03):** `ParseLatencyDiagnosticService` is opt-in timing; SLL only via `diagnoseWithSllProbe()`. E3 asserts **90 s** only. Do not use diagnostic or SLL results for corpus validity.
 
 | Step | Change | Status / gate |
 |------|--------|---------------|
-| **W1** | **Gate AST walk** when `ParsePhaseErrorGate.hasParsePhaseErrors()` — `SqlParserAccess`, `ParseLatencyDiagnosticService`; emit **`AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS`** WARNING (line/pos/token from first parse FATAL/ERROR); mirror on `ParseLatencyReport.diagnostics` | **Done (2026-09-02)** — `ParsePhaseErrorGate`, `PantoSubMapSkipListRegressionTest`; commits `95e66c8`, `e8abd91` |
-| **W2** | **`requireNodeMap` null-guard** in `AbstractASTWalkerHelper` — opt-in at `exitSql`; after first misalign `abortWalk` makes `removeNodeMap` return empty map; `SqlParserAccess` maps residual `subMap` NPEs to **`AST_WALKER_STACK_MISALIGN`** | **Done (2026-09-02)** — manifest row **130** completes clean; unit test + access catch |
-| **W3** | **Tighten `SqlParserAccess.generateAST()` catch** — map stack misalignment NPE to structured diagnostic; dedupe; `ParseLatencyDiagnosticService` parity | **Done** — `WalkerWalkExceptionGate`; access + diagnostic catch paths |
-| **W4** | **Tests + corpus gates** — row **130** regression on **full CSV SQL**; optional zero-FATAL assertion on E3 for Cluster B when adjudicated | **Partial** — `csv-row-130.sql` + `PantoRow130FullCsvRegressionTest`; Cluster B zero-FATAL gates pending **2.11.2** |
-| **W5** | ~~Reclassify **`syntax_corrupt`** rows (**28–32, 41, 314–315**)~~ | **Retracted (2026-09-03)** — E3 diagnostic SLL / walk-skip false positives; production `SqlParserAccess` parses row **28** et al. on LL path |
+| **W1** | ~~Skip AST walk on parse-phase FATAL~~ | **Superseded (2026-09-03)** — always walk; `WalkerWalkExceptionGate` |
+| **W2** | **`requireNodeMap` null-guard** in `AbstractASTWalkerHelper` | **Done (2026-09-02)** |
+| **W3** | **`WalkerWalkExceptionGate`** on `SqlParserAccess.generateAST()` catch | **Done** |
+| **W4** | Row **130** regression + `ClusterBSllRegressionTest` production parity | **Done (2026-09-03)** |
+| **W5** | ~~`syntax_corrupt` author-error sign-off~~ | **Retracted (2026-09-03)** |
 
 **Cluster A disposition (former 20-row skip list):**
 
-| Category | csv_rows | W1 outcome | Remaining work |
-|----------|----------|------------|----------------|
-| **syntax_corrupt** | ~~28–32, 41, 314–315~~ | **Retracted** — diagnostic false positives; use `SqlParserAccess` for validity |
-| **legitimate_complex** | 130, 1814, 2120, 4163, 5860–5863 | May still walk if no parse-phase FATAL | **W2** null-guard + targeted fix |
-| **dev_template** | 4157–4158, 4164, 4170–4171 | Same as legitimate_complex | **W2** + classify whether SQL is in-scope for parser |
+| Category | csv_rows | Status |
+|----------|----------|--------|
+| ~~**syntax_corrupt**~~ | ~~28–32, 41, 314–315~~ | **Retracted** — diagnostic false positives |
+| **legitimate_complex** | 130, 1814, 2120, 4163, 5860–5863 | **Clean on production path** post-W2 — monitor only |
+| **dev_template** | 4157–4158, 4164, 4170–4171 | **Complete (E3)** — classify if production tickets |
 
-**Next step:** **W2** (null-guard), starting with row **130** on full `panto_513_outstanding_issues.csv` SQL.
+**Next step:** None required for W-track. Optional **2.11.4** cleanup.
 
 ##### Legacy step mapping (for grep / old notes)
 
@@ -1207,7 +1208,7 @@ Post-C2.2 batch (`PantoTimeoutBatchBenchmarkTest`, 74 rows, ~4 s): **18** rows l
 
 **Retracted W5 syntax_corrupt (rows 28–32, 41, 314–315):** false positives from diagnostic SLL path and former walk-skip policy — production parses these on the LL path (e.g. row **28** has zero walker fatals).
 
-**Cluster B (10 rows):** SLL-only false positives vs production — pending **2.10** in `SqlParserAccess`, not E3 diagnostic changes.
+**Cluster B (10 rows):** SLL-only false positives; production LL = 0 fatals. **`ClusterBSllRegressionTest`**. §2.10 abandoned — no SLL in `SqlParserAccess`.
 
 **Regression gates:** `mvn -pl parse -Dtest=PantoTimeoutCorpusE3GateTest,ClusterBSllRegressionTest test`
 
@@ -1220,20 +1221,20 @@ Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL
 | 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Walker AST hot path + scope reconstruction (**post-S5**); convert egress not dominant on probe | 475 | **Complete (E3)** |
 | 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Walker hot path (C2.2 fixed dominant cost); ~~D1 defer-global-merge~~ **abandoned** | 1837 | **Complete (E3)** |
 | 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | **Complete (E3)** |
-| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | **2.11** — row **1814** **W2** |
+| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | **Complete (E3)** |
 | 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | **Complete (E3)** |
 | 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | **Complete (E3)** |
-| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **2.11** Cluster B — E3 pass; **7 FATALs**/row (fast) |
+| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **Complete (E3)** |
 | 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | **Complete (E3)** |
-| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | **2.11** — **5860–5863** **W2**; **5592–5594** Cluster B fast FATALs |
+| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | **Complete (E3)** |
 | 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | **Complete (E3)** |
 | 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | **Complete (E3)** |
-| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | **2.11** — row **130** **W2** canary |
+| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 ~8s diagnostic) | 130 | **Complete (E3)** — W2 canary |
 | 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | **Complete (E3)** |
-| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | **2.11** — dev-template rows **W2** |
-| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **2.11** Cluster B — E3 pass; **32 FATALs** (fast) |
-| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | **2.11** — row **2120** **W2** |
-| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | **2.11** Cluster B — **5453–5454** fast FATALs |
+| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | **Complete (E3)** |
+| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **Excluded** — utility workbook |
+| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | **Complete (E3)** |
+| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | **Complete (E3)** |
 | 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | **Complete (E3)** |
 
 **Suggested order:** 2.8-1 → 2.8-2 (largest N, matches UNION-header hypothesis) → non-UNION canaries **2.8-10 (5261), 2.8-11 (4647), 2.8-12 (130), 2.8-15 (4197)** → remaining UNION-mix and join/substitution buckets.
@@ -1427,86 +1428,45 @@ Do not implement parity changes until this explanation is recorded for the case.
 
 - Schema qualification or folded-case spelling of the same physical source.
 - Removing richer 5.1.3 nested `def_*` or query-dictionary evidence to make raw output resemble 5.0.0-3.
-- Timeouts and performance regressions owned by **2.8** (**complete**); fast-FATAL / subMap residuals → **2.11**.
+- Timeouts and performance regressions owned by **2.8** (**complete**); walker residuals → **2.11** (**complete**).
 - Assuming all comparison differences share the 2.7 finalizer root cause.
 
 ---
 
 ### 2.10 — SLL→LL two-stage prediction policy (`SqlParserAccess`)
 
-**Kind:** Performance / correctness (production parse path)
+**Kind:** Performance (production parse path)
 
-**Status:** **Not started**
+**Status:** **Abandoned (2026-09-03)** — will not implement.
 
-**Component:** `SqlParserAccess` / ANTLR prediction mode
+**Decision:** Prefer **LL accuracy and fidelity** over any performance gain from SLL-first prediction with LL fallback. A prior attempt at SLL-only parsing produced silent partial parses; Cluster B adjudication showed SLL can build wrong trees even when it “succeeds.”
 
-**Problem:** Production `SqlParserAccess` uses **LL only**. On some live rows (e.g. **4176**) a pure-SLL parse is much faster but can be wrong. **`ParseLatencyDiagnosticService`** is opt-in timing only (`diagnose()` = LL parity); `diagnoseWithSllProbe()` for future perf work. Production policy is still **LL-only**.
+**Permanent policy:** `SqlParserAccess` uses **LL only**. No SLL in production. `ParseLatencyDiagnosticService.diagnoseWithSllProbe()` remains for explicit future perf investigations — not validation.
 
-**Goal:** Land a **safe** two-stage policy: try SLL, fall back to LL on ambiguity/cancellation, and **reject** partial trees when prediction fails (compatible bailout strategy for ANTLR 4.13 in this repo).
-
-**Tests / gates:**
-
-- `SqlParserAccessSllPredictionSafetyTest` — representative rows + optional full corpus sweep
-- `ClusterBSllRegressionTest` — **10** Cluster B rows adjudicated as SLL-only E3 false positives (`cluster-b-sll-regression-rows.json` → `pending_2_10_csv_rows`)
-- Row **4176** / **4177** production-path regression (`ParseLatencyDiagnosticTest`)
-- After 2.10 lands: E3 `walkerFatalCount` parity on `pending_2_10_csv_rows` (diagnostic service already LL-reparses after SLL failure; production path still pending)
-- No increase in `walkerFatal` or empty `tableDictionary` on corpus sample
-
-**Pending fixes (Cluster B → 2.10, adjudicated 2026-09-02):**
-
-Frozen SQL fixtures already in `sql/csv-row-<n>.sql`. Index: `cluster-b-sll-regression-rows.json`.
-
-| csv_row | Bucket | SLL fatals | Default (LL) fatals | Symptom |
-|--------:|--------|----------:|--------------------:|---------|
-| 605–636 | 2.8-7 Student Address | 7 each | 0 | SLL builds `def_query0` without `agg2=union6` alias |
-| 5453–5454 | 2.8-17 wide contact | 3 each | 0 | SLL drops `table_alias` map present under default |
-| 5592–5594 | 2.8-9 intake UNION | 16 each | 0 | SLL `def_query0` vs default `def_union2` |
-
-**Deferred (not 2.10-only):** row **4197** — utility workbook (multi-statement script); excluded via `panto-corpus-exclusion-list.json` (signed off 2026-09-03).
-
-**Tooling:** `python3 tools/compare_cluster_b_sll_vs_default.py` — regenerate comparison; `SllVsDefaultClusterBProbe` — per-row probe.
-
-**Out of scope:** Changing grammar. ~~Altering diagnostic-only SLL behavior~~ — E3 diagnostic service now LL-reparses after SLL parse-phase failure for semantic parity.
+**Regression (Cluster B):** `ClusterBSllRegressionTest` — **10** rows in `cluster-b-sll-regression-rows.json`; production path zero fatals.
 
 ---
 
-### 2.11 — Panto timeout corpus residuals (W-track + fast-FATAL rows)
+### 2.11 — Panto timeout corpus residuals (W-track)
 
-**Kind:** Defect / investigation (walker correctness + semantic diagnostics on live RMCP SQL)
+**Kind:** Defect / investigation (walker correctness on live RMCP SQL)
 
-**Status:** **In progress** — **W1** done (§2.8 W-track); **W2–W5** + Cluster B open
+**Status:** **Complete (2026-09-03)**
 
-**Component:** event walker (`AbstractASTWalkerHelper` / `exitSql` null `subMap`), parse-error recovery, semantic FATAL emission
+**Component:** event walker (`AbstractASTWalkerHelper`), `WalkerWalkExceptionGate`, production `SqlParserAccess`
 
-**Background:** Phase **2.8** closed the **90 s timeout** problem (E3: **74/74** rows). Residual semantic work:
-
-| Cluster | Count | Symptom | Tracker |
-|---------|------:|---------|---------|
-| **A — former subMap skip** | **20** | Pre-**W1**: `subMap` NPE after parse-error recovery; post-**W1**: syntax_corrupt rows clean; **legitimate_complex** may still need **W2** | §2.8 **W-track** + [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (cleared) |
-| **B — fast-FATAL** | **10** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics (bound queries only; row **4197** excluded as utility workbook) | §2.8 E3 fast-FATAL table — all **10** adjudicated → **2.10** |
-
-**Suggested approach:**
-
-1. **Cluster A** — **W1** done for parse-phase failures; **W2** null-guard for rows that still walk; **W5** document `syntax_corrupt` as author-error.
-2. **Cluster B** — **Adjudicated (2026-09-02):** ten bound-query E3 fast-FATAL rows are SLL-only false positives vs production `SqlParserAccess` → **`cluster-b-sll-regression-rows.json`** / **2.10**. Row **4197** signed off as **utility workbook** → `panto-corpus-exclusion-list.json`.
-3. E3 already includes all **74** rows post-**W1**; add zero-FATAL assertions when Cluster B is adjudicated (**W4**).
-4. **Cleanup** — Delete one-off triage CLIs after **W2** + Cluster B classification (**2.11.4**). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests.
+**Summary:** Phase **2.8** closed the **90 s timeout** problem. W-track delivered structured diagnostics; W5 retracted; production always walks; diagnostic service is opt-in timing only.
 
 | Step | Task | Status |
 |------|------|--------|
-| 2.11.1 | **Cluster A** — **W2** null-guard + **W5** syntax_corrupt classification | **Partial** — **W1** + **W2** done |
-| 2.11.2 | **Cluster B** — fast-FATAL (10 bound-query rows) | **Adjudicated** — all **10** routed to **2.10**; **4197** utility workbook excluded |
-| 2.11.3 | E3 / skip-list hygiene | **Done** — **74/74** in E3; skip list cleared |
-| 2.11.4 | Remove one-off investigation CLIs after classification | **Partial** — some probes remain (`PantoSubMapRowProbe`) |
+| 2.11.1 | **W-track** (W1–W5) | **Complete** — W1 superseded; W5 retracted |
+| 2.11.2 | **Cluster B** adjudication | **Complete** — `ClusterBSllRegressionTest` |
+| 2.11.3 | E3 hygiene | **Complete** — 74/74 timing gate |
+| 2.11.4 | Remove one-off investigation CLIs | **Complete (2026-09-03)** — removed `PantoSubMapRowProbe`, `PantoSubMapFailureAnalysisTest`, `SllVsDefaultClusterBProbe`, `SqlParserAccessSllPredictionSafetyTest`, `tools/compare_cluster_b_sll_vs_default.py` |
 
-**Deliverables:**
+**Retained:** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, `PantoTimeoutCorpusE3GateTest`, `PantoSubMapSkipListRegressionTest`, `ClusterBSllRegressionTest`.
 
-- Updated skip list (shrinking as rows are fixed or reclassified)
-- Focused regression test per confirmed fix
-- Bucket tracker rows currently marked **2.11** move to **Complete** when every listed CSV row in that bucket is clean
-- One-off triage CLIs removed once classification is complete (**2.11.4**)
-
-**Out of scope:** Re-opening **2.8** timeout work; **D1** / **D2** / **C2** micro-opts (all abandoned).
+**Out of scope:** Re-opening **2.8**; **2.10** SLL policy; diagnostic/SLL for corpus classification.
 
 ---
 

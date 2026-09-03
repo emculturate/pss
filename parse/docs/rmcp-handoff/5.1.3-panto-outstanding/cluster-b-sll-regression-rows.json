@@ -1,19 +1,8 @@
 {
-  "description": "Cluster B E3 fast-FATAL rows adjudicated 2026-09-02. Ten rows are SLL-only false positives vs production SqlParserAccess. Row 4197 excluded as utility workbook (see panto-corpus-exclusion-list.json).",
-  "source": "2.11.2 adjudication routed to 2.10 SLL→LL policy (10 rows)",
+  "description": "Cluster B: ten bound-query rows where SLL prediction produced false walker fatals but production SqlParserAccess (LL) parses with zero fatals. §2.10 SLL→LL optimization abandoned 2026-09-03 — permanent LL-only production policy. Row 4197 excluded as utility workbook.",
+  "source": "2.11.2 adjudication (2026-09-02); §2.10 abandoned (2026-09-03)",
+  "production_policy": "LL only — no SLL in SqlParserAccess",
   "csv_rows": [
-    605,
-    606,
-    623,
-    635,
-    636,
-    5453,
-    5454,
-    5592,
-    5593,
-    5594
-  ],
-  "pending_2_10_csv_rows": [
     605,
     606,
     623,
@@ -32,122 +21,72 @@
     {
       "csv_row": 605,
       "bucket": "2.8-7",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 7,
-      "default_top_scope": "def_query7",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "{agg2=union6}",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-605.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-605.sql"
     },
     {
       "csv_row": 606,
       "bucket": "2.8-7",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 7,
-      "default_top_scope": "def_query7",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "{agg2=union6}",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-606.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-606.sql"
     },
     {
       "csv_row": 623,
       "bucket": "2.8-7",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 7,
-      "default_top_scope": "def_query7",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "{agg2=union6}",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-623.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-623.sql"
     },
     {
       "csv_row": 635,
       "bucket": "2.8-7",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 7,
-      "default_top_scope": "def_query7",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "{agg2=union6}",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-635.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-635.sql"
     },
     {
       "csv_row": 636,
       "bucket": "2.8-7",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 7,
-      "default_top_scope": "def_query7",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "{agg2=union6}",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-636.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-636.sql"
     },
     {
       "csv_row": 5453,
       "bucket": "2.8-17",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 3,
-      "default_top_scope": "def_query0",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "present",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-5453.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-5453.sql"
     },
     {
       "csv_row": 5454,
       "bucket": "2.8-17",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 3,
-      "default_top_scope": "def_query0",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": "present",
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-5454.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-5454.sql"
     },
     {
       "csv_row": 5592,
       "bucket": "2.8-9",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 16,
-      "default_top_scope": "def_union2",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": null,
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-5592.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-5592.sql"
     },
     {
       "csv_row": 5593,
       "bucket": "2.8-9",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 16,
-      "default_top_scope": "def_union2",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": null,
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-5593.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-5593.sql"
     },
     {
       "csv_row": 5594,
       "bucket": "2.8-9",
-      "default_fatals": 0,
+      "ll_fatals": 0,
       "sll_fatals": 16,
-      "default_top_scope": "def_union2",
-      "sll_top_scope": "def_query0",
-      "default_table_alias": null,
-      "sll_table_alias": null,
-      "fixture": "sql/csv-row-5594.sql",
-      "pending_2_10": true
+      "fixture": "sql/csv-row-5594.sql"
     }
   ]
 }

@@ -55,14 +55,14 @@ final class PantoOutstandingSqlFixtures {
         }
     }
 
-    /** Cluster B rows (E3 fast-FATAL) adjudicated as SLL-only false positives → **2.10**. */
-    static List<Integer> clusterB210PendingRows() throws IOException {
-        return readCsvRowIndex("pending_2_10_csv_rows");
+    /** Cluster B rows — SLL false positives; production LL path has zero fatals (see cluster-b-sll-regression-rows.json). */
+    static List<Integer> clusterBRegressionRows() throws IOException {
+        return readClusterBRows();
     }
 
-    /** Cluster B bound-query fast-FATAL rows (excludes utility workbook row 4197). */
+    /** Cluster B bound-query rows (excludes utility workbook row 4197). */
     static List<Integer> clusterBE3FastFatalRows() throws IOException {
-        return readCsvRowIndex("csv_rows");
+        return readClusterBRows();
     }
 
     /** Rows excluded from bound-query correctness gates (utility workbooks, etc.). */
@@ -70,18 +70,16 @@ final class PantoOutstandingSqlFixtures {
         return List.copyOf(PantoCorpusExclusionList.excludedCsvRows());
     }
 
-    private static List<Integer> readCsvRowIndex(String field) throws IOException {
+    private static List<Integer> readClusterBRows() throws IOException {
         Path index = resolveHandoffRoot().resolve("cluster-b-sll-regression-rows.json");
         if (!Files.isRegularFile(index)) {
             throw new IllegalStateException("Missing cluster-b-sll-regression-rows.json under handoff pack");
         }
         try (Reader reader = Files.newBufferedReader(index, StandardCharsets.UTF_8)) {
             ClusterBIndexPayload payload = new Gson().fromJson(reader, ClusterBIndexPayload.class);
-            List<Integer> rows = field.equals("pending_2_10_csv_rows")
-                    ? payload.pending210CsvRows
-                    : payload.csvRows;
+            List<Integer> rows = payload.csvRows;
             if (rows == null || rows.isEmpty()) {
-                throw new IllegalStateException("Empty cluster-b index field: " + field);
+                throw new IllegalStateException("Empty cluster-b-sll-regression-rows.json csv_rows");
             }
             return List.copyOf(rows);
         }
@@ -117,8 +115,5 @@ final class PantoOutstandingSqlFixtures {
     static final class ClusterBIndexPayload {
         @SerializedName("csv_rows")
         List<Integer> csvRows;
-
-        @SerializedName("pending_2_10_csv_rows")
-        List<Integer> pending210CsvRows;
     }
 }
