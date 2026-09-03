@@ -1448,12 +1448,21 @@ Do not implement parity changes until this explanation is recorded for the case.
 1. **Cluster A** — For each skip-list row: classify `syntax_corrupt` vs `legitimate_complex` vs `dev_template`; fix walker null-guard where SQL is valid; document corpus-quality exclusions where SQL is author-error.
 2. **Cluster B** — Capture FATAL messages per row; group by root cause (set-op interface, substitution, join resolution, etc.); fix or adjudicate like **2.9**.
 3. Re-include rows in `PantoTimeoutCorpusE3GateTest` as fixes land (remove from skip list or add zero-FATAL gate).
+4. **Cleanup (after classification)** — Delete one-off Phase 2.8 investigation CLIs and manual probes that exist only for subMap / fast-FATAL triage (e.g. `PantoSubMapRowProbe`, `PantoSubMapFailureAnalysisTest` if superseded). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests — those are retained regression harnesses (see §2.8).
+
+| Step | Task | Status |
+|------|------|--------|
+| 2.11.1 | Classify and fix **Cluster A** (subMap skip list, 20 rows) | Not started |
+| 2.11.2 | Classify and fix **Cluster B** (fast-FATAL, 11 rows) | Not started |
+| 2.11.3 | Re-include fixed rows in `PantoTimeoutCorpusE3GateTest` / shrink skip list | Not started |
+| 2.11.4 | Remove one-off investigation CLIs after **2.11.1–2.11.2** classification is done | Not started |
 
 **Deliverables:**
 
 - Updated skip list (shrinking as rows are fixed or reclassified)
 - Focused regression test per confirmed fix
 - Bucket tracker rows currently marked **2.11** move to **Complete** when every listed CSV row in that bucket is clean
+- One-off triage CLIs removed once classification is complete (**2.11.4**)
 
 **Out of scope:** Re-opening **2.8** timeout work; **D1** / **D2** / **C2** micro-opts (all abandoned).
 
