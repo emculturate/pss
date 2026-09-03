@@ -76,7 +76,7 @@ public class PantoSubMapSkipListRegressionTest {
     }
 
     @Test
-    public void sqlParserAccess_row130_manifestSql_noSubMapFatal() throws IOException {
+    public void sqlParserAccess_row130_fullCsvSql_noSubMapFatal() throws IOException {
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_GIANT_CASE);
         SqlParserAccess access = new SqlParserAccess(false, false, false);
         access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);

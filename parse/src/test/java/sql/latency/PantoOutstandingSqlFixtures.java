@@ -1,11 +1,11 @@
 package sql.latency;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +40,16 @@ final class PantoOutstandingSqlFixtures {
         if (fromManifest != null) {
             return fromManifest;
         }
-        return loadFromCsv(csvRow);
+        return sqlFromHandoffCsvOnly(csvRow);
+    }
+
+    /** Loads row SQL from {@code panto_513_outstanding_issues.csv} only (no manifest). */
+    static String sqlFromHandoffCsvOnly(int csvRow) throws IOException {
+        String sql = loadFromCsv(csvRow);
+        if (sql == null) {
+            throw new IllegalStateException("No CSV row " + csvRow + " in outstanding issues pack");
+        }
+        return sql;
     }
 
     private static String loadFromManifest(int csvRow) throws IOException {
@@ -68,98 +77,84 @@ final class PantoOutstandingSqlFixtures {
     }
 
     private static String loadFromCsv(int csvRow) throws IOException {
-        Map<Integer, String> index = loadCsvIndex();
-        String sql = index.get(csvRow);
-        if (sql == null) {
-            throw new IllegalStateException("No CSV row " + csvRow + " in outstanding issues pack");
-        }
-        return sql;
+        return loadCsvIndex().get(csvRow);
     }
 
     private static Map<Integer, String> loadCsvIndex() throws IOException {
         Path csv = resolveCsv();
+        String content = Files.readString(csv, StandardCharsets.UTF_8);
+        List<String[]> records = parseCsvRecords(content);
+        if (records.isEmpty()) {
+            throw new IllegalStateException("Empty CSV: " + csv);
+        }
+        String[] header = records.get(0);
+        int csvRowIndex = -1;
+        int querySqlIndex = -1;
+        for (int i = 0; i < header.length; i++) {
+            if ("csv_row".equals(header[i])) {
+                csvRowIndex = i;
+            } else if ("query_sql".equals(header[i])) {
+                querySqlIndex = i;
+            }
+        }
+        if (csvRowIndex < 0 || querySqlIndex < 0) {
+            throw new IllegalStateException("Unexpected CSV header in " + csv);
+        }
         Map<Integer, String> byRow = new HashMap<>();
-        try (BufferedReader reader = Files.newBufferedReader(csv, StandardCharsets.UTF_8)) {
-            String header = reader.readLine();
-            if (header == null || !header.startsWith("csv_row,")) {
-                throw new IllegalStateException("Unexpected CSV header in " + csv);
+        for (int r = 1; r < records.size(); r++) {
+            String[] fields = records.get(r);
+            if (fields.length <= Math.max(csvRowIndex, querySqlIndex)) {
+                continue;
             }
-            String line;
-            while ((line = reader.readLine()) != null) {
-                int comma = line.indexOf(',');
-                if (comma <= 0) {
-                    continue;
-                }
-                int row = Integer.parseInt(line.substring(0, comma));
-                byRow.put(row, extractQuerySqlField(line.substring(comma + 1)));
-            }
+            byRow.put(Integer.parseInt(fields[csvRowIndex]), fields[querySqlIndex]);
         }
         return byRow;
     }
 
-    private static String extractQuerySqlField(String afterCsvRow) {
-        int fieldIndex = 0;
-        int i = 0;
-        while (i < afterCsvRow.length()) {
-            if (afterCsvRow.charAt(i) == '"') {
-                if (fieldIndex == 8) {
-                    return readQuotedSql(afterCsvRow, i + 1);
-                }
-                i = endOfQuotedField(afterCsvRow, i);
-                fieldIndex++;
-                if (i < afterCsvRow.length() && afterCsvRow.charAt(i) == ',') {
-                    i++;
+    /**
+     * RFC 4180-style CSV parse (quoted fields may contain newlines and doubled quotes).
+     */
+    private static List<String[]> parseCsvRecords(String content) {
+        List<String[]> records = new ArrayList<>();
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < content.length() && content.charAt(i + 1) == '"') {
+                        field.append('"');
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field.append(c);
                 }
                 continue;
             }
-            int nextComma = afterCsvRow.indexOf(',', i);
-            if (nextComma < 0) {
-                if (fieldIndex == 8) {
-                    return afterCsvRow.substring(i);
-                }
-                throw new IllegalStateException("query_sql field missing");
-            }
-            if (fieldIndex == 8) {
-                return afterCsvRow.substring(i, nextComma);
-            }
-            i = nextComma + 1;
-            fieldIndex++;
-        }
-        throw new IllegalStateException("query_sql field missing");
-    }
-
-    private static String readQuotedSql(String line, int start) {
-        StringBuilder sql = new StringBuilder();
-        int end = start;
-        while (end < line.length()) {
-            char c = line.charAt(end);
             if (c == '"') {
-                if (end + 1 < line.length() && line.charAt(end + 1) == '"') {
-                    sql.append('"');
-                    end += 2;
-                    continue;
-                }
-                break;
+                inQuotes = true;
+            } else if (c == ',') {
+                fields.add(field.toString());
+                field.setLength(0);
+            } else if (c == '\r') {
+                // ignore
+            } else if (c == '\n') {
+                fields.add(field.toString());
+                field.setLength(0);
+                records.add(fields.toArray(String[]::new));
+                fields = new ArrayList<>();
+            } else {
+                field.append(c);
             }
-            sql.append(c);
-            end++;
         }
-        return sql.toString();
-    }
-
-    private static int endOfQuotedField(String line, int openQuote) {
-        int i = openQuote + 1;
-        while (i < line.length()) {
-            if (line.charAt(i) == '"') {
-                if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
-                    i += 2;
-                    continue;
-                }
-                return i + 1;
-            }
-            i++;
+        if (!field.isEmpty() || !fields.isEmpty() || inQuotes) {
+            fields.add(field.toString());
+            records.add(fields.toArray(String[]::new));
         }
-        return line.length();
+        return records;
     }
 
     private static Path resolveSqlRoot() {
