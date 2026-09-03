@@ -5,6 +5,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -453,6 +456,53 @@ public class SqlParseMCPTest {
         assertEquals("WARNING", messages.get(1).getAsJsonObject().get("severity").getAsString());
         assertEquals("SEVERE_WARNING", messages.get(2).getAsJsonObject().get("severity").getAsString());
         }
+
+    @Test
+    public void normalizeSqlTextForMcp_replacesNbspWithAsciiSpace() {
+        String normalized = SqlParseMCP.normalizeSqlTextForMcp("select \u00a0 as x");
+        assertFalse(normalized.contains("\u00a0"));
+        assertEquals(' ', normalized.charAt(6));
+    }
+
+    @Test
+    public void peekRequestId_readsIdBeforeFullDispatch() {
+        assertEquals("42", SqlParseMCP.peekRequestId(
+                "{\"jsonrpc\":\"2.0\",\"id\":\"42\",\"method\":\"tool/parseSql\",\"params\":{}}"));
+        assertEquals("7", SqlParseMCP.peekRequestId(
+                "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":null}"));
+    }
+
+    @Test
+    public void parseSqlWithNbsp_returnsJsonRpcIdAndParsesRow28Fixture() throws Exception {
+        Path row28 = Path.of("docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
+        if (!Files.isRegularFile(row28)) {
+            row28 = Path.of("parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-28.sql");
+        }
+        String sql = Files.readString(row28, StandardCharsets.UTF_8);
+        assertTrue(sql.indexOf('\u00a0') >= 0);
+
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":" + gson.toJson(sql) + "}";
+        String request = createJsonRpcRequest("28", "tool/parseSql", params);
+        runServiceWithInput(request);
+
+        JsonObject responseObj = findFirstResultObject(outContent.toString());
+        assertNotNull(responseObj);
+        assertEquals("28", responseObj.get("id").getAsString());
+        assertNotNull(responseObj.get("result"));
+        assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+    }
+
+    @Test
+    public void parseSqlWithNbspInSimpleSelect_returnsCorrelatedJsonRpcId() {
+        String params = "{\"endPoint\":\"SQL\",\"sqlText\":\"select 1\u00a0as one_col\"}";
+        String request = createJsonRpcRequest("nb", "tool/parseSql", params);
+        runServiceWithInput(request);
+
+        JsonObject responseObj = findFirstResultObject(outContent.toString());
+        assertNotNull(responseObj);
+        assertEquals("nb", responseObj.get("id").getAsString());
+        assertTrue(responseObj.getAsJsonObject("result").get("ok").getAsBoolean());
+    }
 
    
 }

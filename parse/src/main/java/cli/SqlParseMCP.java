@@ -3,6 +3,7 @@ package cli;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -17,6 +18,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import access.Snippet;
@@ -26,6 +28,9 @@ import errorhandling.ParseDiagnostic;
 public class SqlParseMCP {
 
     private static final Gson gson = new GsonBuilder().serializeNulls().create();
+
+    /** Diagnostic when MCP response serialization fails after a successful parse. */
+    static final String MCP_RESPONSE_SERIALIZE_ERROR = "MCP_RESPONSE_SERIALIZE_ERROR";
 
     // --- JSON-RPC Message Classes ---
 
@@ -155,7 +160,7 @@ When ok is true, you should:
         if (!params.has("sqlText") || !params.has("endPoint")) {
             throw new IllegalArgumentException("Parameters must include 'sqlText' and 'endPoint'.");
         }
-        String sqlText = params.get("sqlText").getAsString();
+        String sqlText = normalizeSqlTextForMcp(params.get("sqlText").getAsString());
         String endPoint = params.get("endPoint").getAsString();
 
         try {
@@ -165,16 +170,84 @@ When ok is true, you should:
                     .getMethod("executeTheParse", String.class, String.class)
                     .invoke(access, sqlText, endPoint);
             Snippet snippet = (Snippet) access.getClass().getMethod("getSnippet").invoke(access);
-            return formatParseResult(snippet);
+            return formatParseResultSafely(snippet);
         } catch (Exception e) {
-            // If the parser throws, return a result object with error info
+            return buildMcpInternalErrorResult(e);
+        }
+    }
+
+    /**
+     * Replace Unicode space characters that break the lexer or Gson serialization (e.g. U+00A0 NBSP
+     * from Word/Excel exports) with ASCII space. Preserves tab and newline.
+     */
+    static String normalizeSqlTextForMcp(String sql) {
+        if (sql == null || sql.isEmpty()) {
+            return sql;
+        }
+        StringBuilder normalized = new StringBuilder(sql.length());
+        for (int index = 0; index < sql.length(); index++) {
+            char ch = sql.charAt(index);
+            normalized.append(isProblematicWhitespace(ch) ? ' ' : ch);
+        }
+        return normalized.toString();
+    }
+
+    private static boolean isProblematicWhitespace(char ch) {
+        if (ch == '\u00A0' || ch == '\uFEFF') {
+            return true;
+        }
+        if (ch >= '\u2000' && ch <= '\u200B') {
+            return true;
+        }
+        return ch == '\u202F' || ch == '\u205F' || ch == '\u3000';
+    }
+
+    private JsonObject buildMcpInternalErrorResult(Throwable error) {
+        Throwable root = unwrapThrowable(error);
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            message = root.getClass().getSimpleName();
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("ok", false);
+        result.addProperty("hasFatalErrors", true);
+        ParseDiagnostic exceptionDiagnostic = new ParseDiagnostic(
+                ParseDiagnostic.Severity.FATAL,
+                "MCP_INTERNAL_ERROR",
+                message,
+                null,
+                null,
+                "SqlParseMCP",
+                null,
+                null,
+                false,
+                "mcp.response",
+                root.getClass().getSimpleName(),
+                null);
+        result.addProperty("fatalErrorCount", 1);
+        result.add("errors", diagnosticsToJsonArray(List.of(exceptionDiagnostic)));
+        result.add("messages", diagnosticsToJsonArray(List.of(exceptionDiagnostic)));
+        return result;
+    }
+
+    private JsonObject formatParseResultSafely(Snippet snippet) {
+        try {
+            return formatParseResult(snippet);
+        } catch (Exception serializeError) {
             JsonObject result = new JsonObject();
             result.addProperty("ok", false);
             result.addProperty("hasFatalErrors", true);
-            ParseDiagnostic exceptionDiagnostic = new ParseDiagnostic(
+            result.addProperty("parsePartial", true);
+            result.addProperty("fatalErrorCount", 1);
+            Throwable root = unwrapThrowable(serializeError);
+            String message = root.getMessage();
+            if (message == null || message.isBlank()) {
+                message = root.getClass().getSimpleName();
+            }
+            ParseDiagnostic diagnostic = new ParseDiagnostic(
                     ParseDiagnostic.Severity.FATAL,
-                    "MCP_INTERNAL_ERROR",
-                    e.getMessage(),
+                    MCP_RESPONSE_SERIALIZE_ERROR,
+                    "Parse completed but MCP could not serialize the full response: " + message,
                     null,
                     null,
                     "SqlParseMCP",
@@ -182,12 +255,57 @@ When ok is true, you should:
                     null,
                     false,
                     "mcp.response",
-                    e.getClass().getSimpleName(),
+                    root.getClass().getSimpleName(),
                     null);
-            result.addProperty("fatalErrorCount", 1);
-            result.add("errors", diagnosticsToJsonArray(List.of(exceptionDiagnostic)));
-            result.add("messages", diagnosticsToJsonArray(List.of(exceptionDiagnostic)));
+            result.add("errors", diagnosticsToJsonArray(List.of(diagnostic)));
+            result.add("messages", diagnosticsToJsonArray(List.of()));
+            JsonObject partialParse = new JsonObject();
+            addParsePayloadFieldSafely(partialParse, "fatalErrorCount", snippet == null ? null : snippet.getFatalErrorCount());
+            if (snippet != null) {
+                addParsePayloadFieldSafely(partialParse, "fatalErrorStringList", snippet.getFatalErrorStringList());
+            }
+            result.add("parse", partialParse);
             return result;
+        }
+    }
+
+    private void addParsePayloadFieldSafely(JsonObject parseResult, String fieldName, Object value) {
+        try {
+            parseResult.add(fieldName, pruneNulls(gson.toJsonTree(value)));
+        } catch (RuntimeException ignored) {
+            parseResult.add(fieldName, JsonNull.INSTANCE);
+        }
+    }
+
+    private static Throwable unwrapThrowable(Throwable error) {
+        Throwable current = error;
+        while (current instanceof java.lang.reflect.InvocationTargetException
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    /** Best-effort id extraction so error responses correlate even when Gson request parse fails. */
+    static String peekRequestId(String jsonPayload) {
+        if (jsonPayload == null || jsonPayload.isBlank()) {
+            return null;
+        }
+        try {
+            JsonElement root = JsonParser.parseString(jsonPayload);
+            if (!root.isJsonObject()) {
+                return null;
+            }
+            JsonElement idElement = root.getAsJsonObject().get("id");
+            if (idElement == null || idElement.isJsonNull()) {
+                return null;
+            }
+            if (idElement.isJsonPrimitive()) {
+                return idElement.getAsString();
+            }
+            return idElement.toString();
+        } catch (RuntimeException ignored) {
+            return null;
         }
     }
 
@@ -262,25 +380,16 @@ When ok is true, you should:
 
     private JsonObject buildParsePayload(Snippet snippet) {
         JsonObject parseResult = new JsonObject();
-
-        JsonElement jstr = pruneNulls(gson.toJsonTree(snippet.getSqlAbstractTree()));
-        parseResult.add("sqlTree", jstr);
-        jstr = pruneNulls(gson.toJsonTree(snippet.getSymbolTable()));
-        parseResult.add("symbolTable", jstr);
-        jstr = pruneNulls(gson.toJsonTree(snippet.getTableDictionary()));
-        parseResult.add("tableDictionary", jstr);
-        jstr = pruneNulls(gson.toJsonTree(snippet.getQueryColumnDictionaryMap()));
-        parseResult.add("queryDictionary", jstr);
-        jstr = pruneNulls(gson.toJsonTree(snippet.getSubstitutionsMap()));
-        parseResult.add("substitutionsMap", jstr);
-        jstr = pruneNulls(gson.toJsonTree(snippet.getQueryInterface()));
-        parseResult.add("queryInterface", jstr);
+        addParsePayloadFieldSafely(parseResult, "sqlTree", snippet.getSqlAbstractTree());
+        addParsePayloadFieldSafely(parseResult, "symbolTable", snippet.getSymbolTable());
+        addParsePayloadFieldSafely(parseResult, "tableDictionary", snippet.getTableDictionary());
+        addParsePayloadFieldSafely(parseResult, "queryDictionary", snippet.getQueryColumnDictionaryMap());
+        addParsePayloadFieldSafely(parseResult, "substitutionsMap", snippet.getSubstitutionsMap());
+        addParsePayloadFieldSafely(parseResult, "queryInterface", snippet.getQueryInterface());
         if (snippet.getArrayOutputCollectorsMap() != null
                 && !snippet.getArrayOutputCollectorsMap().isEmpty()) {
-            jstr = pruneNulls(gson.toJsonTree(snippet.getArrayOutputCollectorsMap()));
-            parseResult.add("arrayOutputCollectors", jstr);
+            addParsePayloadFieldSafely(parseResult, "arrayOutputCollectors", snippet.getArrayOutputCollectorsMap());
         }
-
         return parseResult;
     }
 
@@ -444,7 +553,8 @@ When ok is true, you should:
     // --- Main Application Loop ---
 
     public void run() {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
             while (!Thread.currentThread().isInterrupted()) {
                 // Read headers to find Content-Length
                 String line = reader.readLine();
@@ -463,7 +573,8 @@ When ok is true, you should:
                 // Read the JSON payload
                 char[] buffer = new char[contentLength];
                 reader.read(buffer, 0, contentLength);
-                String jsonPayload = new String(buffer);
+                String jsonPayload = new String(buffer, 0, contentLength);
+                String requestIdHint = peekRequestId(jsonPayload);
 
                 JsonRpcRequest request = null;
                 try {
@@ -492,10 +603,14 @@ When ok is true, you should:
                     writeResponse(new JsonRpcResponse(request.id, result));
 
                 } catch (Exception e) {
-                    String requestId = (request != null) ? request.id : null;
+                    String requestId = resolveRequestId(request, requestIdHint);
                     // JSON-RPC error codes: -32600 Invalid Request, -32602 Invalid Params, -32603 Internal error
                     int code = (e instanceof IllegalArgumentException) ? -32602 : -32603;
-                    writeResponse(new JsonRpcErrorResponse(requestId, code, e.getMessage()));
+                    String message = e.getMessage();
+                    if (message == null || message.isBlank()) {
+                        message = unwrapThrowable(e).getClass().getSimpleName();
+                    }
+                    writeResponse(new JsonRpcErrorResponse(requestId, code, message));
                 }
             }
         } catch (IOException e) {
@@ -504,12 +619,61 @@ When ok is true, you should:
         }
     }
 
+    private static String resolveRequestId(JsonRpcRequest request, String requestIdHint) {
+        if (request != null && request.id != null) {
+            return request.id;
+        }
+        return requestIdHint;
+    }
+
     private static void writeResponse(Object responseObject) {
-        String jsonResponse = gson.toJson(responseObject);
-        int contentLength = jsonResponse.getBytes().length;
-        System.out.print("Content-Length: " + contentLength + "\r\n\r\n");
-        System.out.print(jsonResponse);
-        System.out.flush(); // <-- This is crucial!
+        try {
+            String jsonResponse = gson.toJson(responseObject);
+            byte[] payload = jsonResponse.getBytes(StandardCharsets.UTF_8);
+            System.out.print("Content-Length: " + payload.length + "\r\n\r\n");
+            System.out.write(payload);
+            System.out.flush();
+        } catch (Exception primaryFailure) {
+            String requestId = extractIdFromResponseObject(responseObject);
+            String message = unwrapThrowable(primaryFailure).getMessage();
+            if (message == null || message.isBlank()) {
+                message = "MCP response serialization failed";
+            }
+            writeFallbackErrorResponse(requestId, -32603, message);
+        }
+    }
+
+    private static String extractIdFromResponseObject(Object responseObject) {
+        if (responseObject instanceof JsonRpcResponse) {
+            return ((JsonRpcResponse) responseObject).id;
+        }
+        if (responseObject instanceof JsonRpcErrorResponse) {
+            return ((JsonRpcErrorResponse) responseObject).id;
+        }
+        return null;
+    }
+
+    private static void writeFallbackErrorResponse(String requestId, int code, String message) {
+        try {
+            JsonObject envelope = new JsonObject();
+            envelope.addProperty("jsonrpc", "2.0");
+            if (requestId == null) {
+                envelope.add("id", JsonNull.INSTANCE);
+            } else {
+                envelope.addProperty("id", requestId);
+            }
+            JsonObject error = new JsonObject();
+            error.addProperty("code", code);
+            error.addProperty("message", message);
+            envelope.add("error", error);
+            String jsonResponse = gson.toJson(envelope);
+            byte[] payload = jsonResponse.getBytes(StandardCharsets.UTF_8);
+            System.out.print("Content-Length: " + payload.length + "\r\n\r\n");
+            System.out.write(payload);
+            System.out.flush();
+        } catch (Exception fatal) {
+            System.err.println("MCP could not write JSON-RPC response: " + fatal.getMessage());
+        }
     }
 
     public static void main(String[] args) {
