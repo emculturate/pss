@@ -16,6 +16,16 @@ import static org.junit.Assert.assertTrue;
  * Phase 2.8-E3 corpus gate — all {@code timeout_513} rows (74) plus named bucket canaries
  * must finish under the 90s RMCP kill.
  *
+ * <p><b>What this gate measures:</b> wall-clock timing on the opt-in
+ * {@link ParseLatencyDiagnosticService#diagnose(String, String)} path (LL parse + walk +
+ * finalize). It does <em>not</em> assert zero walker FATALs and must not be used for
+ * accept/reject decisions.
+ *
+ * <p><b>Not production parsing:</b> {@code SqlParserAccess} is the correctness path.
+ * {@code ParseLatencyDiagnosticService} is available for future timing investigations only.
+ * Use {@link ParseLatencyDiagnosticService#diagnoseWithSllProbe(String, String)} when
+ * comparing SLL vs LL prediction cost — never to gate production behavior.
+ *
  * <p>SQL fixtures: {@code parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-&lt;n&gt;.sql}
  */
 public class PantoTimeoutCorpusE3GateTest {

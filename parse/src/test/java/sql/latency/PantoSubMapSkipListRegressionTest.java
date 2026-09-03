@@ -11,20 +11,16 @@ import access.WalkerWalkExceptionGate;
 import astwalkers.AbstractASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
 
-import static access.SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS;
 import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Regression: former subMap skip-list rows complete through access + diagnostic paths.
+ * Regression: former subMap skip-list rows complete through access + opt-in diagnostic paths.
  */
 public class PantoSubMapSkipListRegressionTest {
 
-    /** Former syntax_corrupt Acquia export representative. */
     private static final int ROW_ACQUIA = 28;
-
-    /** Former legitimate_complex giant CASE row. */
     private static final int ROW_GIANT_CASE = 130;
 
     @Test
@@ -42,26 +38,15 @@ public class PantoSubMapSkipListRegressionTest {
     }
 
     @Test
-    public void diagnosticService_selectFrom_skipsAstWalk() {
-        ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose("select from", SQLPARSER_SQL_TREE_KEY);
-        assertTrue("walk should be skipped on parse failure", report.walkMs < 200L);
-        assertTrue("total should stay fast", report.totalMs < 5_000L);
-        assertTrue(report.diagnostics.stream().anyMatch(d -> d != null
-                && DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS.equals(d.code())
-                && d.severity() == ParseDiagnostic.Severity.WARNING
-                && "ParseLatencyDiagnosticService".equals(d.source())));
-    }
-
-    @Test
-    public void sqlParserAccess_selectFrom_skipsAstWalk() {
+    public void sqlParserAccess_selectFrom_mapsSubMapMisalignWithoutRawJavaFatal() {
         SqlParserAccess access = new SqlParserAccess(false, false, false);
         access.executeTheParse("select from", SQLPARSER_SQL_TREE_KEY);
 
         for (String fatal : access.getFatalErrorList()) {
-            assertFalse("unexpected walker fatal: " + fatal, fatal.contains("subMap"));
+            assertFalse("unexpected raw subMap fatal: " + fatal, fatal.contains("subMap"));
         }
         assertTrue(access.getAllDiagnostics().stream().anyMatch(d -> d != null
-                && DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS.equals(d.code())));
+                && AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN.equals(d.code())));
     }
 
     @Test

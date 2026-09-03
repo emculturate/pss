@@ -47,13 +47,14 @@ public class ClusterBSllRegressionTest {
     }
 
     @Test
-    public void pending210_diagnosticServiceSllPath_emitsFatals() throws IOException {
+    public void pending210_diagnosticService_matchesAccessWalkerFatals() throws IOException {
         for (int csvRow : PantoOutstandingSqlFixtures.clusterB210PendingRows()) {
             String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
             ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
-            assertTrue(
-                    "csv_row=" + csvRow + " expected E3 SLL false-positive fatals before 2.10",
-                    report.walkerFatalCount > 0);
+            assertEquals(
+                    "csv_row=" + csvRow + " E3 walkerFatal parity with SqlParserAccess",
+                    0,
+                    report.walkerFatalCount);
         }
     }
 }

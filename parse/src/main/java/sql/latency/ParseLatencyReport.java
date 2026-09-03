@@ -49,7 +49,14 @@ public final class ParseLatencyReport {
     /** FATAL diagnostics emitted by the event walker. */
     public final int walkerFatalCount;
 
-    /** Parse-, walker-, and access-policy diagnostics (includes {@code AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS} when walk is skipped). */
+    /**
+     * {@code 1} when {@link #diagnoseWithSllProbe(String, String)} ran and the SLL-only
+     * attempt reported parse-phase FATAL/ERROR. Profiling signal only — not used in
+     * production {@code SqlParserAccess}.
+     */
+    public final int llReparseAfterSllFailure;
+
+    /** Parse-, walker-, and walk-exception diagnostics from the diagnostic run. */
     public final List<ParseDiagnostic> diagnostics;
 
     ParseLatencyReport(
@@ -64,6 +71,7 @@ public final class ParseLatencyReport {
             int contextSensitivityCount,
             int parseErrorCount,
             int walkerFatalCount,
+            int llReparseAfterSllFailure,
             List<ParseDiagnostic> diagnostics) {
         this.endpoint               = endpoint;
         this.querySizeChars         = querySizeChars;
@@ -77,6 +85,7 @@ public final class ParseLatencyReport {
         this.contextSensitivityCount = contextSensitivityCount;
         this.parseErrorCount        = parseErrorCount;
         this.walkerFatalCount       = walkerFatalCount;
+        this.llReparseAfterSllFailure = llReparseAfterSllFailure;
         this.diagnostics            = diagnostics == null ? List.of() : List.copyOf(diagnostics);
     }
 
@@ -87,10 +96,10 @@ public final class ParseLatencyReport {
     public String summary() {
         return String.format(
             "endpoint=%-12s  chars=%6d  lex=%4dms  parse=%6dms  walk=%6dms  fin=%4dms  " +
-            "total=%6dms  sllFallback=%d  ambig=%d  ctxSens=%d  parseErr=%d  walkerFatal=%d",
+            "total=%6dms  sllFallback=%d  llReparse=%d  ambig=%d  ctxSens=%d  parseErr=%d  walkerFatal=%d",
             endpoint, querySizeChars,
             lexMs, parseMs, walkMs, finalizeMs, totalMs,
-            sllFallbackCount, ambiguityCount, contextSensitivityCount,
+            sllFallbackCount, llReparseAfterSllFailure, ambiguityCount, contextSensitivityCount,
             parseErrorCount, walkerFatalCount);
     }
 

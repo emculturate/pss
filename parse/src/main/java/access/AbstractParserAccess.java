@@ -169,7 +169,6 @@ public abstract class AbstractParserAccess {
 
     /**
      * True when ANTLR reported syntax errors or the parse phase emitted FATAL/ERROR diagnostics.
-     * Used to skip AST walking on recovered partial trees that would mis-align walker state.
      */
     protected boolean hasParsePhaseErrors() {
         return ParsePhaseErrorGate.hasParsePhaseErrors(getParser(), errorCollector, errorListener);

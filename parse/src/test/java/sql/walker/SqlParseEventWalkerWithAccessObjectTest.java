@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import access.Snippet;
 import access.SqlParserAccess;
+import astwalkers.AbstractASTWalkerHelper;
 import astwalkers.SqlASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
@@ -335,7 +336,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicSelectSyntaxFailureTest1() {
 		final String query = "select from";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
 		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
@@ -343,9 +344,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 
 		assertDiagnosticByCode(
 				snippet,
-				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
-				ParseDiagnostic.Severity.WARNING,
-				"Semantic analysis skipped because the SQL did not parse successfully (first parse error at line 1, position 7).",
+				AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,
+				ParseDiagnostic.Severity.FATAL,
+				"walker stack mis-aligned",
 				null);
 	}				
 
@@ -353,17 +354,17 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 	@Test
 	public void basicSelectSyntaxFailureTest2() {
 		final String query = "not a sql statement at all";
-		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 1);
+		final Snippet snippet = runFailedSyntaxSQLParserTest(query, SQLPARSER_SQL_TREE_KEY, 2);
 
-		String text = snippet.getFatalErrorStringList().get(0);
 		Assert.assertTrue("Expected a syntax error with " + query,
-			text.equals("Line 1:0 - null - unexpected input: 'not'"));
+			snippet.getFatalErrorStringList().stream()
+				.anyMatch(text -> text.equals("Line 1:0 - null - unexpected input: 'not'")));
 
 		assertDiagnosticByCode(
 				snippet,
-				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
-				ParseDiagnostic.Severity.WARNING,
-				"Semantic analysis skipped because the SQL did not parse successfully (first parse error at line 1, position 0).",
+				AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,
+				ParseDiagnostic.Severity.FATAL,
+				"walker stack mis-aligned",
 				null);
 	}				
 
@@ -2919,7 +2920,7 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 		final Snippet tupleInList = runFailedSyntaxSQLParserTest(
 				"SELECT a FROM t1 WHERE (a, a) IN ((1, 2), (3, 4))",
 				SQLPARSER_SQL_TREE_KEY,
-				1);
+				2);
 		assertFatalDiagnosticByCode(
 				tupleInList,
 				"REPORT_ERROR",
@@ -2927,9 +2928,9 @@ public class SqlParseEventWalkerWithAccessObjectTest {
 				",");
 		assertDiagnosticByCode(
 				tupleInList,
-				SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS,
-				ParseDiagnostic.Severity.WARNING,
-				"first parse error at line 1, position 25",
+				AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,
+				ParseDiagnostic.Severity.FATAL,
+				"walker stack mis-aligned",
 				null);
 
 		final String invalidQualifiedQuery = "SELECT q.a FROM (SELECT a FROM t1) q WHERE q.missing IN (SELECT a FROM t2)";

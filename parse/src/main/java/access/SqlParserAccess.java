@@ -203,21 +203,17 @@ public class SqlParserAccess extends AbstractParserAccess {
             // Create a new instance of SqlParseEventWalker to extract the SQL from the parse tree
             this.extractor = new SqlParseEventWalker();
 
-        if (hasParsePhaseErrors()) {
-            recordAstWalkSkippedDueToParseErrors();
-        } else {
-            try {
-                // walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
-                // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
-                // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
-                ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
+        try {
+            // walk the tree and extract the SQL USING THE CUSTOM Extractor/Event Walker
+            // The ParseTreeWalker.DEFAULT is used to walk the parse tree and call the appropriate methods in the extractor.
+            // The extractor will collect the SQL Abstract Syntax Tree, Symbol Table, Table Column Dictionary, Substitution Variables, and Query Interface.
+            ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
 
-            } catch (Exception e) {
-                if (!handleWalkException(e)) {
-                    System.err.println("EXCEPTION when walking the parse tree: " + e.getMessage());
-                    this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
-                    System.out.println("Exception: " + this.getFatalErrorList());
-                }
+        } catch (Exception e) {
+            if (!handleWalkException(e)) {
+                System.err.println("EXCEPTION when walking the parse tree: " + e.getMessage());
+                this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
+                System.out.println("Exception: " + this.getFatalErrorList());
             }
         }
         if (this.extractor != null) {
@@ -259,11 +255,6 @@ public class SqlParserAccess extends AbstractParserAccess {
         } else {
             throw new IllegalStateException("Parser tree is null. Ensure the parser was run successfully.");    
         }
-    }
-
-    private void recordAstWalkSkippedDueToParseErrors() {
-        addAccessDiagnostic(ParsePhaseErrorGate.astWalkSkippedDueToParseErrors(
-                errorCollector, errorListener, "SqlParserAccess"));
     }
 
     /**

@@ -12,8 +12,11 @@ import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
 
 /**
- * Shared policy for skipping AST walks when the parse phase already failed.
- * Recovered partial parse trees mis-align walker stack state ({@code subMap} null).
+ * Parse-phase diagnostic helpers shared by {@code SqlParserAccess} and opt-in
+ * {@link sql.latency.ParseLatencyDiagnosticService}.
+ *
+ * <p>Production parsing always attempts the AST walk; {@link access.WalkerWalkExceptionGate}
+ * maps walker stack mis-alignment (e.g. {@code subMap} null) to structured diagnostics.
  */
 public final class ParsePhaseErrorGate {
 

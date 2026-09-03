@@ -44,99 +44,98 @@ import sql.SQLSelectParserParser;
 import sql.walker.SqlParseEventWalker;
 
 /**
- * Splits a full parse run into four independently timed phases and counts
- * ANTLR4 prediction events so Phase 2.8 can determine whether the 5.1.3
- * timeout is in grammar prediction or in the event walker.
+ * <b>Opt-in timing instrumentation only.</b> Not used by production {@code SqlParserAccess}.
+ *
+ * <p>Splits a parse run into independently timed phases (lex / parse / walk / finalize) and
+ * optionally counts ANTLR4 prediction events. Intended for future performance investigations
+ * (Phase 2.8-style profiling) and CI timing gates such as {@code PantoTimeoutCorpusE3GateTest}.
+ *
+ * <p><b>Normal entry point:</b> {@link #diagnose(String, String)} uses the same LL prediction
+ * mode as production and always attempts the AST walk (walker exceptions are mapped via
+ * {@link WalkerWalkExceptionGate}, matching {@code SqlParserAccess}).
+ *
+ * <p><b>Performance probe only:</b> {@link #diagnoseWithSllProbe(String, String)} additionally
+ * runs an SLL parse pass before LL. Its results must never drive accept/reject or skip-walk
+ * policy in production code.
  *
  * <h2>How to use</h2>
  * <pre>{@code
  * ParseLatencyReport r = ParseLatencyDiagnosticService.diagnose(queryText, "SQL");
  * System.out.println(r.summary());
- * // inspect r.sllFallbackCount, r.parseMs, r.walkMs, …
  * }</pre>
- *
- * <h2>Interpreting results (Phase 2.8 guide)</h2>
- * <ul>
- *   <li><b>{@code sllFallbackCount} > 0 AND {@code parseMs} is large</b> — the hang
- *       is in grammar prediction.  Focus on set-op member rules, LISTAGG suffix,
- *       or the new {@code script} top-level alternatives.</li>
- *   <li><b>{@code parseMs} is small but {@code walkMs} is large</b> — the hang is
- *       in the event walker.  Profile {@link SqlParseEventWalker} with JFR or
- *       async-profiler; look for O(n²) list scans triggered by many
- *       LISTAGG/window expressions.</li>
- *   <li><b>Both phases complete quickly in isolation but total is slow</b> — check
- *       {@code finalizeMs}; the symbol-tree finalizer may be the culprit.</li>
- * </ul>
  */
 public final class ParseLatencyDiagnosticService {
 
     private ParseLatencyDiagnosticService() {}
 
     /**
-     * Runs a full parse of {@code query} through the given {@code endpoint} and
-     * returns a {@link ParseLatencyReport} with per-phase timings and ANTLR4
-     * prediction-event counts.
-     *
-     * @param query    raw SQL text (may contain PSS substitution variables)
-     * @param endpoint one of the {@code SQLPARSER_*_TREE_KEY} constants, e.g. {@code "SQL"}
+     * Production-parity timing split: LL parse + walk + finalize (no SLL probe).
      */
     public static ParseLatencyReport diagnose(String query, String endpoint) {
+        return runDiagnose(query, endpoint, false);
+    }
+
+    /**
+     * Opt-in performance probe: SLL parse timing pass, then LL parse + walk + finalize.
+     * {@link ParseLatencyReport#llReparseAfterSllFailure} is {@code 1} when the SLL-only
+     * attempt reported parse-phase FATAL/ERROR. That signal is for profiling only.
+     */
+    public static ParseLatencyReport diagnoseWithSllProbe(String query, String endpoint) {
+        return runDiagnose(query, endpoint, true);
+    }
+
+    private static ParseLatencyReport runDiagnose(String query, String endpoint, boolean includeSllProbe) {
 
         // ── Phase 1: Lex ─────────────────────────────────────────────────────
         long t0 = System.nanoTime();
         CharStream charStream = CharStreams.fromString(query);
         SQLSelectParserLexer lexer = new SQLSelectParserLexer(charStream);
-        lexer.removeErrorListeners();           // silence default console output
+        lexer.removeErrorListeners();
         CommonTokenStream tokens = new CommonTokenStream(lexer);
-        tokens.fill();                          // materialise all tokens now
+        tokens.fill();
         long lexMs = msElapsed(t0);
 
         // ── Phase 2: Parse ───────────────────────────────────────────────────
-        SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
-        parser.removeErrorListeners();          // remove default console listener
-
-        // Counting listener: wraps DiagnosticErrorListener and tallies events.
         CountingDiagnosticListener diagListener = new CountingDiagnosticListener();
-        parser.addErrorListener(diagListener);
+        long parseMs = 0;
+        boolean sllParsePhaseFailed = false;
 
-        ParseErrorListener syntaxListener = new ParseErrorListener();
+        if (includeSllProbe) {
+            ParsePhaseResult sllPhase = runParsePhase(tokens, endpoint, PredictionMode.SLL, diagListener);
+            parseMs += sllPhase.parseMs;
+            sllParsePhaseFailed = ParsePhaseErrorGate.hasParsePhaseErrors(
+                    sllPhase.parser, sllPhase.syntaxCollector, sllPhase.syntaxListener);
+            tokens.seek(0);
+        }
 
-        // Standard error strategy (allows parse to continue on errors).
-        ParseErrorCollector syntaxCollector = new ParseErrorCollector();
-        parser.setErrorHandler(syntaxCollector);
-        parser.addErrorListener(syntaxListener);
+        ParsePhaseResult llPhase = runParsePhase(tokens, endpoint, PredictionMode.LL, diagListener);
+        parseMs += llPhase.parseMs;
 
-        // Force SLL first; SqlParserAccess uses the same policy with LL retry on cancellation.
-        parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
+        SQLSelectParserParser parser = llPhase.parser;
+        ParseErrorCollector syntaxCollector = llPhase.syntaxCollector;
+        ParseErrorListener syntaxListener = llPhase.syntaxListener;
+        ParseTree parseTree = llPhase.parseTree;
 
-        long t1 = System.nanoTime();
-        ParseTree parseTree = runEndpoint(parser, endpoint);
-        long parseMs = msElapsed(t1);
-
-        boolean skipWalk = ParsePhaseErrorGate.hasParsePhaseErrors(parser, syntaxCollector, syntaxListener);
-
-        // ── Phase 3: Walk ────────────────────────────────────────────────────
+        // ── Phase 3: Walk (always — same as SqlParserAccess) ─────────────────
         SqlParseEventWalker walker = new SqlParseEventWalker();
         List<ParseDiagnostic> walkExceptionDiagnostics = new ArrayList<>();
         long t2 = System.nanoTime();
-        if (!skipWalk) {
-            try {
-                ParseTreeWalker.DEFAULT.walk(walker, parseTree);
-            } catch (Exception e) {
-                List<ParseDiagnostic> walkerDiagnostics = null;
-                Snippet walkerSnippet = walker.getSnippet();
-                if (walkerSnippet != null) {
-                    walkerDiagnostics = walkerSnippet.getParserDiagnosticList();
-                }
-                if (!WalkerWalkExceptionGate.recognizeWalkException(
-                        e,
-                        "ParseLatencyDiagnosticService",
-                        walkExceptionDiagnostics,
-                        WalkerWalkExceptionGate.existingMisalignCandidates(
-                                ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener),
-                                walkerDiagnostics))) {
-                    System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
-                }
+        try {
+            ParseTreeWalker.DEFAULT.walk(walker, parseTree);
+        } catch (Exception e) {
+            List<ParseDiagnostic> walkerDiagnostics = null;
+            Snippet walkerSnippet = walker.getSnippet();
+            if (walkerSnippet != null) {
+                walkerDiagnostics = walkerSnippet.getParserDiagnosticList();
+            }
+            if (!WalkerWalkExceptionGate.recognizeWalkException(
+                    e,
+                    "ParseLatencyDiagnosticService",
+                    walkExceptionDiagnostics,
+                    WalkerWalkExceptionGate.existingMisalignCandidates(
+                            ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener),
+                            walkerDiagnostics))) {
+                System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
             }
         }
         long walkMs = msElapsed(t2);
@@ -150,11 +149,10 @@ public final class ParseLatencyDiagnosticService {
         }
         long finalizeMs = msElapsed(t3);
 
-        // ── Collect counts ───────────────────────────────────────────────────
         int parseErrorCount = parser.getNumberOfSyntaxErrors();
         int walkerFatalCount = countWalkerFatals(walker, walkExceptionDiagnostics);
         List<ParseDiagnostic> diagnostics = collectReportDiagnostics(
-                syntaxCollector, syntaxListener, skipWalk, walker, walkExceptionDiagnostics);
+                syntaxCollector, syntaxListener, walker, walkExceptionDiagnostics);
 
         return new ParseLatencyReport(
                 endpoint,
@@ -168,16 +166,44 @@ public final class ParseLatencyDiagnosticService {
                 diagListener.contextSensitivityCount,
                 parseErrorCount,
                 walkerFatalCount,
+                includeSllProbe && sllParsePhaseFailed ? 1 : 0,
                 diagnostics);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    private static ParsePhaseResult runParsePhase(
+            CommonTokenStream tokens,
+            String endpoint,
+            PredictionMode predictionMode,
+            CountingDiagnosticListener diagListener) {
+        SQLSelectParserParser parser = new SQLSelectParserParser(tokens);
+        parser.removeErrorListeners();
+        parser.addErrorListener(diagListener);
+
+        ParseErrorListener syntaxListener = new ParseErrorListener();
+        ParseErrorCollector syntaxCollector = new ParseErrorCollector();
+        parser.setErrorHandler(syntaxCollector);
+        parser.addErrorListener(syntaxListener);
+        parser.getInterpreter().setPredictionMode(predictionMode);
+
+        long t0 = System.nanoTime();
+        ParseTree parseTree = runEndpoint(parser, endpoint);
+        long parseMs = msElapsed(t0);
+
+        return new ParsePhaseResult(parser, syntaxCollector, syntaxListener, parseTree, parseMs);
+    }
+
+    private record ParsePhaseResult(
+            SQLSelectParserParser parser,
+            ParseErrorCollector syntaxCollector,
+            ParseErrorListener syntaxListener,
+            ParseTree parseTree,
+            long parseMs) {
+    }
 
     private static long msElapsed(long nanoStart) {
         return (System.nanoTime() - nanoStart) / 1_000_000L;
     }
 
-    /** Dispatches to the correct grammar rule based on the endpoint key. */
     private static ParseTree runEndpoint(SQLSelectParserParser parser, String endpoint) {
         switch (endpoint) {
             case SQLPARSER_SQL_TREE_KEY:          return parser.sql();
@@ -187,7 +213,7 @@ public final class ParseLatencyDiagnosticService {
             case SQLPARSER_PREDICAND_TREE_KEY:    return parser.predicand_value();
             case SQLPARSER_IN_LIST_TREE_KEY:      return parser.in_list_predicate_value();
             case SQLPARSER_CONDITION_TREE_KEY:    return parser.condition_value();
-            case SQLPARSER_TUPLE_TREE_KEY:        return parser.tuple_value();
+            case SQLPARSER_TUPLE_TREE_KEY:       return parser.tuple_value();
             case SQLPARSER_VALUES_TREE_KEY:       return parser.values_statement_end();
             case SQLPARSER_DDL_TREE_KEY:          return parser.ddl();
             case SQLPARSER_JOIN_EXTENSION_TREE_KEY: return parser.join_extension_value();
@@ -230,33 +256,20 @@ public final class ParseLatencyDiagnosticService {
     private static List<ParseDiagnostic> collectReportDiagnostics(
             ParseErrorCollector syntaxCollector,
             ParseErrorListener syntaxListener,
-            boolean skipWalk,
             SqlParseEventWalker walker,
             List<ParseDiagnostic> walkExceptionDiagnostics) {
         List<ParseDiagnostic> diagnostics = new ArrayList<>(
                 ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener));
-        if (skipWalk) {
-            diagnostics.add(ParsePhaseErrorGate.astWalkSkippedDueToParseErrors(
-                    syntaxCollector, syntaxListener, "ParseLatencyDiagnosticService"));
-        } else {
-            Snippet snippet = walker.getSnippet();
-            if (snippet != null && snippet.getParserDiagnosticList() != null) {
-                diagnostics.addAll(snippet.getParserDiagnosticList());
-            }
-            if (walkExceptionDiagnostics != null && !walkExceptionDiagnostics.isEmpty()) {
-                diagnostics.addAll(walkExceptionDiagnostics);
-            }
+        Snippet snippet = walker.getSnippet();
+        if (snippet != null && snippet.getParserDiagnosticList() != null) {
+            diagnostics.addAll(snippet.getParserDiagnosticList());
+        }
+        if (walkExceptionDiagnostics != null && !walkExceptionDiagnostics.isEmpty()) {
+            diagnostics.addAll(walkExceptionDiagnostics);
         }
         return diagnostics;
     }
 
-    // ── Inner listener ────────────────────────────────────────────────────────
-
-    /**
-     * Counts ANTLR4 prediction events without printing them to the console.
-     * Extends {@link DiagnosticErrorListener} to inherit its detection logic
-     * but overrides each callback to increment counters instead of printing.
-     */
     static final class CountingDiagnosticListener extends DiagnosticErrorListener {
 
         int sllFallbackCount       = 0;
@@ -264,7 +277,7 @@ public final class ParseLatencyDiagnosticService {
         int contextSensitivityCount = 0;
 
         CountingDiagnosticListener() {
-            super(true); // exactOnly=true: only report genuine ambiguities
+            super(true);
         }
 
         @Override
@@ -276,7 +289,6 @@ public final class ParseLatencyDiagnosticService {
                 BitSet conflictingAlts,
                 ATNConfigSet configs) {
             sllFallbackCount++;
-            // do NOT call super — we don't want console output
         }
 
         @Override

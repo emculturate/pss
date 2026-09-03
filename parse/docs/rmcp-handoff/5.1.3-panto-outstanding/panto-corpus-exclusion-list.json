@@ -2,8 +2,7 @@
   "description": "Panto timeout-corpus rows excluded from bound-query parser correctness gates. These are not parser defects — utility workbooks, multi-statement scripts, or other non-bound SQL saved as a single corpus row.",
   "generatedAt": "2026-09-03",
   "categories": {
-    "utility_workbook": "Manual diagnostic worklist: multiple unrelated SELECT statements in one file for query-tool use; not a single bound statement.",
-    "syntax_corrupt": "Fragment or corrupt SQL shape (see W5 author-error rows 28–32, 41, 314–315)."
+    "utility_workbook": "Manual diagnostic worklist: multiple unrelated SELECT statements in one file for query-tool use; not a single bound statement."
   },
   "csv_rows": [
     4197
