@@ -214,6 +214,22 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 				registration.constructLabel());
 	}
 
+	private Map<String, Object> removeWalkerNodeMap(ParserRuleContext ctx) {
+		int ruleIndex = ctx.getRuleIndex();
+		Integer stackLevel = walker.currentStackLevel(ruleIndex);
+		Token start = ctx.getStart();
+		String ruleName = ruleIndex >= 0 && ruleIndex < SQLSelectParserParser.ruleNames.length
+				? SQLSelectParserParser.ruleNames[ruleIndex]
+				: null;
+		return walker.requireNodeMap(
+				ruleIndex,
+				stackLevel,
+				start == null ? null : start.getLine(),
+				start == null ? null : start.getCharPositionInLine(),
+				ruleName,
+				start == null ? null : start.getText());
+	}
+
 	private void emitStatementSnowflakeDialectGrammarWarning(
 			String constructLabel,
 			Integer line,
@@ -1851,6 +1867,10 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLvl = walker.pushStack(ruleIndex);
 
+		if (walker.abortWalk) {
+			return;
+		}
+
 		if (ctx.getChildCount() == 1)
 			if (ctx.getChild(0) instanceof TerminalNodeImpl) {
 				// I'm a leaf
@@ -1877,6 +1897,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		int ruleIndex = ctx.getRuleIndex();
 		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("astExitEveryRule")) {
 		try {
+		if (!walker.abortWalk) {
 		recordDialectGrammarRuleIfApplicable(ctx);
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Object item = null;
@@ -1911,6 +1932,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 						idMap.put(((Integer) (idMap.size())).toString(), item);
 				}
 			}
+		}
 		}
 
 		walker.popStack(ruleIndex);
@@ -2082,9 +2104,11 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void exitSql( SQLSelectParserParser.SqlContext ctx) {
 		int ruleIndex = ctx.getRuleIndex();
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
-		Map<String, Object> subMap = walker.removeNodeMap(ruleIndex, stackLevel);
-		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
-		 walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
+		Map<String, Object> subMap = removeWalkerNodeMap(ctx);
+		if (!walker.abortWalk) {
+			subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+			walker.asTree.put(SQLPARSER_SQL_TREE_KEY, subMap.remove("1"));
+		}
 		symbolTreeHelper.finalizeTopLevelUnresolvedColumns();
 
 	}

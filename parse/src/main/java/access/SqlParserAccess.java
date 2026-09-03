@@ -213,9 +213,13 @@ public class SqlParserAccess extends AbstractParserAccess {
                 ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
 
             } catch (Exception e) {
-                System.err.println("EXCEPTION when walking the parse tree: " + e.getMessage());
-                this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
-                System.out.println("Exception: " + this.getFatalErrorList());
+                if (recordWalkerStackMisalignFromWalkException(e)) {
+                    // structured fatal already recorded
+                } else {
+                    System.err.println("EXCEPTION when walking the parse tree: " + e.getMessage());
+                    this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
+                    System.out.println("Exception: " + this.getFatalErrorList());
+                }
             }
         }
         if (this.extractor != null) {
@@ -262,6 +266,36 @@ public class SqlParserAccess extends AbstractParserAccess {
     private void recordAstWalkSkippedDueToParseErrors() {
         addAccessDiagnostic(ParsePhaseErrorGate.astWalkSkippedDueToParseErrors(
                 errorCollector, errorListener, "SqlParserAccess"));
+    }
+
+    /**
+     * Maps walker {@code subMap} NPEs to {@link astwalkers.AbstractASTWalkerHelper#DIAG_AST_WALKER_STACK_MISALIGN}.
+     *
+     * @return true when the exception was recognized and a structured fatal was recorded
+     */
+    private boolean recordWalkerStackMisalignFromWalkException(Exception e) {
+        if (!isWalkerStackMisalignNpe(e)) {
+            return false;
+        }
+        addAccessDiagnostic(new ParseDiagnostic(
+                ParseDiagnostic.Severity.FATAL,
+                astwalkers.AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,
+                "Semantic analysis aborted: walker stack mis-aligned during AST walk.",
+                null,
+                null,
+                "SqlParserAccess",
+                null,
+                null,
+                false,
+                "ast-walk",
+                e.getClass().getSimpleName(),
+                null));
+        return true;
+    }
+
+    private static boolean isWalkerStackMisalignNpe(Exception e) {
+        String message = e.getMessage();
+        return message != null && message.contains("\"subMap\" is null");
     }
 
     @SuppressWarnings("unchecked")

@@ -89,6 +89,13 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 	public static final String DIAG_APPLICATION_ISSUE_ERROR = "APPLICATION_ISSUE_ERROR";
 	public static final String DIAG_APPLICATION_ISSUE_FATAL = "APPLICATION_ISSUE_FATAL";
 	public static final String DIAG_APPLICATION_ISSUE_WARNING = "APPLICATION_ISSUE_WARNING";
+	/** Walker exited a grammar rule without a matching enter-frame on the AST stack. */
+	public static final String DIAG_AST_WALKER_STACK_MISALIGN = "AST_WALKER_STACK_MISALIGN";
+
+	private static final Map<String, Object> EMPTY_NODE_MAP = Map.of();
+
+	/** When true, semantic walk should stop processing (first {@link #DIAG_AST_WALKER_STACK_MISALIGN}). */
+	public boolean abortWalk = false;
 
 
     public AbstractASTWalkerHelper() {
@@ -119,6 +126,9 @@ public abstract class AbstractASTWalkerHelper implements InterfaceASTWalkerHelpe
 		registerDiagnostic(DIAG_APPLICATION_ISSUE_WARNING,
 				"APPLICATION_ISSUE_WARNING",
 				"Application-injected parser warning");
+		registerDiagnostic(DIAG_AST_WALKER_STACK_MISALIGN,
+				"AST_WALKER_STACK_MISALIGN",
+				"Walker stack mis-aligned during semantic analysis");
 	}
 
 	public void registerDiagnostic(String key, String code, String defaultMessage) {
@@ -465,7 +475,73 @@ public Integer pushStack(String key, Object symbols) {
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> removeNodeMap(int ruleIndex, Integer stackLevel) {
 		String mapIdx = makeMapIndex(ruleIndex, stackLevel);
-		return (Map<String, Object>) asTree.remove(mapIdx);
+		Map<String, Object> subMap = (Map<String, Object>) asTree.remove(mapIdx);
+		if (subMap != null) {
+			return subMap;
+		}
+		if (abortWalk) {
+			return EMPTY_NODE_MAP;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> requireNodeMap(int ruleIndex, Integer stackLevel) {
+		return requireNodeMap(ruleIndex, stackLevel, null, null, null, null);
+	}
+
+	/**
+	 * Like {@link #removeNodeMap(int, Integer)} but when the frame is missing records
+	 * {@link #DIAG_AST_WALKER_STACK_MISALIGN} once and returns an empty map.
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> requireNodeMap(
+			int ruleIndex,
+			Integer stackLevel,
+			Integer line,
+			Integer charPositionInLine,
+			String ruleName,
+			String tokenText) {
+		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		if (subMap != null) {
+			return subMap;
+		}
+		recordStackMisalign(ruleIndex, stackLevel, line, charPositionInLine, ruleName, tokenText);
+		return EMPTY_NODE_MAP;
+	}
+
+	public boolean isWalkAborted() {
+		return abortWalk;
+	}
+
+	private void recordStackMisalign(
+			int ruleIndex,
+			Integer stackLevel,
+			Integer line,
+			Integer charPositionInLine,
+			String ruleName,
+			String tokenText) {
+		if (abortWalk) {
+			return;
+		}
+		abortWalk = true;
+		String ruleLabel = ruleName != null && !ruleName.isBlank()
+				? ruleName
+				: "ruleIndex=" + ruleIndex;
+		String message;
+		if (line != null && charPositionInLine != null) {
+			message = String.format(
+					"Semantic analysis aborted: walker stack mis-aligned at %s (line %d, position %d).",
+					ruleLabel,
+					line,
+					charPositionInLine);
+		} else {
+			message = String.format(
+					"Semantic analysis aborted: walker stack mis-aligned at %s (stack level %s).",
+					ruleLabel,
+					stackLevel);
+		}
+		addWalkerFatal(DIAG_AST_WALKER_STACK_MISALIGN, message, line, charPositionInLine, tokenText);
 	}
 
 	public String makeMapIndex(int ruleIndex, Integer stackIndex) {
@@ -481,6 +557,9 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleOneChild(int ruleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
@@ -500,11 +579,17 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleListList(int ruleIndex, int parentRuleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> item = removeNodeMap(ruleIndex, stackLevel);
+		if (item == null) {
+			return;
+		}
 		item.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 
 		Map<String, Object> subMap = getNodeMap(parentRuleIndex, parentStackLevel);
+		if (subMap == null) {
+			return;
+		}
 		subMap.putAll(item);
 		asTree.put("SKIP", "TRUE");
 	}
@@ -519,6 +604,9 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleListItem(int ruleIndex, int parentRuleIndex) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 		String[] keys = new String[1];
 		keys = subMap.keySet().toArray(keys);
@@ -529,6 +617,9 @@ public Integer pushStack(String key, Object symbols) {
 			Integer parentStackLevel = currentStackLevel(parentRuleIndex);
 
 			subMap = getNodeMap(parentRuleIndex, parentStackLevel);
+			if (subMap == null) {
+				return;
+			}
 			Integer indx = subMap.size();
 			subMap.put(indx.toString(), item);
 			asTree.put("SKIP", "TRUE");
@@ -545,6 +636,9 @@ public Integer pushStack(String key, Object symbols) {
 	public void handleOperandList(int ruleIndex, String operand) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		if (subMap.size() == 1) {
@@ -572,7 +666,13 @@ public Integer pushStack(String key, Object symbols) {
 		try (WalkerHotspotProfiler.HotspotScope ignored = WalkerHotspotProfiler.hotspotScope("handlePushDown")) {
 		Integer stackLevel = currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = removeNodeMap(ruleIndex, stackLevel);
+		if (subMap == null) {
+			return;
+		}
 		Object type = subMap.remove(ASTWALKER_RULE_TYPE_KEY);
+		if (type == null) {
+			return;
+		}
 
 		Map<String, Object> newMap = collectNewRuleMap(ruleIndex, stackLevel);
 		newMap.put(type.toString(), subMap);
@@ -588,6 +688,9 @@ public Integer pushStack(String key, Object symbols) {
 	 */
 	public void addToParent(int parentRuleIndex, Integer parentStackLevel, Object item) {
 		Map<String, Object> pMap = getNodeMap(parentRuleIndex, parentStackLevel);
+		if (pMap == null) {
+			return;
+		}
 		Integer indx = pMap.size();
 		pMap.put(indx.toString(), item);
 		asTree.put("SKIP", "TRUE");

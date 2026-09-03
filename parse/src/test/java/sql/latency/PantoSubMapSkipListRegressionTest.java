@@ -21,6 +21,9 @@ public class PantoSubMapSkipListRegressionTest {
     /** Former syntax_corrupt Acquia export representative. */
     private static final int ROW_ACQUIA = 28;
 
+    /** Former legitimate_complex giant CASE row. */
+    private static final int ROW_GIANT_CASE = 130;
+
     @Test
     public void diagnosticService_selectFrom_skipsAstWalk() {
         ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose("select from", SQLPARSER_SQL_TREE_KEY);
@@ -47,6 +50,17 @@ public class PantoSubMapSkipListRegressionTest {
     @Test
     public void sqlParserAccess_formerSkipRow28_noSubMapFatal() throws IOException {
         String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_ACQUIA);
+        SqlParserAccess access = new SqlParserAccess(false, false, false);
+        access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
+
+        for (String fatal : access.getFatalErrorList()) {
+            assertFalse("unexpected walker fatal: " + fatal, fatal.contains("subMap"));
+        }
+    }
+
+    @Test
+    public void sqlParserAccess_row130_manifestSql_noSubMapFatal() throws IOException {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_GIANT_CASE);
         SqlParserAccess access = new SqlParserAccess(false, false, false);
         access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
 

@@ -17,7 +17,7 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | Phase | Item | Kind | Status | Detail |
 |------|------|------|--------|--------|
 | 1 | Snowflake PIVOT quoted unaliased identifiers | Enhancement | Not started | See external brief |
-| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.8, **2.9 complete**; **2.10–2.11** open | This file (2.1–2.11) |
+| 2 | Set-op interfaces, `VALUES`, ordered aggregates, `CASE`, parse performance, and cross-version source/diagnostic differences | Defect / enhancement | **Reopened** — 2.1–2.8, **2.9 complete**; **2.10** open; **2.11 in progress** (W1 done) | This file (2.1–2.11) |
 | 3 | Snowflake `PARSE_URL` / PARSE functions with `:` field access | Enhancement | Not started | This file |
 | 4 | Snowflake `DATEADD` / date-part keywords vs column resolution | Defect | Not started | This file |
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
@@ -46,7 +46,7 @@ Do **not** duplicate the specification here. The full problem statement, reprodu
 
 **Kind:** Defect (set-op interface, `VALUES` FROM syntax, WITH final-query source finalization) plus standalone grammar enhancements
 
-**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.8 and **2.9** complete; **2.10–2.11** open. **2.5** SQL guardrail complete; Jinja-authored fixture closure → **Phase 6.4**.
+**Status:** **Reopened** (2026-08-19) — subtasks 2.1–2.8 and **2.9** complete; **2.10** open; **2.11 in progress** (**W1** done). **2.5** SQL guardrail complete; Jinja-authored fixture closure → **Phase 6.4**.
 
 **Theme:** UNION / INTERSECT / EXCEPT branches must keep a usable FROM/JOIN scope and a sensible output interface (2.1–2.2). **2.3** is `WITHIN GROUP` on ordered aggregates. **2.4** is nested searched `CASE`. **2.5** is a parse hang / `PARSE_TIMEOUT` on a multi-CTE rollup query — diagnose root cause, then fix termination. **2.6** is a flat searched `CASE` that extracts `product` from `cat.title` via `POSITION`, nested `SPLIT`/`SPLIT_PART`, and `NULLIF`/`TRIM`/`COALESCE`. **2.7** (complete) locked WITH CTE physical/tuple trailing-clause collection in global `tableDictionary` and confirmed CTE aliases belong in query/symbol structures only. **2.8** investigates broad 5.1.3 parse latency by timing parse-tree construction, event walking / semantic diagnostics, and result return separately before optimizing the dominant paths. **2.9** investigates remaining 5.0.0-3 versus 5.1.3 source and diagnostic differences and determines which version is semantically correct before changing behavior.
 
@@ -63,10 +63,10 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 5 | **2.4** | Low–medium after 2.6 — nested `CASE` likely already parses once `SPLIT(…)[n]` works | Medium | **Complete** — grammar already allowed nested `CASE`; blocker was `SPLIT(…)[n]` (2.6). Exemplar tests in `SqlEventWalkerArraySubscriptTests`. |
 | 6 | **2.5** | Unknown — investigate-first bisect | Low breadth, high severity per query | **Complete** (SQL guardrail) — table-stubbed exemplar in `dncEmailRollupMultiCteExemplarV0Test`. Jinja-authored fixture (§2.5 starter query) → **Phase 6.4**. |
 | 7 | **2.7** | Medium — WITH CTE physical-source / tuple-substitution finalization | High — trailing-clause tuple columns must land on global physical/tuple keys | **Complete** (2026-09-01) — CTE aliases intentionally absent from global `tableDictionary`; goldens in `SqlEventWalkerWithCteTupleSubstitutionTests`. |
-| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **Complete (2026-09-02)** — E1–E3; **54/54** runnable rows &lt; 90 s; C2.2 fixed α≈2; D1/D2/C2 micro-opts **abandoned** |
+| 8 | **2.8** | Investigation first — stage timing, 74-query corpus characterization, 5.0.0-3 comparison, then targeted profiling | High — 5.1.3 times out after 90 seconds on queries that complete on 5.0.0-3 | **Complete (2026-09-02)** — E1–E3; **74/74** rows &lt; 90 s; C2.2 fixed α≈2; walker residuals tracked in §2.8 **W-track** → **2.11** |
 | 9 | **2.9** | Medium — dual-parse, message capture, semantic adjudication, then cluster-specific fixes | High — 5.1.3 emits new FATALs or loses non-CTE source evidence on live queries | **Complete** (2026-09-01) — all eight Panto degradations adjudicated; see [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md). |
 | 10 | **2.10** | SLL→LL two-stage prediction policy in `SqlParserAccess` | Medium — production parse latency on some rows (e.g. 4176) | **Not started** |
-| 11 | **2.11** | Panto timeout corpus residuals: subMap skip list (20) + fast-FATAL rows (11) | High — correctness / diagnostics on live RMCP SQL | **Not started** |
+| 11 | **2.11** | Panto timeout corpus residuals: walk-gate follow-up + fast-FATAL rows (11) | High — correctness / diagnostics on live RMCP SQL | **In progress** — §2.8 **W1** done; **W2–W5** + Cluster B open |
 
 **Dependencies:** 2.1–2.7 complete. Characterize **2.9** for residual functional source/diagnostic differences; 2.8 instrumentation and corpus characterization can proceed independently. **Fixtures:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests.unionWildcardBranchAgainstExplicitColumnListTest` (2.1); `SqlEventWalkerUnparenthesizedValuesTests` (2.2); `SqlEventWalkerArraySubscriptTests` (2.4 starter/isolation/`SPLIT_PART(…,-1)` plus **placement** — nested `CASE` in `WHERE` / `JOIN ON` / `HAVING` / `UPDATE SET`; product `CASE` in `WHERE` / `HAVING` / `UPDATE SET`; all with six extractor goldens) (2.4, 2.6); `SqlEventWalkerWithinGroupOrderedAggregateTests` (2.3); `SqlEventWalkerSubqueriesAndClauseSemanticsTests.dncEmailRollupMultiCteExemplarV0Test` (2.5 guardrail); `SqlEventWalkerWithCteTupleSubstitutionTests` (2.7 — complete); use Panto rows 3150, 3870, 4648, 4726, 5410, 5455, and clusters A–E in [panto-tabledict-degradations-2026-08-19.md](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-tabledict-degradations-2026-08-19.md) for **2.9** (CTE keys absent from global `tableDictionary` alone are not defects); use all 74 timeout rows indexed by `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-513-parse-timeouts-2026-08-19.md` or `panto_513_outstanding_issues.csv` for 2.8.
 
@@ -84,7 +84,7 @@ Completed order was **2.1 → 2.2 → 2.6 → 2.3 → 2.4 → 2.5 → 2.7**. Cha
 | 2.8 | 5.1.3 slow-parse investigation: isolate parse, walker/diagnostics, and result-return time; optimize measured bottlenecks | **Complete (2026-09-02)** — E1–E3; timeout problem closed; see §2.8 |
 | 2.9 | Adjudicate and resolve non-CTE / residual 5.0.0-3 versus 5.1.3 source and diagnostic differences | **Complete** (2026-09-01) |
 | 2.10 | SLL→LL two-stage prediction in `SqlParserAccess` | **Not started** |
-| 2.11 | Panto corpus residuals: subMap skip list + fast-FATAL clusters | **Not started** |
+| 2.11 | Panto corpus residuals: walk-gate follow-up (W-track) + fast-FATAL clusters | **In progress** — W1 done; see §2.8 W-track |
 
 ---
 
@@ -763,7 +763,7 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 
 **Kind:** Performance defect / investigation (many queries exceed 90 seconds and regress materially from 5.0.0-3)
 
-**Status:** **Complete (2026-09-02)** — timeout mission closed (E1–E3). Residual corpus semantics → **2.11**; production SLL policy → **2.10**.
+**Status:** **Complete (2026-09-02)** — timeout mission closed (E1–E3). Walker residuals tracked in **W-track** below → **2.11**; production SLL policy → **2.10**.
 
 **Component:** end-to-end parser pipeline; likely more than one algorithm (set-op interface matching is not the only timeout shape)
 
@@ -780,9 +780,11 @@ Implement `expr[n]` once; both 2.4 and 2.6 must pass with the same production.
 - **Done (2026-09-02):** Phase **C2.1** — `hotspotScope` nanosecond timing on walker helper paths (`WalkerHotspotProfiler`, dual-mode harness).
 - **Done (2026-09-02):** Phase **C2.2** — removed eager `showTrace` / `asTree.toString()` from `enterEveryRule` / `exitEveryRule` (root cause of α≈2). N=50 M=20 walk **~900 ms** (was **~10.5 s** pre-solution); E1 fitted **α ≈ 0.94**, **β ≈ 0.92**.
 - **Done (2026-09-02):** Phase **E1** — full calibration matrix re-run (`setOpTimingProbeE1CalibrationMatrixTest`); post-C baselines recorded below.
-- **Done (2026-09-02):** Post-C2.2 batch re-run of all **74** `timeout_513` rows (`PantoTimeoutBatchBenchmarkTest`) — **0/74** still timeout (~4 s total). **20** rows log walker fatals (`subMap is null` or bare `null` in `exitSql`); excluded from automated full-parse via [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (**54** runnable rows for **E3**).
+- **Done (2026-09-02):** Post-C2.2 batch re-run of all **74** `timeout_513` rows (`PantoTimeoutBatchBenchmarkTest`) — **0/74** still timeout (~4 s total). Former **20** subMap skip-list rows cleared after parse-phase walk gate (see **W-track** below).
 - **Done (2026-09-02):** Phase **E2** — full row **475** (`EAB.Country`, 248 `UNION`, 41,829 chars) embedded in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry`; diagnostic **walk=89 ms**, **total=173 ms** (5.0.0-3 ~7.4 s walk; pre-C2.2 **90 s** kill).
-- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **54/54** runnable `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197** pass. **11** rows emit FATAL diagnostics but complete fast → **2.11**. **20** subMap skip-list rows → **2.11**.
+- **Done (2026-09-02):** Phase **E3** — `PantoTimeoutCorpusE3GateTest`: **74/74** `timeout_513` rows under **90 s** (`maxWalkMs=81` row **475**, `maxTotalMs=174` row **605**); named canaries **2.8-1** (475, 476, 1827, 1828), **2.8-2** (**1837**), non-UNION **5261, 4647, 4197, 130** pass. **11** rows emit FATAL diagnostics but complete fast → **2.11** Cluster B.
+- **Done (2026-09-02):** **W1** — parse-phase walk gate on `SqlParserAccess` + `ParseLatencyDiagnosticService` (`ParsePhaseErrorGate`); `AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS` WARNING with first parse error line/pos; `ParseLatencyReport.diagnostics`; `PantoSubMapSkipListRegressionTest`; skip list cleared (`e8abd91`).
+- **Done (2026-09-02):** **W2** — `requireNodeMap` at `exitSql` + `abortWalk` empty-map fallback on `removeNodeMap`; `SqlParserAccess` maps `subMap` NPE → `AST_WALKER_STACK_MISALIGN`; `AbstractASTWalkerHelperTest#removeNodeMapOnMissingFrameRecordsStackMisalignFatal`.
 - **Abandoned (2026-09-02):** **D1** (defer global merge), **D2** (`LinkedHashSet` dedup), **C2** optional micro-opts (clause-flatten batching, local FROM fast path) — no E3 regression; will not implement.
 - **Done (2026-09-02):** Phase **C1** — `WalkerHotspotProfiler` extended with `walkerExit_*`, `columnCapture_*`, `columnArchive_*`, `columnResolution_<round>_*` counters (`SqlParseEventWalker`, `SqlASTWalkerHelper`, `SqlParseSymbolTreeHelper`).
 - **Done (2026-09-01):** Set-op scoping implementation plan and JVM timing probes (`setOpTimingProbeTenUnionAllJoinersV0Test`, `setOpTimingProbeTenIntersectJoinersV0Test` in `SqlEventWalkerSubqueriesAndClauseSemanticsTests`) — baseline recorded below.
@@ -945,9 +947,34 @@ This measures **accumulation of distinct physical table names** in the global di
 |------|--------|------|
 | **E1** | **Done** — full calibration matrix after **C2.2**; post-C baselines below | **α ≈ 0.94**, **β ≈ 0.92** (OLS log-log) |
 | **E2** | **Done** — full row **475** in `sql/csv-row-475.sql` + `ParseLatencyDiagnosticTest#pantoRow475_eabCountry` | **walk=89 ms**, **total=173 ms** (chars=41,829; 248 `UNION`) |
-| **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **54/54** runnable rows &lt; 90 s; **2.8-1** + **2.8-2** canary **1837** + non-UNION **5261, 4647, 4197** | Bucket tracker **Complete** (timeout); **20** subMap skips + **11** fast-FATAL rows documented |
+| **E3** | **Done** — `PantoTimeoutCorpusE3GateTest`; **74/74** rows &lt; 90 s; **2.8-1** + **2.8-2** canary **1837** + non-UNION **5261, 4647, 4197, 130** | Bucket tracker **Complete** (timeout); **11** fast-FATAL rows + **W2–W5** walker residuals documented |
 
-**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2.2` → `E1` → `E2` → `E3`. ~~`B2`→`B3`~~ skipped. ~~`D1`~~, ~~`D2`~~, ~~`C2` micro-opts~~ **abandoned**. Next: **2.11** (corpus residuals) → **2.10** (SLL policy).
+**Suggested execution order:** `A` (done) → `B1` (done) → `C1`→`C2.2` → `E1` → `E2` → `E3` → **W1** (done) → **W2** (done) → **W4** (row **130** full CSV) → **2.11.2** (fast-FATAL cluster) → **2.10** (SLL policy). ~~`B2`→`B3`~~ skipped. ~~`D1`~~, ~~`D2`~~, ~~`C2` micro-opts~~ **abandoned**.
+
+#### Parse-phase walk gate + walker stack residuals (**W-track**, 2.8 → 2.11)
+
+**Problem:** After parse-error recovery, walking a partial AST mis-aligns walker stack state (`removeNodeMap()` → `subMap` null → NPE in `exitSql`). Syntax-corrupt corpus SQL should surface **only** the parse-phase FATAL; legitimate-complex SQL may parse without a parse-phase FATAL but still mis-align the walker.
+
+**Goal:** Trap failures as structured diagnostics — not Java stack traces — and route `syntax_corrupt` rows to corpus-quality classification (no walker fix).
+
+| Step | Change | Status / gate |
+|------|--------|---------------|
+| **W1** | **Gate AST walk** when `ParsePhaseErrorGate.hasParsePhaseErrors()` — `SqlParserAccess`, `ParseLatencyDiagnosticService`; emit **`AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS`** WARNING (line/pos/token from first parse FATAL/ERROR); mirror on `ParseLatencyReport.diagnostics` | **Done (2026-09-02)** — `ParsePhaseErrorGate`, `PantoSubMapSkipListRegressionTest`; commits `95e66c8`, `e8abd91` |
+| **W2** | **`requireNodeMap` null-guard** in `AbstractASTWalkerHelper` — opt-in at `exitSql`; after first misalign `abortWalk` makes `removeNodeMap` return empty map; `SqlParserAccess` maps residual `subMap` NPEs to **`AST_WALKER_STACK_MISALIGN`** | **Done (2026-09-02)** — manifest row **130** completes clean; unit test + access catch |
+| **W3** | **Tighten `SqlParserAccess.generateAST()` catch** — map stack misalignment NPE to structured diagnostic | **Partial** — `subMap` NPE path mapped in **W2** |
+| **W3** | **Tighten `SqlParserAccess.generateAST()` catch** — map stack misalignment to structured diagnostic instead of raw `subMap is null` message | **Not started** — belt-and-suspenders after **W2** |
+| **W4** | **Tests + corpus gates** — row **130** regression on **full CSV SQL**; optional zero-FATAL assertion on E3 for Cluster B when adjudicated | **Partial** — syntax-failure access tests + `PantoSubMapSkipListRegressionTest`; E3 **74/74**; row **130** null-guard test pending **W2** |
+| **W5** | **Workplan / corpus bookkeeping** — reclassify **`syntax_corrupt`** rows (**28–32, 41, 314–315**) as author-error (no parser fix after W1); keep skip list empty unless batch reproduces walker throw **without** parse-phase errors | **Partial** — skip list cleared; bucket tracker updated; author-error notes pending |
+
+**Cluster A disposition (former 20-row skip list):**
+
+| Category | csv_rows | W1 outcome | Remaining work |
+|----------|----------|------------|----------------|
+| **syntax_corrupt** | 28–32, 41, 314–315 | Walk skipped; parse FATAL only | **W5** — document as corpus-quality / author-error |
+| **legitimate_complex** | 130, 1814, 2120, 4163, 5860–5863 | May still walk if no parse-phase FATAL | **W2** null-guard + targeted fix |
+| **dev_template** | 4157–4158, 4164, 4170–4171 | Same as legitimate_complex | **W2** + classify whether SQL is in-scope for parser |
+
+**Next step:** **W2** (null-guard), starting with row **130** on full `panto_513_outstanding_issues.csv` SQL.
 
 ##### Legacy step mapping (for grep / old notes)
 
@@ -1080,7 +1107,7 @@ Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 
 1. **2.8-1 (EAB.Country)** — **E2/E3 complete.** Full row **475** walk **36–89 ms**; all four **2.8-1** rows sub-second.
 2. **2.8-2 (PCM convert)** — **E3 complete** for all **20** runnable rows; canary **1837** walk **11–71 ms**. **D1 abandoned** — no 90 s regression; defer-global-merge will not be pursued.
-3. **Non-UNION guardrails** — **5261, 4647, 4197** pass E3 timeout gate (**4197** emits 32 FATALs in **~2 ms**). Row **130** on subMap skip list.
+3. **Non-UNION guardrails** — **5261, 4647, 4197, 130** pass E3 timeout gate (**4197** emits 32 FATALs in **~2 ms**). Row **130** is **W2** canary (null-guard).
 
 **When to run what (progress checklist):**
 
@@ -1140,41 +1167,42 @@ Pre-fix **5.0.0-3** full row ~7.4 s walk; **5.1.3** pre-C2.2 hit **90 s** kill.
 
 **Verdict:** `contains()` dedup is **real on shared-table shapes** but **not material** at probe scale (convert ≪ 1% of walk). **D2 abandoned** — spike was slower on wall time; **will not implement**.
 
-#### subMap walker skip list (20 `timeout_513` rows)
+#### subMap walker skip list (cleared 2026-09-02)
 
-Post-C2.2 batch (`PantoTimeoutBatchBenchmarkTest`, 74 rows, ~4 s): **18** rows logged `walker threw` in stderr; **5861** and **5862** are the same `par_intake_student` family as **5860**/**5863** and are included for corpus hygiene. These rows complete within the 90 s budget but hit walker fatals when `removeNodeMap()` returns null after parse-error recovery mis-aligns the AST walker stack.
+Post-C2.2 batch (`PantoTimeoutBatchBenchmarkTest`, 74 rows, ~4 s): **18** rows logged `walker threw` in stderr before **W1**. **W1** (parse-phase walk gate) cleared the automated skip list; all **74** rows now run in `PantoTimeoutCorpusE3GateTest`.
 
-**Canonical file:** [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json)  
-**Consumers:** `PantoCorpusSkipList` (Java), `tools/benchmark_panto_timeout_rows.py` (default exclude), `PantoTimeoutBatchBenchmarkTest` (skip unless `-Dpanto.skip.list.include=true`).
+**Canonical file:** [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) — **`row_count: 0`**. Re-open a row only if full-parse batch reproduces walker stack mis-align **without** parse-phase errors.
 
-| csv_row | query_key (short) | Batch exception | Category | Note |
-|--------:|-------------------|-----------------|----------|------|
-| 28 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | Missing `CASE` `end)` |
-| 30 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | Missing `CASE` `end)` |
-| 31 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | Missing `CASE` `end)` |
-| 32 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | Missing `CASE` `end)` |
-| 41 | Acquia/PDP_Acquia_Export_v2 | `subMap is null` | syntax_corrupt | Missing `CASE` `end)` |
-| 130 | ALR/transformation_query_applicants | `subMap is null` | legitimate_complex | Giant searched `CASE` |
-| 314 | ALR/transformation_query_inquiry | `subMap is null` | syntax_corrupt | Broken `IN` list across lines |
-| 315 | ALR/transformation_query_inquiry | `subMap is null` | syntax_corrupt | Broken `IN` list across lines |
-| 1814 | Enroll360/Partner Processed Census Student Term Attributes.final | `subMap is null` | legitimate_complex | Many CTEs + `UNION ALL` |
-| 2120 | Enroll360/Project Atlas Migration Checks.stud_race | `walker threw: null` | legitimate_complex | Atlas migration check |
-| 4157 | Enroll360/DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | Funds logic setup SQL |
-| 4158 | Enroll360/DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | Funds logic setup SQL |
-| 4163 | Enroll360/FundAmountLogicTesting_Student Year Funds | `walker threw: null` | legitimate_complex | Fund amount logic testing |
-| 4164 | Enroll360/funds logic testing | `walker threw: null` | dev_template | Funds logic template |
-| 4170 | Enroll360/TESTING_DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | Funds logic setup SQL |
-| 4171 | Enroll360/TESTING_DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | Funds logic setup SQL |
-| 5860 | PDP_ALR_V2/par_intake_student_last_validated | `walker threw: null` | legitimate_complex | CTE + `UNION` intake |
-| 5861 | PDP_ALR_V2/par_intake_student | *(same family; no stderr in E1 batch)* | legitimate_complex | Sibling of 5860/5863 |
-| 5862 | PDP_ALR_V2/par_intake_student | *(same family; no stderr in E1 batch)* | legitimate_complex | Sibling of 5860/5863 |
-| 5863 | PDP_ALR_V2/par_intake_student | `walker threw: null` | legitimate_complex | CTE + `UNION` intake |
+**Former skip-list rows** (for **W2** / **W5** tracking):
 
-**E3 runnable corpus:** **54** rows (74 − 20). Re-include skipped rows with `python3 tools/benchmark_panto_timeout_rows.py --include-skip-list` or `-Dpanto.skip.list.include=true` when debugging walker null-guard fixes.
+| csv_row | query_key (short) | Former batch exception | Category | W-track |
+|--------:|-------------------|------------------------|----------|---------|
+| 28 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** document author-error |
+| 30 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 31 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 32 | Acquia/PDP_Acquia_Export | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 41 | Acquia/PDP_Acquia_Export_v2 | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 130 | ALR/transformation_query_applicants | `subMap is null` | legitimate_complex | **W2** canary |
+| 314 | ALR/transformation_query_inquiry | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 315 | ALR/transformation_query_inquiry | `subMap is null` | syntax_corrupt | **W1** ✓ — **W5** |
+| 1814 | Enroll360/Partner Processed Census Student Term Attributes.final | `subMap is null` | legitimate_complex | **W2** |
+| 2120 | Enroll360/Project Atlas Migration Checks.stud_race | `walker threw: null` | legitimate_complex | **W2** |
+| 4157 | Enroll360/DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | **W2** + classify |
+| 4158 | Enroll360/DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | **W2** + classify |
+| 4163 | Enroll360/FundAmountLogicTesting_Student Year Funds | `walker threw: null` | legitimate_complex | **W2** |
+| 4164 | Enroll360/funds logic testing | `walker threw: null` | dev_template | **W2** + classify |
+| 4170 | Enroll360/TESTING_DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | **W2** + classify |
+| 4171 | Enroll360/TESTING_DataOrgPilot.StudentYearFundsLogicTesting | `walker threw: null` | dev_template | **W2** + classify |
+| 5860 | PDP_ALR_V2/par_intake_student_last_validated | `walker threw: null` | legitimate_complex | **W2** |
+| 5861 | PDP_ALR_V2/par_intake_student | *(same family)* | legitimate_complex | **W2** |
+| 5862 | PDP_ALR_V2/par_intake_student | *(same family)* | legitimate_complex | **W2** |
+| 5863 | PDP_ALR_V2/par_intake_student | `walker threw: null` | legitimate_complex | **W2** |
+
+**Consumers:** `PantoCorpusSkipList` (allows empty list), `tools/benchmark_panto_timeout_rows.py` (default exclude when non-empty), `PantoTimeoutBatchBenchmarkTest` (skip unless `-Dpanto.skip.list.include=true`).
 
 #### E3 fast-FATAL rows (11 — complete under 90s, emit FATAL diagnostics)
 
-`PantoTimeoutCorpusE3GateTest` (2026-09-02): **54/54** runnable rows pass the **90 s** timeout gate. **11** rows emit one or more FATAL diagnostics but finish in **&lt; 200 ms** total — distinct from the **20** subMap skip-list rows.
+`PantoTimeoutCorpusE3GateTest` (2026-09-02, updated post-**W1**): **74/74** rows pass the **90 s** timeout gate. **11** rows emit one or more FATAL diagnostics but finish in **&lt; 200 ms** total — **Cluster B** (distinct from former subMap skip-list / **W2** path).
 
 | csv_row | Bucket | max symptom |
 |--------:|--------|-------------|
@@ -1194,20 +1222,20 @@ Update **Status** as work lands. Counts are of CSV rows (all `timeout_513`). SQL
 | 2.8-1 | 4 | Giant constant-row `UNION` lookup (~248 branches, no JOIN/CTE) | Walker AST hot path + scope reconstruction (**post-S5**); convert egress not dominant on probe | 475 | **Complete (E3)** |
 | 2.8-2 | 20 | Long `UNION ALL` of PCM “convert” slices (~66–94 branches + `<…>` substitutions) | Walker hot path (C2.2 fixed dominant cost); ~~D1 defer-global-merge~~ **abandoned** | 1837 | **Complete (E3)** |
 | 2.8-3 | 3 | Medium `UNION ALL` of typed attribute slices (N = 2–18) | Same set-op matching, smaller N | 1436 | **Complete (E3)** |
-| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | **2.11** — row **1814** subMap skip |
+| 2.8-4 | 1 | Many CTEs, then `UNION ALL` of attribute categories + windows | CTE finalization **and** set-op matching | 1814 | **2.11** — row **1814** **W2** |
 | 2.8-5 | 4 | Wide Student.final: many JOINs + nested derived tables ± source `UNION ALL` | Joins / derived tables; multifile also set-ops | 2325 (1 UNION; join-heavy probe) | **Complete (E3)** |
-| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | **2.11** — rows **28–32, 41** subMap skip |
-| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **2.11** — E3 pass; **7 FATALs**/row (fast) |
+| 2.8-6 | 5 | Wide Acquia export: many JOINs + translations + one `UNION` | Joins / substitutions / one set-op | 28 | **Complete (E3)** — rows **28–32, 41** **W1** (syntax_corrupt) |
+| 2.8-7 | 5 | Student Address: nested agg + `UNION ALL` of address sources | Derived table + set-op + join | 605 | **2.11** Cluster B — E3 pass; **7 FATALs**/row (fast) |
 | 2.8-8 | 1 | Small `UNION ALL` of identical-width “slice” SELECTs (N≈4) | Set-op even at small N, or `SELECT *` / bind expansion | 2110 | **Complete (E3)** |
-| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | **2.11** — **5860–5863** skip; **5592–5594** fast FATALs |
+| 2.8-9 | 7 | Two-branch `UNION` of wide CAST/substitution lists (intake) | Per-column substitution/interface, not branch count | 5592 | **2.11** — **5860–5863** **W2**; **5592–5594** Cluster B fast FATALs |
 | 2.8-10 | 2 | Nested `SELECT *` + many `ROW_NUMBER() OVER` (Colleague PIT) | Star expansion / windows / nested scopes (**5261 has 0 UNION**) | 5261 | **Complete (E3)** |
 | 2.8-11 | 2 | Long `WITH` chain (~20 CTEs) + dense `<downfillcolmap.*>` (~80k chars) | CTE / substitution / scope finalization (no UNION) | 4647 | **Complete (E3)** |
-| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | **2.11** — row **130** subMap skip |
-| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | **2.11** — rows **314–315** subMap skip (syntax-corrupt) |
-| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | **2.11** — dev-template rows on subMap skip |
-| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **2.11** — E3 pass; **32 FATALs** (fast) |
-| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | **2.11** — row **2120** subMap skip |
-| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | **2.11** — **5453–5454** fast FATALs |
+| 2.8-12 | 3 | Giant searched `CASE` (hundreds of `WHEN`) | `CASE` walk (row 130 already ~20s on 5.0.0-3) | 130 | **2.11** — row **130** **W2** canary |
+| 2.8-13 | 3 | Many modest `CASE`s + large `IN (…)` / regexp (no set-ops) | Expression / IN-list resolution | 314 | **Complete (E3)** — rows **314–315** **W1** (syntax_corrupt) |
+| 2.8-14 | 6 | `WITH funds_data` + many PCM LEFT JOINs + nested fund `CASE` (no UNION) | Join / dictionary / substitution | 4157 | **2.11** — dev-template rows **W2** |
+| 2.8-15 | 1 | Star-join of many bound fulfillment tables (no UNION) | Many-join scope / bind keys | 4197 | **2.11** Cluster B — E3 pass; **32 FATALs** (fast) |
+| 2.8-16 | 3 | Nested derived-table JOINs (Project Atlas, no UNION) | Nested scopes / joins | 2116 | **2.11** — row **2120** **W2** |
+| 2.8-17 | 3 | Wide contact projection + translation JOINs + substitutions (no UNION) | Wide interface + substitutions | 5453 | **2.11** Cluster B — **5453–5454** fast FATALs |
 | 2.8-18 | 1 | Donor intake: `WITH` + several JOINs + one `UNION` | Mix of CTE + set-op + joins | 6025 | **Complete (E3)** |
 
 **Suggested order:** 2.8-1 → 2.8-2 (largest N, matches UNION-header hypothesis) → non-UNION canaries **2.8-10 (5261), 2.8-11 (4647), 2.8-12 (130), 2.8-15 (4197)** → remaining UNION-mix and join/substitution buckets.
@@ -1313,7 +1341,7 @@ Retain both the original full query and any minimized reproduction. Redact or pa
 #### Acceptance
 
 - Every supplied slow query is assigned a dominant stage or an explicitly documented unresolved measurement result.
-- Every row in the 74-query timeout brief completes on 5.1.3 without the 90-second abort, **or** has a documented blocker routed to **2.11** (subMap skip list) with active-stage capture.
+- Every row in the 74-query timeout brief completes on 5.1.3 without the 90-second abort, **or** has a documented blocker routed to **2.11** (**W-track** / Cluster B) with active-stage capture.
 - Stage boundaries reconcile with caller-observed total time closely enough to identify where the missing time is spent.
 - 5.0.0-3 and 5.1.3 comparisons use equivalent runtime settings and distinguish cold from warm execution.
 - Each implemented optimization is justified by profile evidence and has a focused performance regression check plus correctness coverage.
@@ -1428,34 +1456,34 @@ Do not implement parity changes until this explanation is recorded for the case.
 
 ---
 
-### 2.11 — Panto timeout corpus residuals (subMap skip list + fast-FATAL rows)
+### 2.11 — Panto timeout corpus residuals (W-track + fast-FATAL rows)
 
 **Kind:** Defect / investigation (walker correctness + semantic diagnostics on live RMCP SQL)
 
-**Status:** **Not started**
+**Status:** **In progress** — **W1** done (§2.8 W-track); **W2–W5** + Cluster B open
 
 **Component:** event walker (`AbstractASTWalkerHelper` / `exitSql` null `subMap`), parse-error recovery, semantic FATAL emission
 
-**Background:** Phase **2.8** closed the **90 s timeout** problem (E3: **54/54** runnable rows). **31** rows still need semantic follow-up:
+**Background:** Phase **2.8** closed the **90 s timeout** problem (E3: **74/74** rows). Residual semantic work:
 
-| Cluster | Count | Symptom | Canonical list |
-|---------|------:|---------|------------------|
-| **A — subMap walker skip** | **20** | `removeNodeMap()` returns null → NPE in `exitSql` after parse-error recovery mis-aligns walker stack | [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) |
+| Cluster | Count | Symptom | Tracker |
+|---------|------:|---------|---------|
+| **A — former subMap skip** | **20** | Pre-**W1**: `subMap` NPE after parse-error recovery; post-**W1**: syntax_corrupt rows clean; **legitimate_complex** may still need **W2** | §2.8 **W-track** + [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (cleared) |
 | **B — fast-FATAL** | **11** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics | §2.8 E3 fast-FATAL table (rows **605–636**, **4197**, **5453–5454**, **5592–5594**) |
 
 **Suggested approach:**
 
-1. **Cluster A** — For each skip-list row: classify `syntax_corrupt` vs `legitimate_complex` vs `dev_template`; fix walker null-guard where SQL is valid; document corpus-quality exclusions where SQL is author-error.
+1. **Cluster A** — **W1** done for parse-phase failures; **W2** null-guard for rows that still walk; **W5** document `syntax_corrupt` as author-error.
 2. **Cluster B** — Capture FATAL messages per row; group by root cause (set-op interface, substitution, join resolution, etc.); fix or adjudicate like **2.9**.
-3. Re-include rows in `PantoTimeoutCorpusE3GateTest` as fixes land (remove from skip list or add zero-FATAL gate).
-4. **Cleanup (after classification)** — Delete one-off Phase 2.8 investigation CLIs and manual probes that exist only for subMap / fast-FATAL triage (e.g. `PantoSubMapRowProbe`, `PantoSubMapFailureAnalysisTest` if superseded). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests — those are retained regression harnesses (see §2.8).
+3. E3 already includes all **74** rows post-**W1**; add zero-FATAL assertions when Cluster B is adjudicated (**W4**).
+4. **Cleanup** — Delete one-off triage CLIs after **W2** + Cluster B classification (**2.11.4**). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests.
 
 | Step | Task | Status |
 |------|------|--------|
-| 2.11.1 | Classify and fix **Cluster A** (subMap skip list, 20 rows) | Not started |
-| 2.11.2 | Classify and fix **Cluster B** (fast-FATAL, 11 rows) | Not started |
-| 2.11.3 | Re-include fixed rows in `PantoTimeoutCorpusE3GateTest` / shrink skip list | Not started |
-| 2.11.4 | Remove one-off investigation CLIs after **2.11.1–2.11.2** classification is done | Not started |
+| 2.11.1 | **Cluster A** — **W2** null-guard + **W5** syntax_corrupt classification | **Partial** — **W1** + **W2** done |
+| 2.11.2 | **Cluster B** — fast-FATAL (11 rows) | Not started |
+| 2.11.3 | E3 / skip-list hygiene | **Done** — **74/74** in E3; skip list cleared |
+| 2.11.4 | Remove one-off investigation CLIs after classification | **Partial** — some probes remain (`PantoSubMapRowProbe`) |
 
 **Deliverables:**
 
