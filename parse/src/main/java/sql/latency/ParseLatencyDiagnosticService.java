@@ -96,7 +96,7 @@ public final class ParseLatencyDiagnosticService {
         ParseErrorCollector syntaxCollector = new ParseErrorCollector();
         parser.setErrorHandler(syntaxCollector);
 
-        // Force SLL first (matches production behaviour), then LL on fallback.
+        // Force SLL first; SqlParserAccess uses the same policy with LL retry on cancellation.
         parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
 
         long t1 = System.nanoTime();

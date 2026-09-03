@@ -77,6 +77,55 @@ public class ParseLatencyDiagnosticTest {
         run("Panto row 130 — ALR Applicant (large CASE)", PANTO_ROW_130, SQLPARSER_SQL_TREE_KEY);
     }
 
+    // ── Rows 4176/4177: MSU Bozeman fixed-width export (2.8-12 giant CASE bucket) ─
+
+    /** Regression gate: bucket 2.8-12; production path must stay well under 90s kill. */
+    private static final long PANTO_ROW_4176_ACCESS_WARN_MS = 10_000L;
+
+    @Test
+    public void pantoRow4176_msuBozemanApplyResponder() throws Exception {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(4176);
+        run("Panto row 4176 — MSUBozeman.ApplyResponder (diagnostic)", sql, SQLPARSER_SQL_TREE_KEY);
+        runProductionAccess("Panto row 4176 — MSUBozeman.ApplyResponder (SqlParserAccess)", sql);
+    }
+
+    @Test
+    public void pantoRow4177_msuBozemanCultivateResponder() throws Exception {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(4177);
+        run("Panto row 4177 — MSUBozeman.CultivateResponder (diagnostic)", sql, SQLPARSER_SQL_TREE_KEY);
+        runProductionAccess("Panto row 4177 — MSUBozeman.CultivateResponder (SqlParserAccess)", sql);
+    }
+
+    private static void runProductionAccess(String label, String query) {
+        System.out.println("\n=== " + label + " ===");
+        long t0 = System.nanoTime();
+        access.SqlParserAccess parserAccess = new access.SqlParserAccess(false, false, false);
+        parserAccess.executeTheParse(query, SQLPARSER_SQL_TREE_KEY);
+        long totalMs = (System.nanoTime() - t0) / 1_000_000L;
+        access.Snippet snippet = parserAccess.getSnippet();
+        int fatals = snippet == null ? -1 : snippet.getFatalErrorCount();
+        System.out.printf(
+                "accessTotalMs=%d  fatal=%d  tableDictKeys=%d%n",
+                totalMs,
+                fatals,
+                snippet == null || snippet.getTableDictionary() == null ? -1 : snippet.getTableDictionary().size());
+        if (totalMs > PANTO_ROW_4176_ACCESS_WARN_MS) {
+            System.out.println("  *** SLOW ACCESS PATH — investigate parse prediction or walk");
+        }
+        if (fatals > 0) {
+            System.out.println("  *** ACCESS PATH FATAL diagnostics");
+        }
+        org.junit.Assert.assertTrue("expected no FATAL diagnostics: " + label, fatals == 0);
+        org.junit.Assert.assertTrue(
+                "expected bound table in tableDictionary: " + label,
+                snippet != null
+                        && snippet.getTableDictionary() != null
+                        && !snippet.getTableDictionary().isEmpty());
+        org.junit.Assert.assertTrue(
+                "expected access path under " + PANTO_ROW_4176_ACCESS_WARN_MS + "ms: " + label,
+                totalMs < PANTO_ROW_4176_ACCESS_WARN_MS);
+    }
+
     // ── Smoke test: tiny query, verifies the harness itself works ─────────────
 
     @Test

@@ -10,6 +10,7 @@ import java.util.Set;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import errorhandling.ParseDiagnostic;
@@ -145,44 +146,47 @@ public class SqlParserAccess extends AbstractParserAccess {
     // It is called by the executeTheParse method in the parent class AbstractParserAccess.
     @Override
     public void runParser(String type) {
-        // This method runs the parser on the input text and returns the parse tree.
         if (this.parser == null) {
             throw new IllegalStateException("Parser has not been built. Call buildParser() first.");
-        } else if (type.equals(SQLPARSER_SQL_TREE_KEY)) {
-            this.parserEmitPoint = parser.sql();
-        } else if (type.equals(SQLPARSER_COLUMN_TREE_KEY)) {
-            this.parserEmitPoint = parser.column_value();
-        } else if (type.equals(SQLPARSER_PREDICAND_TREE_KEY)) {
-            this.parserEmitPoint = parser.predicand_value();
-        } else if (type.equals(SQLPARSER_IN_LIST_TREE_KEY)) {
-            this.parserEmitPoint = parser.in_list_predicate_value();
-        } else if (type.equals(SQLPARSER_CONDITION_TREE_KEY)) {
-            this.parserEmitPoint = parser.condition_value();
-        } else if (type.equals(SQLPARSER_TUPLE_TREE_KEY)) {
-            this.parserEmitPoint = parser.tuple_value();
-        } else if (type.equals(SQLPARSER_VALUES_TREE_KEY)) {
-            this.parserEmitPoint = parser.values_statement_end();
-        } else if (type.equals(SQLPARSER_QUERY_TREE_KEY)) {
-            this.parserEmitPoint = parser.query_value();
-        } else if (type.equals(SQLPARSER_DDL_TREE_KEY)) {
-            this.parserEmitPoint = parser.ddl();
-        } else if (type.equals(SQLPARSER_SCRIPT_TREE_KEY)) {
-            this.parserEmitPoint = parser.script();
-        } else if (type.equals(SQLPARSER_JOIN_EXTENSION_TREE_KEY)) {
-            this.parserEmitPoint = parser.join_extension_value();
-        } else if (type.equals(SQLPARSER_LITERAL_TREE_KEY)) {
-            this.parserEmitPoint = parser.literal_value();
-        } else if (type.equals(SQLPARSER_INSERT_TREE_KEY)) {
-            this.parserEmitPoint = parser.insert_end_point();
-        } else if (type.equals(SQLPARSER_UPDATE_TREE_KEY)) {
-            this.parserEmitPoint = parser.update_end_point();
-        } else if (type.equals(SQLPARSER_DELETE_TREE_KEY)) {
-            this.parserEmitPoint = parser.delete_end_point();
-        } else if (type.equals(SQLPARSER_TRUNCATE_TREE_KEY)) {
-            this.parserEmitPoint = parser.truncate_end_point();
-         } else {
-            throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
         }
+        this.parserEmitPoint = invokeEndpointRule(type);
+    }
+
+    private ParserRuleContext invokeEndpointRule(String type) {
+        if (type.equals(SQLPARSER_SQL_TREE_KEY)) {
+            return parser.sql();
+        } else if (type.equals(SQLPARSER_COLUMN_TREE_KEY)) {
+            return parser.column_value();
+        } else if (type.equals(SQLPARSER_PREDICAND_TREE_KEY)) {
+            return parser.predicand_value();
+        } else if (type.equals(SQLPARSER_IN_LIST_TREE_KEY)) {
+            return parser.in_list_predicate_value();
+        } else if (type.equals(SQLPARSER_CONDITION_TREE_KEY)) {
+            return parser.condition_value();
+        } else if (type.equals(SQLPARSER_TUPLE_TREE_KEY)) {
+            return parser.tuple_value();
+        } else if (type.equals(SQLPARSER_VALUES_TREE_KEY)) {
+            return parser.values_statement_end();
+        } else if (type.equals(SQLPARSER_QUERY_TREE_KEY)) {
+            return parser.query_value();
+        } else if (type.equals(SQLPARSER_DDL_TREE_KEY)) {
+            return parser.ddl();
+        } else if (type.equals(SQLPARSER_SCRIPT_TREE_KEY)) {
+            return parser.script();
+        } else if (type.equals(SQLPARSER_JOIN_EXTENSION_TREE_KEY)) {
+            return parser.join_extension_value();
+        } else if (type.equals(SQLPARSER_LITERAL_TREE_KEY)) {
+            return parser.literal_value();
+        } else if (type.equals(SQLPARSER_INSERT_TREE_KEY)) {
+            return parser.insert_end_point();
+        } else if (type.equals(SQLPARSER_UPDATE_TREE_KEY)) {
+            return parser.update_end_point();
+        } else if (type.equals(SQLPARSER_DELETE_TREE_KEY)) {
+            return parser.delete_end_point();
+        } else if (type.equals(SQLPARSER_TRUNCATE_TREE_KEY)) {
+            return parser.truncate_end_point();
+        }
+        throw new IllegalArgumentException("Invalid Grammar End Point Type Requested: " + type);
     }
 
     @Override

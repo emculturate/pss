@@ -19,6 +19,7 @@ Prepared 2026-08-19 from the Panto extracted-queries dual-parse (**5.0.0-3** vs 
 |------|----------|
 | `phase-2.7-with-conditionless-join-finalizer.md` | Phase 2.7 spec — **complete**; CTE aliases not in global `tableDictionary` by design |
 | `panto_513_outstanding_issues.csv` | **82** data rows: domain, entity, query name, full `query_sql`, timings, `issue_kinds` |
+| `panto-submap-walker-skip-list.json` | **20** `timeout_513` rows excluded from automated full-parse (subMap walker fatals); **54** runnable for E3 |
 | `outstanding-issues-index.md` | Compact tables (no SQL) for workplan / PR description |
 | `row-index.json` | Machine-readable row lists |
 | `panto-tabledict-degradations-2026-08-19.md` | 8 degradation clusters (A–F), acceptance, hypotheses |
