@@ -213,9 +213,7 @@ public class SqlParserAccess extends AbstractParserAccess {
                 ParseTreeWalker.DEFAULT.walk(this.extractor, this.parserEmitPoint);
 
             } catch (Exception e) {
-                if (recordWalkerStackMisalignFromWalkException(e)) {
-                    // structured fatal already recorded
-                } else {
+                if (!handleWalkException(e)) {
                     System.err.println("EXCEPTION when walking the parse tree: " + e.getMessage());
                     this.addFatalError("Exception when walking the parse tree: " + e.getMessage());
                     System.out.println("Exception: " + this.getFatalErrorList());
@@ -269,33 +267,28 @@ public class SqlParserAccess extends AbstractParserAccess {
     }
 
     /**
-     * Maps walker {@code subMap} NPEs to {@link astwalkers.AbstractASTWalkerHelper#DIAG_AST_WALKER_STACK_MISALIGN}.
+     * {@link #generateAST()} walk catch path — package-visible for regression tests.
      *
-     * @return true when the exception was recognized and a structured fatal was recorded
+     * @return true when the exception was recognized as walker stack mis-align (recorded or deduped)
      */
-    private boolean recordWalkerStackMisalignFromWalkException(Exception e) {
-        if (!isWalkerStackMisalignNpe(e)) {
-            return false;
+    boolean handleWalkException(Exception e) {
+        List<ParseDiagnostic> walkerDiagnostics = null;
+        if (this.extractor != null) {
+            Snippet walkerSnippet = this.extractor.getSnippet();
+            if (walkerSnippet != null) {
+                walkerDiagnostics = walkerSnippet.getParserDiagnosticList();
+            }
         }
-        addAccessDiagnostic(new ParseDiagnostic(
-                ParseDiagnostic.Severity.FATAL,
-                astwalkers.AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN,
-                "Semantic analysis aborted: walker stack mis-aligned during AST walk.",
-                null,
-                null,
+        List<ParseDiagnostic> pending = new ArrayList<>();
+        boolean recognized = WalkerWalkExceptionGate.recognizeWalkException(
+                e,
                 "SqlParserAccess",
-                null,
-                null,
-                false,
-                "ast-walk",
-                e.getClass().getSimpleName(),
-                null));
-        return true;
-    }
-
-    private static boolean isWalkerStackMisalignNpe(Exception e) {
-        String message = e.getMessage();
-        return message != null && message.contains("\"subMap\" is null");
+                pending,
+                WalkerWalkExceptionGate.existingMisalignCandidates(getAllDiagnostics(), walkerDiagnostics));
+        for (ParseDiagnostic diagnostic : pending) {
+            addAccessDiagnostic(diagnostic);
+        }
+        return recognized;
     }
 
     @SuppressWarnings("unchecked")

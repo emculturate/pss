@@ -1,11 +1,14 @@
 package sql.latency;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.junit.Test;
 
 import access.SqlParserAccess;
+import access.WalkerWalkExceptionGate;
 
+import astwalkers.AbstractASTWalkerHelper;
 import errorhandling.ParseDiagnostic;
 
 import static access.SqlParserAccess.DIAG_AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS;
@@ -23,6 +26,20 @@ public class PantoSubMapSkipListRegressionTest {
 
     /** Former legitimate_complex giant CASE row. */
     private static final int ROW_GIANT_CASE = 130;
+
+    @Test
+    public void diagnosticService_walkCatchParity_recordsStructuredMisalign() {
+        List<ParseDiagnostic> captured = new java.util.ArrayList<>();
+        Exception npe = new NullPointerException(
+                "Cannot invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null");
+        WalkerWalkExceptionGate.recognizeWalkException(
+                npe, "ParseLatencyDiagnosticService", captured, List.of());
+
+        assertTrue(captured.stream().anyMatch(d -> d != null
+                && AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN.equals(d.code())
+                && d.severity() == ParseDiagnostic.Severity.FATAL
+                && "ParseLatencyDiagnosticService".equals(d.source())));
+    }
 
     @Test
     public void diagnosticService_selectFrom_skipsAstWalk() {

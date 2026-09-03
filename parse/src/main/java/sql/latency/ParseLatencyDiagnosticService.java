@@ -22,6 +22,7 @@ import errorhandling.ParseErrorCollector;
 import errorhandling.ParseErrorListener;
 import access.ParsePhaseErrorGate;
 import access.Snippet;
+import access.WalkerWalkExceptionGate;
 import static mumble.SQLParserEndPoints.SQLPARSER_COLUMN_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_CONDITION_TREE_KEY;
 import static mumble.SQLParserEndPoints.SQLPARSER_DDL_TREE_KEY;
@@ -116,13 +117,26 @@ public final class ParseLatencyDiagnosticService {
 
         // ── Phase 3: Walk ────────────────────────────────────────────────────
         SqlParseEventWalker walker = new SqlParseEventWalker();
+        List<ParseDiagnostic> walkExceptionDiagnostics = new ArrayList<>();
         long t2 = System.nanoTime();
         if (!skipWalk) {
             try {
                 ParseTreeWalker.DEFAULT.walk(walker, parseTree);
             } catch (Exception e) {
-                // record but don't rethrow — we still want the timing data
-                System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
+                List<ParseDiagnostic> walkerDiagnostics = null;
+                Snippet walkerSnippet = walker.getSnippet();
+                if (walkerSnippet != null) {
+                    walkerDiagnostics = walkerSnippet.getParserDiagnosticList();
+                }
+                if (!WalkerWalkExceptionGate.recognizeWalkException(
+                        e,
+                        "ParseLatencyDiagnosticService",
+                        walkExceptionDiagnostics,
+                        WalkerWalkExceptionGate.existingMisalignCandidates(
+                                ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener),
+                                walkerDiagnostics))) {
+                    System.err.println("[ParseLatencyDiagnosticService] walker threw: " + e.getMessage());
+                }
             }
         }
         long walkMs = msElapsed(t2);
@@ -138,9 +152,9 @@ public final class ParseLatencyDiagnosticService {
 
         // ── Collect counts ───────────────────────────────────────────────────
         int parseErrorCount = parser.getNumberOfSyntaxErrors();
-        int walkerFatalCount = countWalkerFatals(walker);
+        int walkerFatalCount = countWalkerFatals(walker, walkExceptionDiagnostics);
         List<ParseDiagnostic> diagnostics = collectReportDiagnostics(
-                syntaxCollector, syntaxListener, skipWalk, walker);
+                syntaxCollector, syntaxListener, skipWalk, walker, walkExceptionDiagnostics);
 
         return new ParseLatencyReport(
                 endpoint,
@@ -187,16 +201,24 @@ public final class ParseLatencyDiagnosticService {
         }
     }
 
-    private static int countWalkerFatals(SqlParseEventWalker walker) {
+    private static int countWalkerFatals(
+            SqlParseEventWalker walker,
+            List<ParseDiagnostic> walkExceptionDiagnostics) {
         try {
-            Snippet snippet = walker.getSnippet();
-            if (snippet == null || snippet.getParserDiagnosticList() == null) {
-                return 0;
-            }
             int n = 0;
-            for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
-                if (diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL) {
-                    n++;
+            Snippet snippet = walker.getSnippet();
+            if (snippet != null && snippet.getParserDiagnosticList() != null) {
+                for (ParseDiagnostic diagnostic : snippet.getParserDiagnosticList()) {
+                    if (diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL) {
+                        n++;
+                    }
+                }
+            }
+            if (walkExceptionDiagnostics != null) {
+                for (ParseDiagnostic diagnostic : walkExceptionDiagnostics) {
+                    if (diagnostic != null && diagnostic.severity() == ParseDiagnostic.Severity.FATAL) {
+                        n++;
+                    }
                 }
             }
             return n;
@@ -209,7 +231,8 @@ public final class ParseLatencyDiagnosticService {
             ParseErrorCollector syntaxCollector,
             ParseErrorListener syntaxListener,
             boolean skipWalk,
-            SqlParseEventWalker walker) {
+            SqlParseEventWalker walker,
+            List<ParseDiagnostic> walkExceptionDiagnostics) {
         List<ParseDiagnostic> diagnostics = new ArrayList<>(
                 ParsePhaseErrorGate.collectDiagnostics(syntaxCollector, syntaxListener));
         if (skipWalk) {
@@ -219,6 +242,9 @@ public final class ParseLatencyDiagnosticService {
             Snippet snippet = walker.getSnippet();
             if (snippet != null && snippet.getParserDiagnosticList() != null) {
                 diagnostics.addAll(snippet.getParserDiagnosticList());
+            }
+            if (walkExceptionDiagnostics != null && !walkExceptionDiagnostics.isEmpty()) {
+                diagnostics.addAll(walkExceptionDiagnostics);
             }
         }
         return diagnostics;
