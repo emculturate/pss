@@ -1,0 +1,23 @@
+{
+  "description": "Panto timeout-corpus rows excluded from bound-query parser correctness gates. These are not parser defects — utility workbooks, multi-statement scripts, or other non-bound SQL saved as a single corpus row.",
+  "generatedAt": "2026-09-03",
+  "categories": {
+    "utility_workbook": "Manual diagnostic worklist: multiple unrelated SELECT statements in one file for query-tool use; not a single bound statement.",
+    "syntax_corrupt": "Fragment or corrupt SQL shape (see W5 author-error rows 28–32, 41, 314–315)."
+  },
+  "csv_rows": [
+    4197
+  ],
+  "rows": [
+    {
+      "csv_row": 4197,
+      "category": "utility_workbook",
+      "query_key": "enrollment_services/Entering Class/Migration checks fulfillment counts",
+      "domain_name": "enrollment_services",
+      "query_name": "Migration checks fulfillment counts",
+      "reason": "Worklist of unrelated SELECT statements for manual fulfillment/transformation review in the query tool. Full file fails at line 85 (second SELECT). First statement (lines 11–76, star-join audit) parses with 0 fatals in isolation.",
+      "fixture": "sql/csv-row-4197.sql",
+      "signed_off": "2026-09-03"
+    }
+  ]
+}

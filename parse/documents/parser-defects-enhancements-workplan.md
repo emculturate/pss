@@ -1463,7 +1463,7 @@ Frozen SQL fixtures already in `sql/csv-row-<n>.sql`. Index: `cluster-b-sll-regr
 | 5453–5454 | 2.8-17 wide contact | 3 each | 0 | SLL drops `table_alias` map present under default |
 | 5592–5594 | 2.8-9 intake UNION | 16 each | 0 | SLL `def_query0` vs default `def_union2` |
 
-**Deferred (not 2.10-only):** row **4197** — `SqlParserAccess` parse failure at line 85; remains **2.11**.
+**Deferred (not 2.10-only):** row **4197** — utility workbook (multi-statement script); excluded via `panto-corpus-exclusion-list.json` (signed off 2026-09-03).
 
 **Tooling:** `python3 tools/compare_cluster_b_sll_vs_default.py` — regenerate comparison; `SllVsDefaultClusterBProbe` — per-row probe.
 
@@ -1484,19 +1484,19 @@ Frozen SQL fixtures already in `sql/csv-row-<n>.sql`. Index: `cluster-b-sll-regr
 | Cluster | Count | Symptom | Tracker |
 |---------|------:|---------|---------|
 | **A — former subMap skip** | **20** | Pre-**W1**: `subMap` NPE after parse-error recovery; post-**W1**: syntax_corrupt rows clean; **legitimate_complex** may still need **W2** | §2.8 **W-track** + [panto-submap-walker-skip-list.json](../docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json) (cleared) |
-| **B — fast-FATAL** | **11** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics | §2.8 E3 fast-FATAL table — **10** adjudicated → **2.10**; **4197** deferred |
+| **B — fast-FATAL** | **10** | Finish in **&lt; 200 ms** but emit one or more FATAL diagnostics (bound queries only; row **4197** excluded as utility workbook) | §2.8 E3 fast-FATAL table — all **10** adjudicated → **2.10** |
 
 **Suggested approach:**
 
 1. **Cluster A** — **W1** done for parse-phase failures; **W2** null-guard for rows that still walk; **W5** document `syntax_corrupt` as author-error.
-2. **Cluster B** — **Adjudicated (2026-09-02):** all 11 E3 fast-FATAL rows are SLL-vs-default divergences. **10** (`605–636`, `5453–5454`, `5592–5594`) are SLL-only false positives vs production `SqlParserAccess` → **`cluster-b-sll-regression-rows.json`** / **2.10**. Row **4197** has production parse failure at line 85 → remains **2.11**.
+2. **Cluster B** — **Adjudicated (2026-09-02):** ten bound-query E3 fast-FATAL rows are SLL-only false positives vs production `SqlParserAccess` → **`cluster-b-sll-regression-rows.json`** / **2.10**. Row **4197** signed off as **utility workbook** → `panto-corpus-exclusion-list.json`.
 3. E3 already includes all **74** rows post-**W1**; add zero-FATAL assertions when Cluster B is adjudicated (**W4**).
 4. **Cleanup** — Delete one-off triage CLIs after **W2** + Cluster B classification (**2.11.4**). **Keep** `ParseLatencyDiagnosticService`, `WalkerHotspotProfiler`, and E3 gate tests.
 
 | Step | Task | Status |
 |------|------|--------|
 | 2.11.1 | **Cluster A** — **W2** null-guard + **W5** syntax_corrupt classification | **Partial** — **W1** + **W2** done |
-| 2.11.2 | **Cluster B** — fast-FATAL (11 rows) | **Adjudicated** — **10** routed to **2.10** (SLL-only E3 false positives); **4197** deferred (production parse failure) |
+| 2.11.2 | **Cluster B** — fast-FATAL (10 bound-query rows) | **Adjudicated** — all **10** routed to **2.10**; **4197** utility workbook excluded |
 | 2.11.3 | E3 / skip-list hygiene | **Done** — **74/74** in E3; skip list cleared |
 | 2.11.4 | Remove one-off investigation CLIs after classification | **Partial** — some probes remain (`PantoSubMapRowProbe`) |
 

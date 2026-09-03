@@ -60,9 +60,14 @@ final class PantoOutstandingSqlFixtures {
         return readCsvRowIndex("pending_2_10_csv_rows");
     }
 
-    /** All 11 Cluster B E3 fast-FATAL rows (includes row 4197 deferred). */
+    /** Cluster B bound-query fast-FATAL rows (excludes utility workbook row 4197). */
     static List<Integer> clusterBE3FastFatalRows() throws IOException {
         return readCsvRowIndex("csv_rows");
+    }
+
+    /** Rows excluded from bound-query correctness gates (utility workbooks, etc.). */
+    static List<Integer> corpusExclusionRows() {
+        return List.copyOf(PantoCorpusExclusionList.excludedCsvRows());
     }
 
     private static List<Integer> readCsvRowIndex(String field) throws IOException {

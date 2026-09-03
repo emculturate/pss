@@ -58,8 +58,9 @@ public class SqlParserAccessSllPredictionSafetyTest {
         long slow = 0;
         int skipped = 0;
         Set<Integer> skipRows = PantoCorpusSkipList.subMapWalkerCsvRows();
+        Set<Integer> exclusionRows = PantoCorpusExclusionList.excludedCsvRows();
         for (ManifestRow row : payload.rows) {
-            if (skipRows.contains(row.csvRow)) {
+            if (skipRows.contains(row.csvRow) || exclusionRows.contains(row.csvRow)) {
                 skipped++;
                 continue;
             }

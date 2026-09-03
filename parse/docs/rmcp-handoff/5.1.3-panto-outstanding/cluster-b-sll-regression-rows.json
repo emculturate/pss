@@ -1,5 +1,5 @@
 {
-  "description": "Cluster B E3 fast-FATAL rows adjudicated 2026-09-02. Ten rows are SLL-only false positives vs production SqlParserAccess; row 4197 has a separate production parse failure.",
+  "description": "Cluster B E3 fast-FATAL rows adjudicated 2026-09-02. Ten rows are SLL-only false positives vs production SqlParserAccess. Row 4197 excluded as utility workbook (see panto-corpus-exclusion-list.json).",
   "source": "2.11.2 adjudication routed to 2.10 SLL→LL policy (10 rows)",
   "csv_rows": [
     605,
@@ -7,7 +7,6 @@
     623,
     635,
     636,
-    4197,
     5453,
     5454,
     5592,
@@ -26,13 +25,8 @@
     5593,
     5594
   ],
-  "deferred_rows": [
-    {
-      "csv_row": 4197,
-      "reason": "SqlParserAccess parse failure at line 85 (syntax recovery); not SLL-only — remains 2.11",
-      "sll_fatals": 32,
-      "default_walker_error": "NullPointerException: subMap is null"
-    }
+  "excluded_csv_rows": [
+    4197
   ],
   "rows": [
     {
@@ -94,18 +88,6 @@
       "sll_table_alias": null,
       "fixture": "sql/csv-row-636.sql",
       "pending_2_10": true
-    },
-    {
-      "csv_row": 4197,
-      "bucket": "2.8-15",
-      "default_fatals": -1,
-      "sll_fatals": 32,
-      "default_top_scope": null,
-      "sll_top_scope": "def_query0",
-      "default_table_alias": null,
-      "sll_table_alias": "{pd_acad=..., pd_core=...}",
-      "fixture": "sql/csv-row-4197.sql",
-      "pending_2_10": false
     },
     {
       "csv_row": 5453,

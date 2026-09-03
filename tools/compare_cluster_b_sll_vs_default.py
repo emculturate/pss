@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PARSE = ROOT / "parse"
-ROWS = [605, 606, 623, 635, 636, 4197, 5453, 5454, 5592, 5593, 5594]
+ROWS = [605, 606, 623, 635, 636, 5453, 5454, 5592, 5593, 5594]
 
 
 def run_row(row: int) -> dict:

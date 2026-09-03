@@ -29,7 +29,7 @@ public class PantoTimeoutCorpusE3GateTest {
     static final int E3_BUCKET_2_8_2_CANARY = 1837;
 
     /** Non-UNION guardrails (row 130 formerly on subMap skip list). */
-    static final int[] E3_NON_UNION_CANARIES = {5261, 4647, 4197, 130};
+    static final int[] E3_NON_UNION_CANARIES = {5261, 4647, 130};
 
     @Test
     public void e3RunnableCorpus_allRowsUnder90s() throws IOException {
@@ -43,7 +43,7 @@ public class PantoTimeoutCorpusE3GateTest {
 
         for (int csvRow : csvRows) {
             RowGateResult result = gateRow(csvRow);
-            if (result.walkerFatalCount() > 0) {
+            if (result.walkerFatalCount() > 0 && !PantoCorpusExclusionList.isExcluded(csvRow)) {
                 withFatals++;
             }
             if (result.walkMs() > maxWalkMs) {
@@ -60,9 +60,10 @@ public class PantoTimeoutCorpusE3GateTest {
         }
 
         System.out.printf(Locale.ROOT,
-                "E3_CORPUS_SUMMARY rows=%d skipList=%d maxWalkMs=%d (csv_row=%d) maxTotalMs=%d (csv_row=%d) rowsWithFatals=%d%n",
+                "E3_CORPUS_SUMMARY rows=%d skipList=%d exclusions=%d maxWalkMs=%d (csv_row=%d) maxTotalMs=%d (csv_row=%d) boundQueryRowsWithFatals=%d%n",
                 csvRows.size(),
                 PantoCorpusSkipList.subMapWalkerCsvRows().size(),
+                PantoCorpusExclusionList.excludedCsvRows().size(),
                 maxWalkMs,
                 maxWalkRow,
                 maxTotalMs,

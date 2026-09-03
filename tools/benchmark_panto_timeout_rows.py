@@ -18,11 +18,24 @@ DEFAULT_SKIP_LIST = (
     ROOT
     / "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-submap-walker-skip-list.json"
 )
+DEFAULT_EXCLUSION_LIST = (
+    ROOT
+    / "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/panto-corpus-exclusion-list.json"
+)
 
 
 def load_skip_rows(skip_list_path: Path) -> set[int]:
     payload = json.loads(skip_list_path.read_text(encoding="utf-8"))
-    return {int(row["csv_row"]) for row in payload.get("rows", [])}
+    rows = {int(row["csv_row"]) for row in payload.get("rows", [])}
+    rows.update(int(row) for row in payload.get("csv_rows", []))
+    return rows
+
+
+def load_excluded_rows(exclusion_list_path: Path) -> set[int]:
+    payload = json.loads(exclusion_list_path.read_text(encoding="utf-8"))
+    rows = {int(row["csv_row"]) for row in payload.get("rows", [])}
+    rows.update(int(row) for row in payload.get("csv_rows", []))
+    return rows
 
 
 def load_rows(
@@ -31,6 +44,7 @@ def load_rows(
     *,
     exclude_skip_list: bool,
     skip_list_path: Path,
+    exclusion_list_path: Path,
 ) -> list[dict]:
     with csv_path.open(newline="", encoding="utf-8") as handle:
         records = list(csv.DictReader(handle))
@@ -39,6 +53,7 @@ def load_rows(
     skip_rows: set[int] = set()
     if exclude_skip_list:
         skip_rows = load_skip_rows(skip_list_path)
+        skip_rows.update(load_excluded_rows(exclusion_list_path))
     rows = []
     for record in records:
         csv_row = int(record["csv_row"])
@@ -74,9 +89,15 @@ def main() -> int:
         help="JSON skip list (default: panto-submap-walker-skip-list.json).",
     )
     parser.add_argument(
+        "--exclusion-list",
+        type=Path,
+        default=DEFAULT_EXCLUSION_LIST,
+        help="JSON exclusion list for utility workbooks (default: panto-corpus-exclusion-list.json).",
+    )
+    parser.add_argument(
         "--include-skip-list",
         action="store_true",
-        help="Include subMap walker-skip rows in the manifest (default: exclude).",
+        help="Include skip-list and exclusion-list rows in the manifest (default: exclude).",
     )
     args = parser.parse_args()
 
@@ -86,12 +107,14 @@ def main() -> int:
         issue,
         exclude_skip_list=not args.include_skip_list,
         skip_list_path=args.skip_list,
+        exclusion_list_path=args.exclusion_list,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "source_csv": str(args.csv),
         "issue_filter": args.issue,
         "skip_list": str(args.skip_list) if not args.include_skip_list else None,
+        "exclusion_list": str(args.exclusion_list) if not args.include_skip_list else None,
         "row_count": len(rows),
         "rows": rows,
     }

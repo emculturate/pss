@@ -29,7 +29,8 @@ import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
  *   mvn -pl parse -Dtest=PantoTimeoutBatchBenchmarkTest#runTimeout513RowsFromManifest test
  * </pre>
  *
- * <p>Rows in {@link PantoCorpusSkipList} (subMap walker fatals) are skipped unless
+ * <p>Rows in {@link PantoCorpusSkipList} (subMap walker fatals) and
+ * {@link PantoCorpusExclusionList} (utility workbooks) are skipped unless
  * {@code -Dpanto.skip.list.include=true}.
  */
 public class PantoTimeoutBatchBenchmarkTest {
@@ -44,7 +45,9 @@ public class PantoTimeoutBatchBenchmarkTest {
         Path manifest = resolveManifestPath();
         List<ManifestRow> rows = loadManifest(manifest);
         boolean includeSkipList = Boolean.getBoolean("panto.skip.list.include");
-        Set<Integer> skipRows = includeSkipList ? Set.of() : PantoCorpusSkipList.subMapWalkerCsvRows();
+        Set<Integer> skipRows = includeSkipList
+                ? Set.of()
+                : unionSkipAndExclusionRows();
         int skipped = 0;
         System.out.printf(Locale.ROOT,
                 "PANTO_BATCH manifest=%s rows=%d skip=%d timeoutMs=%d%n",
@@ -61,10 +64,14 @@ public class PantoTimeoutBatchBenchmarkTest {
         for (ManifestRow row : rows) {
             if (skipRows.contains(row.csvRow)) {
                 skipped++;
+                String skipReason = PantoCorpusExclusionList.isExcluded(row.csvRow)
+                        ? "corpus_exclusion"
+                        : "subMap_walker_skip";
                 System.out.printf(Locale.ROOT,
-                        "%d,%s,SKIP,subMap_walker_skip,,,,,,,,,,SKIP,%d,%d%n",
+                        "%d,%s,SKIP,%s,,,,,,,,,,SKIP,%d,%d%n",
                         row.csvRow,
                         csvEscape(row.queryKey),
+                        skipReason,
                         row.prev5003Ms,
                         row.prev513Ms);
                 continue;
@@ -184,5 +191,11 @@ public class PantoTimeoutBatchBenchmarkTest {
             return "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;
+    }
+
+    private static Set<Integer> unionSkipAndExclusionRows() {
+        Set<Integer> combined = new java.util.LinkedHashSet<>(PantoCorpusSkipList.subMapWalkerCsvRows());
+        combined.addAll(PantoCorpusExclusionList.excludedCsvRows());
+        return combined;
     }
 }
