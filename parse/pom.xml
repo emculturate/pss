@@ -18,7 +18,7 @@
   <description>Parser for several PSS Grammars using ANTLR4</description>
 
   <properties>
-    <antlr4.version>4.13.1</antlr4.version>
+    <antlr4.version>4.13.2</antlr4.version>
     <maven.compiler.release>21</maven.compiler.release>
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

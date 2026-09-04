@@ -1,0 +1,28 @@
+name: Maven Test
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - Fall-2026-Extensions
+      - Spring-2026-Extensions
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run tests
+        run: mvn -B test
