@@ -34,6 +34,15 @@ The **`pss-parse-docs`** Maven artifact (`pss-parse-docs-5.1.3-1.jar`) is the co
 | `global-table-dictionary-cte-alias-policy` | 5.1.3 global `tableDictionary`: physical/tuple only; CTE via `table_alias` |
 | `set-operation-interface-duplicate-output-names-policy` | UNION / INTERSECT / EXCEPT branch interface distinctness; duplicate output names and author remediation |
 
+### Panto platform design (repo-only — not in `pss-parse-docs` JAR)
+
+These documents live under `parse/documents/` and describe **Query Tool / Panto product semantics** (templates, bundles, resolution, generation). They are **not** synced into the parser docs manifest. Agents must read them before **redesigning or refactoring** substitution variables, snippet endpoints, `substitutionsMap` / resolution-set behavior, or SQL generation from template ASTs — the parser and walker must continue to enforce the design justifications they describe.
+
+| Document | Use when |
+|----------|----------|
+| [`panto-variable-inheritance-using-bundles.md`](parse/documents/panto-variable-inheritance-using-bundles.md) | How Panto types variables from grammar location, parses snippets per endpoint, builds substitution maps from sequenced bundle imports, forms resolution/unresolved sets, and generates final SQL via depth-first AST traversal |
+| [`panto-language-enhancements-grammar-safe-dynamic-expansion-2.md`](parse/documents/panto-language-enhancements-grammar-safe-dynamic-expansion-2.md) | Proposed cardinality / sequence substitution extensions (Phase 9 workplan); read **after** the bundles concept-of-operations doc |
+
 ### Version alignment
 
 - **Maven artifact version** (`5.1.3-1`) matches **`pss-parse`** coordinates.
@@ -55,5 +64,6 @@ Or list entries: `jar tf "$JAR" 'META-INF/pss-parse/**'`
 
 - **Set-op convert egress (Phase 2.8 + 15.6):** `.cursor/rules/set-op-convert-egress-scoping.mdc` — bundle build vs egress reads, S4 sibling isolation, no post-bundle fallback; canonical test `setOpSiblingIsolationInvariantV0Test`
 - **Relational modifiers:** `.cursor/rules/relational-modifier-resolution.mdc` → `parse/documents/relational-modifier-resolution-policy.md`
+- **Panto variables & snippets:** `parse/documents/panto-variable-inheritance-using-bundles.md` — platform semantics to preserve when changing variable types, endpoints, or substitution/resolution behavior (see **Panto platform design** above).
 - **Do not auto-refresh pivot/unpivot goldens** without user confirmation (see rule file).
 - Regenerate vendor docs after editing `parse/documents/*.md`: `./scripts/sync-pss-parse-docs-vendor.sh 5.1.3 5.1.3-1` or `mvn -pl pss-parse-docs package`.

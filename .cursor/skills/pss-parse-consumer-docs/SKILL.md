@@ -17,6 +17,7 @@ Apply this skill **before** implementing or modifying:
 - Code that reads `parse.symbolTable`, `tableDictionary`, `queryDictionary`, or `interface`
 - RMCP / MCP parse-and-explain tooling for **`5.1.3`** / **`513`** output
 - Consumer tests that assert bucket shapes or tracing behavior
+- Parser or walker changes to **Panto substitution variables**, snippet endpoints, `substitutionsMap`, or template-to-SQL generation (read **Panto platform docs** below first)
 
 Do not infer bucket semantics from test strings alone — read the bundled docs.
 
@@ -64,6 +65,17 @@ Map tasks to docs:
 | Ordered select-list output alias refs (`queryN` in `interface` / `window_*`) | `ordered-select-list-output-alias-policy` |
 | Set-op branches with duplicate select-list output names | `set-operation-interface-duplicate-output-names-policy` |
 | Global `tableDictionary` vs CTE / query aliases (5.1.3) | `global-table-dictionary-cte-alias-policy` |
+
+## Panto platform docs (repo-only — not in manifest)
+
+These files are under `parse/documents/` only. They are **not** in `pss-parse-docs.manifest.json`. Use them when work touches **Panto substitution variables, snippets, bundles, or query generation** — not only symbol-table consumption.
+
+| Task | Document |
+|------|----------|
+| Variable types from grammar context, bundle inheritance, substitution map, resolution/unresolved sets, depth-first generation into final SQL | `parse/documents/panto-variable-inheritance-using-bundles.md` |
+| Planned cardinality / multi-value substitution (Phase 9) | `parse/documents/panto-language-enhancements-grammar-safe-dynamic-expansion-2.md` |
+
+**Rule:** Before redesigning or refactoring parser/walker variable or snippet behavior, read the bundles concept-of-operations doc and ensure changes remain consistent with its stated guarantees (typed AST substitution, deterministic bundle order, cycle prohibition, empty unresolved set before execution).
 
 ## Extract from the JAR (no vendor tree)
 

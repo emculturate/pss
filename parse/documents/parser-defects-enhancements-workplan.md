@@ -23,6 +23,8 @@ Living list of parser defects and enhancements discovered from RMCP / DBT scan e
 | 5 | Snowflake ARRAY syntax and functions | Enhancement | Not started | This file (5.1–5.12) |
 | 6 | Simple JINJA substitutions support | Enhancement | Not started | This file (6.1–6.4); **6.4** closes Phase **2.5** Jinja fixture |
 | 7 | Deep JINJA language support | Enhancement (optional) | Not started | This file |
+| 8 | Panto variable types & parser endpoints — test coverage backlog | Test / docs | Not started | This file (8.1–8.2); catalog from 5.1.3 grammar + walker review (2026-09-04) |
+| 9 | Panto cardinality & grammar-safe dynamic AST expansion | Enhancement (Panto language) | Not started — exploratory design | [panto-language-enhancements-grammar-safe-dynamic-expansion-2.md](./panto-language-enhancements-grammar-safe-dynamic-expansion-2.md) (9.1–9.5 delivery sequence) |
 
 ---
 
@@ -2326,6 +2328,99 @@ In scope when activated (additional 7.x later):
 
 ---
 
+## Phase 8 — Panto variable types & parser endpoints (test coverage backlog)
+
+**Kind:** Test / documentation backlog (not a grammar defect phase)
+
+**Status:** Not started
+
+**Theme:** The 5.1.3 parser recognizes **seven** Panto substitution `type=` values (`tuple`, `column`, `predicand`, `condition`, `in_list`, `query`, `join_extension`) across **sixteen** parse endpoints (`SQL`, `SCRIPT`, `DDL`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `VALUES`, `COLUMN`, `PREDICAND`, `CONDITION`, `IN_LIST`, `TUPLE`, `QUERY`, `JOIN_EXTENSION`, `LITERAL`). All seven types have at least one golden test today (primarily `SqlEventWalkerNonSqlEndpointParserTests`, plus integration tests in `SqlEventWalkerPredicatesOperatorsSubstitutionsTests`, `SqlEventWalkerJoinsAndTableResolutionTests`, `SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`, `SqlEventWalkerPivotUnpivotTests`). This phase tracks **endpoint-level** and **type × grammar** combinations that are implemented but weakly or not directly tested — so they are not lost when writing consumer docs or extending Panto.
+
+**Canonical references:** `SQLSelectParser.g4` start rules; `SQLParserEndPoints.java`; `MumbleConstants` substitution keys; `SqlASTWalkerHelper.resolveSubstitutionValueTypeFromContext`.
+
+**Acceptance (phase):** Each row in **8.1** and **8.2** either has a focused golden test (endpoint helper or minimal SQL fixture) or is explicitly marked *N/A* with rationale in this section.
+
+### 8.1 — Parser endpoint test coverage gaps
+
+| Endpoint | Grammar rule | Gap | Suggested test / helper |
+|----------|--------------|-----|-------------------------|
+| **`INSERT`** | `insert_end_point` | **No dedicated endpoint test.** INSERT with substitutions is exercised only via the **`SQL`** endpoint (`SqlEventWalkerDmlUpdateInsertDeleteTruncateTests`). No parity test like `updateStatementEndpointMatchesSqlEndpointTest` / `truncateStatementEndpointMatchesDdlEndpointTest`. | Add `runInsertEndPointParsertest` + `insertStatementEndpointMatchesSqlEndpointTest` (golden parity on `INSERT` subtree vs `SQL`). |
+| **`DELETE`** | `delete_end_point` | Smoke only (`deleteStatementEndpointMatchesSqlEndpointWithUsingSubqueryTest` — `assertNotNull` on DELETE subtree). No golden parity vs SQL. | Extend to full AST / `substitutionsMap` / symbol-table parity for a Snowflake `DELETE … USING` fixture. |
+| **`SCRIPT`** | `script` | `SqlEventWalkerScriptsAndDDLTests` covers multi-statement scripts; **no angle-bracket substitution variables** in SCRIPT-scoped outputs. | Minimal two-statement script with `<tuple>` / `<condition>` in SELECT + DML; assert per-statement `substitutionsMap.SCRIPT.N`. |
+| **`DDL`** | `ddl` | Endpoint parsing tested (`SqlEventWalkerScriptsAndDDLTests`, `SqlEventWalkerDdlTests`); **no substitution variables** in CREATE / ALTER / DROP object names or AS-query stubs. | Only if product needs DDL templates with `<var>` — otherwise mark *N/A*. |
+| **`VALUES`** | `values_statement_end` | Literal matrices only (`SqlEventWalkerNonSqlEndpointParserTests`, `SqlEventWalkerUnparenthesizedValuesTests`). **No VALUES endpoint test** where the matrix or statement is a `<variable>`. | `VALUES <matrixVar>` or cell-level substitution if grammar supports it. |
+| **`LITERAL`** | `literal_value` | Tested (`literalBooleanTrueEndpointTest`, etc.). Variables **not applicable** — grammar excludes `variable_identifier`. | *N/A* — document only. |
+
+**Well-covered endpoints (no 8.1 action unless regressions):** `SQL`, `UPDATE`, `TRUNCATE`, `COLUMN`, `PREDICAND`, `CONDITION`, `IN_LIST`, `TUPLE`, `QUERY`, `JOIN_EXTENSION`.
+
+### 8.2 — Variable type × grammar combinations (weak or missing direct tests)
+
+| Combination | Grammar / walker context | Gap | Suggested minimal fixture |
+|-------------|--------------------------|-----|---------------------------|
+| **`EXISTS <var>`** | `exists_predicate_value : variable_identifier` | Grammar allows; **no test** stamps a substitution on EXISTS. Expected `type=query` if implemented. | `WHERE EXISTS <subqueryVar>` at CONDITION or SQL endpoint. |
+| **`INSERT … <queryVar>`** (non-parenthesized source) | `insert_source_primary : variable_identifier` | Walker stamps `query` on insert scope; complex INSERT tests cover tuple/column heavily but **no minimal** `INSERT INTO t SELECT … FROM <sourceQuery>` at INSERT endpoint. | `INSERT INTO employees (a) <insertSourceQuery>` + INSERT endpoint parity (pairs with **8.1**). |
+| **`VALUES` matrix as `<var>`** | `insert_values_statement` comment (“substitution to insert a values matrix”) | **No test** for whole-matrix or cell substitution at VALUES / INSERT VALUES. | `INSERT INTO t (a,b) VALUES <rowMatrix>` or documented *out of scope* if Panto never emits this shape. |
+| **`SCRIPT` / `DDL` with `<variables>`** | Same `variable_identifier` tokens as SQL | No endpoint-scoped golden with substitutions (see **8.1**). | Shared with SCRIPT/DDL rows in **8.1**. |
+| **Jinja predicand / column (Phase 6)** | `jinja_identifier` in non-table positions | Table-position Jinja → `tuple` is tested (`SqlEventWalkerPivotUnpivotTests`, join tests). **6.2** predicand/column Jinja is workplan Phase 6 — not 8.2 closure. | Defer to Phase **6.2**; cross-link only. |
+
+**Well-covered types (at least one direct golden each):** `tuple`, `column`, `predicand`, `condition`, `in_list`, `query`, `join_extension`. Representative tests: `basicTupleSubstitutionVariableTest`, `basicColumnVariableTest`, `basicPredicandSubstitutionTest`, `conditionVariableSubstitutionInV3Test`, `inListVariableSubstitutionTest`, `basicQuerySubstitutionValueTest`, `joinExtensionJoinWithOnTwoConditionVariablesTest`. Integration: `withQueryFromNavigateV2StudentSubstitution`, `withClauseSubstitutionTupleCteT2_9Test` (`WITH … AS <var>` → `tuple` vs `WITH … AS ( <var> )` → `query`).
+
+### Out of scope for Phase 8
+
+- Implementing new grammar for gaps that are intentionally unsupported.
+- Bulk token-id golden refresh (see `.cursor/rules/lexer-token-id-golden-policy.mdc`).
+- Consumer-facing Panto variable-type markdown (separate doc; this phase is the engineering backlog).
+
+---
+
+## Phase 9 — Panto cardinality & grammar-safe dynamic AST expansion
+
+**Kind:** Enhancement (Panto language — substitution variables with multi-value cardinality)
+
+**Status:** Not started — **exploratory design only** (no implementation scheduled)
+
+Do **not** duplicate the specification here. The full problem statement, type model (`Variable<T, Cardinality>`), proposed syntax (`<name[?]>`, `<name[*]>`, `<name[+]>`, `<name[m..n]>`, …), AST-role validation registry, structural folds, choice/optional values, parameterized snippets, collection expansion, provenance, acceptance criteria, and open questions live in:
+
+**[panto-language-enhancements-grammar-safe-dynamic-expansion-2.md](./panto-language-enhancements-grammar-safe-dynamic-expansion-2.md)**
+
+**Platform background (constraints, not duplicated here):** [panto-variable-inheritance-using-bundles.md](./panto-variable-inheritance-using-bundles.md) — concept of operations for templates, bundles, variable-snippet pairs, substitution maps, resolution sets, and AST-based query generation. Any Phase 9 parser or walker work must preserve and enforce those semantics unless this workplan and that document are explicitly revised together.
+
+### Strategic intent
+
+The ideas in this phase are intended to **extend Panto substitution capabilities** so that DBT/Jinja-generated queries can **eventually migrate** into the more performant Panto ecosystem. The goal is **not** to reach parity with Jinja as a general-purpose template language. It is to provide **sufficient** grammar-safe repetition, optionality, and structural composition that the few capabilities Jinja might still offer are **not a compelling reason to stay on Jinja** rather than migrate to Panto.
+
+### Problem (summary)
+
+Today's Panto model is `Variable<T> → AstNode<T>` (exactly one typed AST per occurrence). Recursive `join_extension` chaining covers some repetition, but there is no first-class way to resolve a variable to a **deterministically ordered sequence** of compatible AST nodes and splice them into a grammar list (select items, joins, conditions with folds, set-op branches, etc.) without procedural text generation.
+
+### Recommended delivery sequence (from design doc)
+
+| Sub-phase | Topic |
+|-----------|--------|
+| **9.1** | Typed sequences & splicing — `<name[range]>`, `sequence<T>` resolution values, AST-role cardinality registry, grammar-owned separators; **first targets:** select-item list and `join_extension` |
+| **9.2** | Optional values & structural folds (`conjunction`, `disjunction`, `union_all`, `join_chain`, …) |
+| **9.3** | Parameterized typed snippets |
+| **9.4** | Declarative collection expansion (ordered sources, bundle metadata) |
+| **9.5** | Evaluate pattern-directed AST rewriting (defer unless 9.1–9.4 prove insufficient) |
+
+### First increment (when work starts)
+
+> Allow `<name[1..*]>` to resolve to a deterministically ordered sequence of same-type snippet ASTs, validate legality against the variable's AST role, and splice into the parent during depth-first generation — without changing existing exactly-one variables.
+
+### Dependencies / related work
+
+- **Phase 8** — endpoint and scalar substitution test gaps should be closed or tracked before extending the substitution model.
+- **Phase 6** — Jinja tuple/predicand migration intersects DBT `for` / `if` use cases called out in the design doc's migration table.
+- **513 parser** — cardinality suffix parsing may extend `variable_identifier` lexer/grammar; semantic validation stays in the walker, not duplicated per SQL production.
+
+### Out of scope (phase)
+
+- Full Jinja programming model or feature parity with Jinja (Phase **7**; see **Strategic intent** above).
+- Arbitrary string concatenation or procedural SQL text emission.
+- Shipping in `pss-parse-docs` manifest until design is accepted and at least **9.1** has a stable contract.
+
+---
+
 ## Later phases
 
-_(Add Phase 8+ here.)_
+_(Add Phase 10+ here.)_
