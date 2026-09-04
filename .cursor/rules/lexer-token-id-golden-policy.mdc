@@ -1,0 +1,22 @@
+---
+description: Lexer token-type ID shifts during grammar work — golden update policy
+alwaysApply: true
+---
+
+# Lexer token-type ID golden policy (Phase 2.6+)
+
+When adding lexer tokens (e.g. `LEFT_BRACKET` / `RIGHT_BRACKET` for array subscript), ANTLR renumbers token type IDs. Golden tests embed those IDs in position strings like `<393>`.
+
+## Do
+
+- Update goldens **only** for tests added or changed to prove the current grammar extension (e.g. new `SqlEventWalkerArraySubscriptTests`).
+- At the **end** of the lexer/grammar work (when the user says we're done), take one pass to update token string rule IDs across the suite — **after** talking to the user first.
+
+## Do not
+
+- Bulk-update token IDs across the full test suite mid-task.
+- Re-run the entire walker golden corpus expecting to auto-fix `<nnn>` token references.
+
+## When many IDs shift
+
+Provide the user a **substitution list** (old token id → new token id, or a find/replace table) so they can apply it manually to save token cost. Do not mass-edit unrelated test files without explicit approval.

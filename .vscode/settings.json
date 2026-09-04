@@ -1,0 +1,64 @@
+{
+  "task.allowAutomaticTasks": "on",
+  "java.project.importOnFirstTimeStartup": "automatic",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.autobuild.enabled": true,
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.errors.incompleteClasspath.severity": "warning",
+  "java.import.maven.enabled": true,
+  "java.import.exclusions": [
+    "**/src/main/antlr4/**/.antlr/**"
+  ],
+  "java.import.maven.offline.enabled": false,
+  "java.import.maven.downloadSources": true,
+  "java.import.gradle.enabled": false,
+  "debug.internalConsoleOptions": "openOnSessionStart",
+  "debug.console.closeOnEnd": false,
+  "jdk.test.editor.enableShortcuts": true,
+  "java.debug.settings.console": "internalConsole",
+  "java.debug.settings.forceBuildBeforeLaunch": false,
+  "java.debug.settings.hotCodeReplace": "auto",
+  "java.debug.settings.vmArgs": "-Dpss.walker.test.verbose=true -Xmx2g -Xms256m",
+  "java.test.log.level": "verbose",
+  "java.test.editor.enableShortcuts": true,
+  "java.test.editor.revealOutput": "always",
+  "java.test.defaultConfig": "pss-fast-debug",
+  "java.test.config": [
+    {
+      "name": "pss-fast-debug",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=true",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    },
+    {
+      "name": "default",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=true",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    },
+    {
+      "name": "pss-verbose",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=true",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    },
+    {
+      "name": "pss-quiet",
+      "workingDirectory": "${workspaceFolder}/parse",
+      "vmArgs": [
+        "-Dpss.walker.test.verbose=false",
+        "-Xmx2g",
+        "-Xms256m"
+      ]
+    }
+  ]
+}

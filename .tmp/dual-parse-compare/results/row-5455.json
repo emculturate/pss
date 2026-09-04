@@ -1,0 +1,1073 @@
+{
+  "sql_file": "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-5455.sql",
+  "parse_ms": {
+    "5.0.0-3": 383,
+    "5.1.3": 579
+  },
+  "parse_outputs": {
+    "5.0.0-3": {
+      "tableDictionary": {
+        "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+          "FUNNEL_STATUS_CALC": "[@93,745:755='comb_common',<328>,2:434]",
+          "create_dt": "[@35,253:263='comb_common',<328>,1:253]",
+          "source_type_key": "[@111,879:889='comb_common',<328>,2:568]",
+          "sourcecontact_id": "[@123,980:990='comb_common',<328>,3:7]",
+          "src_priority": "[@31,227:237='comb_common',<328>,1:227]"
+        },
+        "dim__sourcecontact_priority": {
+          "intake_type_key": "[@107,852:859='priority',<328>,2:541]",
+          "src_con_priority": "[@17,126:133='priority',<328>,1:126]",
+          "acs_inquiry_override_ind": "[@39,276:283='priority',<328>,1:276]",
+          "funnel_status_key": "[@115,911:918='priority',<328>,2:600]"
+        },
+        "<[Partner_Data_Platform].[Contact Sourcecontacts]>": {
+          "contact_key": "[@5,39:50='cont_srccont',<328>,1:39]",
+          "source_contact_id": "[@56,505:516='cont_srccont',<328>,2:194]"
+        },
+        "comb_common": {
+          "source_type_key": "[@149,1206:1216='comb_common',<328>,4:150]"
+        },
+        "dim_funnel_status": {
+          "FUNNEL_PRIORITY": "[@27,196:208='funnel_status',<328>,1:196]",
+          "FUNNEL_STATUS_LABEL": "[@86,702:714='funnel_status',<328>,2:391]",
+          "funnel_status_key": "[@119,940:952='funnel_status',<328>,2:629]"
+        },
+        "chosencontact_combined": {
+          "source_contact_id": "[@216,1595:1595='a',<328>,9:29]",
+          "source_type_key": "[@220,1616:1616='a',<328>,9:50]",
+          "contact_key": "[@245,1774:1774='a',<328>,9:208]",
+          "src_con_priority": "[@250,1797:1797='a',<328>,9:231]",
+          "src_priority": "[@228,1655:1666='src_priority',<328>,9:89]",
+          "create_dt": "[@255,1823:1831='create_dt',<328>,9:257]",
+          "FUNNEL_PRIORITY": "[@232,1680:1694='FUNNEL_PRIORITY',<328>,9:114]",
+          "acs_inquiry_override_ind": "[@236,1716:1739='acs_inquiry_override_ind',<328>,9:150]",
+          "INTAKE_TYPE_LABEL": "[@234,1697:1713='INTAKE_TYPE_LABEL',<328>,9:131]"
+        },
+        "crf__intake_type": {
+          "intake_type_key": "[@67,577:578='ST',<328>,2:266]",
+          "intake_type_label": "[@169,1343:1346='ST_1',<328>,6:13]",
+          "INTAKE_TYPE_LABEL": "[@23,174:175='ST',<328>,1:174]"
+        },
+        "acs__contacts": {
+          "sourcecontact_id": "[@163,1307:1310='ACON',<328>,5:38]",
+          "eab_contact_id": "[@185,1438:1441='ACON',<328>,6:108]"
+        }
+      },
+      "symbolTable": {
+        "with": {
+          "ChosenContact_Combined": {
+            "query1": {
+              "ST": "crf__intake_type",
+              "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+                "source_type_key": "[@111,879:889='comb_common',<328>,2:568]",
+                "src_priority": "[@31,227:237='comb_common',<328>,1:227]",
+                "sourcecontact_id": "[@123,980:990='comb_common',<328>,3:7]",
+                "create_dt": "[@35,253:263='comb_common',<328>,1:253]",
+                "FUNNEL_STATUS_CALC": "[@93,745:755='comb_common',<328>,2:434]"
+              },
+              "dim__sourcecontact_priority": {
+                "intake_type_key": "[@107,852:859='priority',<328>,2:541]",
+                "src_con_priority": "[@17,126:133='priority',<328>,1:126]",
+                "acs_inquiry_override_ind": "[@39,276:283='priority',<328>,1:276]",
+                "funnel_status_key": "[@115,911:918='priority',<328>,2:600]"
+              },
+              "<[Partner_Data_Platform].[Contact Sourcecontacts]>": {
+                "source_contact_id": "[@56,505:516='cont_srccont',<328>,2:194]",
+                "contact_key": "[@5,39:50='cont_srccont',<328>,1:39]"
+              },
+              "comb_common": "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+              "dim_funnel_status": {
+                "FUNNEL_PRIORITY": "[@27,196:208='funnel_status',<328>,1:196]",
+                "FUNNEL_STATUS_LABEL": "[@86,702:714='funnel_status',<328>,2:391]",
+                "funnel_status_key": "[@119,940:952='funnel_status',<328>,2:629]"
+              },
+              "cont_srccont": "<[Partner_Data_Platform].[Contact Sourcecontacts]>",
+              "crf__intake_type": {
+                "intake_type_key": "[@67,577:578='ST',<328>,2:266]",
+                "INTAKE_TYPE_LABEL": "[@23,174:175='ST',<328>,1:174]"
+              },
+              "interface": {
+                "source_contact_id": {
+                  "column": {
+                    "name": "source_contact_id",
+                    "table_ref": "cont_srccont"
+                  }
+                },
+                "source_type_key": {
+                  "column": {
+                    "name": "source_type_key",
+                    "table_ref": "comb_common"
+                  }
+                },
+                "contact_key": {
+                  "column": {
+                    "name": "contact_key",
+                    "table_ref": "cont_srccont"
+                  }
+                },
+                "src_con_priority": {
+                  "column": {
+                    "name": "src_con_priority",
+                    "table_ref": "priority"
+                  }
+                },
+                "src_priority": {
+                  "column": {
+                    "name": "src_priority",
+                    "table_ref": "comb_common"
+                  }
+                },
+                "FUNNEL_PRIORITY": {
+                  "column": {
+                    "name": "FUNNEL_PRIORITY",
+                    "table_ref": "funnel_status"
+                  }
+                },
+                "create_dt": {
+                  "column": {
+                    "name": "create_dt",
+                    "table_ref": "comb_common"
+                  }
+                },
+                "acs_inquiry_override_ind": {
+                  "column": {
+                    "name": "acs_inquiry_override_ind",
+                    "table_ref": "priority"
+                  }
+                },
+                "INTAKE_TYPE_LABEL": {
+                  "column": {
+                    "name": "INTAKE_TYPE_LABEL",
+                    "table_ref": "ST"
+                  }
+                }
+              },
+              "priority": "dim__sourcecontact_priority",
+              "query0": {
+                "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+                  "sourcecontact_id": "[@159,1274:1286='comb_common_1',<328>,5:5]",
+                  "FUNNEL_STATUS_CALC": "[@178,1388:1400='comb_common_1',<328>,6:58]"
+                },
+                "ST_1": "crf__intake_type",
+                "comb_common": {
+                  "source_type_key": "[@149,1206:1216='comb_common',<328>,4:150]"
+                },
+                "comb_common_1": "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+                "crf__intake_type": {
+                  "intake_type_key": "[@145,1183:1186='ST_1',<328>,4:127]",
+                  "intake_type_label": "[@169,1343:1346='ST_1',<328>,6:13]"
+                },
+                "interface": {
+                  "sourcecontact_id": {
+                    "column": {
+                      "name": "sourcecontact_id",
+                      "table_ref": "comb_common_1"
+                    }
+                  }
+                },
+                "acs__contacts": {
+                  "sourcecontact_id": "[@163,1307:1310='ACON',<328>,5:38]",
+                  "eab_contact_id": "[@185,1438:1441='ACON',<328>,6:108]"
+                },
+                "ACON": "acs__contacts"
+              },
+              "funnel_status": "dim_funnel_status"
+            }
+          }
+        },
+        "query3": {
+          "c": "query2",
+          "interface": {
+            "source_contact_id": {
+              "column": {
+                "name": "source_contact_id",
+                "table_ref": "c"
+              }
+            },
+            "source_type_key": {
+              "column": {
+                "name": "source_type_key",
+                "table_ref": "c"
+              }
+            },
+            "contact_key": {
+              "column": {
+                "name": "contact_key",
+                "table_ref": "c"
+              }
+            },
+            "acs_inquiry_override_ind": {
+              "column": {
+                "name": "acs_inquiry_override_ind",
+                "table_ref": "c"
+              }
+            }
+          },
+          "query2": {
+            "source_contact_id": "[@198,1498:1498='c',<328>,8:24]",
+            "source_type_key": "[@202,1519:1519='c',<328>,8:45]",
+            "contact_key": "[@194,1483:1483='c',<328>,8:9]",
+            "priority_ranked": "[@268,1910:1910='c',<328>,12:7]",
+            "acs_inquiry_override_ind": "[@206,1538:1538='c',<328>,8:64]"
+          },
+          "def_query2": {
+            "a": "ChosenContact_Combined",
+            "ChosenContact_Combined": {
+              "source_contact_id": "[@216,1595:1595='a',<328>,9:29]",
+              "source_type_key": "[@220,1616:1616='a',<328>,9:50]",
+              "contact_key": "[@245,1774:1774='a',<328>,9:208]",
+              "src_con_priority": "[@250,1797:1797='a',<328>,9:231]",
+              "src_priority": "[@228,1655:1666='src_priority',<328>,9:89]",
+              "create_dt": "[@255,1823:1831='create_dt',<328>,9:257]",
+              "FUNNEL_PRIORITY": "[@232,1680:1694='FUNNEL_PRIORITY',<328>,9:114]",
+              "acs_inquiry_override_ind": "[@236,1716:1739='acs_inquiry_override_ind',<328>,9:150]",
+              "INTAKE_TYPE_LABEL": "[@234,1697:1713='INTAKE_TYPE_LABEL',<328>,9:131]"
+            },
+            "interface": {
+              "source_contact_id": {
+                "column": {
+                  "name": "source_contact_id",
+                  "table_ref": "a"
+                }
+              },
+              "source_type_key": {
+                "column": {
+                  "name": "source_type_key",
+                  "table_ref": "a"
+                }
+              },
+              "contact_key": {
+                "column": {
+                  "name": "contact_key",
+                  "table_ref": "a"
+                }
+              },
+              "src_con_priority": {
+                "column": {
+                  "name": "src_con_priority",
+                  "table_ref": "a"
+                }
+              },
+              "src_priority": {
+                "column": {
+                  "name": "src_priority",
+                  "table_ref": null
+                }
+              },
+              "priority_ranked": {
+                "window_function": {
+                  "over": {
+                    "partition_by": {
+                      "1": {
+                        "column": {
+                          "name": "contact_key",
+                          "table_ref": "a"
+                        }
+                      }
+                    },
+                    "orderby": {
+                      "1": {
+                        "null_order": null,
+                        "predicand": {
+                          "column": {
+                            "name": "src_con_priority",
+                            "table_ref": "a"
+                          }
+                        },
+                        "sort_order": "DESC"
+                      },
+                      "2": {
+                        "null_order": null,
+                        "predicand": {
+                          "column": {
+                            "name": "create_dt",
+                            "table_ref": null
+                          }
+                        },
+                        "sort_order": "asc"
+                      }
+                    }
+                  },
+                  "function": {
+                    "function_name": "ROW_NUMBER",
+                    "parameters": null
+                  }
+                }
+              },
+              "create_dt": {
+                "column": {
+                  "name": "create_dt",
+                  "table_ref": null
+                }
+              },
+              "FUNNEL_PRIORITY": {
+                "column": {
+                  "name": "FUNNEL_PRIORITY",
+                  "table_ref": null
+                }
+              },
+              "acs_inquiry_override_ind": {
+                "column": {
+                  "name": "acs_inquiry_override_ind",
+                  "table_ref": null
+                }
+              },
+              "INTAKE_TYPE_LABEL": {
+                "column": {
+                  "name": "INTAKE_TYPE_LABEL",
+                  "table_ref": null
+                }
+              }
+            }
+          }
+        }
+      },
+      "queryDictionary": null,
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": null,
+      "parserMessageStringList": []
+    },
+    "5.1.3": {
+      "tableDictionary": {
+        "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+          "source_type_key": [
+            "[@13,97:107='comb_common',<393>,1:97]",
+            "[@71,598:608='comb_common',<393>,2:287]",
+            "[@111,879:889='comb_common',<393>,2:568]",
+            "[@149,1206:1216='comb_common',<393>,4:150]"
+          ],
+          "sourcecontact_id": [
+            "[@130,1024:1036='comb_common_1',<393>,3:51]",
+            "[@159,1274:1286='comb_common_1',<393>,5:5]",
+            "[@52,474:484='comb_common',<393>,2:163]",
+            "[@123,980:990='comb_common',<393>,3:7]"
+          ],
+          "src_priority": [
+            "[@31,227:237='comb_common',<393>,1:227]"
+          ],
+          "FUNNEL_STATUS_CALC": [
+            "[@178,1388:1400='comb_common_1',<393>,6:58]",
+            "[@93,745:755='comb_common',<393>,2:434]"
+          ],
+          "create_dt": [
+            "[@35,253:263='comb_common',<393>,1:253]"
+          ]
+        },
+        "<[Partner_Data_Platform].[Contact Sourcecontacts]>": {
+          "source_contact_id": [
+            "[@9,65:76='cont_srccont',<393>,1:65]",
+            "[@56,505:516='cont_srccont',<393>,2:194]"
+          ],
+          "contact_key": [
+            "[@5,39:50='cont_srccont',<393>,1:39]"
+          ]
+        },
+        "es_pdp_common.common.dim_funnel_status": {
+          "FUNNEL_STATUS_LABEL": [
+            "[@86,702:714='funnel_status',<393>,2:391]"
+          ],
+          "funnel_status_key": [
+            "[@119,940:952='funnel_status',<393>,2:629]"
+          ],
+          "FUNNEL_PRIORITY": [
+            "[@27,196:208='funnel_status',<393>,1:196]"
+          ]
+        },
+        "pdp.crf__intake_type": {
+          "intake_type_key": [
+            "[@145,1183:1186='ST_1',<393>,4:127]",
+            "[@67,577:578='ST',<393>,2:266]"
+          ],
+          "intake_type_label": [
+            "[@169,1343:1346='ST_1',<393>,6:13]",
+            "[@23,174:175='ST',<393>,1:174]"
+          ],
+          "INTAKE_TYPE_LABEL": [
+            "[@23,174:175='ST',<393>,1:174]"
+          ]
+        },
+        "es_pdp_common.common.dim__sourcecontact_priority": {
+          "src_con_priority": [
+            "[@17,126:133='priority',<393>,1:126]"
+          ],
+          "funnel_status_key": [
+            "[@115,911:918='priority',<393>,2:600]"
+          ],
+          "intake_type_key": [
+            "[@107,852:859='priority',<393>,2:541]"
+          ],
+          "acs_inquiry_override_ind": [
+            "[@39,276:283='priority',<393>,1:276]"
+          ]
+        },
+        "pdp.acs__contacts": {
+          "sourcecontact_id": [
+            "[@163,1307:1310='ACON',<393>,5:38]"
+          ],
+          "eab_contact_id": [
+            "[@185,1438:1441='ACON',<393>,6:108]"
+          ]
+        }
+      },
+      "symbolTable": {
+        "def_query4": {
+          "context_list": {
+            "ChosenContact_Combined": "query2"
+          },
+          "query_dictionary": {
+            "source_contact_id": [
+              "[@200,1500:1516='source_contact_id',<393>,8:26]"
+            ],
+            "source_type_key": [
+              "[@204,1521:1535='source_type_key',<393>,8:47]"
+            ],
+            "contact_key": [
+              "[@196,1485:1495='contact_key',<393>,8:11]"
+            ],
+            "acs_inquiry_override_ind": [
+              "[@208,1540:1563='acs_inquiry_override_ind',<393>,8:66]"
+            ]
+          },
+          "filters": [
+            {
+              "name": "priority_ranked",
+              "table_ref": "c"
+            }
+          ],
+          "interface": {
+            "source_contact_id": [
+              {
+                "name": "source_contact_id",
+                "table_ref": "c"
+              }
+            ],
+            "source_type_key": [
+              {
+                "name": "source_type_key",
+                "table_ref": "c"
+              }
+            ],
+            "contact_key": [
+              {
+                "name": "contact_key",
+                "table_ref": "c"
+              }
+            ],
+            "acs_inquiry_override_ind": [
+              {
+                "name": "acs_inquiry_override_ind",
+                "table_ref": "c"
+              }
+            ]
+          },
+          "def_query3": {
+            "context_list": {
+              "ChosenContact_Combined": "query2",
+              "a": "query2"
+            },
+            "window_ordered_by": [
+              {
+                "name": "src_con_priority",
+                "table_ref": "a"
+              },
+              {
+                "name": "create_dt",
+                "table_ref": "query2"
+              }
+            ],
+            "query_dictionary": {
+              "source_contact_id": [
+                "[@218,1597:1613='source_contact_id',<393>,9:31]",
+                "[@198,1498:1498='c',<393>,8:24]"
+              ],
+              "source_type_key": [
+                "[@222,1618:1632='source_type_key',<393>,9:52]",
+                "[@202,1519:1519='c',<393>,8:45]"
+              ],
+              "contact_key": [
+                "[@214,1582:1592='contact_key',<393>,9:16]",
+                "[@194,1483:1483='c',<393>,8:9]"
+              ],
+              "src_con_priority": [
+                "[@226,1637:1652='src_con_priority',<393>,9:71]"
+              ],
+              "src_priority": [
+                "[@228,1655:1666='src_priority',<393>,9:89]"
+              ],
+              "priority_ranked": [
+                "[@259,1843:1857='priority_ranked',<393>,9:277]",
+                "[@268,1910:1910='c',<393>,12:7]"
+              ],
+              "create_dt": [
+                "[@230,1669:1677='create_dt',<393>,9:103]"
+              ],
+              "FUNNEL_PRIORITY": [
+                "[@232,1680:1694='FUNNEL_PRIORITY',<393>,9:114]"
+              ],
+              "acs_inquiry_override_ind": [
+                "[@236,1716:1739='acs_inquiry_override_ind',<393>,9:150]",
+                "[@206,1538:1538='c',<393>,8:64]"
+              ],
+              "INTAKE_TYPE_LABEL": [
+                "[@234,1697:1713='INTAKE_TYPE_LABEL',<393>,9:131]"
+              ]
+            },
+            "window_partition_by": [
+              {
+                "name": "contact_key",
+                "table_ref": "a"
+              }
+            ],
+            "interface": {
+              "source_contact_id": [
+                {
+                  "name": "source_contact_id",
+                  "table_ref": "a"
+                }
+              ],
+              "source_type_key": [
+                {
+                  "name": "source_type_key",
+                  "table_ref": "a"
+                }
+              ],
+              "contact_key": [
+                {
+                  "name": "contact_key",
+                  "table_ref": "a"
+                }
+              ],
+              "src_con_priority": [
+                {
+                  "name": "src_con_priority",
+                  "table_ref": "a"
+                }
+              ],
+              "src_priority": [
+                {
+                  "name": "src_priority",
+                  "table_ref": "query2"
+                }
+              ],
+              "priority_ranked": [
+                {
+                  "name": "contact_key",
+                  "table_ref": "a"
+                },
+                {
+                  "name": "src_con_priority",
+                  "table_ref": "a"
+                },
+                {
+                  "name": "create_dt",
+                  "table_ref": "query2"
+                }
+              ],
+              "create_dt": [
+                {
+                  "name": "create_dt",
+                  "table_ref": "query2"
+                }
+              ],
+              "FUNNEL_PRIORITY": [
+                {
+                  "name": "FUNNEL_PRIORITY",
+                  "table_ref": "query2"
+                }
+              ],
+              "acs_inquiry_override_ind": [
+                {
+                  "name": "acs_inquiry_override_ind",
+                  "table_ref": "query2"
+                }
+              ],
+              "INTAKE_TYPE_LABEL": [
+                {
+                  "name": "INTAKE_TYPE_LABEL",
+                  "table_ref": "query2"
+                }
+              ]
+            },
+            "table_alias": {
+              "ChosenContact_Combined": "query2",
+              "a": "query2"
+            }
+          },
+          "table_alias": {
+            "ChosenContact_Combined": "query2",
+            "c": "query3"
+          },
+          "def_query2": {
+            "query_dictionary": {
+              "source_contact_id": [
+                "[@11,78:94='source_contact_id',<393>,1:78]",
+                "[@216,1595:1595='a',<393>,9:29]"
+              ],
+              "source_type_key": [
+                "[@15,109:123='source_type_key',<393>,1:109]",
+                "[@220,1616:1616='a',<393>,9:50]"
+              ],
+              "contact_key": [
+                "[@7,52:62='contact_key',<393>,1:52]",
+                "[@212,1580:1580='a',<393>,9:14]",
+                "[@245,1774:1774='a',<393>,9:208]"
+              ],
+              "src_con_priority": [
+                "[@21,156:171='src_con_priority',<393>,1:156]",
+                "[@224,1635:1635='a',<393>,9:69]",
+                "[@250,1797:1797='a',<393>,9:231]"
+              ],
+              "src_priority": [
+                "[@33,239:250='src_priority',<393>,1:239]",
+                "[@228,1655:1666='src_priority',<393>,9:89]"
+              ],
+              "FUNNEL_PRIORITY": [
+                "[@29,210:224='FUNNEL_PRIORITY',<393>,1:210]",
+                "[@232,1680:1694='FUNNEL_PRIORITY',<393>,9:114]"
+              ],
+              "create_dt": [
+                "[@37,265:273='create_dt',<393>,1:265]",
+                "[@230,1669:1677='create_dt',<393>,9:103]",
+                "[@255,1823:1831='create_dt',<393>,9:257]"
+              ],
+              "acs_inquiry_override_ind": [
+                "[@41,285:308='acs_inquiry_override_ind',<393>,1:285]",
+                "[@236,1716:1739='acs_inquiry_override_ind',<393>,9:150]"
+              ],
+              "INTAKE_TYPE_LABEL": [
+                "[@25,177:193='INTAKE_TYPE_LABEL',<393>,1:177]",
+                "[@234,1697:1713='INTAKE_TYPE_LABEL',<393>,9:131]"
+              ]
+            },
+            "table_dictionary": {
+              "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+                "source_type_key": [
+                  "[@13,97:107='comb_common',<393>,1:97]",
+                  "[@71,598:608='comb_common',<393>,2:287]",
+                  "[@111,879:889='comb_common',<393>,2:568]",
+                  "[@149,1206:1216='comb_common',<393>,4:150]"
+                ],
+                "src_priority": [
+                  "[@31,227:237='comb_common',<393>,1:227]"
+                ],
+                "sourcecontact_id": [
+                  "[@52,474:484='comb_common',<393>,2:163]",
+                  "[@123,980:990='comb_common',<393>,3:7]"
+                ],
+                "FUNNEL_STATUS_CALC": [
+                  "[@93,745:755='comb_common',<393>,2:434]"
+                ],
+                "create_dt": [
+                  "[@35,253:263='comb_common',<393>,1:253]"
+                ]
+              },
+              "<[Partner_Data_Platform].[Contact Sourcecontacts]>": {
+                "source_contact_id": [
+                  "[@9,65:76='cont_srccont',<393>,1:65]",
+                  "[@56,505:516='cont_srccont',<393>,2:194]"
+                ],
+                "contact_key": [
+                  "[@5,39:50='cont_srccont',<393>,1:39]"
+                ]
+              },
+              "es_pdp_common.common.dim_funnel_status": {
+                "FUNNEL_STATUS_LABEL": [
+                  "[@86,702:714='funnel_status',<393>,2:391]"
+                ],
+                "funnel_status_key": [
+                  "[@119,940:952='funnel_status',<393>,2:629]"
+                ],
+                "FUNNEL_PRIORITY": [
+                  "[@27,196:208='funnel_status',<393>,1:196]"
+                ]
+              },
+              "pdp.crf__intake_type": {
+                "intake_type_key": [
+                  "[@67,577:578='ST',<393>,2:266]"
+                ],
+                "INTAKE_TYPE_LABEL": [
+                  "[@23,174:175='ST',<393>,1:174]"
+                ]
+              },
+              "es_pdp_common.common.dim__sourcecontact_priority": {
+                "src_con_priority": [
+                  "[@17,126:133='priority',<393>,1:126]"
+                ],
+                "funnel_status_key": [
+                  "[@115,911:918='priority',<393>,2:600]"
+                ],
+                "intake_type_key": [
+                  "[@107,852:859='priority',<393>,2:541]"
+                ],
+                "acs_inquiry_override_ind": [
+                  "[@39,276:283='priority',<393>,1:276]"
+                ]
+              }
+            },
+            "dependent_queries": {
+              "in_list1": {
+                "query": "query0",
+                "type": "filters"
+              }
+            },
+            "def_query0": {
+              "query_dictionary": {
+                "sourcecontact_id": [
+                  "[@132,1038:1053='sourcecontact_id',<393>,3:65]"
+                ]
+              },
+              "table_dictionary": {
+                "<[Partner_Data_Platform].[Contact].{combined_common_format}>": {
+                  "sourcecontact_id": [
+                    "[@130,1024:1036='comb_common_1',<393>,3:51]",
+                    "[@159,1274:1286='comb_common_1',<393>,5:5]",
+                    "[@52,474:484='comb_common',<393>,2:163]",
+                    "[@123,980:990='comb_common',<393>,3:7]"
+                  ],
+                  "FUNNEL_STATUS_CALC": [
+                    "[@178,1388:1400='comb_common_1',<393>,6:58]",
+                    "[@93,745:755='comb_common',<393>,2:434]"
+                  ]
+                },
+                "pdp.crf__intake_type": {
+                  "intake_type_key": [
+                    "[@145,1183:1186='ST_1',<393>,4:127]",
+                    "[@67,577:578='ST',<393>,2:266]"
+                  ],
+                  "intake_type_label": [
+                    "[@169,1343:1346='ST_1',<393>,6:13]",
+                    "[@23,174:175='ST',<393>,1:174]"
+                  ]
+                },
+                "pdp.acs__contacts": {
+                  "sourcecontact_id": [
+                    "[@163,1307:1310='ACON',<393>,5:38]"
+                  ],
+                  "eab_contact_id": [
+                    "[@185,1438:1441='ACON',<393>,6:108]"
+                  ]
+                }
+              },
+              "filters": [
+                {
+                  "name": "intake_type_key",
+                  "table_ref": "ST_1"
+                },
+                {
+                  "name": "source_type_key",
+                  "table_ref": "comb_common"
+                },
+                {
+                  "name": "sourcecontact_id",
+                  "table_ref": "comb_common_1"
+                },
+                {
+                  "name": "sourcecontact_id",
+                  "table_ref": "ACON"
+                },
+                {
+                  "name": "intake_type_label",
+                  "table_ref": "ST_1"
+                },
+                {
+                  "name": "FUNNEL_STATUS_CALC",
+                  "table_ref": "comb_common_1"
+                },
+                {
+                  "name": "eab_contact_id",
+                  "table_ref": "ACON"
+                }
+              ],
+              "interface": {
+                "sourcecontact_id": [
+                  {
+                    "name": "sourcecontact_id",
+                    "table_ref": "comb_common_1"
+                  }
+                ]
+              },
+              "table_alias": {
+                "ST_1": "pdp.crf__intake_type",
+                "comb_common_1": "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+                "ACON": "PDP.acs__contacts"
+              }
+            },
+            "filters": [
+              {
+                "name": "sourcecontact_id",
+                "table_ref": "comb_common"
+              },
+              {
+                "name": "source_contact_id",
+                "table_ref": "cont_srccont"
+              },
+              {
+                "name": "intake_type_key",
+                "table_ref": "ST"
+              },
+              {
+                "name": "source_type_key",
+                "table_ref": "comb_common"
+              },
+              {
+                "name": "FUNNEL_STATUS_LABEL",
+                "table_ref": "funnel_status"
+              },
+              {
+                "name": "FUNNEL_STATUS_CALC",
+                "table_ref": "comb_common"
+              },
+              {
+                "name": "intake_type_key",
+                "table_ref": "priority"
+              },
+              {
+                "name": "funnel_status_key",
+                "table_ref": "priority"
+              },
+              {
+                "name": "funnel_status_key",
+                "table_ref": "funnel_status"
+              }
+            ],
+            "interface": {
+              "source_contact_id": [
+                {
+                  "name": "source_contact_id",
+                  "table_ref": "cont_srccont"
+                }
+              ],
+              "source_type_key": [
+                {
+                  "name": "source_type_key",
+                  "table_ref": "comb_common"
+                }
+              ],
+              "contact_key": [
+                {
+                  "name": "contact_key",
+                  "table_ref": "cont_srccont"
+                }
+              ],
+              "src_con_priority": [
+                {
+                  "name": "src_con_priority",
+                  "table_ref": "priority"
+                }
+              ],
+              "src_priority": [
+                {
+                  "name": "src_priority",
+                  "table_ref": "comb_common"
+                }
+              ],
+              "FUNNEL_PRIORITY": [
+                {
+                  "name": "FUNNEL_PRIORITY",
+                  "table_ref": "funnel_status"
+                }
+              ],
+              "create_dt": [
+                {
+                  "name": "create_dt",
+                  "table_ref": "comb_common"
+                }
+              ],
+              "acs_inquiry_override_ind": [
+                {
+                  "name": "acs_inquiry_override_ind",
+                  "table_ref": "priority"
+                }
+              ],
+              "INTAKE_TYPE_LABEL": [
+                {
+                  "name": "INTAKE_TYPE_LABEL",
+                  "table_ref": "ST"
+                }
+              ]
+            },
+            "table_alias": {
+              "ST": "pdp.crf__intake_type",
+              "comb_common": "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+              "cont_srccont": "<[Partner_Data_Platform].[Contact Sourcecontacts]>",
+              "priority": "es_pdp_common.common.dim__sourcecontact_priority",
+              "funnel_status": "es_pdp_common.common.dim_funnel_status"
+            }
+          }
+        }
+      },
+      "queryDictionary": {
+        "query4": {
+          "source_contact_id": [
+            "[@200,1500:1516='source_contact_id',<393>,8:26]"
+          ],
+          "source_type_key": [
+            "[@204,1521:1535='source_type_key',<393>,8:47]"
+          ],
+          "contact_key": [
+            "[@196,1485:1495='contact_key',<393>,8:11]"
+          ],
+          "acs_inquiry_override_ind": [
+            "[@208,1540:1563='acs_inquiry_override_ind',<393>,8:66]"
+          ]
+        },
+        "query0": {
+          "sourcecontact_id": [
+            "[@132,1038:1053='sourcecontact_id',<393>,3:65]"
+          ]
+        },
+        "query2": {
+          "source_contact_id": [
+            "[@11,78:94='source_contact_id',<393>,1:78]",
+            "[@216,1595:1595='a',<393>,9:29]"
+          ],
+          "source_type_key": [
+            "[@15,109:123='source_type_key',<393>,1:109]",
+            "[@220,1616:1616='a',<393>,9:50]"
+          ],
+          "contact_key": [
+            "[@7,52:62='contact_key',<393>,1:52]",
+            "[@212,1580:1580='a',<393>,9:14]",
+            "[@245,1774:1774='a',<393>,9:208]"
+          ],
+          "src_con_priority": [
+            "[@21,156:171='src_con_priority',<393>,1:156]",
+            "[@224,1635:1635='a',<393>,9:69]",
+            "[@250,1797:1797='a',<393>,9:231]"
+          ],
+          "src_priority": [
+            "[@33,239:250='src_priority',<393>,1:239]",
+            "[@228,1655:1666='src_priority',<393>,9:89]"
+          ],
+          "FUNNEL_PRIORITY": [
+            "[@29,210:224='FUNNEL_PRIORITY',<393>,1:210]",
+            "[@232,1680:1694='FUNNEL_PRIORITY',<393>,9:114]"
+          ],
+          "create_dt": [
+            "[@37,265:273='create_dt',<393>,1:265]",
+            "[@230,1669:1677='create_dt',<393>,9:103]",
+            "[@255,1823:1831='create_dt',<393>,9:257]"
+          ],
+          "acs_inquiry_override_ind": [
+            "[@41,285:308='acs_inquiry_override_ind',<393>,1:285]",
+            "[@236,1716:1739='acs_inquiry_override_ind',<393>,9:150]"
+          ],
+          "INTAKE_TYPE_LABEL": [
+            "[@25,177:193='INTAKE_TYPE_LABEL',<393>,1:177]",
+            "[@234,1697:1713='INTAKE_TYPE_LABEL',<393>,9:131]"
+          ]
+        },
+        "query3": {
+          "source_contact_id": [
+            "[@218,1597:1613='source_contact_id',<393>,9:31]",
+            "[@198,1498:1498='c',<393>,8:24]"
+          ],
+          "source_type_key": [
+            "[@222,1618:1632='source_type_key',<393>,9:52]",
+            "[@202,1519:1519='c',<393>,8:45]"
+          ],
+          "contact_key": [
+            "[@214,1582:1592='contact_key',<393>,9:16]",
+            "[@194,1483:1483='c',<393>,8:9]"
+          ],
+          "src_con_priority": [
+            "[@226,1637:1652='src_con_priority',<393>,9:71]"
+          ],
+          "src_priority": [
+            "[@228,1655:1666='src_priority',<393>,9:89]"
+          ],
+          "priority_ranked": [
+            "[@259,1843:1857='priority_ranked',<393>,9:277]",
+            "[@268,1910:1910='c',<393>,12:7]"
+          ],
+          "create_dt": [
+            "[@230,1669:1677='create_dt',<393>,9:103]"
+          ],
+          "FUNNEL_PRIORITY": [
+            "[@232,1680:1694='FUNNEL_PRIORITY',<393>,9:114]"
+          ],
+          "acs_inquiry_override_ind": [
+            "[@236,1716:1739='acs_inquiry_override_ind',<393>,9:150]",
+            "[@206,1538:1538='c',<393>,8:64]"
+          ],
+          "INTAKE_TYPE_LABEL": [
+            "[@234,1697:1713='INTAKE_TYPE_LABEL',<393>,9:131]"
+          ]
+        }
+      },
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": []
+    }
+  },
+  "scoring": {
+    "legacy_missing_keys": [
+      "comb_common",
+      "chosencontact_combined"
+    ],
+    "fatal_count": {
+      "5.0.0-3": 0,
+      "5.1.3": 0
+    },
+    "fatal_messages_513": [],
+    "fatal_messages_5003": [],
+    "tableDictionary_keys": {
+      "5.0.0-3": [
+        "<[Partner_Data_Platform].[Contact Sourcecontacts]>",
+        "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+        "acs__contacts",
+        "chosencontact_combined",
+        "comb_common",
+        "crf__intake_type",
+        "dim__sourcecontact_priority",
+        "dim_funnel_status"
+      ],
+      "5.1.3": [
+        "<[Partner_Data_Platform].[Contact Sourcecontacts]>",
+        "<[Partner_Data_Platform].[Contact].{combined_common_format}>",
+        "es_pdp_common.common.dim__sourcecontact_priority",
+        "es_pdp_common.common.dim_funnel_status",
+        "pdp.acs__contacts",
+        "pdp.crf__intake_type"
+      ]
+    },
+    "tableDictionary_only_in_5003_norm": [
+      "chosencontact_combined",
+      "comb_common"
+    ],
+    "tableDictionary_only_in_513_norm": [],
+    "cte_rescoring": [
+      {
+        "name": "comb_common",
+        "in_513_tableDictionary": false,
+        "table_alias_binding_513": null,
+        "symbol_tree_evidence_513": {
+          "name_in_symbol_tree": true,
+          "table_alias_binding": false,
+          "context_list_entry": false,
+          "def_scope_key": false
+        }
+      },
+      {
+        "name": "chosencontact_combined",
+        "in_513_tableDictionary": false,
+        "table_alias_binding_513": "ChosenContact_Combined=query2",
+        "symbol_tree_evidence_513": {
+          "name_in_symbol_tree": true,
+          "table_alias_binding": true,
+          "context_list_entry": false,
+          "def_scope_key": false
+        }
+      }
+    ],
+    "enhancements_513": [
+      "5.1.3 enhancement: CTE 'chosencontact_combined' registered in symbol table table_alias as ChosenContact_Combined=query2 (not in global tableDictionary by design; richer than 5.0.0-3 CTE promotion)"
+    ],
+    "significant_issues": [],
+    "not_significant_under_latest_policy": [
+      "CTE 'comb_common' missing from tableDictionary but present elsewhere in symbol tree"
+    ],
+    "verdict": "no_significant_issue"
+  }
+}

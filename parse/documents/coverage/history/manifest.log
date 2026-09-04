@@ -1,0 +1,7 @@
+timestamp=20260422_182526
+maven_args=BACKFILL_ONLY
+previous_target_xml=parse/target/site/previous_jacoco_20260422_181918/jacoco_site/jacoco.xml
+previous_git_xml=parse/documents/coverage/history/jacoco_previous_20260422_182526.xml
+new_target_xml=parse/target/site/jacoco/jacoco.xml
+new_git_xml=parse/documents/coverage/history/jacoco_new_20260422_182526.xml
+---

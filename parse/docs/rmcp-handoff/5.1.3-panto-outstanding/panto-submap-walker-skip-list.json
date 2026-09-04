@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-02",
+  "reason": "Former subMap walker skip rows cleared after SqlParserAccess + ParseLatencyDiagnosticService skip AST walk on parse-phase FATAL/ERROR (AST_WALK_SKIPPED_DUE_TO_PARSE_ERRORS). Re-open a row here only if full-parse batch reproduces walker stack mis-align without parse-phase errors.",
+  "source_batch": "PantoSubMapSkipListDiagnosticProbeTest post walk-gate (manifest SQL, 74 timeout_513 rows)",
+  "confirmed_stderr_throws": 0,
+  "row_count": 0,
+  "rows": []
+}

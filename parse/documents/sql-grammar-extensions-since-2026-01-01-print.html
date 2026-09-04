@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>SQL grammar extensions since 2026-01-01</title>
+<style>
+@page { margin: 0.75in; }
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.35;
+  color: #111;
+  max-width: 7.5in;
+  margin: 0 auto;
+  padding: 0.25in 0;
+}
+h1 {
+  font-size: 18pt;
+  font-weight: 600;
+  margin: 0 0 0.35em 0;
+  border-bottom: 2px solid #333;
+  padding-bottom: 0.2em;
+}
+.meta { margin: 0 0 1em 0; }
+.meta p { margin: 0.35em 0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0 1em 0;
+  font-size: 10pt;
+}
+th, td {
+  border: 1px solid #666;
+  padding: 0.35em 0.5em;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: #f0f0f0; font-weight: 600; }
+h2 {
+  font-size: 12pt;
+  font-weight: 600;
+  margin: 1.1em 0 0.4em 0;
+  page-break-after: avoid;
+  color: #222;
+}
+ul { margin: 0.25em 0 0.6em 0; padding-left: 1.35em; }
+li { margin: 0.2em 0; }
+code, .mono {
+  font-family: Menlo, "Courier New", monospace;
+  font-size: 9.5pt;
+}
+hr.section {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 0.85em 0;
+}
+strong { font-weight: 600; }
+@media print {
+  body { padding: 0; }
+  h2 { page-break-before: auto; }
+}
+</style>
+</head>
+<body>
+
+<h1>SQL grammar extensions since 2026-01-01</h1>
+
+<div class="meta">
+<p><strong>Scope:</strong> <code>parse/src/main/antlr4/sql/SQLSelectParser.g4</code> (and lexer tokens in the same file) on branch <code>Spring-2026-Extensions</code>, compared to the last pre-2026 snapshot (<code>f49203f</code>, 2025-12-31).</p>
+<p><strong>Purpose:</strong> Quick outline of <strong>new or materially expanded</strong> parse coverage—by statement/clause—not walker, generator, or test work unless the grammar itself changed.</p>
+<p><strong>Build artifacts (2026-08-09):</strong> <code>mvn package</code> in <code>parse/</code> produces:</p>
+</div>
+
+<table>
+<thead><tr><th>Artifact</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>target/pss-parse-5.1.3-1.jar</code></td><td>Main parser + runtime classes</td></tr>
+<tr><td><code>target/pss-parse-5.1.3-1-tests.jar</code></td><td>Test utilities (<code>classifier: tests</code>)</td></tr>
+<tr><td><code>target/pss-parse-5.1.3-1-fat.jar</code></td><td>Standalone jar-with-dependencies (Python/JS callers)</td></tr>
+</tbody>
+</table>
+
+<h2>Script and entry points</h2>
+<ul>
+<li><strong><code>script</code> / <code>sql_statement</code></strong> — New top-level: semicolon-separated mixes of DDL, DML, <code>WITH …</code> pipelines, and bare <code>query_expression</code>.</li>
+<li><strong>Dedicated endpoints</strong> — Formal start rules for <code>update_end_point</code>, <code>delete_end_point</code>, <code>truncate_end_point</code> (update existed loosely before; delete/truncate endpoints are new).</li>
+<li><strong><code>literal_value</code></strong> — Fragment endpoint wired for numeric/unsigned literals (walker key <code>LITERAL</code>).</li>
+<li><strong><code>predicand_value</code></strong> — Unchanged name; predicand/expression surface expanded (see Expressions).</li>
+</ul>
+<hr class="section"/>
+
+<h2>DDL</h2>
+<ul>
+<li><strong>Full DDL primaries</strong> — <code>ddl</code> / <code>ddl_primary</code> with CREATE / DROP / ALTER / TRUNCATE (not only <code>CREATE TABLE AS</code>).</li>
+<li><strong>CREATE object types</strong> — Table (column list + options tail, or <code>AS query</code>), index, view, materialized view, function, procedure, macro, sequence, schema, database, role, user, stage, file format.</li>
+<li><strong>DROP / ALTER</strong> — <code>ddl_object_type</code> + object name + optional tails.</li>
+<li><strong>Opaque option capture</strong> — <code>generic_ddl_paren_content</code> (nested parens) and <code>generic_ddl_options</code> (verbatim tail to <code>;</code> or EOF); options are <strong>not</strong> fully decomposed in the grammar.</li>
+<li><strong>TRUNCATE dialect split</strong> — Snowflake (<code>TRUNCATE TABLE name</code>) vs Postgres (optional <code>TABLE</code>, multiple names).</li>
+</ul>
+<hr class="section"/>
+
+<h2>WITH (CTE)</h2>
+<ul>
+<li><strong>CTE body shapes</strong> — <code>query</code> under a CTE may be <code>query_expression</code>, <strong>INSERT</strong>, <strong>UPDATE</strong>, <strong>DELETE</strong>, or <strong>VALUES</strong> (not only SELECT).</li>
+<li><strong>Substitution CTE body</strong> — <code>query_alias variable_identifier</code> (tuple/query substitution as CTE body).</li>
+<li><strong>Nested WITH</strong> — <code>cte_body</code> allows <code>with_query</code> (Snowflake-style nested WITH inside a CTE only).</li>
+<li><strong>DML + outer WITH</strong> — Same <code>with_query</code> wrapper used for leading CTEs on DML statements (per comment blocks in grammar).</li>
+</ul>
+<hr class="section"/>
+
+<h2>INSERT</h2>
+<ul>
+<li><strong>Postgres path as default</strong> — <code>insert_expression</code> → <code>postgres_insert</code> (Snowflake insert remains <code>snowflake_insert</code> building block).</li>
+<li><strong>ON CONFLICT</strong> — <code>conflict_target</code>, <code>DO NOTHING</code>, <code>DO UPDATE SET</code> + optional <code>WHERE</code> (lexer keywords <code>CONFLICT</code> / <code>DO</code> / <code>NOTHING</code> with <code>Identifier</code> fallback when tokenized as names).</li>
+<li><strong>RETURNING</strong> — Shared <code>returning</code> rule on insert (Postgres-style).</li>
+<li><strong>Target table rule</strong> — <code>insert_target_table_primary</code> excludes table-function call shape from <code>INSERT INTO … (cols)</code>.</li>
+<li><strong>Sources</strong> — <code>query_expression</code>, substitution, <code>VALUES</code>, <code>DEFAULT VALUES</code>.</li>
+<li><strong>Targets</strong> — <code>db_object_name</code>, substitutions, <strong>Jinja/DBT</strong> <code>jinja_identifier</code>.</li>
+</ul>
+<hr class="section"/>
+
+<h2>UPDATE</h2>
+<ul>
+<li><strong><code>update_end_point</code></strong> — First-class parse entry.</li>
+<li><strong>Clause options</strong> — <code>SET</code> assignment list, optional <code>FROM</code>, <code>WHERE</code>, <strong>RETURNING</strong> (Postgres/Snowflake overlap; reuses <code>select_list</code>).</li>
+<li><strong>Table resolution</strong> — Uses <code>table_primary</code> / left-factored aliasing (see FROM).</li>
+</ul>
+<hr class="section"/>
+
+<h2>DELETE</h2>
+<ul>
+<li><strong>Snowflake vs Postgres</strong> — <code>delete_snowflake_expression</code> (no <code>RETURNING</code>) vs <code>delete_postgres_expression</code> (requires <code>delete_returning</code>).</li>
+<li><strong>USING</strong> — <code>delete_using_clause</code> with <code>table_reference_list</code>.</li>
+<li><strong>CTE validity</strong> — Grammar comments distinguish which variant may appear as a CTE data source.</li>
+</ul>
+<hr class="section"/>
+
+<h2>TRUNCATE</h2>
+<ul>
+<li><strong>Standalone</strong> — <code>truncate_end_point</code> and <code>truncate_statement_primary</code> under DDL/script.</li>
+<li><strong>Dialect variants</strong> — See DDL (Snowflake vs Postgres).</li>
+</ul>
+<hr class="section"/>
+
+<h2>SELECT / set operations</h2>
+<ul>
+<li><strong><code>query_primary</code> removed</strong> — Set-op members use <code>set_operation_member</code>: <code>subquery</code> | <code>query_specification</code> | <code>variable_identifier</code> (avoids dead <code>query_primary</code> alternative).</li>
+<li><strong>QUALIFY</strong> — Snowflake post-window filter: <code>qualify_clause</code> after <code>HAVING</code>, before <code>ORDER BY</code>.</li>
+<li><strong>Set ops</strong> — <code>UNION</code> / <code>EXCEPT</code> / <code>INTERSECT</code> with optional <code>DISTINCT</code>/<code>ALL</code> on qualifiers (structure retained; member rules updated).</li>
+</ul>
+<hr class="section"/>
+
+<h2>FROM / joins / relation sources</h2>
+<ul>
+<li><strong>LATERAL</strong> — <code>lateral_modifier</code> on comma and join operands.</li>
+<li><strong>Relation sources</strong> — <code>table_source_primary</code> adds <strong>table functions</strong>, <strong>VALUES</strong>, <strong>Jinja</strong>, substitutions; <code>jinja_identifier</code> in FROM/INSERT targets.</li>
+<li><strong>PIVOT / UNPIVOT</strong> — Postfix <code>table_relational_modifier</code> on <code>table_primary</code> (see below).</li>
+<li><strong>Alias factoring</strong> — Aliases on <code>table_primary</code> / modifier aliases gated so PIVOT/UNPIVOT do not admit ambiguous double-optional <code>AS</code> (left-factoring change).</li>
+<li><strong>Join extension</strong> — <code>join_extension</code> substitution variable still supported; <code>join_extension_primary</code> for snippet endpoint.</li>
+</ul>
+<hr class="section"/>
+
+<h2>PIVOT / UNPIVOT (Snowflake)</h2>
+<ul>
+<li><strong>UNPIVOT</strong> — Value/name columns, <code>IN</code> list, <code>INCLUDE NULLS</code> / <code>EXCLUDE NULLS</code>.</li>
+<li><strong>PIVOT</strong> — Aggregate clause (single aggregate or Snowflake comma list: AVG/COUNT/MAX/MIN/SUM), <code>FOR</code> column, <code>IN</code> content:
+<ul>
+<li>literal value list (with optional <code>AS</code> prefix labels),</li>
+<li><code>ANY</code> [ <code>ORDER BY</code> … ],</li>
+<li>subquery.</li>
+</ul></li>
+<li><strong>DEFAULT ON NULL (...)</strong> — Optional pivot tail.</li>
+<li><strong>Shared IN-list helpers</strong> — <code>relational_modifier_*</code> rules shared between pivot and unpivot.</li>
+</ul>
+<hr class="section"/>
+
+<h2>Table functions (Snowflake-oriented)</h2>
+<ul>
+<li><strong><code>table_function_primary</code></strong> — <code>TABLE(…)</code> wrapper or bare call.</li>
+<li><strong>Named functions</strong> — FLATTEN (incl. <code>LATERAL_FLATTEN</code> name), GENERATOR, RESULT_SCAN, INFER_SCHEMA, VALIDATE, plus <strong>generic</strong> <code>identifier(…)</code> fallback.</li>
+<li><strong>Named arguments</strong> — <code>INPUT=&gt;</code>, <code>PATH=&gt;</code>, <code>ROWCOUNT=&gt;</code>, <code>LOCATION=&gt;</code>, etc., with semantic predicates on argument lists where required.</li>
+<li><strong><code>table_argument_literal</code></strong> — String/numeric args for TF kwargs (T2.1 coverage).</li>
+</ul>
+<hr class="section"/>
+
+<h2>GROUP BY / HAVING</h2>
+<ul>
+<li><strong>GROUP BY ALL</strong> — <code>groupby_all_option</code>.</li>
+<li><strong>GROUP BY DISTINCT</strong> — <code>groupby_distinct_body</code> wrapping grouping elements.</li>
+<li><strong>GROUPING SETS</strong> — First-class <code>grouping_sets_list</code> / <code>grouping_element</code> alternative (baseline had ROLLUP/CUBE/empty/parenthesized sets but not explicit <code>GROUPING SETS</code> grouping element).</li>
+<li><strong>Legacy</strong> — Still allows <code>GROUP BY select_list</code> alternative.</li>
+</ul>
+<hr class="section"/>
+
+<h2>WHERE / predicates</h2>
+<ul>
+<li><strong><code>quantified_comparison_predicate</code></strong> — Wired on <code>predicate</code> (<code>= ALL|ANY|SOME (subquery)</code>); rule existed pre-2026 but was not on the main predicate chain in the same way.</li>
+<li><strong><code>substitution_predicate</code></strong> — Tuple/substitution in boolean context.</li>
+<li><strong><code>exists_predicate</code></strong> — <code>EXISTS</code> on subquery or substitution.</li>
+<li><strong>Removed</strong> — <code>unique_predicate</code> (SQL <code>UNIQUE (subquery)</code>—not Snowflake).</li>
+<li><strong>LIKE / ILIKE</strong> — <code>like_any_predicate</code> (<code>LIKE ANY</code> / <code>ILIKE ANY</code>) with optional <code>ESCAPE</code>.</li>
+</ul>
+<hr class="section"/>
+
+<h2>Expressions, casts, functions</h2>
+<ul>
+<li><strong>Unparenthesized arithmetic in predicands</strong> — <code>row_value_predicand</code> includes <code>common_value_expression</code> (<code>+</code>, <code>*</code>, etc. without extra parens).</li>
+<li><strong>Postgres <code>::</code> casts</strong> — Chained <code>(expr)::type</code>, including <code>NULL::type</code>; predicand and value-expression paths updated.</li>
+<li><strong>CAST / inline casts</strong> — Broader NULL and chain casting support in value expressions.</li>
+<li><strong>String / search functions</strong> — <code>POSITION</code> (incl. SQL <code>IN</code> form), <code>INSTR</code>, <code>CHARINDEX</code> (2- and 3-argument shapes).</li>
+<li><strong>Snowflake scalars</strong> — <code>IFF</code>, <code>MD5</code>, <code>REVERSE</code> (lexer + routine names).</li>
+<li><strong>TRIM</strong> — Dropped unreachable <code>trim_operands</code> alternative; MySQL-style and <code>FROM</code> forms retained.</li>
+<li><strong>JSON path columns</strong> — Colon path segments on <code>column_reference</code> / <code>column_primary</code> (variant access).</li>
+</ul>
+<hr class="section"/>
+
+<h2>EXTRACT / DATE_PART</h2>
+<ul>
+<li><strong><code>extract_expression</code></strong> — Expanded <code>extract_field</code> (Postgres + <strong>Snowflake</strong> field tokens, case-insensitive <code>EXTRACT</code> lexer).</li>
+<li><strong><code>extract_source</code></strong> — Column, datetime literal, <strong>interval</strong>, broader predicand sources; dedicated <strong>predicand</strong> endpoint coverage.</li>
+<li><strong><code>date_part_expression</code></strong> — Snowflake/Postgres <code>DATE_PART(field FROM source)</code> with case-insensitive <code>DATE_PART</code> lexer (new keyword placed after PIVOT block to limit token renumbering).</li>
+</ul>
+<hr class="section"/>
+
+<h2>Substitutions, Jinja, DBT</h2>
+<ul>
+<li><strong>Angle-bracket substitutions</strong> — Expanded use in columns, FROM, CTE bodies, predicates, set-op members.</li>
+<li><strong><code>jinja_identifier</code></strong> — <code>{{ ref|source|stream|var|env_var(...) }}</code>, <code>config.get(...)</code>, <code>{{ this }}</code> / <code>{{ target.schema }}</code> chains, keyword args in calls.</li>
+<li><strong>Insert/update symbol tables</strong> — Grammar allows DML shapes that carry substitutions (walker work; grammar enables targets/sources).</li>
+</ul>
+<hr class="section"/>
+
+<h2>VALUES</h2>
+<ul>
+<li><strong>Script / CTE / FROM</strong> — <code>values_statement_primary</code> as relation source.</li>
+<li><strong>Insert</strong> — <code>insert_values_statement</code> / matrix forms unchanged in spirit; better integrated with DML and CTE rules.</li>
+</ul>
+<hr class="section"/>
+
+<h2>Lexer / grammar hygiene</h2>
+<ul>
+<li><strong>Many new keywords</strong> — DDL objects, DML (<code>DELETE</code>, <code>TRUNCATE</code>, <code>RETURNING</code>, conflict words), PIVOT/UNPIVOT, table-function args, Snowflake extract parts, <code>DATE_PART</code>, <code>SETS</code>, etc.</li>
+<li><strong>Keyword placement policy</strong> — Comment in lexer: append late-keyword block before <code>Identifier</code> to avoid mass token ID churn in goldens.</li>
+<li><strong>Parser predicates</strong> — Jinja recognition, disallowed join/set-op aliases, implicit alias gating, Snowflake TF mode literals, DDL not applicable here but same file.</li>
+</ul>
+<hr class="section"/>
+
+<h2>Intentionally shallow or out of scope in the grammar</h2>
+<ul>
+<li><strong>DDL interiors</strong> — Captured as opaque text, not per-option rules (see <code>generic_ddl_*</code>).</li>
+<li><strong>Hive INSERT OVERWRITE</strong> — Documented in comments; not a first-class alternate in current <code>insert_expression</code>.</li>
+<li><strong>Full Postgres INSERT</strong> — <code>postgres_insert</code> builds on Snowflake-shaped core; some Postgres-only insert variants may still be comment-only.</li>
+</ul>
+<hr class="section"/>
+
+<h2>Related non-grammar work (same period, for context only)</h2>
+<p>Walker AST, symbol tables, dialect warnings, JaCoCo exit coverage, golden test consolidation, and <code>SQLStatementGenerator</code> updates accompany these grammar changes but are not listed rule-by-rule here.</p>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+
+    {
+      "type": "java",
+      "name": "Debug Current File (Verbose)",
+      "request": "launch",
+      "mainClass": "${file}",
+      "projectName": "pss-parse",
+      "console": "internalConsole",
+      "vmArgs": "-Dpss.walker.test.verbose=true -Xmx2g -Xms256m"
+    }
+  ]
+}

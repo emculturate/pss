@@ -1,1 +1,5 @@
 /target/
+/target_test-classes/
+src/main/antlr4/**/.antlr/
+__pycache__/
+*.pyc

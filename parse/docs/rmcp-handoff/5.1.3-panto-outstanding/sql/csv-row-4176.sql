@@ -1,0 +1,155 @@
+select 
+-- contact_key
+repeat(' ',8) || -- contact_key removed, padded 8 fields as partner was not loading the student ID in the first place
+substring(rtrim(ltrim(coalesce(replace(replace(replace(replace(replace(first_name,'’',''),'í','i'),'á','a'),'ñ','n'),''),'é','e'))),1,25) || repeat(' ',25-len(rtrim(ltrim(coalesce(replace(replace(first_name,'\\\'',''),'í','i'),''))))) || 
+substring(rtrim(ltrim(coalesce(middle_name,''))),1,20) || repeat(' ',20-len(rtrim(ltrim(coalesce(middle_name,''))))) || 
+substring(rtrim(ltrim(coalesce(replace(replace(replace(replace(replace(last_name,'’',''),'í','i'),'á','a'),'ñ','n'),''),'é','e'))),1,25) || repeat(' ',25-len(rtrim(ltrim(coalesce(replace(replace(last_name,'\\\'',''),'í','i'),''))))) ||
+substring(rtrim(ltrim(coalesce(address_line_1,''))),1,45) || repeat(' ',45-len(rtrim(ltrim(coalesce(address_line_1,''))))) ||
+substring(rtrim(ltrim(coalesce(address_line_2,''))),1,45) || repeat(' ',45-len(rtrim(ltrim(coalesce(address_line_2,''))))) ||											
+substring(rtrim(ltrim(coalesce(city,''))),1,25) || repeat(' ',25-len(rtrim(ltrim(coalesce(city,''))))) ||
+substring(rtrim(ltrim(coalesce(state,''))),1,2) || repeat(' ',2-len(rtrim(ltrim(coalesce(state,''))))) ||
+substring(rtrim(ltrim(coalesce(zip_code,''))),1,10) || repeat(' ',10-len(rtrim(ltrim(coalesce(zip_code,''))))) ||
+substring(rtrim(ltrim(coalesce(to_char(birth_date,'MMddyyyy'),''))),1,8) || repeat(' ',8-len(rtrim(ltrim(coalesce(to_char(birth_date,'MMddyyyy'),''))))) || 
+substring(rtrim(ltrim(coalesce(case
+	when gender = 'Male' then 'M'
+	when gender = 'Female' then 'F'
+	else 'N'
+	end,''))),1,1) || repeat(' ',1-len(rtrim(ltrim(coalesce(case
+	when gender = 'Male' then 'M'
+	when gender = 'Female' then 'F'
+	else 'N'
+	end,''))))) ||
+substring(rtrim(ltrim(coalesce(email,''))),1,60) || repeat(' ',60-len(rtrim(ltrim(coalesce(email,''))))) ||
+substring(rtrim(ltrim(coalesce(phone,''))),1,10) || repeat(' ',10-len(rtrim(ltrim(coalesce(phone,''))))) ||
+substring(rtrim(ltrim(coalesce(hs_ceeb_code,''))),1,6) || repeat(' ',6-len(rtrim(ltrim(coalesce(hs_ceeb_code,''))))) ||
+substring(rtrim(ltrim(coalesce(to_char(grad_year),''))),1,4) || repeat(' ',4-len(rtrim(ltrim(coalesce(to_char(grad_year),''))))) ||
+substring(rtrim(ltrim(coalesce(case
+when upper(major_1) = 'ARCHITECTURE AND RELATED SERVICES' then 'ENVD'
+when upper(major_1) = 'FOREIGN LANGUAGES, LITERATURES, AND LINGUISTICS' then 'US'
+when upper(major_1) = 'SOCIAL SCIENCES' then 'US'
+when upper(major_1) = 'MATHEMATICS AND STATISTICS' then 'MOPT'
+when upper(major_1) = 'COMMUNICATION, JOURNALISM, AND RELATED PROGRAMS' then 'ENGL'
+when upper(major_1) = 'HISTORY' then 'HIST'
+when upper(major_1) = 'FAMILY AND CONSUMER SCIENCES, HUMAN SCIENCES' then 'FCSI'
+when upper(major_1) = 'EDUCATION' then 'ELED'
+when upper(major_1) = 'LEISURE AND RECREATIONAL ACTIVITIES' then 'PBMG'
+when upper(major_1) = 'THEOLOGY AND RELIGIOUS VOCATIONS' then 'US'
+when upper(major_1) = 'TRANSPORTATION AND MATERIALS MOVING' then 'US'
+when upper(major_1) = 'CITIZENSHIP ACTIVITIES' then 'US'
+when upper(major_1) = 'ENGLISH LANGUAGE, LITERATURE, AND LETTERS' then 'ENGL'
+when upper(major_1) = 'MULTI AND INTERDISCIPLINARY STUDIES' then 'US'
+when upper(major_1) = 'PHILOSOPHY AND RELIGIOUS STUDIES' then 'PLGR'
+when upper(major_1) = 'LIBRARY SCIENCE' then 'US'
+when upper(major_1) = 'MILITARY SCIENCE, LEADERSHIP, AND OPERATIONAL ART' then 'US'
+when upper(major_1) = 'ENGINEERING' then 'GENG'
+when upper(major_1) = 'HOMELAND SECURITY, LAW ENFORCEMENT, FIREFIGHTING, AND RELATED PROTECTIVE SERVICES' then 'SOCL'
+when upper(major_1) = 'MEDICAL RESIDENCY AND FELLOWSHIP PROGRAMS' then 'CLBS'
+when upper(major_1) = 'SCIENCE TECHNOLOGIES AND TECHNICIANS' then 'US'
+when upper(major_1) = 'COMMUNICATIONS TECHNOLOGIES, TECHNICIANS, AND SUPPORT SERVICES' then 'US'
+when upper(major_1) = 'CONSTRUCTION TRADES' then 'CET'
+when upper(major_1) = 'UNMAPPED VALUE' then ''
+when upper(major_1) = '' then ''
+when upper(major_1) = 'PSYCHOLOGY' then 'PYAP'
+when upper(major_1) = 'COMPUTER AND INFORMATION SCIENCES AND SUPPORT SERVICES' then 'CS'
+when upper(major_1) = 'LEGAL PROFESSIONS AND STUDIES' then 'US'
+when upper(major_1) = 'ENGINEERING, ENGINEERING-RELATED TECHNOLOGIES, AND TECHNICIANS' then 'GENG'
+when upper(major_1) = 'AREA, ETHNIC, CULTURAL, GENDER, AND GROUP STUDIES' then 'US'
+when upper(major_1) = 'VISUAL AND PERFORMING ARTS' then 'MPVT'
+when upper(major_1) = 'PUBLIC ADMINISTRATION AND SOCIAL SERVICE PROFESSIONS' then 'PBUS'
+when upper(major_1) = 'UNKNOWN' then ''
+when upper(major_1) = 'MILITARY TECHNOLOGIES AND APPLIED SCIENCES' then 'US'
+when upper(major_1) = 'CULINARY, ENTERTAINMENT, AND PERSONAL SERVICES' then 'US'
+when upper(major_1) = 'AGRICULTURAL, ANIMAL, PLANT, VETERINARY SCIENCE, AND RELATED FIELDS' then 'GAGR'
+when upper(major_1) = 'NATURAL RESOURCES AND CONSERVATION' then 'RGEM'
+when upper(major_1) = 'PARKS, RECREATION, LEISURE, FITNESS, AND KINESIOLOGY' then 'US'
+when upper(major_1) = 'PHYSICAL SCIENCES' then 'US'
+when upper(major_1) = 'INTERPERSONAL AND SOCIAL SKILLS' then 'US'
+when upper(major_1) = 'HIGH SCHOOL AND SECONDARY DIPLOMAS AND CERTIFICATES' then 'US'
+when upper(major_1) = 'BUSINESS, MANAGEMENT, MARKETING, AND RELATED SUPPORT SERVICES' then 'PBMG'
+when upper(major_1) = 'BIOLOGICAL AND BIOMEDICAL SCIENCES' then 'BLOB'
+when upper(major_1) = 'HEALTH PROFESSIONS AND RELATED PROGRAMS' then 'CLBS'
+when upper(major_1) = 'MECHANIC AND REPAIR TECHNOLOGIES AND TECHNICIANS' then 'ME'
+when upper(major_1) = 'LIBERAL ARTS AND SCIENCES, GENERAL STUDIES, AND HUMANITIES' then 'US'
+when upper(major_1) = 'HEALTH PROFESSIONS RESIDENCY AND FELLOWSHIP PROGRAMS' then 'CLBS'
+when upper(major_1) = 'HEALTH-RELATED KNOWLEDGE AND SKILLS' then 'CLBS'
+when upper(major_1) = 'BASIC SKILLS AND DEVELOPMENTAL OR REMEDIAL EDUCATION' then 'US'
+when upper(major_1) = 'PRECISION PRODUCTION' then 'US'
+else ''
+end,''))),1,4) || repeat(' ',4-len(rtrim(ltrim(coalesce(case
+when upper(major_1) = 'ARCHITECTURE AND RELATED SERVICES' then 'ENVD'
+when upper(major_1) = 'FOREIGN LANGUAGES, LITERATURES, AND LINGUISTICS' then 'US'
+when upper(major_1) = 'SOCIAL SCIENCES' then 'US'
+when upper(major_1) = 'MATHEMATICS AND STATISTICS' then 'MOPT'
+when upper(major_1) = 'COMMUNICATION, JOURNALISM, AND RELATED PROGRAMS' then 'ENGL'
+when upper(major_1) = 'HISTORY' then 'HIST'
+when upper(major_1) = 'FAMILY AND CONSUMER SCIENCES, HUMAN SCIENCES' then 'FCSI'
+when upper(major_1) = 'EDUCATION' then 'ELED'
+when upper(major_1) = 'LEISURE AND RECREATIONAL ACTIVITIES' then 'PBMG'
+when upper(major_1) = 'THEOLOGY AND RELIGIOUS VOCATIONS' then 'US'
+when upper(major_1) = 'TRANSPORTATION AND MATERIALS MOVING' then 'US'
+when upper(major_1) = 'CITIZENSHIP ACTIVITIES' then 'US'
+when upper(major_1) = 'ENGLISH LANGUAGE, LITERATURE, AND LETTERS' then 'ENGL'
+when upper(major_1) = 'MULTI AND INTERDISCIPLINARY STUDIES' then 'US'
+when upper(major_1) = 'PHILOSOPHY AND RELIGIOUS STUDIES' then 'PLGR'
+when upper(major_1) = 'LIBRARY SCIENCE' then 'US'
+when upper(major_1) = 'MILITARY SCIENCE, LEADERSHIP, AND OPERATIONAL ART' then 'US'
+when upper(major_1) = 'ENGINEERING' then 'GENG'
+when upper(major_1) = 'HOMELAND SECURITY, LAW ENFORCEMENT, FIREFIGHTING, AND RELATED PROTECTIVE SERVICES' then 'SOCL'
+when upper(major_1) = 'MEDICAL RESIDENCY AND FELLOWSHIP PROGRAMS' then 'CLBS'
+when upper(major_1) = 'SCIENCE TECHNOLOGIES AND TECHNICIANS' then 'US'
+when upper(major_1) = 'COMMUNICATIONS TECHNOLOGIES, TECHNICIANS, AND SUPPORT SERVICES' then 'US'
+when upper(major_1) = 'CONSTRUCTION TRADES' then 'CET'
+when upper(major_1) = 'UNMAPPED VALUE' then ''
+when upper(major_1) = '' then ''
+when upper(major_1) = 'PSYCHOLOGY' then 'PYAP'
+when upper(major_1) = 'COMPUTER AND INFORMATION SCIENCES AND SUPPORT SERVICES' then 'CS'
+when upper(major_1) = 'LEGAL PROFESSIONS AND STUDIES' then 'US'
+when upper(major_1) = 'ENGINEERING, ENGINEERING-RELATED TECHNOLOGIES, AND TECHNICIANS' then 'GENG'
+when upper(major_1) = 'AREA, ETHNIC, CULTURAL, GENDER, AND GROUP STUDIES' then 'US'
+when upper(major_1) = 'VISUAL AND PERFORMING ARTS' then 'MPVT'
+when upper(major_1) = 'PUBLIC ADMINISTRATION AND SOCIAL SERVICE PROFESSIONS' then 'PBUS'
+when upper(major_1) = 'UNKNOWN' then ''
+when upper(major_1) = 'MILITARY TECHNOLOGIES AND APPLIED SCIENCES' then 'US'
+when upper(major_1) = 'CULINARY, ENTERTAINMENT, AND PERSONAL SERVICES' then 'US'
+when upper(major_1) = 'AGRICULTURAL, ANIMAL, PLANT, VETERINARY SCIENCE, AND RELATED FIELDS' then 'GAGR'
+when upper(major_1) = 'NATURAL RESOURCES AND CONSERVATION' then 'RGEM'
+when upper(major_1) = 'PARKS, RECREATION, LEISURE, FITNESS, AND KINESIOLOGY' then 'US'
+when upper(major_1) = 'PHYSICAL SCIENCES' then 'US'
+when upper(major_1) = 'INTERPERSONAL AND SOCIAL SKILLS' then 'US'
+when upper(major_1) = 'HIGH SCHOOL AND SECONDARY DIPLOMAS AND CERTIFICATES' then 'US'
+when upper(major_1) = 'BUSINESS, MANAGEMENT, MARKETING, AND RELATED SUPPORT SERVICES' then 'PBMG'
+when upper(major_1) = 'BIOLOGICAL AND BIOMEDICAL SCIENCES' then 'BLOB'
+when upper(major_1) = 'HEALTH PROFESSIONS AND RELATED PROGRAMS' then 'CLBS'
+when upper(major_1) = 'MECHANIC AND REPAIR TECHNOLOGIES AND TECHNICIANS' then 'ME'
+when upper(major_1) = 'LIBERAL ARTS AND SCIENCES, GENERAL STUDIES, AND HUMANITIES' then 'US'
+when upper(major_1) = 'HEALTH PROFESSIONS RESIDENCY AND FELLOWSHIP PROGRAMS' then 'CLBS'
+when upper(major_1) = 'HEALTH-RELATED KNOWLEDGE AND SKILLS' then 'CLBS'
+when upper(major_1) = 'BASIC SKILLS AND DEVELOPMENTAL OR REMEDIAL EDUCATION' then 'US'
+when upper(major_1) = 'PRECISION PRODUCTION' then 'US'
+else ''
+end,''))))) ||
+substring(rtrim(ltrim(coalesce(case
+	when upper(race_1) = 'NATIVE HAWAIIAN/PACIFIC ISLANDER' then '6'
+	when upper(race_1) = 'ASIAN' then '4'
+	when upper(race_1) = 'WHITE' then '1'
+	when upper(race_1) = 'BLACK/AFRICAN AMERICAN' then '2'
+	when upper(race_1) = 'PREFER NOT TO RESPOND' then '7'
+	when upper(race_1) = 'AMERICAN INDIAN/ALASKA NATIVE' then '5'
+	when upper(race_1) = 'MULTIRACIAL' then '6'
+	else ''
+	end,''))),1,1) || repeat(' ',1-len(rtrim(ltrim(coalesce(case
+	when upper(race_1) = 'NATIVE HAWAIIAN/PACIFIC ISLANDER' then '6'
+	when upper(race_1) = 'ASIAN' then '4'
+	when upper(race_1) = 'WHITE' then '1'
+	when upper(race_1) = 'BLACK/AFRICAN AMERICAN' then '2'
+	when upper(race_1) = 'PREFER NOT TO RESPOND' then '7'
+	when upper(race_1) = 'AMERICAN INDIAN/ALASKA NATIVE' then '5'
+	when upper(race_1) = 'MULTIRACIAL' then '6'
+	else ''
+	end,'')))))
+as output_header
+from <[Partner_Portal].[apply_application_generation]> as aag
+where 1=1
+and first_apply_email_engagement_date is not null
+and first_apply_email_engagement_date >= current_date - 10
+--and last_name like 'Santamaria%'

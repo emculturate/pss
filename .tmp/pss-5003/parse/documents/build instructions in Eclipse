@@ -1,0 +1,72 @@
+Installation steps:
+
+Download latest Java eclipse package and install it on Mac machine.
+
+Java Eclipse package download
+
+Install Antlr 4 IDE in the Eclipse
+
+Go to Help --> Eclipse Marketplace --> search for "Antlr" --> select "Antlr 4 IDE 0.3.6" and install
+
+Install BASH
+
+When you want to run functions from your command line, this is a must-have.
+Start up Terminal.
+Type "cd ~/" to go to your home folder.
+Type "touch .bash_profile" to create your new file.
+Edit .bash_profile with your favorite editor (or you can just type "open -e .bash_profile" to open it in TextEdit.
+
+Check out PSS project from Github and build library
+
+Install maven
+
+Download the latest and unzip in your Home directory.
+Add Maven binaries to the path and append.
+
+nano $HOME/.profile
+ 
+export PATH=$PATH:/Applications/apache-maven-3.4.5/bin
+Ctrl+x to Save and Exit from “nano”.
+
+Maven Installation Steps:
+
+Step 1 Download the Apache Maven bin.tar.gz file from http://maven.apache.org/download.cgi.
+Extract/unzip the distribution archive file into /Applications/apache-maven-3.4.5 by the following command.
+
+$ tar -xvf apache-maven-3.4.5-bin.tar.gz -C /Applications/
+
+Step 2 Add the M2_HOME environment variable. To edit your ~/.bash_profile, run the following command to open it in text editor.
+
+open -e ~/.bash_profile
+
+Step 3 Add the following exports to your ~/.bash_profile and save it.
+
+export M2_HOME=/Applications/apache-maven-3.4.5
+export PATH=$PATH:$M2_HOME/bin
+
+Step 4 Use source command on ~/.bash_profile which is used to load any functions file into the current shell script or a command prompt.
+
+source ~/.bash_profile
+
+Step 5
+Run the following command to verify maven version
+
+mvn -version
+
+Maven command to build locally:
+
+mvn clean package -Dmaven.test.skip=true
+
+Maven command to build jar
+
+Assuming version is 1.1
+
+mvn clean package deploy:deploy-file -Dmaven.test.skip=true  -Dfile='target/pss-parse-1.1.jar' -DgroupId=pss -DartifactId=pss-parse -Dversion='1.1' -s settings.xml
+
+Pom file snippet for PSS library
+
+        <dependency>
+               <groupId>pss</groupId>
+               <artifactId>pss-parse</artifactId>
+               <version>1.1</version>
+        </dependency>

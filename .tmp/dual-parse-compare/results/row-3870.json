@@ -1,0 +1,3922 @@
+{
+  "sql_file": "parse/docs/rmcp-handoff/5.1.3-panto-outstanding/sql/csv-row-3870.sql",
+  "parse_ms": {
+    "5.0.0-3": 755,
+    "5.1.3": 964
+  },
+  "parse_outputs": {
+    "5.0.0-3": {
+      "tableDictionary": {
+        "<[Enroll360].[Student Term].[Last Validated].{final}>": {
+          "curr_entry_year_academic": "[@42,456:463='stu_term',<328>,11:2]",
+          "years_employed": "[@96,950:957='stu_term',<328>,20:2]",
+          "academic_rating": "[@102,1000:1007='stu_term',<328>,21:2]",
+          "eab_entry_year_academic": "[@24,286:293='stu_term',<328>,8:2]",
+          "eab_current_funnel_status": "[@138,1344:1351='stu_term',<328>,27:2]",
+          "recruitment_status": "[@60,616:623='stu_term',<328>,14:2]",
+          "interest_rating": "[@108,1052:1059='stu_term',<328>,22:2]",
+          "eab_student_type": "[@150,1470:1477='stu_term',<328>,29:2]",
+          "eab_entry_term": "[@30,354:361='stu_term',<328>,9:2]",
+          "first_source_dt": "[@78,770:777='stu_term',<328>,17:2]",
+          "eab_inquiry_ind": "[@126,1222:1229='stu_term',<328>,25:2]",
+          "primary_student_id": "[@162,1564:1571='stu_term',<328>,31:2]",
+          "first_source": "[@72,724:731='stu_term',<328>,16:2]",
+          "curr_entry_year_calendar": "[@120,1152:1159='stu_term',<328>,24:2]",
+          "student_type": "[@48,526:533='stu_term',<328>,12:2]",
+          "inquiry_ind": "[@54,572:579='stu_term',<328>,13:2]",
+          "athletic_recruit_ind": "[@84,822:829='stu_term',<328>,18:2]",
+          "state_resident": "[@66,674:681='stu_term',<328>,15:2]",
+          "student_level": "[@114,1104:1111='stu_term',<328>,23:2]",
+          "curr_entry_term": "[@36,404:411='stu_term',<328>,10:2]",
+          "eab_athletic_recruit_ind": "[@132,1274:1281='stu_term',<328>,26:2]",
+          "eab_first_source": "[@144,1416:1423='stu_term',<328>,28:2]",
+          "athletic_recruit_sport": "[@90,884:891='stu_term',<328>,19:2]",
+          "partnercontact_id": "[@357,3511:3518='stu_term',<328>,75:1]",
+          "intake_dt": "[@156,1524:1531='stu_term',<328>,30:2]",
+          "partner_system_name": "[@367,3577:3584='stu_term',<328>,75:67]"
+        },
+        "<[Enroll360].[Student Term SIS].[Last Validated].{final}>": {
+          "curr_entry_year_academic": "[@492,4865:4876='stu_term_sis',<328>,109:1]",
+          "eab_student_id": "[@893,8537:8548='stu_term_sis',<328>,196:7]",
+          "years_employed": "[@629,6185:6196='stu_term_sis',<328>,145:1]",
+          "academic_rating": "[@643,6316:6327='stu_term_sis',<328>,149:1]",
+          "eab_entry_year_academic": "[@840,8230:8241='stu_term_sis',<328>,193:16]",
+          "eab_current_funnel_status": "[@749,7343:7354='stu_term_sis',<328>,173:1]",
+          "recruitment_status": "[@534,5274:5285='stu_term_sis',<328>,121:1]",
+          "interest_rating": "[@657,6451:6462='stu_term_sis',<328>,153:1]",
+          "eab_student_type": "[@858,8346:8357='stu_term_sis',<328>,194:17]",
+          "eab_entry_term": "[@876,8449:8460='stu_term_sis',<328>,195:16]",
+          "first_source_dt": "[@583,5711:5722='stu_term_sis',<328>,133:9]",
+          "eab_alternative_academic_rank": "[@437,4266:4277='stu_term_sis',<328>,94:11]",
+          "eab_inquiry_ind": "[@706,6937:6948='stu_term_sis',<328>,165:12]",
+          "first_source": "[@562,5548:5559='stu_term_sis',<328>,129:1]",
+          "curr_entry_year_calendar": "[@685,6720:6731='stu_term_sis',<328>,161:1]",
+          "student_type": "[@506,5033:5044='stu_term_sis',<328>,113:1]",
+          "inquiry_ind": "[@520,5152:5163='stu_term_sis',<328>,117:1]",
+          "athletic_recruit_ind": "[@601,5861:5872='stu_term_sis',<328>,137:1]",
+          "state_resident": "[@548,5420:5431='stu_term_sis',<328>,125:1]",
+          "student_level": "[@671,6584:6595='stu_term_sis',<328>,157:1]",
+          "curr_entry_term": "[@478,4721:4732='stu_term_sis',<328>,105:1]",
+          "eab_athletic_recruit_ind": "[@731,7149:7160='stu_term_sis',<328>,169:12]",
+          "eab_first_source": "[@763,7519:7530='stu_term_sis',<328>,177:1]",
+          "alternative_academic_rank": "[@431,4214:4225='stu_term_sis',<328>,93:1]",
+          "athletic_recruit_sport": "[@615,6023:6034='stu_term_sis',<328>,141:1]",
+          "partnercontact_id": "[@822,8065:8076='stu_term_sis',<328>,191:6]",
+          "eab_student_id_type": "[@900,8581:8592='stu_term_sis',<328>,196:51]",
+          "intake_dt": "[@798,7837:7848='stu_term_sis',<328>,185:14]",
+          "partner_system_name": "[@830,8141:8152='stu_term_sis',<328>,192:7]"
+        },
+        "student_term_crm": {
+          "inquiry_ind_crm": "[@516,5119:5131='stud_term_crm',<328>,116:1]",
+          "primary_student_id_crm": "[@425,4152:4164='stud_term_crm',<328>,92:1]",
+          "partnercontact_id_02": "[@826,8098:8110='stud_term_crm',<328>,191:39]",
+          "curr_entry_term_crm": "[@474,4684:4696='stud_term_crm',<328>,104:1]",
+          "eab_entry_term_crm": "[@885,8492:8504='stud_term_crm',<328>,195:59]",
+          "eab_entry_year_academic_CRM": "[@849,8282:8294='stud_term_crm',<328>,193:68]",
+          "student_level_crm": "[@667,6549:6561='stud_term_crm',<328>,156:1]",
+          "athletic_recruit_ind_crm": "[@597,5819:5831='stud_term_crm',<328>,136:1]",
+          "state_resident_crm": "[@544,5384:5396='stud_term_crm',<328>,124:1]",
+          "interest_rating_crm": "[@653,6414:6426='stud_term_crm',<328>,152:1]",
+          "eab_student_id_type_crm": "[@916,8680:8692='stud_term_crm',<328>,196:150]",
+          "eab_current_funnel_status_crm": "[@745,7296:7308='stud_term_crm',<328>,172:1]",
+          "eab_athletic_recruit_ind_crm": "[@722,7059:7071='stud_term_crm',<328>,168:12]",
+          "partner_system_name_02": "[@834,8176:8188='stud_term_crm',<328>,192:42]",
+          "curr_entry_year_academic_crm": "[@488,4819:4831='stud_term_crm',<328>,108:1]",
+          "recruitment_status_crm": "[@530,5234:5246='stud_term_crm',<328>,120:1]",
+          "student_type_crm": "[@502,4999:5011='stud_term_crm',<328>,112:1]",
+          "first_source_dt_crm": "[@574,5642:5654='stud_term_crm',<328>,132:9]",
+          "eab_first_source_crm": "[@759,7481:7493='stud_term_crm',<328>,176:1]",
+          "eab_entry_year_academic_crm": "[@444,4348:4360='stud_term_crm',<328>,96:1]",
+          "academic_rating_crm": "[@639,6279:6291='stud_term_crm',<328>,148:1]",
+          "athletic_recruit_sport_crm": "[@611,5979:5991='stud_term_crm',<328>,140:1]",
+          "years_employed_crm": "[@625,6149:6161='stud_term_crm',<328>,144:1]",
+          "eab_student_type_crm": "[@867,8392:8404='stud_term_crm',<328>,194:63]",
+          "curr_entry_year_calendar_crm": "[@681,6674:6686='stud_term_crm',<328>,160:1]",
+          "first_source_crm": "[@558,5514:5526='stud_term_crm',<328>,128:1]",
+          "eab_inquiry_ind_crm": "[@697,6865:6877='stud_term_crm',<328>,164:12]",
+          "eab_student_id_crm": "[@909,8631:8643='stud_term_crm',<328>,196:101]",
+          "intake_dt_crm": "[@789,7774:7786='stud_term_crm',<328>,184:14]"
+        },
+        "<[Enroll360].[Partner ID Xwalk].{final}>": {
+          "target_partnercontact_id": "[@326,3176:3177='xw',<328>,64:2]",
+          "target_partner_system_name": "[@332,3232:3233='xw',<328>,65:2]",
+          "source_partnercontact_id": "[@292,2855:2856='xw',<328>,57:2]",
+          "source_partner_system_name": "[@298,2911:2912='xw',<328>,58:2]",
+          "intake_dt": "[@338,3292:3293='xw',<328>,66:2]"
+        }
+      },
+      "symbolTable": {
+        "with": {
+          "student_term_crm": {
+            "query7": {
+              "<[Enroll360].[Student Term].[Last Validated].{final}>": {
+                "curr_entry_year_academic": "[@42,456:463='stu_term',<328>,11:2]",
+                "years_employed": "[@96,950:957='stu_term',<328>,20:2]",
+                "academic_rating": "[@102,1000:1007='stu_term',<328>,21:2]",
+                "eab_entry_year_academic": "[@24,286:293='stu_term',<328>,8:2]",
+                "eab_current_funnel_status": "[@138,1344:1351='stu_term',<328>,27:2]",
+                "recruitment_status": "[@60,616:623='stu_term',<328>,14:2]",
+                "interest_rating": "[@108,1052:1059='stu_term',<328>,22:2]",
+                "eab_student_type": "[@150,1470:1477='stu_term',<328>,29:2]",
+                "eab_entry_term": "[@30,354:361='stu_term',<328>,9:2]",
+                "first_source_dt": "[@78,770:777='stu_term',<328>,17:2]",
+                "eab_inquiry_ind": "[@126,1222:1229='stu_term',<328>,25:2]",
+                "primary_student_id": "[@162,1564:1571='stu_term',<328>,31:2]",
+                "first_source": "[@72,724:731='stu_term',<328>,16:2]",
+                "curr_entry_year_calendar": "[@120,1152:1159='stu_term',<328>,24:2]",
+                "student_type": "[@48,526:533='stu_term',<328>,12:2]",
+                "inquiry_ind": "[@54,572:579='stu_term',<328>,13:2]",
+                "athletic_recruit_ind": "[@84,822:829='stu_term',<328>,18:2]",
+                "state_resident": "[@66,674:681='stu_term',<328>,15:2]",
+                "student_level": "[@114,1104:1111='stu_term',<328>,23:2]",
+                "curr_entry_term": "[@36,404:411='stu_term',<328>,10:2]",
+                "eab_athletic_recruit_ind": "[@132,1274:1281='stu_term',<328>,26:2]",
+                "eab_first_source": "[@144,1416:1423='stu_term',<328>,28:2]",
+                "athletic_recruit_sport": "[@90,884:891='stu_term',<328>,19:2]",
+                "partnercontact_id": "[@357,3511:3518='stu_term',<328>,75:1]",
+                "intake_dt": "[@156,1524:1531='stu_term',<328>,30:2]",
+                "partner_system_name": "[@367,3577:3584='stu_term',<328>,75:67]"
+              },
+              "def_query6": {
+                "query5": {
+                  "partner_system_name_01": "[@177,1827:1848='partner_system_name_01',<328>,37:29]",
+                  "partner_system_name_02": "[@181,1873:1894='partner_system_name_02',<328>,37:75]",
+                  "*": "*",
+                  "partnercontact_id_01": "[@175,1805:1824='partnercontact_id_01',<328>,37:7]",
+                  "partnercontact_id_02": "[@179,1851:1870='partnercontact_id_02',<328>,37:53]",
+                  "rn": "[@350,3388:3389='rn',<328>,70:6]"
+                },
+                "interface": {
+                  "partner_system_name_01": {
+                    "column": {
+                      "name": "partner_system_name_01",
+                      "table_ref": null
+                    }
+                  },
+                  "partner_system_name_02": {
+                    "column": {
+                      "name": "partner_system_name_02",
+                      "table_ref": null
+                    }
+                  },
+                  "partnercontact_id_01": {
+                    "column": {
+                      "name": "partnercontact_id_01",
+                      "table_ref": null
+                    }
+                  },
+                  "partnercontact_id_02": {
+                    "column": {
+                      "name": "partnercontact_id_02",
+                      "table_ref": null
+                    }
+                  }
+                },
+                "def_query5": {
+                  "def_union4": {
+                    "query0": {
+                      "interface": {
+                        "partner_system_name_01": {
+                          "column": {
+                            "name": "source_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partner_system_name_02": {
+                          "column": {
+                            "name": "target_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_01": {
+                          "column": {
+                            "name": "source_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_02": {
+                          "column": {
+                            "name": "target_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "intake_dt": {
+                          "column": {
+                            "name": "intake_dt",
+                            "table_ref": "xw"
+                          }
+                        }
+                      },
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>",
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partnercontact_id": "[@224,2214:2215='xw',<328>,43:2]",
+                        "target_partner_system_name": "[@230,2270:2271='xw',<328>,44:2]",
+                        "source_partnercontact_id": "[@212,2098:2099='xw',<328>,41:9]",
+                        "source_partner_system_name": "[@218,2154:2155='xw',<328>,42:2]",
+                        "intake_dt": "[@236,2330:2331='xw',<328>,45:2]"
+                      }
+                    },
+                    "interface": {
+                      "partner_system_name_01": "query_column",
+                      "partner_system_name_02": "query_column",
+                      "partnercontact_id_01": "query_column",
+                      "partnercontact_id_02": "query_column",
+                      "intake_dt": "query_column"
+                    },
+                    "query1": {
+                      "interface": {
+                        "partner_system_name_01": {
+                          "column": {
+                            "name": "target_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partner_system_name_02": {
+                          "column": {
+                            "name": "source_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_01": {
+                          "column": {
+                            "name": "target_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_02": {
+                          "column": {
+                            "name": "source_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "intake_dt": {
+                          "column": {
+                            "name": "intake_dt",
+                            "table_ref": "xw"
+                          }
+                        }
+                      },
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>",
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partnercontact_id": "[@246,2419:2420='xw',<328>,48:8]",
+                        "target_partner_system_name": "[@252,2475:2476='xw',<328>,49:2]",
+                        "source_partnercontact_id": "[@258,2535:2536='xw',<328>,50:2]",
+                        "source_partner_system_name": "[@264,2591:2592='xw',<328>,51:2]",
+                        "intake_dt": "[@270,2651:2652='xw',<328>,52:2]"
+                      }
+                    },
+                    "query2": {
+                      "interface": {
+                        "partner_system_name_01": {
+                          "column": {
+                            "name": "source_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partner_system_name_02": {
+                          "column": {
+                            "name": "source_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_01": {
+                          "column": {
+                            "name": "source_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_02": {
+                          "column": {
+                            "name": "source_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "intake_dt": {
+                          "column": {
+                            "name": "intake_dt",
+                            "table_ref": "xw"
+                          }
+                        }
+                      },
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>",
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "source_partnercontact_id": "[@292,2855:2856='xw',<328>,57:2]",
+                        "source_partner_system_name": "[@298,2911:2912='xw',<328>,58:2]",
+                        "intake_dt": "[@304,2971:2972='xw',<328>,59:2]"
+                      }
+                    },
+                    "query3": {
+                      "interface": {
+                        "partner_system_name_01": {
+                          "column": {
+                            "name": "target_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partner_system_name_02": {
+                          "column": {
+                            "name": "target_partner_system_name",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_01": {
+                          "column": {
+                            "name": "target_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "partnercontact_id_02": {
+                          "column": {
+                            "name": "target_partnercontact_id",
+                            "table_ref": "xw"
+                          }
+                        },
+                        "intake_dt": {
+                          "column": {
+                            "name": "intake_dt",
+                            "table_ref": "xw"
+                          }
+                        }
+                      },
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>",
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partnercontact_id": "[@326,3176:3177='xw',<328>,64:2]",
+                        "target_partner_system_name": "[@332,3232:3233='xw',<328>,65:2]",
+                        "intake_dt": "[@338,3292:3293='xw',<328>,66:2]"
+                      }
+                    }
+                  },
+                  "union4": {
+                    "partner_system_name_01": "[@197,1980:2001='partner_system_name_01',<328>,39:74]",
+                    "partner_system_name_02": "[@201,2026:2047='partner_system_name_02',<328>,39:120]",
+                    "partnercontact_id_01": "[@195,1958:1977='partnercontact_id_01',<328>,39:52]",
+                    "*": "[@186,1924:1924='*',<289>,39:18]",
+                    "partnercontact_id_02": "[@199,2004:2023='partnercontact_id_02',<328>,39:98]",
+                    "intake_dt": "[@204,2058:2066='intake_dt',<328>,39:152]"
+                  },
+                  "xw_full": "union4",
+                  "interface": {
+                    "*": {
+                      "column": {
+                        "name": "*",
+                        "table_ref": "*"
+                      }
+                    },
+                    "rn": {
+                      "window_function": {
+                        "over": {
+                          "partition_by": {
+                            "1": {
+                              "column": {
+                                "name": "partnercontact_id_01",
+                                "table_ref": null
+                              }
+                            },
+                            "2": {
+                              "column": {
+                                "name": "partner_system_name_01",
+                                "table_ref": null
+                              }
+                            },
+                            "3": {
+                              "column": {
+                                "name": "partnercontact_id_02",
+                                "table_ref": null
+                              }
+                            },
+                            "4": {
+                              "column": {
+                                "name": "partner_system_name_02",
+                                "table_ref": null
+                              }
+                            }
+                          },
+                          "orderby": {
+                            "1": {
+                              "null_order": null,
+                              "predicand": {
+                                "column": {
+                                  "name": "intake_dt",
+                                  "table_ref": null
+                                }
+                              },
+                              "sort_order": "desc"
+                            }
+                          }
+                        },
+                        "function": {
+                          "function_name": "row_number",
+                          "parameters": null
+                        }
+                      }
+                    }
+                  }
+                },
+                "xw": "query5"
+              },
+              "stu_term": "<[Enroll360].[Student Term].[Last Validated].{final}>",
+              "query6": {
+                "partner_system_name_01": "[@376,3622:3623='xw',<328>,75:112]",
+                "*": "[@5,165:166='xw',<328>,5:4]",
+                "partnercontact_id_01": "[@361,3540:3541='xw',<328>,75:30]"
+              },
+              "interface": {
+                "inquiry_ind_crm": {
+                  "column": {
+                    "name": "inquiry_ind",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "primary_student_id_crm": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "curr_entry_term_crm": {
+                  "column": {
+                    "name": "curr_entry_term",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_entry_term_crm": {
+                  "column": {
+                    "name": "eab_entry_term",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "student_level_crm": {
+                  "column": {
+                    "name": "student_level",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "athletic_recruit_ind_crm": {
+                  "column": {
+                    "name": "athletic_recruit_ind",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "state_resident_crm": {
+                  "column": {
+                    "name": "state_resident",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "interest_rating_crm": {
+                  "column": {
+                    "name": "interest_rating",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_student_id_type_crm": {
+                  "function": {
+                    "function_name": "CAST",
+                    "data_type": {
+                      "type": "VARCHAR"
+                    },
+                    "type": "CAST",
+                    "value": {
+                      "literal": "'primary'"
+                    }
+                  }
+                },
+                "eab_current_funnel_status_crm": {
+                  "column": {
+                    "name": "eab_current_funnel_status",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_athletic_recruit_ind_crm": {
+                  "column": {
+                    "name": "eab_athletic_recruit_ind",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "curr_entry_year_academic_crm": {
+                  "column": {
+                    "name": "curr_entry_year_academic",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "recruitment_status_crm": {
+                  "column": {
+                    "name": "recruitment_status",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "student_type_crm": {
+                  "column": {
+                    "name": "student_type",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "first_source_dt_crm": {
+                  "column": {
+                    "name": "first_source_dt",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_first_source_crm": {
+                  "column": {
+                    "name": "eab_first_source",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "*": {
+                  "column": {
+                    "name": "*",
+                    "table_ref": "xw"
+                  }
+                },
+                "eab_entry_year_academic_crm": {
+                  "column": {
+                    "name": "eab_entry_year_academic",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "academic_rating_crm": {
+                  "column": {
+                    "name": "academic_rating",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "athletic_recruit_sport_crm": {
+                  "column": {
+                    "name": "athletic_recruit_sport",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "years_employed_crm": {
+                  "column": {
+                    "name": "years_employed",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_student_type_crm": {
+                  "column": {
+                    "name": "eab_student_type",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "curr_entry_year_calendar_crm": {
+                  "column": {
+                    "name": "curr_entry_year_calendar",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "first_source_crm": {
+                  "column": {
+                    "name": "first_source",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_inquiry_ind_crm": {
+                  "column": {
+                    "name": "eab_inquiry_ind",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "eab_student_id_crm": {
+                  "column": {
+                    "name": "primary_student_id",
+                    "table_ref": "stu_term"
+                  }
+                },
+                "intake_dt_crm": {
+                  "column": {
+                    "name": "intake_dt",
+                    "table_ref": "stu_term"
+                  }
+                }
+              },
+              "xw": "query6"
+            }
+          }
+        },
+        "query9": {
+          "def_query8": {
+            "stud_term_crm": "student_term_crm",
+            "stu_term_sis": "<[Enroll360].[Student Term SIS].[Last Validated].{final}>",
+            "<[Enroll360].[Student Term SIS].[Last Validated].{final}>": {
+              "curr_entry_year_academic": "[@492,4865:4876='stu_term_sis',<328>,109:1]",
+              "eab_student_id": "[@893,8537:8548='stu_term_sis',<328>,196:7]",
+              "years_employed": "[@629,6185:6196='stu_term_sis',<328>,145:1]",
+              "academic_rating": "[@643,6316:6327='stu_term_sis',<328>,149:1]",
+              "eab_entry_year_academic": "[@840,8230:8241='stu_term_sis',<328>,193:16]",
+              "eab_current_funnel_status": "[@749,7343:7354='stu_term_sis',<328>,173:1]",
+              "recruitment_status": "[@534,5274:5285='stu_term_sis',<328>,121:1]",
+              "interest_rating": "[@657,6451:6462='stu_term_sis',<328>,153:1]",
+              "eab_student_type": "[@858,8346:8357='stu_term_sis',<328>,194:17]",
+              "eab_entry_term": "[@876,8449:8460='stu_term_sis',<328>,195:16]",
+              "first_source_dt": "[@583,5711:5722='stu_term_sis',<328>,133:9]",
+              "eab_alternative_academic_rank": "[@437,4266:4277='stu_term_sis',<328>,94:11]",
+              "eab_inquiry_ind": "[@706,6937:6948='stu_term_sis',<328>,165:12]",
+              "first_source": "[@562,5548:5559='stu_term_sis',<328>,129:1]",
+              "curr_entry_year_calendar": "[@685,6720:6731='stu_term_sis',<328>,161:1]",
+              "student_type": "[@506,5033:5044='stu_term_sis',<328>,113:1]",
+              "inquiry_ind": "[@520,5152:5163='stu_term_sis',<328>,117:1]",
+              "athletic_recruit_ind": "[@601,5861:5872='stu_term_sis',<328>,137:1]",
+              "state_resident": "[@548,5420:5431='stu_term_sis',<328>,125:1]",
+              "student_level": "[@671,6584:6595='stu_term_sis',<328>,157:1]",
+              "curr_entry_term": "[@478,4721:4732='stu_term_sis',<328>,105:1]",
+              "eab_athletic_recruit_ind": "[@731,7149:7160='stu_term_sis',<328>,169:12]",
+              "eab_first_source": "[@763,7519:7530='stu_term_sis',<328>,177:1]",
+              "alternative_academic_rank": "[@431,4214:4225='stu_term_sis',<328>,93:1]",
+              "athletic_recruit_sport": "[@615,6023:6034='stu_term_sis',<328>,141:1]",
+              "partnercontact_id": "[@822,8065:8076='stu_term_sis',<328>,191:6]",
+              "eab_student_id_type": "[@900,8581:8592='stu_term_sis',<328>,196:51]",
+              "intake_dt": "[@798,7837:7848='stu_term_sis',<328>,185:14]",
+              "partner_system_name": "[@830,8141:8152='stu_term_sis',<328>,192:7]"
+            },
+            "student_term_crm": {
+              "inquiry_ind_crm": "[@516,5119:5131='stud_term_crm',<328>,116:1]",
+              "primary_student_id_crm": "[@425,4152:4164='stud_term_crm',<328>,92:1]",
+              "partnercontact_id_02": "[@826,8098:8110='stud_term_crm',<328>,191:39]",
+              "curr_entry_term_crm": "[@474,4684:4696='stud_term_crm',<328>,104:1]",
+              "eab_entry_term_crm": "[@885,8492:8504='stud_term_crm',<328>,195:59]",
+              "eab_entry_year_academic_CRM": "[@849,8282:8294='stud_term_crm',<328>,193:68]",
+              "student_level_crm": "[@667,6549:6561='stud_term_crm',<328>,156:1]",
+              "athletic_recruit_ind_crm": "[@597,5819:5831='stud_term_crm',<328>,136:1]",
+              "state_resident_crm": "[@544,5384:5396='stud_term_crm',<328>,124:1]",
+              "interest_rating_crm": "[@653,6414:6426='stud_term_crm',<328>,152:1]",
+              "eab_student_id_type_crm": "[@916,8680:8692='stud_term_crm',<328>,196:150]",
+              "eab_current_funnel_status_crm": "[@745,7296:7308='stud_term_crm',<328>,172:1]",
+              "eab_athletic_recruit_ind_crm": "[@722,7059:7071='stud_term_crm',<328>,168:12]",
+              "partner_system_name_02": "[@834,8176:8188='stud_term_crm',<328>,192:42]",
+              "curr_entry_year_academic_crm": "[@488,4819:4831='stud_term_crm',<328>,108:1]",
+              "recruitment_status_crm": "[@530,5234:5246='stud_term_crm',<328>,120:1]",
+              "student_type_crm": "[@502,4999:5011='stud_term_crm',<328>,112:1]",
+              "first_source_dt_crm": "[@574,5642:5654='stud_term_crm',<328>,132:9]",
+              "eab_first_source_crm": "[@759,7481:7493='stud_term_crm',<328>,176:1]",
+              "eab_entry_year_academic_crm": "[@444,4348:4360='stud_term_crm',<328>,96:1]",
+              "academic_rating_crm": "[@639,6279:6291='stud_term_crm',<328>,148:1]",
+              "athletic_recruit_sport_crm": "[@611,5979:5991='stud_term_crm',<328>,140:1]",
+              "years_employed_crm": "[@625,6149:6161='stud_term_crm',<328>,144:1]",
+              "eab_student_type_crm": "[@867,8392:8404='stud_term_crm',<328>,194:63]",
+              "curr_entry_year_calendar_crm": "[@681,6674:6686='stud_term_crm',<328>,160:1]",
+              "first_source_crm": "[@558,5514:5526='stud_term_crm',<328>,128:1]",
+              "eab_inquiry_ind_crm": "[@697,6865:6877='stud_term_crm',<328>,164:12]",
+              "eab_student_id_crm": "[@909,8631:8643='stud_term_crm',<328>,196:101]",
+              "intake_dt_crm": "[@789,7774:7786='stud_term_crm',<328>,184:14]"
+            },
+            "interface": {
+              "curr_entry_year_academic": {
+                "substitution": {
+                  "name": "<curr_entry_year_academic>",
+                  "type": "predicand"
+                }
+              },
+              "inquiry_ind_sis": {
+                "column": {
+                  "name": "inquiry_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "inquiry_ind_crm": {
+                "column": {
+                  "name": "inquiry_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_current_funnel_status": {
+                "substitution": {
+                  "name": "<eab_current_funnel_status>",
+                  "type": "predicand"
+                }
+              },
+              "curr_entry_term_sis": {
+                "column": {
+                  "name": "curr_entry_term",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "curr_entry_term_crm": {
+                "column": {
+                  "name": "curr_entry_term_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "interest_rating": {
+                "substitution": {
+                  "name": "<interest_rating>",
+                  "type": "predicand"
+                }
+              },
+              "eab_student_type": {
+                "substitution": {
+                  "name": "<eab_student_type>",
+                  "type": "predicand"
+                }
+              },
+              "eab_alternative_academic_rank": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "eab_alternative_academic_rank",
+                        "table_ref": "stu_term_sis"
+                      }
+                    }
+                  },
+                  "function_name": "to_number"
+                }
+              },
+              "student_level_crm": {
+                "column": {
+                  "name": "student_level_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_inquiry_ind": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "substitution": {
+                        "name": "<eab_inquiry_ind>",
+                        "type": "predicand"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "athletic_recruit_ind_crm": {
+                "column": {
+                  "name": "athletic_recruit_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "student_level_sis": {
+                "column": {
+                  "name": "student_level",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "primary_student_id": {
+                "column": {
+                  "name": "primary_student_id_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "state_resident_crm": {
+                "column": {
+                  "name": "state_resident_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "first_source": {
+                "substitution": {
+                  "name": "<first_source>",
+                  "type": "predicand"
+                }
+              },
+              "athletic_recruit_ind_sis": {
+                "column": {
+                  "name": "athletic_recruit_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "state_resident_sis": {
+                "column": {
+                  "name": "state_resident",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "curr_entry_year_calendar": {
+                "substitution": {
+                  "name": "<curr_entry_year_calendar>",
+                  "type": "predicand"
+                }
+              },
+              "inquiry_ind": {
+                "substitution": {
+                  "name": "<inquiry_ind>",
+                  "type": "predicand"
+                }
+              },
+              "state_resident": {
+                "substitution": {
+                  "name": "<state_resident>",
+                  "type": "predicand"
+                }
+              },
+              "eab_student_id_type_sis": {
+                "column": {
+                  "name": "eab_student_id_type",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "curr_entry_term": {
+                "substitution": {
+                  "name": "<curr_entry_term>",
+                  "type": "predicand"
+                }
+              },
+              "recruitment_status_sis": {
+                "column": {
+                  "name": "recruitment_status",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "recruitment_status_crm": {
+                "column": {
+                  "name": "recruitment_status_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_athletic_recruit_ind": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "substitution": {
+                        "name": "<eab_athletic_recruit_ind>",
+                        "type": "predicand"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "eab_first_source": {
+                "substitution": {
+                  "name": "<eab_first_source>",
+                  "type": "predicand"
+                }
+              },
+              "first_source_dt_crm": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "first_source_dt_crm",
+                        "table_ref": "stud_term_crm"
+                      }
+                    }
+                  },
+                  "function_name": "to_date"
+                }
+              },
+              "eab_first_source_crm": {
+                "column": {
+                  "name": "eab_first_source_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_first_source_sis": {
+                "column": {
+                  "name": "eab_first_source",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "first_source_dt_sis": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "first_source_dt",
+                        "table_ref": "stu_term_sis"
+                      }
+                    }
+                  },
+                  "function_name": "to_date"
+                }
+              },
+              "eab_student_type_sis": {
+                "column": {
+                  "name": "eab_student_type",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "eab_entry_year_academic_sis": {
+                "column": {
+                  "name": "eab_entry_year_academic",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "eab_entry_year_academic_crm": {
+                "column": {
+                  "name": "eab_entry_year_academic_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "athletic_recruit_sport_sis": {
+                "column": {
+                  "name": "athletic_recruit_sport",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "years_employed_sis": {
+                "column": {
+                  "name": "years_employed",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "academic_rating_crm": {
+                "column": {
+                  "name": "academic_rating_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "athletic_recruit_sport_crm": {
+                "column": {
+                  "name": "athletic_recruit_sport_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "years_employed_crm": {
+                "column": {
+                  "name": "years_employed_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_student_type_crm": {
+                "column": {
+                  "name": "eab_student_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "curr_entry_year_calendar_sis": {
+                "column": {
+                  "name": "curr_entry_year_calendar",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "academic_rating_sis": {
+                "column": {
+                  "name": "academic_rating",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "curr_entry_year_calendar_crm": {
+                "column": {
+                  "name": "curr_entry_year_calendar_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_inquiry_ind_sis": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "eab_inquiry_ind",
+                        "table_ref": "stu_term_sis"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "partnercontact_id": {
+                "substitution": {
+                  "name": "<eab_student_id>",
+                  "type": "predicand"
+                }
+              },
+              "eab_inquiry_ind_crm": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "eab_inquiry_ind_crm",
+                        "table_ref": "stud_term_crm"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "eab_student_id_sis": {
+                "column": {
+                  "name": "eab_student_id",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "eab_student_id_type": {
+                "substitution": {
+                  "name": "<eab_student_id_type>",
+                  "type": "predicand"
+                }
+              },
+              "partner_system_name": {
+                "substitution": {
+                  "name": "<eab_student_id_type>",
+                  "type": "predicand"
+                }
+              },
+              "intake_dt_sis": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "intake_dt",
+                        "table_ref": "stu_term_sis"
+                      }
+                    }
+                  },
+                  "function_name": "to_timestamp"
+                }
+              },
+              "intake_dt": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "substitution": {
+                        "name": "<intake_dt>",
+                        "type": "predicand"
+                      }
+                    }
+                  },
+                  "function_name": "to_timestamp"
+                }
+              },
+              "eab_student_id_crm": {
+                "column": {
+                  "name": "eab_student_id_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "intake_dt_crm": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "intake_dt_crm",
+                        "table_ref": "stud_term_crm"
+                      }
+                    }
+                  },
+                  "function_name": "to_timestamp"
+                }
+              },
+              "eab_student_id": {
+                "substitution": {
+                  "name": "<eab_student_id>",
+                  "type": "predicand"
+                }
+              },
+              "years_employed": {
+                "substitution": {
+                  "name": "<years_employed>",
+                  "type": "predicand"
+                }
+              },
+              "academic_rating": {
+                "substitution": {
+                  "name": "<academic_rating>",
+                  "type": "predicand"
+                }
+              },
+              "eab_entry_year_academic": {
+                "substitution": {
+                  "name": "<eab_entry_year_academic>",
+                  "type": "predicand"
+                }
+              },
+              "recruitment_status": {
+                "substitution": {
+                  "name": "<recruitment_status>",
+                  "type": "predicand"
+                }
+              },
+              "eab_entry_term_crm": {
+                "column": {
+                  "name": "eab_entry_term_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_entry_term_sis": {
+                "column": {
+                  "name": "eab_entry_term",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "eab_entry_term": {
+                "substitution": {
+                  "name": "<eab_entry_term>",
+                  "type": "predicand"
+                }
+              },
+              "first_source_dt": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "substitution": {
+                        "name": "<first_source_dt>",
+                        "type": "predicand"
+                      }
+                    }
+                  },
+                  "function_name": "to_date"
+                }
+              },
+              "interest_rating_crm": {
+                "column": {
+                  "name": "interest_rating_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_student_id_type_crm": {
+                "column": {
+                  "name": "eab_student_id_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "interest_rating_sis": {
+                "column": {
+                  "name": "interest_rating",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "student_type": {
+                "substitution": {
+                  "name": "<student_type>",
+                  "type": "predicand"
+                }
+              },
+              "eab_current_funnel_status_crm": {
+                "column": {
+                  "name": "eab_current_funnel_status_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "eab_current_funnel_status_sis": {
+                "column": {
+                  "name": "eab_current_funnel_status",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "athletic_recruit_ind": {
+                "substitution": {
+                  "name": "<athletic_recruit_ind>",
+                  "type": "predicand"
+                }
+              },
+              "student_level": {
+                "substitution": {
+                  "name": "<student_level>",
+                  "type": "predicand"
+                }
+              },
+              "eab_athletic_recruit_ind_sis": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "eab_athletic_recruit_ind",
+                        "table_ref": "stu_term_sis"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "eab_athletic_recruit_ind_crm": {
+                "function": {
+                  "parameters": {
+                    "1": {
+                      "column": {
+                        "name": "eab_athletic_recruit_ind_crm",
+                        "table_ref": "stud_term_crm"
+                      }
+                    }
+                  },
+                  "function_name": "to_boolean"
+                }
+              },
+              "curr_entry_year_academic_crm": {
+                "column": {
+                  "name": "curr_entry_year_academic_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "curr_entry_year_academic_sis": {
+                "column": {
+                  "name": "curr_entry_year_academic",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "student_type_crm": {
+                "column": {
+                  "name": "student_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "student_type_sis": {
+                "column": {
+                  "name": "student_type",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "alternative_academic_rank": {
+                "column": {
+                  "name": "alternative_academic_rank",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "first_source_crm": {
+                "column": {
+                  "name": "first_source_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              },
+              "first_source_sis": {
+                "column": {
+                  "name": "first_source",
+                  "table_ref": "stu_term_sis"
+                }
+              },
+              "athletic_recruit_sport": {
+                "substitution": {
+                  "name": "<athletic_recruit_sport>",
+                  "type": "predicand"
+                }
+              }
+            }
+          },
+          "query8": {
+            "curr_entry_year_academic": "curr_entry_year_academic",
+            "inquiry_ind_sis": "inquiry_ind_sis",
+            "inquiry_ind_crm": "inquiry_ind_crm",
+            "eab_current_funnel_status": "eab_current_funnel_status",
+            "curr_entry_term_sis": "curr_entry_term_sis",
+            "curr_entry_term_crm": "curr_entry_term_crm",
+            "interest_rating": "interest_rating",
+            "eab_student_type": "eab_student_type",
+            "eab_alternative_academic_rank": "eab_alternative_academic_rank",
+            "student_level_crm": "student_level_crm",
+            "eab_inquiry_ind": "eab_inquiry_ind",
+            "athletic_recruit_ind_crm": "athletic_recruit_ind_crm",
+            "student_level_sis": "student_level_sis",
+            "primary_student_id": "primary_student_id",
+            "state_resident_crm": "state_resident_crm",
+            "first_source": "first_source",
+            "athletic_recruit_ind_sis": "athletic_recruit_ind_sis",
+            "state_resident_sis": "state_resident_sis",
+            "curr_entry_year_calendar": "curr_entry_year_calendar",
+            "inquiry_ind": "inquiry_ind",
+            "state_resident": "state_resident",
+            "eab_student_id_type_sis": "eab_student_id_type_sis",
+            "curr_entry_term": "curr_entry_term",
+            "recruitment_status_sis": "recruitment_status_sis",
+            "recruitment_status_crm": "recruitment_status_crm",
+            "eab_athletic_recruit_ind": "eab_athletic_recruit_ind",
+            "eab_first_source": "eab_first_source",
+            "first_source_dt_crm": "first_source_dt_crm",
+            "eab_first_source_crm": "eab_first_source_crm",
+            "*": "[@385,3745:3745='*',<289>,79:7]",
+            "eab_first_source_sis": "eab_first_source_sis",
+            "first_source_dt_sis": "first_source_dt_sis",
+            "eab_student_type_sis": "eab_student_type_sis",
+            "eab_entry_year_academic_sis": "eab_entry_year_academic_sis",
+            "eab_entry_year_academic_crm": "eab_entry_year_academic_crm",
+            "athletic_recruit_sport_sis": "athletic_recruit_sport_sis",
+            "years_employed_sis": "years_employed_sis",
+            "academic_rating_crm": "academic_rating_crm",
+            "athletic_recruit_sport_crm": "athletic_recruit_sport_crm",
+            "years_employed_crm": "years_employed_crm",
+            "eab_student_type_crm": "eab_student_type_crm",
+            "curr_entry_year_calendar_sis": "curr_entry_year_calendar_sis",
+            "academic_rating_sis": "academic_rating_sis",
+            "curr_entry_year_calendar_crm": "curr_entry_year_calendar_crm",
+            "eab_inquiry_ind_sis": "eab_inquiry_ind_sis",
+            "partnercontact_id": "partnercontact_id",
+            "eab_inquiry_ind_crm": "eab_inquiry_ind_crm",
+            "eab_student_id_sis": "eab_student_id_sis",
+            "eab_student_id_type": "eab_student_id_type",
+            "partner_system_name": "partner_system_name",
+            "intake_dt_sis": "intake_dt_sis",
+            "intake_dt": "intake_dt",
+            "eab_student_id_crm": "[@936,8794:8811='eab_student_id_crm',<328>,199:42]",
+            "intake_dt_crm": "intake_dt_crm",
+            "eab_student_id": "eab_student_id",
+            "EAB_CURRENT_FUNNEL_STATUS_SIS": "[@942,8833:8861='EAB_CURRENT_FUNNEL_STATUS_SIS',<328>,200:6]",
+            "years_employed": "years_employed",
+            "EAB_CURRENT_FUNNEL_STATUS_CRM": "[@944,8866:8894='EAB_CURRENT_FUNNEL_STATUS_CRM',<328>,200:39]",
+            "academic_rating": "academic_rating",
+            "eab_entry_year_academic": "eab_entry_year_academic",
+            "recruitment_status": "recruitment_status",
+            "eab_entry_term_crm": "eab_entry_term_crm",
+            "eab_entry_term_sis": "eab_entry_term_sis",
+            "eab_entry_term": "eab_entry_term",
+            "first_source_dt": "first_source_dt",
+            "interest_rating_crm": "interest_rating_crm",
+            "eab_student_id_type_crm": "eab_student_id_type_crm",
+            "interest_rating_sis": "interest_rating_sis",
+            "student_type": "student_type",
+            "eab_current_funnel_status_crm": "eab_current_funnel_status_crm",
+            "eab_current_funnel_status_sis": "eab_current_funnel_status_sis",
+            "athletic_recruit_ind": "athletic_recruit_ind",
+            "student_level": "student_level",
+            "eab_athletic_recruit_ind_sis": "eab_athletic_recruit_ind_sis",
+            "eab_athletic_recruit_ind_crm": "eab_athletic_recruit_ind_crm",
+            "curr_entry_year_academic_crm": "curr_entry_year_academic_crm",
+            "curr_entry_year_academic_sis": "curr_entry_year_academic_sis",
+            "student_type_crm": "student_type_crm",
+            "student_type_sis": "student_type_sis",
+            "EAB_STUDENT_ID_SIS": "[@931,8759:8776='EAB_STUDENT_ID_SIS',<328>,199:7]",
+            "alternative_academic_rank": "alternative_academic_rank",
+            "first_source_crm": "first_source_crm",
+            "first_source_sis": "first_source_sis",
+            "athletic_recruit_sport": "athletic_recruit_sport"
+          },
+          "final": "query8",
+          "interface": {
+            "*": {
+              "column": {
+                "name": "*",
+                "table_ref": "*"
+              }
+            }
+          }
+        }
+      },
+      "queryDictionary": null,
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": null,
+      "parserMessageStringList": []
+    },
+    "5.1.3": {
+      "tableDictionary": {
+        "<[Enroll360].[Student Term].[Last Validated].{final}>": {
+          "curr_entry_year_academic": [
+            "[@42,456:463='stu_term',<393>,11:2]"
+          ],
+          "years_employed": [
+            "[@96,950:957='stu_term',<393>,20:2]"
+          ],
+          "academic_rating": [
+            "[@102,1000:1007='stu_term',<393>,21:2]"
+          ],
+          "eab_entry_year_academic": [
+            "[@24,286:293='stu_term',<393>,8:2]"
+          ],
+          "eab_current_funnel_status": [
+            "[@138,1344:1351='stu_term',<393>,27:2]"
+          ],
+          "interest_rating": [
+            "[@108,1052:1059='stu_term',<393>,22:2]"
+          ],
+          "recruitment_status": [
+            "[@60,616:623='stu_term',<393>,14:2]"
+          ],
+          "eab_student_type": [
+            "[@150,1470:1477='stu_term',<393>,29:2]"
+          ],
+          "eab_entry_term": [
+            "[@30,354:361='stu_term',<393>,9:2]"
+          ],
+          "first_source_dt": [
+            "[@78,770:777='stu_term',<393>,17:2]"
+          ],
+          "eab_inquiry_ind": [
+            "[@126,1222:1229='stu_term',<393>,25:2]"
+          ],
+          "first_source": [
+            "[@72,724:731='stu_term',<393>,16:2]"
+          ],
+          "primary_student_id": [
+            "[@9,174:181='stu_term',<393>,6:2]",
+            "[@162,1564:1571='stu_term',<393>,31:2]"
+          ],
+          "curr_entry_year_calendar": [
+            "[@120,1152:1159='stu_term',<393>,24:2]"
+          ],
+          "student_type": [
+            "[@48,526:533='stu_term',<393>,12:2]"
+          ],
+          "athletic_recruit_ind": [
+            "[@84,822:829='stu_term',<393>,18:2]"
+          ],
+          "inquiry_ind": [
+            "[@54,572:579='stu_term',<393>,13:2]"
+          ],
+          "state_resident": [
+            "[@66,674:681='stu_term',<393>,15:2]"
+          ],
+          "student_level": [
+            "[@114,1104:1111='stu_term',<393>,23:2]"
+          ],
+          "curr_entry_term": [
+            "[@36,404:411='stu_term',<393>,10:2]"
+          ],
+          "eab_athletic_recruit_ind": [
+            "[@132,1274:1281='stu_term',<393>,26:2]"
+          ],
+          "eab_first_source": [
+            "[@144,1416:1423='stu_term',<393>,28:2]"
+          ],
+          "partnercontact_id": [
+            "[@357,3511:3518='stu_term',<393>,75:1]"
+          ],
+          "athletic_recruit_sport": [
+            "[@90,884:891='stu_term',<393>,19:2]"
+          ],
+          "partner_system_name": [
+            "[@367,3577:3584='stu_term',<393>,75:67]"
+          ],
+          "intake_dt": [
+            "[@156,1524:1531='stu_term',<393>,30:2]"
+          ]
+        },
+        "<[Enroll360].[Student Term SIS].[Last Validated].{final}>": {
+          "curr_entry_year_academic": [
+            "[@492,4865:4876='stu_term_sis',<393>,109:1]"
+          ],
+          "eab_student_id": [
+            "[@393,3806:3817='stu_term_sis',<393>,83:4]",
+            "[@893,8537:8548='stu_term_sis',<393>,196:7]"
+          ],
+          "years_employed": [
+            "[@629,6185:6196='stu_term_sis',<393>,145:1]"
+          ],
+          "academic_rating": [
+            "[@643,6316:6327='stu_term_sis',<393>,149:1]"
+          ],
+          "eab_entry_year_academic": [
+            "[@450,4424:4435='stu_term_sis',<393>,97:1]",
+            "[@840,8230:8241='stu_term_sis',<393>,193:16]"
+          ],
+          "eab_current_funnel_status": [
+            "[@749,7343:7354='stu_term_sis',<393>,173:1]"
+          ],
+          "recruitment_status": [
+            "[@534,5274:5285='stu_term_sis',<393>,121:1]"
+          ],
+          "interest_rating": [
+            "[@657,6451:6462='stu_term_sis',<393>,153:1]"
+          ],
+          "eab_student_type": [
+            "[@777,7659:7670='stu_term_sis',<393>,181:1]",
+            "[@858,8346:8357='stu_term_sis',<393>,194:17]"
+          ],
+          "eab_entry_term": [
+            "[@464,4590:4601='stu_term_sis',<393>,101:1]",
+            "[@876,8449:8460='stu_term_sis',<393>,195:16]"
+          ],
+          "first_source_dt": [
+            "[@583,5711:5722='stu_term_sis',<393>,133:9]"
+          ],
+          "eab_alternative_academic_rank": [
+            "[@437,4266:4277='stu_term_sis',<393>,94:11]"
+          ],
+          "eab_inquiry_ind": [
+            "[@706,6937:6948='stu_term_sis',<393>,165:12]"
+          ],
+          "first_source": [
+            "[@562,5548:5559='stu_term_sis',<393>,129:1]"
+          ],
+          "curr_entry_year_calendar": [
+            "[@685,6720:6731='stu_term_sis',<393>,161:1]"
+          ],
+          "student_type": [
+            "[@506,5033:5044='stu_term_sis',<393>,113:1]"
+          ],
+          "athletic_recruit_ind": [
+            "[@601,5861:5872='stu_term_sis',<393>,137:1]"
+          ],
+          "inquiry_ind": [
+            "[@520,5152:5163='stu_term_sis',<393>,117:1]"
+          ],
+          "state_resident": [
+            "[@548,5420:5431='stu_term_sis',<393>,125:1]"
+          ],
+          "student_level": [
+            "[@671,6584:6595='stu_term_sis',<393>,157:1]"
+          ],
+          "curr_entry_term": [
+            "[@478,4721:4732='stu_term_sis',<393>,105:1]"
+          ],
+          "eab_athletic_recruit_ind": [
+            "[@731,7149:7160='stu_term_sis',<393>,169:12]"
+          ],
+          "eab_first_source": [
+            "[@763,7519:7530='stu_term_sis',<393>,177:1]"
+          ],
+          "alternative_academic_rank": [
+            "[@431,4214:4225='stu_term_sis',<393>,93:1]"
+          ],
+          "partnercontact_id": [
+            "[@822,8065:8076='stu_term_sis',<393>,191:6]"
+          ],
+          "athletic_recruit_sport": [
+            "[@615,6023:6034='stu_term_sis',<393>,141:1]"
+          ],
+          "eab_student_id_type": [
+            "[@411,3987:3998='stu_term_sis',<393>,88:1]",
+            "[@900,8581:8592='stu_term_sis',<393>,196:51]"
+          ],
+          "partner_system_name": [
+            "[@830,8141:8152='stu_term_sis',<393>,192:7]"
+          ],
+          "intake_dt": [
+            "[@798,7837:7848='stu_term_sis',<393>,185:14]"
+          ]
+        },
+        "<[Enroll360].[Partner ID Xwalk].{final}>": {
+          "target_partner_system_name": [
+            "[@230,2270:2271='xw',<393>,44:2]",
+            "[@252,2475:2476='xw',<393>,49:2]",
+            "[@320,3116:3117='xw',<393>,63:2]",
+            "[@332,3232:3233='xw',<393>,65:2]"
+          ],
+          "target_partnercontact_id": [
+            "[@224,2214:2215='xw',<393>,43:2]",
+            "[@246,2419:2420='xw',<393>,48:8]",
+            "[@314,3060:3061='xw',<393>,62:8]",
+            "[@326,3176:3177='xw',<393>,64:2]"
+          ],
+          "source_partnercontact_id": [
+            "[@212,2098:2099='xw',<393>,41:9]",
+            "[@258,2535:2536='xw',<393>,50:2]",
+            "[@280,2739:2740='xw',<393>,55:8]",
+            "[@292,2855:2856='xw',<393>,57:2]"
+          ],
+          "source_partner_system_name": [
+            "[@218,2154:2155='xw',<393>,42:2]",
+            "[@264,2591:2592='xw',<393>,51:2]",
+            "[@286,2795:2796='xw',<393>,56:2]",
+            "[@298,2911:2912='xw',<393>,58:2]"
+          ],
+          "intake_dt": [
+            "[@236,2330:2331='xw',<393>,45:2]",
+            "[@270,2651:2652='xw',<393>,52:2]",
+            "[@304,2971:2972='xw',<393>,59:2]",
+            "[@338,3292:3293='xw',<393>,66:2]"
+          ]
+        }
+      },
+      "symbolTable": {
+        "def_query9": {
+          "context_list": {
+            "student_term_crm": "query7"
+          },
+          "def_query8": {
+            "context_list": {
+              "student_term_crm": "query7",
+              "stud_term_crm": "query7"
+            },
+            "query_dictionary": {
+              "curr_entry_year_academic": [
+                "[@500,4968:4991='curr_entry_year_academic',<393>,110:31]"
+              ],
+              "inquiry_ind_sis": [
+                "[@524,5180:5194='inquiry_ind_sis',<393>,117:29]"
+              ],
+              "inquiry_ind_crm": [
+                "[@518,5133:5147='inquiry_ind_crm',<393>,116:15]"
+              ],
+              "eab_current_funnel_status": [
+                "[@757,7449:7473='eab_current_funnel_status',<393>,174:32]"
+              ],
+              "curr_entry_term_sis": [
+                "[@482,4753:4771='curr_entry_term_sis',<393>,105:33]"
+              ],
+              "curr_entry_term_crm": [
+                "[@476,4698:4716='curr_entry_term_crm',<393>,104:15]"
+              ],
+              "interest_rating": [
+                "[@665,6527:6541='interest_rating',<393>,154:22]"
+              ],
+              "eab_student_type": [
+                "[@785,7738:7753='eab_student_type',<393>,182:23]"
+              ],
+              "eab_alternative_academic_rank": [
+                "[@442,4313:4341='eab_alternative_academic_rank',<393>,94:58]"
+              ],
+              "student_level_crm": [
+                "[@669,6563:6579='student_level_crm',<393>,156:15]"
+              ],
+              "eab_inquiry_ind": [
+                "[@718,7026:7040='eab_inquiry_ind',<393>,166:34]"
+              ],
+              "athletic_recruit_ind_crm": [
+                "[@599,5833:5856='athletic_recruit_ind_crm',<393>,136:15]"
+              ],
+              "student_level_sis": [
+                "[@675,6614:6630='student_level_sis',<393>,157:31]"
+              ],
+              "primary_student_id": [
+                "[@429,4192:4209='primary_student_id',<393>,92:41]"
+              ],
+              "state_resident_crm": [
+                "[@546,5398:5415='state_resident_crm',<393>,124:15]"
+              ],
+              "first_source": [
+                "[@570,5615:5626='first_source',<393>,130:19]"
+              ],
+              "athletic_recruit_ind_sis": [
+                "[@605,5898:5921='athletic_recruit_ind_sis',<393>,137:38]"
+              ],
+              "state_resident_sis": [
+                "[@552,5451:5468='state_resident_sis',<393>,125:32]"
+              ],
+              "curr_entry_year_calendar": [
+                "[@693,6823:6846='curr_entry_year_calendar',<393>,162:31]"
+              ],
+              "inquiry_ind": [
+                "[@528,5216:5226='inquiry_ind',<393>,118:18]"
+              ],
+              "state_resident": [
+                "[@556,5493:5506='state_resident',<393>,126:21]"
+              ],
+              "eab_student_id_type_sis": [
+                "[@415,4023:4045='eab_student_id_type_sis',<393>,88:37]"
+              ],
+              "curr_entry_term": [
+                "[@486,4797:4811='curr_entry_term',<393>,106:22]"
+              ],
+              "recruitment_status_sis": [
+                "[@538,5309:5330='recruitment_status_sis',<393>,121:36]"
+              ],
+              "recruitment_status_crm": [
+                "[@532,5248:5269='recruitment_status_crm',<393>,120:15]"
+              ],
+              "eab_athletic_recruit_ind": [
+                "[@743,7265:7288='eab_athletic_recruit_ind',<393>,170:43]"
+              ],
+              "eab_first_source": [
+                "[@771,7598:7613='eab_first_source',<393>,178:23]"
+              ],
+              "first_source_dt_crm": [
+                "[@579,5680:5698='first_source_dt_crm',<393>,132:47]"
+              ],
+              "eab_first_source_crm": [
+                "[@761,7495:7514='eab_first_source_crm',<393>,176:15]"
+              ],
+              "*": [
+                "[@385,3745:3745='*',<291>,79:7]"
+              ],
+              "eab_first_source_sis": [
+                "[@767,7552:7571='eab_first_source_sis',<393>,177:34]"
+              ],
+              "first_source_dt_sis": [
+                "[@588,5744:5762='first_source_dt_sis',<393>,133:42]"
+              ],
+              "eab_student_type_sis": [
+                "[@781,7692:7711='eab_student_type_sis',<393>,181:34]"
+              ],
+              "eab_entry_year_academic_sis": [
+                "[@454,4464:4490='eab_entry_year_academic_sis',<393>,97:41]"
+              ],
+              "eab_entry_year_academic_crm": [
+                "[@448,4393:4419='eab_entry_year_academic_crm',<393>,96:46]"
+              ],
+              "athletic_recruit_sport_sis": [
+                "[@619,6062:6087='athletic_recruit_sport_sis',<393>,141:40]"
+              ],
+              "years_employed_sis": [
+                "[@633,6216:6233='years_employed_sis',<393>,145:32]"
+              ],
+              "academic_rating_crm": [
+                "[@641,6293:6311='academic_rating_crm',<393>,148:15]"
+              ],
+              "athletic_recruit_sport_crm": [
+                "[@613,5993:6018='athletic_recruit_sport_crm',<393>,140:15]"
+              ],
+              "years_employed_crm": [
+                "[@627,6163:6180='years_employed_crm',<393>,144:15]"
+              ],
+              "eab_student_type_crm": [
+                "[@775,7635:7654='eab_student_type_crm',<393>,180:15]"
+              ],
+              "curr_entry_year_calendar_sis": [
+                "[@689,6761:6788='curr_entry_year_calendar_sis',<393>,161:42]"
+              ],
+              "academic_rating_sis": [
+                "[@647,6348:6366='academic_rating_sis',<393>,149:33]"
+              ],
+              "curr_entry_year_calendar_crm": [
+                "[@683,6688:6715='curr_entry_year_calendar_crm',<393>,160:15]"
+              ],
+              "eab_inquiry_ind_sis": [
+                "[@711,6970:6988='eab_inquiry_ind_sis',<393>,165:45]"
+              ],
+              "partnercontact_id": [
+                "[@405,3920:3936='partnercontact_id',<393>,85:21]"
+              ],
+              "eab_inquiry_ind_crm": [
+                "[@702,6903:6921='eab_inquiry_ind_crm',<393>,164:50]"
+              ],
+              "eab_student_id_sis": [
+                "[@397,3837:3854='eab_student_id_sis',<393>,83:35]",
+                "[@931,8759:8776='EAB_STUDENT_ID_SIS',<393>,199:7]"
+              ],
+              "eab_student_id_type": [
+                "[@419,4078:4096='eab_student_id_type',<393>,89:29]"
+              ],
+              "partner_system_name": [
+                "[@423,4126:4144='partner_system_name',<393>,90:26]"
+              ],
+              "intake_dt_sis": [
+                "[@803,7864:7876='intake_dt_sis',<393>,185:41]"
+              ],
+              "intake_dt": [
+                "[@810,7910:7918='intake_dt',<393>,186:30]"
+              ],
+              "eab_student_id_crm": [
+                "[@391,3781:3798='eab_student_id_crm',<393>,82:15]",
+                "[@936,8794:8811='eab_student_id_crm',<393>,199:42]"
+              ],
+              "intake_dt_crm": [
+                "[@794,7806:7818='intake_dt_crm',<393>,184:46]"
+              ],
+              "eab_student_id": [
+                "[@401,3882:3895='eab_student_id',<393>,84:24]"
+              ],
+              "years_employed": [
+                "[@637,6258:6271='years_employed',<393>,146:21]"
+              ],
+              "academic_rating": [
+                "[@651,6392:6406='academic_rating',<393>,150:22]"
+              ],
+              "eab_entry_year_academic": [
+                "[@458,4524:4546='eab_entry_year_academic',<393>,98:30]"
+              ],
+              "recruitment_status": [
+                "[@542,5359:5376='recruitment_status',<393>,122:25]"
+              ],
+              "eab_entry_term_crm": [
+                "[@462,4568:4585='eab_entry_term_crm',<393>,100:15]"
+              ],
+              "eab_entry_term_sis": [
+                "[@468,4621:4638='eab_entry_term_sis',<393>,101:32]"
+              ],
+              "eab_entry_term": [
+                "[@472,4663:4676='eab_entry_term',<393>,102:21]"
+              ],
+              "first_source_dt": [
+                "[@595,5797:5811='first_source_dt',<393>,134:31]"
+              ],
+              "interest_rating_crm": [
+                "[@655,6428:6446='interest_rating_crm',<393>,152:15]"
+              ],
+              "eab_student_id_type_crm": [
+                "[@409,3960:3982='eab_student_id_type_crm',<393>,87:18]"
+              ],
+              "interest_rating_sis": [
+                "[@661,6483:6501='interest_rating_sis',<393>,153:33]"
+              ],
+              "student_type": [
+                "[@514,5100:5111='student_type',<393>,114:19]"
+              ],
+              "eab_current_funnel_status_crm": [
+                "[@747,7310:7338='eab_current_funnel_status_crm',<393>,172:15]",
+                "[@944,8866:8894='EAB_CURRENT_FUNNEL_STATUS_CRM',<393>,200:39]"
+              ],
+              "eab_current_funnel_status_sis": [
+                "[@753,7385:7413='eab_current_funnel_status_sis',<393>,173:43]",
+                "[@942,8833:8861='EAB_CURRENT_FUNNEL_STATUS_SIS',<393>,200:6]"
+              ],
+              "athletic_recruit_ind": [
+                "[@609,5952:5971='athletic_recruit_ind',<393>,138:27]"
+              ],
+              "student_level": [
+                "[@679,6654:6666='student_level',<393>,158:20]"
+              ],
+              "eab_athletic_recruit_ind_sis": [
+                "[@736,7191:7218='eab_athletic_recruit_ind_sis',<393>,169:54]"
+              ],
+              "eab_athletic_recruit_ind_crm": [
+                "[@727,7106:7133='eab_athletic_recruit_ind_crm',<393>,168:59]"
+              ],
+              "curr_entry_year_academic_crm": [
+                "[@490,4833:4860='curr_entry_year_academic_crm',<393>,108:15]"
+              ],
+              "curr_entry_year_academic_sis": [
+                "[@496,4906:4933='curr_entry_year_academic_sis',<393>,109:42]"
+              ],
+              "student_type_crm": [
+                "[@504,5013:5028='student_type_crm',<393>,112:15]"
+              ],
+              "student_type_sis": [
+                "[@510,5062:5077='student_type_sis',<393>,113:30]"
+              ],
+              "alternative_academic_rank": [
+                "[@433,4227:4251='alternative_academic_rank',<393>,93:14]"
+              ],
+              "first_source_crm": [
+                "[@560,5528:5543='first_source_crm',<393>,128:15]"
+              ],
+              "first_source_sis": [
+                "[@566,5577:5592='first_source_sis',<393>,129:30]"
+              ],
+              "athletic_recruit_sport": [
+                "[@623,6120:6141='athletic_recruit_sport',<393>,142:29]"
+              ]
+            },
+            "table_dictionary": {
+              "<[Enroll360].[Student Term SIS].[Last Validated].{final}>": {
+                "curr_entry_year_academic": [
+                  "[@492,4865:4876='stu_term_sis',<393>,109:1]"
+                ],
+                "eab_student_id": [
+                  "[@393,3806:3817='stu_term_sis',<393>,83:4]",
+                  "[@893,8537:8548='stu_term_sis',<393>,196:7]"
+                ],
+                "years_employed": [
+                  "[@629,6185:6196='stu_term_sis',<393>,145:1]"
+                ],
+                "academic_rating": [
+                  "[@643,6316:6327='stu_term_sis',<393>,149:1]"
+                ],
+                "eab_entry_year_academic": [
+                  "[@450,4424:4435='stu_term_sis',<393>,97:1]",
+                  "[@840,8230:8241='stu_term_sis',<393>,193:16]"
+                ],
+                "eab_current_funnel_status": [
+                  "[@749,7343:7354='stu_term_sis',<393>,173:1]"
+                ],
+                "recruitment_status": [
+                  "[@534,5274:5285='stu_term_sis',<393>,121:1]"
+                ],
+                "interest_rating": [
+                  "[@657,6451:6462='stu_term_sis',<393>,153:1]"
+                ],
+                "eab_student_type": [
+                  "[@777,7659:7670='stu_term_sis',<393>,181:1]",
+                  "[@858,8346:8357='stu_term_sis',<393>,194:17]"
+                ],
+                "eab_entry_term": [
+                  "[@464,4590:4601='stu_term_sis',<393>,101:1]",
+                  "[@876,8449:8460='stu_term_sis',<393>,195:16]"
+                ],
+                "first_source_dt": [
+                  "[@583,5711:5722='stu_term_sis',<393>,133:9]"
+                ],
+                "eab_alternative_academic_rank": [
+                  "[@437,4266:4277='stu_term_sis',<393>,94:11]"
+                ],
+                "eab_inquiry_ind": [
+                  "[@706,6937:6948='stu_term_sis',<393>,165:12]"
+                ],
+                "first_source": [
+                  "[@562,5548:5559='stu_term_sis',<393>,129:1]"
+                ],
+                "curr_entry_year_calendar": [
+                  "[@685,6720:6731='stu_term_sis',<393>,161:1]"
+                ],
+                "student_type": [
+                  "[@506,5033:5044='stu_term_sis',<393>,113:1]"
+                ],
+                "athletic_recruit_ind": [
+                  "[@601,5861:5872='stu_term_sis',<393>,137:1]"
+                ],
+                "inquiry_ind": [
+                  "[@520,5152:5163='stu_term_sis',<393>,117:1]"
+                ],
+                "state_resident": [
+                  "[@548,5420:5431='stu_term_sis',<393>,125:1]"
+                ],
+                "student_level": [
+                  "[@671,6584:6595='stu_term_sis',<393>,157:1]"
+                ],
+                "curr_entry_term": [
+                  "[@478,4721:4732='stu_term_sis',<393>,105:1]"
+                ],
+                "eab_athletic_recruit_ind": [
+                  "[@731,7149:7160='stu_term_sis',<393>,169:12]"
+                ],
+                "eab_first_source": [
+                  "[@763,7519:7530='stu_term_sis',<393>,177:1]"
+                ],
+                "alternative_academic_rank": [
+                  "[@431,4214:4225='stu_term_sis',<393>,93:1]"
+                ],
+                "partnercontact_id": [
+                  "[@822,8065:8076='stu_term_sis',<393>,191:6]"
+                ],
+                "athletic_recruit_sport": [
+                  "[@615,6023:6034='stu_term_sis',<393>,141:1]"
+                ],
+                "eab_student_id_type": [
+                  "[@411,3987:3998='stu_term_sis',<393>,88:1]",
+                  "[@900,8581:8592='stu_term_sis',<393>,196:51]"
+                ],
+                "partner_system_name": [
+                  "[@830,8141:8152='stu_term_sis',<393>,192:7]"
+                ],
+                "intake_dt": [
+                  "[@798,7837:7848='stu_term_sis',<393>,185:14]"
+                ]
+              }
+            },
+            "filters": [
+              {
+                "name": "partnercontact_id",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "partnercontact_id_02",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "partner_system_name",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "partner_system_name_02",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "eab_entry_year_academic",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "eab_entry_year_academic_CRM",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "eab_student_type",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "eab_student_type_crm",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "eab_entry_term",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "eab_entry_term_crm",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "eab_student_id",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "eab_student_id_type",
+                "table_ref": "stu_term_sis"
+              },
+              {
+                "name": "eab_student_id_crm",
+                "table_ref": "stud_term_crm"
+              },
+              {
+                "name": "eab_student_id_type_crm",
+                "table_ref": "stud_term_crm"
+              }
+            ],
+            "interface": {
+              "curr_entry_year_academic": [
+                {
+                  "name": "<curr_entry_year_academic>",
+                  "type": "predicand"
+                }
+              ],
+              "inquiry_ind_sis": [
+                {
+                  "name": "inquiry_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "inquiry_ind_crm": [
+                {
+                  "name": "inquiry_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_current_funnel_status": [
+                {
+                  "name": "<eab_current_funnel_status>",
+                  "type": "predicand"
+                }
+              ],
+              "curr_entry_term_sis": [
+                {
+                  "name": "curr_entry_term",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "curr_entry_term_crm": [
+                {
+                  "name": "curr_entry_term_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "interest_rating": [
+                {
+                  "name": "<interest_rating>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_student_type": [
+                {
+                  "name": "<eab_student_type>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_alternative_academic_rank": [
+                {
+                  "name": "eab_alternative_academic_rank",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "student_level_crm": [
+                {
+                  "name": "student_level_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_inquiry_ind": [
+                {
+                  "name": "<eab_inquiry_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "athletic_recruit_ind_crm": [
+                {
+                  "name": "athletic_recruit_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "student_level_sis": [
+                {
+                  "name": "student_level",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "primary_student_id": [
+                {
+                  "name": "primary_student_id_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "state_resident_crm": [
+                {
+                  "name": "state_resident_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "first_source": [
+                {
+                  "name": "<first_source>",
+                  "type": "predicand"
+                }
+              ],
+              "athletic_recruit_ind_sis": [
+                {
+                  "name": "athletic_recruit_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "state_resident_sis": [
+                {
+                  "name": "state_resident",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "curr_entry_year_calendar": [
+                {
+                  "name": "<curr_entry_year_calendar>",
+                  "type": "predicand"
+                }
+              ],
+              "inquiry_ind": [
+                {
+                  "name": "<inquiry_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "state_resident": [
+                {
+                  "name": "<state_resident>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_student_id_type_sis": [
+                {
+                  "name": "eab_student_id_type",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "curr_entry_term": [
+                {
+                  "name": "<curr_entry_term>",
+                  "type": "predicand"
+                }
+              ],
+              "recruitment_status_sis": [
+                {
+                  "name": "recruitment_status",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "recruitment_status_crm": [
+                {
+                  "name": "recruitment_status_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_athletic_recruit_ind": [
+                {
+                  "name": "<eab_athletic_recruit_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_first_source": [
+                {
+                  "name": "<eab_first_source>",
+                  "type": "predicand"
+                }
+              ],
+              "first_source_dt_crm": [
+                {
+                  "name": "first_source_dt_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_first_source_crm": [
+                {
+                  "name": "eab_first_source_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_first_source_sis": [
+                {
+                  "name": "eab_first_source",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "first_source_dt_sis": [
+                {
+                  "name": "first_source_dt",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_student_type_sis": [
+                {
+                  "name": "eab_student_type",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_entry_year_academic_sis": [
+                {
+                  "name": "eab_entry_year_academic",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_entry_year_academic_crm": [
+                {
+                  "name": "eab_entry_year_academic_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "athletic_recruit_sport_sis": [
+                {
+                  "name": "athletic_recruit_sport",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "years_employed_sis": [
+                {
+                  "name": "years_employed",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "academic_rating_crm": [
+                {
+                  "name": "academic_rating_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "athletic_recruit_sport_crm": [
+                {
+                  "name": "athletic_recruit_sport_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "years_employed_crm": [
+                {
+                  "name": "years_employed_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_student_type_crm": [
+                {
+                  "name": "eab_student_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "curr_entry_year_calendar_sis": [
+                {
+                  "name": "curr_entry_year_calendar",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "academic_rating_sis": [
+                {
+                  "name": "academic_rating",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "curr_entry_year_calendar_crm": [
+                {
+                  "name": "curr_entry_year_calendar_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_inquiry_ind_sis": [
+                {
+                  "name": "eab_inquiry_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "partnercontact_id": [
+                {
+                  "name": "<eab_student_id>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_inquiry_ind_crm": [
+                {
+                  "name": "eab_inquiry_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_student_id_sis": [
+                {
+                  "name": "eab_student_id",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_student_id_type": [
+                {
+                  "name": "<eab_student_id_type>",
+                  "type": "predicand"
+                }
+              ],
+              "partner_system_name": [
+                {
+                  "name": "<eab_student_id_type>",
+                  "type": "predicand"
+                }
+              ],
+              "intake_dt_sis": [
+                {
+                  "name": "intake_dt",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "intake_dt": [
+                {
+                  "name": "<intake_dt>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_student_id_crm": [
+                {
+                  "name": "eab_student_id_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "intake_dt_crm": [
+                {
+                  "name": "intake_dt_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_student_id": [
+                {
+                  "name": "<eab_student_id>",
+                  "type": "predicand"
+                }
+              ],
+              "years_employed": [
+                {
+                  "name": "<years_employed>",
+                  "type": "predicand"
+                }
+              ],
+              "academic_rating": [
+                {
+                  "name": "<academic_rating>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_entry_year_academic": [
+                {
+                  "name": "<eab_entry_year_academic>",
+                  "type": "predicand"
+                }
+              ],
+              "recruitment_status": [
+                {
+                  "name": "<recruitment_status>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_entry_term_crm": [
+                {
+                  "name": "eab_entry_term_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_entry_term_sis": [
+                {
+                  "name": "eab_entry_term",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_entry_term": [
+                {
+                  "name": "<eab_entry_term>",
+                  "type": "predicand"
+                }
+              ],
+              "first_source_dt": [
+                {
+                  "name": "<first_source_dt>",
+                  "type": "predicand"
+                }
+              ],
+              "interest_rating_crm": [
+                {
+                  "name": "interest_rating_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_student_id_type_crm": [
+                {
+                  "name": "eab_student_id_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "interest_rating_sis": [
+                {
+                  "name": "interest_rating",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "student_type": [
+                {
+                  "name": "<student_type>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_current_funnel_status_crm": [
+                {
+                  "name": "eab_current_funnel_status_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "eab_current_funnel_status_sis": [
+                {
+                  "name": "eab_current_funnel_status",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "athletic_recruit_ind": [
+                {
+                  "name": "<athletic_recruit_ind>",
+                  "type": "predicand"
+                }
+              ],
+              "student_level": [
+                {
+                  "name": "<student_level>",
+                  "type": "predicand"
+                }
+              ],
+              "eab_athletic_recruit_ind_sis": [
+                {
+                  "name": "eab_athletic_recruit_ind",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "eab_athletic_recruit_ind_crm": [
+                {
+                  "name": "eab_athletic_recruit_ind_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "curr_entry_year_academic_crm": [
+                {
+                  "name": "curr_entry_year_academic_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "curr_entry_year_academic_sis": [
+                {
+                  "name": "curr_entry_year_academic",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "student_type_crm": [
+                {
+                  "name": "student_type_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "student_type_sis": [
+                {
+                  "name": "student_type",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "alternative_academic_rank": [
+                {
+                  "name": "alternative_academic_rank",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "first_source_crm": [
+                {
+                  "name": "first_source_crm",
+                  "table_ref": "stud_term_crm"
+                }
+              ],
+              "first_source_sis": [
+                {
+                  "name": "first_source",
+                  "table_ref": "stu_term_sis"
+                }
+              ],
+              "athletic_recruit_sport": [
+                {
+                  "name": "<athletic_recruit_sport>",
+                  "type": "predicand"
+                }
+              ]
+            },
+            "table_alias": {
+              "stu_term_sis": "<[Enroll360].[Student Term SIS].[Last Validated].{final}>",
+              "stud_term_crm": "query7",
+              "student_term_crm": "query7"
+            }
+          },
+          "def_query7": {
+            "def_query6": {
+              "query_dictionary": {
+                "partner_system_name_01": [
+                  "[@177,1827:1848='partner_system_name_01',<393>,37:29]",
+                  "[@376,3622:3623='xw',<393>,75:112]"
+                ],
+                "partner_system_name_02": [
+                  "[@181,1873:1894='partner_system_name_02',<393>,37:75]"
+                ],
+                "partnercontact_id_01": [
+                  "[@175,1805:1824='partnercontact_id_01',<393>,37:7]",
+                  "[@361,3540:3541='xw',<393>,75:30]"
+                ],
+                "*": [
+                  "[@5,165:166='xw',<393>,5:4]"
+                ],
+                "partnercontact_id_02": [
+                  "[@179,1851:1870='partnercontact_id_02',<393>,37:53]"
+                ]
+              },
+              "filters": [
+                {
+                  "name": "rn",
+                  "table_ref": "query5"
+                }
+              ],
+              "def_query5": {
+                "def_union4": {
+                  "query_dictionary": {
+                    "partner_system_name_01": [
+                      "[@197,1980:2001='partner_system_name_01',<393>,39:74]"
+                    ],
+                    "partner_system_name_02": [
+                      "[@201,2026:2047='partner_system_name_02',<393>,39:120]"
+                    ],
+                    "partnercontact_id_01": [
+                      "[@195,1958:1977='partnercontact_id_01',<393>,39:52]"
+                    ],
+                    "*": [
+                      "[@385,3745:3745='*',<291>,79:7]"
+                    ],
+                    "partnercontact_id_02": [
+                      "[@199,2004:2023='partnercontact_id_02',<393>,39:98]"
+                    ],
+                    "intake_dt": [
+                      "[@204,2058:2066='intake_dt',<393>,39:152]"
+                    ]
+                  },
+                  "def_query1": {
+                    "query_dictionary": {
+                      "partner_system_name_01": [
+                        "[@256,2508:2529='partner_system_name_01',<393>,49:35]"
+                      ],
+                      "partner_system_name_02": [
+                        "[@268,2624:2645='partner_system_name_02',<393>,51:35]"
+                      ],
+                      "partnercontact_id_01": [
+                        "[@250,2450:2469='partnercontact_id_01',<393>,48:39]"
+                      ],
+                      "*": [
+                        "[@186,1924:1924='*',<291>,39:18]"
+                      ],
+                      "partnercontact_id_02": [
+                        "[@262,2566:2585='partnercontact_id_02',<393>,50:33]"
+                      ],
+                      "intake_dt": [
+                        "[@272,2654:2662='intake_dt',<393>,52:5]"
+                      ]
+                    },
+                    "table_dictionary": {
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partner_system_name": [
+                          "[@252,2475:2476='xw',<393>,49:2]"
+                        ],
+                        "target_partnercontact_id": [
+                          "[@246,2419:2420='xw',<393>,48:8]"
+                        ],
+                        "source_partnercontact_id": [
+                          "[@258,2535:2536='xw',<393>,50:2]"
+                        ],
+                        "source_partner_system_name": [
+                          "[@264,2591:2592='xw',<393>,51:2]"
+                        ],
+                        "intake_dt": [
+                          "[@270,2651:2652='xw',<393>,52:2]"
+                        ]
+                      }
+                    },
+                    "setop": "UNION",
+                    "interface": {
+                      "partner_system_name_01": [
+                        {
+                          "name": "target_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partner_system_name_02": [
+                        {
+                          "name": "source_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_01": [
+                        {
+                          "name": "target_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_02": [
+                        {
+                          "name": "source_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "intake_dt": [
+                        {
+                          "name": "intake_dt",
+                          "table_ref": "xw"
+                        }
+                      ]
+                    },
+                    "table_alias": {
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>"
+                    }
+                  },
+                  "def_query0": {
+                    "query_dictionary": {
+                      "partner_system_name_01": [
+                        "[@222,2187:2208='partner_system_name_01',<393>,42:35]"
+                      ],
+                      "partner_system_name_02": [
+                        "[@234,2303:2324='partner_system_name_02',<393>,44:35]"
+                      ],
+                      "partnercontact_id_01": [
+                        "[@216,2129:2148='partnercontact_id_01',<393>,41:40]"
+                      ],
+                      "*": [
+                        "[@186,1924:1924='*',<291>,39:18]"
+                      ],
+                      "partnercontact_id_02": [
+                        "[@228,2245:2264='partnercontact_id_02',<393>,43:33]"
+                      ],
+                      "intake_dt": [
+                        "[@238,2333:2341='intake_dt',<393>,45:5]"
+                      ]
+                    },
+                    "table_dictionary": {
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partner_system_name": [
+                          "[@230,2270:2271='xw',<393>,44:2]",
+                          "[@252,2475:2476='xw',<393>,49:2]",
+                          "[@320,3116:3117='xw',<393>,63:2]",
+                          "[@332,3232:3233='xw',<393>,65:2]"
+                        ],
+                        "target_partnercontact_id": [
+                          "[@224,2214:2215='xw',<393>,43:2]",
+                          "[@246,2419:2420='xw',<393>,48:8]",
+                          "[@314,3060:3061='xw',<393>,62:8]",
+                          "[@326,3176:3177='xw',<393>,64:2]"
+                        ],
+                        "source_partnercontact_id": [
+                          "[@212,2098:2099='xw',<393>,41:9]",
+                          "[@258,2535:2536='xw',<393>,50:2]",
+                          "[@280,2739:2740='xw',<393>,55:8]",
+                          "[@292,2855:2856='xw',<393>,57:2]"
+                        ],
+                        "source_partner_system_name": [
+                          "[@218,2154:2155='xw',<393>,42:2]",
+                          "[@264,2591:2592='xw',<393>,51:2]",
+                          "[@286,2795:2796='xw',<393>,56:2]",
+                          "[@298,2911:2912='xw',<393>,58:2]"
+                        ],
+                        "intake_dt": [
+                          "[@236,2330:2331='xw',<393>,45:2]",
+                          "[@270,2651:2652='xw',<393>,52:2]",
+                          "[@304,2971:2972='xw',<393>,59:2]",
+                          "[@338,3292:3293='xw',<393>,66:2]"
+                        ]
+                      }
+                    },
+                    "interface": {
+                      "partner_system_name_01": [
+                        {
+                          "name": "source_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partner_system_name_02": [
+                        {
+                          "name": "target_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_01": [
+                        {
+                          "name": "source_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_02": [
+                        {
+                          "name": "target_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "intake_dt": [
+                        {
+                          "name": "intake_dt",
+                          "table_ref": "xw"
+                        }
+                      ]
+                    },
+                    "table_alias": {
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>"
+                    }
+                  },
+                  "interface": {
+                    "partner_system_name_01": "query_column",
+                    "partner_system_name_02": "query_column",
+                    "partnercontact_id_01": "query_column",
+                    "partnercontact_id_02": "query_column",
+                    "intake_dt": "query_column"
+                  },
+                  "def_query3": {
+                    "query_dictionary": {
+                      "partner_system_name_01": [
+                        "[@324,3149:3170='partner_system_name_01',<393>,63:35]"
+                      ],
+                      "partner_system_name_02": [
+                        "[@336,3265:3286='partner_system_name_02',<393>,65:35]"
+                      ],
+                      "partnercontact_id_01": [
+                        "[@318,3091:3110='partnercontact_id_01',<393>,62:39]"
+                      ],
+                      "*": [
+                        "[@186,1924:1924='*',<291>,39:18]"
+                      ],
+                      "partnercontact_id_02": [
+                        "[@330,3207:3226='partnercontact_id_02',<393>,64:33]"
+                      ],
+                      "intake_dt": [
+                        "[@340,3295:3303='intake_dt',<393>,66:5]"
+                      ]
+                    },
+                    "table_dictionary": {
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "target_partner_system_name": [
+                          "[@320,3116:3117='xw',<393>,63:2]",
+                          "[@332,3232:3233='xw',<393>,65:2]"
+                        ],
+                        "target_partnercontact_id": [
+                          "[@314,3060:3061='xw',<393>,62:8]",
+                          "[@326,3176:3177='xw',<393>,64:2]"
+                        ],
+                        "intake_dt": [
+                          "[@338,3292:3293='xw',<393>,66:2]"
+                        ]
+                      }
+                    },
+                    "setop": "UNION",
+                    "interface": {
+                      "partner_system_name_01": [
+                        {
+                          "name": "target_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partner_system_name_02": [
+                        {
+                          "name": "target_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_01": [
+                        {
+                          "name": "target_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_02": [
+                        {
+                          "name": "target_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "intake_dt": [
+                        {
+                          "name": "intake_dt",
+                          "table_ref": "xw"
+                        }
+                      ]
+                    },
+                    "table_alias": {
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>"
+                    }
+                  },
+                  "def_query2": {
+                    "query_dictionary": {
+                      "partner_system_name_01": [
+                        "[@290,2828:2849='partner_system_name_01',<393>,56:35]"
+                      ],
+                      "partner_system_name_02": [
+                        "[@302,2944:2965='partner_system_name_02',<393>,58:35]"
+                      ],
+                      "partnercontact_id_01": [
+                        "[@284,2770:2789='partnercontact_id_01',<393>,55:39]"
+                      ],
+                      "*": [
+                        "[@186,1924:1924='*',<291>,39:18]"
+                      ],
+                      "partnercontact_id_02": [
+                        "[@296,2886:2905='partnercontact_id_02',<393>,57:33]"
+                      ],
+                      "intake_dt": [
+                        "[@306,2974:2982='intake_dt',<393>,59:5]"
+                      ]
+                    },
+                    "table_dictionary": {
+                      "<[Enroll360].[Partner ID Xwalk].{final}>": {
+                        "source_partnercontact_id": [
+                          "[@280,2739:2740='xw',<393>,55:8]",
+                          "[@292,2855:2856='xw',<393>,57:2]"
+                        ],
+                        "source_partner_system_name": [
+                          "[@286,2795:2796='xw',<393>,56:2]",
+                          "[@298,2911:2912='xw',<393>,58:2]"
+                        ],
+                        "intake_dt": [
+                          "[@304,2971:2972='xw',<393>,59:2]"
+                        ]
+                      }
+                    },
+                    "setop": "UNION",
+                    "interface": {
+                      "partner_system_name_01": [
+                        {
+                          "name": "source_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partner_system_name_02": [
+                        {
+                          "name": "source_partner_system_name",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_01": [
+                        {
+                          "name": "source_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "partnercontact_id_02": [
+                        {
+                          "name": "source_partnercontact_id",
+                          "table_ref": "xw"
+                        }
+                      ],
+                      "intake_dt": [
+                        {
+                          "name": "intake_dt",
+                          "table_ref": "xw"
+                        }
+                      ]
+                    },
+                    "table_alias": {
+                      "xw": "<[Enroll360].[Partner ID Xwalk].{final}>"
+                    }
+                  }
+                },
+                "window_ordered_by": [
+                  {
+                    "name": "intake_dt",
+                    "table_ref": "union4"
+                  }
+                ],
+                "query_dictionary": {
+                  "partner_system_name_01": [
+                    "[@177,1827:1848='partner_system_name_01',<393>,37:29]"
+                  ],
+                  "partner_system_name_02": [
+                    "[@181,1873:1894='partner_system_name_02',<393>,37:75]"
+                  ],
+                  "*": [
+                    "[@186,1924:1924='*',<291>,39:18]"
+                  ],
+                  "partnercontact_id_01": [
+                    "[@175,1805:1824='partnercontact_id_01',<393>,37:7]"
+                  ],
+                  "partnercontact_id_02": [
+                    "[@179,1851:1870='partnercontact_id_02',<393>,37:53]"
+                  ],
+                  "rn": [
+                    "[@208,2077:2078='rn',<393>,39:171]",
+                    "[@350,3388:3389='rn',<393>,70:6]"
+                  ]
+                },
+                "window_partition_by": [
+                  {
+                    "name": "partnercontact_id_01",
+                    "table_ref": "union4"
+                  },
+                  {
+                    "name": "partner_system_name_01",
+                    "table_ref": "union4"
+                  },
+                  {
+                    "name": "partnercontact_id_02",
+                    "table_ref": "union4"
+                  },
+                  {
+                    "name": "partner_system_name_02",
+                    "table_ref": "union4"
+                  }
+                ],
+                "interface": {
+                  "*": [
+                    {
+                      "name": "*",
+                      "table_ref": "*"
+                    }
+                  ],
+                  "rn": [
+                    {
+                      "name": "partnercontact_id_01",
+                      "table_ref": "union4"
+                    },
+                    {
+                      "name": "partner_system_name_01",
+                      "table_ref": "union4"
+                    },
+                    {
+                      "name": "partnercontact_id_02",
+                      "table_ref": "union4"
+                    },
+                    {
+                      "name": "partner_system_name_02",
+                      "table_ref": "union4"
+                    },
+                    {
+                      "name": "intake_dt",
+                      "table_ref": "union4"
+                    }
+                  ]
+                },
+                "table_alias": {
+                  "xw_full": "union4"
+                }
+              },
+              "interface": {
+                "partner_system_name_01": [
+                  {
+                    "name": "partner_system_name_01",
+                    "table_ref": "query5"
+                  }
+                ],
+                "partner_system_name_02": [
+                  {
+                    "name": "partner_system_name_02",
+                    "table_ref": "query5"
+                  }
+                ],
+                "partnercontact_id_01": [
+                  {
+                    "name": "partnercontact_id_01",
+                    "table_ref": "query5"
+                  }
+                ],
+                "*": "wildcard",
+                "partnercontact_id_02": [
+                  {
+                    "name": "partnercontact_id_02",
+                    "table_ref": "query5"
+                  }
+                ]
+              },
+              "table_alias": {
+                "xw": "query5"
+              }
+            },
+            "query_dictionary": {
+              "inquiry_ind_crm": [
+                "[@58,596:610='inquiry_ind_crm',<393>,13:26]",
+                "[@516,5119:5131='stud_term_crm',<393>,116:1]"
+              ],
+              "primary_student_id_crm": [
+                "[@166,1595:1616='primary_student_id_crm',<393>,31:33]",
+                "[@425,4152:4164='stud_term_crm',<393>,92:1]"
+              ],
+              "partnercontact_id_02": [
+                "[@826,8098:8110='stud_term_crm',<393>,191:39]"
+              ],
+              "curr_entry_term_crm": [
+                "[@40,432:450='curr_entry_term_crm',<393>,10:30]",
+                "[@474,4684:4696='stud_term_crm',<393>,104:1]"
+              ],
+              "eab_entry_term_crm": [
+                "[@34,381:398='eab_entry_term_crm',<393>,9:29]",
+                "[@460,4554:4566='stud_term_crm',<393>,100:1]",
+                "[@885,8492:8504='stud_term_crm',<393>,195:59]"
+              ],
+              "student_level_crm": [
+                "[@118,1130:1146='student_level_crm',<393>,23:28]",
+                "[@667,6549:6561='stud_term_crm',<393>,156:1]"
+              ],
+              "athletic_recruit_ind_crm": [
+                "[@88,855:878='athletic_recruit_ind_crm',<393>,18:35]",
+                "[@597,5819:5831='stud_term_crm',<393>,136:1]"
+              ],
+              "state_resident_crm": [
+                "[@70,701:718='state_resident_crm',<393>,15:29]",
+                "[@544,5384:5396='stud_term_crm',<393>,124:1]"
+              ],
+              "interest_rating_crm": [
+                "[@112,1080:1098='interest_rating_crm',<393>,22:30]",
+                "[@653,6414:6426='stud_term_crm',<393>,152:1]"
+              ],
+              "eab_student_id_type_crm": [
+                "[@22,258:280='eab_student_id_type_crm',<393>,7:32]",
+                "[@407,3946:3958='stud_term_crm',<393>,87:4]",
+                "[@916,8680:8692='stud_term_crm',<393>,196:150]"
+              ],
+              "eab_current_funnel_status_crm": [
+                "[@142,1382:1410='eab_current_funnel_status_crm',<393>,27:40]",
+                "[@745,7296:7308='stud_term_crm',<393>,172:1]"
+              ],
+              "eab_athletic_recruit_ind_crm": [
+                "[@136,1311:1338='eab_athletic_recruit_ind_crm',<393>,26:39]",
+                "[@722,7059:7071='stud_term_crm',<393>,168:12]"
+              ],
+              "partner_system_name_02": [
+                "[@834,8176:8188='stud_term_crm',<393>,192:42]"
+              ],
+              "curr_entry_year_academic_crm": [
+                "[@46,493:520='curr_entry_year_academic_crm',<393>,11:39]",
+                "[@488,4819:4831='stud_term_crm',<393>,108:1]"
+              ],
+              "recruitment_status_crm": [
+                "[@64,647:668='recruitment_status_crm',<393>,14:33]",
+                "[@530,5234:5246='stud_term_crm',<393>,120:1]"
+              ],
+              "student_type_crm": [
+                "[@52,551:566='student_type_crm',<393>,12:27]",
+                "[@502,4999:5011='stud_term_crm',<393>,112:1]"
+              ],
+              "first_source_dt_crm": [
+                "[@82,798:816='first_source_dt_crm',<393>,17:30]",
+                "[@574,5642:5654='stud_term_crm',<393>,132:9]"
+              ],
+              "eab_first_source_crm": [
+                "[@148,1445:1464='eab_first_source_crm',<393>,28:31]",
+                "[@759,7481:7493='stud_term_crm',<393>,176:1]"
+              ],
+              "*": [
+                "[@7,168:168='*',<291>,5:7]"
+              ],
+              "eab_entry_year_academic_crm": [
+                "[@28,322:348='eab_entry_year_academic_crm',<393>,8:38]",
+                "[@444,4348:4360='stud_term_crm',<393>,96:1]",
+                "[@849,8282:8294='stud_term_crm',<393>,193:68]"
+              ],
+              "academic_rating_crm": [
+                "[@106,1028:1046='academic_rating_crm',<393>,21:30]",
+                "[@639,6279:6291='stud_term_crm',<393>,148:1]"
+              ],
+              "athletic_recruit_sport_crm": [
+                "[@94,919:944='athletic_recruit_sport_crm',<393>,19:37]",
+                "[@611,5979:5991='stud_term_crm',<393>,140:1]"
+              ],
+              "years_employed_crm": [
+                "[@100,977:994='years_employed_crm',<393>,20:29]",
+                "[@625,6149:6161='stud_term_crm',<393>,144:1]"
+              ],
+              "eab_student_type_crm": [
+                "[@154,1499:1518='eab_student_type_crm',<393>,29:31]",
+                "[@773,7621:7633='stud_term_crm',<393>,180:1]",
+                "[@867,8392:8404='stud_term_crm',<393>,194:63]"
+              ],
+              "curr_entry_year_calendar_crm": [
+                "[@124,1189:1216='curr_entry_year_calendar_crm',<393>,24:39]",
+                "[@681,6674:6686='stud_term_crm',<393>,160:1]"
+              ],
+              "first_source_crm": [
+                "[@76,749:764='first_source_crm',<393>,16:27]",
+                "[@558,5514:5526='stud_term_crm',<393>,128:1]"
+              ],
+              "eab_inquiry_ind_crm": [
+                "[@130,1250:1268='eab_inquiry_ind_crm',<393>,25:30]",
+                "[@697,6865:6877='stud_term_crm',<393>,164:12]"
+              ],
+              "eab_student_id_crm": [
+                "[@13,205:222='eab_student_id_crm',<393>,6:33]",
+                "[@389,3767:3779='stud_term_crm',<393>,82:1]",
+                "[@909,8631:8643='stud_term_crm',<393>,196:101]"
+              ],
+              "intake_dt_crm": [
+                "[@160,1546:1558='intake_dt_crm',<393>,30:24]",
+                "[@789,7774:7786='stud_term_crm',<393>,184:14]"
+              ]
+            },
+            "table_dictionary": {
+              "<[Enroll360].[Student Term].[Last Validated].{final}>": {
+                "curr_entry_year_academic": [
+                  "[@42,456:463='stu_term',<393>,11:2]"
+                ],
+                "years_employed": [
+                  "[@96,950:957='stu_term',<393>,20:2]"
+                ],
+                "academic_rating": [
+                  "[@102,1000:1007='stu_term',<393>,21:2]"
+                ],
+                "eab_entry_year_academic": [
+                  "[@24,286:293='stu_term',<393>,8:2]"
+                ],
+                "eab_current_funnel_status": [
+                  "[@138,1344:1351='stu_term',<393>,27:2]"
+                ],
+                "interest_rating": [
+                  "[@108,1052:1059='stu_term',<393>,22:2]"
+                ],
+                "recruitment_status": [
+                  "[@60,616:623='stu_term',<393>,14:2]"
+                ],
+                "eab_student_type": [
+                  "[@150,1470:1477='stu_term',<393>,29:2]"
+                ],
+                "eab_entry_term": [
+                  "[@30,354:361='stu_term',<393>,9:2]"
+                ],
+                "first_source_dt": [
+                  "[@78,770:777='stu_term',<393>,17:2]"
+                ],
+                "eab_inquiry_ind": [
+                  "[@126,1222:1229='stu_term',<393>,25:2]"
+                ],
+                "first_source": [
+                  "[@72,724:731='stu_term',<393>,16:2]"
+                ],
+                "primary_student_id": [
+                  "[@9,174:181='stu_term',<393>,6:2]",
+                  "[@162,1564:1571='stu_term',<393>,31:2]"
+                ],
+                "curr_entry_year_calendar": [
+                  "[@120,1152:1159='stu_term',<393>,24:2]"
+                ],
+                "student_type": [
+                  "[@48,526:533='stu_term',<393>,12:2]"
+                ],
+                "athletic_recruit_ind": [
+                  "[@84,822:829='stu_term',<393>,18:2]"
+                ],
+                "inquiry_ind": [
+                  "[@54,572:579='stu_term',<393>,13:2]"
+                ],
+                "state_resident": [
+                  "[@66,674:681='stu_term',<393>,15:2]"
+                ],
+                "student_level": [
+                  "[@114,1104:1111='stu_term',<393>,23:2]"
+                ],
+                "curr_entry_term": [
+                  "[@36,404:411='stu_term',<393>,10:2]"
+                ],
+                "eab_athletic_recruit_ind": [
+                  "[@132,1274:1281='stu_term',<393>,26:2]"
+                ],
+                "eab_first_source": [
+                  "[@144,1416:1423='stu_term',<393>,28:2]"
+                ],
+                "partnercontact_id": [
+                  "[@357,3511:3518='stu_term',<393>,75:1]"
+                ],
+                "athletic_recruit_sport": [
+                  "[@90,884:891='stu_term',<393>,19:2]"
+                ],
+                "partner_system_name": [
+                  "[@367,3577:3584='stu_term',<393>,75:67]"
+                ],
+                "intake_dt": [
+                  "[@156,1524:1531='stu_term',<393>,30:2]"
+                ]
+              }
+            },
+            "filters": [
+              {
+                "name": "partnercontact_id",
+                "table_ref": "stu_term"
+              },
+              {
+                "name": "partnercontact_id_01",
+                "table_ref": "xw"
+              },
+              {
+                "name": "partner_system_name",
+                "table_ref": "stu_term"
+              },
+              {
+                "name": "partner_system_name_01",
+                "table_ref": "xw"
+              }
+            ],
+            "interface": {
+              "inquiry_ind_crm": [
+                {
+                  "name": "inquiry_ind",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "primary_student_id_crm": [
+                {
+                  "name": "primary_student_id",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "curr_entry_term_crm": [
+                {
+                  "name": "curr_entry_term",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_entry_term_crm": [
+                {
+                  "name": "eab_entry_term",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "student_level_crm": [
+                {
+                  "name": "student_level",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "athletic_recruit_ind_crm": [
+                {
+                  "name": "athletic_recruit_ind",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "state_resident_crm": [
+                {
+                  "name": "state_resident",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "interest_rating_crm": [
+                {
+                  "name": "interest_rating",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_student_id_type_crm": [],
+              "eab_current_funnel_status_crm": [
+                {
+                  "name": "eab_current_funnel_status",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_athletic_recruit_ind_crm": [
+                {
+                  "name": "eab_athletic_recruit_ind",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "curr_entry_year_academic_crm": [
+                {
+                  "name": "curr_entry_year_academic",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "recruitment_status_crm": [
+                {
+                  "name": "recruitment_status",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "student_type_crm": [
+                {
+                  "name": "student_type",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "first_source_dt_crm": [
+                {
+                  "name": "first_source_dt",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_first_source_crm": [
+                {
+                  "name": "eab_first_source",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "*": [
+                {
+                  "name": "*",
+                  "table_ref": "xw"
+                }
+              ],
+              "eab_entry_year_academic_crm": [
+                {
+                  "name": "eab_entry_year_academic",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "academic_rating_crm": [
+                {
+                  "name": "academic_rating",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "athletic_recruit_sport_crm": [
+                {
+                  "name": "athletic_recruit_sport",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "years_employed_crm": [
+                {
+                  "name": "years_employed",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_student_type_crm": [
+                {
+                  "name": "eab_student_type",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "curr_entry_year_calendar_crm": [
+                {
+                  "name": "curr_entry_year_calendar",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "first_source_crm": [
+                {
+                  "name": "first_source",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_inquiry_ind_crm": [
+                {
+                  "name": "eab_inquiry_ind",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "eab_student_id_crm": [
+                {
+                  "name": "primary_student_id",
+                  "table_ref": "stu_term"
+                }
+              ],
+              "intake_dt_crm": [
+                {
+                  "name": "intake_dt",
+                  "table_ref": "stu_term"
+                }
+              ]
+            },
+            "table_alias": {
+              "stu_term": "<[Enroll360].[Student Term].[Last Validated].{final}>",
+              "xw": "query6"
+            }
+          },
+          "query_dictionary": {
+            "*": [
+              "[@385,3745:3745='*',<291>,79:7]"
+            ]
+          },
+          "filters": [
+            {
+              "name": "EAB_STUDENT_ID_SIS",
+              "table_ref": "query8"
+            },
+            {
+              "name": "eab_student_id_crm",
+              "table_ref": "query8"
+            },
+            {
+              "name": "EAB_CURRENT_FUNNEL_STATUS_SIS",
+              "table_ref": "query8"
+            },
+            {
+              "name": "EAB_CURRENT_FUNNEL_STATUS_CRM",
+              "table_ref": "query8"
+            }
+          ],
+          "interface": {
+            "*": [
+              {
+                "name": "*",
+                "table_ref": "*"
+              }
+            ]
+          },
+          "table_alias": {
+            "student_term_crm": "query7",
+            "final": "query8"
+          }
+        }
+      },
+      "queryDictionary": {
+        "union4": {
+          "partner_system_name_01": [
+            "[@197,1980:2001='partner_system_name_01',<393>,39:74]"
+          ],
+          "partner_system_name_02": [
+            "[@201,2026:2047='partner_system_name_02',<393>,39:120]"
+          ],
+          "partnercontact_id_01": [
+            "[@195,1958:1977='partnercontact_id_01',<393>,39:52]"
+          ],
+          "*": [
+            "[@385,3745:3745='*',<291>,79:7]"
+          ],
+          "partnercontact_id_02": [
+            "[@199,2004:2023='partnercontact_id_02',<393>,39:98]"
+          ],
+          "intake_dt": [
+            "[@204,2058:2066='intake_dt',<393>,39:152]"
+          ]
+        },
+        "query8": {
+          "curr_entry_year_academic": [
+            "[@500,4968:4991='curr_entry_year_academic',<393>,110:31]"
+          ],
+          "inquiry_ind_sis": [
+            "[@524,5180:5194='inquiry_ind_sis',<393>,117:29]"
+          ],
+          "inquiry_ind_crm": [
+            "[@518,5133:5147='inquiry_ind_crm',<393>,116:15]"
+          ],
+          "eab_current_funnel_status": [
+            "[@757,7449:7473='eab_current_funnel_status',<393>,174:32]"
+          ],
+          "curr_entry_term_sis": [
+            "[@482,4753:4771='curr_entry_term_sis',<393>,105:33]"
+          ],
+          "curr_entry_term_crm": [
+            "[@476,4698:4716='curr_entry_term_crm',<393>,104:15]"
+          ],
+          "interest_rating": [
+            "[@665,6527:6541='interest_rating',<393>,154:22]"
+          ],
+          "eab_student_type": [
+            "[@785,7738:7753='eab_student_type',<393>,182:23]"
+          ],
+          "eab_alternative_academic_rank": [
+            "[@442,4313:4341='eab_alternative_academic_rank',<393>,94:58]"
+          ],
+          "student_level_crm": [
+            "[@669,6563:6579='student_level_crm',<393>,156:15]"
+          ],
+          "eab_inquiry_ind": [
+            "[@718,7026:7040='eab_inquiry_ind',<393>,166:34]"
+          ],
+          "athletic_recruit_ind_crm": [
+            "[@599,5833:5856='athletic_recruit_ind_crm',<393>,136:15]"
+          ],
+          "student_level_sis": [
+            "[@675,6614:6630='student_level_sis',<393>,157:31]"
+          ],
+          "primary_student_id": [
+            "[@429,4192:4209='primary_student_id',<393>,92:41]"
+          ],
+          "state_resident_crm": [
+            "[@546,5398:5415='state_resident_crm',<393>,124:15]"
+          ],
+          "first_source": [
+            "[@570,5615:5626='first_source',<393>,130:19]"
+          ],
+          "athletic_recruit_ind_sis": [
+            "[@605,5898:5921='athletic_recruit_ind_sis',<393>,137:38]"
+          ],
+          "state_resident_sis": [
+            "[@552,5451:5468='state_resident_sis',<393>,125:32]"
+          ],
+          "curr_entry_year_calendar": [
+            "[@693,6823:6846='curr_entry_year_calendar',<393>,162:31]"
+          ],
+          "inquiry_ind": [
+            "[@528,5216:5226='inquiry_ind',<393>,118:18]"
+          ],
+          "state_resident": [
+            "[@556,5493:5506='state_resident',<393>,126:21]"
+          ],
+          "eab_student_id_type_sis": [
+            "[@415,4023:4045='eab_student_id_type_sis',<393>,88:37]"
+          ],
+          "curr_entry_term": [
+            "[@486,4797:4811='curr_entry_term',<393>,106:22]"
+          ],
+          "recruitment_status_sis": [
+            "[@538,5309:5330='recruitment_status_sis',<393>,121:36]"
+          ],
+          "recruitment_status_crm": [
+            "[@532,5248:5269='recruitment_status_crm',<393>,120:15]"
+          ],
+          "eab_athletic_recruit_ind": [
+            "[@743,7265:7288='eab_athletic_recruit_ind',<393>,170:43]"
+          ],
+          "eab_first_source": [
+            "[@771,7598:7613='eab_first_source',<393>,178:23]"
+          ],
+          "first_source_dt_crm": [
+            "[@579,5680:5698='first_source_dt_crm',<393>,132:47]"
+          ],
+          "eab_first_source_crm": [
+            "[@761,7495:7514='eab_first_source_crm',<393>,176:15]"
+          ],
+          "*": [
+            "[@385,3745:3745='*',<291>,79:7]"
+          ],
+          "eab_first_source_sis": [
+            "[@767,7552:7571='eab_first_source_sis',<393>,177:34]"
+          ],
+          "first_source_dt_sis": [
+            "[@588,5744:5762='first_source_dt_sis',<393>,133:42]"
+          ],
+          "eab_student_type_sis": [
+            "[@781,7692:7711='eab_student_type_sis',<393>,181:34]"
+          ],
+          "eab_entry_year_academic_sis": [
+            "[@454,4464:4490='eab_entry_year_academic_sis',<393>,97:41]"
+          ],
+          "eab_entry_year_academic_crm": [
+            "[@448,4393:4419='eab_entry_year_academic_crm',<393>,96:46]"
+          ],
+          "athletic_recruit_sport_sis": [
+            "[@619,6062:6087='athletic_recruit_sport_sis',<393>,141:40]"
+          ],
+          "years_employed_sis": [
+            "[@633,6216:6233='years_employed_sis',<393>,145:32]"
+          ],
+          "academic_rating_crm": [
+            "[@641,6293:6311='academic_rating_crm',<393>,148:15]"
+          ],
+          "athletic_recruit_sport_crm": [
+            "[@613,5993:6018='athletic_recruit_sport_crm',<393>,140:15]"
+          ],
+          "years_employed_crm": [
+            "[@627,6163:6180='years_employed_crm',<393>,144:15]"
+          ],
+          "eab_student_type_crm": [
+            "[@775,7635:7654='eab_student_type_crm',<393>,180:15]"
+          ],
+          "curr_entry_year_calendar_sis": [
+            "[@689,6761:6788='curr_entry_year_calendar_sis',<393>,161:42]"
+          ],
+          "academic_rating_sis": [
+            "[@647,6348:6366='academic_rating_sis',<393>,149:33]"
+          ],
+          "curr_entry_year_calendar_crm": [
+            "[@683,6688:6715='curr_entry_year_calendar_crm',<393>,160:15]"
+          ],
+          "eab_inquiry_ind_sis": [
+            "[@711,6970:6988='eab_inquiry_ind_sis',<393>,165:45]"
+          ],
+          "partnercontact_id": [
+            "[@405,3920:3936='partnercontact_id',<393>,85:21]"
+          ],
+          "eab_inquiry_ind_crm": [
+            "[@702,6903:6921='eab_inquiry_ind_crm',<393>,164:50]"
+          ],
+          "eab_student_id_sis": [
+            "[@397,3837:3854='eab_student_id_sis',<393>,83:35]",
+            "[@931,8759:8776='EAB_STUDENT_ID_SIS',<393>,199:7]"
+          ],
+          "eab_student_id_type": [
+            "[@419,4078:4096='eab_student_id_type',<393>,89:29]"
+          ],
+          "partner_system_name": [
+            "[@423,4126:4144='partner_system_name',<393>,90:26]"
+          ],
+          "intake_dt_sis": [
+            "[@803,7864:7876='intake_dt_sis',<393>,185:41]"
+          ],
+          "intake_dt": [
+            "[@810,7910:7918='intake_dt',<393>,186:30]"
+          ],
+          "eab_student_id_crm": [
+            "[@391,3781:3798='eab_student_id_crm',<393>,82:15]",
+            "[@936,8794:8811='eab_student_id_crm',<393>,199:42]"
+          ],
+          "intake_dt_crm": [
+            "[@794,7806:7818='intake_dt_crm',<393>,184:46]"
+          ],
+          "eab_student_id": [
+            "[@401,3882:3895='eab_student_id',<393>,84:24]"
+          ],
+          "years_employed": [
+            "[@637,6258:6271='years_employed',<393>,146:21]"
+          ],
+          "academic_rating": [
+            "[@651,6392:6406='academic_rating',<393>,150:22]"
+          ],
+          "eab_entry_year_academic": [
+            "[@458,4524:4546='eab_entry_year_academic',<393>,98:30]"
+          ],
+          "recruitment_status": [
+            "[@542,5359:5376='recruitment_status',<393>,122:25]"
+          ],
+          "eab_entry_term_crm": [
+            "[@462,4568:4585='eab_entry_term_crm',<393>,100:15]"
+          ],
+          "eab_entry_term_sis": [
+            "[@468,4621:4638='eab_entry_term_sis',<393>,101:32]"
+          ],
+          "eab_entry_term": [
+            "[@472,4663:4676='eab_entry_term',<393>,102:21]"
+          ],
+          "first_source_dt": [
+            "[@595,5797:5811='first_source_dt',<393>,134:31]"
+          ],
+          "interest_rating_crm": [
+            "[@655,6428:6446='interest_rating_crm',<393>,152:15]"
+          ],
+          "eab_student_id_type_crm": [
+            "[@409,3960:3982='eab_student_id_type_crm',<393>,87:18]"
+          ],
+          "interest_rating_sis": [
+            "[@661,6483:6501='interest_rating_sis',<393>,153:33]"
+          ],
+          "student_type": [
+            "[@514,5100:5111='student_type',<393>,114:19]"
+          ],
+          "eab_current_funnel_status_crm": [
+            "[@747,7310:7338='eab_current_funnel_status_crm',<393>,172:15]",
+            "[@944,8866:8894='EAB_CURRENT_FUNNEL_STATUS_CRM',<393>,200:39]"
+          ],
+          "eab_current_funnel_status_sis": [
+            "[@753,7385:7413='eab_current_funnel_status_sis',<393>,173:43]",
+            "[@942,8833:8861='EAB_CURRENT_FUNNEL_STATUS_SIS',<393>,200:6]"
+          ],
+          "athletic_recruit_ind": [
+            "[@609,5952:5971='athletic_recruit_ind',<393>,138:27]"
+          ],
+          "student_level": [
+            "[@679,6654:6666='student_level',<393>,158:20]"
+          ],
+          "eab_athletic_recruit_ind_sis": [
+            "[@736,7191:7218='eab_athletic_recruit_ind_sis',<393>,169:54]"
+          ],
+          "eab_athletic_recruit_ind_crm": [
+            "[@727,7106:7133='eab_athletic_recruit_ind_crm',<393>,168:59]"
+          ],
+          "curr_entry_year_academic_crm": [
+            "[@490,4833:4860='curr_entry_year_academic_crm',<393>,108:15]"
+          ],
+          "curr_entry_year_academic_sis": [
+            "[@496,4906:4933='curr_entry_year_academic_sis',<393>,109:42]"
+          ],
+          "student_type_crm": [
+            "[@504,5013:5028='student_type_crm',<393>,112:15]"
+          ],
+          "student_type_sis": [
+            "[@510,5062:5077='student_type_sis',<393>,113:30]"
+          ],
+          "alternative_academic_rank": [
+            "[@433,4227:4251='alternative_academic_rank',<393>,93:14]"
+          ],
+          "first_source_crm": [
+            "[@560,5528:5543='first_source_crm',<393>,128:15]"
+          ],
+          "first_source_sis": [
+            "[@566,5577:5592='first_source_sis',<393>,129:30]"
+          ],
+          "athletic_recruit_sport": [
+            "[@623,6120:6141='athletic_recruit_sport',<393>,142:29]"
+          ]
+        },
+        "query9": {
+          "*": [
+            "[@385,3745:3745='*',<291>,79:7]"
+          ]
+        },
+        "query5": {
+          "*": [
+            "[@186,1924:1924='*',<291>,39:18]"
+          ],
+          "partner_system_name_01": [
+            "[@177,1827:1848='partner_system_name_01',<393>,37:29]"
+          ],
+          "partnercontact_id_01": [
+            "[@175,1805:1824='partnercontact_id_01',<393>,37:7]"
+          ],
+          "partner_system_name_02": [
+            "[@181,1873:1894='partner_system_name_02',<393>,37:75]"
+          ],
+          "partnercontact_id_02": [
+            "[@179,1851:1870='partnercontact_id_02',<393>,37:53]"
+          ],
+          "rn": [
+            "[@208,2077:2078='rn',<393>,39:171]",
+            "[@350,3388:3389='rn',<393>,70:6]"
+          ]
+        },
+        "query6": {
+          "partner_system_name_01": [
+            "[@177,1827:1848='partner_system_name_01',<393>,37:29]",
+            "[@376,3622:3623='xw',<393>,75:112]"
+          ],
+          "partnercontact_id_01": [
+            "[@175,1805:1824='partnercontact_id_01',<393>,37:7]",
+            "[@361,3540:3541='xw',<393>,75:30]"
+          ],
+          "*": [
+            "[@5,165:166='xw',<393>,5:4]"
+          ],
+          "partner_system_name_02": [
+            "[@181,1873:1894='partner_system_name_02',<393>,37:75]"
+          ],
+          "partnercontact_id_02": [
+            "[@179,1851:1870='partnercontact_id_02',<393>,37:53]"
+          ]
+        },
+        "query7": {
+          "inquiry_ind_crm": [
+            "[@58,596:610='inquiry_ind_crm',<393>,13:26]",
+            "[@516,5119:5131='stud_term_crm',<393>,116:1]"
+          ],
+          "primary_student_id_crm": [
+            "[@166,1595:1616='primary_student_id_crm',<393>,31:33]",
+            "[@425,4152:4164='stud_term_crm',<393>,92:1]"
+          ],
+          "partnercontact_id_02": [
+            "[@826,8098:8110='stud_term_crm',<393>,191:39]"
+          ],
+          "curr_entry_term_crm": [
+            "[@40,432:450='curr_entry_term_crm',<393>,10:30]",
+            "[@474,4684:4696='stud_term_crm',<393>,104:1]"
+          ],
+          "eab_entry_term_crm": [
+            "[@34,381:398='eab_entry_term_crm',<393>,9:29]",
+            "[@460,4554:4566='stud_term_crm',<393>,100:1]",
+            "[@885,8492:8504='stud_term_crm',<393>,195:59]"
+          ],
+          "student_level_crm": [
+            "[@118,1130:1146='student_level_crm',<393>,23:28]",
+            "[@667,6549:6561='stud_term_crm',<393>,156:1]"
+          ],
+          "athletic_recruit_ind_crm": [
+            "[@88,855:878='athletic_recruit_ind_crm',<393>,18:35]",
+            "[@597,5819:5831='stud_term_crm',<393>,136:1]"
+          ],
+          "state_resident_crm": [
+            "[@70,701:718='state_resident_crm',<393>,15:29]",
+            "[@544,5384:5396='stud_term_crm',<393>,124:1]"
+          ],
+          "interest_rating_crm": [
+            "[@112,1080:1098='interest_rating_crm',<393>,22:30]",
+            "[@653,6414:6426='stud_term_crm',<393>,152:1]"
+          ],
+          "eab_student_id_type_crm": [
+            "[@22,258:280='eab_student_id_type_crm',<393>,7:32]",
+            "[@407,3946:3958='stud_term_crm',<393>,87:4]",
+            "[@916,8680:8692='stud_term_crm',<393>,196:150]"
+          ],
+          "eab_current_funnel_status_crm": [
+            "[@142,1382:1410='eab_current_funnel_status_crm',<393>,27:40]",
+            "[@745,7296:7308='stud_term_crm',<393>,172:1]"
+          ],
+          "eab_athletic_recruit_ind_crm": [
+            "[@136,1311:1338='eab_athletic_recruit_ind_crm',<393>,26:39]",
+            "[@722,7059:7071='stud_term_crm',<393>,168:12]"
+          ],
+          "partner_system_name_02": [
+            "[@834,8176:8188='stud_term_crm',<393>,192:42]"
+          ],
+          "curr_entry_year_academic_crm": [
+            "[@46,493:520='curr_entry_year_academic_crm',<393>,11:39]",
+            "[@488,4819:4831='stud_term_crm',<393>,108:1]"
+          ],
+          "recruitment_status_crm": [
+            "[@64,647:668='recruitment_status_crm',<393>,14:33]",
+            "[@530,5234:5246='stud_term_crm',<393>,120:1]"
+          ],
+          "student_type_crm": [
+            "[@52,551:566='student_type_crm',<393>,12:27]",
+            "[@502,4999:5011='stud_term_crm',<393>,112:1]"
+          ],
+          "first_source_dt_crm": [
+            "[@82,798:816='first_source_dt_crm',<393>,17:30]",
+            "[@574,5642:5654='stud_term_crm',<393>,132:9]"
+          ],
+          "eab_first_source_crm": [
+            "[@148,1445:1464='eab_first_source_crm',<393>,28:31]",
+            "[@759,7481:7493='stud_term_crm',<393>,176:1]"
+          ],
+          "*": [
+            "[@7,168:168='*',<291>,5:7]"
+          ],
+          "eab_entry_year_academic_crm": [
+            "[@28,322:348='eab_entry_year_academic_crm',<393>,8:38]",
+            "[@444,4348:4360='stud_term_crm',<393>,96:1]",
+            "[@849,8282:8294='stud_term_crm',<393>,193:68]"
+          ],
+          "academic_rating_crm": [
+            "[@106,1028:1046='academic_rating_crm',<393>,21:30]",
+            "[@639,6279:6291='stud_term_crm',<393>,148:1]"
+          ],
+          "athletic_recruit_sport_crm": [
+            "[@94,919:944='athletic_recruit_sport_crm',<393>,19:37]",
+            "[@611,5979:5991='stud_term_crm',<393>,140:1]"
+          ],
+          "years_employed_crm": [
+            "[@100,977:994='years_employed_crm',<393>,20:29]",
+            "[@625,6149:6161='stud_term_crm',<393>,144:1]"
+          ],
+          "eab_student_type_crm": [
+            "[@154,1499:1518='eab_student_type_crm',<393>,29:31]",
+            "[@773,7621:7633='stud_term_crm',<393>,180:1]",
+            "[@867,8392:8404='stud_term_crm',<393>,194:63]"
+          ],
+          "curr_entry_year_calendar_crm": [
+            "[@124,1189:1216='curr_entry_year_calendar_crm',<393>,24:39]",
+            "[@681,6674:6686='stud_term_crm',<393>,160:1]"
+          ],
+          "first_source_crm": [
+            "[@76,749:764='first_source_crm',<393>,16:27]",
+            "[@558,5514:5526='stud_term_crm',<393>,128:1]"
+          ],
+          "eab_inquiry_ind_crm": [
+            "[@130,1250:1268='eab_inquiry_ind_crm',<393>,25:30]",
+            "[@697,6865:6877='stud_term_crm',<393>,164:12]"
+          ],
+          "eab_student_id_crm": [
+            "[@13,205:222='eab_student_id_crm',<393>,6:33]",
+            "[@389,3767:3779='stud_term_crm',<393>,82:1]",
+            "[@909,8631:8643='stud_term_crm',<393>,196:101]"
+          ],
+          "intake_dt_crm": [
+            "[@160,1546:1558='intake_dt_crm',<393>,30:24]",
+            "[@789,7774:7786='stud_term_crm',<393>,184:14]"
+          ]
+        },
+        "query0": {
+          "partner_system_name_01": [
+            "[@222,2187:2208='partner_system_name_01',<393>,42:35]"
+          ],
+          "partnercontact_id_01": [
+            "[@216,2129:2148='partnercontact_id_01',<393>,41:40]"
+          ],
+          "*": [
+            "[@186,1924:1924='*',<291>,39:18]"
+          ],
+          "partner_system_name_02": [
+            "[@234,2303:2324='partner_system_name_02',<393>,44:35]"
+          ],
+          "partnercontact_id_02": [
+            "[@228,2245:2264='partnercontact_id_02',<393>,43:33]"
+          ],
+          "intake_dt": [
+            "[@238,2333:2341='intake_dt',<393>,45:5]"
+          ]
+        },
+        "query1": {
+          "partner_system_name_01": [
+            "[@256,2508:2529='partner_system_name_01',<393>,49:35]"
+          ],
+          "partnercontact_id_01": [
+            "[@250,2450:2469='partnercontact_id_01',<393>,48:39]"
+          ],
+          "*": [
+            "[@186,1924:1924='*',<291>,39:18]"
+          ],
+          "partner_system_name_02": [
+            "[@268,2624:2645='partner_system_name_02',<393>,51:35]"
+          ],
+          "partnercontact_id_02": [
+            "[@262,2566:2585='partnercontact_id_02',<393>,50:33]"
+          ],
+          "intake_dt": [
+            "[@272,2654:2662='intake_dt',<393>,52:5]"
+          ]
+        },
+        "query2": {
+          "partner_system_name_01": [
+            "[@290,2828:2849='partner_system_name_01',<393>,56:35]"
+          ],
+          "partnercontact_id_01": [
+            "[@284,2770:2789='partnercontact_id_01',<393>,55:39]"
+          ],
+          "*": [
+            "[@186,1924:1924='*',<291>,39:18]"
+          ],
+          "partner_system_name_02": [
+            "[@302,2944:2965='partner_system_name_02',<393>,58:35]"
+          ],
+          "partnercontact_id_02": [
+            "[@296,2886:2905='partnercontact_id_02',<393>,57:33]"
+          ],
+          "intake_dt": [
+            "[@306,2974:2982='intake_dt',<393>,59:5]"
+          ]
+        },
+        "query3": {
+          "partner_system_name_01": [
+            "[@324,3149:3170='partner_system_name_01',<393>,63:35]"
+          ],
+          "partnercontact_id_01": [
+            "[@318,3091:3110='partnercontact_id_01',<393>,62:39]"
+          ],
+          "*": [
+            "[@186,1924:1924='*',<291>,39:18]"
+          ],
+          "partner_system_name_02": [
+            "[@336,3265:3286='partner_system_name_02',<393>,65:35]"
+          ],
+          "partnercontact_id_02": [
+            "[@330,3207:3226='partnercontact_id_02',<393>,64:33]"
+          ],
+          "intake_dt": [
+            "[@340,3295:3303='intake_dt',<393>,66:5]"
+          ]
+        }
+      },
+      "fatalErrorCount": 0,
+      "fatalErrorStringList": [],
+      "diagnostics": []
+    }
+  },
+  "scoring": {
+    "legacy_missing_keys": [
+      "student_term_crm"
+    ],
+    "fatal_count": {
+      "5.0.0-3": 0,
+      "5.1.3": 0
+    },
+    "fatal_messages_513": [],
+    "fatal_messages_5003": [],
+    "tableDictionary_keys": {
+      "5.0.0-3": [
+        "<[Enroll360].[Partner ID Xwalk].{final}>",
+        "<[Enroll360].[Student Term SIS].[Last Validated].{final}>",
+        "<[Enroll360].[Student Term].[Last Validated].{final}>",
+        "student_term_crm"
+      ],
+      "5.1.3": [
+        "<[Enroll360].[Partner ID Xwalk].{final}>",
+        "<[Enroll360].[Student Term SIS].[Last Validated].{final}>",
+        "<[Enroll360].[Student Term].[Last Validated].{final}>"
+      ]
+    },
+    "tableDictionary_only_in_5003_norm": [
+      "student_term_crm"
+    ],
+    "tableDictionary_only_in_513_norm": [],
+    "cte_rescoring": [
+      {
+        "name": "student_term_crm",
+        "in_513_tableDictionary": false,
+        "table_alias_binding_513": "student_term_crm=query7",
+        "symbol_tree_evidence_513": {
+          "name_in_symbol_tree": true,
+          "table_alias_binding": true,
+          "context_list_entry": false,
+          "def_scope_key": false
+        }
+      }
+    ],
+    "enhancements_513": [
+      "5.1.3 enhancement: CTE 'student_term_crm' registered in symbol table table_alias as student_term_crm=query7 (not in global tableDictionary by design; richer than 5.0.0-3 CTE promotion)"
+    ],
+    "significant_issues": [],
+    "not_significant_under_latest_policy": [],
+    "verdict": "no_significant_issue"
+  }
+}

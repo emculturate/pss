@@ -1,0 +1,101 @@
+package sql.latency;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.junit.Ignore;
+import org.junit.Test;
+
+import access.SqlParserAccess;
+import access.WalkerWalkExceptionGate;
+
+import astwalkers.AbstractASTWalkerHelper;
+import errorhandling.ParseDiagnostic;
+
+import static mumble.SQLParserEndPoints.SQLPARSER_SQL_TREE_KEY;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * Regression: former subMap skip-list rows complete through access + opt-in diagnostic paths.
+ */
+public class PantoSubMapSkipListRegressionTest {
+
+    private static final int ROW_ACQUIA = 28;
+    private static final int ROW_GIANT_CASE = 130;
+
+    @Test
+    public void diagnosticService_walkCatchParity_recordsStructuredMisalign() {
+        List<ParseDiagnostic> captured = new java.util.ArrayList<>();
+        Exception npe = new NullPointerException(
+                "Cannot invoke \"java.util.Map.remove(Object)\" because \"subMap\" is null");
+        WalkerWalkExceptionGate.recognizeWalkException(
+                npe, "ParseLatencyDiagnosticService", captured, List.of());
+
+        assertTrue(captured.stream().anyMatch(d -> d != null
+                && AbstractASTWalkerHelper.DIAG_AST_WALKER_STACK_MISALIGN.equals(d.code())
+                && d.severity() == ParseDiagnostic.Severity.FATAL
+                && "ParseLatencyDiagnosticService".equals(d.source())));
+    }
+
+    @Test
+    public void sqlParserAccess_selectFrom_mapsSubMapMisalignWithoutRawJavaFatal() {
+        SqlParserAccess access = new SqlParserAccess(false, false, false);
+        access.executeTheParse("select from", SQLPARSER_SQL_TREE_KEY);
+
+        boolean hasMisalign = WalkerWalkExceptionGate.containsStackMisalignDiagnostic(
+                access.getAllDiagnostics());
+        if (!hasMisalign && access.getSnippet() != null) {
+            hasMisalign = WalkerWalkExceptionGate.containsStackMisalignDiagnostic(
+                    access.getSnippet().getParserDiagnosticList());
+        }
+        assertTrue("expected AST_WALKER_STACK_MISALIGN diagnostic", hasMisalign);
+        assertTrue(
+                "expected misalign in fatal error strings",
+                access.getFatalErrorList().stream()
+                        .anyMatch(msg -> msg.contains("walker stack mis-aligned")));
+
+        for (String fatal : access.getFatalErrorList()) {
+            assertFalse("unexpected raw subMap fatal: " + fatal, fatal.contains("subMap"));
+        }
+    }
+
+    @Test
+    public void sqlParserAccess_formerSkipRow28_noSubMapFatal() throws IOException {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_ACQUIA);
+        SqlParserAccess access = new SqlParserAccess(false, false, false);
+        access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
+
+        for (String fatal : access.getFatalErrorList()) {
+            assertFalse("unexpected walker fatal: " + fatal, fatal.contains("subMap"));
+        }
+    }
+
+    @Test
+    public void sqlParserAccess_row130_fullCsvSql_noSubMapFatal() throws IOException {
+        String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(ROW_GIANT_CASE);
+        SqlParserAccess access = new SqlParserAccess(false, false, false);
+        access.executeTheParse(sql, SQLPARSER_SQL_TREE_KEY);
+
+        for (String fatal : access.getFatalErrorList()) {
+            assertFalse("unexpected walker fatal: " + fatal, fatal.contains("subMap"));
+        }
+    }
+
+    @Ignore("Manual — 20-row diagnostic timing sweep; covered by PantoTimeoutCorpusE3GateTest")
+    @Test
+    public void diagnosticService_formerSkipRows_underE3Gate() throws IOException {
+        int[] formerSkipRows = {
+                28, 30, 31, 32, 41, 130, 314, 315, 1814, 2120,
+                4157, 4158, 4163, 4164, 4170, 4171, 5860, 5861, 5862, 5863
+        };
+        for (int csvRow : formerSkipRows) {
+            String sql = PantoOutstandingSqlFixtures.sqlForCsvRow(csvRow);
+            ParseLatencyReport report = ParseLatencyDiagnosticService.diagnose(sql, SQLPARSER_SQL_TREE_KEY);
+            assertTrue(
+                    "csv_row=" + csvRow + " walkMs=" + report.walkMs + " totalMs=" + report.totalMs,
+                    report.walkMs < PantoLatencyGateConstants.E3_TIMEOUT_MS
+                            && report.totalMs < PantoLatencyGateConstants.E3_TIMEOUT_MS);
+        }
+    }
+}

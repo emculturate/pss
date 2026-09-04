@@ -1,0 +1,20 @@
+--- a/parse/src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java
++++ b/parse/src/main/java/sql/symboltree/SqlParseSymbolTreeHelper.java
+@@ -1448,10 +1448,18 @@ public class SqlParseSymbolTreeHelper {
+ 					if (sourceRefs.isEmpty()) {
+ 						// Scenario: implicit reference has no candidate source.
+ 						if (!hasLocalPhysicalFromTables(localFromTableCollection)
+ 								&& hasOnlyQueryBackedAliasSources(localTableAliasMap)) {
++							// If we have a parent scope visible, defer this unresolved column
++							// to the parent so it can attempt resolution there before we emit fatal.
++							if (deferCorrelatedValueSubqueryQualifiedUnknowns) {
++								// Leave unresolved; will bubble up to parent scope
++								continue;
++							}
+ 							emitUnqualifiedNotFoundInQueryAliasFatal(
+ 									columnName,
+ 									refLocation,
+ 									localTableAliasMap);
+ 							hasSpecificResolutionFatalForOutputColumn = true;
+ 						}
+ 						continue;
