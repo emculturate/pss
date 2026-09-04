@@ -774,7 +774,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{orders={id=[[@1,7:7='o',<393>,1:7]], items=[[@24,84:84='o',<393>,1:84]]}, flatten0={sku=[[@5,13:13='f',<393>,1:13], [@37,122:122='f',<393>,1:122]]}, products={name=[[@11,27:27='p',<393>,1:27]], sku=[[@33,114:114='p',<393>,1:114]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<393>,1:9]], sku=[[@9,22:24='sku',<393>,1:22]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={name=[[@13,29:32='name',<225>,1:29]], sku=[[@9,22:24='sku',<393>,1:22]], id=[[@3,9:10='id',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<393>,1:9]], sku=[[@9,22:24='sku',<393>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<393>,1:7]], items=[[@24,84:84='o',<393>,1:84]]}, flatten0={sku=[[@5,13:13='f',<393>,1:13], [@37,122:122='f',<393>,1:122]]}, products={name=[[@11,27:27='p',<393>,1:27]], sku=[[@33,114:114='p',<393>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",
@@ -1106,7 +1106,7 @@ public class SqlEventWalkerTableFunctionTests extends AbstractSqlParseEventWalke
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{orders={id=[[@1,7:7='o',<393>,1:7]], items=[[@24,84:84='o',<393>,1:84]]}, flatten0={sku=[[@5,13:13='f',<393>,1:13], [@37,122:122='f',<393>,1:122]]}, products={name=[[@11,27:27='p',<393>,1:27]], sku=[[@33,114:114='p',<393>,1:114]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<393>,1:9]], sku=[[@9,22:24='sku',<393>,1:22]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={name=[[@13,29:32='name',<225>,1:29]], sku=[[@9,22:24='sku',<393>,1:22]], id=[[@3,9:10='id',<393>,1:9]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong",
 				"{def_query0={query_dictionary={name=[[@13,29:32='name',<225>,1:29]], id=[[@3,9:10='id',<393>,1:9]], sku=[[@9,22:24='sku',<393>,1:22]]}, table_dictionary={orders={id=[[@1,7:7='o',<393>,1:7]], items=[[@24,84:84='o',<393>,1:84]]}, flatten0={sku=[[@5,13:13='f',<393>,1:13], [@37,122:122='f',<393>,1:122]]}, products={name=[[@11,27:27='p',<393>,1:27]], sku=[[@33,114:114='p',<393>,1:114]]}}, filters=[{name=sku, table_ref=p}, {name=sku, table_ref=f}], interface={name=[{name=name, table_ref=p}], id=[{name=id, table_ref=o}], sku=[{name=sku, table_ref=f}]}, table_alias={p=products, f=flatten0, o=orders}}}",

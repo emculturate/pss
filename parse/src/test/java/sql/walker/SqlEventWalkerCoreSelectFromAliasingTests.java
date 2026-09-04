@@ -291,7 +291,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{tab1={a=[[@1,8:8='a',<393>,1:8]], b=[[@5,18:18='b',<393>,1:18]], c=[[@9,28:28='c',<393>,1:28]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={02_y=[[@7,23:26='02_y',<396>,1:23]], 999_z=[[@11,33:37='999_z',<396>,1:33]], 01_x=[[@3,13:16='01_x',<396>,1:13]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={01_x=[[@3,13:16='01_x',<396>,1:13]], 02_y=[[@7,23:26='02_y',<396>,1:23]], 999_z=[[@11,33:37='999_z',<396>,1:33]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={02_y=[[@7,23:26='02_y',<396>,1:23]], 999_z=[[@11,33:37='999_z',<396>,1:33]], 01_x=[[@3,13:16='01_x',<396>,1:13]]}, table_dictionary={tab1={a=[[@1,8:8='a',<393>,1:8]], b=[[@5,18:18='b',<393>,1:18]], c=[[@9,28:28='c',<393>,1:28]]}}, interface={02_y=[{name=b, table_ref=tab1}], 999_z=[{name=c, table_ref=tab1}], 01_x=[{name=a, table_ref=tab1}]}}}",
 				extractor.getSymbolTable().toString());
@@ -314,7 +314,7 @@ public class SqlEventWalkerCoreSelectFromAliasingTests extends AbstractSqlParseE
 				extractor.getSubstitutionsMap().toString());
 		Assert.assertEquals("Table Dictionary is wrong", "{\"99tab1\"={\"22_b\"=[[@5,24:29='\"22_b\"',<397>,1:24]], \"09_a\"=[[@1,8:13='\"09_a\"',<397>,1:8]], \"36_c\"=[[@9,39:44='\"36_c\"',<397>,1:39]]}}",
 				extractor.getTableColumnDictionaryMap().toString());
-		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={02_y=[[@7,34:37='02_y',<396>,1:34]], 01_x=[[@3,18:21='01_x',<396>,1:18]], \"999_z\"=[[@11,49:55='\"999_z\"',<397>,1:49]]}}",
+		Assert.assertEquals("Query Column Dictionary is wrong", "{query0={01_x=[[@3,18:21='01_x',<396>,1:18]], \"999_z\"=[[@11,49:55='\"999_z\"',<397>,1:49]], 02_y=[[@7,34:37='02_y',<396>,1:34]]}}",
 				extractor.getQueryColumnDictionaryMap().toString());
 		Assert.assertEquals("Symbol Table is wrong", "{def_query0={query_dictionary={\"999_z\"=[[@11,49:55='\"999_z\"',<397>,1:49]], 02_y=[[@7,34:37='02_y',<396>,1:34]], 01_x=[[@3,18:21='01_x',<396>,1:18]]}, table_dictionary={\"99tab1\"={\"22_b\"=[[@5,24:29='\"22_b\"',<397>,1:24]], \"09_a\"=[[@1,8:13='\"09_a\"',<397>,1:8]], \"36_c\"=[[@9,39:44='\"36_c\"',<397>,1:39]]}}, interface={\"999_z\"=[{name=\"36_c\", table_ref=\"99tab1\"}], 02_y=[{name=\"22_b\", table_ref=\"99tab1\"}], 01_x=[{name=\"09_a\", table_ref=\"99tab1\"}]}}}",
 				extractor.getSymbolTable().toString());
