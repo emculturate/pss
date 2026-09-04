@@ -78,16 +78,63 @@ def eval_query_concat(expr: str) -> str:
     return "".join(out)
 
 
-def extract_sql(body: str) -> str | None:
+QCD_ASSERT_LABELS = (
+    "Query Column Dictionary is wrong",
+    "Query column dictionary is wrong",
+)
+
+
+def extract_sql_from_assignments(body: str) -> str | None:
     for var in ("query", "sql"):
-        qm = re.search(
-            rf"final String {var}\s*=\s*(.*?);\s*\n\s*(?:final SQLSelectParserParser|SQLSelectParserParser)",
-            body,
-            re.DOTALL,
-        )
-        if qm:
-            return eval_query_concat(qm.group(1).strip())
+        if not re.search(rf"\bString\s+{var}\s*=", body):
+            continue
+        parts: list[str] = []
+        for m in re.finditer(rf"{var}\s*(?:\+=|=)\s*(.*?);", body, re.DOTALL):
+            parts.append(eval_query_concat(m.group(1).strip()))
+        if parts:
+            return "".join(parts)
     return None
+
+
+def extract_sql(body: str) -> str | None:
+    patterns = [
+        r"final String (query|sql)\s*=\s*(.*?);\s*\n\s*(?:final SQLSelectParserParser|SQLSelectParserParser)",
+        r"final String (query|sql)\s*=\s*(.*?);\s*\n\s*SqlParseEventWalker",
+        r"(?:final )?String (query|sql)\s*=\s*\n\s*(.*?);\s*\n\s*final SQLSelectParserParser",
+    ]
+    for pattern in patterns:
+        qm = re.search(pattern, body, re.DOTALL)
+        if qm:
+            return eval_query_concat(qm.group(2).strip())
+    return extract_sql_from_assignments(body)
+
+
+def replace_nth_java_string_after(block: str, anchor: str, n: int, expected: str) -> str:
+    idx = block.find(anchor)
+    if idx < 0:
+        return block
+    pos = idx + len(anchor)
+    count = 0
+    i = pos
+    while i < len(block):
+        if block[i] != '"':
+            i += 1
+            continue
+        j = i + 1
+        while j < len(block):
+            if block[j] == "\\":
+                j += 2
+                continue
+            if block[j] == '"':
+                count += 1
+                if count == n:
+                    return block[: i + 1] + escape_java(expected) + block[j:]
+                i = j + 1
+                break
+            j += 1
+        else:
+            break
+    return block
 
 
 def list_method_blocks(java_text: str) -> list[tuple[str, int, int]]:
@@ -278,7 +325,20 @@ def patch_method_block(
         key = (method, field)
         if key not in goldens:
             continue
-        block = replace_expected_in_block(block, label, getter, goldens[key], object_var)
+        expected = goldens[key]
+        if field == "QueryDictionary":
+            for qcd_label in QCD_ASSERT_LABELS:
+                block = replace_expected_in_block(
+                    block, qcd_label, getter, expected, object_var
+                )
+            block = replace_nth_java_string_after(
+                block, "assertWalkerGoldenOutputs(extractor,", 5, expected
+            )
+            block = replace_nth_java_string_after(
+                block, "assertTripleJoinMixedOperandsHappyPath(query,", 5, expected
+            )
+            continue
+        block = replace_expected_in_block(block, label, getter, expected, object_var)
     return block
 
 
