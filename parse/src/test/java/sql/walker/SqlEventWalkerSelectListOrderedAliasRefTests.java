@@ -8,7 +8,7 @@ import errorhandling.ParseDiagnostic;
 import sql.SQLSelectParserParser;
 
 /**
- * Ordered intra–SELECT-list output-alias references: a prior select-item alias may
+ * Ordered intra-SELECT-list output-alias references: a prior select-item alias may
  * appear anywhere a column reference is valid in a later select-list item, provided
  * the alias is defined earlier in source order.
  */
@@ -23,6 +23,21 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 		assertNoWalkerDiagnostics(extractor);
 		assertNoFatalErrors(extractor);
 		return extractor;
+	}
+
+	private void assertWalkerGoldenOutputs(SqlParseEventWalker extractor, String expectedAst,
+			String expectedInterface, String expectedSubstitutions, String expectedTableDictionary,
+			String expectedQueryColumnDictionary, String expectedSymbolTable) {
+		Assert.assertEquals("AST is wrong", expectedAst, extractor.getAsTree().toString());
+		Assert.assertEquals("Interface is wrong", expectedInterface, extractor.getInterface().toString());
+		Assert.assertEquals("Substitution List is wrong", expectedSubstitutions,
+				extractor.getSubstitutionsMap().toString());
+		Assert.assertEquals("Table Dictionary is wrong", expectedTableDictionary,
+				extractor.getTableColumnDictionaryMap().toString());
+		Assert.assertEquals("Query Column Dictionary is wrong", expectedQueryColumnDictionary,
+				extractor.getQueryColumnDictionaryMap().toString());
+		Assert.assertEquals("Symbol Table is wrong", expectedSymbolTable,
+				extractor.getSymbolTable().toString());
 	}
 
 	private void assertPriorAliasBoundToQueryScope(SqlParseEventWalker extractor) {
@@ -69,68 +84,61 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 		Assert.assertNotNull("expected fatal for forward prior_alias ref", fatal);
 	}
 
-	private static final String WRAPPED_FROM_AB = " FROM (select a, b from tab1)";
-	private static final String WRAPPED_FROM_T1 = " FROM (select 1 as k from t1)";
 	// --- origin item types (first select-list entry) ---
 
 	@Test
 	public void orderedAliasFromPlainColumnInArithmeticConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a AS " + PRIOR_ALIAS + ", " + PRIOR_ALIAS + " + 1 AS nxt FROM tab1");
+				"SELECT a AS prior_alias, prior_alias + 1 AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromArithmeticExpressionInFunctionConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a + b AS " + PRIOR_ALIAS + ", TRIM(" + PRIOR_ALIAS + ") AS nxt FROM tab1");
+				"SELECT a + b AS prior_alias, TRIM(prior_alias) AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromFunctionExpressionInCalcConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT LOWER(a) AS " + PRIOR_ALIAS + ", " + PRIOR_ALIAS + " || 'x' AS nxt FROM tab1");
+				"SELECT LOWER(a) AS prior_alias, prior_alias || 'x' AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromCaseExpressionInCalcConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT CASE WHEN a > 0 THEN a ELSE b END AS " + PRIOR_ALIAS
-						+ ", " + PRIOR_ALIAS + " + 1 AS nxt FROM tab1");
+				"SELECT CASE WHEN a > 0 THEN a ELSE b END AS prior_alias, prior_alias + 1 AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromCastExpressionInFunctionConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT CAST(a AS VARCHAR) AS " + PRIOR_ALIAS
-						+ ", TRIM(" + PRIOR_ALIAS + ") AS nxt FROM tab1");
+				"SELECT CAST(a AS VARCHAR) AS prior_alias, TRIM(prior_alias) AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromPredicandSubstitutionInCalcConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <partner_name> AS " + PRIOR_ALIAS
-						+ ", " + PRIOR_ALIAS + " || 'z' AS nxt FROM tab1");
+				"SELECT <partner_name> AS prior_alias, prior_alias || 'z' AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromComparisonPredicandInCalcConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <a> >= <b> AS " + PRIOR_ALIAS
-						+ ", " + PRIOR_ALIAS + " + 0 AS nxt FROM tab1");
+				"SELECT <a> >= <b> AS prior_alias, prior_alias + 0 AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromBareValueInCalcConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT CURRENT_DATE AS " + PRIOR_ALIAS
-						+ ", " + PRIOR_ALIAS + " AS nxt FROM tab1");
+				"SELECT CURRENT_DATE AS prior_alias, prior_alias AS nxt FROM tab1");
 		// bare-value origin is grounded; consumer re-reference stays on query scope
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -138,8 +146,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasFromColumnSubstitutionInWindowPartitionByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <email_col> AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (PARTITION BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT <email_col> AS prior_alias, ROW_NUMBER() OVER (PARTITION BY prior_alias) AS rn FROM tab1");
 		assertWindowPartitionByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -147,26 +154,34 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasFromBooleanConditionSubstitutionInFunctionConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <a> AND <b> AS " + PRIOR_ALIAS
-						+ ", TRIM(" + PRIOR_ALIAS + ") AS nxt FROM tab1");
+				"SELECT <a> AND <b> AS prior_alias, TRIM(prior_alias) AS nxt FROM tab1");
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
 
 	@Test
 	public void orderedAliasFromScalarSubqueryInArithmeticConsumerTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT (SELECT max(x) FROM t2) AS " + PRIOR_ALIAS
-						+ ", " + PRIOR_ALIAS + " + 1 AS nxt FROM t1");
-		assertPriorAliasBoundToQueryScope(extractor);
+				"SELECT (SELECT max(x) FROM t2) AS prior_alias, prior_alias + 1 AS nxt FROM t1");
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={lookup={from={table={alias=null, table=t2}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=x, table_ref=null}}}}}}, alias=prior_alias}, 2={alias=nxt, calc={left={column={name=prior_alias, table_ref=null}}, right={literal=1}, operator=+}}}, from={table={alias=null, table=t1}}}}",
+				"[prior_alias, nxt]",
+				"{}",
+				"{t1={}, t2={x=[[@5,19:19='x',<393>,1:19]]}}",
+				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@13,47:57='prior_alias',<393>,1:47]], nxt=[[@17,66:68='nxt',<393>,1:66]]}}",
+				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@13,47:57='prior_alias',<393>,1:47]], nxt=[[@17,66:68='nxt',<393>,1:66]]}, table_dictionary={t1={}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<393>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], nxt=[{name=prior_alias, table_ref=query2}]}}}");
 	}
 
 	@Test
 	public void orderedAliasFromScalarSubqueryInWindowPartitionByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT (SELECT max(x) FROM t2) AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (PARTITION BY " + PRIOR_ALIAS + ") AS rn FROM t1");
-		assertWindowPartitionByPriorAlias(extractor);
-		assertPriorAliasBoundToQueryScope(extractor);
+				"SELECT (SELECT max(x) FROM t2) AS prior_alias, ROW_NUMBER() OVER (PARTITION BY prior_alias) AS rn FROM t1");
+		assertWalkerGoldenOutputs(extractor,
+				"{SQL={select={1={lookup={from={table={alias=null, table=t2}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=x, table_ref=null}}}}}}, alias=prior_alias}, 2={alias=rn, window_function={over={partition_by={1={column={name=prior_alias, table_ref=null}}}}, function={function_name=ROW_NUMBER, parameters=null}}}}, from={table={alias=null, table=t1}}}}",
+				"[prior_alias, rn]",
+				"{}",
+				"{t1={}, t2={x=[[@5,19:19='x',<393>,1:19]]}}",
+				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={rn=[[@23,95:96='rn',<393>,1:95]], prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@20,79:89='prior_alias',<393>,1:79]]}}",
+				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@20,79:89='prior_alias',<393>,1:79]], rn=[[@23,95:96='rn',<393>,1:95]]}, table_dictionary={t1={}}, window_partition_by=[{name=prior_alias, table_ref=query2}], dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<393>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], rn=[{name=prior_alias, table_ref=query2}]}}}");
 	}
 
 	// --- column-ref sites inside later select-list items ---
@@ -174,8 +189,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasReferencedInWindowPartitionByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (PARTITION BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT a AS prior_alias, ROW_NUMBER() OVER (PARTITION BY prior_alias) AS rn FROM tab1");
 		assertWindowPartitionByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -183,8 +197,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasReferencedInWindowOrderByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (ORDER BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT a AS prior_alias, ROW_NUMBER() OVER (ORDER BY prior_alias) AS rn FROM tab1");
 		assertWindowOrderedByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -192,8 +205,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasReferencedInWindowPartitionByAndOrderByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (PARTITION BY a ORDER BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT a AS prior_alias, ROW_NUMBER() OVER (PARTITION BY a ORDER BY prior_alias) AS rn FROM tab1");
 		assertWindowOrderedByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -201,8 +213,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedPredicandAliasReferencedInWindowPartitionByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <partner_name> AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (PARTITION BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT <partner_name> AS prior_alias, ROW_NUMBER() OVER (PARTITION BY prior_alias) AS rn FROM tab1");
 		assertWindowPartitionByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -210,8 +221,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedPredicandAliasReferencedInWindowOrderByTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT <partner_name> AS " + PRIOR_ALIAS
-						+ ", ROW_NUMBER() OVER (ORDER BY " + PRIOR_ALIAS + ") AS rn FROM tab1");
+				"SELECT <partner_name> AS prior_alias, ROW_NUMBER() OVER (ORDER BY prior_alias) AS rn FROM tab1");
 		assertWindowOrderedByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
 	}
@@ -219,8 +229,7 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasReferencedInAggregateWindowFunctionParameterTest() {
 		SqlParseEventWalker extractor = parseHappyPath(
-				"SELECT a AS " + PRIOR_ALIAS
-						+ ", SUM(b) OVER (PARTITION BY " + PRIOR_ALIAS + " ORDER BY " + PRIOR_ALIAS + ") AS s FROM tab1");
+				"SELECT a AS prior_alias, SUM(b) OVER (PARTITION BY prior_alias ORDER BY prior_alias) AS s FROM tab1");
 		assertWindowPartitionByPriorAlias(extractor);
 		assertWindowOrderedByPriorAlias(extractor);
 		assertPriorAliasBoundToQueryScope(extractor);
@@ -231,68 +240,66 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 	@Test
 	public void orderedAliasForwardRefFromPlainColumnUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " + 1 AS nxt, a AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias + 1 AS nxt, a AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromArithmeticExpressionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT TRIM(" + PRIOR_ALIAS + ") AS nxt, a + b AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT TRIM(prior_alias) AS nxt, a + b AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromFunctionExpressionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " || 'x' AS nxt, LOWER(a) AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias || 'x' AS nxt, LOWER(a) AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromCaseExpressionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " + 1 AS nxt, CASE WHEN a > 0 THEN a ELSE b END AS "
-						+ PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias + 1 AS nxt, CASE WHEN a > 0 THEN a ELSE b END AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromCastExpressionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT TRIM(" + PRIOR_ALIAS + ") AS nxt, CAST(a AS VARCHAR) AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT TRIM(prior_alias) AS nxt, CAST(a AS VARCHAR) AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromPredicandSubstitutionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " || 'z' AS nxt, <partner_name> AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias || 'z' AS nxt, <partner_name> AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromComparisonPredicandUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " + 0 AS nxt, <a> >= <b> AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias + 0 AS nxt, <a> >= <b> AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromBareValueUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " AS nxt, CURRENT_DATE AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT prior_alias AS nxt, CURRENT_DATE AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromColumnSubstitutionInWindowPartitionByUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT ROW_NUMBER() OVER (PARTITION BY " + PRIOR_ALIAS + ") AS rn, <email_col> AS "
-						+ PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT ROW_NUMBER() OVER (PARTITION BY prior_alias) AS rn, <email_col> AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromBooleanConditionSubstitutionUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT TRIM(" + PRIOR_ALIAS + ") AS nxt, <a> AND <b> AS " + PRIOR_ALIAS + WRAPPED_FROM_AB);
+				"SELECT TRIM(prior_alias) AS nxt, <a> AND <b> AS prior_alias FROM (select a, b from tab1)");
 	}
 
 	@Test
 	public void orderedAliasForwardRefFromScalarSubqueryUnresolvedTest() {
 		assertPriorAliasForwardReferenceUnresolved(
-				"SELECT " + PRIOR_ALIAS + " + 1 AS nxt, (SELECT max(x) FROM t2) AS " + PRIOR_ALIAS + WRAPPED_FROM_T1);
+				"SELECT prior_alias + 1 AS nxt, (SELECT max(x) FROM t2) AS prior_alias FROM (select 1 as k from t1)");
 	}
 }

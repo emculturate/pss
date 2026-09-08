@@ -81,8 +81,9 @@ Any grammar production that can appear as a `select_item` and receive an output 
 | Comparison / boolean substitution item | `<a> >= <b> AS prior_alias` | Substitution deps on interface entry |
 | Bare value | `CURRENT_DATE AS prior_alias` | Bare-value registry |
 | Window output (prior item) | `ROW_NUMBER() … AS prior_alias` | Window / OVER deps per window policy |
+| Scalar subquery | `(SELECT …) AS prior_alias` | Nested `def_queryN` + grounded closure; **Step 1 contract goldens** ✅ — see [Finalize plan](#finalize-plan--scalar-subquery-origin-contract) |
 
-**Not yet contract-tested:** scalar subquery select items `(SELECT …) AS prior_alias` — treat as implementation gap until a golden lands.
+**Contract status:** scalar subquery origin has smoke tests (`orderedAliasFromScalarSubqueryInArithmeticConsumerTest`, `orderedAliasFromScalarSubqueryInWindowPartitionByTest`) but not yet full six-extractor goldens. Forward-ref negative: `orderedAliasFromScalarSubqueryUnresolvedTest`.
 
 ---
 
@@ -141,13 +142,70 @@ Do **not** treat `table_ref=null` on an intra-list alias ref as a physical colum
 
 | Class | Coverage |
 |-------|----------|
-| `SqlEventWalkerSelectListOrderedAliasRefTests` | Matrix: origins × consumers (arithmetic, function, window partition/order, predicand, bare value, …) |
+| `SqlEventWalkerSelectListOrderedAliasRefTests` | Matrix: origins × consumers (arithmetic, function, window partition/order, predicand, bare value, …); **scalar subquery origin** full six-field goldens: `orderedAliasFromScalarSubqueryInArithmeticConsumerTest`, `orderedAliasFromScalarSubqueryInWindowPartitionByTest` |
 | `SmoketestQualityGateTestSuite` (Phase 13.4 ordered-alias group) | Six representative cases: plain column arithmetic, predicand substitution, bare value, window partition/order, column substitution in partition |
 | `SqlEventWalkerCoreSelectFromAliasingTests` | Chained arithmetic (`V1`), reversed order (`V2`), predicand chain (`V3`/`V4`), outer-scope negative |
 | `SqlEventWalkerFunctionsAggregatesWindowingTests` | Physical + predicand column in `PARTITION BY` |
 | `SqlEventWalkerLiveSampleQueriesTests` | `donorEmailWithInvalidFatalErrorOnQualifiedColumnVariableTest` (production-shaped predicand + window) |
 
 When extending the grammar with new `select_item` shapes, add a row to **Origins** and at least one **consumer site** test before claiming consumer support.
+
+---
+
+## Finalize plan — scalar subquery origin contract
+
+**Goal:** Close the scalar-subquery `prior_alias` gap with locked extractor goldens (not regex-only smoke). **No new grammar** unless goldens expose a walker bug.
+
+**Existing tests (do not duplicate):** `SqlEventWalkerSelectListOrderedAliasRefTests`
+
+| Method | Role |
+|--------|------|
+| `orderedAliasFromScalarSubqueryInArithmeticConsumerTest` | Happy: `(SELECT …) AS prior_alias` → arithmetic consumer |
+| `orderedAliasFromScalarSubqueryInWindowPartitionByTest` | Happy: same origin → `PARTITION BY prior_alias` |
+| `orderedAliasFromScalarSubqueryUnresolvedTest` | Negative: forward ref before subquery is defined |
+
+### Step 1 — Full goldens on the two happy scalar paths ✅ (Sep 2026)
+
+For each happy test above, assert all walker outputs (same contract as `assertWalkerGoldenOutputs` in `SqlEventWalkerWithCteTupleSubstitutionTests`):
+
+- `getAsTree()`
+- `getInterface()`
+- `getSubstitutionsMap()`
+- `getTableColumnDictionaryMap()`
+- `getQueryColumnDictionaryMap()`
+- `getSymbolTable()`
+
+Capture with `WalkerGoldenCaptureOnce` on **JDK 21**; patch via `parse/tools/refresh_walker_goldens.py` if needed. Keep `assertNoWalkerDiagnostics` / `assertNoFatalErrors`.
+
+### Step 2 — One correlated scalar-subquery origin (optional, recommended)
+
+Add one production-shaped fixture, e.g. `(SELECT MAX(p.amount) FROM payments p WHERE p.order_id = o.id) AS prior_alias` with `prior_alias` reused in a later select item; full goldens on the same six fields.
+
+### Step 3 — Missing consumer sites for scalar origin (optional)
+
+Policy matrix parity with plain-column origins — add at least one of:
+
+- `ORDER BY prior_alias` in `OVER (...)` (`assertWindowOrderedByPriorAlias`)
+- `TRIM(prior_alias)` or `CAST(prior_alias AS …)` (function / cast consumer)
+
+### Step 4 — Forward-ref negative (optional)
+
+Keep `orderedAliasFromScalarSubqueryUnresolvedTest`; optionally add goldens for `table_ref=null` + `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES` fatal shape.
+
+### Step 5 — Quality gate (optional)
+
+Add at least one scalar-subquery delegate to `SmoketestQualityGateTestSuite` (Phase 13.4 ordered-alias group currently has six tests; none are scalar-subquery).
+
+### Step 6 — Policy doc closeout
+
+When Step 1 (and any optional steps taken) are green:
+
+- Mark scalar subquery row in **Origins** as contract-tested; list test method names in **Contract tests**.
+- Remove or archive this finalize section (or mark ✅ complete with date).
+
+### Step 7 — Fix implementation only if goldens fail
+
+If Step 1 assertions fail, fix walker groundedness / `interface` stamping for scalar-subquery origins (`exitSelect_item`, `isGroundedInterfaceOutputAlias`, convert egress). Expect test-only work.
 
 ---
 
