@@ -276,7 +276,7 @@ Further 7.x (`{% if %}`, macros, filters, dbt_utils) — add when phase activate
 
 **Related:** Entry **9.D4** for typed DDL flags; Entry **1.D** for new datetime AST nodes.
 
-**Detail:** git — former `sql-statement-generator-completion-workplan.md` (full rule→exit→emit appendix).
+**Inventory (auto):** `parse/tools/sql_generator_phase0_inventory.py` → `parse/documents/coverage/sql_generator_phase0_inventory.md` (regenerate after grammar/generator changes).
 
 ---
 
