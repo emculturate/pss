@@ -44,4 +44,4 @@ mvn -pl parse -Dtest=ParseLatencyDiagnosticTest test
 
 ## What's next (outside this pack)
 
-See `parser-defects-enhancements-workplan.md` **Phase 3** (Snowflake `PARSE_URL` / `:` field access) and other open phases.
+See [sql-grammar-5.1.4-workplan.md](../../../documents/sql-grammar-5.1.4-workplan.md) **Entry 3** (`PARSE_URL` / `:` field access) and Entries **1–8** for other open parser work.

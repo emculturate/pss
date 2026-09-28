@@ -1,6 +1,6 @@
 # SqlParseEventWalker — `exit*` method coverage gaps
 
-**Workplan (checklists):** [sql_walker_exit_method_coverage-workplan.md](sql_walker_exit_method_coverage-workplan.md)  
+**Workplan:** [sql-grammar-5.1.4-workplan.md](../sql-grammar-5.1.4-workplan.md) **Entry 11** (retired checklist: `sql_walker_exit_method_coverage-workplan.md`)  
 **Generated:** Aug 9, 2026 (after `cd parse && mvn verify` + JaCoCo `target/site/jacoco/jacoco.xml`)  
 **Class:** `sql.walker.SqlParseEventWalker`  
 **Scope:** ANTLR listener **`exit*`** methods only (283 total). Not every lexer token or private helper.
@@ -22,13 +22,13 @@
 
 | `exit*` method | Grammar rule / path | Status |
 |----------------|---------------------|--------|
-| `exitNamed_columns_join` | `named_columns_join` | **Covered** — see [workplan T1.1](sql_walker_exit_method_coverage-workplan.md#t11-exitnamed_columns_join--named_columns_join--complete) and `SqlEventWalkerJoinsAndTableResolutionTests` (JOIN USING section). |
+| `exitNamed_columns_join` | `named_columns_join` | **Covered** — Entry 11 Tier 1; `SqlEventWalkerJoinsAndTableResolutionTests` (JOIN USING section). |
 
 ### Tier 1.2 complete — `exitUnpivot_null_policy`
 
 | `exit*` method | Grammar rule / path | Status |
 |----------------|---------------------|--------|
-| `exitUnpivot_null_policy` | `unpivot_null_policy` | **Covered** — see [workplan T1.2](sql_walker_exit_method_coverage-workplan.md#t12-exitunpivot_null_policy--unpivot_null_policy--complete) and `SqlEventWalkerPivotUnpivotTests` (`unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest`). |
+| `exitUnpivot_null_policy` | `unpivot_null_policy` | **Covered** — Entry 11 Tier 1; `SqlEventWalkerPivotUnpivotTests` (`unpivotIncludeNullsNullPolicyAstShapeTest`, `unpivotExcludeNullsNullPolicyAstShapeTest`). |
 
 ### Tier 1.3–1.4 complete — pivot `IN (ANY)` / `IN (SELECT …)`
 
@@ -100,7 +100,7 @@ Re-run the exit-method vs JaCoCo comparison (same approach as Aug 2026 gap pass)
 
 - [relational-modifier-lineage-consolidation-migration.md](relational-modifier-lineage-consolidation-migration.md) — PIVOT/UNPIVOT convert-egress lineage migration (M0–M5).
 - [sql_walker_astwalkers_gap_report.md](sql_walker_astwalkers_gap_report.md) — broader walker + helper method gaps (older snapshot).
-- [helper-dead-code-hygiene-workplan.md](../helper-dead-code-hygiene-workplan.md) — caller audit vs JaCoCo policy.
+- [sql-grammar-5.1.4-workplan.md](../sql-grammar-5.1.4-workplan.md) Entry **12** — caller audit vs JaCoCo policy.
 
 ## Relational-modifier lineage — operand classification
 

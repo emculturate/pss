@@ -41,7 +41,7 @@ These documents live under `parse/documents/` and describe **Query Tool / Panto 
 | Document | Use when |
 |----------|----------|
 | [`panto-variable-inheritance-using-bundles.md`](parse/documents/panto-variable-inheritance-using-bundles.md) | How Panto types variables from grammar location, parses snippets per endpoint, builds substitution maps from sequenced bundle imports, forms resolution/unresolved sets, and generates final SQL via depth-first AST traversal |
-| [`panto-language-enhancements-grammar-safe-dynamic-expansion-2.md`](parse/documents/panto-language-enhancements-grammar-safe-dynamic-expansion-2.md) | Proposed cardinality / sequence substitution extensions (Phase 9 workplan); read **after** the bundles concept-of-operations doc |
+| [`panto-language-enhancements-grammar-safe-dynamic-expansion-2.md`](parse/documents/panto-language-enhancements-grammar-safe-dynamic-expansion-2.md) | Proposed cardinality / sequence substitution extensions ([5.1.4 workplan](parse/documents/sql-grammar-5.1.4-workplan.md) Entry **8**); read **after** the bundles concept-of-operations doc |
 
 ### Version alignment
 
@@ -62,6 +62,7 @@ Or list entries: `jar tf "$JAR" 'META-INF/pss-parse/**'`
 
 ## Parser implementation rules (this repository)
 
+- **Open parser / grammar / walker work (5.1.4 line):** [`parse/documents/sql-grammar-5.1.4-workplan.md`](parse/documents/sql-grammar-5.1.4-workplan.md) — single master plan (Entries 1–12). Older `*-workplan.md` files in `parse/documents/` are retired stubs.
 - **Set-op convert egress (Phase 2.8 + 15.6):** `.cursor/rules/set-op-convert-egress-scoping.mdc` — bundle build vs egress reads, S4 sibling isolation, no post-bundle fallback; canonical test `setOpSiblingIsolationInvariantV0Test`
 - **Relational modifiers:** `.cursor/rules/relational-modifier-resolution.mdc` → `parse/documents/relational-modifier-resolution-policy.md`
 - **Panto variables & snippets:** `parse/documents/panto-variable-inheritance-using-bundles.md` — platform semantics to preserve when changing variable types, endpoints, or substitution/resolution behavior (see **Panto platform design** above).

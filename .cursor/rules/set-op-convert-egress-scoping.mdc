@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Set-operation convert-egress scoping (Phase 2.8 + 15.6)
 
-**Workplan:** `parse/documents/parser-defects-enhancements-workplan.md` § Phase 2.8 (profiling conclusions + **B/C/D/E** tracks post-S5)  
+**Workplan:** Phase 2.8 complete — see `parse/documents/sql-grammar-5.1.4-workplan.md` **Completed baselines** and `parse/docs/rmcp-handoff/5.1.3-panto-outstanding/` (profiling + **B/C/D/E** tracks post-S5)  
 **Canonical SQL regression:** `SqlEventWalkerSubqueriesAndClauseSemanticsTests#setOpSiblingIsolationInvariantV0Test`  
 **Fast gate:** `SqlEventWalkerSetOpScopingGateTests` (delegates + timing probes)
 

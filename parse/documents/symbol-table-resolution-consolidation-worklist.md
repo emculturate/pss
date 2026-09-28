@@ -15,13 +15,15 @@ Use this document as the **historical handoff** for consolidating column resolut
 
 ## Open work outside this worklist
 
-Independent plans (product-triggered; **not** consolidation blockers):
+**Single master plan (5.1.4 line):** [sql-grammar-5.1.4-workplan.md](sql-grammar-5.1.4-workplan.md)
 
-| Plan | Status | When to start |
-|------|--------|----------------|
-| [ddl-structured-options-parsing-workplan.md](ddl-structured-options-parsing-workplan.md) (ex–13.5) | ⏸️ Not started | Product needs structured DDL options (`IF NOT EXISTS`, `OR REPLACE`, …), not opaque blobs only |
-| [sql-statement-generator-completion-workplan.md](sql-statement-generator-completion-workplan.md) (ex–13.6) | ⏸️ Milestone done; expansion not started | AST→SQL coverage beyond ~51 round-trip smokes |
-| [helper-dead-code-hygiene-workplan.md](helper-dead-code-hygiene-workplan.md) | 🚧 A–B ✅; C–D optional | Post-consolidation zero-caller helper cleanup (caller audit > JaCoCo) |
+| Former spin-off | Entry | Status |
+|-----------------|-------|--------|
+| ex–13.5 DDL structured options | **9** | Not started |
+| ex–13.6 SQL statement generator | **10** | Milestone ✅; expansion not started |
+| Helper dead-code hygiene | **12** | A–B ✅; C–D optional |
+
+Other open parser features (PIVOT, PARSE_URL, ARRAY, Jinja, Panto tests, datetime functions, …) are **Entries 1–8** in the same file. Retired standalone workplans are stub headers only.
 
 **Optional / low priority (not tracked as open phases):**
 

@@ -15,7 +15,7 @@ import sql.SQLSelectParserParser;
  * (column, typed literals, parentheses, calc, cast, nested extract). Every test asserts the
  * walker tree contains no grammar {@code Type=NNN} rule stubs.
  *
- * @see parse/documents/extract-dialect-capture-workplan.md
+ * @see parse/documents/sql-grammar-5.1.4-workplan.md (EXTRACT/DATE_PART — completed baseline)
  */
 public class SqlEventWalkerExtractTests extends AbstractSqlParseEventWalkerTest {
 
