@@ -1,0 +1,19 @@
+---
+description: How to launch and wait on long-running jobs (corpus runs, full mvn test suites, jar builds)
+alwaysApply: true
+---
+
+# Long-running jobs
+
+Applies to anything expected to take more than about a minute (full `mvn -pl parse test`, dual-parse corpus runs, batch probes).
+
+## Do
+
+- Launch the command itself in the foreground of a background shell: Shell with `block_until_ms: 0` and `required_permissions: ["all"]`.
+- Within about 30 seconds of launch, check real progress (e.g. `wc -l` of output files, or the log tail). If nothing is being written, stop and fix the launch before waiting.
+- Wait with AwaitShell on that shell's id with a completion pattern, and re-check progress between waits.
+
+## Do not
+
+- Do not use `nohup … &` (or a trailing `&`) inside a Shell call: the child process is killed when that shell exits.
+- Do not sleep or wait for long periods without a shell id and without having confirmed progress first.

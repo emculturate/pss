@@ -40,6 +40,9 @@
 | **13** | SELECT-list subquery alias scope (false `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`) + operand `lookup` wrapper | Defect | **Complete** (2026-11-10) |
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
+| **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Not started** |
+| **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns (false `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`) | Defect | **Not started** |
+| **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Not started** |
 
 ---
 
@@ -439,6 +442,131 @@ It is **not** visible to:
 - Entry 14 corpus results: no previously deferred valid template becomes fatal.
 
 **Out of scope:** Inspecting candidate snippet text to decide whether it actually declares the alias. The bound query and the snippet are parsed independently, and the binding is resolved by Panto bundles at generation time.
+
+---
+
+## Entry 16 — Set operation with a query variable member loses its output interface
+
+**Status:** Not started (opened 2026-11-11)  
+**Kind:** Defect — release blocker for bound-query templates  
+**Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract ([panto-template-remediation-5.1.4.md](./panto-template-remediation-5.1.4.md), "Not your problem")
+
+**Problem:** When a derived table or CTE body is a set operation and one of its members is a query variable (`set_operation_member : … | variable_identifier`, for example `<union_add.Partner ID Xwalk>`), the published output interface of that derived table / CTE is empty. Every `alias.column` read by the consumer is then reported FATAL `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`, although the real `SELECT` member defines all the columns. A set operation takes its output names from its first query member (positional matching for the rest), so the interface should come from the query member(s), and the variable member should only be checked for arity when its shape is known (it is not, at template parse time).
+
+**Affected queries (11-10-2026 extract, `bound_queries_11-10-2026.csv` record numbers, header = record 1):**
+
+| Case ID | Domain / entity / query name | FATALs |
+|---------|------------------------------|--------|
+| q2084 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.final | 7 (alias `all_ids`) |
+| q2087 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.final_simple | 7 (alias `agg`) |
+| q2088 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.final_simple | 12 (alias `all_ids`) |
+
+Removing only the `union all <union_add.…>` member clears every FATAL in q2087. Ten other templates in the extract use `union [all] <union_add…>` without failing; per the probes below, presumably because the union is top-level, has two or more query members, or no consumer reads the derived alias's columns (not yet checked one by one).
+
+**Observed behaviour (2026-11-11 probes, `.tmp/alias-scope/ua*.tsv`):**
+
+| Shape | Result |
+|-------|--------|
+| `(select t.a, t.b from tbl t <op> <union_add.X>) agg` for `<op>` = `UNION ALL`, `UNION`, `UNION DISTINCT`, `INTERSECT`, `EXCEPT` | FATAL on `agg.a`, `agg.b` |
+| `(<union_add.X> union all select t.a, t.b from tbl t) agg` (variable first) | FATAL |
+| CTE body `with agg as (select … union all <union_add.X>) select agg.a …` | FATAL |
+| `(select t.a from tbl t union all <union_add.X> union all <union_add.Y>) agg` (one query, two variables) | FATAL |
+| `((select t.a from tbl t union <q.X>) intersect (select u.a from u u)) agg` (nested, parenthesised) | FATAL |
+| `(<union_add.X> union all <union_add.Y>) agg` (variables only) | FATAL — expected behaviour needs a decision (see below) |
+| `(select t.a from tbl t union all select u.a from u u union all <union_add.X>) agg` (two queries, one variable) | Clean |
+| `(select t.a from tbl t intersect <q.X> except <q.Y>) agg` | Clean |
+| Top-level `select t.a from tbl t union all <union_add.X>` | Clean |
+
+The pattern points at the set-operation interface builder for a `unionized_query` whose only query member is accompanied by variable members (and at variable-only operations); root cause still to be confirmed in `SqlParseEventWalker` / set-op interface finalisation (see `.cursor/rules/set-op-convert-egress-scoping.mdc` for the bundle-build vs egress rules that must be kept).
+
+**Fix rule:**
+
+1. The interface of a set operation comes from its first **query** member, wherever variables appear in the member list (first, middle, last, or several).
+2. Variable members contribute no columns and do not trigger `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` or `DUPLICATE_INTERFACE_COLUMNS`.
+3. **Decision needed — variable-only set operation:** the interface is unknown at template parse time. Proposed: mark the interface *open* so consumers report `alias.column` reads as SEVERE_WARNING (not FATAL), consistent with Entry 14's treatment of unverifiable references. Confirm with the product owner before implementing.
+
+| Sub | Work | Status |
+|-----|------|--------|
+| **16.1** | Root cause in set-op interface construction for query + variable members | Not started |
+| **16.2** | Fix per the rule above; decide and implement the variable-only case | Not started |
+| **16.3** | Tests (below) | Not started |
+| **16.4** | Re-check q2084, q2087, q2088 and the ten passing `union_add` templates; full suite; no change to set-op egress goldens unless explained | Not started |
+
+**Test requirements (16.3).** The tests must prove that **every set (tuple-conjunction) operator the grammar supports** works with a query snippet variable as a member: `UNION`, `UNION ALL`, `UNION DISTINCT`, `EXCEPT`, `EXCEPT ALL`, `EXCEPT DISTINCT`, `INTERSECT`, `INTERSECT ALL`, `INTERSECT DISTINCT` (`union_clause` / `intersect_clause` with optional `set_qualifier`). For each operator cover:
+
+- the variable as the last, first, and a middle member;
+- **more than one variable** in the same operation (for example `select … union all <union_add.X> union all <union_add.Y>`);
+- **more than one query** in the same operation together with one or more variables (for example `select … from a union all select … from b union all <union_add.X> union all select … from c`);
+- mixed operators with precedence (`INTERSECT` binds tighter than `UNION` / `EXCEPT`) and parenthesised sub-operations that contain variables;
+- each placement as a derived table read by `alias.column`, as a CTE body read by `cte.column`, as a scalar / `IN` subquery, and at top level;
+- negative controls: a genuinely missing column (`agg.not_there`) stays FATAL, and two **query** members with different column counts still raise `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH`;
+- the variable-only case, with whatever behaviour 16.2 decides.
+
+Assert both the diagnostics and the published interface (`def_queryN` output columns) of the set operation.
+
+---
+
+## Entry 17 — `DATEADD` / `DATEDIFF` date parts resolved as columns
+
+**Status:** Not started (opened 2026-11-11)  
+**Kind:** Defect (minimum slice of **Entry 1**)  
+**Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract
+
+**Problem:** The first argument of `DATEADD` / `DATEDIFF` (and the other date-part functions in Entry 1) is parsed as an ordinary column reference. When the query's only visible sources are derived tables or CTEs, the part name (`year`, `day`, `month`, …) is looked up in their output interfaces and reported FATAL `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`. With a physical table in scope it silently becomes a phantom column reference instead (wrong lineage, no error).
+
+**Affected queries (11-10-2026 extract):**
+
+| Case ID | Domain / entity / query name | FATAL |
+|---------|------------------------------|-------|
+| q5866 | PDP_AMS / mkt__segmentation / pdp_ams_mkt__segmentation_intake | `Unqualified column 'year' at (l:29 c:15) was not found in output interface of any visible query alias [cte_mkt_segmentation]` — `dateadd(year,2000,effective_end_date)` |
+
+**Repro (2026-11-11):** `select dateadd(year, 1, c.d) as y from (select a.d from t a) c` → FATAL on `year`; same for `dateadd(day, …)` and `datediff(month, …)`. Over a physical table (`from t a`) the same calls are clean but record `year` / `day` as columns.
+
+**Fix:** treat the date/time part argument as an enumerated part constant, never as a column (Entry 1 design: "Add all standard Snowflake date or time part constants recognition … as non-keyword enumerated types"). If Entry 1 slice A is not ready for this release, ship the minimum: recognise the Snowflake date and time part names (and their abbreviations, for example `d`, `dd`, `m`, `mm`, `y`, `yy`) in the first argument of `DATEADD`, `DATEDIFF`, `TIMEADD`, `TIMEDIFF`, `TIMESTAMPADD`, `TIMESTAMPDIFF`, `DATE_TRUNC`, and exclude them from symbol collection.
+
+| Sub | Work | Status |
+|-----|------|--------|
+| **17.1** | Exclude date/time part arguments from column resolution (minimum slice, or Entry 1 slice A/B) | Not started |
+| **17.2** | Tests: each function × part names and abbreviations × source kinds (physical table, derived table, CTE, set operation); assert no column ref for the part and correct refs for the other arguments; predicand variables in the increment / expression slots still classified as predicands | Not started |
+| **17.3** | Re-check q5866; full suite; update goldens that currently expect a part as a column (report the list before changing them) | Not started |
+
+---
+
+## Entry 18 — Snowflake non-reserved words, array literals, and walker crash after syntax errors
+
+**Status:** Not started (opened 2026-11-11)  
+**Kind:** Defect  
+**Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract
+
+**Problem:** Words that Snowflake allows as identifiers or function names are rejected by the 5.1.4 grammar, and an array literal in a SELECT list does not parse. After the resulting syntax error the semantic walk often crashes (`ClassCastException: String cannot be cast to Map`, or `null`) or aborts with `AST_WALKER_STACK_MISALIGN`, adding application-issue FATALs on top of the syntax error.
+
+**Affected queries and snippets (11-10-2026 extract; `q` = bound query record, `s` = snippet record):**
+
+| Sub-problem | Case IDs | Domain / entity / query name (or bundle) | Example |
+|-------------|----------|------------------------------------------|---------|
+| `position` as alias / column | q5909, q5910, q5913 | PDP_UG / acs__contacts / del_src_intake_acs_contacts_PDP_UG_asof_20260910 (q5909), src_intake_acs_contacts_PDP_UG_asof_20260910 (q5910), src_intake_acs_contacts_PDP_UG_v0.2 (q5913) | `CAST(acq_contacts.<Position> AS varchar) AS position`, `acs_contacts.position` |
+| `input` as CTE name | q5390, q5394 | Partner_Data_Platform / Contact Attributes Combined / con_contact_attributes_combined_full_load (q5390), pre_swap_con_contact_attributes_combined_full_load (q5394) | `with input as ( … )` |
+| `path` as alias / column | q2090 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.ID_Array | `ARRAY_CONSTRUCT(SYSTEM_NAME\|\|'::'\|\|ID) AS PATH`, `ARRAY_APPEND(ap.PATH, se.B)` |
+| `truncate(…)` function | q3399, q3438, q3490, q3546 | Enroll360 / Student Term Application / Enroll360.Student Term Application.final (q3399), .final_v2 (q3438), INACTIVE_….final (q3490), INACTIVE_….final_v2 (q3546) | `dateadd(d, truncate(try_to_decimal(…)), …)` |
+| Array literal | s82233 (tuple) | Foundation / bundle `m_STUDENT_COURSE_WORK_8026_OSF:v.5001` | `(select ['STUDENT_ID', 'ACADEMIC_PERIOD', …]` |
+
+**One-line repros (2026-11-11, all FATAL on 5.1.4-1):** `select cast(a.x as varchar) as position from t a`; `select a.position from t a`; `with input as (select 1 as x) select input.x from input`; `select array_construct(a.x) as path from t a`; `select truncate(a.x) as y from t a` (`trunc(a.x)` is clean); `select ['a','b'] as arr from t a`.
+
+**Fix:**
+
+- Allow `POSITION`, `INPUT`, `PATH` wherever a non-reserved identifier is allowed (column, alias, CTE / table name, qualified column part), keeping their keyword roles (`POSITION(x IN y)` / `POSITION(x, y)`, `FLATTEN(input => …, path => …)`). Audit the other keywords added since 5.0.0-3 against Snowflake's [reserved keyword list](https://docs.snowflake.com/en/sql-reference/reserved-keywords) and allow every non-reserved one as an identifier.
+- Accept `TRUNCATE(expr [, scale])` as a numeric function (Snowflake synonym of `TRUNC`), distinct from DDL `TRUNCATE TABLE` (Entry 1 notes TRUNC vs TRUNCATE).
+- Accept array literals `[expr, …]` as value expressions (overlaps **Entry 4.4**; verify against the delivered `expr[n]` subscript work).
+- Walker robustness: after a syntax error the walker must not throw. Report the syntax error(s) only, and skip or guard the semantic step instead of raising `ClassCastException` / `null` application FATALs.
+
+| Sub | Work | Status |
+|-----|------|--------|
+| **18.1** | Non-reserved identifier audit; allow `position`, `input`, `path` (+ any others found) as identifiers | Not started |
+| **18.2** | `TRUNCATE(expr[, scale])` function | Not started |
+| **18.3** | Array literal value expression (with Entry 4.4) | Not started |
+| **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not started |
+| **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Not started |
+| **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Not started |
 
 ---
 
