@@ -118,6 +118,147 @@ Branch the grammar when the dialects have different syntax, arity, AST, or keywo
 
 The Postgres rows are part of the dialect-symmetry requirement for Entry 1. They may be delivered after Snowflake slices A–C, but the grammar/registry design must leave explicit branches for them and must not classify their names as ordinary columns.
 
+#### Approved parser grammar design (2026-11-11)
+
+Dedicated date/time productions must precede the generic `value_expression_primary` / `routine_invocation` path so a level such as `year` is parsed as part metadata, never as a `column_reference`. Existing `extract_expression`, `date_part_expression`, and their AST contracts remain unchanged.
+
+```antlr
+predicand_primary
+  : extract_expression
+  | date_part_expression
+  | datetime_manipulation_expression      // NEW: before generic functions
+  | value_expression_primary
+  | string_value_expression
+  | sign numeric_primary
+  | trim_function
+  | null_literal
+  | variable_identifier
+  | puml_constant_identifier
+  | position_function
+  ;
+
+numeric_primary
+  : extract_expression
+  | date_part_expression
+  | datetime_manipulation_expression      // NEW
+  | value_expression_primary
+  ;
+
+datetime_manipulation_expression
+  : snowflake_datetime_add_expression
+  | snowflake_datetime_diff_expression
+  | datetime_trunc_expression
+  | snowflake_time_slice_expression
+  | snowflake_day_boundary_expression
+  | postgres_datetime_expression
+  ;
+```
+
+Use one non-column part production across the new functions. Keep `extract_field` as a compatibility wrapper. The final `identifier` alternative accepts documented aliases and extensible engine parts without collecting them as columns; the shared Java registry performs canonicalization and affinity classification.
+
+```antlr
+extract_field
+  : datetime_part
+  ;
+
+datetime_part
+  : primary_datetime_field
+  | time_zone_field
+  | extended_datetime_field
+  | snowflake_datetime_part
+  | character_literal
+  | identifier
+  ;
+
+snowflake_datetime_part
+  : DAYOFMONTH | DAYOFWEEK | DAYOFWEEKISO | DAYOFYEAR
+  | WEEKISO | WEEKOFYEAR
+  | EPOCH_SECOND | EPOCH_MILLISECOND | EPOCH_MICROSECOND
+  ;
+```
+
+The dedicated rules must label arguments semantically. Representative shapes:
+
+```antlr
+snowflake_datetime_add_expression
+  : function=snowflake_datetime_add_function
+    LEFT_PAREN level=datetime_part
+    COMMA increment=value_expression
+    COMMA datetime_value=value_expression RIGHT_PAREN
+  ;
+
+snowflake_datetime_diff_expression
+  : function=snowflake_datetime_diff_function
+    LEFT_PAREN level=datetime_part
+    COMMA left_value=value_expression
+    COMMA right_value=value_expression RIGHT_PAREN
+  ;
+
+datetime_trunc_expression
+  : DATE_TRUNC LEFT_PAREN level=datetime_part
+    COMMA datetime_value=value_expression RIGHT_PAREN
+  | TRUNC LEFT_PAREN datetime_value=value_expression
+    COMMA level=datetime_part RIGHT_PAREN
+  ;
+```
+
+Apply the same pattern to the remaining matrix rows. Bare built-ins that match these shapes use the dedicated rules and dialect classifier. Schema-qualified same-name calls remain generic, dialect-neutral UDF calls. One-argument `TRUNC(value)` remains on the generic path unless semantic type evidence can distinguish datetime truncation from neutral numeric truncation.
+
+#### Approved `datetime_function` AST contract (2026-11-11)
+
+All new dedicated Snowflake and PostgreSQL constructions use a common top-level `datetime_function` key. Do not place them under generic `function`, and do not encode their arguments as positional `parameters`: that would allow a generic generator to render a date/time part as an ordinary expression.
+
+```text
+DATEADD(year, 1, created_at)
+
+{datetime_function={
+  invocation=DATEADD,
+  level={canonical=YEAR, text=year, form=KEYWORD},
+  increment={literal=1},
+  value={column={name=created_at}}
+}}
+
+DATE_TRUNC('month', created_at)
+
+{datetime_function={
+  invocation=DATE_TRUNC,
+  level={canonical=MONTH, text=month, form=STRING},
+  value={column={name=created_at}}
+}}
+```
+
+Part-like values use `{canonical, text, form}`:
+
+- `canonical` is the registry-normalized meaning used for validation and dialect affinity;
+- `text` preserves the authored spelling, including aliases such as `mm`;
+- `form` is `KEYWORD`, `IDENTIFIER`, or `STRING`;
+- generators write `KEYWORD` / `IDENTIFIER` text without quotes and emit `STRING` text as an escaped SQL character literal;
+- canonicalization must never silently replace authored text during ordinary regeneration.
+
+Generators dispatch once on `datetime_function`, then use `invocation` to select an ordered signature. Never infer SQL argument order from map insertion order.
+
+| Invocation family | Permitted subtree keys in SQL argument order |
+|-------------------|-----------------------------------------------|
+| `DATEADD`, `TIMEADD`, `TIMESTAMPADD` | `level`, `increment`, `value` |
+| `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF` | `level`, `left`, `right` |
+| `DATE_TRUNC` | `level`, `value` |
+| datetime `TRUNC` | `value`, optional `level` |
+| `TIME_SLICE` | `value`, `slice_length`, `level`, optional `boundary` |
+| `LAST_DAY` | `value`, optional `level` |
+| `NEXT_DAY`, `PREVIOUS_DAY` | `value`, `weekday` |
+| `DATE_BIN` | `stride`, `source`, `origin` |
+| one-argument `AGE` | `value` |
+| two-argument `AGE` | `left`, `right` |
+| `MAKE_DATE` | `year`, `month`, `day` |
+| `MAKE_TIME` | `hour`, `minute`, `second` |
+| `MAKE_TIMESTAMP` | `year`, `month`, `day`, `hour`, `minute`, `second` |
+| `MAKE_TIMESTAMPTZ` | timestamp fields plus optional `timezone` |
+| `MAKE_INTERVAL` | `components`, keyed by `years`, `months`, `weeks`, `days`, `hours`, `mins`, `secs`; retain positional vs named source form where required for regeneration |
+| `JUSTIFY_DAYS`, `JUSTIFY_HOURS`, `JUSTIFY_INTERVAL` | `value` |
+| `CLOCK_TIMESTAMP`, `STATEMENT_TIMESTAMP`, `TRANSACTION_TIMESTAMP`, `TIMEOFDAY` | no argument fields |
+
+`level` and `weekday` use the part-like metadata contract. Ordinary expression fields retain their normal AST nodes, including predicand-typed substitutions. The AST does not store a second dialect flag: affinity continues to use the existing per-statement diagnostic collector.
+
 #### Agent implementation matrix — level / part terms
 
 Apply this matrix in every dedicated part slot (`DATEADD`, diff/trunc family, `EXTRACT`, `DATE_PART`, `TIME_SLICE`, and Postgres date/time productions where applicable). Quoted part literals and unquoted level tokens must converge on the same normalized classifier.
@@ -191,23 +332,24 @@ There was no known snippet-specific date-part regression in the original 15 pars
 
 | Phase | Work |
 |-------|------|
-| **1 Design** | AST keys (`level` / `increment` / expr vs align with `extract`); one function/part affinity catalog; Snowflake + Postgres branches; `TIMESTAMPADD` lexer; TRUNC vs TRUNCATE |
-| **2 Grammar** | Dedicated `*_expression` rules on `predicand_primary` + value primaries; validated part nonterminals; branch only when target syntax/shape differs |
-| **3 Walker** | All `exit*`; exclude parts from symbol collection; predicand stamping on increment/expr; route rule/function/part affinity through the existing statement dialect collector |
-| **4 Tests** | `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus Postgres/shared dialect matrix, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
-| **5 Corpus** | Rebuild jar; re-run bound-query + snippet extracts; prove q5866 and all date/time matches; compare FATALs, AST/interfaces, dictionaries, lineage, and dialect diagnostics |
+| **1 Lexer baseline** | Inventory and add every lexer entry required by delivery Slices B–E in one late-keyword batch immediately before `Identifier`; regenerate; publish the complete old→new token-ID substitutions; update all affected goldens; require a green full suite before grammar work |
+| **2 Grammar + AST** | Implement the approved dedicated productions, `datetime_part`, `datetime_function` contract, and invocation signature registry incrementally; branch only when syntax, arity, AST, or keyword role differs |
+| **3 Walker + affinity** | Add every exit method; exclude parts from symbol collection; stamp predicand substitutions in expression fields; route rule/function/part affinity through the existing statement collector |
+| **4 Focused tests** | Add `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus PostgreSQL/shared matrices, AST signatures, rendering forms, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
+| **5 Corpus + delivery** | Rebuild jar; re-run bound-query and snippet extracts; prove q5866 and all date/time matches; compare FATALs, AST/interfaces, dictionaries, lineage, and dialect diagnostics; finish generator/docs/release notes |
 
 ### Delivery slices
 
 | Slice | Scope |
 |-------|--------|
-| **A** | `DATEADD`, `TIMEADD`, `TIMESTAMPADD` + core symbol-table tests |
-| **B** | Diff/trunc family: `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, `DATE_TRUNC`, `TRUNC` |
-| **C** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` |
-| **D** | PostgreSQL counterparts in the implementation matrix (`DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions) + shared/target part-affinity tests |
-| **E** | `pss-parse-docs` / release notes; generator follow-up → **Entry 10** if needed |
+| **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate, record token substitutions, update every affected golden (explicitly approved 2026-11-11), and run the full suite green. No later slice may change lexer numbering without separate review. |
+| **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage |
+| **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` |
+| **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` |
+| **E — PostgreSQL symmetry** | `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions, named `MAKE_INTERVAL`, shared/target part-affinity tests |
+| **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred |
 
-**Story minimum:** slice **A** + regression tests. **Full Entry 1:** A+B+C+D+E.
+**Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
 
 ### Acceptance
 
