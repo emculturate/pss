@@ -1,8 +1,8 @@
 # Workplan: PSS 5.1.3 missing table-dictionary sources vs 5.0.0-3
 
 Date: 2026-08-19  
-Kind: Defect (regression vs **5.0.0-3**)  
-Audience: PSS parser agent — investigate why **5.1.3** omits sources that **5.0.0-3** still records, and restore them without dropping other dictionary entries.  
+Kind: Originally filed as a defect (regression vs **5.0.0-3**); **closed 2026-09-01 — not a defect.** CTE references moving out of global `tableDictionary` into the query/symbol structures (`table_alias` → `def_queryN`, `query_dictionary`) is an **intentional 5.1.3+ enhancement** and is **not** on any fix list. Re-confirmed on 5.1.4-1 (2026-11-10, 82-row dual-parse): no physical/tuple source loss on any bound query.  
+Audience: Historical record of the RMCP scoring and its adjudication. Do **not** restore CTE names to global `tableDictionary`.  
 Corpus: Panto extracted-queries CSV dual-parse (`SQL` endpoint), RMCP compare after table-dict last-identifier scoring and outermost-only queryDictionary vs 5.0.0-3.
 
 **Related:** Phase **2.7** — [phase-2.7-with-conditionless-join-finalizer.md](./phase-2.7-with-conditionless-join-finalizer.md) (**complete**, 2026-09-01). Global `tableDictionary` is for physical and tuple substitution sources only; **CTE aliases must not appear there**. Several cases below were originally scored as “missing CTE keys” in `tableDictionary` vs 5.0.0-3 — re-adjudicate under **2.9** for functional source loss in `query_dictionary` / symbol-tree structures.
@@ -182,9 +182,6 @@ Fixture: `sql/csv-row-5455.sql`.
 
 ---
 
-## Suggested parser-side workflow
+## Comparing future corpora
 
-1. Load `sql/csv-row-5455.sql` and `sql/csv-row-583.sql` (or a stub-table reduction of 583) on **5.0.0-3** and **5.1.3**; dump `tableDictionary` keys.
-2. Walk WITH-finalizer / table-dictionary merge; log which CTE names are skipped and why (unused? no ON? substitution body? set-op?).
-3. Add failing goldens per cluster, then fix, then re-run all eight fixtures.
-4. Report: one root cause per cluster (merge if two clusters share a function).
+No parser work remains from this brief. When re-running a 5.0.0-3 dual-parse, score a CTE or local alias that is absent from 5.1.3+ `tableDictionary` as an **enhancement** when it is bound on `table_alias` (`{name=queryN}`) or otherwise present in the symbol tree. Score as a regression only when a physical or tuple source is missing from `tableDictionary`, or 5.1.3+ emits new FATALs that the set-op interface policy does not justify. `.tmp/dual-parse-compare/compare_panto_corpus.py` applies these rules.

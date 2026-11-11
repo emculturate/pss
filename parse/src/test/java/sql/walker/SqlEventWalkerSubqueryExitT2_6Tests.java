@@ -42,7 +42,7 @@ public class SqlEventWalkerSubqueryExitT2_6Tests extends AbstractSqlParseEventWa
 		final String query = "SELECT a FROM t1 WHERE a > (SELECT max(b) FROM t2)";
 		SqlParseEventWalker extractor = runParsertest(query, parse(query));
 		assertSubqueryExitOutputs(extractor,
-				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}, where={condition={left={column={name=a, table_ref=null}}, right={select={1={function={function_name=max, qualifier=null, parameters={column={name=b, table_ref=null}}}}}, from={table={alias=null, table=t2}}}, operator=>}}}}",
+				"{SQL={select={1={column={name=a, table_ref=null}}}, from={table={alias=null, table=t1}}, where={condition={left={column={name=a, table_ref=null}}, right={lookup={from={table={alias=null, table=t2}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=b, table_ref=null}}}}}}}, operator=>}}}}",
 				"[a]", "{}",
 				"{t1={a=[[@1,7:7='a',<393>,1:7], [@5,23:23='a',<393>,1:23]]}, t2={b=[[@11,39:39='b',<393>,1:39]]}}",
 				"{query0={unnamed_0=[[@12,40:40=')',<288>,1:40]]}, query2={a=[[@1,7:7='a',<393>,1:7]]}}",

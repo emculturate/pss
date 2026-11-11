@@ -71,6 +71,21 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	private static final String TEMP_SCRIPT_STATEMENT_SYMBOL_PREFIX = "_tmp_script_statement_symbols_";
 	private final ScriptParseAccumulator scriptParseAccumulator = new ScriptParseAccumulator();
 
+	/** Source position of a join extension variable ({@code FROM ... <extension>}). */
+	private record JoinExtensionVariableLocation(String name, Integer line, Integer charPositionInLine) {
+	}
+
+	/**
+	 * Join extension variables of the statement being walked; emptied after each statement.
+	 * When present, unresolved qualified table references may be supplied by the substituted
+	 * join snippet, so that statement's QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE fatals become severe warnings.
+	 */
+	private final List<JoinExtensionVariableLocation> joinExtensionVariableLocations = new ArrayList<>();
+	/** Index in the walker diagnostic list where the current statement's diagnostics begin. */
+	private int statementDiagnosticStart = 0;
+	private static final java.util.regex.Pattern QUALIFIED_SOURCE_NOT_FOUND_REF_PATTERN =
+			java.util.regex.Pattern.compile("Column '([^']*)'.*No alias or table called '([^']*)'");
+
 	/**
 	 * AST Walker Helper for this instance of the SQL Parse Event Walker
 	 */
@@ -1796,6 +1811,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 			snippet.setArrayOutputCollectorsMap(scriptParseAccumulator.buildScriptArrayOutputCollectorsMap());
 		}
 		// Handoff: copy walker-generated (non-parser) diagnostics into the snippet.
+		deferStatementQualifiedSourceFatalsToJoinExtensions();
 		snippet.setParserDiagnosticList(
 				scriptParseAccumulator.prefixWalkerDiagnostics(new ArrayList<>(walker.getWalkerDiagnostics())));
 		return snippet;
@@ -1967,6 +1983,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 	public void enterScript( SQLSelectParserParser.ScriptContext ctx) {
 		walker.pushSymbolTable();
 		scriptParseAccumulator.reset();
+		joinExtensionVariableLocations.clear();
+		statementDiagnosticStart = walker.getWalkerDiagnostics().size();
 	}
 
 	@Override
@@ -2022,6 +2040,8 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		walker.pushSymbolTable();
 		walker.resetPerStatementScope();
 		resetStatementDialectGrammarCounters();
+		joinExtensionVariableLocations.clear();
+		statementDiagnosticStart = walker.getWalkerDiagnostics().size();
 	}
 
 	@Override
@@ -2045,6 +2065,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		// It gives each statement its own line range, which is later used to attach statement prefixes to global diagnostics.
 		// It prevents cross-statement carryover in dictionaries and collector outputs.
 		if (scriptParseAccumulator.hasActiveStatement()) {
+			deferStatementQualifiedSourceFatalsToJoinExtensions();
 			int statementSequence = scriptParseAccumulator.endStatement();
 			scriptParseAccumulator.recordLineRange(statementSequence, ctx.getStart(), ctx.getStop());
 			scriptParseAccumulator.captureStatementSnapshot(
@@ -4629,7 +4650,7 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 
 		// Simplify interface reference map by standardizing it into a flat map of column references and not the entire AST subtree
 		ArrayList<Object> columnList = new ArrayList<Object>();
-		symbolTreeHelper.flattenSubTreeForDependencyColumns(interfaceReference, columnList);
+		symbolTreeHelper.flattenSelectItemDependencyColumns(interfaceReference, columnList);
 		symbolTreeHelper.attachWalkCapturedSiteTokensToSelectItemDependencyRefs(columnList);
 		symbolTreeHelper.rotateSelectItemUnresolvedColumnSnapshot();
 		if (symbolTreeHelper.isWindowFunctionSelectItemSubtree(interfaceReference)
@@ -4790,8 +4811,105 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"),
 				MUMBLE_JOIN_EXTENSION_TYPE_KEY);
+		recordJoinExtensionVariableLocation(ctx, reference);
 
 		walker.handleOneChild(ruleIndex);
+	}
+
+	@SuppressWarnings("unchecked")
+	private void recordJoinExtensionVariableLocation(ParserRuleContext ctx, Map<String, Object> reference) {
+		String name = null;
+		if (reference != null && reference.get(ASTWALKER_SUBSTITUTION_KEY) instanceof Map<?, ?> substitution) {
+			Object nameObj = ((Map<String, Object>) substitution).get("name");
+			name = (nameObj == null) ? null : nameObj.toString();
+		}
+		if (name == null || name.isBlank()) {
+			name = ctx.getText();
+		}
+		Token start = ctx.getStart();
+		joinExtensionVariableLocations.add(new JoinExtensionVariableLocation(
+				name,
+				(start == null) ? null : start.getLine(),
+				(start == null) ? null : start.getCharPositionInLine()));
+	}
+
+	/**
+	 * Called once per statement, after all of its diagnostics are collected. If the statement has
+	 * join extension variables, its QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE fatals become severe
+	 * warnings and each of its join extension variables gets a JOIN_EXTENSION_REQUIRED severe
+	 * warning. No join extension warning is added when nothing was converted: an unsubstituted
+	 * join extension is removed from the generated query. Other fatals, and diagnostics of
+	 * sibling statements, are untouched. The join extension list is emptied afterwards.
+	 */
+	void deferStatementQualifiedSourceFatalsToJoinExtensions() {
+		try {
+			if (joinExtensionVariableLocations.isEmpty()) {
+				return;
+			}
+			List<ParseDiagnostic> diagnostics = walker.getWalkerDiagnostics();
+			String qualifiedSourceCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE);
+			if (diagnostics == null || qualifiedSourceCode == null) {
+				return;
+			}
+			LinkedHashSet<String> deferredRefs = new LinkedHashSet<>();
+			for (int i = Math.min(statementDiagnosticStart, diagnostics.size()); i < diagnostics.size(); i++) {
+				ParseDiagnostic diagnostic = diagnostics.get(i);
+				if (diagnostic == null
+						|| diagnostic.severity() != ParseDiagnostic.Severity.FATAL
+						|| !qualifiedSourceCode.equals(diagnostic.code())) {
+					continue;
+				}
+				diagnostics.set(i, new ParseDiagnostic(
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						diagnostic.code(),
+						diagnostic.message(),
+						diagnostic.line(),
+						diagnostic.charPositionInLine(),
+						diagnostic.source(),
+						diagnostic.ruleName(),
+						diagnostic.tokenText(),
+						true,
+						diagnostic.phase(),
+						diagnostic.exceptionType(),
+						diagnostic.details()));
+				deferredRefs.add(qualifiedSourceRefLabel(diagnostic));
+			}
+			if (deferredRefs.isEmpty()) {
+				return;
+			}
+			String requiredCode = walker.getDiagnosticCode(SqlASTWalkerHelper.DIAG_SQL_JOIN_EXTENSION_REQUIRED);
+			String requiredTemplate = walker.getDiagnosticMessage(SqlASTWalkerHelper.DIAG_SQL_JOIN_EXTENSION_REQUIRED);
+			for (JoinExtensionVariableLocation location : joinExtensionVariableLocations) {
+				String message = String.format(requiredTemplate,
+						location.name(), location.line(), location.charPositionInLine(),
+						deferredRefs.size(), String.join(", ", deferredRefs));
+				walker.addWalkerDiagnostic(
+						ParseDiagnostic.Severity.SEVERE_WARNING,
+						requiredCode,
+						message,
+						location.line(),
+						location.charPositionInLine(),
+						walker.getClass().getSimpleName(),
+						null,
+						location.name(),
+						true,
+						"ast-walk",
+						null,
+						null);
+			}
+		} finally {
+			joinExtensionVariableLocations.clear();
+			statementDiagnosticStart = (walker.getWalkerDiagnostics() == null) ? 0 : walker.getWalkerDiagnostics().size();
+		}
+	}
+
+	private static String qualifiedSourceRefLabel(ParseDiagnostic diagnostic) {
+		String message = diagnostic.message();
+		java.util.regex.Matcher matcher = (message == null) ? null : QUALIFIED_SOURCE_NOT_FOUND_REF_PATTERN.matcher(message);
+		if (matcher != null && matcher.find()) {
+			return matcher.group(2) + "." + matcher.group(1);
+		}
+		return (diagnostic.tokenText() == null) ? String.valueOf(message) : diagnostic.tokenText();
 	}
 
 	@Override
@@ -10837,6 +10955,16 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		Integer stackLevel = walker.currentStackLevel(ruleIndex);
 		Map<String, Object> subMap = walker.getNodeMap(ruleIndex, stackLevel);
 		Map<String, Object> reference = walker.checkForSubstitutionVariable((Map<String, Object>) subMap.get("1"), MUMBLE_TUPLE_KEY);
+		if (reference != null
+				&& !reference.containsKey(MUMBLE_LOOKUP_KEY)
+				&& symbolTreeHelper.isQueryBackedSelectItemReference(reference)) {
+			// Scalar subquery in a value position: same lookup subtree shape as a bare select item
+			HashMap<String, Object> lookupBody = new HashMap<String, Object>();
+			lookupBody.putAll(reference);
+			HashMap<String, Object> lookup = new HashMap<String, Object>();
+			lookup.put(MUMBLE_LOOKUP_KEY, lookupBody);
+			subMap.put("1", lookup);
+		}
 
 		walker.handleOneChild(ruleIndex);
 		symbolTreeHelper.exitPredicateSubqueryFrame(

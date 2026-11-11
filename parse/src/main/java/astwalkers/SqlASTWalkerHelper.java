@@ -57,6 +57,7 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 	}
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE";
 		public static final String DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS = "SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS";
+		public static final String DIAG_SQL_JOIN_EXTENSION_REQUIRED = "SQL_JOIN_EXTENSION_REQUIRED";
 		public static final String DIAG_SQL_AMBIGUOUS_COLUMN_REFERENCE = "SQL_AMBIGUOUS_COLUMN_REFERENCE";
 		public static final String DIAG_SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE =
 				"SQL_AMBIGUOUS_DERIVED_COLUMN_REFERENCE";
@@ -251,6 +252,9 @@ public final class SqlASTWalkerHelper extends AbstractASTWalkerHelper {
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE",
 				 "Source Table not found for Column '%s' at (l:%s c:%s). No alias or table called '%s'.");
+		 registerDiagnostic(DIAG_SQL_JOIN_EXTENSION_REQUIRED,
+				 "JOIN_EXTENSION_REQUIRED",
+				 "Join extension variable '%s' at (l:%s c:%s) is not optional: %s table/column reference(s) not defined in the query (%s) must be satisfied by the substituted join extension snippet.");
 		 registerDiagnostic(DIAG_SQL_QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS,
 				 "QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS",
 				 "Qualified column '%s' at (l:%s c:%s) was not found in output interface of query alias '%s'.");

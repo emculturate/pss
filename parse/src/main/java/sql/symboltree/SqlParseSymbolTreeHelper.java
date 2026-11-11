@@ -11185,6 +11185,23 @@ public class SqlParseSymbolTreeHelper {
 	}
 
 	/**
+	 * Select-item interface flattening. A subquery nested inside a select-item expression
+	 * (operand, function argument, {@code CASE}, {@code IN}/{@code EXISTS}) is a separate scope:
+	 * its local refs stay in its own {@code def_queryN} (linked via {@code dependent_queries}) and
+	 * outer correlations are validated at predicate-frame exit. Lifting them into the outer
+	 * interface would resolve inner aliases against the outer {@code table_alias}. A bare
+	 * query-backed select item keeps its full lineage; its output column is exempt from interface
+	 * validation via {@code MUMBLE_SCALAR_SUBQUERY_ALIASES_KEY}.
+	 */
+	public void flattenSelectItemDependencyColumns(HashMap<String, Object> interfaceReference, ArrayList<Object> columnList) {
+		try (WalkerHotspotProfiler.HotspotScope ignored =
+				WalkerHotspotProfiler.hotspotScope("flattenSubTreeForDependencyColumns")) {
+			boolean bareQueryBackedItem = isQueryBackedSelectItemReference(interfaceReference);
+			flattenSubTreeForDependencyColumns(interfaceReference, columnList, !bareQueryBackedItem);
+		}
+	}
+
+	/**
 	 * Clause flattening ({@code filters}, {@code grouped_by}, {@code ordered_by}) collects only
 	 * references in the enclosing query scope. The {@code filters} list aggregates column refs from
 	 * WHERE, HAVING, QUALIFY, and JOIN ON (not separate symbol-table keys). Subquery-local columns
