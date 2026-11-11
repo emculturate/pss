@@ -328,6 +328,66 @@ Use a rebuilt 5.1.4 fat jar and re-run both 11-10-2026 extracts through their co
 
 There was no known snippet-specific date-part regression in the original 15 parser-defect cases, but the snippet extract must still be re-run: generic function parsing can hide phantom part columns without producing a FATAL.
 
+### Local corpus evidence and replay tools (archived 2026-11-11)
+
+The former repository `.tmp/` assessment artifacts and the two untracked live CSV
+extracts were moved to a **local-only sibling archive**, outside this Git repository:
+[`../../../pss-parser-evidence/2026-11-11/`](../../../pss-parser-evidence/2026-11-11/).
+On the current workstation this is
+`/Users/ghowe/emculturate-pss/pss-parser-evidence/2026-11-11`.
+The archive contains authored SQL and diagnostic payloads; do not commit, publish,
+or upload it. It is not a shared or remote backup.
+
+| Archive-relative location | Purpose |
+|---------------------------|---------|
+| `live_queries/` | Original bound-query and snippet CSV extracts; preserve record order for stable `qN` / `sN` IDs |
+| `comparison/corpus*.jsonl` | Frozen endpoint-normalized inputs, including final, IN_LIST, tuple-wrapper, and join-extension variants |
+| `comparison/runs/*/results.jsonl` | Historical 5.0.0-3 and pre/post-fix 5.1.4 results; keep all tags, especially `base5003`, `inlist5003`, `pre514`, `final514`, and `entry16-*` |
+| `comparison/runs/jext514/` | Unmerged historical run; shard outputs retained because no merged result exists |
+| `comparison/` | Batch/probe Java sources, comparison/classification scripts, remediation indexes, affected IDs, summaries, and detailed probe results |
+| `alias-scope/`, `capture/` | Entry 13–16 scope/lineage probes, including the 113-query Entry 14 evidence and captured golden failures |
+| `legacy-5003/` | Frozen legacy parser source/build snapshot, including the 5.0.0-3 reference JAR; not an active module |
+| `jars/` | Historical prefix/postfix 5.1.4 JARs, not current release artifacts |
+| `logs/` | Historical compile/test evidence, including `full-parse-regression-entry16-final.log`: 2,194 tests, 0 failures, 0 errors, 21 skipped; this is a recorded result, not a new verification |
+| `manifests/` | Source-to-archive paths, sizes, SHA-256 hashes, discarded-file reasons, initial Git status, and hashes of unrelated modified files |
+| `original-tools/` | Byte-preserved originals of the four replay scripts whose paths were adapted after relocation |
+
+Cleanup removed only untracked rebuildable classes/Python caches, empty outputs,
+the machine-specific classpath, Finder metadata, shard inputs verified against
+retained corpus records, and shard outputs whose concatenation was byte-identical
+to a retained merged result. Other evidence, including historical failing logs,
+was retained. Previously tracked temporary artifacts now appear as Git deletions;
+the existing build/IDE edits were left unchanged.
+
+**Replay from the repository root** (requires the rebuilt fat JAR and a suitable JDK):
+
+```bash
+REPO="$PWD"
+EVIDENCE="$(cd .. && pwd)/pss-parser-evidence/2026-11-11"
+python3 "$EVIDENCE/comparison/run_corpus.py" run datetime514 \
+  "$REPO/parse/target/pss-parse-5.1.4-1-fat.jar" \
+  --corpus "$EVIDENCE/comparison/corpus-final.jsonl" --shards 1
+```
+
+Use a **new run tag** each time; do not overwrite historical baseline tags.
+`--only "$EVIDENCE/comparison/entry16-affected-ids.txt"` selects the saved Entry 16
+cases; another ID file can select q5866 or the date/time matrix.
+`run_corpus.py build` reconstructs `corpus.jsonl` from the archived CSVs, but the
+frozen `corpus-final.jsonl` is the comparison reference: keep its historical
+endpoint normalization rather than assuming a fresh build is identical.
+
+`compare_live.py` compares its fixed `base5003` / `pre514` / `post514` tags.
+`new_fatals.py` compares `final514` against `base5003` overlaid with `inlist5003`;
+`remediation_index.py` regenerates the local remediation index from those saved
+results and classifications. The older `compare_panto_corpus.py` and
+`compare_panto_29.py` now require `PSS_REPO_ROOT="$REPO"` to locate repository
+fixtures/current JARs and use the archived legacy JAR; the latter still targets
+5.1.3 and is historical, not the Entry 1 runner.
+
+The batch summaries retain AST hashes and selected diagnostics, **not** complete
+dictionaries, lineage, or dialect hit counts. Entry 1 closure still requires the
+detailed AST/symbol-table/dialect assertions specified above.
+
 ### Work phases
 
 | Phase | Work |
@@ -638,7 +698,7 @@ The `join_extension` group is a separate 5.1.x behaviour, not part of this defec
 | **14.1** | Record join extension variable locations in `exitJoin_extension` | Complete |
 | **14.2** | Conversion + `JOIN_EXTENSION_REQUIRED` diagnostic (catalog entry in `SqlASTWalkerHelper`); runs at `exitSql_statement` for scripts and at `getSnippet()` for single-query endpoints | Complete |
 | **14.3** | Tests (`SqlEventWalkerJoinExtensionDeferralTests`, 6): one / two join extensions; no warning without missing refs; no conversion without a join extension; unrelated fatals (duplicate interface, set-op column count) stay fatal; script statements evaluated independently | Complete — full `parse` suite 2187 run, 0 failures, 21 skipped; no existing golden changed |
-| **14.4** | Corpus re-check of the 113 remaining bound queries (`.tmp/alias-scope/remaining113-entry14.out`) | Complete — see results below |
+| **14.4** | Corpus re-check of the 113 remaining bound queries (`alias-scope/remaining113-entry14.out` in the local archive documented under Entry 1) | Complete — see results below |
 
 **14.4 results (5.1.4-1 jar with Entry 13 + 14):**
 
@@ -708,7 +768,7 @@ It is **not** visible to:
 
 Removing only the `union all <union_add.…>` member clears every FATAL in q2087. Ten other templates in the extract use `union [all] <union_add…>` without failing because the union is top-level, has two or more concrete query members, or no consumer reads the derived alias's columns. All thirteen templates were rechecked after the fix.
 
-**Observed behaviour (2026-11-11 probes, `.tmp/alias-scope/ua*.tsv`):**
+**Observed behaviour (2026-11-11 probes, `alias-scope/ua*.tsv` in the local archive documented under Entry 1):**
 
 | Shape | Result |
 |-------|--------|

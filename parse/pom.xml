@@ -19,7 +19,7 @@
 
   <properties>
     <antlr4.version>4.13.2</antlr4.version>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.jar.plugin.version>3.3.0</maven.jar.plugin.version>
@@ -121,8 +121,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${maven.compiler.plugin.version}</version>
         <configuration>
-          <source>${maven.compiler.release}</source>
-          <target>${maven.compiler.release}</target>
+          <release>${maven.compiler.release}</release>
           <compilerReuseStrategy>alwaysNew</compilerReuseStrategy>
           <compilerArgument>-Xlint:all</compilerArgument>
           <showWarnings>${maven.compiler.showWarnings}</showWarnings>

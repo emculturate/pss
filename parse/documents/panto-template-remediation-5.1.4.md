@@ -169,7 +169,7 @@ Parse the corrected template with the `SQL` endpoint (or the snippet with its en
 
 ## Index of cases
 
-Generated from the 2026-11-10 run (`.tmp/dual-parse-compare/runs/final514` versus `runs/base5003` + `runs/inlist5003`; regenerate with `.tmp/dual-parse-compare/remediation_index.py`). "First fatal message" shows only the first of the case's FATALs.
+Generated from the 2026-11-10 run (`comparison/runs/final514` versus `runs/base5003` + `runs/inlist5003` in the local evidence archive; regenerate with its `comparison/remediation_index.py`). Archive location and replay instructions are documented in [the 5.1.4 workplan, Entry 1](sql-grammar-5.1.4-workplan.md#local-corpus-evidence-and-replay-tools-archived-2026-11-11). "First fatal message" shows only the first of the case's FATALs.
 
 ### Pattern 1 — duplicate output name inside a UNION branch
 
@@ -515,4 +515,3 @@ Generated from the 2026-11-10 run (`.tmp/dual-parse-compare/runs/final514` versu
 |---|---|---|---|---|---|
 | 1 | `q5128` | Pagoda / TRANSFER_COURSEWORK / banner_sar_transfer_coursework | 59:24 | 2 | Line 59:24 - unexpected input: ']' in rule value_expression: order by] |
 | 2 | `s6989` (in_list) | ALR / bundle `ALR.Partner Code Mapping.All:v01` | 18:42 | 1 | Line 18:42 - unexpected input: ']' in rule row_value_expression: 'American Indian or Alaska Native, Asian',] |
-
