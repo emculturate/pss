@@ -40,9 +40,10 @@
 | **13** | SELECT-list subquery alias scope (false `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE`) + operand `lookup` wrapper | Defect | **Complete** (2026-11-10) |
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
-| **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Not started** |
+| **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Complete** (2026-11-11) |
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Not started** |
+| **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
 
 ---
 
@@ -52,7 +53,7 @@
 |---------|------------------|-------------------|
 | **EXTRACT / DATE_PART `FROM`** | ✅ Aug 2026 | `SqlEventWalkerExtractTests`; git: `extract-dialect-capture-workplan.md` |
 | **Symbol table resolution consolidation** Phases 1–20 | ✅ Aug 2026 | [symbol-table-resolution-consolidation-worklist.md](./symbol-table-resolution-consolidation-worklist.md) (historical) |
-| **RMCP parser-defects Phase 2** (set-op, `VALUES`, `CASE`, parse perf 2.8–2.11, etc.) | ✅ 2026-08–09 | [parse/docs/rmcp-handoff/5.1.3-panto-outstanding/](./docs/rmcp-handoff/5.1.3-panto-outstanding/); set-op egress: `.cursor/rules/set-op-convert-egress-scoping.mdc` |
+| **RMCP parser-defects Phase 2 implementation** (set-op, `VALUES`, `CASE`, parse perf 2.8–2.11, etc.) | ✅ 2026-08–09; residual acceptance matrix → **Entry 19** | [parse/docs/rmcp-handoff/5.1.3-panto-outstanding/](./docs/rmcp-handoff/5.1.3-panto-outstanding/); set-op egress: `.cursor/rules/set-op-convert-egress-scoping.mdc` |
 | **Java 21 / parent 5.1.4-1 toolchain** | ✅ Sep 2026 | git: `java-21-upgrade-workplan.md` |
 | **2.5 Jinja DNC rollup closure** | ⏳ | **Entry 5** subtask **5.4** (depends on **5.1**) |
 
@@ -563,7 +564,7 @@ It is **not** visible to:
 | q2087 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.final_simple | 7 (alias `agg`) |
 | q2088 | Enroll360 / Partner ID Xwalk / Enroll360.Partner ID Xwalk.final_simple | 12 (alias `all_ids`) |
 
-Removing only the `union all <union_add.…>` member clears every FATAL in q2087. Ten other templates in the extract use `union [all] <union_add…>` without failing; per the probes below, presumably because the union is top-level, has two or more query members, or no consumer reads the derived alias's columns (not yet checked one by one).
+Removing only the `union all <union_add.…>` member clears every FATAL in q2087. Ten other templates in the extract use `union [all] <union_add…>` without failing because the union is top-level, has two or more concrete query members, or no consumer reads the derived alias's columns. All thirteen templates were rechecked after the fix.
 
 **Observed behaviour (2026-11-11 probes, `.tmp/alias-scope/ua*.tsv`):**
 
@@ -579,20 +580,20 @@ Removing only the `union all <union_add.…>` member clears every FATAL in q2087
 | `(select t.a from tbl t intersect <q.X> except <q.Y>) agg` | Clean |
 | Top-level `select t.a from tbl t union all <union_add.X>` | Clean |
 
-The pattern points at the set-operation interface builder for a `unionized_query` whose only query member is accompanied by variable members (and at variable-only operations); root cause still to be confirmed in `SqlParseEventWalker` / set-op interface finalisation (see `.cursor/rules/set-op-convert-egress-scoping.mdc` for the bundle-build vs egress rules that must be kept).
+**Confirmed root cause (2026-11-11):** set-operation identity was inferred from at least two published `def_queryN` / query-like participant scopes. A query variable is correctly typed and retained in the AST / substitution map but intentionally has no `def_queryN`; one concrete query plus variable members therefore failed the participant-count test and the composite `def_unionN` / `def_intersectN` never received the concrete query's interface. The operator staged for a variable was also left pending and could be stamped onto the composite scope or a later participant.
 
 **Fix rule:**
 
 1. The interface of a set operation comes from its first **query** member, wherever variables appear in the member list (first, middle, last, or several).
 2. Variable members contribute no columns and do not trigger `SET_OPERATION_INTERFACE_COLUMN_COUNT_MISMATCH` or `DUPLICATE_INTERFACE_COLUMNS`.
-3. **Decision needed — variable-only set operation:** the interface is unknown at template parse time. Proposed: mark the interface *open* so consumers report `alias.column` reads as SEVERE_WARNING (not FATAL), consistent with Entry 14's treatment of unverifiable references. Confirm with the product owner before implementing.
+3. **Variable-only set operation (decision confirmed 2026-11-11):** the interface is unknown at template parse time. Publish an open wildcard interface so consumers do not falsely reject `alias.column`; final generated SQL remains responsible for concrete interface validation after substitution.
 
 | Sub | Work | Status |
 |-----|------|--------|
-| **16.1** | Root cause in set-op interface construction for query + variable members | Not started |
-| **16.2** | Fix per the rule above; decide and implement the variable-only case | Not started |
-| **16.3** | Tests (below) | Not started |
-| **16.4** | Re-check q2084, q2087, q2088 and the ten passing `union_add` templates; full suite; no change to set-op egress goldens unless explained | Not started |
+| **16.1** | Root cause in set-op interface construction for query + variable members | Complete (2026-11-11) |
+| **16.2** | Fix per the rule above; decide and implement the variable-only case | Complete (2026-11-11) |
+| **16.3** | Tests (below) | Complete — focused class + existing set-op gate pass |
+| **16.4** | Re-check q2084, q2087, q2088 and the ten passing `union_add` templates; full suite; no change to set-op egress goldens unless explained | Complete — all 13 templates have zero FATALs under both 5.0.0-3 and 5.1.4-1; full suite passes |
 
 **Test requirements (16.3).** The tests must prove that **every set (tuple-conjunction) operator the grammar supports** works with a query snippet variable as a member: `UNION`, `UNION ALL`, `UNION DISTINCT`, `EXCEPT`, `EXCEPT ALL`, `EXCEPT DISTINCT`, `INTERSECT`, `INTERSECT ALL`, `INTERSECT DISTINCT` (`union_clause` / `intersect_clause` with optional `set_qualifier`). For each operator cover:
 
@@ -605,6 +606,8 @@ The pattern points at the set-operation interface builder for a `unionized_query
 - the variable-only case, with whatever behaviour 16.2 decides.
 
 Assert both the diagnostics and the published interface (`def_queryN` output columns) of the set operation.
+
+**Acceptance result (2026-11-11):** q1789, q1840, q1841, q1842, q1853, q1854, q1855, q1872, q1996, q2084, q2087, q2088, and q2089 all parse with zero FATALs under both 5.0.0-3 and the fixed 5.1.4-1 build. No snippet record in the extract exhibited this defect. The full `parse` regression passes: 2,194 tests, 0 failures, 0 errors, 21 skipped. Seven pre-existing symbol-table expectations were updated because they encoded the retired pending-operator leakage and absence of the now-required composite interface.
 
 ---
 
@@ -652,6 +655,26 @@ All problem evidence, reproductions, implementation requirements, tests, and bou
 | **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not started |
 | **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Not started |
 | **18.6** | Re-check q2090, q3399, q3438, q3490, q3546, q5390, q5394, q5909, q5910, q5913, s82233; full suite | Not started |
+
+---
+
+## Entry 19 — RMCP Phase 2 acceptance-test closure
+
+**Status:** Partial — parser implementation is present; close the residual test promises from the September 2026 RMCP plan before retiring its duplicate copy.
+**Kind:** Test / verification (implement a parser fix only if these fixtures expose a real regression)
+
+The old Phase 2 plan is otherwise accounted for: wildcard set-op handling (2.1), `VALUES` aliases (2.2), `WITHIN GROUP` grammar and `LISTAGG` coverage (2.3), nested / product `CASE` and function-result subscripts (2.4 / 2.6), CTE dictionary policy (2.7 / 2.9), and the 74-query timeout program (2.8 / 2.11) are delivered or closed. The Jinja-authored DNC rollup (2.5) remains explicitly tracked as **Entry 5.4**.
+
+| Sub | Residual acceptance work | Evidence / boundary | Status |
+|-----|--------------------------|---------------------|--------|
+| **19.1** | Add the exact 2.2 shape: an explicit-column UNION branch over `FROM VALUES (…) AS default_stream (cols)` followed by a joined source, with `COALESCE(pso.sort_order, 999)` and `default_stream.*` reads | `SqlEventWalkerUnparenthesizedValuesTests` covers parser endpoints and alias columns; JOIN tests cover parenthesized `VALUES`, but not this full unparenthesized UNION-branch construction | Not started |
+| **19.2** | Complete shared `WITHIN GROUP` aggregate coverage for `PERCENTILE_CONT` and `PERCENTILE_DISC`; verify multiple sort keys and null ordering | Grammar already admits both; `SqlEventWalkerWithinGroupOrderedAggregateTests` currently exercises only `LISTAGG` | Not started |
+| **19.3** | Complete `ARRAY_AGG … WITHIN GROUP` / `OVER` and compound-array coverage | Owned by **Entry 4.3**, not duplicated here; close this row when 4.3 accepts | Not started (Entry 4.3) |
+| **19.4** | Run the focused Phase 2 regression classes and record whether 19.1–19.3 required code changes | Include wildcard set-op controls, unresolved aliases/columns, and concrete set-op width mismatch negatives | Not started |
+
+For **19.1**, use a physical table in place of `{{ ref('sort_orders') }}` so the Phase 2 grammar/walker behavior is independently testable. Add the Jinja-authored variant when **Entry 5.1** lands. Require no syntax recovery, no `QUALIFIED_COLUMN_NOT_FOUND` for `pso` or `default_stream`, and a seven-column set-op interface. Keep a missing-alias negative control.
+
+For **19.2**, assert AST, interface, dictionaries, symbol table, and `within_group_ordered_by` lineage. Do not add unsupported aggregate names merely to satisfy the old prose; test the four aggregates admitted by `ordered_aggregate_function` (`LISTAGG`, `ARRAY_AGG`, `PERCENTILE_CONT`, `PERCENTILE_DISC`) and align dialect restrictions with current target documentation.
 
 ---
 

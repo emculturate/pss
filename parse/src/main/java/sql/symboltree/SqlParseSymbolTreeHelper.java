@@ -171,6 +171,9 @@ public class SqlParseSymbolTreeHelper {
 			SqlASTWalkerHelper.TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY;
 	private static final String TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY =
 			SqlASTWalkerHelper.TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY;
+	/** Query-variable members seen in the current syntactic set-operation frame (walk-time only). */
+	private static final String TEMP_SET_OPERATION_QUERY_VARIABLE_MEMBERS_KEY =
+			"_tmp_set_operation_query_variable_members";
 	public static final String RELATIONAL_MODIFIER_SOURCE_COLUMNS_KEY = "source_columns";
 	public static final String RELATIONAL_MODIFIER_OPERAND_TOKEN_REFS_KEY = "modifier_operand_token_refs";
 	/** Depth counter while walking {@code JOIN … USING (column_reference_list)}. */
@@ -7281,13 +7284,15 @@ public class SqlParseSymbolTreeHelper {
 
 	@SuppressWarnings("unchecked")
 	public void hoistInsertSourceSequenceToSetOperationRoot(Map<String, Object> setOperationDefinition) {
-		if (setOperationDefinition == null || setOperationDefinition.isEmpty()
-				|| !isSetOperationDefinition(setOperationDefinition)) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
 			return;
 		}
 
-		Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(setOperationDefinition);
 		Map<String, Object> firstParticipant = findFirstSetOperationParticipant(setOperationDefinition);
+		if (firstParticipant == null) {
+			return;
+		}
+		Map<String, Object> firstLeaf = findFirstSetOperationLeafDefinition(firstParticipant);
 		Object sequenceObj = resolveInsertSourceSelectSequenceObject(setOperationDefinition);
 		if (!(sequenceObj instanceof ArrayList<?>) && firstLeaf != null) {
 			sequenceObj = firstLeaf.get(TEMP_INSERT_SOURCE_SELECT_SEQUENCE_KEY);
@@ -7311,19 +7316,29 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void publishSetOperationInterfaceAtExit(String setOperationKey, Map<String, Object> setOperationDefinition) {
-		if (setOperationDefinition == null || setOperationDefinition.isEmpty()
-				|| !isSetOperationDefinition(setOperationDefinition)) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
 			return;
 		}
 
 		ArrayList<Map<String, Object>> participants = collectSetOperationParticipantsInOrder(setOperationDefinition);
 		if (participants.isEmpty()) {
+			if (hasSetOperationQueryVariableMembers(setOperationDefinition)) {
+				LinkedHashMap<String, Object> openInterface = new LinkedHashMap<String, Object>();
+				openInterface.put("*", "wildcard");
+				setOperationDefinition.put(MUMBLE_INTERFACE_KEY, openInterface);
+			}
 			return;
 		}
 
-		ArrayList<String> outputColumnNames = extractInterfaceColumnNamesInOrder(participants.get(0));
-		if (outputColumnNames.isEmpty()) {
-			outputColumnNames = extractScopeOutputColumnNamesInSelectOrder(participants.get(0));
+		ArrayList<String> outputColumnNames = new ArrayList<String>();
+		for (Map<String, Object> participant : participants) {
+			outputColumnNames = extractInterfaceColumnNamesInOrder(participant);
+			if (outputColumnNames.isEmpty()) {
+				outputColumnNames = extractScopeOutputColumnNamesInSelectOrder(participant);
+			}
+			if (!outputColumnNames.isEmpty()) {
+				break;
+			}
 		}
 		if (outputColumnNames.isEmpty()) {
 			return;
@@ -7355,9 +7370,58 @@ public class SqlParseSymbolTreeHelper {
 		}
 
 		publishSetOperationInterfaceAtExit(setOperationKey, setOperationDefinition);
-		if (insertSource && isSetOperationDefinition(setOperationDefinition)) {
+		if (insertSource && isSetOperationSourceReference(setOperationKey)) {
 			hoistInsertSourceSequenceToSetOperationRoot(setOperationDefinition);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private boolean hasSetOperationQueryVariableMembers(Map<String, Object> setOperationDefinition) {
+		if (setOperationDefinition == null || setOperationDefinition.isEmpty()) {
+			return false;
+		}
+		Object membersObj = setOperationDefinition.get(TEMP_SET_OPERATION_QUERY_VARIABLE_MEMBERS_KEY);
+		return membersObj instanceof List<?> members && !members.isEmpty();
+	}
+
+	/**
+	 * Records a query substitution as a syntactic set-operation member without manufacturing a
+	 * {@code def_queryN} scope. Query variables have no interface until substitution, but their
+	 * presence still makes the surrounding UNION / INTERSECT / EXCEPT structurally valid.
+	 */
+	@SuppressWarnings("unchecked")
+	public void recordSetOperationQueryVariableMember(Map<String, Object> source) {
+		if (source == null || source.isEmpty()) {
+			return;
+		}
+
+		Object substitutionObj = source.get(MUMBLE_SUBSTITUTION_KEY);
+		if (!(substitutionObj instanceof Map<?, ?> substitutionMapObj)) {
+			return;
+		}
+		Map<String, Object> substitutionMap = (Map<String, Object>) substitutionMapObj;
+		Object typeObj = substitutionMap.get(MUMBLE_TYPE_KEY);
+		if (!MUMBLE_QUERY_KEY.equals(typeObj)) {
+			return;
+		}
+
+		Object membersObj = walker.symbolTable.get(TEMP_SET_OPERATION_QUERY_VARIABLE_MEMBERS_KEY);
+		ArrayList<String> members;
+		if (membersObj instanceof ArrayList<?> memberListObj) {
+			members = (ArrayList<String>) memberListObj;
+		} else {
+			members = new ArrayList<String>();
+			walker.symbolTable.put(TEMP_SET_OPERATION_QUERY_VARIABLE_MEMBERS_KEY, members);
+		}
+
+		Object nameObj = substitutionMap.get(MUMBLE_NAME_KEY);
+		if (nameObj instanceof String name && !name.isBlank()) {
+			members.add(name);
+		}
+
+		// A variable is the participant introduced by the pending UNION / EXCEPT operator.
+		// Consume that operator now so it cannot be stamped onto the composite scope or a later query.
+		consumePendingUnionSetOperatorForNextParticipant();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -9125,12 +9189,11 @@ public class SqlParseSymbolTreeHelper {
 	 */
 	@SuppressWarnings("unchecked")
 	public void applyIntersectSetopToPassthroughUnionizedQueryFrame(HashMap<String, Object> frameSymbols) {
-		if (frameSymbols == null || frameSymbols.isEmpty()) {
-			return;
-		}
-
 		String intersectSetop = consumePendingIntersectSetOperatorForNextParticipant();
 		if (intersectSetop == null) {
+			return;
+		}
+		if (frameSymbols == null || frameSymbols.isEmpty()) {
 			return;
 		}
 
@@ -20074,6 +20137,7 @@ public class SqlParseSymbolTreeHelper {
 		scopePayload.remove(TEMP_SET_OPERATION_OPERATOR_ANCHOR_CHAR_KEY);
 		scopePayload.remove(TEMP_PENDING_UNION_SETOP_FOR_NEXT_PARTICIPANT_KEY);
 		scopePayload.remove(TEMP_PENDING_INTERSECT_SETOP_FOR_NEXT_PARTICIPANT_KEY);
+		scopePayload.remove(TEMP_SET_OPERATION_QUERY_VARIABLE_MEMBERS_KEY);
 		scopePayload.remove(TEMP_SELECT_LIST_OUTPUT_ALIAS_SOURCE_ORDER_KEY);
 	}
 

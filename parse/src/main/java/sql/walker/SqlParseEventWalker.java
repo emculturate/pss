@@ -4403,11 +4403,17 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		subMap.remove(ASTWALKER_RULE_TYPE_KEY);
 
 		Map<String, Object> source = (Map<String, Object>) subMap.remove("1");
+		boolean syntacticSetOperationMember = isSyntacticSetOperationMember(ctx);
 		if (source != null && source.containsKey(MUMBLE_SUBSTITUTION_KEY)
+				&& !syntacticSetOperationMember
 				&& walker.isUnderPredicandSubqueryFrame(ctx)) {
 			walker.stampSubstitutionVariableFromContext(source, ctx);
 		} else {
 			walker.checkForSubstitutionVariable(source, MUMBLE_QUERY_KEY);
+		}
+		if (source != null && source.containsKey(MUMBLE_SUBSTITUTION_KEY)
+				&& syntacticSetOperationMember) {
+			symbolTreeHelper.recordSetOperationQueryVariableMember(source);
 		}
 
 		if (subMap.isEmpty()) {
@@ -4427,6 +4433,18 @@ public class SqlParseEventWalker extends SQLSelectParserBaseListener {
 		}
 
 		walker.collect(ruleIndex, stackLevel, source);
+	}
+
+	private boolean isSyntacticSetOperationMember(
+			SQLSelectParserParser.Set_operation_memberContext ctx) {
+		if (ctx == null || !(ctx.getParent() instanceof SQLSelectParserParser.Unionized_queryContext unionizedCtx)) {
+			return false;
+		}
+		if (unionizedCtx.set_operation_member().size() > 1) {
+			return true;
+		}
+		return unionizedCtx.getParent() instanceof SQLSelectParserParser.Intersected_queryContext intersectedCtx
+				&& intersectedCtx.unionized_query().size() > 1;
 	}
 
 	@Override
