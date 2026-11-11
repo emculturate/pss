@@ -25,7 +25,7 @@
 
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
-| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **Not started** |
+| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **In progress** — Slice A token batch generated/compiled; manual goldens and full-suite gate pending |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Not started** |
@@ -42,7 +42,7 @@
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
 | **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Complete** (2026-11-11) |
 | **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
-| **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Not started** |
+| **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Partial** — known identifier/function grammar fixes included with Entry 1 lexer baseline |
 | **19** | RMCP Phase 2 acceptance-test closure (`VALUES` joined UNION branch; ordered aggregates) | Test / verification | **Partial** (implementation delivered) |
 
 ---
@@ -392,7 +392,7 @@ detailed AST/symbol-table/dialect assertions specified above.
 
 | Phase | Work |
 |-------|------|
-| **1 Lexer baseline** | Inventory and add every lexer entry required by delivery Slices B–E in one late-keyword batch immediately before `Identifier`; regenerate; publish the complete old→new token-ID substitutions; update all affected goldens; require a green full suite before grammar work |
+| **1 Lexer baseline** | Inventory and add every lexer entry required by delivery Slices B–E in one late-keyword batch immediately before `Identifier`; regenerate; publish the complete old→new token-ID substitutions in safe replacement order; the user updates affected goldens manually; require a green full suite before grammar work |
 | **2 Grammar + AST** | Implement the approved dedicated productions, `datetime_part`, `datetime_function` contract, and invocation signature registry incrementally; branch only when syntax, arity, AST, or keyword role differs |
 | **3 Walker + affinity** | Add every exit method; exclude parts from symbol collection; stamp predicand substitutions in expression fields; route rule/function/part affinity through the existing statement collector |
 | **4 Focused tests** | Add `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus PostgreSQL/shared matrices, AST signatures, rendering forms, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
@@ -402,7 +402,7 @@ detailed AST/symbol-table/dialect assertions specified above.
 
 | Slice | Scope |
 |-------|--------|
-| **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate, record token substitutions, update every affected golden (explicitly approved 2026-11-11), and run the full suite green. No later slice may change lexer numbering without separate review. |
+| **A — lexer baseline** | In one batch add or confirm dedicated late lexer entries for every bare built-in needed by Slices B–E: add/diff aliases, trunc/slice/day-boundary names, `DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, and timestamp clock functions. Do not add lexer tokens for part aliases or extensible parts. Regenerate and provide sorted token substitutions; golden token-ID edits are user-only (2026-11-11 clarification supersedes earlier bulk-update approval). Run the full suite after the user's edits. No later slice may change lexer numbering without separate review. |
 | **B — add family + registries** | Shared part/signature registries; `datetime_function`; `DATEADD`, `TIMEADD`, `TIMESTAMPADD`; core AST/symbol-table/dialect tests; q5866 clean with `year` absent from dictionaries and lineage |
 | **C — difference + truncation** | `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, shared `DATE_TRUNC`, datetime `TRUNC`; preserve neutral numeric `TRUNC` |
 | **D — remaining Snowflake** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` |
@@ -410,6 +410,32 @@ detailed AST/symbol-table/dialect assertions specified above.
 | **F — delivery closure** | Generator support for `datetime_function`, `pss-parse-docs` / release notes, bound-query + snippet corpus comparison, full regression; generator follow-up may remain under **Entry 10** only if explicitly deferred |
 
 **Story minimum:** Slices **A–B** + regression tests. **Full Entry 1:** A+B+C+D+E+F.
+
+**Slice A, first checkpoint (2026-11-11):** Added 26 late date/time function
+tokens, `DATEADD` through `TIMEOFDAY`, immediately before `Identifier`. Existing
+token IDs 1–392 remain unchanged; former IDs 393–413 shift by +26. Supply the
+replacement list in descending old-ID order, matching exact `<nnn>` strings.
+No existing golden was edited. Part aliases remain identifiers, and the new
+function tokens remain eligible for generic/qualified UDF calls until dedicated
+date/time productions are implemented.
+
+With user approval, the same checkpoint included the narrow Entry 18 parser-rule
+fixes: existing `POSITION`, `INPUT`, and `PATH` tokens are non-reserved identifiers;
+existing `TRUNCATE` is allowed as a generic function name. Their lexer declarations
+were not moved or duplicated, so they introduce no additional token-ID changes.
+`position_function` precedes `routine_invocation` to preserve the existing
+POSITION comma/IN AST path.
+
+Verification: ANTLR regeneration, main/test compilation, and the five tests in
+`SqlDatetimeLexerBaselineTest` pass via
+`mvn -pl parse -Dmaven.compiler.fork=true -Dtest=SqlDatetimeLexerBaselineTest test`.
+Initial builds encountered IDE-written unresolved-ANTLR error classes that Maven
+considered current; invalidating only
+`parse/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst`
+forced a successful javac rebuild. Java auto-build was temporarily disabled with
+permission and restored. The full golden suite remains pending manual token-ID
+edits; this checkpoint does not complete Slice A or implement date/time AST,
+symbol-table, or affinity changes.
 
 ### Acceptance
 
@@ -752,7 +778,7 @@ It is **not** visible to:
 
 ## Entry 16 — Set operation with a query variable member loses its output interface
 
-**Status:** Not started (opened 2026-11-11)  
+**Status:** Partial — known identifier/function grammar fixes delivered with Entry 1 Slice A; remaining work below (opened 2026-11-11)  
 **Kind:** Defect — release blocker for bound-query templates  
 **Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract ([panto-template-remediation-5.1.4.md](./panto-template-remediation-5.1.4.md), "Not your problem")
 
@@ -851,8 +877,8 @@ All problem evidence, reproductions, implementation requirements, tests, and bou
 
 | Sub | Work | Status |
 |-----|------|--------|
-| **18.1** | Non-reserved identifier audit; allow `position`, `input`, `path` (+ any others found) as identifiers | Not started |
-| **18.2** | `TRUNCATE(expr[, scale])` function | Not started |
+| **18.1** | Non-reserved identifier audit; allow `position`, `input`, `path` (+ any others found) as identifiers | Known three names accepted; broader audit and corpus validation pending |
+| **18.2** | `TRUNCATE(expr[, scale])` function | Generic grammar acceptance delivered; walker/corpus validation pending |
 | **18.3** | Array literal value expression (with Entry 4.4) | Not started |
 | **18.4** | Walker guard: no exceptions after syntax errors (repro: any 18.1–18.3 case) | Not started |
 | **18.5** | Tests per word in each identifier position plus its keyword role; token-ID golden impact handled per `.cursor/rules/lexer-token-id-golden-policy.mdc` (substitution list, no bulk update without approval) | Not started |

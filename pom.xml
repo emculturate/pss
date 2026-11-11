@@ -27,6 +27,12 @@
 
   <profiles>
     <profile>
+      <id>isolated-build</id>
+      <build>
+        <directory>${project.basedir}/target-maven</directory>
+      </build>
+    </profile>
+    <profile>
       <id>github-packages</id>
       <distributionManagement>
         <repository>

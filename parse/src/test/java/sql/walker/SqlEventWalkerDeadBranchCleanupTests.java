@@ -35,9 +35,9 @@ public class SqlEventWalkerDeadBranchCleanupTests extends AbstractSqlParseEventW
 		assertWalkerOutputs(extractor,
 				"{SQL={insert={preamble=insert_overwrite_into, from={from={table={alias=null, table=src}}, select={1={column={name=score, table_ref=null}}}}, target_table={table={schema=staging, alias=null, table=dst}}}}}",
 				"[score]", "{}",
-				"{src={score=[[@7,41:45='score',<393>,1:41]]}, staging.dst={score=[[@7,41:45='score',<393>,1:41]]}}",
-				"{query0={score=[[@7,41:45='score',<393>,1:41]]}, insert1={score=[[@7,41:45='score',<393>,1:41]]}}",
-				"{def_insert1={query_dictionary={score=[[@7,41:45='score',<393>,1:41]]}, table_dictionary={staging.dst={score=[[@7,41:45='score',<393>,1:41]]}}, def_query0={query_dictionary={score=[[@7,41:45='score',<393>,1:41]]}, table_dictionary={src={score=[[@7,41:45='score',<393>,1:41]]}}, interface={score=[{name=score, table_ref=src}]}}, interface={score=[{name=score, table_ref=query0}]}}}");
+				"{src={score=[[@7,41:45='score',<419>,1:41]]}, staging.dst={score=[[@7,41:45='score',<419>,1:41]]}}",
+				"{query0={score=[[@7,41:45='score',<419>,1:41]]}, insert1={score=[[@7,41:45='score',<419>,1:41]]}}",
+				"{def_insert1={query_dictionary={score=[[@7,41:45='score',<419>,1:41]]}, table_dictionary={staging.dst={score=[[@7,41:45='score',<419>,1:41]]}}, def_query0={query_dictionary={score=[[@7,41:45='score',<419>,1:41]]}, table_dictionary={src={score=[[@7,41:45='score',<419>,1:41]]}}, interface={score=[{name=score, table_ref=src}]}}, interface={score=[{name=score, table_ref=query0}]}}}");
 	}
 
 	@Test
@@ -60,7 +60,7 @@ public class SqlEventWalkerDeadBranchCleanupTests extends AbstractSqlParseEventW
 				"{SQL={select={1={function={function_name=CAST, data_type={type=TIMESTAMP WITHOUT TIME ZONE}, type=CAST, value={literal='x'}}, alias=t}}, from={table={alias=null, table=tab1}}}}",
 				"[t]", "{}",
 				"{tab1={}}",
-				"{query0={t=[[@11,51:51='t',<393>,1:51]]}}",
-				"{def_query0={query_dictionary={t=[[@11,51:51='t',<393>,1:51]]}, table_dictionary={tab1={}}, interface={t=[]}}}");
+				"{query0={t=[[@11,51:51='t',<419>,1:51]]}}",
+				"{def_query0={query_dictionary={t=[[@11,51:51='t',<419>,1:51]]}, table_dictionary={tab1={}}, interface={t=[]}}}");
 	}
 }

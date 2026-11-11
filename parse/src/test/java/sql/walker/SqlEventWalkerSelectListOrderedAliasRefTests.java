@@ -166,9 +166,9 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 				"{SQL={select={1={lookup={from={table={alias=null, table=t2}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=x, table_ref=null}}}}}}, alias=prior_alias}, 2={alias=nxt, calc={left={column={name=prior_alias, table_ref=null}}, right={literal=1}, operator=+}}}, from={table={alias=null, table=t1}}}}",
 				"[prior_alias, nxt]",
 				"{}",
-				"{t1={}, t2={x=[[@5,19:19='x',<393>,1:19]]}}",
-				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@13,47:57='prior_alias',<393>,1:47]], nxt=[[@17,66:68='nxt',<393>,1:66]]}}",
-				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@13,47:57='prior_alias',<393>,1:47]], nxt=[[@17,66:68='nxt',<393>,1:66]]}, table_dictionary={t1={}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<393>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], nxt=[{name=prior_alias, table_ref=query2}]}}}");
+				"{t1={}, t2={x=[[@5,19:19='x',<419>,1:19]]}}",
+				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={prior_alias=[[@11,34:44='prior_alias',<419>,1:34], [@13,47:57='prior_alias',<419>,1:47]], nxt=[[@17,66:68='nxt',<419>,1:66]]}}",
+				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<419>,1:34], [@13,47:57='prior_alias',<419>,1:47]], nxt=[[@17,66:68='nxt',<419>,1:66]]}, table_dictionary={t1={}}, dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<419>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], nxt=[{name=prior_alias, table_ref=query2}]}}}");
 	}
 
 	@Test
@@ -179,9 +179,9 @@ public class SqlEventWalkerSelectListOrderedAliasRefTests extends AbstractSqlPar
 				"{SQL={select={1={lookup={from={table={alias=null, table=t2}}, select={1={function={function_name=max, qualifier=null, parameters={column={name=x, table_ref=null}}}}}}, alias=prior_alias}, 2={alias=rn, window_function={over={partition_by={1={column={name=prior_alias, table_ref=null}}}}, function={function_name=ROW_NUMBER, parameters=null}}}}, from={table={alias=null, table=t1}}}}",
 				"[prior_alias, rn]",
 				"{}",
-				"{t1={}, t2={x=[[@5,19:19='x',<393>,1:19]]}}",
-				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={rn=[[@23,95:96='rn',<393>,1:95]], prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@20,79:89='prior_alias',<393>,1:79]]}}",
-				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<393>,1:34], [@20,79:89='prior_alias',<393>,1:79]], rn=[[@23,95:96='rn',<393>,1:95]]}, table_dictionary={t1={}}, window_partition_by=[{name=prior_alias, table_ref=query2}], dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<393>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], rn=[{name=prior_alias, table_ref=query2}]}}}");
+				"{t1={}, t2={x=[[@5,19:19='x',<419>,1:19]]}}",
+				"{query0={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, query2={rn=[[@23,95:96='rn',<419>,1:95]], prior_alias=[[@11,34:44='prior_alias',<419>,1:34], [@20,79:89='prior_alias',<419>,1:79]]}}",
+				"{def_query2={query_dictionary={prior_alias=[[@11,34:44='prior_alias',<419>,1:34], [@20,79:89='prior_alias',<419>,1:79]], rn=[[@23,95:96='rn',<419>,1:95]]}, table_dictionary={t1={}}, window_partition_by=[{name=prior_alias, table_ref=query2}], dependent_queries={predicand1={query=query0, type=interface}}, def_query0={query_dictionary={unnamed_0=[[@6,20:20=')',<288>,1:20]]}, table_dictionary={t2={x=[[@5,19:19='x',<419>,1:19]]}}, interface={unnamed_0=[{name=x, table_ref=t2}]}}, interface={prior_alias=[{name=x, table_ref=null}], rn=[{name=prior_alias, table_ref=query2}]}}}");
 	}
 
 	// --- column-ref sites inside later select-list items ---

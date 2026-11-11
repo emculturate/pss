@@ -1258,8 +1258,8 @@ nonparenthesized_value_expression_primary
   | ordered_aggregate_expression
   | case_expression
   | cast_function_expression
-  | routine_invocation
   | position_function
+  | routine_invocation
   | window_over_partition_expression
   | predicand_subquery
   ;
@@ -2150,6 +2150,7 @@ function_names_for_reserved_words
   | IFF
   | MD5
   | REVERSE
+  | TRUNCATE
   ;
 
 sql_argument_list
@@ -2511,6 +2512,37 @@ nonreserved_keywords
   | FOR
   | INCLUDE
   | EXCLUDE
+  // Entry 18: contextual keywords also usable as column, alias, and CTE names
+  | POSITION
+  | INPUT
+  | PATH
+  // Entry 1: retain generic calls and qualified UDFs until dedicated rules apply
+  | DATEADD
+  | TIMEADD
+  | TIMESTAMPADD
+  | DATEDIFF
+  | TIMEDIFF
+  | TIMESTAMPDIFF
+  | DATE_TRUNC
+  | TRUNC
+  | TIME_SLICE
+  | LAST_DAY
+  | NEXT_DAY
+  | PREVIOUS_DAY
+  | DATE_BIN
+  | AGE
+  | MAKE_DATE
+  | MAKE_TIME
+  | MAKE_TIMESTAMP
+  | MAKE_TIMESTAMPTZ
+  | MAKE_INTERVAL
+  | JUSTIFY_DAYS
+  | JUSTIFY_HOURS
+  | JUSTIFY_INTERVAL
+  | CLOCK_TIMESTAMP
+  | STATEMENT_TIMESTAMP
+  | TRANSACTION_TIMESTAMP
+  | TIMEOFDAY
   ;
 
 /*
@@ -3323,10 +3355,12 @@ Population_Identifier
 */
 
 QUALIFY : Q U A L I F Y;
+// Entry 18 contextual identifier; keep its existing token position.
 POSITION : P O S I T I O N;
 CHARINDEX : C H A R I N D E X;
 INSTR : I N S T R;
 DELETE : D E L E T E;
+// Entry 18 numeric function alias as well as a DDL keyword.
 TRUNCATE : T R U N C A T E;
 IFF : I F F;
 MD5 : M D '5';
@@ -3340,6 +3374,7 @@ VALIDATE : V A L I D A T E;
 RESULT_SCAN : R E S U L T UNDERLINE S C A N;
 QUERY_HISTORY : Q U E R Y UNDERLINE H I S T O R Y;
 QUERY_HSTORY : Q U E R Y UNDERLINE H S T O R Y;
+// Entry 18 contextual identifiers that retain their FLATTEN argument roles.
 INPUT : I N P U T;
 PATH : P A T H;
 RECURSIVE : R E C U R S I V E;
@@ -3392,6 +3427,39 @@ EPOCH_SECOND : E P O C H UNDERLINE S E C O N D;
 DATE_PART : [Dd] [Aa] [Tt] [Ee] '_' [Pp] [Aa] [Rr] [Tt] ;
 SETS : S E T S;
 WITHIN : W I T H I N;
+
+/*
+===============================================================================
+  Entry 1: date/time function tokens for delivery slices B-E
+  Part aliases remain identifiers; keep new tokens immediately before Identifier.
+===============================================================================
+*/
+DATEADD : D A T E A D D;
+TIMEADD : T I M E A D D;
+TIMESTAMPADD : T I M E S T A M P A D D;
+DATEDIFF : D A T E D I F F;
+TIMEDIFF : T I M E D I F F;
+TIMESTAMPDIFF : T I M E S T A M P D I F F;
+DATE_TRUNC : D A T E UNDERLINE T R U N C;
+TRUNC : T R U N C;
+TIME_SLICE : T I M E UNDERLINE S L I C E;
+LAST_DAY : L A S T UNDERLINE D A Y;
+NEXT_DAY : N E X T UNDERLINE D A Y;
+PREVIOUS_DAY : P R E V I O U S UNDERLINE D A Y;
+DATE_BIN : D A T E UNDERLINE B I N;
+AGE : A G E;
+MAKE_DATE : M A K E UNDERLINE D A T E;
+MAKE_TIME : M A K E UNDERLINE T I M E;
+MAKE_TIMESTAMP : M A K E UNDERLINE T I M E S T A M P;
+MAKE_TIMESTAMPTZ : M A K E UNDERLINE T I M E S T A M P T Z;
+MAKE_INTERVAL : M A K E UNDERLINE I N T E R V A L;
+JUSTIFY_DAYS : J U S T I F Y UNDERLINE D A Y S;
+JUSTIFY_HOURS : J U S T I F Y UNDERLINE H O U R S;
+JUSTIFY_INTERVAL : J U S T I F Y UNDERLINE I N T E R V A L;
+CLOCK_TIMESTAMP : C L O C K UNDERLINE T I M E S T A M P;
+STATEMENT_TIMESTAMP : S T A T E M E N T UNDERLINE T I M E S T A M P;
+TRANSACTION_TIMESTAMP : T R A N S A C T I O N UNDERLINE T I M E S T A M P;
+TIMEOFDAY : T I M E O F D A Y;
 
 Identifier
   : ('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|Digit|'_')*

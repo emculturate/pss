@@ -22,7 +22,8 @@
   "java.errors.incompleteClasspath.severity": "warning",
   "java.import.maven.enabled": true,
   "java.import.exclusions": [
-    "**/src/main/antlr4/**/.antlr/**"
+    "**/src/main/antlr4/**/.antlr/**",
+    "**/target-maven/**"
   ],
   "java.import.maven.offline.enabled": false,
   "java.import.maven.downloadSources": true,
@@ -41,6 +42,7 @@
   "java.test.config": [
     {
       "name": "pss-fast-debug",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
       "workingDirectory": "${workspaceFolder}/parse",
       "vmArgs": [
         "-Dpss.walker.test.verbose=true",
@@ -50,6 +52,7 @@
     },
     {
       "name": "default",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
       "workingDirectory": "${workspaceFolder}/parse",
       "vmArgs": [
         "-Dpss.walker.test.verbose=true",
@@ -59,6 +62,7 @@
     },
     {
       "name": "pss-verbose",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
       "workingDirectory": "${workspaceFolder}/parse",
       "vmArgs": [
         "-Dpss.walker.test.verbose=true",
@@ -68,6 +72,7 @@
     },
     {
       "name": "pss-quiet",
+      "javaExec": "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin/java",
       "workingDirectory": "${workspaceFolder}/parse",
       "vmArgs": [
         "-Dpss.walker.test.verbose=false",

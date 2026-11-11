@@ -11,6 +11,26 @@ The parser is designed to be used in a variety of contexts, including:
 
 The parser is designed to be extensible, and it is possible to add new SQL statements and functions to the grammar.
 
+## Building and testing alongside the IDE
+
+When Java auto-build is enabled, use the isolated Maven profile so the IDE and
+Maven do not overwrite each other's compiled classes:
+
+```bash
+mvn -Pisolated-build clean test
+```
+
+The profile keeps generated ANTLR sources, classes, test reports, and packaged
+artifacts under each module's `target-maven/`, separate from the IDE's `target/`.
+The VS Code Maven test tasks use this profile. Java auto-build can remain enabled.
+Subsequent runs can use `mvn -Pisolated-build test`.
+
+The profile is opt-in: existing release/build commands without it retain their
+normal output paths. Tools that explicitly read `parse/target/` do not consume
+the isolated output; use `parse/target-maven/` when inspecting an isolated build.
+If the IDE reports missing Maven dependencies, its project model still needs
+repair; isolated tests do not depend on the IDE's compiled output.
+
 ## Command-Line SQL Parsing
 
 This project provides a command-line interface (CLI) to parse SQL statements directly from your terminal. The main class for this functionality is `cli.SqlParse`.

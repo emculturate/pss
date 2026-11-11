@@ -1,3 +1,4 @@
 .DS_Store
 /.tmp/
+target-maven/
 /parse/testdata/live_queries/
