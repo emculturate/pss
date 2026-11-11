@@ -25,7 +25,7 @@
 
 | Entry | Feature | Kind | Status |
 |-------|---------|------|--------|
-| **1** | Snowflake date/time manipulation (`DATEADD`, `TIMEADD`, `TIMESTAMPADD`, …) | Enhancement | **Not started** |
+| **1** | Target-dialect date/time manipulation + Snowflake/Postgres dependency affinity | Enhancement | **Not started** |
 | **2** | Snowflake PIVOT quoted unaliased IN-list identifiers | Enhancement | **Not started** |
 | **3** | Snowflake `PARSE_*` + `:` semi-structured field access | Enhancement | **Not started** |
 | **4** | Snowflake `ARRAY` syntax and functions (5.1–5.12) | Enhancement | **Not started** |
@@ -41,7 +41,7 @@
 | **14** | Join extension present → `QUALIFIED_COLUMN_NOT_FOUND_IN_TABLE` reported as severe warning + `JOIN_EXTENSION_REQUIRED` (whole-query) | Defect (release blocker) | **Complete** (2026-11-10) |
 | **15** | Scope-aware join extension deferral (per-scope diagnostic capture) | Enhancement | **Not started** (follows **14**) |
 | **16** | Set operation with a query variable member loses its output interface (false `QUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIAS`) | Defect (release blocker) | **Not started** |
-| **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns (false `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`) | Defect | **Not started** |
+| **17** | `DATEADD` / `DATEDIFF` date parts resolved as columns | Defect | **Merged into Entry 1** (2026-11-11) |
 | **18** | Snowflake non-reserved words rejected (`position`, `input`, `path`, `truncate()`), array literals, and walker crash after syntax errors | Defect | **Not started** |
 
 ---
@@ -58,11 +58,13 @@
 
 ---
 
-## Entry 1 — Snowflake date/time manipulation functions
+## Entry 1 — Target-dialect date/time manipulation and dependency affinity
 
 ### Product story (authoritative)
 
 Update and release the parser jar to recognize and construct proper AST and symbol table entries for the **DATEADD** and **TIMEADD** functions in Snowflake's SQL dialect. If this assumption is incorrect, defer this story until the capability is available in a newer parser.
+
+The Snowflake product story remains the delivery driver. The implementation must also classify equivalent PostgreSQL-only function, part, and grammar forms through the same statement dialect mechanism, so adding Snowflake support does not create a one-sided dialect detector.
 
 Subtree will be structured with three mandatory parts: Tree should have been structured with **"level"** for the part of the date to be modified, **"increment"** for the integer factor, and **"date part"** for the expression generating the date or timestamp.
 
@@ -80,20 +82,119 @@ While we're at this, add support for all Snowflake date and time functions, incl
 
 Build rules for subsets of the date and time parts, and add all exit methods for rules.
 
+### Dialect dependency marking (required)
+
+Recognizing a construct is not sufficient: when correct execution depends on a target dialect, the statement must also be marked with that dialect affinity. Reuse the existing statement-level mechanism in `SqlParseEventWalker`:
+
+- `recordStatementDialectGrammarHit(SqlGrammarDialect.SNOWFLAKE|POSTGRES, …)` increments the appropriate statement counter and emits one `STATEMENT_SNOWFLAKE_DIALECT_GRAMMAR` or `STATEMENT_POSTGRES_DIALECT_GRAMMAR` warning;
+- seeing both affinities in one statement emits `STATEMENT_MIXED_DIALECT_GRAMMAR` FATAL;
+- scripts reset the counters and flags for every statement;
+- `SqlGrammarDialectRuleRegistry` is the registry for distinct grammar rules; semantic registries/callbacks are appropriate when shared grammar is classified by a function name, argument form, or level/part value (as already done by `ExtractDatetimeFieldAffinity` and `SqlBareValueExpressionRegistry`).
+
+This warning/counter pair is the current “query depends on Snowflake/Postgres” flag; do not add a competing symbol-table key. If consumers later require a serialized boolean or enum in `Snippet`, derive it from the same per-statement hit collector rather than adding a second classifier.
+
+Branch the grammar when the dialects have different syntax, arity, AST, or keyword roles. Do **not** fork an otherwise identical rule merely to raise a flag: use a semantic affinity registry and call the same collector. Shared ANSI/Snowflake/Postgres forms remain neutral. A schema-qualified function call or an explicitly modeled user-defined function with the same name as a built-in must remain neutral unless it uses dialect-specific syntax.
+
+#### Agent implementation matrix — date/time functions
+
+“Flag” means call the statement dialect collector at the function token. “Shared” means accept without either flag; a dialect-specific part or argument form may still flag the statement separately.
+
+| Construct accepted by the grammar | Target affinity | Detection / grammar action | Flag | Notes / required tests |
+|-----------------------------------|-----------------|----------------------------|------|------------------------|
+| `DATEADD(part, increment, value)`, `TIMEADD(…)`, `TIMESTAMPADD(…)` | Snowflake | Dedicated add-family production; distinguish `TIMESTAMPADD` from `TIMESTAMP` lexer split | Snowflake | All three aliases; canonical parts + documented abbreviations; substitutions in slots 2–3 |
+| `DATEDIFF(part, left, right)`, `TIMEDIFF(…)`, `TIMESTAMPDIFF(…)` | Snowflake | Dedicated diff-family production | Snowflake | Preserve argument order; part is never a column |
+| `TIME_SLICE(…)` | Snowflake | Dedicated production because arity and optional alignment argument are dialect-specific | Snowflake | Validate supported parts and optional arguments |
+| `LAST_DAY(…)`, `NEXT_DAY(…)`, `PREVIOUS_DAY(…)` | Snowflake | Dedicated productions (including optional part where Snowflake permits it) | Snowflake | Do not infer affinity from an unqualified UDF call until the call matches the built-in shape |
+| datetime `TRUNC(value, part)` / `TRUNC(value)` | Snowflake | Dedicated datetime alternative, separate from numeric `TRUNC` and DDL `TRUNCATE` | Snowflake | Numeric `TRUNC(number[, scale])` remains neutral unless a target-specific form proves otherwise |
+| `EXTRACT(part FROM value)` | Shared shell | Existing `extract_expression`; classify `part` using the part matrix below | Part-dependent or neutral | Preserve existing AST and diagnostics |
+| `DATE_PART(part FROM value)` | Shared parser extension | Existing `date_part_expression`; classify `part` | Part-dependent or neutral | This repo intentionally accepts the FROM form |
+| `DATE_PART('part', value)` | Shared Snowflake/Postgres name | Continue through function parsing or a shared dedicated rule; classify the literal part | Part-dependent or neutral | Existing comma-form affinity tests must remain green |
+| `DATE_TRUNC('part', value)` | Shared Snowflake/Postgres name | Shared production; classify the part and any dialect-specific overload | Part-dependent or neutral | Do not flag from the function name alone |
+| `DATE_BIN(stride, source, origin)` | PostgreSQL | Dedicated Postgres production | Postgres | Interval stride; three arguments |
+| `AGE(…)`, `MAKE_DATE(…)`, `MAKE_TIME(…)`, `MAKE_TIMESTAMP(…)`, `MAKE_TIMESTAMPTZ(…)`, `MAKE_INTERVAL(…)` | PostgreSQL | Dedicated built-in alternatives or semantic function-shape registry | Postgres | A schema-qualified same-name UDF is neutral |
+| `JUSTIFY_DAYS(…)`, `JUSTIFY_HOURS(…)`, `JUSTIFY_INTERVAL(…)` | PostgreSQL | Semantic function-shape registry | Postgres | Interval argument |
+| `CLOCK_TIMESTAMP()`, `STATEMENT_TIMESTAMP()`, `TRANSACTION_TIMESTAMP()`, `TIMEOFDAY()` | PostgreSQL | Zero-argument built-in alternatives / semantic registry | Postgres | Do not confuse shared `CURRENT_TIMESTAMP` with these |
+
+The Postgres rows are part of the dialect-symmetry requirement for Entry 1. They may be delivered after Snowflake slices A–C, but the grammar/registry design must leave explicit branches for them and must not classify their names as ordinary columns.
+
+#### Agent implementation matrix — level / part terms
+
+Apply this matrix in every dedicated part slot (`DATEADD`, diff/trunc family, `EXTRACT`, `DATE_PART`, `TIME_SLICE`, and Postgres date/time productions where applicable). Quoted part literals and unquoted level tokens must converge on the same normalized classifier.
+
+| Accepted canonical part / level | Target affinity | Flag behavior |
+|---------------------------------|-----------------|---------------|
+| `YEAR`, `QUARTER`, `MONTH`, `WEEK`, `DAY`, `HOUR`, `MINUTE`, `SECOND` | Shared | No dialect flag |
+| `DAYOFMONTH`, `DAYOFWEEK`, `DAYOFWEEKISO`, `DAYOFYEAR`, `WEEKISO`, `WEEKOFYEAR`, `EPOCH_SECOND`, `EPOCH_MILLISECOND`, `EPOCH_MICROSECOND` | Snowflake | Snowflake flag |
+| `CENTURY`, `DECADE`, `DOW`, `DOY`, `EPOCH`, `ISODOW`, `ISOYEAR`, `MICROSECONDS`, `MILLENNIUM`, `MILLISECONDS` | PostgreSQL | Postgres flag |
+| `TIMEZONE`, `TIMEZONE_HOUR`, `TIMEZONE_MINUTE` | PostgreSQL | Postgres flag; add to `ExtractDatetimeFieldAffinity` unless Snowflake documentation proves a shared form |
+| Documented aliases/abbreviations (`yy`, `yyyy`, `qtr`, `mon`, `mm`, `wk`, `woy`, `dd`, `dw`, `hh`, `mi`, `sec`, `ms`, `us`, `ns`, etc.) | Inherit the owning canonical part | Normalize first, then flag; verify each alias against current Snowflake/Postgres documentation—do not guess from spelling |
+| Character literal or identifier not in a target registry | Unknown / extensible | Accept where the function permits extensible text, but do not set a dialect flag and do not collect it as a column |
+
+Keep a single machine-readable part registry (canonical name, aliases, allowed function families, affinity). Do not duplicate sets independently in grammar predicates, `ExtractDatetimeFieldAffinity`, and walker code.
+
+#### Agent implementation matrix — non-date constructs that establish dialect affinity
+
+Entry 1 must preserve and test these existing markers when composing or nesting date/time expressions. This is also the model for future dialect branches. The rows describe the current registry; audit constructs that overlap across engines before expanding the catalog.
+
+| Target | Already recognized constructs / keywords | Implementation source |
+|--------|------------------------------------------|-----------------------|
+| Snowflake | `QUALIFY`; `PIVOT` / `UNPIVOT`; Snowflake multi-aggregate PIVOT; nested `WITH` inside a CTE body; Snowflake `TRUNCATE TABLE`; Snowflake DELETE form; quoted numeric identifiers; dollar function identifiers | `SqlGrammarDialectRuleRegistry` plus `nestedWithInCteBodyRegistration` |
+| PostgreSQL | `ON CONFLICT`; `DELETE … RETURNING` / `delete_returning`; Postgres DELETE form; Postgres TRUNCATE form (optional `TABLE`, multiple targets) | `SqlGrammarDialectRuleRegistry` |
+| Snowflake bare value | `CURRENT_ORGANIZATION_USER` | `SqlBareValueExpressionRegistry` |
+| PostgreSQL bare values | `CURRENT_CATALOG`, `CURRENT_ROLE`, `CURRENT_SCHEMA`, `SESSION_USER`, `USER` | `SqlBareValueExpressionRegistry` |
+| Shared / neutral bare values | `CURRENT_DATE`, `CURRENT_TIME`, `CURRENT_TIMESTAMP`, `CURRENT_USER`, `LOCALTIME`, `LOCALTIMESTAMP` | `SqlBareValueExpressionRegistry`; no dialect flag |
+
+**Dialect acceptance tests:** one warning and the correct counter for each target-only row; no warning for every shared row; nested target-specific function/part combinations count every hit but emit one target warning; Snowflake + Postgres in either order emits one mixed-dialect FATAL at the second affinity; SCRIPT statements reset independently; part text is absent from table/query dictionaries; grammar-rule and semantic-registry paths produce the same diagnostic contract.
+
 **Testing:** (1) Basic dateadd/timeadd; (2) rule templates for `DATEADD` / `TIMEADD` / `TIMESTAMPADD`; (3) symbol tables resolve increment and date/time expr, **ignore** parts; predicand substitutions in slots 2–3; nested complexity; fec/`year` regression (formerly “parser-defects Phase 4”).
 
 ### Baseline (2026-09-28)
 
 Most names parse as generic `function` via `routine_invocation`; unquoted parts become **`column`** refs. **`TIMESTAMPADD` fails parse** (`TIMESTAMP` lexer split). No dedicated AST or walker tests.
 
+### Absorbed corpus defect (former Entry 17)
+
+Entry 1 owns the complete fix and regression evidence for the date-part-as-column defect found by the 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract.
+
+**Problem:** The first argument of `DATEADD` / `DATEDIFF` (and the other date-part functions in this entry) is parsed as an ordinary column reference. When the only visible sources are derived tables or CTEs, the part (`year`, `day`, `month`, …) is looked up in their output interfaces and reported FATAL `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`. With a physical table in scope it may appear clean while silently recording the part as a phantom source column, which corrupts lineage.
+
+**Known affected bound query:**
+
+| Case ID | Extract record | Domain / entity / query name | FATAL / expression |
+|---------|----------------|------------------------------|--------------------|
+| q5866 | `bound_queries_11-10-2026.csv` record 5866 (header = record 1) | PDP_AMS / mkt__segmentation / pdp_ams_mkt__segmentation_intake | `Unqualified column 'year' at (l:29 c:15) was not found in output interface of any visible query alias [cte_mkt_segmentation]` — `dateadd(year,2000,effective_end_date)` |
+
+**Minimal reproductions (2026-11-11):**
+
+- `select dateadd(year, 1, c.d) as y from (select a.d from t a) c` → FATAL on `year`;
+- the same occurs with `dateadd(day, …)` and `datediff(month, …)`;
+- over a physical source (`from t a`) the calls may be clean but incorrectly record `year` / `day` as columns.
+
+The fix is not merely to suppress q5866's diagnostic. Every recognized date/time part and documented abbreviation must be parsed as a part constant, excluded from table/query dictionaries and unresolved-column handling, and classified for dialect affinity using the matrices above.
+
+### Extract/corpus re-test required before Entry 1 closes
+
+Use a rebuilt 5.1.4 fat jar and re-run both 11-10-2026 extracts through their correct endpoints:
+
+1. Parse every record in `bound_queries_11-10-2026.csv` through `SQL`.
+2. Parse every record in `snippets-11-10-2026.csv` through the endpoint implied by its type (`COLUMN`, `PREDICAND`, `CONDITION`, `TUPLE`, `QUERY`, `JOIN_EXTENSION`, `IN_LIST`, etc.), using the same endpoint-input normalization as the prior 5.0.0-3 vs 5.1.4-1 comparison.
+3. Re-test every bound-query or snippet record that previously failed on 5.1.4 but succeeded on 5.0.0-3; identify date/time cases separately from unrelated author errors and Entries 16/18.
+4. q5866 must lose its FATAL, and `year` must be absent from its table dictionary, query dictionary, unresolved-reference diagnostics, and lineage.
+5. Search both extracts for every function and part/alias listed in the Entry 1 matrices. For each match, verify that the part is not collected as a column and that target-only constructs produce the expected Snowflake/Postgres statement flag.
+6. Compare the new run with the saved 5.0.0-3 and pre-fix 5.1.4 results. Investigate every new FATAL and every changed AST/interface outside the intended date/time nodes; do not refresh unrelated goldens or accept corpus drift wholesale.
+7. Record the affected case IDs, template/bundle names, before/after FATAL counts, dialect diagnostics, and any remaining failures in this entry. When extracts with stable Panto IDs become available, add those IDs rather than relying only on `qN` / `sN` record numbers.
+
+There was no known snippet-specific date-part regression in the original 15 parser-defect cases, but the snippet extract must still be re-run: generic function parsing can hide phantom part columns without producing a FATAL.
+
 ### Work phases
 
 | Phase | Work |
 |-------|------|
-| **1 Design** | AST keys (`level` / `increment` / expr vs align with `extract`); part subsets per Snowflake; `TIMESTAMPADD` lexer; TRUNC vs TRUNCATE |
-| **2 Grammar** | Dedicated `*_expression` rules on `predicand_primary` + value primaries; validated part nonterminals |
-| **3 Walker** | All `exit*`; exclude parts from symbol collection; predicand stamping on increment/expr |
-| **4 Tests** | `SqlEventWalkerSnowflakeDatetimeManipulationTests` — story matrix + fec/`year` CASE |
+| **1 Design** | AST keys (`level` / `increment` / expr vs align with `extract`); one function/part affinity catalog; Snowflake + Postgres branches; `TIMESTAMPADD` lexer; TRUNC vs TRUNCATE |
+| **2 Grammar** | Dedicated `*_expression` rules on `predicand_primary` + value primaries; validated part nonterminals; branch only when target syntax/shape differs |
+| **3 Walker** | All `exit*`; exclude parts from symbol collection; predicand stamping on increment/expr; route rule/function/part affinity through the existing statement dialect collector |
+| **4 Tests** | `SqlEventWalkerSnowflakeDatetimeManipulationTests` plus Postgres/shared dialect matrix, counters/warnings/mixed fatal, SCRIPT reset, and fec/`year` CASE |
+| **5 Corpus** | Rebuild jar; re-run bound-query + snippet extracts; prove q5866 and all date/time matches; compare FATALs, AST/interfaces, dictionaries, lineage, and dialect diagnostics |
 
 ### Delivery slices
 
@@ -102,13 +203,14 @@ Most names parse as generic `function` via `routine_invocation`; unquoted parts 
 | **A** | `DATEADD`, `TIMEADD`, `TIMESTAMPADD` + core symbol-table tests |
 | **B** | Diff/trunc family: `DATEDIFF`, `TIMEDIFF`, `TIMESTAMPDIFF`, `DATE_TRUNC`, `TRUNC` |
 | **C** | `TIME_SLICE`, `LAST_DAY`, `NEXT_DAY`, `PREVIOUS_DAY` |
-| **D** | `pss-parse-docs` / release notes; generator follow-up → **Entry 10** if needed |
+| **D** | PostgreSQL counterparts in the implementation matrix (`DATE_BIN`, `AGE`, `MAKE_*`, `JUSTIFY_*`, timestamp clock functions) + shared/target part-affinity tests |
+| **E** | `pss-parse-docs` / release notes; generator follow-up → **Entry 10** if needed |
 
-**Story minimum:** slice **A** + regression tests. **Full Entry 1:** A+B+C+D.
+**Story minimum:** slice **A** + regression tests. **Full Entry 1:** A+B+C+D+E.
 
 ### Acceptance
 
-Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE clean; EXTRACT/DATE_PART FROM unchanged; 5.1.4 jar + grammar extension doc.
+Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE and q5866 are clean; no date/time part appears as a physical/query column or unresolved reference; EXTRACT/DATE_PART FROM unchanged; every target-only function/part/construct in the matrices raises the matching statement dialect flag; shared forms raise neither; mixed affinity remains FATAL per statement; bound-query and snippet extract re-check is documented with no unexplained regressions; 5.1.4 jar + grammar extension doc.
 
 ### Snowflake reference
 
@@ -506,29 +608,12 @@ Assert both the diagnostics and the published interface (`def_queryN` output col
 
 ---
 
-## Entry 17 — `DATEADD` / `DATEDIFF` date parts resolved as columns
+## Entry 17 — Merged into Entry 1
 
-**Status:** Not started (opened 2026-11-11)  
-**Kind:** Defect (minimum slice of **Entry 1**)  
-**Found by:** 5.0.0-3 vs 5.1.4-1 comparison of the 11-10-2026 extract
+**Status:** Merged into **Entry 1** (2026-11-11)
+**Former scope:** `DATEADD` / `DATEDIFF` date parts resolved as columns (q5866; false `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`, plus silent phantom-column lineage over physical sources).
 
-**Problem:** The first argument of `DATEADD` / `DATEDIFF` (and the other date-part functions in Entry 1) is parsed as an ordinary column reference. When the query's only visible sources are derived tables or CTEs, the part name (`year`, `day`, `month`, …) is looked up in their output interfaces and reported FATAL `UNQUALIFIED_COLUMN_NOT_FOUND_IN_QUERY_ALIASES`. With a physical table in scope it silently becomes a phantom column reference instead (wrong lineage, no error).
-
-**Affected queries (11-10-2026 extract):**
-
-| Case ID | Domain / entity / query name | FATAL |
-|---------|------------------------------|-------|
-| q5866 | PDP_AMS / mkt__segmentation / pdp_ams_mkt__segmentation_intake | `Unqualified column 'year' at (l:29 c:15) was not found in output interface of any visible query alias [cte_mkt_segmentation]` — `dateadd(year,2000,effective_end_date)` |
-
-**Repro (2026-11-11):** `select dateadd(year, 1, c.d) as y from (select a.d from t a) c` → FATAL on `year`; same for `dateadd(day, …)` and `datediff(month, …)`. Over a physical table (`from t a`) the same calls are clean but record `year` / `day` as columns.
-
-**Fix:** treat the date/time part argument as an enumerated part constant, never as a column (Entry 1 design: "Add all standard Snowflake date or time part constants recognition … as non-keyword enumerated types"). If Entry 1 slice A is not ready for this release, ship the minimum: recognise the Snowflake date and time part names (and their abbreviations, for example `d`, `dd`, `m`, `mm`, `y`, `yy`) in the first argument of `DATEADD`, `DATEDIFF`, `TIMEADD`, `TIMEDIFF`, `TIMESTAMPADD`, `TIMESTAMPDIFF`, `DATE_TRUNC`, and exclude them from symbol collection.
-
-| Sub | Work | Status |
-|-----|------|--------|
-| **17.1** | Exclude date/time part arguments from column resolution (minimum slice, or Entry 1 slice A/B) | Not started |
-| **17.2** | Tests: each function × part names and abbreviations × source kinds (physical table, derived table, CTE, set operation); assert no column ref for the part and correct refs for the other arguments; predicand variables in the increment / expression slots still classified as predicands | Not started |
-| **17.3** | Re-check q5866; full suite; update goldens that currently expect a part as a column (report the list before changing them) | Not started |
+All problem evidence, reproductions, implementation requirements, tests, and bound-query/snippet extract re-check instructions now live under **Entry 1 — Target-dialect date/time manipulation and dependency affinity**. Keep this numbered tombstone so Entries 18+ do not need renumbering; do not implement or track Entry 17 separately.
 
 ---
 
