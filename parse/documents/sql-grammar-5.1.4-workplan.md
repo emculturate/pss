@@ -1289,13 +1289,26 @@ unit restrictions, dialect affinity, complete sibling mini-suites, and
 snippet permutations remain pending.
 
 **DATEADD scenario progress (2026-11-12):** Placement tests now include
-scenarios 1-6, 8, 17, and 19, plus portions of 13-16, 20-22, 25, 27,
-and 47. Scenario 5 has all 24 argument-shape combinations except literal/literal,
-each with six literal output goldens. The remaining alias inventory, substitution permutations,
+scenarios 1-29, plus portions of 47. Scenario 5 has all 24 argument-shape combinations except literal/literal,
+each with six literal output goldens. The remaining substitution permutations,
 scope/clause/DML/set-operation matrix, and affinity/reset coverage are not yet
-complete. Scenario 48 depends on DATEADD dialect affinity, which is not yet
+complete. Scenario 18 compares the registry against the Snowflake DATEADD
+parts table and tests all 62 canonical and alias spellings in 11 full-golden
+parser batches. Scenario 48 depends on DATEADD dialect affinity, which is not yet
 implemented. Positive cases use six literal output goldens; ambiguity cases
 assert the existing source-position diagnostics.
+Scenarios 20-28 cover level-like columns, invalid and nested levels, numeric
+expressions, repeated inputs, ordinary-function nesting, nested DATEADD, and
+CASE. The `epoch_second` control is accepted by EXTRACT with the existing
+Snowflake dialect warning and rejected as a DATEADD part.
+Scenario 29 covers all three DATEADD anchors as derived-table producers,
+including child-to-parent output lineage and the joined anchor's filter inputs.
+Nested qualified column substitutions in both DATEADD formulas are also
+covered with missing source aliases: they remain fatal without a join extension
+and become severe warnings with a required-extension warning when one is present.
+The unknown-table-alias control currently reports the SELECT output alias
+position rather than the offending qualifier; an ordinary column reference
+shows the same existing diagnostic behavior.
 
 Structured AST (not `parameters.1.column` for parts); `TIMESTAMPADD` parses; fec/`year` CASE and q5866 are clean; no date/time part appears as a physical/query column or unresolved reference; EXTRACT/DATE_PART unified under the approved Phase 1 action with syntax-preserving datetime-family ASTs, retained source semantics, and documented consumer changes; every target-only function/part/construct in the matrices raises the matching statement dialect flag; shared forms raise neither; mixed affinity remains FATAL per statement; bound-query and snippet extract re-check is documented with no unexplained regressions; 5.1.4 jar + grammar extension doc.
 
